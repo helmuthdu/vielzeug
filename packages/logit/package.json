@@ -1,0 +1,30 @@
+{
+  "name": "@vielzeug/logit",
+  "version": "0.0.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && vite build",
+    "fix": "biome check --write --unsafe src",
+    "lint": "biome check src",
+    "prepublishOnly": "npm run build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4"
+  }
+}

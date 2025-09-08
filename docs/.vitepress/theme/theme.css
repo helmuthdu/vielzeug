@@ -1,0 +1,222 @@
+:root {
+  --vp-c-brand-lighter: var(--color-warning-backdrop);
+  --vp-c-brand-1: var(--color-warning);
+  --vp-c-brand-2: var(--color-warning-focus);
+  --vp-c-brand-3: var(--color-warning);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-warning));
+  --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-warning) 50%, var(--color-error) 50%);
+  --vp-home-hero-image-filter: blur(75px);
+  --vp-custom-navbar-color: hsla(240, 4%, 93%, 0.97);
+  --size-0-5: 0.125rem;
+  --size-1: 0.25rem;
+  --size-1-5: 0.375rem;
+  --size-2: 0.5rem;
+  --size-2-5: 0.625rem;
+  --size-3: 0.75rem;
+  --size-3-5: 0.875rem;
+  --size-4: 1rem;
+  --size-5: 1.25rem;
+  --size-6: 1.5rem;
+  --size-7: 1.75rem;
+  --size-8: 2rem;
+  --size-9: 2.25rem;
+  --size-10: 2.5rem;
+  --size-11: 2.75rem;
+  --size-12: 3rem;
+  --size-14: 3.5rem;
+  --size-16: 4rem;
+  --size-20: 5rem;
+  --size-24: 6rem;
+  --size-28: 7rem;
+  --size-32: 8rem;
+  --size-36: 9rem;
+  --size-40: 10rem;
+  --size-44: 11rem;
+  --size-48: 12rem;
+  --size-52: 13rem;
+  --size-56: 14rem;
+  --size-60: 15rem;
+  --size-64: 16rem;
+  --size-72: 18rem;
+  --size-80: 20rem;
+  --size-96: 24rem;
+  --size-xs: 20rem; /* 320px */
+  --size-sm: 24rem; /* 384px */
+  --size-md: 28rem; /* 448px */
+  --size-lg: 32rem; /* 512px */
+  --size-xl: 36rem; /* 576px */
+  --size-2xl: 42rem; /* 672px */
+  --size-3xl: 48rem; /* 768px */
+  --size-4xl: 56rem; /* 896px */
+  --size-5xl: 64rem; /* 1024px */
+  --size-6xl: 72rem; /* 1152px */
+  --size-7xl: 80rem; /* 1280px */
+  --size-full: 100%;
+  --size-fit: fit-content;
+  --size-min: min-content;
+  --size-max: max-content;
+  --size-auto: auto;
+  --size-none: none;
+  --size-prose: 65ch;
+  --size-screen-width: 100vw;
+  --size-screen-height: 100vh;
+  --size-screen-xs: 480px;
+  --size-screen-sm: 640px;
+  --size-screen-md: 768px;
+  --size-screen-lg: 1024px;
+  --size-screen-xl: 1280px;
+  --size-screen-2xl: 1536px;
+  --grid-1: repeat(1, minmax(0, 1fr));
+  --grid-2: repeat(2, minmax(0, 1fr));
+  --grid-3: repeat(3, minmax(0, 1fr));
+  --grid-4: repeat(4, minmax(0, 1fr));
+  --grid-5: repeat(5, minmax(0, 1fr));
+  --grid-6: repeat(6, minmax(0, 1fr));
+  --grid-7: repeat(7, minmax(0, 1fr));
+  --grid-8: repeat(8, minmax(0, 1fr));
+  --grid-9: repeat(9, minmax(0, 1fr));
+  --grid-10: repeat(10, minmax(0, 1fr));
+  --grid-11: repeat(11, minmax(0, 1fr));
+  --grid-12: repeat(12, minmax(0, 1fr));
+  --border: 1px;
+  --border-0: 0;
+  --border-2: 2px;
+  --border-4: 4px;
+  --border-8: 8px;
+  --ring: 0 0 0 var(--border);
+  --ring-2: 0 0 0 var(--border-2);
+  --ring-4: 0 0 0 var(--border-4);
+  --ring-8: 0 0 0 var(--border-8);
+  --rounded: 0.25rem;
+  --rounded-sm: 0.125rem;
+  --rounded-md: 0.375rem;
+  --rounded-lg: 0.5rem;
+  --rounded-xl: 0.75rem;
+  --rounded-2xl: 1rem;
+  --rounded-3xl: 1.5rem;
+  --rounded-full: 9999px;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 10%), 0 8px 10px -6px rgb(0 0 0 / 10%);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 25%);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 5%);
+  --font-weight-thin: 100;
+  --font-weight-extralight: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+  --line-spacing-xs: 1rem;
+  --line-spacing-sm: 1.25rem;
+  --line-spacing-md: 1.5rem;
+  --line-spacing-lg: 1.75rem;
+  --line-spacing-xl: 1.75rem;
+  --line-spacing-2xl: 2rem;
+  --line-spacing-3xl: 2.25rem;
+  --line-spacing-4xl: 2.5rem;
+  --line-spacing-5xl: 1;
+  --line-spacing-6xl: 1;
+  --line-spacing-7xl: 1;
+  --line-spacing-8xl: 1;
+  --line-spacing-9xl: 1;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+  --text-8xl: 6rem;
+  --text-9xl: 8rem;
+  --color-contrast-50: hsla(240, 4%, 93%, 0.97);
+  --color-contrast-100: hsla(240, 4%, 90%, 0.97);
+  --color-contrast-200: hsla(240, 4%, 74%, 0.97);
+  --color-contrast-300: hsla(240, 4%, 57%, 0.97);
+  --color-contrast-400: hsla(240, 4%, 44%, 0.97);
+  --color-contrast-500: hsla(240, 4%, 34%, 0.97);
+  --color-contrast-600: hsla(240, 4%, 26%, 0.97);
+  --color-contrast-700: hsla(240, 4%, 20%, 0.97);
+  --color-contrast-800: hsla(240, 4%, 15%, 0.97);
+  --color-contrast-900: hsla(240, 4%, 12%, 0.97);
+  --color-canvas: var(--color-contrast-50);
+  --color-contrast: var(--color-contrast-900);
+  --color-content-heading: var(--color-contrast-900);
+  --color-content-body: var(--color-contrast-800);
+  --color-content-secondary: var(--color-contrast-700);
+  --color-content-tertiary: var(--color-contrast-600);
+  --color-content-disabled: var(--color-contrast-500);
+  --color-content-contrast: var(--color-contrast-50);
+  --color-primary-backdrop: hsla(206, 100%, 90%, 0.97);
+  --color-primary-focus: hsla(206, 100%, 51%, 0.97);
+  --color-primary: hsla(206, 100%, 44%, 0.97);
+  --color-primary-content: hsla(206, 100%, 26%, 0.97);
+  --color-primary-contrast: hsla(206, 100%, 97%, 0.97);
+  --color-success-backdrop: hsla(142, 71%, 90%, 0.97);
+  --color-success-focus: hsla(142, 71%, 51%, 0.97);
+  --color-success: hsla(142, 71%, 44%, 0.97);
+  --color-success-content: hsla(142, 71%, 26%, 0.97);
+  --color-success-contrast: hsla(142, 71%, 97%, 0.97);
+  --color-warning-backdrop: hsla(38, 92%, 97%, 0.97);
+  --color-warning-focus: hsla(38, 92%, 63%, 0.97);
+  --color-warning: hsla(38, 92%, 57%, 0.97);
+  --color-warning-content: hsla(38, 92%, 26%, 0.97);
+  --color-warning-contrast: hsla(38, 92%, 97%, 0.97);
+  --color-error-backdrop: hsla(350, 89%, 90%, 0.97);
+  --color-error-focus: hsla(350, 89%, 63%, 0.97);
+  --color-error: hsla(350, 89%, 57%, 0.97);
+  --color-error-content: hsla(350, 89%, 26%, 0.97);
+  --color-error-contrast: hsla(350, 89%, 97%, 0.97);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-contrast-50: hsla(240, 4%, 9%, 0.97);
+    --color-contrast-100: hsla(240, 4%, 12%, 0.97);
+    --color-contrast-200: hsla(240, 4%, 15%, 0.97);
+    --color-contrast-300: hsla(240, 4%, 20%, 0.97);
+    --color-contrast-400: hsla(240, 4%, 26%, 0.97);
+    --color-contrast-500: hsla(240, 4%, 34%, 0.97);
+    --color-contrast-600: hsla(240, 4%, 44%, 0.97);
+    --color-contrast-700: hsla(240, 4%, 57%, 0.97);
+    --color-contrast-800: hsla(240, 4%, 74%, 0.97);
+    --color-contrast-900: hsla(240, 4%, 90%, 0.97);
+  }
+}
+
+.dark {
+  --vp-custom-navbar-color: hsla(240, 4%, 9%, 0.97);
+}
+
+.VPNavBar,
+.VPNavBar.fill {
+  background: var(--vp-custom-navbar-color);
+  backdrop-filter: saturate(50%) blur(24px);
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.VPNavBar.fill .content-body,
+.VPNavBar.has-sidebar .content-body {
+  background: none !important;
+}
+
+.VPNavBar:not(.top) .content-body {
+  background-color: inherit !important;
+}
+
+.VPNavBar.has-sidebar .curtain {
+  display: none;
+}
+
+.VPNavBarTitle.has-sidebar .title {
+  border: none;
+}
