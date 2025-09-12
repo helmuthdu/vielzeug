@@ -33,4 +33,4 @@ const doubled = map(arr, (x) => x * 2);
 
 ---
 
-> **Tip:** Toolkit is part of the [Vielzeug](https://github.com/vielzeug) toolkit for modern web development.
+> **Tip:** Toolkit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) toolkit for modern web development.

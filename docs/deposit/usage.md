@@ -1,6 +1,6 @@
-# Depot Usage
+# Deposit Usage
 
-How to install, import, and use the depot package in your project.
+How to install, import, and use the deposit package in your project.
 
 ## Installation
 
@@ -29,33 +29,33 @@ const schema = {
 
 ```ts
 const localAdapter = new LocalStorageAdapter('mydb', 1, schema);
-const depot = new Depot(localAdapter);
+const deposit = new Depot(localAdapter);
 ```
 
 ### Using IndexedDB
 
 ```ts
 const indexedAdapter = new IndexedDBAdapter('mydb', 1, schema);
-const depot = new Depot(indexedAdapter);
+const deposit = new Depot(indexedAdapter);
 ```
 
 ## Basic Usage
 
 ```ts
 // Add a user
-await depot.put('users', { id: 'u1', name: 'Alice', age: 30, email: 'alice@example.com' });
+await deposit.put('users', { id: 'u1', name: 'Alice', age: 30, email: 'alice@example.com' });
 
 // Get a user
-const user = await depot.get('users', 'u1');
+const user = await deposit.get('users', 'u1');
 
 // Update a user
-await depot.put('users', { id: 'u1', name: 'Alice Smith', age: 31, email: 'alice@example.com' });
+await deposit.put('users', { id: 'u1', name: 'Alice Smith', age: 31, email: 'alice@example.com' });
 
 // Delete a user
-await depot.delete('users', 'u1');
+await deposit.delete('users', 'u1');
 
 // Get all users
-const allUsers = await depot.getAll('users');
+const allUsers = await deposit.getAll('users');
 ```
 
 ## Advanced Features

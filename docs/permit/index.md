@@ -36,4 +36,4 @@ const canView = Permit.check(user, 'posts', 'view');
 
 ---
 
-> **Tip:** Permit is part of the [Vielzeug](https://github.com/vielzeug) toolkit for modern web development.
+> **Tip:** Permit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) toolkit for modern web development.
