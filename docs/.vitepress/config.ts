@@ -10,8 +10,9 @@ export default defineConfig({
     ['meta', { content: 'yes', name: 'apple-mobile-web-app-capable' }],
     ['meta', { content: 'black', name: 'apple-mobile-web-app-status-bar-style' }],
   ],
+  ignoreDeadLinks: true,
   sitemap: {
-    hostname: `https://pages.git.i.mercedes-benz.com${baseUrl}`,
+    hostname: `https://pages.github.com${baseUrl}`,
     transformItems: (items) => {
       return items.map((item) => {
         return {
@@ -22,13 +23,14 @@ export default defineConfig({
     },
   },
   themeConfig: {
-    logo: '/icons/logo_mbio.png',
+    logo: '/logo_main.svg',
     nav: [
       { link: '/toolkit/', text: 'Toolkit' },
       { link: '/deposit/', text: 'Deposit' },
       { link: '/fetchit/', text: 'Fetchit' },
       { link: '/logit/', text: 'Logit' },
       { link: '/permit/', text: 'Permit' },
+      { link: '/repl', text: 'REPL' },
     ],
     search: {
       provider: 'local',
@@ -225,7 +227,7 @@ export default defineConfig({
         },
       ],
     },
-    socialLinks: [{ icon: 'github', link: 'https://git.i.mercedes-benz.com/dh-io-emh/emh-knowledge-center' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com.com/helmuthdu/vielzeug' }],
   },
   title: 'Vielzeug',
 });
