@@ -359,11 +359,11 @@ describe('IndexedDBAdapter', () => {
 });
 
 describe('Depot', () => {
-  let depot: Deposit<typeof userSchema>;
+  let deposit: Deposit<typeof userSchema>;
 
   beforeEach(() => {
     localStorage.clear();
-    depot = new Deposit({
+    deposit = new Deposit({
       dbName: 'TestDB',
       schema: userSchema,
       type: 'localStorage',
@@ -372,43 +372,43 @@ describe('Depot', () => {
   });
 
   test('basic CRUD', async () => {
-    await depot.put('users', { id: 1, name: 'Alice' });
-    expect(await depot.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    await deposit.put('users', { id: 1, name: 'Alice' });
+    expect(await deposit.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
 
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { id: 2, name: 'Bob' },
       { id: 3, name: 'Charlie' },
     ]);
-    expect((await depot.getAll('users')).length).toBe(3);
+    expect((await deposit.getAll('users')).length).toBe(3);
 
-    await depot.delete('users', 1);
-    expect(await depot.get('users', 1)).toBeUndefined();
+    await deposit.delete('users', 1);
+    expect(await deposit.get('users', 1)).toBeUndefined();
 
-    await depot.clear('users');
-    expect(await depot.getAll('users')).toEqual([]);
+    await deposit.clear('users');
+    expect(await deposit.getAll('users')).toEqual([]);
   });
 
   test('bulkDelete removes multiple users', async () => {
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
       { id: 3, name: 'Charlie' },
     ]);
-    await depot.bulkDelete('users', [1, 3]);
-    expect(await depot.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    await deposit.bulkDelete('users', [1, 3]);
+    expect(await deposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
   });
 
   test('bulkDelete with non-existent keys does not throw', async () => {
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
-    await expect(depot.bulkDelete('users', [1, 999])).resolves.toBeUndefined();
-    expect(await depot.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    await expect(deposit.bulkDelete('users', [1, 999])).resolves.toBeUndefined();
+    expect(await deposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
   });
 
   test('bulkPut with TTL stores and expires records', async () => {
-    await depot.bulkPut(
+    await deposit.bulkPut(
       'users',
       [
         { id: 1, name: 'Alice' },
@@ -417,64 +417,64 @@ describe('Depot', () => {
       1,
     );
     await new Promise((r) => setTimeout(r, 5));
-    expect(await depot.getAll('users')).toEqual([]);
+    expect(await deposit.getAll('users')).toEqual([]);
   });
 
   test('clear on empty table does not throw', async () => {
-    await expect(depot.clear('users')).resolves.toBeUndefined();
-    expect(await depot.getAll('users')).toEqual([]);
+    await expect(deposit.clear('users')).resolves.toBeUndefined();
+    expect(await deposit.getAll('users')).toEqual([]);
   });
 
   test('count returns correct number after operations', async () => {
-    expect(await depot.count('users')).toBe(0);
-    await depot.put('users', { id: 1, name: 'Alice' });
-    expect(await depot.count('users')).toBe(1);
-    await depot.bulkPut('users', [
+    expect(await deposit.count('users')).toBe(0);
+    await deposit.put('users', { id: 1, name: 'Alice' });
+    expect(await deposit.count('users')).toBe(1);
+    await deposit.bulkPut('users', [
       { id: 2, name: 'Bob' },
       { id: 3, name: 'Charlie' },
     ]);
-    expect(await depot.count('users')).toBe(3);
-    await depot.delete('users', 2);
-    expect(await depot.count('users')).toBe(2);
-    await depot.clear('users');
-    expect(await depot.count('users')).toBe(0);
+    expect(await deposit.count('users')).toBe(3);
+    await deposit.delete('users', 2);
+    expect(await deposit.count('users')).toBe(2);
+    await deposit.clear('users');
+    expect(await deposit.count('users')).toBe(0);
   });
 
   test('delete non-existent key does not throw', async () => {
-    await expect(depot.delete('users', 999)).resolves.toBeUndefined();
+    await expect(deposit.delete('users', 999)).resolves.toBeUndefined();
   });
 
   test('get returns defaultValue if not found', async () => {
     const def = { id: 99, name: 'Default' };
-    expect(await depot.get('users', 99, def)).toBe(def);
+    expect(await deposit.get('users', 99, def)).toBe(def);
   });
 
   test('put with TTL expires record', async () => {
-    await depot.put('users', { id: 1, name: 'Alice' }, 1);
+    await deposit.put('users', { id: 1, name: 'Alice' }, 1);
     await new Promise((r) => setTimeout(r, 5));
-    expect(await depot.get('users', 1)).toBeUndefined();
+    expect(await deposit.get('users', 1)).toBeUndefined();
   });
 
   test('query chaining works', async () => {
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { age: 25, id: 1, name: 'Alice' },
       { age: 30, id: 2, name: 'Bob' },
       { age: 28, id: 3, name: 'Charlie' },
     ]);
-    const results = await depot.query('users').equals('age', 30).orderBy('id', 'desc').toArray();
+    const results = await deposit.query('users').equals('age', 30).orderBy('id', 'desc').toArray();
     expect(results).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
   test('transaction commits changes atomically', async () => {
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
-    await depot.transaction(['users'], async (stores) => {
+    await deposit.transaction(['users'], async (stores) => {
       (stores as any).users = stores.users.filter((u) => u.id !== 1);
       stores.users.push({ id: 3, name: 'Charlie' });
     });
-    const all = await depot.getAll('users');
+    const all = await deposit.getAll('users');
     expect(all).toEqual([
       { id: 2, name: 'Bob' },
       { id: 3, name: 'Charlie' },
@@ -482,37 +482,37 @@ describe('Depot', () => {
   });
 
   test('transaction throws and does not apply changes on error', async () => {
-    await depot.bulkPut('users', [{ id: 1, name: 'Alice' }]);
+    await deposit.bulkPut('users', [{ id: 1, name: 'Alice' }]);
     await expect(
-      depot.transaction(['users'], async () => {
+      deposit.transaction(['users'], async () => {
         throw new Error('fail');
       }),
     ).rejects.toThrow('Transaction failed');
     // Data should remain unchanged
-    expect(await depot.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(await deposit.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
   test('patch applies put, delete, and clear operations', async () => {
-    await depot.bulkPut('users', [
+    await deposit.bulkPut('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
-    await depot.patch('users', [
+    await deposit.patch('users', [
       { type: 'put', value: { id: 3, name: 'Charlie' } },
       { key: 1, type: 'delete' },
     ]);
-    expect(await depot.getAll('users')).toEqual([
+    expect(await deposit.getAll('users')).toEqual([
       { id: 2, name: 'Bob' },
       { id: 3, name: 'Charlie' },
     ]);
-    await depot.patch('users', [{ type: 'clear' }]);
-    expect(await depot.getAll('users')).toEqual([]);
+    await deposit.patch('users', [{ type: 'clear' }]);
+    expect(await deposit.getAll('users')).toEqual([]);
   });
 
   test('patch with empty array does nothing', async () => {
-    await depot.bulkPut('users', [{ id: 1, name: 'Alice' }]);
-    await depot.patch('users', []);
-    expect(await depot.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+    await deposit.bulkPut('users', [{ id: 1, name: 'Alice' }]);
+    await deposit.patch('users', []);
+    expect(await deposit.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
   test('Depot constructor throws on unknown adapter type', () => {

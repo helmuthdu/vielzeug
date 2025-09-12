@@ -42,7 +42,7 @@ const Theme: Readonly<Record<LogitColors, LogitTheme>> = {
 };
 
 // biome-ignore assist/source/useSortedKeys: -
-const loggerLevel: Readonly<Record<LogitLevel, number>> = {
+const logLevel: Readonly<Record<LogitLevel, number>> = {
   debug: 0,
   trace: 1,
   time: 2,
@@ -63,11 +63,11 @@ const state: Required<LogitOptions> = {
   variant: 'symbol',
 };
 
-const shouldLog = (type: LogitType) => loggerLevel[state.logLevel] <= loggerLevel[type];
+const shouldLog = (type: LogitType) => logLevel[state.logLevel] <= logLevel[type];
 const getTimestamp = () => new Date().toISOString().slice(11, 23);
 
 const sendRemoteLog = (type: LogitType, args: any) => {
-  if (state.remote.handler && loggerLevel[state.remote.logLevel] <= loggerLevel[type]) {
+  if (state.remote.handler && logLevel[state.remote.logLevel] <= logLevel[type]) {
     state.remote.handler(type, ...args);
   }
 };
