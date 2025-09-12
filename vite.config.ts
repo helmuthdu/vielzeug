@@ -26,6 +26,6 @@ export const getConfig = (__dirname: string) => {
       },
       sourcemap: true,
     },
-    plugins: [dts({ include: [resolve(__dirname, 'src')] })],
+    plugins: [dts({ include: [resolve(__dirname, 'src')], insertTypesEntry: true, rollupTypes: true })],
   } as UserConfig;
 };
