@@ -20,16 +20,24 @@ export function sum<T>(array: T[], callback?: (item: T) => number | Date): numbe
   return array.reduce<number | Date | undefined>((acc, item) => {
     const value = callback ? callback(item) : item;
     if (value instanceof Date) {
-      const valueTime = value.getTime();
-      if (acc === undefined) return new Date(valueTime);
-      if (acc instanceof Date) return new Date(acc.getTime() + valueTime);
-      return new Date(acc + valueTime);
+      return sumDate(value, acc);
     }
     if (typeof value === 'number') {
-      if (acc === undefined) return value;
-      if (acc instanceof Date) return new Date(acc.getTime() + value);
-      return acc + value;
+      return sumNumbers(acc, value);
     }
     throw new TypeError('sum only supports numbers and Date objects');
   }, undefined);
+}
+
+function sumDate(value: Date, acc: number | Date | undefined) {
+  const valueTime = value.getTime();
+  if (acc === undefined) return new Date(valueTime);
+  if (acc instanceof Date) return new Date(acc.getTime() + valueTime);
+  return new Date(acc + valueTime);
+}
+
+function sumNumbers<T>(acc: number | Date | undefined, value: number | (T & number)) {
+  if (acc === undefined) return value;
+  if (acc instanceof Date) return new Date(acc.getTime() + value);
+  return acc + value;
 }

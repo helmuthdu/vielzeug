@@ -140,7 +140,6 @@
 import { ref, onMounted } from 'vue';
 import * as toolkit from '../../../../packages/toolkit/src/index';
 
-window.toolkit = toolkit;
 
 const editorContainer = ref(null);
 const outputContainer = ref(null);
@@ -309,6 +308,7 @@ onMounted(() => {
 
 const initializeREPL = () => {
   // Load Monaco Editor
+  window.toolkit = toolkit;
   const script = document.createElement('script');
   script.src = 'https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js';
   script.onload = () => {
