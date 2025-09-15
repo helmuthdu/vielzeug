@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Choose environment
+        options:
+          - stage
+          - production
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
