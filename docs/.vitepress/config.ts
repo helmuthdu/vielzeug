@@ -1,9 +1,7 @@
 import { defineConfig } from 'vitepress';
 
-const baseUrl = '/';
-
 export default defineConfig({
-  base: baseUrl,
+  base: '/vielzeug',
   description: 'Documentation for the Vielzeug monorepo',
   head: [
     ['meta', { content: '#008dfc', name: 'theme-color' }],
@@ -12,12 +10,12 @@ export default defineConfig({
   ],
   ignoreDeadLinks: true,
   sitemap: {
-    hostname: `https://pages.github.com${baseUrl}`,
+    hostname: 'https://helmuthdu.github.io/vielzeug',
     transformItems: (items) => {
       return items.map((item) => {
         return {
           ...item,
-          url: `${baseUrl.split('/').at(-1)}/${item.url}`, // Fix sitemap URLs
+          url: `vielzeug/${item.url}`, // Fix sitemap URLs
         };
       });
     },
