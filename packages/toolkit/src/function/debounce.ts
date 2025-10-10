@@ -18,7 +18,7 @@ import type { Fn } from '../types';
  * @returns - A debounced function
  */
 export function debounce<T extends Fn>(fn: T, delay = 300): (...args: Parameters<T>) => void {
-  let timeoutFn: NodeJS.Timeout | undefined;
+  let timeoutFn: ReturnType<typeof setTimeout>;
 
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutFn);

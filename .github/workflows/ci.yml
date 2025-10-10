@@ -22,9 +22,12 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: '10.17.1'
+
       - name: Verify Change Logs
-        run: node common/scripts/install-run-rush.cjs change --verify
+        run: node common/scripts/install-run-rush.js change --verify
+
       - name: Rush Install
-        run: node common/scripts/install-run-rush.cjs install
+        run: node common/scripts/install-run-rush.js install
+
       - name: Rush rebuild
-        run: node common/scripts/install-run-rush.cjs rebuild --verbose --production
+        run: node common/scripts/install-run-rush.js rebuild --verbose

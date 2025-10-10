@@ -26,7 +26,7 @@
    * Specify one of: "pnpmVersion", "npmVersion", or "yarnVersion".  See the Rush documentation
    * for details about these alternatives.
    */
-  "pnpmVersion": "10.14.0",
+  "pnpmVersion": "10.17.1",
 
   // "npmVersion": "6.14.15",
   // "yarnVersion": "1.9.4",
@@ -333,27 +333,27 @@
     {
       "packageName": "@vielzeug/toolkit",
       "projectFolder": "packages/toolkit",
-      "shouldPublish": true,
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/deposit",
       "projectFolder": "packages/deposit",
-      "shouldPublish": true,
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/fetchit",
       "projectFolder": "packages/fetchit",
-      "shouldPublish": true,
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/logit",
       "projectFolder": "packages/logit",
-      "shouldPublish": true,
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/permit",
       "projectFolder": "packages/permit",
-      "shouldPublish": true,
+      "shouldPublish": true
     }
   ]
 }
