@@ -1,0 +1,16 @@
+{
+  "projectType": "monorepo",
+  "monorepoTool": "rush",
+  "packageManager": "pnpm",
+  "languages": ["typescript", "javascript"],
+  "nodeVersion": ">=18.20.3 <19.0.0 || >=20.14.0 <=22.14.0",
+  "projects": [
+    "packages/toolkit",
+    "packages/deposit",
+    "packages/fetchit",
+    "packages/logit",
+    "packages/permit"
+  ],
+  "frameworks": [],
+  "description": "Monorepo managed by Rush, using TypeScript and pnpm. Contains multiple packages under 'packages/'."
+}

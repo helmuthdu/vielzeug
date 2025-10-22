@@ -1,0 +1,71 @@
+name: Release Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Name of the Rush package to release
+        required: true
+      bump:
+        description: Version bump (patch|minor|major)
+        required: true
+        default: patch
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.19.0
+
+      - name: Configure Git
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+
+      - name: Auth for npm
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Rush Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Apply version bump
+        run: |
+          node common/scripts/install-run-rush.js publish \
+            --apply \
+            --include ${{ inputs.package }} \
+            --override-bump ${{ inputs.bump }} \
+            --target-branch main
+
+      - name: Build package
+        run: node common/scripts/install-run-rush.js build --to ${{ inputs.package }} --verbose
+
+      - name: Publish to npm
+        run: |
+          node common/scripts/install-run-rush.js publish \
+            --publish \
+            --include ${{ inputs.package }} \
+            --target-branch main \
+            --set-access-level public
+
+      - name: Push tags & commit
+        run: |
+          git push --follow-tags origin main

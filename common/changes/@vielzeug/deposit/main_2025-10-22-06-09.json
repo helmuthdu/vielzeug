@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "Initial release",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}

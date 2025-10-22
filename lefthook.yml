@@ -1,0 +1,24 @@
+pre-commit:
+  piped: true
+  follow: true
+  commands:
+    lint:resources:
+      glob: '*.{html,json,yml}'
+      run: >
+        npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+    lint:js:
+      glob: '*[!.{spec,test}].{[tj]s,[tj]sx}'
+      run: >
+        npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+        npx vitest related {staged_files}
+    test:unit:
+      glob: '*.{spec,test}.{[tj]s,[tj]sx}'
+      run: >
+        npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+        npx vitest {staged_files}
+
+pre-push:
+  commands:
+    check:
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,md,mdx,html}"
+      run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true {push_files}

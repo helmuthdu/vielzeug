@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/logit",
+      "comment": "Initial release",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/logit"
+}

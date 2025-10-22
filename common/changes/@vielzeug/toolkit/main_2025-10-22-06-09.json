@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/toolkit",
+      "comment": "Initial release",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/toolkit"
+}

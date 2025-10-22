@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/permit",
+      "comment": "Initial release",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/permit"
+}
