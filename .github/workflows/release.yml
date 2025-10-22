@@ -49,11 +49,9 @@ jobs:
 
       - name: Apply version bump
         run: |
-          node common/scripts/install-run-rush.js publish \
-            --apply \
-            --include ${{ inputs.package }} \
-            --override-bump ${{ inputs.bump }} \
-            --target-branch main
+          node common/scripts/install-run-rush.js version --bump
+          git add .
+          git commit -m "chore(release): bump version"
 
       - name: Build package
         run: node common/scripts/install-run-rush.js build --to ${{ inputs.package }} --verbose
@@ -61,11 +59,9 @@ jobs:
       - name: Publish to npm
         run: |
           node common/scripts/install-run-rush.js publish \
-            --publish \
-            --include ${{ inputs.package }} \
-            --target-branch main \
-            --set-access-level public
+            --publish
 
       - name: Push tags & commit
         run: |
-          git push --follow-tags origin main
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin --tags

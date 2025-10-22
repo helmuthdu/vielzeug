@@ -1,0 +1,25 @@
+{
+  "name": "@vielzeug/deposit",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/deposit_v1.0.0",
+      "date": "Wed, 22 Oct 2025 08:00:42 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial release"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `1.0.0`"
+          }
+        ]
+      }
+    }
+  ]
+}
