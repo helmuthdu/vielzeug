@@ -1,0 +1,17 @@
+{
+  "name": "@vielzeug/logit",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/logit_v1.0.0",
+      "date": "Wed, 22 Oct 2025 08:00:42 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial release"
+          }
+        ]
+      }
+    }
+  ]
+}
