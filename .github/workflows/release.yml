@@ -49,7 +49,7 @@ jobs:
 
       - name: Apply version bump
         run: |
-          node common/scripts/install-run-rush.js version --bump --bump-type ${{ inputs.bump }}
+          node common/scripts/install-run-rush.js version --bump
           git add .
           git commit -m "chore(release): bump version"
 
