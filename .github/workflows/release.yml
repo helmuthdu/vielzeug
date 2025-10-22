@@ -59,10 +59,7 @@ jobs:
       - name: Publish to npm
         run: |
           node common/scripts/install-run-rush.js publish \
-            --publish \
-            --include ${{ inputs.package }} \
-            --target-branch main \
-            --set-access-level public
+            --publish
 
       - name: Push tags & commit
         run: |
