@@ -63,4 +63,5 @@ jobs:
 
       - name: Push tags & commit
         run: |
-          git push --follow-tags origin main
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin --tags
