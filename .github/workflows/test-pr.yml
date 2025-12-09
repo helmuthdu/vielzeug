@@ -31,5 +31,7 @@ jobs:
       - name: Rush Build
         run: node common/scripts/install-run-rush.js rebuild --verbose
 
+      - run: pnpm install
+
       - name: Run Tests
         run: pnpm test
