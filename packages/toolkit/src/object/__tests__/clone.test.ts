@@ -17,9 +17,9 @@ describe('clone', () => {
 
     expect(result).toEqual(arr);
     expect(result).not.toBe(arr); // Ensure it's a deep copy
-    // @ts-ignore
+    // @ts-expect-error
     result[2].a = 4;
-    // @ts-ignore
+    // @ts-expect-error
     expect(arr[2].a).toBe(3); // Original array remains unchanged
   });
 

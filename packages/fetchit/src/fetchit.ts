@@ -183,9 +183,9 @@ export function createFetchService(context: ContextProps = { url: '' }) {
     put: makeMethodRequest('PUT'),
     setHeaders(payload: Record<string, string | undefined>) {
       context.headers = { ...(context.headers ?? {}), ...payload };
-      Object.keys(context.headers).forEach(
-        (key) => context.headers![key] === undefined && delete context.headers![key],
-      );
+      for (const key of Object.keys(context.headers)) {
+        context.headers![key] === undefined && delete context.headers![key];
+      }
     },
   };
 }

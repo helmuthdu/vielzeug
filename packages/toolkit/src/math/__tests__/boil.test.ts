@@ -34,14 +34,14 @@ describe('boil', () => {
 
   it('throws TypeError if the first argument is not an array', () => {
     // @ts-expect-error
-    expect(() => boil(null, (a, b) => a)).toThrow(TypeError);
+    expect(() => boil(null, (a, _b) => a)).toThrow(TypeError);
     // @ts-expect-error
-    expect(() => boil(undefined, (a, b) => a)).toThrow(TypeError);
+    expect(() => boil(undefined, (a, _b) => a)).toThrow(TypeError);
     // @ts-expect-error
-    expect(() => boil(123, (a, b) => a)).toThrow(TypeError);
+    expect(() => boil(123, (a, _b) => a)).toThrow(TypeError);
     // @ts-expect-error
-    expect(() => boil({}, (a, b) => a)).toThrow(TypeError);
+    expect(() => boil({}, (a, _b) => a)).toThrow(TypeError);
     // @ts-expect-error
-    expect(() => boil('string', (a, b) => a)).toThrow(TypeError);
+    expect(() => boil('string', (a, _b) => a)).toThrow(TypeError);
   });
 });

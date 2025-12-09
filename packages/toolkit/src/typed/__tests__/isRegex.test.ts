@@ -6,7 +6,7 @@ describe('isRegex', () => {
   });
 
   it('returns true for a RegExp object', () => {
-    expect(isRegex(new RegExp('abc'))).toBe(true);
+    expect(isRegex(/abc/)).toBe(true);
   });
 
   it('returns false for a string', () => {

@@ -18,7 +18,7 @@ describe('diff', () => {
   it('should return the difference between two objects', () => {
     const curr = { a: 1, b: 2, c: 3 };
     const prev = { b: 2, c: 3, d: 4 };
-    // @ts-ignore
+    // @ts-expect-error
     expect(diff(curr, prev)).toEqual({ a: 1, d: undefined });
   });
 
@@ -33,14 +33,14 @@ describe('diff', () => {
     const prev = { a: 1, b: '2' };
     // biome-ignore lint/suspicious/noDoubleEquals: -
     const comparator = (a: unknown, b: unknown) => a == b; // Loose equality
-    // @ts-ignore
+    // @ts-expect-error
     expect(diff(curr, prev, comparator)).toEqual({});
   });
 
   it('should handle cases where keys are added or removed', () => {
     const curr = { a: 1, b: 2 };
     const prev = { b: 2, c: 3 };
-    // @ts-ignore
+    // @ts-expect-error
     expect(diff(curr, prev)).toEqual({ a: 1, c: undefined });
   });
 });

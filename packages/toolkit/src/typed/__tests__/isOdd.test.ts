@@ -37,11 +37,11 @@ describe('isOdd', () => {
   });
 
   it('returns false for non-number types', () => {
-    expect(isOdd('1' as any)).toBe(false);
-    expect(isOdd(null as any)).toBe(false);
-    expect(isOdd(undefined as any)).toBe(false);
-    expect(isOdd({} as any)).toBe(false);
-    expect(isOdd([] as any)).toBe(false);
-    expect(isOdd(() => 1 as any)).toBe(false);
+    expect(isOdd('1')).toBe(false);
+    expect(isOdd(null)).toBe(false);
+    expect(isOdd(undefined)).toBe(false);
+    expect(isOdd({})).toBe(false);
+    expect(isOdd([])).toBe(false);
+    expect(isOdd(() => 1)).toBe(false);
   });
 });
