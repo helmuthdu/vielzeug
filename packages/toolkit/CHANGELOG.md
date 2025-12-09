@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4] - 2025-12-09
+
+### Changes
+
+- Release version 1.0.4
+
+
 ## [1.0.3] - 2025-12-09
 
 ### Changes
