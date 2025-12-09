@@ -6,10 +6,22 @@ on:
       package:
         description: Name of the Rush package to release
         required: true
+        type: choice
+        options:
+          - '@vielzeug/toolkit'
+          - '@vielzeug/deposit'
+          - '@vielzeug/fetchit'
+          - '@vielzeug/logit'
+          - '@vielzeug/permit'
       bump:
         description: Version bump (patch|minor|major)
         required: true
+        type: choice
         default: patch
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
