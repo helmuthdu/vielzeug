@@ -57,9 +57,9 @@ export function merge<T extends Obj[]>(strategy: MergeStrategy = 'deep', ...item
     return Object.assign({}, ...items) as Merge<T>;
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   return items.reduce<Merge<T>>(
-    // @ts-ignore
+    // @ts-expect-error
     (acc, obj) => {
       return deepMerge(acc, obj, strategy);
     },

@@ -39,7 +39,7 @@ describe('assert', () => {
 
   it('should use the provided ErrorType', () => {
     class CustomError extends Error {}
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => assert(false, 'Custom error', { type: CustomError })).toThrowError(CustomError);
   });
 
