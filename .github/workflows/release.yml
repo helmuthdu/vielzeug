@@ -39,29 +39,30 @@ jobs:
           git config user.name "ci-bot"
           git config user.email "ci-bot@users.noreply.github.com"
 
-      - name: Auth for npm
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Rush Install
         run: node common/scripts/install-run-rush.js install
 
-      - name: Apply version bump
+      - name: Create change file
         run: |
-          node common/scripts/install-run-rush.js version --bump
-          git add .
-          git commit -m "chore(release): bump version"
+          node common/scripts/install-run-rush.js change \
+            --bulk \
+            --bump-type ${{ inputs.bump }} \
+            --message "Release: ${{ inputs.bump }} version bump" \
+            --email "ci-bot@users.noreply.github.com"
 
       - name: Build package
         run: node common/scripts/install-run-rush.js build --to ${{ inputs.package }} --verbose
 
-      - name: Publish to npm
+      - name: Publish (apply + tag + npm)
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           node common/scripts/install-run-rush.js publish \
-            --publish
+            --apply \
+            --publish \
+            --set-access-level public \
+            --add-commit-details \
+            --target-branch ${{ github.ref_name }}
 
-      - name: Push tags & commit
-        run: |
-          git push origin HEAD:${{ github.ref_name }}
-          git push origin --tags
+      - name: Push tags
+        run: git push origin --tags

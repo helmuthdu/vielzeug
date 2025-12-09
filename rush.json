@@ -213,7 +213,7 @@
      * your PR branch, and in this situation "rush change" will also automatically invoke "git fetch"
      * to retrieve the latest activity for the remote main branch.
      */
-    // "url": "https://github.com/microsoft/rush-example",
+    "url": "https://github.com/helmuthdu/vielzeug",
     /**
      * The default branch name. This tells "rush change" which remote branch to compare against.
      * The default value is "main"
@@ -333,27 +333,32 @@
     {
       "packageName": "@vielzeug/toolkit",
       "projectFolder": "packages/toolkit",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     },
     {
       "packageName": "@vielzeug/deposit",
       "projectFolder": "packages/deposit",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     },
     {
       "packageName": "@vielzeug/fetchit",
       "projectFolder": "packages/fetchit",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     },
     {
       "packageName": "@vielzeug/logit",
       "projectFolder": "packages/logit",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     },
     {
       "packageName": "@vielzeug/permit",
       "projectFolder": "packages/permit",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ]
 }
