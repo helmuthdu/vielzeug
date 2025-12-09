@@ -140,6 +140,12 @@ jobs:
           
           echo "::notice::Tag that would be created: ${{ inputs.package }}@${{ steps.version.outputs.new-version }}"
 
+      - name: Setup npm authentication (test mode)
+        if: false
+        run: |
+          echo "::notice::In production, this would configure npm authentication"
+          echo "::notice::Command: echo '//registry.npmjs.org/:_authToken=***' > ~/.npmrc"
+
       - name: Dry run - npm publish check
         working-directory: ${{ steps.package-info.outputs.folder }}
         run: |
