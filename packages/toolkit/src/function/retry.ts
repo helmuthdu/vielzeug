@@ -32,7 +32,7 @@ export async function retry<T>(
     delay?: number;
     backoff?: number;
     signal?: AbortSignal;
-  },
+  } = {},
 ): Promise<T> {
   let currentDelay = delay;
 

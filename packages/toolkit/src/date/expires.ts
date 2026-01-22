@@ -13,15 +13,17 @@ export type Expires = 'EXPIRED' | 'SOON' | 'LATER' | 'NEVER' | 'UNKNOWN';
  *   - 'UNKNOWN' if the date is invalid.
  */
 export function expires(date: string | Date, days = 7): Expires {
-  const now = Date.now();
-  const target = typeof date === 'string' ? new Date(date) : new Date(date);
-  if (Number.isNaN(target.getTime())) return 'UNKNOWN';
+  const target = typeof date === 'string' ? new Date(date) : date;
+  const targetTime = target.getTime();
 
+  if (Number.isNaN(targetTime)) return 'UNKNOWN';
   if (target.getFullYear() >= 9999) return 'NEVER';
 
-  const expiringThresholdMs = days * 24 * 60 * 60 * 1000;
-  const diff = target.getTime() - now;
+  const now = Date.now();
+  const diff = targetTime - now;
+
   if (diff <= 0) return 'EXPIRED';
-  if (diff <= expiringThresholdMs) return 'SOON';
+  if (diff <= days * 24 * 60 * 60 * 1000) return 'SOON';
+
   return 'LATER';
 }

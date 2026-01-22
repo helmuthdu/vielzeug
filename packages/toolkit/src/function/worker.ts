@@ -34,18 +34,27 @@ export function worker<T extends (...args: any) => any, R = Awaited<ReturnType<T
 
   return (...args: Parameters<T>): Promise<R> =>
     new Promise((resolve, reject) => {
-      const worker = new Worker(workerUrl);
-      worker.onmessage = (e) => {
-        if (e.data.success) resolve(e.data.result);
-        else reject(new Error(e.data.error));
-        worker.terminate();
+      const workerInstance = new Worker(workerUrl);
+
+      const cleanup = () => {
+        workerInstance.terminate();
         URL.revokeObjectURL(workerUrl);
       };
-      worker.onerror = (err) => {
-        reject(err);
-        worker.terminate();
-        URL.revokeObjectURL(workerUrl);
+
+      workerInstance.onmessage = (e) => {
+        cleanup();
+        if (e.data.success) {
+          resolve(e.data.result);
+        } else {
+          reject(new Error(e.data.error));
+        }
       };
-      worker.postMessage({ args });
+
+      workerInstance.onerror = (err) => {
+        cleanup();
+        reject(new Error(err.message || 'Worker error occurred'));
+      };
+
+      workerInstance.postMessage({ args });
     });
 }

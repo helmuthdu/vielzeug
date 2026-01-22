@@ -39,7 +39,9 @@ type PipeReturn<T extends FnDynamic[]> = (
 export function pipe<T extends FnDynamic[]>(...fns: T) {
   assert(fns.length > 0, 'pipe requires at least one function', { args: { fns } });
 
-  const firstFn = fns.shift()!;
+  const firstFn = fns[0];
+  const restFns = fns.slice(1);
+
   return ((...args: FirstParameters<T>) =>
-    fns.reduce((prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)), firstFn(...args))) as PipeReturn<T>;
+    restFns.reduce((prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)), firstFn(...args))) as PipeReturn<T>;
 }

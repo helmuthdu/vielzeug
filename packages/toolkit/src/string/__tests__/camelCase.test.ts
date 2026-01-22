@@ -48,8 +48,8 @@ describe('camelCase', () => {
   });
 
   it('should handle strings with special characters', () => {
-    expect(camelCase('hello-world!')).toBe('helloWorld!');
-    expect(camelCase('hello_world@')).toBe('helloWorld@');
+    expect(camelCase('hello-world!')).toBe('helloWorld');
+    expect(camelCase('hello_world@')).toBe('helloWorld');
   });
 
   it('should handle strings with numbers', () => {

@@ -17,7 +17,10 @@
  * @returns The truncated string.
  */
 export function truncate(str: string, limit = 25, completeWords = false, ellipsis = '…'): string {
-  const _limit = completeWords ? str.substring(0, limit).lastIndexOf(' ') : limit;
+  if (str.length <= limit) return str;
 
-  return str.length > _limit ? `${str.substring(0, _limit).trim()}${ellipsis}` : str;
+  const _limit = completeWords ? str.substring(0, limit).lastIndexOf(' ') : limit;
+  const effectiveLimit = _limit > 0 ? _limit : limit;
+
+  return `${str.substring(0, effectiveLimit).trim()}${ellipsis}`;
 }

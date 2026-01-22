@@ -24,12 +24,16 @@ export function isMatch(object: any, source: any): boolean {
   if (object === source) return true;
   if (object == null || source == null) return false;
 
-  if (Array.isArray(object) && Array.isArray(source)) {
-    // biome-ignore lint/suspicious/noExplicitAny: -
-    return object.length === source.length && source.every((item: any, i: number) => isMatch(object[i], item));
-  }
+  const isObjArray = Array.isArray(object);
+  const isSrcArray = Array.isArray(source);
 
-  if (Array.isArray(object) !== Array.isArray(source)) return false;
+  if (isObjArray !== isSrcArray) return false;
+
+  if (isObjArray && isSrcArray) {
+    if (source.length > object.length) return false;
+    // biome-ignore lint/suspicious/noExplicitAny: -
+    return source.every((item: any, i: number) => isMatch(object[i], item));
+  }
 
   if (typeof source === 'object') {
     for (const key in source) {

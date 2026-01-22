@@ -30,22 +30,27 @@ export function similarity(str1: unknown, str2: unknown): number {
 
   const a = String(str1).toLowerCase();
   const b = String(str2).toLowerCase();
+
   if (a === b) return 1;
   if (!a.length || !b.length) return 0;
 
   const aLength = a.length;
   const bLength = b.length;
-  const matrix = Array.from({ length: aLength + 1 }, (_, i) =>
-    Array.from({ length: bLength + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
-  );
 
+  // Initialize matrix with first row and column
+  const matrix: number[][] = Array.from({ length: aLength + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= bLength; j++) {
+    matrix[0][j] = j;
+  }
+
+  // Calculate Levenshtein distance
   for (let i = 1; i <= aLength; i++) {
     for (let j = 1; j <= bLength; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost, // substitution
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
       );
     }
   }

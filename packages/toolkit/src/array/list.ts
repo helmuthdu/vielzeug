@@ -9,16 +9,22 @@ type Config<T> = {
   sortFn?: (a: T, b: T) => number;
 };
 
+const DEFAULT_LIMIT = 10;
+const DEFAULT_SEARCH_TONE = 0.5;
+const MIN_LIMIT = 1;
+
 function getPages<T>(data: T[], size: number, sortFn: Config<T>['sortFn']): T[][] {
-  return chunk<T>(sortFn ? [...data].sort(sortFn) : [...data], size) as T[][];
+  const sortedData = sortFn ? [...data].sort(sortFn) : [...data];
+  return chunk<T>(sortedData, size) as T[][];
 }
 
 function getData<T>(data: T[], currentFilterFn: Predicate<T>, query = ''): T[] {
-  return (query ? search(data, query, 0.5) : data).filter(currentFilterFn) as T[];
+  const searchResults = query ? search(data, query, DEFAULT_SEARCH_TONE) : data;
+  return searchResults.filter(currentFilterFn) as T[];
 }
 
 export function list<T>(initialData: T[], config: Config<T> = {}) {
-  let { limit = 10, filterFn = () => true, sortFn } = config;
+  let { limit = DEFAULT_LIMIT, filterFn = () => true, sortFn } = config;
   let rawData = [...initialData];
   let offset = 0;
   let query = '';
@@ -47,7 +53,7 @@ export function list<T>(initialData: T[], config: Config<T> = {}) {
       return update();
     },
     set limit(newLimit: number) {
-      limit = Math.max(1, newLimit);
+      limit = Math.max(MIN_LIMIT, newLimit);
       update();
     },
     get meta() {

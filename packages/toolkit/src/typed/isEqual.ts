@@ -36,19 +36,22 @@ export function isEqual(a: unknown, b: unknown): boolean {
     return true;
   }
 
+  // Ensure both are arrays or neither is
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+
   // Date comparison
   if (a instanceof Date && b instanceof Date) {
     return a.getTime() === b.getTime();
   }
 
   // Object comparison
-  const keysA = new Set([...Object.keys(a)]);
-  const keysB = new Set([...Object.keys(b)]);
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
 
-  if (keysA.size !== keysB.size) return false;
+  if (keysA.length !== keysB.length) return false;
 
   for (const key of keysA) {
-    if (!keysB.has(key) || !isEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
+    if (!Object.hasOwn(b, key) || !isEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
       return false;
   }
 
