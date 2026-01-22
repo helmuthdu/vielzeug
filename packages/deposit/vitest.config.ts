@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import path, { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -10,6 +10,6 @@ export default defineConfig({
     name: 'deposit',
     environment: 'jsdom',
     globals: true,
-    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    setupFiles: [resolve(__dirname, './vitest.setup.ts'), 'fake-indexeddb/auto'],
   },
 });
