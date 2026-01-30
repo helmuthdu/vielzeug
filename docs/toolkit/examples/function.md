@@ -7,8 +7,9 @@ composing, currying, debouncing, memoizing, and more.
 
 | Method    | Description                          |
 | --------- | ------------------------------------ |
-| assert    | Assert a condition, throw if false   |
-| attempt   | Try/catch wrapper for function calls |
+| assert       | Assert a condition, throw if false          |
+| assertParams | Assert required object keys are non-empty   |
+| attempt      | Try/catch wrapper for function calls        |
 | compare   | Compare two values                   |
 | compareBy | Compare by a selector function       |
 | compose   | Compose multiple functions           |
@@ -29,6 +30,7 @@ composing, currying, debouncing, memoizing, and more.
 ## 🔗 Granular Examples
 
 - [assert](./function/assert.md)
+- [assertParams](./function/assertParams.md)
 - [attempt](./function/attempt.md)
 - [compare](./function/compare.md)
 - [compareBy](./function/compareBy.md)
