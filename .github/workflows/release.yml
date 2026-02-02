@@ -133,15 +133,9 @@ jobs:
           git push origin HEAD:${{ github.ref_name }}
           git push origin --tags
 
-      - name: Setup npm authentication
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}
         run: |
-          # Use pnpm to publish as it handles workspace:* dependencies
-          # We use --no-git-checks because we already handled versioning and tagging
           pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
