@@ -1,33 +1,78 @@
 # compact
 
-Removes falsy values from an array (false, 0, '', null, undefined, NaN).
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-618_B-success" alt="Size">
+</div>
+
+The `compact` utility creates a new array with all falsy values removed. This is particularly useful for cleaning up sparse arrays or removing optional values that weren't provided.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Type-safe**: Properly filters out `null`, `undefined`, and other falsy types from the resulting array type.
+- **Immutable**: Returns a new array, leaving the original unchanged.
 
 ## API
 
 ```ts
-compact<T>(array: T[]): T[]
+interface CompactFunction {
+  <T>(array: (T | null | undefined | false | "" | 0 | typeof NaN)[]): T[]
+}
 ```
+
+### Parameters
 
 - `array`: The array to compact.
 
 ### Returns
 
-- A new array with all falsy values removed (`false`, `0`, `''`, `null`, `undefined`, `NaN`).
+- A new array containing only the truthy elements from the original array.
 
-## Example
+## Examples
+
+### Cleaning Mixed Arrays
 
 ```ts
 import { compact } from '@vielzeug/toolkit';
 
-const arr = [0, 1, false, 2, '', 3, null, undefined, NaN];
-const compacted = compact(arr); // [1, 2, 3]
+const mixed = [0, 1, false, 2, '', 3, null, undefined, NaN, 'hello'];
+const clean = compact(mixed); 
+// [1, 2, 3, 'hello']
 ```
 
-## Notes
+### Sanitizing Data Structures
 
-- Throws `TypeError` if the input is not an array.
-- Useful for cleaning up data before processing or display.
+```ts
+import { compact, map } from '@vielzeug/toolkit';
 
-## See also
+const users = [
+  { id: 1, name: 'Alice' },
+  null,
+  { id: 2, name: 'Bob' },
+  undefined
+];
 
-- [filter](./filter.md)
+const validUsers = compact(users);
+// [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]
+```
+
+## Implementation Notes
+
+- The following values are considered falsy and will be removed: `false`, `null`, `undefined`, `0`, `""` (empty string), and `NaN`.
+- Throws `TypeError` if the first argument is not an array.
+- For deep cleaning of nested arrays, you may need to combine this with `map` or use a recursive approach.
+
+## See Also
+
+- [filter](./filter.md): Filter elements based on a custom predicate.
+- [uniq](./uniq.md): Remove duplicate values from an array.
+- [flatten](./flatten.md): Flatten nested arrays into a single level.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

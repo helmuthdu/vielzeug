@@ -1,36 +1,96 @@
 # memo
 
-Creates a function that memoizes the result of the provided function. Supports cache expiration (TTL) and limited cache size (LRU eviction).
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-512_B-success" alt="Size">
+</div>
+
+The `memo` utility creates a memoized version of a function that caches its results based on the provided arguments. It is highly configurable, featuring support for Time-To-Live (TTL) expiration and a maximum cache size with LRU (Least Recently Used) eviction.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Smart Caching**: Efficiently stores and retrieves results for pure functions.
+- **Cache Management**: Prevent memory leaks with `maxSize` and `ttl` options.
+- **LRU Eviction**: Automatically removes the oldest entries when the cache limit is reached.
+- **Type-safe**: Properly preserves the original function's signature and return type.
 
 ## API
 
 ```ts
-memo<T extends Fn>(fn: T, options?: { ttl?: number; maxSize?: number }): (...args: Parameters<T>) => ReturnType<T>
+interface MemoOptions {
+  ttl?: number;
+  maxSize?: number;
+}
+
+interface MemoFunction {
+  <T extends (...args: any[]) => any>(fn: T, options?: MemoOptions): T
+}
 ```
 
-- `fn`: Function to memoize.
-- `options.ttl`: Time-to-live for cache entries in milliseconds (optional).
-- `options.maxSize`: Maximum number of items in cache (optional, LRU eviction).
-- Returns: Memoized function.
+### Parameters
 
-## Example
+- `fn`: The function to memoize.
+- `options`: Optional configuration:
+  - `ttl`: Time in milliseconds before a cached result expires.
+  - `maxSize`: Maximum number of entries to keep in the cache.
+
+### Returns
+
+- A new function that caches results.
+
+## Examples
+
+### Basic Memoization
 
 ```ts
 import { memo } from '@vielzeug/toolkit';
 
-const add = (x, y) => x + y;
-const memoizedAdd = memo(add, { ttl: 5000, maxSize: 10 });
-memoizedAdd(1, 2); // 3 (caches the result)
-memoizedAdd(1, 2); // 3 (from cache)
+const heavyCalculation = (n: number) => {
+  console.log('Calculating...');
+  return n * n;
+};
+
+const cachedCalc = memo(heavyCalculation);
+
+cachedCalc(5); // Logs 'Calculating...', returns 25
+cachedCalc(5); // Returns 25 immediately (from cache)
 ```
 
-## Notes
+### With Expiration (TTL)
 
-- Cache entries expire after `ttl` ms if provided.
-- When `maxSize` is reached, least recently used entries are evicted.
-- Useful for expensive or pure functions.
+```ts
+import { memo } from '@vielzeug/toolkit';
 
-## Related
+// Cache results for only 1 minute
+const getStats = memo(fetchStats, { ttl: 60000 });
+```
 
-- [once](./once.md)
-- [throttle](./throttle.md)
+### Limiting Memory Usage
+
+```ts
+import { memo } from '@vielzeug/toolkit';
+
+// Keep only the last 100 results
+const formatData = memo(formatter, { maxSize: 100 });
+```
+
+## Implementation Notes
+
+- Performance-optimized using a standard `Map` for the cache.
+- The cache key is generated based on the string representation of all arguments.
+- Throws `TypeError` if `fn` is not a function.
+
+## See Also
+
+- [once](./once.md): Cache a result that never changes.
+- [retry](./retry.md): Automatically re-run failed operations.
+- [throttle](./throttle.md): Rate-limit execution based on time.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

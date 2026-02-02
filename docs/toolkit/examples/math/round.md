@@ -1,5 +1,10 @@
 # round
 
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-820_B-success" alt="Size">
+</div>
+
 Rounds a number to a specified number of decimal places.
 
 ## API
@@ -31,3 +36,12 @@ round(3.14159, 4); // 3.1416
 
 - [clamp](./clamp.md)
 - [sum](./sum.md)
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
+

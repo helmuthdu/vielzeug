@@ -1,32 +1,76 @@
 # similarity
 
-Calculates the similarity between two strings as a value between 0 and 1.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-248_B-success" alt="Size">
+</div>
+
+The `similarity` utility calculates a score between `0` and `1` representing how similar two strings are. A score of `1` means the strings are identical, while `0` means they have nothing in common.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Normalized Output**: Returns a float between `0` and `1`.
+- **Case-Insensitive (Optional)**: Can be easily combined with `.toLowerCase()` for case-insensitive matching.
 
 ## API
 
 ```ts
-similarity(a: string, b: string): number
+interface SimilarityFunction {
+  (a: string, b: string): number
+}
 ```
 
-- `a`: First string.
-- `b`: Second string.
-- Returns: Similarity score (0 = no similarity, 1 = identical).
+### Parameters
 
-## Example
+- `a`: The first string to compare.
+- `b`: The second string to compare.
+
+### Returns
+
+- A similarity score between `0` and `1`.
+
+## Examples
+
+### Basic Comparison
 
 ```ts
 import { similarity } from '@vielzeug/toolkit';
 
-similarity('kitten', 'sitting'); // e.g. 0.57
-similarity('foo', 'foo'); // 1
+similarity('apple', 'apply'); // 0.8
+similarity('kitten', 'sitting'); // ~0.57
+similarity('hello', 'world'); // 0.2
+similarity('same', 'same'); // 1
 ```
 
-## Notes
+### Case-Insensitive Matching
 
-- Uses Levenshtein distance for similarity calculation.
-- Useful for fuzzy matching and search.
+```ts
+import { similarity } from '@vielzeug/toolkit';
 
-## Related
+const s1 = 'Vielzeug';
+const s2 = 'vielzeug';
 
-- [snakeCase](./snakeCase.md)
-- [truncate](./truncate.md)
+similarity(s1, s2); // Lower than 1 due to case difference
+similarity(s1.toLowerCase(), s2.toLowerCase()); // 1
+```
+
+## Implementation Notes
+
+- Internally uses the Levenshtein distance algorithm to determine the number of single-character edits required to change one string into another.
+- The score is normalized by dividing the distance by the length of the longer string and subtracting from 1.
+- Throws `TypeError` if either argument is not a string.
+
+## See Also
+
+- [search](../array/search.md): Use similarity to perform fuzzy searches in arrays.
+- [seek](../object/seek.md): Use similarity to find values in deep objects.
+- [truncate](./truncate.md): Shorten long strings.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

@@ -1,59 +1,97 @@
 # assertParams
 
-Asserts that specified keys are present in an object and are not empty strings. Throws an error or logs a warning if any required parameter is missing, with support for custom error types, context names, and bypass mode.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-384_B-success" alt="Size">
+</div>
+
+The `assertParams` utility ensures that specific keys are present and non-empty in a given object. It is designed for validating function arguments or API payloads, providing clear error messages and TypeScript type narrowing.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Bulk Validation**: Check multiple required keys in a single call.
+- **Smart Emptiness Check**: Considers `null`, `undefined`, and empty strings (`''`) as missing values.
+- **Type Narrowing**: Uses TypeScript's `asserts` signature to guarantee property existence in subsequent code.
+- **Contextual Errors**: Include the function or operation name in error messages for better traceability.
 
 ## API
 
 ```ts
-assertParams<T extends object, K extends keyof T>(
-  params: T,
-  keys: K[],
-  name?: string,
-  options?: {
-    type?: ErrorConstructor;
-    bypass?: boolean;
-  }
-): asserts params is T & Required<Pick<T, K>>
+interface AssertParamsOptions {
+  type?: ErrorConstructor;
+  bypass?: boolean;
+}
+
+interface AssertParamsFunction {
+  <T extends object, K extends keyof T>(
+    params: T,
+    keys: K[],
+    name?: string,
+    options?: AssertParamsOptions
+  ): asserts params is T & Required<Pick<T, K>>
+}
 ```
 
-- `params`: The object containing the parameters to check.
-- `keys`: An array of keys that must be present and non-empty in the `params` object.
-- `name`: Optional name for the context (e.g., function name), included in the error message.
-- `options.type`: Error class to throw (default: `Error`).
-- `options.bypass`: If true, logs a warning instead of throwing.
-- Throws: Error (or custom error type) if any required keys are missing or empty strings and `bypass` is not set.
+### Parameters
 
-## Example
+- `params`: The object to validate.
+- `keys`: An array of property names that must be present and non-empty.
+- `name`: Optional. A name for the context (e.g., 'UpdateUser') to include in error messages.
+- `options`: Optional configuration (see [`assert`](./assert.md)).
+
+### Returns
+
+- `void` (Nothing) if all parameters are valid.
+
+## Examples
+
+### Validating Function Inputs
 
 ```ts
 import { assertParams } from '@vielzeug/toolkit';
 
-const params = { id: '123', name: '', age: 25 };
+interface User {
+  id?: string;
+  name?: string;
+}
 
-// Passes, does nothing
-assertParams(params, ['id', 'age']);
-
-// Throws Error: Missing required parameter: "name"
-assertParams(params, ['name']);
-
-// Throws Error: Missing required parameter: "name" in "UserUpdate"
-assertParams(params, ['name'], 'UserUpdate');
-
-// Throws TypeError: Missing required parameters: "id", "name"
-assertParams({ id: '', name: '' }, ['id', 'name'], '', { type: TypeError });
-
-// Logs warning instead of throwing
-assertParams({}, ['id'], 'SoftCheck', { bypass: true });
+function saveUser(user: User) {
+  // Narrow type to ensure id and name exist
+  assertParams(user, ['id', 'name'], 'saveUser');
+  
+  // No need for optional chaining here
+  console.log(user.id.toUpperCase());
+}
 ```
 
-## Notes
+### With Custom Error Types
 
-- A parameter is considered missing if it is `undefined`, `null`, or an empty string (`''`).
-- Uses `assert` internally to handle error throwing or logging.
-- Includes TypeScript `asserts` signature for type narrowing.
+```ts
+import { assertParams } from '@vielzeug/toolkit';
 
-## Related
+const config = { host: 'localhost' };
 
-- [assert](./assert.md)
-- [isDefined](../typed/isDefined.md)
-- [isEmpty](../typed/isEmpty.md)
+// Throws TypeError if 'port' is missing
+assertParams(config, ['port'], 'ConfigLoader', { type: TypeError });
+```
+
+## Implementation Notes
+
+- Internally leverages the `assert` utility.
+- Generates descriptive error messages like: `Missing required parameter: "port" in "ConfigLoader"`.
+- If multiple parameters are missing, it lists all of them in the error.
+
+## See Also
+
+- [assert](./assert.md): The underlying generic assertion helper.
+- [isEmpty](../typed/isEmpty.md): Check if a value is considered empty.
+- [isDefined](../typed/isDefined.md): Check if a value is neither null nor undefined.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

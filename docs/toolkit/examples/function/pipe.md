@@ -1,41 +1,88 @@
 # pipe
 
-Pipes multiple functions into a single function, applying them from left to right. Supports both sync and async functions.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
+</div>
+
+The `pipe` utility performs functional composition from left to right. It takes multiple functions and returns a single function that passes its result from one call to the next, creating a processing pipeline.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Async Support**: Automatically handles Promises. If any function in the pipe returns a Promise, the final result will be a Promise.
+- **Type-safe**: Properly infers input and output types through the entire pipeline.
+- **Left-to-Right**: Executes functions in the order they are provided.
 
 ## API
 
 ```ts
-pipe<T extends FnDynamic[]>(...fns: T): PipeReturn<T>
+interface PipeFunction {
+  <T extends any[], R>(...fns: [
+    (...args: T) => any,
+    ...Array<(arg: any) => any>,
+    (arg: any) => R
+  ]): (...args: T) => R | Promise<R>
+}
 ```
 
-- `...fns`: Functions to pipe, applied from left to right.
-- Returns: A function that applies all piped functions in order. If any function is async, the result is a Promise.
+### Parameters
 
-## Example
+- `...fns`: A sequence of functions to be composed.
+
+### Returns
+
+- A new function that represents the pipeline.
+
+## Examples
+
+### Synchronous Pipeline
 
 ```ts
 import { pipe } from '@vielzeug/toolkit';
 
-const add = (x) => x + 2;
-const multiply = (x) => x * 3;
-const subtract = (x) => x - 4;
-const pipedFn = pipe(subtract, multiply, add);
-pipedFn(5); // ((5-4) * 3) + 2 = 5
+const trim = (s: string) => s.trim();
+const capitalize = (s: string) => s.toUpperCase();
+const exclaim = (s: string) => `${s}!`;
 
-// Async example
-const square = async (x) => x * x;
-const addAsync = async (x) => x + 2;
-const pipedAsync = pipe(square, addAsync);
-await pipedAsync(4); // (4 * 4) + 2 = 18
+const process = pipe(trim, capitalize, exclaim);
+
+process('  hello  '); // 'HELLO!'
 ```
 
-## Notes
+### Asynchronous Pipeline
 
-- Functions are applied from left to right.
-- Supports both synchronous and asynchronous functions.
-- Returns a Promise if any function is async.
+```ts
+import { pipe, delay } from '@vielzeug/toolkit';
 
-## Related
+const fetchUser = async (id: number) => {
+  await delay(10);
+  return { id, name: 'Alice' };
+};
 
-- [compose](./compose.md)
-- [fp](./fp.md)
+const getDisplayName = (user: { name: string }) => user.name;
+
+const getUserName = pipe(fetchUser, getDisplayName);
+
+await getUserName(1); // 'Alice'
+```
+
+## Implementation Notes
+
+- If only one function is provided, it is returned as-is.
+- Uses `reduce` internally to chain function calls.
+- Throws `TypeError` if any provided argument is not a function.
+
+## See Also
+
+- [compose](./compose.md): Functional composition from right to left.
+- [fp](./fp.md): Wrap functions for better functional programming support.
+- [map](../array/map.md): Use `pipe` within a map for complex transformations.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

@@ -1,30 +1,81 @@
 # keys
 
-Returns an array of a given object's own enumerable property names.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-620_B-success" alt="Size">
+</div>
+
+The `keys` utility returns an array of an object's own enumerable property names. It is a type-safe wrapper around the native `Object.keys()`, providing better type inference for the resulting array.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Type-safe**: The resulting array is typed as `(keyof T)[]` rather than just `string[]`.
+- **Enumerable Only**: Consistent with native behavior, only includes own enumerable properties.
 
 ## API
 
 ```ts
-keys<T extends object>(obj: T): (keyof T)[]
+interface KeysFunction {
+  <T extends Record<string, any>>(obj: T): (keyof T)[]
+}
 ```
 
-- `obj`: The object to get keys from.
-- Returns: Array of property names (keys).
+### Parameters
 
-## Example
+- `obj`: The object whose keys should be extracted.
+
+### Returns
+
+- An array containing the object's keys.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { keys } from '@vielzeug/toolkit';
 
-keys({ a: 1, b: 2 }); // ['a', 'b']
+const user = {
+  id: 1,
+  name: 'Alice',
+  role: 'admin'
+};
+
+const userKeys = keys(user); 
+// ['id', 'name', 'role']
 ```
 
-## Notes
+### Type Inference
 
-- Similar to `Object.keys` but with better type inference.
-- Only includes own enumerable properties.
+```ts
+import { keys } from '@vielzeug/toolkit';
 
-## Related
+interface Config {
+  port: number;
+  host: string;
+}
 
-- [entries](./entries.md)
-- [values](./values.md)
+const config: Config = { port: 8080, host: 'localhost' };
+const cKeys = keys(config); // Typed as ('port' | 'host')[]
+```
+
+## Implementation Notes
+
+- Internally calls `Object.keys(obj)`.
+- Does not include keys from the prototype chain.
+- If the argument is not an object (e.g., `null`), it may throw depending on the environment (similar to native `Object.keys`).
+
+## See Also
+
+- [values](./values.md): Extract the values from an object.
+- [entries](./entries.md): Extract both keys and values as pairs.
+- [path](./path.md): Retrieve a value at a specific path.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

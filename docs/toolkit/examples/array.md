@@ -1,115 +1,112 @@
-# 🧩 Array Utilities Examples
+# 🧩 Array Utilities
 
-Array utilities help you transform, query, and manipulate arrays in a type-safe, ergonomic way. Use these helpers to
-write cleaner, more expressive code for common array operations like mapping, filtering, grouping, and more.
+Array utilities provide a powerful set of tools to transform, query, and manipulate arrays in a type-safe, ergonomic way. Use these helpers to write cleaner, more expressive code for common array operations like mapping, filtering, grouping, and more.
 
 ## 📚 Quick Reference
 
-| Method     | Description                            |
-| ---------- | -------------------------------------- |
-| aggregate  | Aggregate values in an array           |
-| alternate  | Alternate values in an array           |
-| chunk      | Split array into chunks                |
-| compact    | Remove falsy values                    |
-| contains   | Check if array contains a value        |
-| every      | Test if all elements pass a predicate  |
-| filter     | Filter elements by predicate           |
-| find       | Find first element matching predicate  |
-| findIndex  | Find index of first matching element   |
-| findLast   | Find last element matching predicate   |
-| flatten    | Flatten nested arrays                  |
-| group      | Group elements by key or function      |
-| list       | Convert array-like to array            |
-| map        | Map each element to a new value        |
-| pick       | Pick elements by indices               |
-| reduce     | Reduce array to a single value         |
-| search     | Search for a value or pattern          |
-| select     | Select elements by predicate           |
-| shift      | Remove first element                   |
-| some       | Test if any element passes a predicate |
-| sort       | Sort array                             |
-| sortBy     | Sort array by key or function          |
-| substitute | Substitute values in array             |
-| uniq       | Remove duplicate values                |
+| Method | Category | Description |
+| :--- | :--- | :--- |
+| [`map`](./array/map.md) | Transformation | Map each element to a new value (supports async) |
+| [`filter`](./array/filter.md) | Query | Filter elements by predicate (supports async) |
+| [`reduce`](./array/reduce.md) | Transformation | Reduce array to a single value |
+| [`group`](./array/group.md) | Aggregation | Group elements by a key or function |
+| [`uniq`](./array/uniq.md) | Set | Remove duplicate values |
+| [`chunk`](./array/chunk.md) | Transformation | Split array into chunks of a specific size |
+| [`flatten`](./array/flatten.md) | Transformation | Flatten nested arrays |
+| [`compact`](./array/compact.md) | Transformation | Remove `null` or `undefined` values |
+| [`sort`](./array/sort.md) | Sorting | Sort array with a custom comparator |
+| [`sortBy`](./array/sortBy.md) | Sorting | Sort array by a property or function |
+| [`find`](./array/find.md) | Query | Find the first element matching a predicate |
+| [`some`](./array/some.md) | Query | Check if any element matches a predicate |
+| [`every`](./array/every.md) | Query | Check if all elements match a predicate |
+| [`aggregate`](./array/aggregate.md) | Aggregation | Perform complex aggregations on an array |
 
-## 🔗 Examples
+## 💡 Practical Examples
 
-### Transformation
+### Data Transformation
 
-- [map](./array/map.md)
-- [reduce](./array/reduce.md)
-- [flatten](./array/flatten.md)
+```ts
+import { map, chunk, compact, uniq } from '@vielzeug/toolkit';
+
+const rawData = [1, 2, null, 2, 3, undefined, 4];
+
+// 1. Clean data (remove nulls/undefined)
+const clean = compact(rawData); // [1, 2, 2, 3, 4]
+
+// 2. Get unique values
+const unique = uniq(clean); // [1, 2, 3, 4]
+
+// 3. Transform values
+const doubled = map(unique, x => x * 2); // [2, 4, 6, 8]
+
+// 4. Batch for processing
+const batches = chunk(doubled, 2); // [[2, 4], [6, 8]]
+```
+
+### Advanced Grouping & Sorting
+
+```ts
+import { group, sortBy } from '@vielzeug/toolkit';
+
+const users = [
+  { name: 'Alice', role: 'admin', age: 30 },
+  { name: 'Bob', role: 'user', age: 25 },
+  { name: 'Charlie', role: 'user', age: 35 },
+];
+
+// Group by role
+const byRole = group(users, u => u.role);
+/*
+{
+  admin: [{ name: 'Alice', ... }],
+  user: [{ name: 'Bob', ... }, { name: 'Charlie', ... }]
+}
+*/
+
+// Sort by age (descending)
+const oldestFirst = sortBy(users, u => u.age, 'desc');
+```
+
+## 🔗 All Array Utilities
+
+<div class="grid-links">
+
+- [aggregate](./array/aggregate.md)
+- [alternate](./array/alternate.md)
 - [chunk](./array/chunk.md)
 - [compact](./array/compact.md)
-- [substitute](./array/substitute.md)
-- [pick](./array/pick.md)
-- [list](./array/list.md)
-
-### Query & Search
-
+- [contains](./array/contains.md)
+- [every](./array/every.md)
+- [filter](./array/filter.md)
 - [find](./array/find.md)
 - [findIndex](./array/findIndex.md)
 - [findLast](./array/findLast.md)
-- [filter](./array/filter.md)
-- [search](./array/search.md)
-- [contains](./array/contains.md)
-- [every](./array/every.md)
-- [some](./array/some.md)
-- [select](./array/select.md)
-
-### Aggregation & Grouping
-
+- [flatten](./array/flatten.md)
 - [group](./array/group.md)
-- [aggregate](./array/aggregate.md)
-
-### Set Operations
-
-- [uniq](./array/uniq.md)
-
-### Sorting
-
+- [list](./array/list.md)
+- [map](./array/map.md)
+- [pick](./array/pick.md)
+- [reduce](./array/reduce.md)
+- [search](./array/search.md)
+- [select](./array/select.md)
+- [shift](./array/shift.md)
+- [some](./array/some.md)
 - [sort](./array/sort.md)
 - [sortBy](./array/sortBy.md)
+- [substitute](./array/substitute.md)
+- [uniq](./array/uniq.md)
 
-### Other
+</div>
 
-- [alternate](./array/alternate.md)
-- [shift](./array/shift.md)
-
-## 💡 Example Usage
-
-```ts
-import { map, filter, group, reduce, chunk, flatten, uniq } from '@vielzeug/toolkit';
-
-const arr = [1, 2, 2, 3, 4];
-
-// Double each value
-const doubled = map(arr, (x) => x * 2); // [2, 4, 4, 6, 8]
-
-// Filter even numbers
-const evens = filter(arr, (x) => x % 2 === 0); // [2, 2, 4]
-
-// Group by even/odd
-const grouped = group(arr, (x) => (x % 2 === 0 ? 'even' : 'odd')); // { even: [2,2,4], odd: [1,3] }
-
-// Sum all values
-const sum = reduce(arr, (acc, x) => acc + x, 0); // 12
-
-// Split into chunks of 2
-const chunks = chunk(arr, 2); // [[1,2],[2,3],[4]]
-
-// Flatten nested arrays
-const flat = flatten([
-  [1, 2],
-  [3, 4],
-]); // [1,2,3,4]
-
-// Remove duplicates
-const unique = uniq(arr); // [1,2,3,4]
-```
-
-## 🔎 See Also
-
-- [Object Utilities](./object.md)
-- [String Utilities](./string.md)
-- [Typed Utilities](./typed.md)
+<style>
+.grid-links ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  list-style: none !important;
+  padding: 0 !important;
+}
+.grid-links li {
+  margin: 0 !important;
+}
+</style>

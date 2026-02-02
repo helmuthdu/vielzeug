@@ -1,29 +1,68 @@
 # uuid
 
-Generates a random RFC4122 v4 UUID string.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-361_B-success" alt="Size">
+</div>
+
+The `uuid` utility generates a cryptographically strong Universally Unique Identifier (UUID) version 4, as specified in RFC 4122.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Secure**: Uses `crypto.getRandomValues()` in the browser and `crypto.randomUUID()` or `crypto.randomBytes()` in Node.js for high-quality randomness.
+- **Collission-Resistant**: Provides 122 bits of randomness, making collisions practically impossible for most applications.
 
 ## API
 
 ```ts
-uuid(): string
+interface UuidFunction {
+  (): string;
+}
 ```
 
-- Returns: A random UUID string.
+### Returns
 
-## Example
+- A string representing a randomly generated UUID v4 (e.g., `'f47ac10b-58cc-4372-a567-0e02b2c3d479'`).
+
+## Examples
+
+### Generating a Unique ID
 
 ```ts
 import { uuid } from '@vielzeug/toolkit';
 
-uuid(); // e.g. 'b8a1c2e0-3c4d-4e2a-9f1a-2b3c4d5e6f7a'
+const userId = uuid();
+const orderId = uuid();
+
+console.log('User ID:', userId);
+console.log('Order ID:', orderId);
 ```
 
-## Notes
+### Usage in Objects
 
-- Uses cryptographically secure random values if available.
-- Useful for unique IDs in databases, DOM, etc.
+```ts
+import { uuid } from '@vielzeug/toolkit';
 
-## Related
+const items = [
+  { id: uuid(), name: 'Item 1' },
+  { id: uuid(), name: 'Item 2' },
+];
+```
 
-- [random](./random.md)
-- [shuffle](./shuffle.md)
+## Implementation Notes
+
+- The function ensures that the version bit is set to `4` and the variant bit is set to `10xx` (as per the RFC 4122 spec).
+- In environments where a cryptographically secure RNG is not available (though rare in modern environments), it may fall back to `Math.random()`, but this is not recommended for security-sensitive applications.
+
+## See Also
+
+- [random](./random.md): Generate random numbers in a range.
+- [draw](./draw.md): Pick a random element from an array.
+- [shuffle](./shuffle.md): Randomly reorder an array.
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

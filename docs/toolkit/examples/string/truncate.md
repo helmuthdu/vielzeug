@@ -1,33 +1,80 @@
 # truncate
 
-Truncates a string to a specified length, optionally adding an ellipsis or custom ending.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1004_B-success" alt="Size">
+</div>
+
+The `truncate` utility shortens a string to a specified length and appends a customizable suffix (like an ellipsis) if the string exceeds that length.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Configurable**: Choose the maximum length and the suffix to append.
+- **Smart Truncation**: Only applies if the string is actually longer than the target length.
 
 ## API
 
 ```ts
-truncate(input: string, length: number, ending?: string): string
+interface TruncateFunction {
+  (input: string, length: number, suffix?: string): string;
+}
 ```
 
-- `input`: The string to truncate.
-- `length`: Maximum length of the result string.
-- `ending`: String to append if truncated (default: '...').
-- Returns: Truncated string.
+### Parameters
 
-## Example
+- `input`: The string to be truncated.
+- `length`: The maximum allowed length of the resulting string, *including* the suffix.
+- `suffix`: The string to append to the end of the truncated result (default: `'...'`).
+
+### Returns
+
+- The truncated string if it was longer than `length`, otherwise the original string.
+
+## Examples
+
+### Basic Truncation
 
 ```ts
 import { truncate } from '@vielzeug/toolkit';
 
-truncate('Hello, world!', 5); // 'Hello...'
-truncate('Hello, world!', 8, '--'); // 'Hello, w--'
+const text = 'Vielzeug is a Swiss-army knife for TypeScript developers.';
+
+truncate(text, 20); // 'Vielzeug is a Swi...'
 ```
 
-## Notes
+### Custom Suffix
 
-- Does not truncate if input is shorter than or equal to length.
-- Useful for UI display and summaries.
+```ts
+import { truncate } from '@vielzeug/toolkit';
 
-## Related
+truncate('Read more about this topic', 15, ' [...]');
+// 'Read more [...]'
+```
 
-- [similarity](./similarity.md)
-- [snakeCase](./snakeCase.md)
+### Short Strings
+
+```ts
+import { truncate } from '@vielzeug/toolkit';
+
+// String is shorter than length, returned as-is
+truncate('Hello', 10); // 'Hello'
+```
+
+## Implementation Notes
+
+- If the `length` provided is less than or equal to the length of the `suffix`, the behavior may vary depending on the implementation (usually returns just the suffix or a portion of it).
+- Does not attempt to truncate at word boundaries; it cuts exactly at the specified character count.
+
+## See Also
+
+- [similarity](./similarity.md): Compare two strings for similarity.
+- [camelCase](./camelCase.md): Convert strings to camelCase.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

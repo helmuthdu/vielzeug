@@ -1,41 +1,95 @@
 # timeDiff
 
-Calculates the remaining time until a target date, returning the value and its unit (e.g., days, months, years).
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
+</div>
+
+The `timeDiff` utility calculates the duration between the current time and a target date, returning the result in the most appropriate human-readable unit (e.g., "5 days" or "2 months"). It is ideal for countdowns, relative time displays, and expiration notices.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Smart Scaling**: Automatically selects the largest possible unit for the difference.
+- **Configurable Units**: Restrict the output to specific units (e.g., only "DAY" or "HOUR").
+- **Bi-directional**: Supports both future and past date comparisons.
 
 ## API
 
 ```ts
-timeDiff(
-  date: Date | string,
-  direction?: 'FUTURE' | 'PAST',
-  allowedUnits?: ('YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND')[]
-): {
+type TimeUnit = 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND';
+
+interface TimeDiffResult {
   value: number;
-  unit: 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'INVALID_DATE';
+  unit: TimeUnit | 'INVALID_DATE';
+}
+
+interface TimeDiffFunction {
+  (
+    date: Date | string | number, 
+    direction?: 'FUTURE' | 'PAST', 
+    allowedUnits?: TimeUnit[]
+  ): TimeDiffResult
 }
 ```
 
-- `date`: The target date (Date object or ISO string).
-- `direction`: 'FUTURE' or 'PAST' (default: 'FUTURE').
-- `allowedUnits`: Optional array of units to filter the result.
+### Parameters
+
+- `date`: The target date to compare with the current time.
+- `direction`: Optional. Specify if the target is in the `'FUTURE'` or `'PAST'` (defaults to `'FUTURE'`).
+- `allowedUnits`: Optional. An array of units to consider for the output (defaults to all units).
 
 ### Returns
 
-- An object containing the remaining time and its unit.
+- An object containing the calculated numeric `value` and the chosen `unit`.
+- Returns `{ value: 0, unit: 'INVALID_DATE' }` if the input date is malformed.
 
-## Example
+## Examples
+
+### Future Countdown
 
 ```ts
 import { timeDiff } from '@vielzeug/toolkit';
 
-timeDiff(new Date(Date.now() + 1000 * 60 * 60 * 24 * 5)); // { value: 5, unit: 'DAY' }
-timeDiff(new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), 'PAST'); // { value: 3, unit: 'DAY' }
-timeDiff(new Date(Date.now() + 1000 * 60 * 60 * 24 * 31)); // { value: 1, unit: 'MONTH' }
-timeDiff(new Date(Date.now() + 1000 * 60 * 60 * 24 * 365)); // { value: 1, unit: 'YEAR' }
-timeDiff('invalid-date'); // { value: 0, unit: 'INVALID_DATE' }
+// Target is 5 days from now
+timeDiff(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)); 
+// { value: 5, unit: 'DAY' }
 ```
 
-## Notes
+### Past Comparison
 
-- Returns `{ value: 0, unit: 'INVALID_DATE' }` for invalid dates.
-- Useful for countdowns, reminders, or time-based logic.
+```ts
+import { timeDiff } from '@vielzeug/toolkit';
+
+// Event happened 3 hours ago
+timeDiff(new Date(Date.now() - 3 * 60 * 60 * 1000), 'PAST');
+// { value: 3, unit: 'HOUR' }
+```
+
+### Restricted Units
+
+```ts
+import { timeDiff } from '@vielzeug/toolkit';
+
+// Show difference only in hours, even if it's days away
+timeDiff(futureDate, 'FUTURE', ['HOUR']);
+```
+
+## Implementation Notes
+
+- Performance-optimized for real-time updates.
+- Uses `Math.floor` for all calculated values.
+- Throws nothing; handles invalid dates gracefully.
+
+## See Also
+
+- [expires](./expires.md): Categorize a date's expiration status.
+- [interval](./interval.md): Generate a sequence of dates.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

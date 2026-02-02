@@ -1,30 +1,80 @@
 # sleep
 
-Creates a Promise that resolves after a specified amount of time.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
+</div>
+
+The `sleep` utility returns a Promise that resolves after a specified amount of time. It is a modern replacement for `setTimeout` when working with `async/await`, allowing you to pause execution in a clean, readable way.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Promise-based**: Native integration with `async/await`.
+- **Lightweight**: Minimal footprint, perfect for simple delays.
 
 ## API
 
 ```ts
-sleep(timeout: number): Promise<void>
+interface SleepFunction {
+  (ms: number): Promise<void>
+}
 ```
 
-- `timeout`: Number of milliseconds to wait before resolving.
-- Returns: Promise that resolves after the specified time.
+### Parameters
 
-## Example
+- `ms`: The number of milliseconds to pause execution.
+
+### Returns
+
+- A Promise that resolves after the specified duration.
+
+## Examples
+
+### Basic Delay
 
 ```ts
 import { sleep } from '@vielzeug/toolkit';
 
-await sleep(1000); // waits 1 second
+async function process() {
+  console.log('Step 1');
+  await sleep(1000); // Wait 1 second
+  console.log('Step 2');
+}
 ```
 
-## Notes
+### Polling Example
 
-- Use with async/await for delays in async code.
-- Useful for testing, polling, or artificial delays.
+```ts
+import { sleep } from '@vielzeug/toolkit';
 
-## Related
+async function checkStatus() {
+  let ready = false;
+  while (!ready) {
+    ready = await pollApi();
+    if (!ready) {
+      await sleep(2000); // Check every 2 seconds
+    }
+  }
+}
+```
 
-- [retry](./retry.md)
-- [predict](./predict.md)
+## Implementation Notes
+
+- Performance-optimized using the native `setTimeout`.
+- If `0` or a negative number is provided, the Promise resolves in the next event loop tick.
+- Throws `TypeError` if the argument is not a number.
+
+## See Also
+
+- [delay](./delay.md): Pause execution and then run a callback.
+- [retry](./retry.md): Automatically retry failed operations with a delay.
+- [predict](./predict.md): Wait until a specific condition is met.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

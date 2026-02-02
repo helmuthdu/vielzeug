@@ -1,38 +1,91 @@
 # find
 
-Returns the first element in an array that satisfies the provided predicate function. Optionally returns a default value if no match is found.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1137_B-success" alt="Size">
+</div>
+
+The `find` utility returns the first element in an array that passes the provided test function. It also supports an optional default value to be returned if no match is found, providing a more ergonomic alternative to the native `Array.prototype.find()`.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Short-circuiting**: Stops searching as soon as the first match is found.
+- **Default Value Support**: Specify a fallback value instead of always receiving `undefined`.
+- **Type-safe**: Properly infers the return type based on the array and default value.
 
 ## API
 
 ```ts
-find<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, defaultValue?: T): T | undefined
+interface FindFunction {
+  <T>(
+    array: T[], 
+    predicate: (item: T, index: number, array: T[]) => boolean, 
+    defaultValue?: T
+  ): T | undefined
+}
 ```
 
-- `array`: The array to search through.
-- `predicate`: The function to test each element.
-- `defaultValue`: Optional value to return if no element matches.
+### Parameters
+
+- `array`: The array to search.
+- `predicate`: The function to test each element. It receives:
+  - `item`: The current element.
+  - `index`: The index of the current element.
+  - `array`: The original array.
+- `defaultValue`: Optional. A value to return if no elements match the predicate.
 
 ### Returns
 
-- The first element that satisfies the predicate, or the default value (if provided), or `undefined`.
+- The first matching element, or the `defaultValue` if provided, or `undefined`.
 
-## Example
+## Examples
+
+### Basic Searching
 
 ```ts
 import { find } from '@vielzeug/toolkit';
 
-const arr = [1, 2, 3, 4];
-find(arr, (x) => x % 2 === 0); // 2
-find(arr, (x) => x > 4, 0); // 0
-find(arr, (x) => x > 4); // undefined
+const numbers = [1, 3, 4, 7, 8];
+
+// Find the first even number
+find(numbers, x => x % 2 === 0); // 4
 ```
 
-## Notes
+### Using a Default Value
 
-- Throws `TypeError` if the input is not an array.
-- Useful for searching, filtering, or conditional logic.
+```ts
+import { find } from '@vielzeug/toolkit';
 
-## See also
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' }
+];
 
-- [findIndex](./findIndex.md)
-- [filter](./filter.md)
+// Find user by ID with fallback
+const user = find(users, u => u.id === 99, { id: 0, name: 'Guest' });
+// { id: 0, name: 'Guest' }
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if the first argument is not an array.
+- Stops iterating as soon as the predicate returns truthy.
+- Does not modify the original array.
+
+## See Also
+
+- [findIndex](./findIndex.md): Get the index of the first matching element.
+- [findLast](./findLast.md): Get the *last* matching element.
+- [filter](./filter.md): Get *all* matching elements.
+- [some](./some.md): Check if *any* match exists.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
+
+

@@ -1,45 +1,70 @@
-# <img src='/logo-depot.svg' alt='Deposit Logo' width='156' style='float: left; padding: 1rem; margin: 1rem;'/> Deposit
+# <img src="/logo-depot.svg" alt="Deposit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Deposit
 
-**Deposit** is a powerful, type-safe browser storage utility for modern web apps. It provides a unified API for IndexedDB and LocalStorage, advanced querying, transactions, and more—all with full TypeScript support.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-28.2_KB-success" alt="Size">
+</div>
 
-## 🚀 Features
+**Deposit** is a powerful, type-safe browser storage utility for modern web apps. It provides a unified, developer-friendly API for **IndexedDB** and **LocalStorage**, featuring advanced querying, migrations, and transactions.
 
-- **Unified API** for IndexedDB and LocalStorage
-- **Type-safe schemas** and queries
-- **Advanced QueryBuilder** (filter, sort, group, paginate, fuzzy search)
-- **Bulk operations** and batch patching
-- **Transactions** across tables
-- **TTL (expiry) support** for records
-- **Custom migrations** for IndexedDB
-- **Zero dependencies** (except for optional logger/utils)
+## 🚀 Key Features
 
-## 🏁 Getting Started
+- **Unified API**: Switch between LocalStorage and IndexedDB without changing your code.
+- **Type-safe**: Define your schemas once and enjoy full autocompletion and type checking.
+- **Advanced Querying**: A rich QueryBuilder supporting filters, sorting, grouping, and pagination.
+- **Migrations**: Robust support for schema versioning and data migrations in IndexedDB.
+- **Transactions**: Ensure data integrity with atomic operations across multiple tables.
+- **TTL (Time-To-Live)**: Native support for record expiration.
+- **Isomorphic**: Minimal footprint with optional logging and utility integration.
+
+## 🏁 Quick Start
+
+```sh
+pnpm add @vielzeug/deposit
+```
+
+### Basic Setup
 
 ```ts
-import { Deposit, LocalStorageAdapter } from '@vielzeug/deposit';
+import { Deposit, IndexedDBAdapter } from '@vielzeug/deposit';
 
+// 1. Define your schema
 const schema = {
-  users: { key: 'id', indexes: ['email'], record: {} as { id: string; name: string; email: string } },
+  users: { 
+    key: 'id', 
+    indexes: ['email'], 
+    record: {} as { id: string; name: string; email: string } 
+  },
 };
 
-const depot = new Deposit(new LocalStorageAdapter('mydb', 1, schema));
-await depot.put('users', { id: 'u1', name: 'Alice', email: 'alice@example.com' });
-const user = await depot.get('users', 'u1');
+// 2. Initialize the depot
+const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
+const db = new Deposit(adapter);
+
+// 3. Start storing data
+await db.put('users', { id: 'u1', name: 'Alice', email: 'alice@example.com' });
+const user = await db.get('users', 'u1');
 ```
 
 ## 📚 Documentation
 
-- [API Reference](./api.md): Full API details for all classes, types, and functions.
-- [Usage](./usage.md): How to install, set up, and use Deposit in your project.
-- [Examples](./examples.md): Practical code samples for all major features.
+- **[Usage Guide](./usage.md)**: Detailed setup, adapters, and basic operations.
+- **[API Reference](./api.md)**: Comprehensive documentation of all methods and types.
+- **[Examples](./examples.md)**: Practical patterns for querying, transactions, and migrations.
 
 ## 💡 Why Deposit?
 
-- No more boilerplate for browser storage.
-- Write queries like you would with an ORM.
-- Migrate, patch, and transact with ease.
-- Works in any modern browser, with or without IndexedDB.
+Native browser storage APIs (like IndexedDB) are notoriously complex and verbose. Deposit abstracts this complexity away, providing an ORM-like experience that makes client-side data management a breeze.
 
 ---
 
-> **Tip:** Deposit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) toolkit for modern web development.
+> **Tip:** Deposit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
+

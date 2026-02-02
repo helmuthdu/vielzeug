@@ -1,31 +1,73 @@
 # kebabCase
 
-Converts a string to kebab-case format.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-368_B-success" alt="Size">
+</div>
+
+The `kebabCase` utility transforms a string into `kebab-case` format (all lower case with words separated by dashes). It is perfect for generating CSS class names, URL slugs, or CLI flags.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Durable Parsing**: Handles spaces, underscores, and dots as separators.
+- **Case Boundary Detection**: Correctly splits strings based on transitions between lower and upper case (e.g., from `camelCase`).
 
 ## API
 
 ```ts
-kebabCase(input: string): string
+interface KebabCaseFunction {
+  (input: string): string
+}
 ```
 
-- `input`: The string to convert.
-- Returns: The kebab-cased string.
+### Parameters
 
-## Example
+- `input`: The string to transform.
+
+### Returns
+
+- The transformed string in `kebab-case`.
+
+## Examples
+
+### Basic Conversion
 
 ```ts
 import { kebabCase } from '@vielzeug/toolkit';
 
-kebabCase('hello world'); // 'hello-world'
-kebabCase('fooBarBaz'); // 'foo-bar-baz'
+kebabCase('hello world');   // 'hello-world'
+kebabCase('fooBar');       // 'foo-bar'
+kebabCase('USER_PROFILE');  // 'user-profile'
+kebabCase('data.meta.id');  // 'data-meta-id'
 ```
 
-## Notes
+### Advanced Scenarios
 
-- Handles spaces, underscores, and mixed cases.
-- Useful for CSS class names and URLs.
+```ts
+import { kebabCase } from '@vielzeug/toolkit';
 
-## Related
+kebabCase('  leading trailing  '); // 'leading-trailing'
+kebabCase('XMLHttpRequest');       // 'xml-http-request'
+kebabCase('multiple___underscores'); // 'multiple-underscores'
+```
 
-- [snakeCase](./snakeCase.md)
-- [camelCase](./camelCase.md)
+## Implementation Notes
+
+- Trims input and removes leading/trailing separators.
+- Collapses consecutive separators into a single dash.
+- Throws `TypeError` if the input is not a string.
+
+## See Also
+
+- [camelCase](./camelCase.md): Convert strings to `camelCase`.
+- [snakeCase](./snakeCase.md): Convert strings to `snake_case`.
+- [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

@@ -1,33 +1,89 @@
 # isEqual
 
-Checks if two values are deeply equal.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-412_B-success" alt="Size">
+</div>
+
+The `isEqual` utility performs a deep equality comparison between two values. It determines if two values are structurally identical, recursively checking nested objects and arrays.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Deep Comparison**: Correctly handles nested structures of any depth.
+- **Strict Equality**: Uses strict equality (`===`) for primitives.
+- **Comprehensive Support**: Properly compares `Date`, `RegExp`, and other built-in objects.
 
 ## API
 
 ```ts
-isEqual(a: unknown, b: unknown): boolean
+interface IsEqualFunction {
+  (a: unknown, b: unknown): boolean
+}
 ```
 
-- `a`: First value.
-- `b`: Second value.
-- Returns: `true` if values are deeply equal, else `false`.
+### Parameters
 
-## Example
+- `a`: The first value to compare.
+- `b`: The second value to compare.
+
+### Returns
+
+- `true` if the values are deeply equal; otherwise, `false`.
+
+## Examples
+
+### Comparing Objects
 
 ```ts
 import { isEqual } from '@vielzeug/toolkit';
 
-isEqual({ a: 1 }, { a: 1 }); // true
-isEqual([1, 2], [1, 2]); // true
-isEqual({ a: 1 }, { a: 2 }); // false
+const obj1 = { id: 1, meta: { tags: ['a', 'b'] } };
+const obj2 = { id: 1, meta: { tags: ['a', 'b'] } };
+const obj3 = { id: 1, meta: { tags: ['a', 'c'] } };
+
+isEqual(obj1, obj2); // true
+isEqual(obj1, obj3); // false
 ```
 
-## Notes
+### Comparing Arrays
 
-- Performs deep comparison for objects and arrays.
-- Useful for testing and change detection.
+```ts
+import { isEqual } from '@vielzeug/toolkit';
 
-## Related
+isEqual([1, [2, 3]], [1, [2, 3]]); // true
+isEqual([1, 2], [2, 1]); // false (order matters)
+```
 
-- [is](./is.md)
-- [isMatch](./isMatch.md)
+### Specialized Types
+
+```ts
+import { isEqual } from '@vielzeug/toolkit';
+
+const d1 = new Date('2024-01-01');
+const d2 = new Date('2024-01-01');
+
+isEqual(d1, d2); // true
+isEqual(/abc/g, /abc/g); // true
+```
+
+## Implementation Notes
+
+- Handles circular references safely.
+- Performance-optimized for large objects.
+- Functions are compared by reference.
+- Throws nothing; safely handles all input types including `null` and `undefined`.
+
+## See Also
+
+- [isMatch](./isMatch.md): Check if an object matches a partial pattern.
+- [contains](../array/contains.md): Search for a value in an array using deep equality.
+- [diff](../object/diff.md): Calculate the difference between two objects.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

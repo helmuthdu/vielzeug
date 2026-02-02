@@ -1,34 +1,81 @@
 # clamp
 
-Restricts a number to be within a specified range.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-128_B-success" alt="Size">
+</div>
+
+The `clamp` utility restricts a numeric value to be within a specified range. If the value is smaller than the minimum, it returns the minimum. If it's larger than the maximum, it returns the maximum. Otherwise, it returns the value itself.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Robust**: Gracefully handles cases where `min` is greater than `max` by swapping them.
+- **Type-safe**: Properly typed for numeric inputs and results.
 
 ## API
 
 ```ts
-clamp(value: number, min: number, max: number): number
+interface ClampFunction {
+  (value: number, min: number, max: number): number
+}
 ```
 
-- `value`: The number to clamp.
-- `min`: Minimum allowed value.
-- `max`: Maximum allowed value.
-- Returns: The clamped value.
+### Parameters
 
-## Example
+- `value`: The numeric value to restrict.
+- `min`: The lower bound of the range.
+- `max`: The upper bound of the range.
+
+### Returns
+
+- The restricted value within the `[min, max]` range.
+
+## Examples
+
+### Basic Clamping
 
 ```ts
 import { clamp } from '@vielzeug/toolkit';
 
-clamp(5, 1, 10); // 5
-clamp(-2, 0, 8); // 0
-clamp(15, 0, 8); // 8
+// Within range
+clamp(5, 0, 10); // 5
+
+// Below range
+clamp(-5, 0, 10); // 0
+
+// Above range
+clamp(15, 0, 10); // 10
 ```
 
-## Notes
+### Real-world Usage (UI Progress)
 
-- If `min` > `max`, the function swaps them internally.
-- Useful for bounding values in UI, games, etc.
+```ts
+import { clamp } from '@vielzeug/toolkit';
 
-## Related
+function setProgress(percent: number) {
+  // Ensure percent is always between 0 and 100
+  const safePercent = clamp(percent, 0, 100);
+  console.log(`Progress: ${safePercent}%`);
+}
+```
 
-- [min](./min.md)
-- [max](./max.md)
+## Implementation Notes
+
+- Performance-optimized using `Math.min` and `Math.max`.
+- If `min > max`, the utility automatically swaps them to ensure consistent behavior.
+- Throws `TypeError` if any of the arguments are not numbers.
+
+## See Also
+
+- [min](./min.md): Find the minimum value in a set.
+- [max](./max.md): Find the maximum value in a set.
+- [isWithin](../typed/isWithin.md): Check if a number is within a range without changing it.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

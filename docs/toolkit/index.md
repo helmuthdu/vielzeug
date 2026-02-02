@@ -1,36 +1,67 @@
-# <img src='/logo-utils.svg' alt='Toolkit Logo' width='156' style="float: left; padding: 1rem; margin: 1rem; background-color: var(--vp-home-hero-image-background-image);"/> Toolkit
+# <img src="/logo-utils.svg" alt="Toolkit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Toolkit
 
-**Toolkit** is a comprehensive, type-safe utility library for modern JavaScript and TypeScript projects. It provides a wide range of helpers for arrays, objects, strings, dates, math, random, DOM, environment, and more—all with full TypeScript support.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-100+_utilities-success" alt="Utilities">
+</div>
 
-## 🚀 Features
+**Toolkit** is a comprehensive, type-safe utility library for modern JavaScript and TypeScript projects. It provides a wide range of helpers for arrays, objects, strings, dates, math, random, and more — all with zero dependencies and full TypeScript support.
 
-- 100+ utility functions for all common data types
-- Type-safe and tree-shakeable
-- No dependencies
-- Consistent API and naming
-- Works in browser and Node.js
+## 🚀 Key Features
 
-## 🏁 Getting Started
+- **100+ Utilities**: Covering all common data structures and tasks.
+- **Type-safe**: Built with TypeScript for excellent developer experience.
+- **Tree-shakeable**: Only include the code you actually use.
+- **Zero Dependencies**: Lightweight and secure.
+- **Isomorphic**: Works perfectly in both the Browser and Node.js.
 
-```ts
-import { map, group, isString } from '@vielzeug/toolkit';
+## 🏁 Quick Start
 
-const arr = [1, 2, 3];
-const doubled = map(arr, (x) => x * 2);
+Install via your favorite package manager:
+
+```sh
+pnpm add @vielzeug/toolkit
 ```
 
-## 📚 Documentation
+Use any utility in your code:
 
-- [API Reference](./api.md): Full API details for all utilities.
-- [Usage](./usage.md): How to install, set up, and use Toolkit in your project.
-- Examples: See the sidebar for practical code samples for each util group.
+```ts
+import { chunk, group, isString } from '@vielzeug/toolkit';
 
-## 💡 Why Toolkit?
+// Split an array into chunks
+const chunks = chunk([1, 2, 3, 4, 5], 2); // [[1, 2], [3, 4], [5]]
 
-- No more lodash or ramda bloat
-- Fully typed, modern, and modular
-- Built for real-world web and Node.js apps
+// Group by a property
+const users = [{ id: 1, role: 'admin' }, { id: 2, role: 'user' }];
+const grouped = group(users, u => u.role); // { admin: [...], user: [...] }
+```
+
+## 📚 Explore the Library
+
+- **[Usage Guide](./usage.md)**: Installation, importing, and best practices.
+- **[API Reference](./api.md)**: Complete list of all available functions.
+- **[REPL](/repl)**: Try the library right in your browser.
+
+### 🧩 Utilities by Category
+
+- [**Array**](./examples/array.md): Transform, filter, group, and sort.
+- [**Object**](./examples/object.md): Deep merge, clone, diff, and nested access.
+- [**String**](./examples/string.md): Casing, similarity, and truncation.
+- [**Math**](./examples/math.md): Average, median, clamp, and ranges.
+- [**Function**](./examples/function.md): Debounce, throttle, compose, and retry.
+- [**Typed**](./examples/typed.md): Comprehensive type guards and checks.
+- [**Date**](./examples/date.md): Interval and difference calculation.
+- [**Random**](./examples/random.md): Random values, shuffle, and UUIDs.
 
 ---
 
-> **Tip:** Toolkit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) toolkit for modern web development.
+> **Tip:** Toolkit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
+

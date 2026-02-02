@@ -1,52 +1,107 @@
 # parseJSON
 
-Parses a JSON string and returns the resulting value, with support for default values, reviver, validation, and silent error handling.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1856_B-success" alt="Size">
+</div>
+
+The `parseJSON` utility provides a safe and robust way to parse JSON strings. It includes built-in error handling, support for default values, optional validation, and a customizable reviver function, ensuring that your application doesn't crash on malformed input.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Safe Parsing**: Automatically catches and handles syntax errors silently or with logging.
+- **Fallback Support**: Specify a default value to return if parsing fails.
+- **Integrated Validation**: Pass a validator function to ensure the parsed data meets your requirements.
+- **Reviver Support**: Full compatibility with the native `JSON.parse` reviver parameter.
 
 ## API
 
 ```ts
-parseJSON<T>(
-  json: unknown,
-  options?: {
-    defaultValue?: T;
-    reviver?: (key: string, value: any) => any;
-    validator?: (value: any) => boolean;
-    silent?: boolean;
-  }
-): T | undefined
+interface ParseJSONOptions<T> {
+  defaultValue?: T;
+  reviver?: (key: string, value: any) => any;
+  validator?: (value: any) => boolean;
+  silent?: boolean;
+}
+
+interface ParseJSONFunction {
+  <T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined
+}
 ```
 
-- `json`: The JSON string to parse. If not a string, returns as is or defaultValue if null/undefined.
-- `options.defaultValue`: Value to return if parsing fails or validation fails.
-- `options.reviver`: Function for custom parsing (see `JSON.parse`).
-- `options.validator`: Function to validate the parsed value.
-- `options.silent`: If true, suppresses error logging (default: false).
-- Returns: Parsed value, or `defaultValue` if parsing/validation fails.
+### Parameters
 
-## Example
+- `json`: The data to parse. If it's not a string, it will be returned as-is (if it's already an object/array) or substituted with the `defaultValue`.
+- `options`: Optional configuration:
+  - `defaultValue`: The value to return if parsing fails or validation fails.
+  - `reviver`: A function that transforms the results as they are parsed.
+  - `validator`: A function that receives the parsed value and must return `true` for the result to be considered valid.
+  - `silent`: If `true`, suppresses error logging to the console when parsing fails (defaults to `false`).
+
+### Returns
+
+- The parsed value, or the `defaultValue` if parsing or validation fails.
+
+## Examples
+
+### Basic Safe Parsing
 
 ```ts
 import { parseJSON } from '@vielzeug/toolkit';
 
-parseJSON('{"foo": 42}'); // { foo: 42 }
-parseJSON('invalid', { defaultValue: { foo: 0 } }); // { foo: 0 }
-parseJSON('{"foo": "bar"}', {
-  validator: v => typeof v.foo === 'string',
-  defaultValue: { foo: '' },
-}); // { foo: 'bar' }
-parseJSON('{"foo": 42}', {
-  reviver: (k, v) => (typeof v === 'number' ? v * 2 : v),
-}); // { foo: 84 }
+// Valid JSON
+parseJSON('{"active": true}'); // { active: true }
+
+// Invalid JSON with fallback
+parseJSON('invalid { json', { defaultValue: { active: false } }); 
+// { active: false }
 ```
 
-## Notes
+### Parsing with Validation
 
-- Returns `defaultValue` if parsing fails or validation fails.
-- If `json` is not a string, returns it as is (unless null/undefined, then returns `defaultValue`).
-- Use `silent: true` to suppress error logs.
-- Useful for robust and safe JSON parsing in applications.
+```ts
+import { parseJSON } from '@vielzeug/toolkit';
 
-## Related
+const raw = '{"id": 123, "name": "Alice"}';
 
-- [clone](./clone.md)
-- [diff](./diff.md)
+// Validate that 'id' is a number
+const user = parseJSON(raw, {
+  validator: v => typeof v.id === 'number',
+  defaultValue: { id: 0, name: 'Guest' }
+});
+```
+
+### Using a Reviver
+
+```ts
+import { parseJSON } from '@vielzeug/toolkit';
+
+const raw = '{"amount": 42}';
+
+// Double all numbers during parsing
+const doubled = parseJSON(raw, {
+  reviver: (k, v) => (typeof v === 'number' ? v * 2 : v)
+});
+// { amount: 84 }
+```
+
+## Implementation Notes
+
+- If the input `json` is already an object or array (not `null`), it skips the `JSON.parse` step but still runs the `validator` if provided.
+- If `null` or `undefined` is passed as the input, it immediately returns the `defaultValue`.
+- Throws nothing by default; all errors are caught and handled based on the `silent` option.
+
+## See Also
+
+- [clone](./clone.md): Create a copy of a parsed object.
+- [path](./path.md): Safely access nested properties of the parsed object.
+- [merge](./merge.md): Combine the parsed object with default settings.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
