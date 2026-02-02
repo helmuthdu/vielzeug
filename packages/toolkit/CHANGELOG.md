@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.7] - 2026-02-02
+
+### Changes
+
+- Release version 1.0.7
+
+
 ## [1.0.6] - 2026-01-16
 
 ### Changes
