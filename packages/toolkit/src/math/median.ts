@@ -24,9 +24,8 @@ export function median<T>(arr: T[], callback?: (item: T) => number | Date): numb
   numericValues.sort((a, b) => a - b);
 
   const mid = Math.floor(numericValues.length / 2);
-  const medianValue = numericValues.length % 2 === 0
-    ? (numericValues[mid - 1] + numericValues[mid]) / 2
-    : numericValues[mid];
+  const medianValue =
+    numericValues.length % 2 === 0 ? (numericValues[mid - 1] + numericValues[mid]) / 2 : numericValues[mid];
 
   return allDates ? new Date(medianValue) : medianValue;
 }

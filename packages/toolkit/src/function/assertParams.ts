@@ -27,9 +27,7 @@ export function assertParams<T extends object, K extends keyof T>(
 ): asserts params is T & Required<Pick<T, K>> {
   assert(!!params, 'Missing parameters object', options);
 
-  const missing = keys.filter(
-    (key) => params[key] === undefined || params[key] === null || params[key] === '',
-  );
+  const missing = keys.filter((key) => params[key] === undefined || params[key] === null || params[key] === '');
 
   if (missing.length > 0) {
     const context = name ? ` in "${name}"` : '';

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
 import { Logit } from '@vielzeug/logit';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assertParams } from '../assertParams';
 
 vi.mock('@vielzeug/logit', () => ({
@@ -22,24 +22,18 @@ describe('assertParams', () => {
   it('should throw if a key is missing', () => {
     const params = { id: '123' };
     // @ts-expect-error
-    expect(() => assertParams(params, ['name'])).toThrowError(
-      'Missing required parameter: "name"',
-    );
+    expect(() => assertParams(params, ['name'])).toThrowError('Missing required parameter: "name"');
   });
 
   it('should throw if a key is an empty string', () => {
     const params = { id: '123', name: '' };
-    expect(() => assertParams(params, ['name'])).toThrowError(
-      'Missing required parameter: "name"',
-    );
+    expect(() => assertParams(params, ['name'])).toThrowError('Missing required parameter: "name"');
   });
 
   it('should throw with multiple missing keys', () => {
     const params = {};
     // @ts-expect-error
-    expect(() => assertParams(params, ['id', 'name'])).toThrowError(
-      'Missing required parameters: "id", "name"',
-    );
+    expect(() => assertParams(params, ['id', 'name'])).toThrowError('Missing required parameters: "id", "name"');
   });
 
   it('should include context name if provided', () => {

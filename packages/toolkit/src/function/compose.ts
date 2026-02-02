@@ -40,5 +40,8 @@ export function compose<T extends FnDynamic[]>(...fns: T): ComposeReturn<T> {
   const restFns = fns.slice(0, -1);
 
   return ((...args: LastParameters<T>) =>
-    restFns.reduceRight((prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)), lastFn(...args))) as ComposeReturn<T>;
+    restFns.reduceRight(
+      (prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)),
+      lastFn(...args),
+    )) as ComposeReturn<T>;
 }

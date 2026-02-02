@@ -31,9 +31,7 @@ export function alternate<T>(
   options: { strategy?: 'prepend' | 'append' } = {},
 ): T[] {
   const { strategy = 'append' } = options;
-  const compareFn = selector
-    ? (el: T) => selector(el) === selector(item)
-    : (el: T) => el === item;
+  const compareFn = selector ? (el: T) => selector(el) === selector(item) : (el: T) => el === item;
 
   const index = array.findIndex(compareFn);
 
