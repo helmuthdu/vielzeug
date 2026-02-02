@@ -45,6 +45,7 @@ jobs:
         with:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
+          scope: '@vielzeug'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -134,13 +135,16 @@ jobs:
 
       - name: Setup npm authentication
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}
         run: |
-          npm publish --access public
+          # Use pnpm to publish as it handles workspace:* dependencies
+          # We use --no-git-checks because we already handled versioning and tagging
+          pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify npm publication
         run: |
