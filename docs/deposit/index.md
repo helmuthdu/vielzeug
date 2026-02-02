@@ -1,4 +1,6 @@
-# <img src="/logo-depot.svg" alt="Deposit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Deposit
+<img src="/logo-depot.svg" alt="Deposit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
+
+# Deposit
 
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">

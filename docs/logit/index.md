@@ -1,4 +1,6 @@
-# <img src="/logo-logger.svg" alt="Logit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Logit
+<img src="/logo-logger.svg" alt="Logit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
+
+# Logit
 
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version">

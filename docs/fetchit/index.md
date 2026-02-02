@@ -1,4 +1,6 @@
-# <img src="/logo-http.svg" alt="Fetchit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Fetchit
+<img src="/logo-http.svg" alt="Fetchit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
+
+# Fetchit
 
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">

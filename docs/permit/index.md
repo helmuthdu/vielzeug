@@ -1,4 +1,6 @@
-# <img src="/logo-permit.svg" alt="Permit" width="40" style="display: inline-block; vertical-align: middle; margin-right: 10px;"> Permit
+<img src="/logo-permit.svg" alt="Permit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
+
+# Permit
 
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">

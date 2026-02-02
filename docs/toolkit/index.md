@@ -1,4 +1,6 @@
-# <img src="/logo-utils.svg" alt="Toolkit" width="32" style="display: inline-block; vertical-align: middle; margin-right: 10px; margin-bottom: 10px;"> Toolkit
+<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
+
+# Toolkit
 
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
