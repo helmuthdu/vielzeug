@@ -24,6 +24,8 @@ export const compare = (a: any, b: any): number => {
   if (a === b) return 0;
   if (a === undefined) return 1;
   if (b === undefined) return -1;
+  if (a === null) return b === null ? 0 : -1;
+  if (b === null) return 1;
 
   if (typeof a === 'string' && typeof b === 'string') {
     return a.localeCompare(b);
@@ -43,5 +45,5 @@ export const compare = (a: any, b: any): number => {
     return aString.localeCompare(bString);
   }
 
-  return 0;
+  return String(a).localeCompare(String(b));
 };

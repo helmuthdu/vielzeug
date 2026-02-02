@@ -9,8 +9,8 @@
     "preRushx": []
   },
   "gitPolicy": {},
-  "nodeSupportedVersionRange": ">=20.14.0 <=22.21.1",
-  "pnpmVersion": "10.25.0",
+  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.0",
+  "pnpmVersion": "10.28.2",
   "projects": [
     {
       "packageName": "@vielzeug/toolkit",

@@ -21,16 +21,19 @@ import type { Fn } from '../types';
  */
 export const once = <T extends Fn>(fn: T): T & { reset: () => void } => {
   let result: ReturnType<T> | undefined;
+  let called = false;
 
   const wrappedFn = ((...args: Parameters<T>): ReturnType<T> => {
-    if (result === undefined) {
+    if (!called) {
       result = fn(...args);
+      called = true;
     }
     return result as ReturnType<T>;
   }) as T & { reset: () => void };
 
   wrappedFn.reset = () => {
     result = undefined;
+    called = false;
   };
 
   return wrappedFn;

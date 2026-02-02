@@ -24,9 +24,7 @@ export function substitute<T>(array: T[], predicate: Predicate<T>, value: T): T[
 
   const index = findIndex(array, predicate);
 
-  if (index === -1) {
-    return array;
-  }
+  if (index === -1) return array;
 
   return [...array.slice(0, index), value, ...array.slice(index + 1)];
 }

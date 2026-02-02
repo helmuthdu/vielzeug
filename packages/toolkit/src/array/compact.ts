@@ -1,6 +1,5 @@
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import { filter } from './filter';
 
 /**
  * Removes falsy values from an array.
@@ -17,8 +16,8 @@ import { filter } from './filter';
  *
  * @throws {TypeError} If the provided array is not an array.
  */
-export function compact<T>(array: T[]) {
+export function compact<T>(array: T[]): NonNullable<T>[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  return filter(array, Boolean);
+  return array.filter(Boolean) as NonNullable<T>[];
 }

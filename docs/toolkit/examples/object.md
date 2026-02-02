@@ -1,23 +1,62 @@
-# 🏷️ Object Utilities Examples
+# 🏷️ Object Utilities
 
-Object utilities help you manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for
-cloning, merging, diffing, extracting keys/values, and more.
+Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for deep cloning, merging, diffing, nested path access, and more.
 
 ## 📚 Quick Reference
 
-| Method    | Description                              |
-| --------- | ---------------------------------------- |
-| clone     | Shallow copy of an object                |
-| diff      | Find differences between objects         |
-| entries   | Get key-value pairs as array             |
-| keys      | Get object keys as array                 |
-| merge     | Merge two or more objects                |
-| parseJSON | Safely parse JSON with fallback          |
-| path      | Get value at a given path                |
-| seek      | Find value by predicate in nested object |
-| values    | Get object values as array               |
+| Method | Description |
+| :--- | :--- |
+| [`clone`](./object/clone.md) | Create a deep clone of an object. |
+| [`merge`](./object/merge.md) | Merge multiple objects with configurable strategies (Deep, Shallow, etc.). |
+| [`diff`](./object/diff.md) | Compare two objects and return the structural differences. |
+| [`path`](./object/path.md) | Safely access nested properties using dot-notation strings. |
+| [`seek`](./object/seek.md) | Find a value anywhere within a deeply nested object by its key. |
+| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value. |
+| [`keys`](./object/keys.md) | Type-safe way to get an object's keys. |
+| [`values`](./object/values.md) | Type-safe way to get an object's values. |
+| [`entries`](./object/entries.md) | Type-safe way to get an object's entries. |
 
-## 🔗 Granular Examples
+## 💡 Practical Examples
+
+### Deep Merging & Cloning
+
+```ts
+import { merge, clone } from '@vielzeug/toolkit';
+
+const config = { api: { host: 'localhost', port: 8080 } };
+const overrides = { api: { port: 3000 } };
+
+// 1. Deep merge (config remains unchanged)
+const finalConfig = merge('deep', config, overrides);
+// { api: { host: 'localhost', port: 3000 } }
+
+// 2. Deep clone
+const deepCopy = clone(finalConfig);
+```
+
+### Accessing Nested Data
+
+```ts
+import { path, seek } from '@vielzeug/toolkit';
+
+const data = {
+  user: {
+    profile: {
+      settings: { theme: 'dark' }
+    }
+  }
+};
+
+// Access via path string
+const theme = path(data, 'user.profile.settings.theme'); // 'dark'
+
+// Find key 'theme' anywhere in the object
+const themeAnywhere = seek(data, 'theme'); // 'dark'
+```
+
+## 🔗 All Object Utilities
+
+<div class="grid-links">
 
 - [clone](./object/clone.md)
 - [diff](./object/diff.md)
@@ -29,30 +68,17 @@ cloning, merging, diffing, extracting keys/values, and more.
 - [seek](./object/seek.md)
 - [values](./object/values.md)
 
-## 💡 Example Usage
+</div>
 
-```ts
-import { clone, merge, diff, keys, values, entries } from '@vielzeug/toolkit';
-
-const obj = { a: 1, b: 2 };
-
-// Shallow copy
-const copy = clone(obj); // { a: 1, b: 2 }
-
-// Merge objects
-const merged = merge({ a: 1 }, { b: 2 }); // { a: 1, b: 2 }
-
-// Find differences
-const difference = diff({ a: 1 }, { a: 2 }); // { a: [1,2] }
-
-// Get keys/values/entries
-const ks = keys(obj); // ['a','b']
-const vs = values(obj); // [1,2]
-const es = entries(obj); // [['a',1],['b',2]]
-```
-
-## 🔎 See Also
-
-- [Array Utilities](./array.md)
-- [String Utilities](./string.md)
-- [Typed Utilities](./typed.md)
+<style>
+.grid-links ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  list-style: none !important;
+  padding: 0 !important;
+}
+.grid-links li {
+  margin: 0 !important;
+}
+</style>

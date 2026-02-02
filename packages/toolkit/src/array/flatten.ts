@@ -1,3 +1,5 @@
+type FlatArray<T> = T extends readonly (infer U)[] ? U : T;
+
 /**
  * Flattens a nested array into a single-level array.
  *
@@ -11,6 +13,6 @@
  *
  * @returns A single-level array.
  */
-export function flatten<T>(array: T[]) {
-  return array.flat(Number.POSITIVE_INFINITY);
+export function flatten<T>(array: T[]): FlatArray<T>[] {
+  return array.flat(Number.POSITIVE_INFINITY) as FlatArray<T>[];
 }

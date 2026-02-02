@@ -1,40 +1,88 @@
 # compose
 
-Creates a function that is the composition of multiple functions, applying them from right to left.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
+</div>
+
+The `compose` utility performs functional composition from right to left. It takes multiple functions and returns a single function that passes its result from one call to the previous one, following standard mathematical notation $f(g(x))$.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Async Support**: Automatically handles Promises. If any function in the chain returns a Promise, the final result will be a Promise.
+- **Type-safe**: Properly infers input and output types through the entire chain.
+- **Right-to-Left**: Executes functions in reverse order of provided arguments.
 
 ## API
 
 ```ts
-compose<T>(...fns: Array<(arg: T) => T>): (input: T) => T
+interface ComposeFunction {
+  <T extends any[], R>(...fns: [
+    (arg: any) => R,
+    ...Array<(arg: any) => any>,
+    (...args: T) => any
+  ]): (...args: T) => R | Promise<R>
+}
 ```
 
-- `...fns`: Functions to compose, applied from right to left.
-- Returns: A function that applies all composed functions in order.
+### Parameters
 
-## Example
+- `...fns`: A sequence of functions to be composed.
+
+### Returns
+
+- A new function that represents the composition.
+
+## Examples
+
+### Synchronous Composition
 
 ```ts
 import { compose } from '@vielzeug/toolkit';
 
-const double = (x: number) => x * 2;
-const increment = (x: number) => x + 1;
+const addTwo = (n: number) => n + 2;
+const double = (n: number) => n * 2;
 
-const doubleThenIncrement = compose(increment, double);
-doubleThenIncrement(3); // 7
+// result = addTwo(double(x))
+const calculate = compose(addTwo, double);
 
-// Async example
-const square = async (x) => x * x;
-const addAsync = async (x) => x + 2;
-const composedAsync = compose(square, addAsync);
-await composedAsync(4); // (4 * 4) + 2 = 18
+calculate(5); // (5 * 2) + 2 = 12
 ```
 
-## Notes
+### Asynchronous Composition
 
-- Functions are applied from right to left: `compose(f, g)(x)` is `f(g(x))`.
-- Useful for building complex transformations from simple functions.
+```ts
+import { compose, delay } from '@vielzeug/toolkit';
 
-## Related
+const saveToDb = async (data: string) => {
+  await delay(10);
+  return { success: true, data };
+};
 
-- [curry](./curry.md)
-- [fp](./fp.md)
+const format = (s: string) => s.trim().toUpperCase();
+
+const processAndSave = compose(saveToDb, format);
+
+await processAndSave('  hello  '); // { success: true, data: 'HELLO' }
+```
+
+## Implementation Notes
+
+- If only one function is provided, it is returned as-is.
+- Uses `reduceRight` internally to chain function calls.
+- Throws `TypeError` if any provided argument is not a function.
+
+## See Also
+
+- [pipe](./pipe.md): Functional composition from left to right.
+- [curry](./curry.md): Transform a function into a sequence of unary functions.
+- [fp](./fp.md): Wrap functions for functional programming styles.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

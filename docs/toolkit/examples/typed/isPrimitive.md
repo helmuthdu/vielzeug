@@ -1,5 +1,10 @@
 # isPrimitive
 
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-658_B-success" alt="Size">
+</div>
+
 Checks if a value is a JavaScript primitive (string, number, boolean, symbol, null, or undefined).
 
 ## API
@@ -29,3 +34,11 @@ isPrimitive({}); // false
 
 - [isObject](./isObject.md)
 - [isArray](./isArray.md)
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

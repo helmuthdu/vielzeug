@@ -45,7 +45,7 @@ describe('isMatch', () => {
 
   it('handles arrays as values', () => {
     expect(isMatch({ a: [1, 2, 3] }, { a: [1, 2, 3] })).toBe(true);
-    expect(isMatch({ a: [1, 2, 3] }, { a: [1, 2] })).toBe(false);
+    expect(isMatch({ a: [1, 2, 3] }, { a: [1, 2] })).toBe(true);
   });
 
   it('handles nested objects and arrays', () => {

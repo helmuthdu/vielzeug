@@ -1,31 +1,73 @@
 # snakeCase
 
-Converts a string to snake_case format.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
+</div>
+
+The `snake_case` utility transforms a string into `snake_case` format (all lower case with words separated by underscores). It is commonly used for database column names, file naming conventions, or environment variables.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Durable Parsing**: Handles spaces, dashes, and dots as separators.
+- **Case Boundary Detection**: Correctly splits strings based on transitions between lower and upper case (e.g., from `camelCase`).
 
 ## API
 
 ```ts
-snakeCase(input: string): string
+interface SnakeCaseFunction {
+  (input: string): string
+}
 ```
 
-- `input`: The string to convert.
-- Returns: The snake_cased string.
+### Parameters
 
-## Example
+- `input`: The string to transform.
+
+### Returns
+
+- The transformed string in `snake_case`.
+
+## Examples
+
+### Basic Conversion
 
 ```ts
 import { snakeCase } from '@vielzeug/toolkit';
 
-snakeCase('hello world'); // 'hello_world'
-snakeCase('fooBarBaz'); // 'foo_bar_baz'
+snakeCase('hello world');   // 'hello_world'
+snakeCase('fooBar');       // 'foo_bar'
+snakeCase('Kebab-Case');   // 'kebab_case'
+snakeCase('data.meta.id');  // 'data_meta_id'
 ```
 
-## Notes
+### Advanced Scenarios
 
-- Handles spaces, dashes, and mixed cases.
-- Useful for database and file names.
+```ts
+import { snakeCase } from '@vielzeug/toolkit';
 
-## Related
+snakeCase('  leading trailing  '); // 'leading_trailing'
+snakeCase('XMLHttpRequest');       // 'xml_http_request'
+snakeCase('multiple---dashes');    // 'multiple_dashes'
+```
 
-- [camelCase](./camelCase.md)
-- [kebabCase](./kebabCase.md)
+## Implementation Notes
+
+- Trims input and removes leading/trailing separators.
+- Collapses consecutive separators into a single underscore.
+- Throws `TypeError` if the input is not a string.
+
+## See Also
+
+- [camelCase](./camelCase.md): Convert strings to `camelCase`.
+- [kebabCase](./kebabCase.md): Convert strings to `kebab-case`.
+- [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

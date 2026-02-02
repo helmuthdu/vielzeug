@@ -1,98 +1,112 @@
-# 🧪 Typed Utilities Examples
+# 🧪 Typed Utilities
 
-Typed utilities help you check types, compare values, and perform predicate logic in a type-safe, ergonomic way. Use
-these helpers for type checks, comparisons, and advanced predicates.
+Typed utilities provide a comprehensive set of type guards and comparison helpers. These tools ensure your code remains type-safe by providing robust checks for all common JavaScript data types and values.
 
 ## 📚 Quick Reference
 
-| Method      | Description                             |
-| ----------- | --------------------------------------- |
-| is          | General type and predicate checker      |
-| gt          | Greater than comparison                 |
-| ge          | Greater than or equal comparison        |
-| lt          | Less than comparison                    |
-| le          | Less than or equal comparison           |
-| isArray     | Check if value is an array              |
-| isBoolean   | Check if value is a boolean             |
-| isDate      | Check if value is a Date                |
-| isDefined   | Check if value is defined               |
-| isEmpty     | Check if value is empty                 |
-| isEqual     | Deep equality check                     |
-| isEven      | Check if value is even                  |
-| isFunction  | Check if value is a function            |
-| isMatch     | Check if value matches a pattern/object |
-| isNegative  | Check if value is negative              |
-| isNil       | Check if value is null or undefined     |
-| isNumber    | Check if value is a number              |
-| isObject    | Check if value is an object             |
-| isOdd       | Check if value is odd                   |
-| isPositive  | Check if value is positive              |
-| isPrimitive | Check if value is a primitive           |
-| isPromise   | Check if value is a Promise             |
-| isRegex     | Check if value is a RegExp              |
-| isString    | Check if value is a string              |
-| isWithin    | Check if value is within a range        |
-| isZero      | Check if value is zero                  |
+### Type Guards
 
-## 🔗 Granular Examples
+| Method | Description |
+| :--- | :--- |
+| [`isString`](./typed/isString.md) | Check if a value is a string. |
+| [`isNumber`](./typed/isNumber.md) | Check if a value is a number. |
+| [`isArray`](./typed/isArray.md) | Check if a value is an array. |
+| [`isObject`](./typed/isObject.md) | Check if a value is a plain object. |
+| [`isFunction`](./typed/isFunction.md) | Check if a value is a function. |
+| [`isDefined`](./typed/isDefined.md) | Check if a value is neither `null` nor `undefined`. |
+| [`isNil`](./typed/isNil.md) | Check if a value is `null` or `undefined`. |
+| [`isEmpty`](./typed/isEmpty.md) | Check if a value is an empty string, array, or object. |
 
-### Type Checks
+### Comparison & Pattern Matching
 
-- [isArray](./typed/isArray.md)
-- [isBoolean](./typed/isBoolean.md)
-- [isDate](./typed/isDate.md)
-- [isDefined](./typed/isDefined.md)
-- [isEmpty](./typed/isEmpty.md)
-- [isFunction](./typed/isFunction.md)
-- [isNil](./typed/isNil.md)
-- [isNumber](./typed/isNumber.md)
-- [isObject](./typed/isObject.md)
-- [isPrimitive](./typed/isPrimitive.md)
-- [isPromise](./typed/isPromise.md)
-- [isRegex](./typed/isRegex.md)
-- [isString](./typed/isString.md)
+| Method | Description |
+| :--- | :--- |
+| [`isEqual`](./typed/isEqual.md) | Perform a deep equality comparison between two values. |
+| [`isMatch`](./typed/isMatch.md) | Check if an object matches a partial pattern or regex. |
+| [`is`](./typed/is.md) | Multi-purpose type and value checker. |
+| [`isWithin`](./typed/isWithin.md) | Check if a number is within a given range. |
 
-### Comparison & Predicate
+## 💡 Practical Examples
+
+### Robust Type Checking
+
+```ts
+import { isString, isArray, isNil, isDefined } from '@vielzeug/toolkit';
+
+function process(data: unknown) {
+  if (isString(data)) {
+    // data is inferred as string
+    return data.toUpperCase();
+  }
+  
+  if (isArray(data)) {
+    // data is inferred as any[]
+    return data.length;
+  }
+  
+  if (isNil(data)) {
+    return 'N/A';
+  }
+}
+```
+
+### Deep Equality & Pattern Matching
+
+```ts
+import { isEqual, isMatch } from '@vielzeug/toolkit';
+
+const user = { id: 1, name: 'Alice', settings: { theme: 'dark' } };
+
+// Deep equality
+isEqual(user, { id: 1, name: 'Alice', settings: { theme: 'dark' } }); // true
+
+// Pattern match
+isMatch(user, { settings: { theme: 'dark' } }); // true
+isMatch(user, { name: /^A/ }); // true (regex support)
+```
+
+## 🔗 All Typed Utilities
+
+<div class="grid-links">
 
 - [is](./typed/is.md)
 - [gt](./typed/gt.md)
 - [ge](./typed/ge.md)
 - [lt](./typed/lt.md)
 - [le](./typed/le.md)
+- [isArray](./typed/isArray.md)
+- [isBoolean](./typed/isBoolean.md)
+- [isDate](./typed/isDate.md)
+- [isDefined](./typed/isDefined.md)
+- [isEmpty](./typed/isEmpty.md)
 - [isEqual](./typed/isEqual.md)
 - [isEven](./typed/isEven.md)
+- [isFunction](./typed/isFunction.md)
 - [isMatch](./typed/isMatch.md)
 - [isNegative](./typed/isNegative.md)
+- [isNil](./typed/isNil.md)
+- [isNumber](./typed/isNumber.md)
+- [isObject](./typed/isObject.md)
 - [isOdd](./typed/isOdd.md)
 - [isPositive](./typed/isPositive.md)
+- [isPrimitive](./typed/isPrimitive.md)
+- [isPromise](./typed/isPromise.md)
+- [isRegex](./typed/isRegex.md)
+- [isString](./typed/isString.md)
 - [isWithin](./typed/isWithin.md)
 - [isZero](./typed/isZero.md)
 
-## 💡 Example Usage
+</div>
 
-```ts
-import { is, isArray, isString, isNumber, isEven, gt, isWithin } from '@vielzeug/toolkit';
-
-// General type check
-is('string', 'hello'); // true
-is('array', []); // true
-
-// Comparison
-gt(5, 3); // true
-isWithin(5, 1, 10); // true
-
-// Predicate
-isEven(4); // true
-
-// Type checks
-isArray([1, 2, 3]); // true
-isString('abc'); // true
-isNumber(123); // true
-```
-
-## 🔎 See Also
-
-- [Array Utilities](./array.md)
-- [Object Utilities](./object.md)
-- [Math Utilities](./math.md)
-- [Function Utilities](./function.md)
+<style>
+.grid-links ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  list-style: none !important;
+  padding: 0 !important;
+}
+.grid-links li {
+  margin: 0 !important;
+}
+</style>

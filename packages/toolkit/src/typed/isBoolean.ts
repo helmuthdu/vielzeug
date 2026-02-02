@@ -1,5 +1,3 @@
-import { typeOf } from './typeOf';
-
 /**
  * Checks if the value is a boolean.
  *
@@ -22,5 +20,5 @@ import { typeOf } from './typeOf';
  * @returns `true` if the value is a boolean, else `false`.
  */
 export function isBoolean(arg: unknown): arg is boolean {
-  return typeOf(arg) === 'boolean';
+  return typeof arg === 'boolean';
 }

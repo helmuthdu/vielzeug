@@ -4,6 +4,24 @@ export type TimeResult = { unit: TimeUnit; value: number };
 
 let defaultUnits: TimeUnit[] = ['YEAR', 'MONTH', 'WEEK', 'DAY', 'HOUR', 'MINUTE', 'SECOND'];
 
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+const MS_PER_WEEK = 7 * MS_PER_DAY;
+const MS_PER_MONTH = 30 * MS_PER_DAY;
+const MS_PER_YEAR = 365 * MS_PER_DAY;
+
+const TIME_UNITS = [
+  { ms: MS_PER_YEAR, unit: 'YEAR' as const },
+  { ms: MS_PER_MONTH, unit: 'MONTH' as const },
+  { ms: MS_PER_WEEK, unit: 'WEEK' as const },
+  { ms: MS_PER_DAY, unit: 'DAY' as const },
+  { ms: MS_PER_HOUR, unit: 'HOUR' as const },
+  { ms: MS_PER_MINUTE, unit: 'MINUTE' as const },
+  { ms: MS_PER_SECOND, unit: 'SECOND' as const },
+];
+
 /**
  * Calculates the remaining time until a target date.
  *
@@ -28,24 +46,15 @@ export function timeDiff(
 ): TimeResult {
   const aDate = typeof a === 'string' ? Date.parse(a) : a.getTime();
   const bDate = typeof b === 'string' ? Date.parse(b) : b.getTime();
+
   if (Number.isNaN(aDate) || Number.isNaN(bDate)) {
     return { unit: 'INVALID_DATE', value: 0 };
   }
 
-  const units = (
-    [
-      { ms: 365 * 24 * 60 * 60 * 1000, unit: 'YEAR' },
-      { ms: 30 * 24 * 60 * 60 * 1000, unit: 'MONTH' },
-      { ms: 7 * 24 * 60 * 60 * 1000, unit: 'WEEK' },
-      { ms: 24 * 60 * 60 * 1000, unit: 'DAY' },
-      { ms: 60 * 60 * 1000, unit: 'HOUR' },
-      { ms: 60 * 1000, unit: 'MINUTE' },
-      { ms: 1000, unit: 'SECOND' },
-    ] satisfies { ms: number; unit: TimeUnit }[]
-  ).filter((u) => allowedUnits.includes(u.unit));
-
-  const diff = aDate > bDate ? aDate - bDate : bDate - aDate;
+  const units = TIME_UNITS.filter((u) => allowedUnits.includes(u.unit));
+  const diff = Math.abs(aDate - bDate);
   const smallestUnit = units[units.length - 1]?.unit ?? 'SECOND';
+
   if (diff <= 0) {
     return { unit: smallestUnit, value: 0 };
   }
@@ -55,6 +64,7 @@ export function timeDiff(
       return { unit, value: Math.floor(diff / ms) };
     }
   }
+
   return { unit: smallestUnit, value: 0 };
 }
 

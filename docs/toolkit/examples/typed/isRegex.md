@@ -1,5 +1,10 @@
 # isRegex
 
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-545_B-success" alt="Size">
+</div>
+
 Checks if a value is a RegExp object.
 
 ## API
@@ -28,3 +33,9 @@ isRegex('abc'); // false
 
 - [isString](./isString.md)
 - [isObject](./isObject.md)
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

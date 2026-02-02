@@ -1,36 +1,84 @@
 # findIndex
 
-Returns the index of the first element in an array that satisfies the provided predicate function.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1014_B-success" alt="Size">
+</div>
+
+The `findIndex` utility returns the index of the first element in an array that satisfies the provided test function. If no element passes the test, it returns `-1`.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Short-circuiting**: Stops searching as soon as the first match is found.
+- **Type-safe**: Properly typed predicate support.
 
 ## API
 
 ```ts
-findIndex<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number
+interface FindIndexFunction {
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number
+}
 ```
 
+### Parameters
+
 - `array`: The array to search.
-- `predicate`: The function to test each element.
+- `predicate`: The function to test each element. It receives:
+  - `item`: The current element.
+  - `index`: The index of the current element.
+  - `array`: The original array.
 
 ### Returns
 
-- The index of the first element that satisfies the predicate, or `-1` if no such element is found.
+- The zero-based index of the first matching element, or `-1` if no match is found.
 
-## Example
+## Examples
+
+### Finding an Index
 
 ```ts
 import { findIndex } from '@vielzeug/toolkit';
 
-const arr = [1, 2, 3, 4];
-findIndex(arr, (x) => x % 2 === 0); // 1
-findIndex(arr, (x) => x > 4); // -1
+const fruits = ['apple', 'banana', 'cherry', 'date'];
+
+// Find index of 'cherry'
+findIndex(fruits, f => f === 'cherry'); // 2
+
+// Find index of a fruit starting with 'z'
+findIndex(fruits, f => f.startsWith('z')); // -1
 ```
 
-## Notes
+### Finding Object Index
 
-- Throws `TypeError` if the input is not an array.
-- Useful for locating items, conditional logic, or array manipulation.
+```ts
+import { findIndex } from '@vielzeug/toolkit';
 
-## See also
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+  { id: 3, name: 'Charlie' }
+];
 
-- [find](./find.md)
-- [findLast](./findLast.md)
+const bobIndex = findIndex(users, u => u.name === 'Bob'); // 1
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if the first argument is not an array.
+- Stops iterating as soon as the predicate returns truthy.
+- Does not modify the original array.
+
+## See Also
+
+- [find](./find.md): Get the first matching element itself.
+- [findLast](./findLast.md): Get the *last* matching element.
+- [search](./search.md): Find elements based on a query.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

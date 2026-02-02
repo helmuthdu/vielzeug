@@ -16,17 +16,16 @@
  */
 export function median<T>(arr: T[], callback?: (item: T) => number | Date): number | Date | undefined {
   if (arr.length === 0) return undefined;
+
   const values = callback ? arr.map(callback) : (arr as unknown as (number | Date)[]);
-  // Determine if all values are Dates
   const allDates = values.every((v) => v instanceof Date);
-  // Convert all values to numbers for sorting/median calculation
   const numericValues = values.map((v) => (v instanceof Date ? v.getTime() : (v as number)));
-  const sorted = numericValues.slice().sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    const medianValue = (sorted[mid - 1] + sorted[mid]) / 2;
-    return allDates ? new Date(medianValue) : medianValue;
-  }
-  const medianValue = sorted[mid];
+
+  numericValues.sort((a, b) => a - b);
+
+  const mid = Math.floor(numericValues.length / 2);
+  const medianValue =
+    numericValues.length % 2 === 0 ? (numericValues[mid - 1] + numericValues[mid]) / 2 : numericValues[mid];
+
   return allDates ? new Date(medianValue) : medianValue;
 }

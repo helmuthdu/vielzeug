@@ -1,13 +1,36 @@
 <template>
-  <div id="repl-container" class="repl-container">
+  <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
     <div class="repl-layout">
       <!-- Code Editor -->
       <div class="editor-section">
         <div class="editor-header">
-          <h3>Code Editor</h3>
+          <div class="header-title">
+            <h3>Editor</h3>
+            <button @click="toggleExpand" class="btn-icon" :title="isExpanded ? 'Collapse' : 'Expand'">
+              <svg v-if="!isExpanded" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>
+            </button>
+          </div>
           <div class="controls">
-            <button @click="runCode" class="btn-primary">Run Code</button>
-            <button @click="clearEditor" class="btn-secondary">Clear</button>
+            <button @click="formatCode" class="btn-icon" title="Format Code">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/><path d="M12 7v10"/><path d="M8 11l4 4 4-4"/></svg>
+            </button>
+            <button @click="copyCode" class="btn-icon" title="Copy to Clipboard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+            <button @click="shareCode" class="btn-icon" title="Share Code">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+            </button>
+            <button @click="resetEditor" class="btn-icon" title="Reset to Default">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+            <button @click="clearEditor" class="btn-icon" title="Clear Editor">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            </button>
+            <button @click="runCode" class="btn-primary btn-with-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Run</span>
+            </button>
             <select v-model="selectedExample" @change="loadExample" id="example-selector">
               <option value="">Choose an example...</option>
               <optgroup label="Array">
@@ -16,6 +39,7 @@
                 <option value="array-map">map - Transform array elements</option>
                 <option value="array-group">group - Group array by key</option>
                 <option value="array-sort">sort - Sort array</option>
+                <option value="array-alternate">alternate - Alternate arrays</option>
               </optgroup>
               <optgroup label="Object">
                 <option value="object-merge">merge - Deep merge objects</option>
@@ -43,9 +67,15 @@
                 <option value="function-pipe">pipe - Compose functions</option>
               </optgroup>
               <optgroup label="Typed">
+                <option value="typed-is">is - General type check</option>
+                <option value="typed-ismatch">isMatch - Pattern match</option>
                 <option value="typed-isarray">isArray - Check if array</option>
                 <option value="typed-isempty">isEmpty - Check if empty</option>
                 <option value="typed-isequal">isEqual - Deep equality check</option>
+              </optgroup>
+              <optgroup label="Random">
+                <option value="random-utils">random - Random utilities</option>
+                <option value="random-draw">draw - Draw random element</option>
               </optgroup>
             </select>
           </div>
@@ -57,7 +87,9 @@
       <div class="output-section">
         <div class="output-header">
           <h3>Output</h3>
-          <button @click="clearOutput" class="btn-secondary">Clear Output</button>
+          <button @click="clearOutput" class="btn-icon" title="Clear Output">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
         </div>
         <div ref="outputContainer" class="output-area"></div>
       </div>
@@ -65,387 +97,53 @@
 
     <!-- Function Reference -->
     <div class="reference-section">
-      <details open>
-        <summary><h3>Available Functions</h3></summary>
-        <div class="function-categories">
-          <div class="category">
-            <h4>Array (24 functions)</h4>
-            <div class="function-list">
-              <code>aggregate</code>, <code>chunk</code>, <code>compact</code>, <code>contains</code>,
-              <code>every</code>, <code>filter</code>, <code>find</code>, <code>findIndex</code>, <code>findLast</code>,
-              <code>flatten</code>, <code>group</code>, <code>list</code>, <code>map</code>, <code>pick</code>,
-              <code>reduce</code>, <code>search</code>, <code>select</code>, <code>shift</code>, <code>some</code>,
-              <code>sort</code>, <code>sortBy</code>, <code>substitute</code>, <code>uniq</code>
-            </div>
-          </div>
-
-          <div class="category">
-            <h4>Object (9 functions)</h4>
-            <div class="function-list">
-              <code>clone</code>, <code>diff</code>, <code>entries</code>, <code>keys</code>, <code>merge</code>,
-              <code>parseJSON</code>, <code>path</code>, <code>seek</code>,
-              <code>values</code>
-            </div>
-          </div>
-
-          <div class="category">
-            <h4>String (6 functions)</h4>
-            <div class="function-list">
-              <code>camelCase</code>, <code>kebabCase</code>, <code>pascalCase</code>, <code>similarity</code>,
-              <code>snakeCase</code>, <code>truncate</code>
-            </div>
-          </div>
-
-          <div class="category">
-            <h4>Math (10 functions)</h4>
-            <div class="function-list">
-              <code>average</code>, <code>boil</code>, <code>clamp</code>, <code>max</code>, <code>median</code>,
-              <code>min</code>, <code>range</code>, <code>rate</code>, <code>round</code>, <code>sum</code>
-            </div>
-          </div>
-
-          <div class="category">
-            <h4>Date (3 functions)</h4>
-            <div class="function-list"><code>expires</code>, <code>interval</code>, <code>timeDiff</code></div>
-          </div>
-
-          <div class="category">
-            <h4>Function (18 functions)</h4>
-            <div class="function-list">
-              <code>assert</code>, <code>attempt</code>, <code>compare</code>, <code>compareBy</code>,
-              <code>compose</code>, <code>curry</code>, <code>debounce</code>, <code>delay</code>, <code>fp</code>,
-              <code>memo</code>, <code>once</code>, <code>pipe</code>, <code>predict</code>, <code>proxy</code>,
-              <code>retry</code>, <code>sleep</code>, <code>throttle</code>, <code>worker</code>
-            </div>
-          </div>
-
-          <div class="category">
-            <h4>Typed (24 functions)</h4>
-            <div class="function-list">
-              <code>ge</code>, <code>gt</code>, <code>isArray</code>, <code>isBoolean</code>, <code>isDate</code>,
-              <code>isDefined</code>, <code>isEmpty</code>, <code>isEqual</code>, <code>isEven</code>,
-              <code>isFunction</code>, <code>isNegative</code>, <code>isNil</code>, <code>isNumber</code>,
-              <code>isObject</code>, <code>isOdd</code>, <code>isPositive</code>, <code>isPrimitive</code>,
-              <code>isPromise</code>, <code>isRegex</code>, <code>isString</code>, <code>isWithin</code>,
-              <code>isZero</code>, <code>le</code>, <code>lt</code>
-            </div>
+      <div class="reference-header">
+        <h3>Available Functions</h3>
+        <div class="search-container">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search functions..." 
+            class="search-input"
+          />
+        </div>
+      </div>
+      <div class="function-categories">
+        <div v-for="category in filteredCategories" :key="category.name" class="category">
+          <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
+          <div class="function-list">
+            <code 
+              v-for="fn in category.functions" 
+              :key="fn" 
+              @click="insertFunction(fn)"
+              class="clickable-fn"
+              :class="{ 'is-match': isMatch(fn) }"
+              title="Click to insert"
+            >{{ fn }}</code>
           </div>
         </div>
-      </details>
+        <div v-if="filteredCategories.length === 0" class="no-results">
+          No functions found matching "{{ searchQuery }}"
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import * as toolkit from '../../../../packages/toolkit/src/index';
-
+import { examples } from './repl/examples';
+import { toolkitTypes } from './repl/types';
 
 const editorContainer = ref(null);
 const outputContainer = ref(null);
 const selectedExample = ref('');
+const isExpanded = ref(false);
+const searchQuery = ref('');
 
-let editor = null;
-
-const examples = {
-  'array-chunk': `import { chunk } from '@vielzeug/toolkit'
-
-const array = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-const chunks = chunk(array, 3)
-console.log('Original:', array)
-console.log('Chunks of 3:', chunks)`,
-
-  'array-filter': `import { filter } from '@vielzeug/toolkit'
-
-const users = [
-  { name: 'Alice', age: 25, active: true },
-  { name: 'Bob', age: 30, active: false },
-  { name: 'Charlie', age: 35, active: true }
-]
-
-const activeUsers = filter(users, user => user.active)
-console.log('Active users:', activeUsers)`,
-
-  'array-map': `import { map } from '@vielzeug/toolkit'
-
-const numbers = [1, 2, 3, 4, 5]
-const squared = map(numbers, n => n * n)
-const withIndex = map(numbers, (n, i) => \`\${i}: \${n}\`)
-
-console.log('Original:', numbers)
-console.log('Squared:', squared)
-console.log('With index:', withIndex)`,
-
-  'array-group': `import { group } from '@vielzeug/toolkit'
-
-const items = [
-  { category: 'fruit', name: 'apple' },
-  { category: 'vegetable', name: 'carrot' },
-  { category: 'fruit', name: 'banana' },
-  { category: 'vegetable', name: 'broccoli' }
-]
-
-const grouped = group(items, item => item.category)
-console.log('Grouped by category:', grouped)`,
-
-  'object-merge': `import { merge } from '@vielzeug/toolkit'
-
-const obj1 = { a: 1, b: { x: 1, y: 2 } }
-const obj2 = { b: { y: 3, z: 4 }, c: 3 }
-
-const merged = merge('deep', obj1, obj2)
-console.log('Object 1:', obj1)
-console.log('Object 2:', obj2)
-console.log('Merged:', merged)`,
-
-  'object-clone': `import { clone } from '@vielzeug/toolkit'
-
-const original = {
-  name: 'John',
-  address: { city: 'New York', country: 'USA' },
-  hobbies: ['reading', 'coding']
-}
-
-const cloned = clone(original)
-cloned.address.city = 'Boston'
-cloned.hobbies.push('gaming')
-
-console.log('Original:', original)
-console.log('Cloned:', cloned)`,
-
-  'string-camelcase': `import { camelCase, kebabCase, pascalCase, snakeCase } from '@vielzeug/toolkit'
-
-const text = 'hello world example'
-
-console.log('Original:', text)
-console.log('camelCase:', camelCase(text))
-console.log('kebab-case:', kebabCase(text))
-console.log('PascalCase:', pascalCase(text))
-console.log('snake_case:', snakeCase(text))`,
-
-  'math-average': `import { average, median, sum, max, min } from '@vielzeug/toolkit'
-
-const scores = [85, 92, 78, 96, 88, 91, 83]
-
-console.log('Scores:', scores)
-console.log('Average:', average(scores))
-console.log('Median:', median(scores))
-console.log('Sum:', sum(scores))
-console.log('Max:', max(scores))
-console.log('Min:', min(scores))`,
-
-  'date-expires': `import { expires } from '@vielzeug/toolkit'
-
-const now = new Date()
-const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
-const past = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
-
-console.log('Current time:', now)
-console.log('Future date expires?', expires(future))
-console.log('Past date expires?', expires(past))`,
-
-  'date-timediff': `import { timeDiff } from '@vielzeug/toolkit'
-
-const now = new Date()
-const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
-const past = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
-
-// Test timeDiff function
-console.log('Time difference (future):', timeDiff(future))
-console.log('Time difference (past):', timeDiff(past))
-console.log('Custom time units:', timeDiff(future, now, ['DAY', 'HOUR']))`,
-
-  'function-debounce': `import { debounce } from '@vielzeug/toolkit'
-
-// Simulate a search function
-const search = debounce((query) => {
-  console.log('Searching for:', query)
-}, 300)
-
-// These calls will be debounced
-search('a')
-search('ap')
-search('app')
-search('apple') // Only this will execute after 300ms
-
-console.log('Debounced search function created')
-console.log('Try calling search() multiple times quickly')`,
-
-  'typed-isarray': `import { isArray, isObject, isString, isNumber } from '@vielzeug/toolkit'
-
-const values = [
-  [1, 2, 3],
-  { key: 'value' },
-  'hello',
-  42,
-  null,
-  undefined
-]
-
-values.forEach((value, index) => {
-  console.log(\`Value \${index}: \${JSON.stringify(value)}\`)
-  console.log(\`isArray: \${isArray(value)}\`)
-  console.log(\`isObject: \${isObject(value)}\`)
-  console.log(\`isString: \${isString(value)}\`)
-  console.log(\`isNumber: \${isNumber(value)}\`)
-  console.log('---')
-})`,
-
-  'typed-isequal': `import { isEqual } from '@vielzeug/toolkit'
-
-  console.log(\`isEqual([1, 2, 3], [1, 2, 3]) // \${isEqual([1, 2, 3], [1, 2, 3])}\`)
-  console.log(\`isEqual([1, 2, 4], [1, 2, 3]) // \${isEqual([1, 2, 4], [1, 2, 3])}\`)
-  console.log(\`isEqual({ a: 1, b: 2 }, { a: 1, b: 2 }) // \${isEqual({ a: 1, b: 2 }, { a: 1, b: 2 })}\`)
-  console.log(\`isEqual({ a: 1, b: 2 }, { a: 1, b: 3 }) // \${isEqual({ a: 1, b: 2 }, { a: 1, b: 3 })}\`)
-  console.log(\`isEqual('hello', 'hello') // \${isEqual('hello', 'hello')}\`)
-  console.log(\`isEqual('hello', 'world') // \${isEqual('hello', 'world')}\`)
-  console.log(\`isEqual(42, 42) // \${isEqual(42, 42)}\`)`,
-};
-
-onMounted(() => {
-  initializeREPL();
-});
-
-const initializeREPL = () => {
-  // Load Monaco Editor
-  window.toolkit = toolkit;
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/monaco-editor@0.44.0/min/vs/loader.js';
-  script.onload = () => {
-    require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.44.0/min/vs' } });
-
-    require(['vs/editor/editor.main'], function () {
-      // Define TypeScript types for autocomplete
-      const toolkitTypes = `
-type MergeStrategy =
-  | 'deep'
-  | 'shallow'
-  | 'lastWins'
-  | 'arrayConcat'
-  | 'arrayReplace'
-  // biome-ignore lint/suspicious/noExplicitAny: -
-  | ((target: any, source: any) => any);
-
-type DeepMerge<T, U> = T extends Obj
-  ? U extends Obj
-    ? {
-        [K in keyof T | keyof U]: K extends keyof T
-          ? K extends keyof U
-            ? DeepMerge<T[K], U[K]>
-            : T[K]
-          : K extends keyof U
-            ? U[K]
-            : never;
-      }
-    : U
-  : U;
-
-type Merge<T extends Obj[]> = T extends [infer First, ...infer Rest]
-  ? First extends Obj
-    ? Rest extends Obj[]
-      ? DeepMerge<First, Merge<Rest>>
-      : First
-    : Obj
-  : Obj;
-
-declare module '@vielzeug/toolkit' {
-  // Array utilities
-  export function chunk<T>(array: T[], size: number): T[][]
-  export function filter<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): T[]
-  export function map<T, R>(array: T[], mapper: (item: T, index: number, array: T[]) => R): R[]
-  export function group<T, K extends PropertyKey>(array: T[], getKey: (item: T) => K): Record<K, T[]>
-  export function sort<T>(array: T[], compare?: (a: T, b: T) => number): T[]
-  export function uniq<T>(array: T[]): T[]
-  export function flatten<T>(array: (T | T[])[]): T[]
-  export function compact<T>(array: (T | null | undefined)[]): T[]
-  export function find<T>(array: T[], predicate: (item: T) => boolean): T | undefined
-  export function some<T>(array: T[], predicate: (item: T) => boolean): boolean
-  export function every<T>(array: T[], predicate: (item: T) => boolean): boolean
-
-  // Object utilities
-  export function merge<T extends Obj[]>(strategy: MergeStrategy = 'deep', ...items: [...T]): Merge<T>
-  export function clone<T>(obj: T): T
-  export function path<T>(obj: any, path: string): T | undefined
-  export function diff<T>(obj1: T, obj2: T): Partial<T>
-  export function keys<T extends Record<string, any>>(obj: T): (keyof T)[]
-  export function values<T extends Record<string, any>>(obj: T): T[keyof T][]
-  export function entries<T extends Record<string, any>>(obj: T): [keyof T, T[keyof T]][]
-
-  // String utilities
-  export function camelCase(str: string): string
-  export function kebabCase(str: string): string
-  export function pascalCase(str: string): string
-  export function snakeCase(str: string): string
-  export function truncate(str: string, length: number, suffix?: string): string
-  export function similarity(str1: string, str2: string): number
-
-  // Math utilities
-  export function average(numbers: number[]): number
-  export function clamp(value: number, min: number, max: number): number
-  export function range(start: number, end: number, step?: number): number[]
-  export function sum(numbers: number[]): number
-  export function max(numbers: number[]): number
-  export function min(numbers: number[]): number
-  export function median(numbers: number[]): number
-  export function round(value: number, precision?: number): number
-
-  // Date utilities
-  export function expires(date: Date | string | number): boolean
-  export function timeDiff(date1: Date, date2: Date): number
-  export function interval(date1: Date, date2: Date): { days: number, hours: number, minutes: number, seconds: number }
-
-  // Function utilities
-  export function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): T
-  export function throttle<T extends (...args: any[]) => any>(fn: T, delay: number): T
-  export function pipe<T, R>(...fns: Array<(arg: any) => any>): (input: T) => R
-  export function compose<T, R>(...fns: Array<(arg: any) => any>): (input: T) => R
-  export function memo<T extends (...args: any[]) => any>(fn: T): T
-  export function once<T extends (...args: any[]) => any>(fn: T): T
-  export function delay(ms: number): Promise<void>
-  export function sleep(ms: number): Promise<void>
-  export function retry<T>(fn: () => T | Promise<T>, options?: { retries?: number, delay?: number }): Promise<T>
-
-  // Type utilities
-  export function isArray(value: any): value is any[]
-  export function isObject(value: any): value is object
-  export function isString(value: any): value is string
-  export function isNumber(value: any): value is number
-  export function isBoolean(value: any): value is boolean
-  export function isDate(value: any): value is Date
-  export function isFunction(value: any): value is Function
-  export function isPromise(value: any): value is Promise<any>
-  export function isRegex(value: any): value is RegExp
-  export function isEmpty(value: any): boolean
-  export function isEqual(a: any, b: any): boolean
-  export function isDefined<T>(value: T | undefined | null): value is T
-  export function isNil(value: any): value is null | undefined
-  export function isPrimitive(value: any): boolean
-  export function isEven(value: number): boolean
-  export function isOdd(value: number): boolean
-  export function isPositive(value: number): boolean
-  export function isNegative(value: number): boolean
-  export function isZero(value: number): boolean
-  export function isWithin(value: number, min: number, max: number): boolean
-  export function gt(a: any, b: any): boolean
-  export function ge(a: any, b: any): boolean
-  export function lt(a: any, b: any): boolean
-  export function le(a: any, b: any): boolean
-
-  // Random utilities
-  export function random(min?: number, max?: number): number
-  export function shuffle<T>(array: T[]): T[]
-  export function uuid(): string
-}
-`;
-
-      monaco.languages.typescript.typescriptDefaults.addExtraLib(
-        toolkitTypes,
-        'file:///node_modules/@vielzeug/toolkit/index.d.ts',
-      );
-
-      // Create editor
-      editor = monaco.editor.create(editorContainer.value, {
-        value: `// Welcome to the Vielzeug REPL!
+const DEFAULT_CODE = `// Welcome to the Vielzeug REPL!
 // All toolkit functions are available globally.
 // Try some examples:
 
@@ -462,13 +160,129 @@ const evenDoubled = map(filter(numbers, n => n % 2 === 0), n => n * 2)
 console.log('Even numbers doubled:', evenDoubled)
 
 // Try more functions!
-`,
+`;
+
+// Group toolkit functions by category for the reference section
+const categories = [
+  {
+    name: 'Array',
+    functions: ['aggregate', 'alternate', 'chunk', 'compact', 'contains', 'every', 'filter', 'find', 'findIndex', 'findLast', 'flatten', 'group', 'list', 'map', 'pick', 'reduce', 'search', 'select', 'shift', 'some', 'sort', 'sortBy', 'substitute', 'uniq']
+  },
+  {
+    name: 'Object',
+    functions: ['clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values']
+  },
+  {
+    name: 'String',
+    functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate']
+  },
+  {
+    name: 'Math',
+    functions: ['average', 'boil', 'clamp', 'max', 'median', 'min', 'range', 'rate', 'round', 'sum']
+  },
+  {
+    name: 'Date',
+    functions: ['expires', 'interval', 'timeDiff']
+  },
+  {
+    name: 'Function',
+    functions: ['assert', 'assertParams', 'attempt', 'compare', 'compareBy', 'compose', 'curry', 'debounce', 'delay', 'fp', 'memo', 'once', 'pipe', 'predict', 'proxy', 'retry', 'sleep', 'throttle', 'worker']
+  },
+  {
+    name: 'Typed',
+    functions: ['ge', 'gt', 'is', 'isArray', 'isBoolean', 'isDate', 'isDefined', 'isEmpty', 'isEqual', 'isEven', 'isFunction', 'isMatch', 'isNegative', 'isNil', 'isNumber', 'isObject', 'isOdd', 'isPositive', 'isPrimitive', 'isPromise', 'isRegex', 'isString', 'isWithin', 'isZero', 'le', 'lt', 'typeOf']
+  },
+  {
+    name: 'Random',
+    functions: ['draw', 'random', 'shuffle', 'uuid']
+  }
+];
+
+const allExportedFunctions = Object.keys(toolkit);
+const categorizedFunctions = categories.flatMap(c => c.functions);
+const missingFunctions = allExportedFunctions.filter(f => !categorizedFunctions.includes(f) && f !== 'default');
+
+if (missingFunctions.length > 0) {
+  console.warn('The following functions are exported from the toolkit but not categorized in the REPL:', missingFunctions);
+}
+
+const filteredCategories = computed(() => {
+  if (!searchQuery.value) return categories;
+  
+  const query = searchQuery.value.toLowerCase();
+  return categories
+    .map(cat => ({
+      ...cat,
+      functions: cat.functions.filter(fn => fn.toLowerCase().includes(query))
+    }))
+    .filter(cat => cat.functions.length > 0);
+});
+
+const isMatch = (fn) => {
+  if (!searchQuery.value) return false;
+  return fn.toLowerCase().includes(searchQuery.value.toLowerCase());
+};
+
+let editor = null;
+
+onMounted(() => {
+  initializeREPL();
+});
+
+onBeforeUnmount(() => {
+  if (editor) {
+    editor.dispose();
+  }
+});
+
+const initializeREPL = () => {
+  // Load Monaco Editor
+  window.toolkit = toolkit;
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/monaco-editor@0.55.1/min/vs/loader.js';
+  script.onload = () => {
+    require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.55.1/min/vs' } });
+
+    require(['vs/editor/editor.main'], function () {
+      monaco.languages.typescript.typescriptDefaults.addExtraLib(
+        toolkitTypes,
+        'file:///node_modules/@vielzeug/toolkit/index.d.ts',
+      );
+
+      // Check for code in URL first, then localStorage, then default
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedCode = urlParams.get('code');
+      let initialCode = DEFAULT_CODE;
+
+      if (sharedCode) {
+        try {
+          initialCode = atob(sharedCode);
+          // Clear URL to avoid carrying it around
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {
+          console.error('Failed to decode shared code', e);
+        }
+      } else {
+        const savedCode = localStorage.getItem('vielzeug-repl-code');
+        if (savedCode) {
+          initialCode = savedCode;
+        }
+      }
+
+      // Create editor
+      editor = monaco.editor.create(editorContainer.value, {
+        value: initialCode,
         language: 'typescript',
         theme: 'vs-dark',
         fontSize: 14,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         automaticLayout: true,
+      });
+
+      // Save to localStorage on change
+      editor.onDidChangeModelContent(() => {
+        localStorage.setItem('vielzeug-repl-code', editor.getValue());
       });
 
       // Auto-run on Ctrl+Enter
@@ -505,18 +319,31 @@ const runCode = () => {
   const originalError = console.error;
   const originalWarn = console.warn;
 
+  const stringify = (item) => {
+    if (item === undefined) return 'undefined';
+    if (item === null) return 'null';
+    if (typeof item === 'object') {
+      try {
+        // Handle Date objects
+        if (item instanceof Date) return `Date(${item.toISOString()})`;
+        // Handle Error objects
+        if (item instanceof Error) return `Error: ${item.message}`;
+        // Handle RegEx
+        if (item instanceof RegExp) return String(item);
+        
+        return JSON.stringify(item, null, 2);
+      } catch (e) {
+        return String(item);
+      }
+    }
+    if (typeof item === 'string') return `'${item}'`;
+    return String(item);
+  };
+
   const addOutput = (content, type = 'log') => {
     const line = document.createElement('div');
     line.className = `output-line output-${type}`;
-
-    content.forEach((item) => {
-      if (typeof item === 'object') {
-        line.textContent += JSON.stringify(item, null, 2);
-      } else {
-        line.textContent += String(item);
-      }
-      line.textContent += ' ';
-    });
+    line.textContent = content.map(stringify).join(' ');
 
     output.appendChild(line);
     output.scrollTop = output.scrollHeight;
@@ -536,22 +363,35 @@ const runCode = () => {
 
   try {
     // Transform import statements to use global toolkit
-    const transformedCode = code
+    let transformedCode = code
       .replace(/import\s*{([^}]+)}\s*from\s*['"]@vielzeug\/toolkit['"]/g, (match, imports) => {
         const importList = imports.split(',').map((i) => i.trim());
         return `const { ${importList.join(', ')} } = window.toolkit || {}`;
       })
       .replace(/import\s*\*\s*as\s+(\w+)\s*from\s*['"]@vielzeug\/toolkit['"]/g, 'const $1 = window.toolkit || {}');
 
+    // Use a self-invoking async function to support top-level await if needed
+    if (transformedCode.includes('await')) {
+      transformedCode = `(async () => { ${transformedCode} })()`;
+    }
+
     // Execute the code
     const result = eval(transformedCode);
 
-    // Show result if it's not undefined
-    if (result !== undefined) {
-      addOutput('→ ' + (typeof result === 'object' ? JSON.stringify(result, null, 2) : result), 'result');
+    // If it's a promise (from the async wrapper), handle it
+    if (result instanceof Promise) {
+      result.then(res => {
+        if (res !== undefined) {
+          addOutput(['→', res], 'result');
+        }
+      }).catch(err => {
+        addOutput(['Error:', err.message], 'error');
+      });
+    } else if (result !== undefined) {
+      addOutput(['→', result], 'result');
     }
   } catch (error) {
-    addOutput('Error: ' + error.message, 'error');
+    addOutput(['Error:', error.message], 'error');
   } finally {
     // Restore console
     console.log = originalLog;
@@ -575,6 +415,69 @@ const clearOutput = () => {
 const loadExample = () => {
   if (selectedExample.value && examples[selectedExample.value] && editor) {
     editor.setValue(examples[selectedExample.value]);
+    runCode();
+  }
+};
+
+const formatCode = () => {
+  if (editor) {
+    editor.getAction('editor.action.formatDocument').run();
+  }
+};
+
+const copyCode = () => {
+  if (editor) {
+    const code = editor.getValue();
+    navigator.clipboard.writeText(code).then(() => {
+      alert('Code copied to clipboard!');
+    });
+  }
+};
+
+const shareCode = () => {
+  if (editor) {
+    const code = editor.getValue();
+    const encoded = btoa(code);
+    const url = new URL(window.location.href);
+    url.searchParams.set('code', encoded);
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      alert('Shareable URL copied to clipboard!');
+    });
+  }
+};
+
+const resetEditor = () => {
+  if (editor && confirm('Are you sure you want to reset the editor to default?')) {
+    editor.setValue(DEFAULT_CODE);
+    localStorage.removeItem('vielzeug-repl-code');
+    runCode();
+  }
+};
+
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value;
+  // Trigger layout recalculation for Monaco
+  if (editor) {
+    setTimeout(() => {
+      editor.layout();
+    }, 100);
+  }
+};
+
+const insertFunction = (fnName) => {
+  if (editor) {
+    const selection = editor.getSelection();
+    const range = new monaco.Range(
+      selection.startLineNumber,
+      selection.startColumn,
+      selection.endLineNumber,
+      selection.endColumn
+    );
+    const text = `${fnName}()`;
+    editor.executeEdits('insert-function', [
+      { range: range, text: text, forceMoveMarkers: true }
+    ]);
+    editor.focus();
   }
 };
 </script>
@@ -583,33 +486,52 @@ const loadExample = () => {
 .repl-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
   min-height: 500px;
 }
 
 .editor-section,
 .output-section {
-  border: 1px solid var(--vp-c-border);
-  border-radius: 8px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
   overflow: hidden;
+  background: var(--vp-c-bg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.editor-section:hover,
+.output-section:hover {
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .editor-header,
 .output-header {
   background: var(--vp-c-bg-soft);
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--vp-c-border);
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--vp-c-divider);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 56px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .editor-header h3,
 .output-header h3 {
   margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--vp-c-text-2);
 }
 
 .controls {
@@ -619,131 +541,302 @@ const loadExample = () => {
 }
 
 .btn-primary,
-.btn-secondary {
-  padding: 0.4rem 0.8rem;
+.btn-secondary,
+.btn-icon {
+  padding: 0.5rem;
   border: none;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon {
+  background: transparent;
+  color: var(--vp-c-text-2);
+  border: 1px solid transparent;
+}
+
+.btn-icon:hover {
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-divider);
+}
+
+.btn-with-icon {
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
 }
 
 .btn-primary {
-  background: var(--vp-c-brand);
+  background: var(--vp-c-brand-1);
   color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary:hover {
-  background: var(--vp-c-brand-dark);
+  background: var(--vp-c-brand-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-secondary {
   background: var(--vp-c-bg-alt);
   color: var(--vp-c-text-1);
-  border: 1px solid var(--vp-c-border);
+  border: 1px solid var(--vp-c-divider);
 }
 
 .btn-secondary:hover {
   background: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-brand-1);
+}
+
+.repl-container.is-expanded {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: var(--vp-c-bg);
+  padding: 2rem;
+  margin: 0;
+}
+
+.is-expanded .repl-layout {
+  height: calc(100vh - 160px);
+  min-height: auto;
+}
+
+.is-expanded .editor-section,
+.is-expanded .output-section {
+  height: 100%;
+}
+
+.is-expanded .code-editor,
+.is-expanded .output-area {
+  height: calc(100% - 56px);
+}
+
+.is-expanded .reference-section {
+  display: none;
 }
 
 #example-selector {
   padding: 0.4rem 0.8rem;
-  border: 1px solid var(--vp-c-border);
-  border-radius: 4px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
   background: var(--vp-c-bg);
   color: var(--vp-c-text-1);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#example-selector:focus {
+  border-color: var(--vp-c-brand-1);
 }
 
 .code-editor {
-  height: 400px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  height: 450px;
+  font-family: var(--vp-font-family-mono);
   background: var(--vp-code-bg);
 }
 
 .output-area {
-  height: 400px;
-  padding: 1rem;
+  height: 450px;
+  padding: 1.25rem;
   background: var(--vp-c-bg-alt);
   overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: var(--vp-font-family-mono);
   font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .reference-section {
-  margin-top: 2rem;
-  border: 1px solid var(--vp-c-border);
-  border-radius: 8px;
-  padding: 1rem;
+  margin-top: 3rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: var(--vp-c-bg);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.reference-section summary {
-  cursor: pointer;
-  margin-bottom: 1rem;
+.reference-header {
+  padding: 1rem 1.5rem;
+  background: var(--vp-c-bg-soft);
+  border-bottom: 1px solid var(--vp-c-divider);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
-.reference-section h3 {
+.reference-header h3 {
   margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--vp-c-text-2);
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--vp-c-text-3);
+  pointer-events: none;
+}
+
+.search-input {
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-size: 0.9rem;
+  width: 240px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input:focus {
+  border-color: var(--vp-c-brand-1);
+  outline: none;
+  width: 320px;
+  box-shadow: 0 0 0 3px var(--vp-c-brand-soft);
 }
 
 .function-categories {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  color: var(--vp-c-text-3);
+  font-style: italic;
+  background: var(--vp-c-bg-soft);
+  border-radius: 8px;
 }
 
 .category h4 {
-  margin: 0 0 0.5rem 0;
-  color: var(--vp-c-brand);
-  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  color: var(--vp-c-brand-1);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 0.5rem;
 }
 
 .function-list {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 .function-list code {
-  background: var(--vp-code-bg);
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
   font-size: 0.8rem;
+  border: 1px solid var(--vp-c-divider);
+  transition: all 0.2s;
+}
+
+.clickable-fn {
+  cursor: pointer;
+}
+
+.clickable-fn:hover {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-fn.is-match {
+  background: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
 
 :deep(.output-line) {
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
   padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 :deep(.output-error) {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.1);
-  padding: 0.5rem;
-  border-radius: 4px;
-  border-left: 3px solid #ff6b6b;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #ef4444;
+  margin: 1rem 0;
+}
+
+:deep(.output-warn) {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+  margin: 1rem 0;
 }
 
 :deep(.output-result) {
-  color: var(--vp-c-text-1);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
 
 :deep(.output-log) {
-  color: #74c0fc;
+  color: var(--vp-c-text-1);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .repl-layout {
     grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 768px) {
   .controls {
     flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   #example-selector {
     width: 100%;
-    margin-top: 0.5rem;
+    order: 10;
   }
 }
 </style>

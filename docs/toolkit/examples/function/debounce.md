@@ -1,33 +1,86 @@
 # debounce
 
-Creates a debounced version of a function, delaying its execution until after a specified wait time has elapsed since the last call.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-256_B-success" alt="Size">
+</div>
+
+The `debounce` utility creates a version of a function that delays its execution until a specified amount of time has passed since it was last called. This is ideal for handling rapid-fire events like window resizing, scrolling, or keystrokes.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Efficient**: Prevents unnecessary processing by grouping multiple calls into one.
+- **Type-safe**: Preserves the argument types of the original function.
 
 ## API
 
 ```ts
-debounce<T extends (...args: any[]) => any>(fn: T, wait: number): (...args: Parameters<T>) => void
+interface DebounceFunction {
+  <T extends (...args: any[]) => any>(
+    fn: T, 
+    wait: number
+  ): (...args: any[]) => void;
+}
 ```
 
-- `fn`: Function to debounce.
-- `wait`: Time in milliseconds to wait before invoking the function.
-- Returns: Debounced function.
+### Parameters
 
-## Example
+- `fn`: The function you want to debounce.
+- `wait`: The number of milliseconds to wait for "silence" before actually calling `fn`.
+
+### Returns
+
+- A new function that, when called, resets the timer and waits for `wait` milliseconds before executing the original `fn`.
+
+## Examples
+
+### Search Input Handling
 
 ```ts
 import { debounce } from '@vielzeug/toolkit';
 
-const log = debounce((msg: string) => console.log(msg), 200);
-log('Hello');
-log('World'); // Only 'World' will be logged after 200ms
+const search = debounce((query: string) => {
+  console.log('Searching for:', query);
+  // Perform API call here
+}, 300);
+
+// Only the last call will execute after 300ms of inactivity
+search('a');
+search('ap');
+search('app');
+search('apple');
 ```
 
-## Notes
+### Window Resize
 
-- Useful for limiting the rate of function calls (e.g., in event handlers).
-- Only the last call within the wait period is executed.
+```ts
+import { debounce } from '@vielzeug/toolkit';
 
-## Related
+const handleResize = debounce(() => {
+  console.log('Window resized!');
+  // Recalculate layout
+}, 250);
 
-- [delay](./delay.md)
-- [throttle](./throttle.md)
+window.addEventListener('resize', handleResize);
+```
+
+## Implementation Notes
+
+- The debounced function does not return the result of the original `fn`, as execution is asynchronous.
+- Each call to the debounced function clears any existing timer and starts a new one.
+- In a Node.js environment, it uses `setTimeout` under the hood.
+
+## See Also
+
+- [throttle](./throttle.md): Execute a function at most once in a specified interval.
+- [delay](./delay.md): Pause execution for a specified duration.
+- [retry](./retry.md): Automatically retry an asynchronous operation.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

@@ -38,14 +38,14 @@ export function interval(
   });
 
   const dateArray: Date[] = [];
-  let currentDate = incrementDate(startDate, interval, 0);
+  let currentDate = new Date(incrementDate(startDate, interval, 0));
 
   while (currentDate <= endDate) {
     dateArray.push(currentDate);
-    currentDate = incrementDate(currentDate, interval, steps);
+    currentDate = new Date(incrementDate(currentDate, interval, steps));
   }
 
-  if (latest && dateArray[dateArray.length - 1] < endDate) {
+  if (latest && dateArray.length > 0 && dateArray[dateArray.length - 1] < endDate) {
     dateArray.push(endDate);
   }
 

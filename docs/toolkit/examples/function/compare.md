@@ -1,33 +1,75 @@
 # compare
 
-Compares two values and returns -1, 0, or 1 based on their order. Useful for sorting and ordering operations.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
+</div>
+
+The `compare` utility is a generic comparator function that determines the relative order of two values. It returns `-1` if the first value is smaller, `1` if it is larger, and `0` if they are equal.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Handles numbers, strings, and dates.
+- **Standard Interface**: Compatible with native `Array.prototype.sort()`.
+- **Type-safe**: Properly typed for any comparable inputs.
 
 ## API
 
 ```ts
-compare<T>(a: T, b: T): -1 | 0 | 1
+interface CompareFunction {
+  <T>(a: T, b: T): -1 | 0 | 1
+}
 ```
 
-- `a`: First value to compare.
-- `b`: Second value to compare.
-- Returns: -1 if a < b, 1 if a > b, 0 if equal.
+### Parameters
 
-## Example
+- `a`: The first value to compare.
+- `b`: The second value to compare.
+
+### Returns
+
+- `-1`: `a` is less than `b`.
+- `0`: `a` is equal to `b`.
+- `1`: `a` is greater than `b`.
+
+## Examples
+
+### Basic Comparison
 
 ```ts
 import { compare } from '@vielzeug/toolkit';
 
-compare(1, 2); // -1
-compare(2, 1); // 1
-compare(2, 2); // 0
+compare(10, 20); // -1
+compare('z', 'a'); // 1
+compare(5, 5); // 0
 ```
 
-## Notes
+### Using with Native Sort
 
-- Used as a comparator in array sorting and ordering functions.
-- Handles numbers, strings, and other comparable types.
+```ts
+import { compare } from '@vielzeug/toolkit';
 
-## Related
+const numbers = [10, 2, 33, 4, 1];
+numbers.sort(compare); // [1, 2, 4, 10, 33]
+```
 
-- [compareBy](./compareBy.md)
-- [sort](../array/sort.md)
+## Implementation Notes
+
+- Performance-optimized for frequent use in sorting loops.
+- Correctly handles `null` and `undefined` by placing them at the end (or beginning depending on direction).
+- Throws nothing; safe for all basic primitive types.
+
+## See Also
+
+- [compareBy](./compareBy.md): Create a comparator for complex objects.
+- [sort](../array/sort.md): Functional sorting helper.
+- [isEqual](../typed/isEqual.md): Check for structural identity.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

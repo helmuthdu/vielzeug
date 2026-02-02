@@ -1,32 +1,64 @@
 # gt
 
-Checks if the first value is greater than the second value.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `gt` utility checks if the first value is strictly greater than the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Supports multiple data types.
+- **Type-safe**: Properly typed for comparable inputs.
 
 ## API
 
 ```ts
-gt<T>(a: T, b: T): boolean
+interface GTFunction {
+  <T>(a: T, b: T): boolean
+}
 ```
 
-- `a`: First value.
-- `b`: Second value.
-- Returns: `true` if `a > b`, else `false`.
+### Parameters
 
-## Example
+- `a`: The value to compare.
+- `b`: The value to compare against.
+
+### Returns
+
+- `true` if `a > b`; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { gt } from '@vielzeug/toolkit';
 
-gt(5, 3); // true
-gt(2, 2); // false
-gt(1, 4); // false
+gt(10, 5);    // true
+gt(5, 10);    // false
+gt(5, 5);     // false
+gt('b', 'a'); // true
 ```
 
-## Notes
+## Implementation Notes
 
-- Works with numbers, strings, and other comparable types.
+- Returns `true` if `a > b`.
+- Uses standard JavaScript comparison rules.
+- Throws nothing; safe for any comparable types.
 
-## Related
+## See Also
 
-- [ge](./ge.md)
-- [lt](./lt.md)
+- [ge](./ge.md): Greater than or equal to.
+- [lt](./lt.md): Less than.
+- [le](./le.md): Less than or equal to.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

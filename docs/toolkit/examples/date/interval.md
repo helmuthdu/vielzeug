@@ -1,43 +1,88 @@
 # interval
 
-Generates an array of dates between a start and end date, with a specified interval and step size.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-342_B-success" alt="Size">
+</div>
+
+The `interval` utility generates an array of dates between a start and end point using a specific time unit and step size. It is highly useful for creating calendars, timeline visualizations, or scheduling tasks.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Multiple Units**: Supports days, weeks, months (start/end), and years (start/end).
+- **Customizable Steps**: Control the density of the generated range.
+- **Directional Control**: Option to return results in reverse chronological order.
 
 ## API
 
 ```ts
-interval(
-  start: Date | string,
-  end: Date | string,
-  options?: {
-    interval?: 'D' | 'W' | 'M' | 'MS' | 'ME' | 'Y' | 'YS' | 'YE';
-    steps?: number;
-    latest?: boolean;
-  }
-): Date[]
+type IntervalType = 'D' | 'W' | 'M' | 'MS' | 'ME' | 'Y' | 'YS' | 'YE';
+
+interface IntervalOptions {
+  interval?: IntervalType;
+  steps?: number;
+  latest?: boolean;
+}
+
+interface IntervalFunction {
+  (start: Date | string | number, end: Date | string | number, options?: IntervalOptions): Date[]
+}
 ```
 
-- `start`: The start date (Date object or ISO string).
-- `end`: The end date (Date object or ISO string).
-- `options`: Optional object:
-  - `interval`: Interval type ('D'=day, 'W'=week, 'M'=month, etc.; default: 'D').
-  - `steps`: Step size (default: 1).
-  - `latest`: If true, returns dates in reverse order (default: false).
+### Parameters
+
+- `start`: The beginning of the date range.
+- `end`: The end of the date range.
+- `options`: Optional configuration:
+  - `interval`: The time unit ('D'=day, 'W'=week, 'M'=month, 'MS'=month start, 'ME'=month end, 'Y'=year, 'YS'=year start, 'YE'=year end; defaults to `'D'`).
+  - `steps`: Number of units between each date (defaults to `1`).
+  - `latest`: If `true`, returns the dates from newest to oldest (defaults to `false`).
 
 ### Returns
 
-- An array of generated dates.
+- An array of `Date` objects representing the generated sequence.
 
-## Example
+## Examples
+
+### Daily Sequence
 
 ```ts
 import { interval } from '@vielzeug/toolkit';
 
-const options = { interval: 'D', steps: 1, latest: false };
-interval('2022-01-01', '2022-01-05', options); // [2022-01-01, 2022-01-02, 2022-01-03, 2022-01-04, 2022-01-05]
-interval('2022-01-01', '2022-01-31', { interval: 'W' }); // [2022-01-01, 2022-01-08, ...]
+// Generate 5 consecutive days
+const days = interval('2024-01-01', '2024-01-05'); 
+// [Jan 1, Jan 2, Jan 3, Jan 4, Jan 5]
 ```
 
-## Notes
+### Weekly Steps (Reverse)
 
+```ts
+import { interval } from '@vielzeug/toolkit';
+
+const weeks = interval('2024-01-01', '2024-02-01', { 
+  interval: 'W', 
+  steps: 2,
+  latest: true
+});
+// [Jan 29, Jan 15, Jan 1]
+```
+
+## Implementation Notes
+
+- Performance-optimized for large date ranges.
+- Correctly handles leap years and different month lengths.
 - Throws `TypeError` if input dates are invalid.
-- Useful for generating date ranges, schedules, or time series.
+
+## See Also
+
+- [expires](./expires.md): Check if a date has passed.
+- [timeDiff](./timeDiff.md): Calculate the duration between two dates.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

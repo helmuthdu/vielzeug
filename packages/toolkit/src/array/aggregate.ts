@@ -27,8 +27,7 @@ export function aggregate<T, K extends keyof T, R extends T[K] extends string ? 
   const result = {} as Record<R, T>;
   const getKey = typeof selector === 'function' ? selector : (item: T) => item[selector];
 
-  for (let index = 0; index < array.length; index++) {
-    const item = array[index];
+  for (const item of array) {
     const key = getKey(item) as R;
 
     result[key] = item;

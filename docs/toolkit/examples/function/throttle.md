@@ -1,36 +1,84 @@
 # throttle
 
-Creates a throttled function that only invokes the provided function at most once per every specified milliseconds.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-244_B-success" alt="Size">
+</div>
+
+The `throttle` utility ensures that a function is called at most once in a specified time interval. It is perfect for limiting the execution rate of heavy handlers like scroll, mouse movement, or continuous API polling.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Performance Optimized**: Reduces CPU usage by dropping redundant intermediate calls.
+- **Type-safe**: Preserves the argument types of the original function.
 
 ## API
 
 ```ts
-throttle<T extends Fn>(fn: T, delay?: number): (...args: Parameters<T>) => void
+interface ThrottleFunction {
+  <T extends (...args: any[]) => any>(
+    fn: T, 
+    limit: number
+  ): (...args: any[]) => void;
+}
 ```
 
-- `fn`: Function to throttle.
-- `delay`: Number of ms to wait before next invocation (default: 700).
-- Returns: Throttled function.
+### Parameters
 
-## Example
+- `fn`: The function you want to throttle.
+- `limit`: The minimum time (in milliseconds) that must pass between successive calls to `fn`.
+
+### Returns
+
+- A new function that, when called repeatedly, executes the original `fn` at most once every `limit` milliseconds.
+
+## Examples
+
+### Scroll Event Handling
 
 ```ts
 import { throttle } from '@vielzeug/toolkit';
 
-const log = () => console.log('Hello, world!');
-const throttledLog = throttle(log, 1000);
-throttledLog(); // logs 'Hello, world!' immediately
-throttledLog(); // does nothing if called again within 1 second
-setTimeout(throttledLog, 1000); // logs after 1 second
+const handleScroll = throttle(() => {
+  console.log('Scroll position:', window.scrollY);
+  // Perform heavy calculation or UI update
+}, 100);
+
+window.addEventListener('scroll', handleScroll);
 ```
 
-## Notes
+### Rate-limited Search
 
-- Useful for rate-limiting event handlers.
-- Only the first call in each interval is executed.
-- Subsequent calls within the interval are ignored.
+```ts
+import { throttle } from '@vielzeug/toolkit';
 
-## Related
+const rateLimitedSearch = throttle((query: string) => {
+  console.log('Fetching results for:', query);
+}, 1000);
 
-- [debounce](./debounce.md)
-- [once](./once.md)
+// Only one call will execute per second even if called faster
+rateLimitedSearch('a');
+rateLimitedSearch('ap');
+rateLimitedSearch('app');
+```
+
+## Implementation Notes
+
+- The throttled function does not return the result of the original `fn`.
+- The first call to the throttled function executes immediately.
+- Subsequent calls within the `limit` period are ignored until the timer expires.
+
+## See Also
+
+- [debounce](./debounce.md): Delay execution until a period of inactivity.
+- [delay](./delay.md): Pause execution for a specified duration.
+- [once](./once.md): Ensure a function is only ever called once.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
