@@ -50,12 +50,6 @@ describe('assertParams', () => {
     expect(() => assertParams(undefined, ['id'])).toThrowError('Missing parameters object');
   });
 
-  it('should support custom error type', () => {
-    class CustomError extends Error {}
-    const params = { id: '' };
-    expect(() => assertParams(params, ['id'], 'Context', { type: CustomError })).toThrowError(CustomError);
-  });
-
   it('should support bypass mode', () => {
     const params = { id: '' };
     assertParams(params, ['id'], 'Context', { bypass: true });

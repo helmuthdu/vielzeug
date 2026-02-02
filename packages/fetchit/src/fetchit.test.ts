@@ -51,7 +51,7 @@ describe('createFetchService', () => {
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    globalThis.fetch = fetchMock;
     vi.resetModules();
   });
 
@@ -249,7 +249,7 @@ describe('createFetchService', () => {
         return mockJsonResponse({ success: true });
       });
 
-      const result = await service.get('data', { id: `retry-${Date.now()}` });
+      const result = await service.get<{success: boolean}>('data', { id: `retry-${Date.now()}` });
 
       expect(attempts).toBe(3);
       expect(result.data.success).toBe(true);
@@ -286,7 +286,7 @@ describe('createFetchService', () => {
 
       fetchMock.mockResolvedValue(mockJsonResponse({ error: 'Not found' }, 404));
 
-      const response = await service.get('missing', { id: `404-${Date.now()}` });
+      const response = await service.get<{error: string}>('missing', { id: `404-${Date.now()}` });
 
       expect(response.ok).toBe(false);
       expect(response.status).toBe(404);
