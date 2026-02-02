@@ -24,11 +24,7 @@ import type { Predicate } from '../types';
 export function findLast<T>(array: T[], predicate: Predicate<T>, defaultValue?: T) {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  if (array.length === 0) {
-    return defaultValue;
-  }
-
-  for (let index = array.length - 1; index >= array.length - 1; index--) {
+  for (let index = array.length - 1; index >= 0; index--) {
     if (predicate(array[index], index, array)) {
       return array[index];
     }

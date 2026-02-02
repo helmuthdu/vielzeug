@@ -1,3 +1,5 @@
+import { normalizeCase } from './_caseUtils';
+
 /**
  * Converts a string to camel case.
  *
@@ -11,9 +13,8 @@
  * @returns The converted string.
  */
 export function camelCase(str: string): string {
-  return str
-    .trim()
-    .toLowerCase()
-    .replace(/[-_\s]+(.)?/g, (_, char) => (char ? char.toUpperCase() : ''))
+  return normalizeCase(str, ' ')
+    .replace(/(?:^|\s)(\w)/g, (_, char) => char.toUpperCase())
+    .replace(/\s+/g, '')
     .replace(/^./, (char) => char.toLowerCase());
 }

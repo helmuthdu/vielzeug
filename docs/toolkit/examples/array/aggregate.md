@@ -1,47 +1,85 @@
 # aggregate
 
-Aggregates an array of objects into an object, keyed by a selector (string or function). Returns an object where each key is the result of the selector and the value is the last matching item.
+The `aggregate` utility transforms an array of objects into a single object, where each key is determined by a selector. If multiple items result in the same key, the last one processed "wins."
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Flexible Keys**: Use a property string or a custom function to generate keys.
+- **Efficient Transformation**: Quickly convert lists into lookup maps.
 
 ## API
 
 ```ts
-aggregate<T, K extends keyof T, R extends T[K] extends string ? T[K] : never>(
-  array: T[],
-  selector: Selector<T>,
-): Record<R, T>
+type Selector<T> = keyof T | ((item: T) => Primitive);
+
+interface AggregateFunction {
+  <T, K extends string | number | symbol>(
+    array: T[], 
+    selector: Selector<T>
+  ): Record<K, T>
+}
 ```
 
+### Parameters
+
 - `array`: The array of objects to aggregate.
-- `selector`: A string key or a function to generate the key for each element.
+- `selector`: A property key string or a function that returns the key for each element.
 
 ### Returns
 
-- An object with keys as generated values and values as the last element for each key.
+- An object with keys as generated values and values as the last matching element for each key.
 
-## Example
+## Examples
+
+### Basic Aggregation by Property
 
 ```ts
 import { aggregate } from '@vielzeug/toolkit';
 
 const data = [
-  { a: 1, name: 'foo' },
-  { a: 2, name: 'bar' },
-  { a: 1, name: 'baz' }
+  { id: 'u1', name: 'Alice' },
+  { id: 'u2', name: 'Bob' },
+  { id: 'u1', name: 'Alice Smith' } // Duplicate ID
 ];
-const result = aggregate(data, 'a');
-// result: { '1': { a: 1, name: 'baz' }, '2': { a: 2, name: 'bar' } }
 
-// Using a selector function
-const byName = aggregate(data, (item) => item.name);
-// result: { foo: { a: 1, name: 'foo' }, bar: { a: 2, name: 'bar' }, baz: { a: 1, name: 'baz' } }
+const byId = aggregate(data, 'id');
+/*
+{
+  u1: { id: 'u1', name: 'Alice Smith' },
+  u2: { id: 'u2', name: 'Bob' }
+}
+*/
 ```
 
-## Notes
+### Aggregation with a Selector Function
 
-- Throws `TypeError` if the input is not an array.
-- Only the last item for each key is kept.
-- Useful for deduplication or grouping by key.
+```ts
+import { aggregate } from '@vielzeug/toolkit';
 
-## See also
+const products = [
+  { sku: 'APL', price: 1.5, category: 'fruit' },
+  { sku: 'BAN', price: 0.8, category: 'fruit' },
+  { sku: 'CHX', price: 5.0, category: 'meat' }
+];
 
-- [group](./group.md)
+const byCategory = aggregate(products, p => p.category);
+/*
+{
+  fruit: { sku: 'BAN', price: 0.8, category: 'fruit' },
+  meat: { sku: 'CHX', price: 5.0, category: 'meat' }
+}
+*/
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if the first argument is not an array.
+- For conflicting keys, the last item in the array is preserved.
+- If you need to preserve all items for a given key, use [`group`](./group.md) instead.
+
+## See Also
+
+- [group](./group.md): Group array elements into lists by key.
+- [uniq](./uniq.md): Remove duplicate elements from an array.
+- [reduce](./reduce.md): Perform custom aggregations.

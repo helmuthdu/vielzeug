@@ -66,21 +66,25 @@ type AdapterConfig<S extends DepositDataSchema> = {
 
 export class Deposit<S extends DepositDataSchema> {
   private readonly adapter: DepositStorageAdapter<S>;
+
   constructor(adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>) {
-    if (typeof adapterOrConfig === 'object' && 'type' in adapterOrConfig) {
-      const config = adapterOrConfig as AdapterConfig<S>;
-      switch (config.type) {
-        case 'localStorage':
-          this.adapter = new LocalStorageAdapter(config.dbName, config.version, config.schema);
-          break;
-        case 'indexedDB':
-          this.adapter = new IndexedDBAdapter(config.dbName, config.version, config.schema, config.migrationFn);
-          break;
-        default:
-          throw new Error(`Unknown adapter type: ${config.type}`);
-      }
-    } else {
-      this.adapter = adapterOrConfig;
+    this.adapter = this.createAdapter(adapterOrConfig);
+  }
+
+  private createAdapter(adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>): DepositStorageAdapter<S> {
+    if (!('type' in adapterOrConfig)) {
+      return adapterOrConfig;
+    }
+
+    const { type, dbName, version, schema, migrationFn } = adapterOrConfig;
+
+    switch (type) {
+      case 'localStorage':
+        return new LocalStorageAdapter(dbName, version, schema);
+      case 'indexedDB':
+        return new IndexedDBAdapter(dbName, version, schema, migrationFn);
+      default:
+        throw new Error(`Unknown adapter type: ${type}`);
     }
   }
 
@@ -109,19 +113,11 @@ export class Deposit<S extends DepositDataSchema> {
     key: KeyType<S, K>,
     defaultValue?: T,
   ): Promise<T | undefined> {
-    try {
-      return this.adapter.get(table, key, defaultValue);
-    } catch (err) {
-      throw new Error(`Error getting record from table ${String(table)}, key ${String(key)}`, { cause: err });
-    }
+    return this.adapter.get(table, key, defaultValue);
   }
 
   getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]> {
-    try {
-      return this.adapter.getAll(table);
-    } catch (err) {
-      throw new Error(`Error getting all records from table ${String(table)}`, { cause: err });
-    }
+    return this.adapter.getAll(table);
   }
 
   put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number) {
@@ -137,16 +133,28 @@ export class Deposit<S extends DepositDataSchema> {
     fn: (stores: T) => Promise<void>,
     ttl?: number,
   ) {
+    const storeMap = await this.loadStores<K, T>(tables);
+    const proxy = this.createStoreProxy(storeMap);
+
+    try {
+      await fn(proxy as T);
+      await this.commitStores(tables, proxy, ttl);
+    } catch (err) {
+      throw new Error('Transaction failed', { cause: err });
+    }
+  }
+
+  private async loadStores<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(tables: K[]): Promise<T> {
     const storeMap = {} as T;
+    const promises = tables.map(async (table) => {
+      (storeMap as any)[table] = await this.getAll(table);
+    });
+    await Promise.all(promises);
+    return storeMap;
+  }
 
-    await Promise.all(
-      tables.map(async (table) => {
-        (storeMap as any)[table] = await this.getAll(table);
-      }),
-    );
-
-    // Use a Proxy to allow reassignment of store arrays (e.g., stores.users = ...)
-    const proxy = new Proxy(storeMap, {
+  private createStoreProxy<T extends Record<string, any>>(storeMap: T): T {
+    return new Proxy(storeMap, {
       get(target, prop) {
         return target[prop as keyof T];
       },
@@ -154,30 +162,37 @@ export class Deposit<S extends DepositDataSchema> {
         target[prop as keyof T] = value;
         return true;
       },
-    });
+    }) as T;
+  }
 
-    try {
-      await fn(proxy as T);
-      await Promise.all(
-        tables.map(async (table) => {
-          await this.clear(table); // Ensure table is cleared before bulkPut
-          await this.bulkPut(table, proxy[table], ttl);
-        }),
-      );
-    } catch (err) {
-      throw new Error('Transaction failed', { cause: err });
-    }
+  private async commitStores<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
+    tables: K[],
+    stores: T,
+    ttl?: number,
+  ): Promise<void> {
+    const commits = tables.map(async (table) => {
+      await this.clear(table);
+      await this.bulkPut(table, stores[table], ttl);
+    });
+    await Promise.all(commits);
   }
 
   async patch<K extends keyof S>(table: K, patches: PatchOperation<S[K]['record'], KeyType<S, K>>[]): Promise<void> {
-    for (const patch of patches) {
-      if (patch.type === 'put') {
-        await this.put(table, patch.value, patch.ttl);
-      } else if (patch.type === 'delete') {
-        await this.delete(table, patch.key as KeyType<S, K>);
-      } else if (patch.type === 'clear') {
-        await this.clear(table);
-      }
+    const operations = patches.map((patch) => this.applyPatch(table, patch));
+    await Promise.all(operations);
+  }
+
+  private async applyPatch<K extends keyof S>(
+    table: K,
+    patch: PatchOperation<S[K]['record'], KeyType<S, K>>,
+  ): Promise<void> {
+    switch (patch.type) {
+      case 'put':
+        return this.put(table, patch.value, patch.ttl);
+      case 'delete':
+        return this.delete(table, patch.key);
+      case 'clear':
+        return this.clear(table);
     }
   }
 }
@@ -191,6 +206,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   private memoCache: Map<string, Promise<T[]>> = new Map();
   private dataVersion = 0;
   private hasMutatingOp = false;
+  private cachedSignature: string | null = null;
 
   constructor(adapter: DepositStorageAdapter<any>, table: string) {
     this.adapter = adapter;
@@ -198,31 +214,30 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 
   private getOpSignature(): string {
-    return this.operations.map((o) => `${o.name}:${JSON.stringify(o.args)}`).join('|');
+    if (this.cachedSignature === null) {
+      this.cachedSignature = this.operations.map((o) => `${o.name}:${JSON.stringify(o.args)}`).join('|');
+    }
+    return this.cachedSignature;
   }
 
   private getMemoKey(): string {
     return `${this.getOpSignature()}|v${this.dataVersion}`;
   }
 
-  /**
-   * Invalidate cache entries matching a predicate. If no predicate is provided, clear all.
-   */
-  private invalidateMemo(predicate?: (key: string) => boolean) {
+  private invalidateMemo(predicate?: (key: string) => boolean): void {
     if (!predicate) {
       this.memoCache.clear();
       return;
     }
-    for (const key of Array.from(this.memoCache.keys())) {
-      if (predicate(key)) {
-        this.memoCache.delete(key);
-      }
+    const keysToDelete = Array.from(this.memoCache.keys()).filter(predicate);
+    for (const key of keysToDelete) {
+      this.memoCache.delete(key);
     }
   }
 
   private pushOp(op: (data: T[]) => T[], name = 'op', args: unknown[] = []): this {
     this.operations.push({ args, name, op });
-    // Only invalidate cache entries that match the new operation signature
+    this.cachedSignature = null; // Invalidate cached signature
     const opSignature = this.getOpSignature();
     this.invalidateMemo((key: string) => key.startsWith(opSignature));
     return this;
@@ -240,22 +255,25 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   between<K extends keyof T>(field: K, lower: number, upper: number): this {
     return this.pushOp(
-      (data) => data.filter((r) => (r[field] as any) >= lower && (r[field] as any) <= upper),
+      (data) =>
+        data.filter((r) => {
+          const val = r[field] as any;
+          return val >= lower && val <= upper;
+        }),
       'between',
       [field, lower, upper],
     );
   }
 
   startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase = false): this {
+    const lowerPrefix = ignoreCase ? prefix.toLowerCase() : prefix;
     return this.pushOp(
       (data) =>
         data.filter((r) => {
           const value = r[field];
           if (typeof value !== 'string') return false;
-          if (ignoreCase) {
-            return value.toLowerCase().startsWith(prefix.toLowerCase());
-          }
-          return value.startsWith(prefix);
+          const str = ignoreCase ? value.toLowerCase() : value;
+          return str.startsWith(lowerPrefix);
         }),
       'startsWith',
       [field, prefix, ignoreCase],
@@ -329,8 +347,9 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   async average<K extends keyof T>(field: K): Promise<number> {
     const arr = await this.toArray();
-    if (!arr.length) return 0;
-    return (await this.sum(field)) / arr.length;
+    if (arr.length === 0) return 0;
+    const total = arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
+    return total / arr.length;
   }
 
   async min<K extends keyof T>(field: K): Promise<T | undefined> {
@@ -342,34 +361,30 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 
   async sum<K extends keyof T>(field: K): Promise<number> {
-    return (await this.toArray()).reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
+    const arr = await this.toArray();
+    return arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
   }
 
   /** ---- Transformations ---- */
 
-  // Mutates records in-place; we disable memoization after such ops for safety.
   modify(callback: (record: T) => T | undefined, context?: { field: keyof T; value: unknown }): this {
     this.hasMutatingOp = true;
     this.dataVersion++;
-    if (context?.field) {
-      // Invalidate only cache entries whose signature includes the field and value
-      this.invalidateMemo(
-        (key: string) =>
-          key.includes(`"${String(context.field)}"`) &&
-          (context.value === undefined || key.includes(JSON.stringify(context.value))),
-      );
-    } else {
-      // Fallback: Invalidate only cache entries that include 'modify' in their signature
+    this.invalidateModifyCache(context);
+
+    return this.pushOp((data) => data.map((item) => callback(item) ?? item), 'modify', [callback]);
+  }
+
+  private invalidateModifyCache(context?: { field: keyof T; value: unknown }): void {
+    if (!context?.field) {
       this.invalidateMemo((key: string) => key.includes('modify'));
+      return;
     }
-    return this.pushOp(
-      (data) =>
-        data.map((item) => {
-          const result = callback(item);
-          return result !== undefined ? result : item;
-        }),
-      'modify',
-      [callback],
+
+    const fieldStr = String(context.field);
+    this.invalidateMemo(
+      (key: string) =>
+        key.includes(`"${fieldStr}"`) && (context.value === undefined || key.includes(JSON.stringify(context.value))),
     );
   }
 
@@ -386,63 +401,75 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   reset(): this {
     this.operations = [];
     this.hasMutatingOp = false;
+    this.cachedSignature = null;
     this.invalidateMemo();
     return this;
   }
 
   async toArray(): Promise<T[]> {
     const key = this.getMemoKey();
-    if (this.memoCache.has(key)) return this.memoCache.get(key)!;
+    const cached = this.memoCache.get(key);
+    if (cached) return cached;
+
+    const promise = this.executeOperations();
+    if (!this.hasMutatingOp) {
+      this.memoCache.set(key, promise);
+    }
+    return promise;
+  }
+
+  private async executeOperations(): Promise<T[]> {
     const originalData = (await this.adapter.getAll(this.table)) as T[];
-    let data = [...originalData];
+    let data = originalData.slice(); // Create a shallow copy
+
     for (const { op } of this.operations) {
       data = op(data);
     }
-    const result = Promise.resolve(data);
-    if (!this.hasMutatingOp) {
-      this.memoCache.set(key, result);
-    }
-    return result;
+
+    return data;
   }
 
   /** ---- Query builder DSL (typed) ---- */
 
   build(conditions: Array<QueryCondition<T>>): this {
     for (const cond of conditions) {
-      switch (cond.type) {
-        case 'equals':
-          this.equals(cond.field as any, cond.value as any);
-          break;
-        case 'between':
-          this.between(cond.field as any, cond.lower as any, cond.upper as any);
-          break;
-        case 'startsWith':
-          this.startsWith(cond.field as any, cond.value);
-          break;
-        case 'where':
-          this.where(cond.field as any, cond.fn as any);
-          break;
-        case 'filter':
-          this.filter(cond.fn);
-          break;
-        case 'orderBy':
-          this.orderBy(cond.field as any, cond.value ?? 'asc');
-          break;
-        case 'limit':
-          this.limit(cond.value);
-          break;
-        case 'offset':
-          this.offset(cond.value);
-          break;
-        case 'page':
-          this.page(cond.pageNumber, cond.pageSize);
-          break;
-        default: {
-          throw new Error(`Unknown query type: ${(cond as any).type}`);
-        }
-      }
+      this.applyCondition(cond);
     }
     return this;
+  }
+
+  private applyCondition(cond: QueryCondition<T>): void {
+    switch (cond.type) {
+      case 'equals':
+        this.equals(cond.field as any, cond.value as any);
+        break;
+      case 'between':
+        this.between(cond.field as any, cond.lower as any, cond.upper as any);
+        break;
+      case 'startsWith':
+        this.startsWith(cond.field as any, cond.value);
+        break;
+      case 'where':
+        this.where(cond.field as any, cond.fn as any);
+        break;
+      case 'filter':
+        this.filter(cond.fn);
+        break;
+      case 'orderBy':
+        this.orderBy(cond.field as any, cond.value ?? 'asc');
+        break;
+      case 'limit':
+        this.limit(cond.value);
+        break;
+      case 'offset':
+        this.offset(cond.value);
+        break;
+      case 'page':
+        this.page(cond.pageNumber, cond.pageSize);
+        break;
+      default:
+        throw new Error(`Unknown query type: ${(cond as any).type}`);
+    }
   }
 }
 
@@ -460,16 +487,18 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
   }
 
   bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]) => {
-    await Promise.all(keys.map((key) => this.delete(table, key)));
+    const promises = keys.map((key) => this.delete(table, key));
+    await Promise.all(promises);
   }, 'BULK_DELETE_FAILED');
 
   bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) => {
-    await Promise.all(values.map((v) => this.put(table, v, ttl)));
+    const promises = values.map((v) => this.put(table, v, ttl));
+    await Promise.all(promises);
   }, 'BULK_PUT_FAILED');
 
   clear = runSafe(async <K extends keyof S>(table: K) => {
     const prefix = this.getStorageKey(table);
-    const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+    const keysToRemove = this.getTableKeys(prefix);
     for (const k of keysToRemove) {
       localStorage.removeItem(k);
     }
@@ -492,6 +521,7 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
       const storageKey = this.getStorageKey(table, String(key));
       const item = localStorage.getItem(storageKey);
       if (!item) return defaultValue;
+
       try {
         const raw = JSON.parse(item);
         const now = Date.now();
@@ -508,35 +538,55 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
   getAll = runSafe(async <K extends keyof S>(table: K): Promise<S[K]['record'][]> => {
     const prefix = this.getStorageKey(table);
     const now = Date.now();
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+    const keys = this.getTableKeys(prefix);
     const records: S[K]['record'][] = [];
+
     for (const k of keys) {
-      try {
-        const raw = JSON.parse(localStorage.getItem(k) ?? '{}');
-        const value = unwrapWithExpiry<S[K]['record']>(raw, now, async () => {
-          const parts = k.split(':');
-          const idPart = parts[parts.length - 1];
-          await this.delete(table, idPart as KeyType<S, typeof table>);
-        });
-        if (value !== undefined) records.push(value);
-      } catch (err) {
-        const parts = k.split(':');
-        const idPart = parts[parts.length - 1];
-        await this.delete(table, idPart as KeyType<S, typeof table>);
-        throw new Error(`Corrupted JSON for key: ${k}`, { cause: err });
+      const record = await this.parseStorageRecord<K>(k, table, now);
+      if (record) {
+        records.push(record);
       }
     }
+
     return records;
   }, 'GET_ALL_FAILED');
 
   put = runSafe(async <K extends keyof S>(table: K, value: S[K]['record'], ttl?: number) => {
-    const key = this.getKey(value, table);
+    const key = this.getRecordKey(value, table);
     if (key === undefined) throw new Error('Missing key for localStorage put');
     localStorage.setItem(this.getStorageKey(table, String(key)), JSON.stringify(wrapWithExpiry(value, ttl)));
   }, 'PUT_FAILED');
 
-  private getKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number | undefined {
-    return value[String((this.schema[table] as DepotDataRecord<any>).key)] as string | number | undefined;
+  private getTableKeys(prefix: string): string[] {
+    return Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+  }
+
+  private async parseStorageRecord<K extends keyof S>(
+    storageKey: string,
+    table: K,
+    now: number,
+  ): Promise<S[K]['record'] | undefined> {
+    try {
+      const raw = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
+      return unwrapWithExpiry<S[K]['record']>(raw, now, async () => {
+        const idPart = this.extractKeyFromStorageKey(storageKey);
+        await this.delete(table, idPart as KeyType<S, typeof table>);
+      });
+    } catch (err) {
+      const idPart = this.extractKeyFromStorageKey(storageKey);
+      await this.delete(table, idPart as KeyType<S, typeof table>);
+      throw new Error(`Corrupted JSON for key: ${storageKey}`, { cause: err });
+    }
+  }
+
+  private extractKeyFromStorageKey(storageKey: string): string {
+    const parts = storageKey.split(':');
+    return parts[parts.length - 1];
+  }
+
+  private getRecordKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number | undefined {
+    const keyField = String((this.schema[table] as DepotDataRecord<any>).key);
+    return value[keyField] as string | number | undefined;
   }
 
   private getStorageKey<K extends keyof S>(table: K, key?: string | number): string {
@@ -563,15 +613,15 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
 
   bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
     await this.withTransaction(table, 'readwrite', async (store) => {
-      await Promise.all(keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange))));
+      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
+      await Promise.all(promises);
     });
   }, 'BULK_DELETE_FAILED');
 
   bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
     await this.withTransaction(table, 'readwrite', async (store) => {
-      for (const value of values) {
-        await this.requestToPromise(store.put(wrapWithExpiry(value, ttl)));
-      }
+      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
+      await Promise.all(promises);
     });
   }, 'BULK_PUT_FAILED');
 
@@ -585,49 +635,64 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
       request.onupgradeneeded = (event) => {
         const db = request.result;
         const tx = request.transaction!;
-        for (const [name, def] of Object.entries(this.schema)) {
-          if (!db.objectStoreNames.contains(name)) {
-            const store = db.createObjectStore(name, { keyPath: (def as DepotDataRecord<any>).key as string });
-            const indexes = (def as DepotDataRecord<any>).indexes;
-            if (indexes) {
-              for (const index of indexes) {
-                store.createIndex(index as string, index as string);
-              }
-            }
-          }
-        }
-        if (this.migrationFn) {
-          try {
-            const maybePromise = this.migrationFn(
-              db,
-              event.oldVersion,
-              (event as any).newVersion ?? null,
-              tx,
-              this.schema,
-            );
-            if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
-              (maybePromise as Promise<void>).catch((err) => {
-                runSafe(() => request.transaction?.abort(), 'TRANSACTION_ABORT_FAILED');
-                reject(new Error('Migration failed', { cause: err }));
-              });
-            }
-          } catch (err) {
-            runSafe(() => request.transaction?.abort(), 'TRANSACTION_ABORT_FAILED');
-            reject(new Error('Migration failed', { cause: err }));
-          }
-        }
+
+        this.createObjectStores(db);
+        this.executeMigration(db, event, tx, reject);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
         resolve();
       };
+
       request.onerror = () => reject(new Error('Failed to open IndexedDB'));
     });
+  }
+
+  private createObjectStores(db: IDBDatabase): void {
+    for (const [name, def] of Object.entries(this.schema)) {
+      if (db.objectStoreNames.contains(name)) continue;
+
+      const keyPath = (def as DepotDataRecord<any>).key as string;
+      const store = db.createObjectStore(name, { keyPath });
+
+      const indexes = (def as DepotDataRecord<any>).indexes;
+      if (indexes) {
+        for (const index of indexes) {
+          store.createIndex(index as string, index as string);
+        }
+      }
+    }
+  }
+
+  private executeMigration(
+    db: IDBDatabase,
+    event: IDBVersionChangeEvent,
+    tx: IDBTransaction,
+    reject: (error: Error) => void,
+  ): void {
+    if (!this.migrationFn) return;
+
+    try {
+      const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx, this.schema);
+
+      if (result && typeof (result as Promise<void>).then === 'function') {
+        (result as Promise<void>).catch((err) => {
+          this.abortTransaction(tx);
+          reject(new Error('Migration failed', { cause: err }));
+        });
+      }
+    } catch (err) {
+      this.abortTransaction(tx);
+      reject(new Error('Migration failed', { cause: err }));
+    }
+  }
+
+  private abortTransaction(tx: IDBTransaction): void {
+    runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED')();
   }
 
   count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
@@ -650,6 +715,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
       return await this.withTransaction(table, 'readonly', async (store) => {
         const result = (await this.requestToPromise(store.get(key as IDBKeyRange))) as any;
         if (!result) return defaultValue;
+
         const now = Date.now();
         const value = unwrapWithExpiry<T>(result, now, async () => await this.delete(table, key));
         return value ?? defaultValue;
@@ -674,10 +740,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     });
   }, 'PUT_FAILED');
 
-  /**
-   * Ensures `fn` runs within a transaction that actually completes before resolving.
-   * We resolve after `transaction.oncomplete`, not just after `fn` finishes.
-   */
   private async withTransaction<T>(
     tables: keyof S | (keyof S)[],
     mode: 'readonly' | 'readwrite',
@@ -686,16 +748,18 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     if (!this.db) await this.connect();
 
     return new Promise<T>((resolve, reject) => {
-      const tx = this.db!.transaction(Array.isArray(tables) ? tables.map(String) : [String(tables)], mode);
-      const store = tx.objectStore(Array.isArray(tables) ? String(tables[0]) : String(tables));
+      const tableNames = Array.isArray(tables) ? tables.map(String) : [String(tables)];
+      const tx = this.db!.transaction(tableNames, mode);
+      const store = tx.objectStore(tableNames[0]);
 
       let result: T | undefined;
+
       fn(store)
         .then((r) => {
           result = r;
         })
         .catch((e) => {
-          runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED');
+          this.abortTransaction(tx);
           reject(e);
         });
 
@@ -714,16 +778,15 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
 }
 
 /**
- * Wraps a value with an expiry timestamp.
+ * Wraps a value with an expiry timestamp if TTL is provided.
  */
 function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { expiresAt?: number } {
   if (ttl === undefined) return value;
-  const now = Date.now();
-  return { ...value, expiresAt: now + ttl };
+  return { ...value, expiresAt: Date.now() + ttl };
 }
 
 /**
- * Unwraps a value from an expiry wrapper, deleting the key if expired.
+ * Unwraps a value from an expiry wrapper, returns undefined if expired.
  */
 function unwrapWithExpiry<T extends Record<string, unknown>>(
   value: T & { expiresAt?: number },
@@ -731,10 +794,12 @@ function unwrapWithExpiry<T extends Record<string, unknown>>(
   onExpire?: () => Promise<void>,
 ): T | undefined {
   if (value.expiresAt === undefined) return value;
+
   if (now >= value.expiresAt) {
     onExpire?.();
     return undefined;
   }
+
   return value;
 }
 

@@ -1,30 +1,62 @@
 # isEven
 
-Checks if a number is even.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `isEven` utility is a type guard that checks if a given number is an even integer.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Strict Check**: Only returns `true` for valid numbers that are divisible by 2.
+- **Type-safe**: Properly typed for numeric inputs.
 
 ## API
 
 ```ts
-isEven(value: number): boolean
+interface IsEvenFunction {
+  (value: number): boolean
+}
 ```
 
-- `value`: Number to check.
-- Returns: `true` if value is even, else `false`.
+### Parameters
 
-## Example
+- `value`: The number to check.
+
+### Returns
+
+- `true` if the number is even; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { isEven } from '@vielzeug/toolkit';
 
-isEven(2); // true
-isEven(3); // false
+isEven(2);  // true
+isEven(42); // true
+isEven(3);  // false
+isEven(0);  // true
 ```
 
-## Notes
+## Implementation Notes
 
-- Only works with numbers.
+- Returns `true` if `value % 2 === 0`.
+- Throws nothing; returns `false` for non-numeric inputs if TypeScript checks are bypassed.
 
-## Related
+## See Also
 
-- [isOdd](./isOdd.md)
-- [isNumber](./isNumber.md)
+- [isOdd](./isOdd.md): Check if a number is odd.
+- [isNumber](./isNumber.md): Check if a value is a number.
+- [isWithin](./isWithin.md): Check if a number is within a range.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

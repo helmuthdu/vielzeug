@@ -1,32 +1,64 @@
 # ge
 
-Checks if the first value is greater than or equal to the second value.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `ge` utility checks if the first value is greater than or equal to the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Supports multiple data types.
+- **Type-safe**: Properly typed for comparable inputs.
 
 ## API
 
 ```ts
-ge<T>(a: T, b: T): boolean
+interface GEFunction {
+  <T>(a: T, b: T): boolean
+}
 ```
 
-- `a`: First value.
-- `b`: Second value.
-- Returns: `true` if `a >= b`, else `false`.
+### Parameters
 
-## Example
+- `a`: The value to compare.
+- `b`: The value to compare against.
+
+### Returns
+
+- `true` if `a >= b`; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { ge } from '@vielzeug/toolkit';
 
-ge(5, 3); // true
-ge(2, 2); // true
-ge(1, 4); // false
+ge(10, 5);    // true
+ge(5, 5);     // true
+ge(3, 10);    // false
+ge('b', 'a'); // true
 ```
 
-## Notes
+## Implementation Notes
 
-- Works with numbers, strings, and other comparable types.
+- Returns `true` if `a >= b`.
+- Uses standard JavaScript comparison rules.
+- Throws nothing; safe for any comparable types.
 
-## Related
+## See Also
 
-- [gt](./gt.md)
-- [le](./le.md)
+- [gt](./gt.md): Greater than.
+- [le](./le.md): Less than or equal to.
+- [lt](./lt.md): Less than.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

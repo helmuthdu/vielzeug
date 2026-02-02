@@ -27,11 +27,12 @@ export function group<T, K extends keyof T, R extends T[K] extends string ? T[K]
   const result = {} as Record<R, T[]>;
   const getKey = typeof selector === 'function' ? selector : (item: T) => item[selector];
 
-  for (let index = 0; index < array.length; index++) {
-    const item = array[index];
+  for (const item of array) {
     const key = (getKey(item) || '_') as R;
 
-    result[key] ||= [] as T[];
+    if (!result[key]) {
+      result[key] = [];
+    }
     result[key].push(item);
   }
 

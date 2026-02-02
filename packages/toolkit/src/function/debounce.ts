@@ -18,10 +18,10 @@ import type { Fn } from '../types';
  * @returns - A debounced function
  */
 export function debounce<T extends Fn>(fn: T, delay = 300): (...args: Parameters<T>) => void {
-  let timeoutFn: ReturnType<typeof setTimeout>;
+  let timeoutId: ReturnType<typeof setTimeout>;
 
   return (...args: Parameters<T>) => {
-    clearTimeout(timeoutFn);
-    timeoutFn = setTimeout(() => fn(...args), delay);
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
   };
 }

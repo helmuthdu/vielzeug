@@ -1,37 +1,96 @@
 # reduce
 
-Reduces an array to a single value using an accumulator function. Supports both synchronous and asynchronous callbacks.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-248_B-success" alt="Size">
+</div>
+
+The `reduce` utility reduces an array to a single value by executing a reducer function on each element, passing in the return value from the calculation on the preceding element.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Type-safe**: Correctly handles types for both elements and the accumulator.
+- **Async Support**: If the callback returns a Promise, `reduce` will return a Promise that resolves to the final value once all elements are processed **sequentially**.
 
 ## API
 
 ```ts
-reduce<T, R>(array: T[], callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>, initialValue: R): R | Promise<R>
+interface ReduceFunction {
+  <T, R>(
+    array: T[], 
+    callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>, 
+    initialValue: R
+  ): R | Promise<R>
+}
 ```
 
+### Parameters
+
 - `array`: The array to reduce.
-- `callback`: The accumulator function (can be async).
-- `initialValue`: The initial value for the accumulator.
+- `callback`: The reducer function called for every element. It receives:
+  - `acc`: The accumulated value.
+  - `item`: The current element.
+  - `index`: The index of the current element.
+  - `array`: The original array.
+- `initialValue`: The value to use as the first argument to the first call of the callback.
 
 ### Returns
 
-- The reduced value, or a Promise that resolves to the reduced value if the callback is async.
+- The accumulated result.
+- A `Promise<R>` if the callback is asynchronous.
 
-## Example
+## Examples
+
+### Basic Aggregation
 
 ```ts
 import { reduce } from '@vielzeug/toolkit';
 
-const arr = [1, 2, 3];
-reduce(arr, (acc, curr) => acc + curr, 0); // 6
-await reduce(arr, async (acc, curr) => acc + curr, 0); // 6
+const numbers = [1, 2, 3, 4];
+const sum = reduce(numbers, (acc, x) => acc + x, 0); // 10
 ```
 
-## Notes
+### Building Objects
 
-- Throws `TypeError` if the input is not an array.
-- Useful for aggregation, transformation, or async workflows.
+```ts
+import { reduce } from '@vielzeug/toolkit';
 
-## See also
+const pairs: [string, number][] = [['a', 1], ['b', 2], ['c', 3]];
+const obj = reduce(pairs, (acc, [key, val]) => {
+  acc[key] = val;
+  return acc;
+}, {} as Record<string, any>);
+// { a: 1, b: 2, c: 3 }
+```
 
-- [map](./map.md)
-- [filter](./filter.md)
+### Asynchronous Reduction
+
+```ts
+import { reduce, delay } from '@vielzeug/toolkit';
+
+const tasks = [1, 2, 3];
+const result = await reduce(tasks, async (acc, task) => {
+  await delay(100); // Process task sequentially
+  return acc + task;
+}, 0); // 6
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if the first argument is not an array.
+- **Sequential Execution**: Unlike `map` and `filter`, asynchronous `reduce` processes elements one after another, as the next call depends on the previous result.
+
+## See Also
+
+- [map](./map.md): Transform each element in an array.
+- [filter](./filter.md): Subset an array.
+- [aggregate](./aggregate.md): For more complex aggregation patterns.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

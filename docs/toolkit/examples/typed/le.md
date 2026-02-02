@@ -1,32 +1,64 @@
 # le
 
-Checks if the first value is less than or equal to the second value.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `le` utility checks if the first value is less than or equal to the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Supports multiple data types.
+- **Type-safe**: Properly typed for comparable inputs.
 
 ## API
 
 ```ts
-le<T>(a: T, b: T): boolean
+interface LEFunction {
+  <T>(a: T, b: T): boolean
+}
 ```
 
-- `a`: First value.
-- `b`: Second value.
-- Returns: `true` if `a <= b`, else `false`.
+### Parameters
 
-## Example
+- `a`: The value to compare.
+- `b`: The value to compare against.
+
+### Returns
+
+- `true` if `a <= b`; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { le } from '@vielzeug/toolkit';
 
-le(2, 3); // true
-le(3, 3); // true
-le(4, 3); // false
+le(5, 10);    // true
+le(5, 5);     // true
+le(10, 3);    // false
+le('a', 'b'); // true
 ```
 
-## Notes
+## Implementation Notes
 
-- Works with numbers, strings, and other comparable types.
+- Returns `true` if `a <= b`.
+- Uses standard JavaScript comparison rules.
+- Throws nothing; safe for any comparable types.
 
-## Related
+## See Also
 
-- [lt](./lt.md)
-- [ge](./ge.md)
+- [lt](./lt.md): Less than.
+- [ge](./ge.md): Greater than or equal to.
+- [gt](./gt.md): Greater than.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

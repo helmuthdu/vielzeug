@@ -1,71 +1,107 @@
 # is
 
-Checks if a value matches a given type or condition. This is a flexible type-checking utility that supports many type and predicate strings, including primitives, arrays, objects, and special checks like 'empty', 'even', 'within', 'gt', ' lt', etc.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1.2_KB-success" alt="Size">
+</div>
+
+The `is` utility is a highly flexible and unified type-checking engine. It acts as a single entry point for nearly all type guards and comparison helpers available in the toolkit, supporting a wide range of string-based predicates and constructor-based checks.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Unified API**: One function to rule them all — primitives, objects, comparisons, and ranges.
+- **Predicate Strings**: Use intuitive strings like `'empty'`, `'even'`, `'nil'`, or `'match'`.
+- **Constructor Support**: Check against native constructors like `Array`, `Date`, or custom classes.
+- **Type Guard**: Provides type narrowing for standard types when using string predicates.
 
 ## API
 
 ```ts
-is(type: 'within', ...args: Parameters<typeof isWithin>): boolean;
-is(type: 'eq', ...args: Parameters<typeof isEqual>): boolean;
-is(type: 'ne', ...args: Parameters<typeof isEqual>): boolean;
-is(type: 'gt', ...args: Parameters<typeof gt>): boolean;
-is(type: 'ge', ...args: Parameters<typeof ge>): boolean;
-is(type: 'lt', ...args: Parameters<typeof lt>): boolean;
-is(type: 'le', ...args: Parameters<typeof le>): boolean;
-is(type: 'match', ...args: Parameters<typeof isMatch>): boolean;
-is(type: 'empty', ...args: Parameters<typeof isEmpty>): boolean;
-is(type: 'array', arg: unknown): arg is Array<unknown>;
-is(type: 'string', arg: unknown): arg is string;
-is(type: 'number', arg: unknown): arg is number;
-is(type: 'object', arg: unknown): arg is object;
-is(type: 'nil', arg: unknown): arg is null | undefined;
-is(type: 'primitive', arg: unknown): arg is string | number | boolean;
-is(type: isType, arg: unknown): boolean;
-is(type: string, arg: unknown): boolean
+interface IsFunction {
+  // Common type guards
+  (type: 'string', value: unknown): value is string;
+  (type: 'number', value: unknown): value is number;
+  (type: 'array', value: unknown): value is any[];
+  (type: 'object', value: unknown): value is object;
+  (type: 'nil', value: unknown): value is null | undefined;
+  
+  // Logical predicates
+  (type: 'empty', value: unknown): boolean;
+  (type: 'match', value: any, pattern: any): boolean;
+  (type: 'within', value: number, min: number, max: number): boolean;
+  
+  // Comparisons
+  (type: 'gt', a: any, b: any): boolean;
+  (type: 'ge', a: any, b: any): boolean;
+  
+  // ... and many more
+}
 ```
 
-## Example
+### Parameters
+
+- `type`: A string identifier for the check, or a constructor (e.g., `Date`).
+- `...args`: The values to be checked or compared.
+
+### Returns
+
+- `true` if the condition is met; otherwise, `false`.
+
+## Examples
+
+### String-based Type Checks
 
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is('array', []); // true
-is('boolean', true); // true
-is('date', new Date()); // true
-is('defined', 123); // true
-is('empty', []); // true
-is('even', 2); // true
-is('function', () => {}); // true
-is('match', { a: 1, b: 2 }, { a: 1 }); // true
-is('nan', Number.NaN); // true
-is('negative', -123); // true
-is('nil', null); // true
-is('null', null); // true
-is('number', 123); // true
-is('object', {}); // true
-is('odd', 3); // true
-is('positive', 123); // true
-is('string', 'hello'); // true
-is('symbol', Symbol('test')); // true
-is('regex', /abc/); // true
-is('string', 'hello world'); // true
-is('undefined', undefined); // true
-is('within', 2, 1, 3); // true
-is('zero', 0); // true
-is('eq', [1, 2, 3], [1, 2, 3]); // true
-is('ne', [1, 2, 3], [1, 2]); // true
-is('ge', 5, 5); // true
-is('gt', 5, 3); // true
-is('le', 5, 5); // true
-is('lt', 3, 5); // true
+is('array', []);       // true
+is('string', 'hello');  // true
+is('nil', null);        // true
+is('primitive', true);  // true
 ```
 
-## Notes
+### Using Predicates & Comparisons
 
-- Throws if no type is provided.
-- Supports a wide range of type and predicate checks, including deep equality, comparison, and more.
+```ts
+import { is } from '@vielzeug/toolkit';
 
-## Related
+is('empty', {});        // true
+is('even', 42);         // true
+is('within', 5, 0, 10); // true
+is('gt', 10, 5);        // true
+is('match', { a: 1 }, { a: 1 }); // true
+```
 
-- [isEqual](./isEqual.md)
-- [isMatch](./isMatch.md)
+### Constructor-based Checks
+
+```ts
+import { is } from '@vielzeug/toolkit';
+
+is(new Date(), Date);   // true
+is([], Array);          // true
+
+class MyClass {}
+is(new MyClass(), MyClass); // true
+```
+
+## Implementation Notes
+
+- Performance-optimized registry of predicates.
+- String predicates are case-insensitive.
+- Throws an error if an invalid or unknown `type` is provided.
+- Internally dispatches to specific utilities like `isEmpty`, `isWithin`, `isArray`, etc.
+
+## See Also
+
+- [isEqual](./isEqual.md): Deep equality checking.
+- [isMatch](./isMatch.md): Pattern matching helper.
+- [isArray](./isArray.md): Dedicated array type guard.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

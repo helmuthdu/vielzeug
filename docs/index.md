@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: 'Vielzeug'
-  text: 'The modular TypeScript toolkit for modern web apps'
+  text: 'The modular TypeScript toolkit'
   tagline: 'Type-safe utilities, blazing-fast storage, flexible logging, and more — all in one monorepo.'
   image:
     src: '/logo.svg'
@@ -15,6 +15,9 @@ hero:
     - theme: alt
       text: API Reference
       link: /toolkit/api
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/helmuthdu/vielzeug
 
 features:
   - title: "@vielzeug/toolkit"
@@ -34,10 +37,9 @@ features:
     link: /fetchit/
 ---
 
-&nbsp;
-> Vielzeug is a modular toolkit for building robust, type-safe, and maintainable JavaScript/TypeScript applications. Each package is designed to work independently or together, so you can pick just what you need.
+## 📦 Modular by Design
 
-## 📦 Packages
+Vielzeug is a Swiss-army knife for modern JavaScript and TypeScript development. Instead of one massive library, we provide a collection of specialized packages that work perfectly together but can be used independently.
 
 - [Toolkit](/toolkit/): 100+ utilities for every data type
 - [Deposit](/deposit/): Unified browser storage (IndexedDB & LocalStorage)
@@ -47,19 +49,21 @@ features:
 
 ## 🚀 Why Vielzeug?
 
-- **Type-safe**: Full TypeScript support everywhere
-- **Modular**: Use only what you need
-- **Zero/low dependencies**: Fast, lightweight, and tree-shakeable
-- **Modern**: Built for real-world web and Node.js apps
-- **Open Source**: MIT licensed, community-driven
+- **Type-safe**: Built with TypeScript from the ground up for the best DX.
+- **Zero/Low Dependencies**: Keep your bundle size small and your supply chain secure.
+- **Consistent API**: Learn one package, and you'll feel at home in all of them.
+- **Modern**: Optimized for ES Modules, tree-shaking, and modern runtimes.
 
-## 📚 Documentation
+## 📚 Quick Links
 
-- [Toolkit Documentation](/toolkit/)
-- [Deposit Documentation](/deposit/)
-- [Logit Documentation](/logit/)
-- [Permit Documentation](/permit/)
-- [Fetchit Documentation](/fetchit/)
+- [Installation Guide](/toolkit/usage)
+- [Try it in the REPL](/repl)
+- [API Reference](/toolkit/api)
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
 
 ---
-> Vielzeug is open source and maintained by the community. Contributions welcome!
+
+<p align="center">
+  Released under the MIT License.<br>
+  Copyright © 2024-present Vielzeug Contributors.
+</p>

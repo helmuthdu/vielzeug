@@ -1,37 +1,100 @@
 # select
 
-Selects elements from an array based on a callback function and an optional predicate function. Supports both synchronous and asynchronous callbacks.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-1420_B-success" alt="Size">
+</div>
+
+The `select` utility is a high-performance combined transformation and filtering tool. It allows you to simultaneously map and filter an array in a single pass, and it provides built-in support for asynchronous operations.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Combined Operation**: Map and filter in one step for better readability and performance.
+- **Async Support**: Handle asynchronous mapping functions seamlessly.
+- **Intelligent Defaults**: Automatically filters out `null` or `undefined` results by default.
 
 ## API
 
 ```ts
-select<T, R>(array: T[], callback: (item: T, index: number, array: T[]) => R | Promise<R>, predicate?: (item: T, index: number, array: T[]) => boolean): R[]
+interface SelectFunction {
+  <T, R>(
+    array: T[], 
+    callback: (item: T, index: number, array: T[]) => R | Promise<R>, 
+    predicate?: (item: T, index: number, array: T[]) => boolean
+  ): R[] | Promise<R[]>
+}
 ```
 
-- `array`: The array to select from.
-- `callback`: Function to map the values (can be async).
-- `predicate`: Optional function to filter the values (default: not nil).
+### Parameters
+
+- `array`: The array to process.
+- `callback`: A transformation function that receives each element and returns a new value (or a Promise for one).
+- `predicate`: Optional. A function that decides which elements from the *original* array should be processed by the callback. Defaults to a check that excludes `null` or `undefined` items.
 
 ### Returns
 
-- A new array with the selected values.
+- A new array of transformed elements.
+- A `Promise<R[]>` if the callback is asynchronous.
 
-## Example
+## Examples
+
+### Synchronous Selection
 
 ```ts
 import { select } from '@vielzeug/toolkit';
 
-const arr = [10, 20, 30, 40];
-select(arr, x => x * 2, x => x > 20); // [60, 80]
-await select(arr, async x => x * 2, x => x > 20); // [60, 80]
+const numbers = [10, 20, 30, 40];
+
+// Double only the numbers greater than 20
+const result = select(numbers, x => x * 2, x => x > 20); 
+// [60, 80]
 ```
 
-## Notes
+### Asynchronous Selection
 
-- Throws `TypeError` if the input is not an array.
-- Useful for mapping, filtering, or extracting subsets.
+```ts
+import { select, delay } from '@vielzeug/toolkit';
 
-## See also
+const ids = [1, 2, 3];
 
-- [pick](./pick.md)
-- [filter](./filter.md)
+// Fetch data for specific IDs
+const details = await select(ids, async (id) => {
+  await delay(50); // Simulate API latency
+  return { id, status: 'ok' };
+}, id => id !== 2);
+// [{ id: 1, ... }, { id: 3, ... }]
+```
+
+### Default Filtering
+
+```ts
+import { select } from '@vielzeug/toolkit';
+
+const data = [1, null, 2, undefined, 3];
+
+// Automatically skips the null/undefined values
+const doubled = select(data, x => x * 2);
+// [2, 4, 6]
+```
+
+## Implementation Notes
+
+- Throws `TypeError` if the first argument is not an array.
+- When using async callbacks, all transformations are initiated concurrently.
+- If no predicate is provided, it uses a standard "is defined" check on the input elements.
+
+## See Also
+
+- [map](./map.md): Standard array transformation.
+- [filter](./filter.md): Standard array filtering.
+- [compact](./compact.md): Remove falsy values from an array.
+- [pick](./pick.md): Extract specific properties from an array of objects.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

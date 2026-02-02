@@ -5,20 +5,77 @@ export type BaseUser = {
   id: string;
   roles: string[];
 };
-type PermissionAction = 'view' | 'create' | 'update' | 'delete';
-type PermissionCheck<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> =
+
+export type PermissionAction = 'view' | 'create' | 'update' | 'delete';
+
+export type PermissionCheck<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> =
   | boolean
   | ((user: T, data: D) => boolean);
+
 type ResourcePermissions<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> = Map<
   string,
   Partial<Record<PermissionAction, PermissionCheck<T, D>>>
 >;
+
 type RolesWithPermissions<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> = Map<
   string,
   ResourcePermissions<T, D>
 >;
 
+/**
+ * Global registry of role-based permissions.
+ */
 const Roles: RolesWithPermissions = new Map();
+
+/**
+ * Wildcard role/resource identifier that matches any role or resource.
+ */
+const WILDCARD = '*';
+
+/**
+ * Gets all roles for a user including the wildcard role.
+ */
+function getUserRoles(user: BaseUser): Set<string> {
+  return new Set([...(user.roles || []), WILDCARD]);
+}
+
+/**
+ * Gets resource permissions for a specific role and resource.
+ * Returns permissions for the specific resource or wildcard resource.
+ */
+function getResourcePermissions<T extends BaseUser, D extends Record<string, any>>(
+  role: string,
+  resource: string,
+): Partial<Record<PermissionAction, PermissionCheck<T, D>>> | undefined {
+  const rolePermissions = Roles.get(role);
+  if (!rolePermissions) return undefined;
+
+  return rolePermissions.get(resource) || rolePermissions.get(WILDCARD);
+}
+
+/**
+ * Evaluates a permission check (boolean or function).
+ */
+function evaluatePermission<T extends BaseUser, D extends Record<string, any>>(
+  permission: PermissionCheck<T, D>,
+  user: T,
+  data?: D,
+): boolean {
+  if (typeof permission === 'function') {
+    // Function permissions require data to evaluate
+    if (data === undefined) return false;
+    return permission(user, data);
+  }
+
+  return Boolean(permission);
+}
+
+/**
+ * Logs the result of a permission check.
+ */
+function logPermissionCheck(user: BaseUser, resource: string, action: PermissionAction, allowed: boolean): void {
+  Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> ${allowed}`);
+}
 
 export const Permit = {
   /**
@@ -38,37 +95,39 @@ export const Permit = {
    *
    * @return Returns true if the user is allowed to perform the action on the resource; otherwise, false.
    */
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   check<T extends BaseUser, D extends Record<string, any>>(
     user: T,
     resource: string,
     action: PermissionAction,
     data?: D,
   ): boolean {
-    // Use Set to avoid duplicate roles
-    const allRoles = new Set([...(user.roles || []), '*']);
-    for (const role of allRoles) {
-      const rolePermissions = Roles.get(role);
-      if (!rolePermissions) continue;
-      const resourcePermissions = rolePermissions.get(resource) || rolePermissions.get('*');
+    const userRoles = getUserRoles(user);
+
+    for (const role of userRoles) {
+      const resourcePermissions = getResourcePermissions<T, D>(role, resource);
       if (!resourcePermissions) continue;
+
       const permission = resourcePermissions[action];
-      if (typeof permission === 'function') {
-        if (data === undefined) continue;
-        if (permission(user, data)) {
-          Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> true`);
-          return true;
-        }
-      } else if (permission) {
-        Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> true`);
+      if (permission === undefined) continue;
+
+      if (evaluatePermission(permission, user, data)) {
+        logPermissionCheck(user, resource, action, true);
         return true;
       }
     }
-    Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> false`);
+
+    logPermissionCheck(user, resource, action, false);
     return false;
   },
 
-  clear() {
+  /**
+   * Clears all registered permissions.
+   *
+   * @remarks
+   * This removes all role-resource-action mappings from the permission registry.
+   * Useful for resetting permissions during testing or application reinitialization.
+   */
+  clear(): void {
     Roles.clear();
     Logit.debug('All permissions have been cleared.');
   },
@@ -89,7 +148,7 @@ export const Permit = {
    * @remarks
    * This function allows you to define permissions for a specific role and resource.
    * You can specify which actions (view, create, update, delete) are allowed for that role on the resource.
-   * If a permission already exists for the role and resource, it will be updated with the new actions.
+   * If a permission already exists for the role and resource, it will be merged with the new actions.
    *
    * @param role - The role to register permissions for (e.g., 'admin', 'user').
    * @param resource - The resource identifier (e.g., 'posts', 'comments').
@@ -103,21 +162,30 @@ export const Permit = {
     actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>,
   ): void {
     if (!role || !resource) {
-      throw new Error('Invalid arguments provided to register permissions.');
+      throw new Error('Role and resource are required to register permissions.');
     }
-    let rolePermissions = Roles.get(role);
-    if (!rolePermissions) {
-      rolePermissions = new Map();
-      Roles.set(role, rolePermissions);
+
+    if (!Roles.has(role)) {
+      Roles.set(role, new Map());
     }
-    const existing = rolePermissions.get(resource) || {};
+
+    const rolePermissions = Roles.get(role)!;
+    const existingPermissions = rolePermissions.get(resource) || {};
+
     // Merge new actions with existing ones
-    const resourcePermissions = { ...existing, ...actions };
-    rolePermissions.set(resource, resourcePermissions as any);
+    rolePermissions.set(resource, { ...existingPermissions, ...actions } as any);
+
     Logit.debug(`Permissions for role '${role}' and resource '${resource}' registered/updated.`);
   },
 
-  get roles() {
+  /**
+   * Returns a copy of all registered roles and their permissions.
+   *
+   * @remarks
+   * This is a defensive copy to prevent external modification of the internal state.
+   * Useful for debugging or inspecting the current permission configuration.
+   */
+  get roles(): RolesWithPermissions {
     return new Map(Roles);
   },
 };

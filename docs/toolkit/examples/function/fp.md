@@ -1,37 +1,79 @@
 # fp
 
-Creates a function that enables functional programming mode for compatible toolkit functions, allowing you to pass the first argument as an array and partially apply the rest.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
+</div>
+
+The `fp` utility enables "Functional Programming" mode for compatible toolkit functions. It converts a standard utility (where the array is usually the first argument) into a partially applied function where the data argument is moved to the end.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Auto-Currying**: Pre-binds transformation logic and waits for the data.
+- **Composition Friendly**: Perfect for use with `pipe`, `compose`, or native `.map()`/`.filter()` calls.
+- **Type-safe**: Properly narrows types for the resulting unary function.
 
 ## API
 
 ```ts
-fp<T, F extends Fn = Fn>(callback: F, ...args: RemoveFirstParameter<F>): (arr: T[]) => ReturnType<F>
+interface FPFunction {
+  <T, R>(callback: (...args: any[]) => any, ...args: any[]): (data: T[]) => R
+}
 ```
 
-- `callback`: A toolkit function that supports functional programming mode (must have an `fp` property).
-- `...args`: Arguments to partially apply to the function (excluding the array argument).
-- Returns: A function that takes an array and applies the original function with the provided arguments.
+### Parameters
 
-## Example
+- `callback`: A toolkit function that supports FP mode (most array/collection utilities).
+- `...args`: The configuration arguments for the callback (excluding the data array).
+
+### Returns
+
+- A new function that accepts a single argument: the data array to be processed.
+
+## Examples
+
+### Reusable Transformations
 
 ```ts
-import { fp } from '@vielzeug/toolkit';
-import { map } from '@vielzeug/toolkit';
+import { fp, map, chunk } from '@vielzeug/toolkit';
 
-const double = (num: number) => num * 2;
-const doubleArray = fp(map, double); // map is fp-compatible
+// Create a reusable 'doubler' function
+const doubleAll = fp(map, (n: number) => n * 2);
 
-doubleArray([1, 2, 3]); // [2, 4, 6]
+doubleAll([1, 2, 3]); // [2, 4, 6]
+doubleAll([10, 20]);  // [20, 40]
 ```
 
-## Notes
+### Within a Pipeline
 
-- Only toolkit functions marked as fp-compatible (with an `fp` property) can be used.
-- Throws a `TypeError` if the function is not fp-compatible.
-- Useful for creating reusable, partially applied array utilities.
+```ts
+import { fp, pipe, map, filter } from '@vielzeug/toolkit';
 
-## Related
+const process = pipe(
+  fp(filter, (n: number) => n > 10),
+  fp(map, (n: number) => n * n)
+);
 
-- [map](../array/map.md)
-- [filter](../array/filter.md)
-- [reduce](../array/reduce.md)
+process([5, 12, 8, 20]); // [144, 400]
+```
+
+## Implementation Notes
+
+- Only functions that have been specifically prepared for FP mode will work (they must support being called with `...args` first).
+- Throws `TypeError` if the `callback` is not a function.
+- Performance is nearly identical to calling the original utility directly.
+
+## See Also
+
+- [pipe](./pipe.md): Compose multiple FP functions together.
+- [curry](./curry.md): Manual currying for any custom function.
+- [map](../array/map.md): The standard version of the map utility.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

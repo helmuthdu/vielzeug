@@ -28,10 +28,12 @@ export function alternate<T>(
   array: T[],
   item: T,
   selector?: (item: T) => Primitive,
-  options?: { strategy?: 'prepend' | 'append' },
+  options: { strategy?: 'prepend' | 'append' } = {},
 ): T[] {
-  const { strategy = 'append' } = options || {};
-  const index = array.findIndex((el) => (selector ? selector(el) === selector(item) : el === item));
+  const { strategy = 'append' } = options;
+  const compareFn = selector ? (el: T) => selector(el) === selector(item) : (el: T) => el === item;
+
+  const index = array.findIndex(compareFn);
 
   if (index !== -1) {
     return [...array.slice(0, index), ...array.slice(index + 1)];

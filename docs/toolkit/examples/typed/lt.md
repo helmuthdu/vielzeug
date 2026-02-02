@@ -1,32 +1,64 @@
 # lt
 
-Checks if the first value is less than the second value.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `lt` utility checks if the first value is strictly less than the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Versatile**: Supports multiple data types.
+- **Type-safe**: Properly typed for comparable inputs.
 
 ## API
 
 ```ts
-lt<T>(a: T, b: T): boolean
+interface LTFunction {
+  <T>(a: T, b: T): boolean
+}
 ```
 
-- `a`: First value.
-- `b`: Second value.
-- Returns: `true` if `a < b`, else `false`.
+### Parameters
 
-## Example
+- `a`: The value to compare.
+- `b`: The value to compare against.
+
+### Returns
+
+- `true` if `a < b`; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { lt } from '@vielzeug/toolkit';
 
-lt(2, 3); // true
-lt(3, 3); // false
-lt(4, 3); // false
+lt(5, 10);    // true
+lt(10, 5);    // false
+lt(5, 5);     // false
+lt('a', 'b'); // true
 ```
 
-## Notes
+## Implementation Notes
 
-- Works with numbers, strings, and other comparable types.
+- Returns `true` if `a < b`.
+- Uses standard JavaScript comparison rules.
+- Throws nothing; safe for any comparable types.
 
-## Related
+## See Also
 
-- [le](./le.md)
-- [gt](./gt.md)
+- [le](./le.md): Less than or equal to.
+- [gt](./gt.md): Greater than.
+- [ge](./ge.md): Greater than or equal to.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

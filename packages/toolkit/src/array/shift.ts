@@ -23,11 +23,12 @@ export function shift<T>(array: T[], positions: number, rotate = false): T[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
   assert(isNumber(positions), IS_NUMBER_ERROR_MSG, { args: { positions }, type: TypeError });
 
-  const len = array.length;
-  if (len === 0) return array;
+  if (array.length === 0) return array;
 
-  const shiftPositions = ((positions % len) + len) % len;
-  return [...array.slice(shiftPositions), ...(rotate ? array.slice(0, shiftPositions) : [])];
+  const normalizedPos = ((positions % array.length) + array.length) % array.length;
+  const shifted = array.slice(normalizedPos);
+
+  return rotate ? [...shifted, ...array.slice(0, normalizedPos)] : shifted;
 }
 
 shift.fp = true;

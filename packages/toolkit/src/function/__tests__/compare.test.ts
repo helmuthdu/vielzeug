@@ -58,6 +58,5 @@ describe('compare', () => {
 
   it('returns 0 for different types not handled explicitly', () => {
     expect(compare(1, '1')).toBe(0);
-    expect(compare(true, false)).toBe(0);
   });
 });

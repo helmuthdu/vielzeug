@@ -1,24 +1,58 @@
-# ➗ Math Utilities Examples
+# ➗ Math Utilities
 
-Math utilities help you perform common mathematical operations in a type-safe, ergonomic way. Use these helpers for
-calculations, clamping, rounding, and more.
+Math utilities provide essential tools for common mathematical operations. These helpers simplify calculations, clamping, rounding, and statistical analysis.
 
 ## 📚 Quick Reference
 
-| Method  | Description                       |
-| ------- | --------------------------------- |
-| average | Calculate the average of numbers  |
-| boil    | Boil down a value (custom logic)  |
-| clamp   | Clamp a value between min and max |
-| max     | Find the maximum value            |
-| median  | Find the median value             |
-| min     | Find the minimum value            |
-| range   | Create a range of numbers         |
-| rate    | Calculate a rate (e.g. percent)   |
-| round   | Round a number to given precision |
-| sum     | Sum all values in an array        |
+| Method | Description |
+| :--- | :--- |
+| [`sum`](./math/sum.md) | Sum all values in an array. |
+| [`average`](./math/average.md) | Calculate the average of an array of numbers. |
+| [`median`](./math/median.md) | Find the median value in an array of numbers. |
+| [`min`](./math/min.md) | Find the minimum value in an array. |
+| [`max`](./math/max.md) | Find the maximum value in an array. |
+| [`clamp`](./math/clamp.md) | Clamp a number between a minimum and maximum value. |
+| [`round`](./math/round.md) | Round a number to a specific decimal precision. |
+| [`range`](./math/range.md) | Generate an array of numbers in a given range. |
+| [`rate`](./math/rate.md) | Calculate a percentage or rate. |
+| [`boil`](./math/boil.md) | Reduce an array to a single value using a custom comparator. |
 
-## 🔗 Granular Examples
+## 💡 Practical Examples
+
+### Statistical Helpers
+
+```ts
+import { sum, average, median, min, max } from '@vielzeug/toolkit';
+
+const data = [10, 2, 38, 23, 38, 8, 15];
+
+sum(data);      // 134
+average(data);  // 19.14...
+median(data);   // 15
+min(data);      // 2
+max(data);      // 38
+```
+
+### Formatting & Constraints
+
+```ts
+import { clamp, round, range } from '@vielzeug/toolkit';
+
+// Clamp values (useful for UI sliders or bounds)
+clamp(105, 0, 100); // 100
+clamp(-5, 0, 100);  // 0
+
+// Round to precision
+round(Math.PI, 4); // 3.1416
+
+// Generate ranges
+range(1, 5);      // [1, 2, 3, 4, 5]
+range(0, 10, 2);  // [0, 2, 4, 6, 8, 10]
+```
+
+## 🔗 All Math Utilities
+
+<div class="grid-links">
 
 - [average](./math/average.md)
 - [boil](./math/boil.md)
@@ -31,32 +65,17 @@ calculations, clamping, rounding, and more.
 - [round](./math/round.md)
 - [sum](./math/sum.md)
 
-## 💡 Example Usage
+</div>
 
-```ts
-import { sum, average, clamp, min, max, round } from '@vielzeug/toolkit';
-
-const nums = [1, 2, 3, 4, 5];
-
-// Sum all numbers
-sum(nums); // 15
-
-// Average
-average(nums); // 3
-
-// Clamp a value
-clamp(10, 0, 5); // 5
-
-// Min/Max
-min(nums); // 1
-max(nums); // 5
-
-// Round to 2 decimals
-round(1.2345, 2); // 1.23
-```
-
-## 🔎 See Also
-
-- [Array Utilities](./array.md)
-- [Date Utilities](./date.md)
-- [Object Utilities](./object.md)
+<style>
+.grid-links ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  list-style: none !important;
+  padding: 0 !important;
+}
+.grid-links li {
+  margin: 0 !important;
+}
+</style>

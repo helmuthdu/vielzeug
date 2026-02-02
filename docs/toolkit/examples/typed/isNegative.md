@@ -1,30 +1,62 @@
 # isNegative
 
-Checks if a number is negative.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
+</div>
+
+The `isNegative` utility is a type guard that checks if a given number is strictly less than zero.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Strict Check**: Only returns `true` for values $< 0$ (zero is not considered negative).
+- **Type-safe**: Properly typed for numeric inputs.
 
 ## API
 
 ```ts
-isNegative(value: number): boolean
+interface IsNegativeFunction {
+  (value: number): boolean
+}
 ```
 
-- `value`: Number to check.
-- Returns: `true` if value is negative, else `false`.
+### Parameters
 
-## Example
+- `value`: The number to check.
+
+### Returns
+
+- `true` if the number is less than zero; otherwise, `false`.
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { isNegative } from '@vielzeug/toolkit';
 
-isNegative(-5); // true
-isNegative(0); // false
+isNegative(-10);  // true
+isNegative(-0.1); // true
+isNegative(0);    // false
+isNegative(5);    // false
 ```
 
-## Notes
+## Implementation Notes
 
-- Only works with numbers.
+- Returns `true` if `value < 0`.
+- Throws nothing; returns `false` for non-numeric inputs if TypeScript checks are bypassed.
 
-## Related
+## See Also
 
-- [isPositive](./isPositive.md)
-- [isNumber](./isNumber.md)
+- [isPositive](./isPositive.md): Check if a number is greater than zero.
+- [isZero](./isZero.md): Check if a number is exactly zero.
+- [isNumber](./isNumber.md): Check if a value is a number.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

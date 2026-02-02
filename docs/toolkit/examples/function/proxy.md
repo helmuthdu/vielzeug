@@ -1,42 +1,103 @@
 # proxy
 
-Creates a new Proxy for the given object that invokes functions when properties are accessed or modified. Supports deep proxying and selective property watching.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-412_B-success" alt="Size">
+</div>
+
+The `proxy` utility creates an enhanced JavaScript Proxy for an object, allowing you to intercept and react to property access (`get`) and modifications (`set`). It features support for selective property watching and optional deep proxying for nested structures.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Reactive Handlers**: Execute custom logic whenever properties are read or updated.
+- **Deep Proxying**: Optionally intercept changes in nested objects and arrays automatically.
+- **Selective Watching**: Limit interceptions to a specific list of keys for better performance.
+- **Type-safe**: Preserves the original object's interface.
 
 ## API
 
 ```ts
-proxy<T extends Obj>(item: T, options: {
-  set?: <K extends PropertyKey>(prop: K, curr: unknown, prev: unknown, target: T) => unknown;
-  get?: <K extends PropertyKey>(prop: K, val: unknown, target: T) => unknown;
+interface ProxyOptions<T extends object> {
+  set?: (prop: string | symbol, next: any, prev: any, target: T) => void;
+  get?: (prop: string | symbol, value: any, target: T) => void;
   deep?: boolean;
   watch?: (keyof T)[];
-}): T
+}
+
+interface ProxyFunction {
+  <T extends object>(item: T, options?: ProxyOptions<T>): T
+}
 ```
 
-- `item`: Object to proxy.
-- `options.set`: Function called on property set.
-- `options.get`: Function called on property get.
-- `options.deep`: If true, proxies nested objects.
-- `options.watch`: Array of property names to watch (optional).
-- Returns: Proxied object.
+### Parameters
 
-## Example
+- `item`: The source object to wrap in a Proxy.
+- `options`: Optional configuration:
+  - `set`: Callback triggered when a property value is changed.
+  - `get`: Callback triggered when a property value is accessed.
+  - `deep`: If `true`, nested objects are also wrapped in proxies (defaults to `false`).
+  - `watch`: An array of keys to monitor. If provided, callbacks only trigger for these properties.
+
+### Returns
+
+- A new Proxy object that behaves like the original but triggers the specified handlers.
+
+## Examples
+
+### Watching Property Changes
 
 ```ts
 import { proxy } from '@vielzeug/toolkit';
 
-const obj = { a: 1, b: 2 };
-const log = (prop, curr, prev, target) => console.log(`Property '${prop}' changed from ${prev} to ${curr}`);
-const proxyObj = proxy(obj, { set: log });
-proxyObj.a = 3; // logs 'Property 'a' changed from 1 to 3'
+const user = { name: 'Alice', age: 25 };
+
+const observableUser = proxy(user, {
+  set: (prop, next, prev) => {
+    console.log(`${String(prop)} changed from ${prev} to ${next}`);
+  }
+});
+
+observableUser.name = 'Bob'; // Logs: name changed from Alice to Bob
 ```
 
-## Notes
+### Selective Watching (Deep)
 
-- Use `deep` for nested objects.
-- Use `watch` to limit which properties trigger handlers.
-- Both `set` and `get` handlers are optional.
+```ts
+import { proxy } from '@vielzeug/toolkit';
 
-## Related
+const config = { 
+  api: { host: 'localhost' },
+  ui: { theme: 'dark' }
+};
 
-- [memo](./memo.md)
+// Only watch the 'api' key, and do it deeply
+const watchedConfig = proxy(config, {
+  deep: true,
+  watch: ['api'],
+  set: (prop) => console.log(`API config updated: ${String(prop)}`)
+});
+
+watchedConfig.api.host = 'api.example.com'; // Triggers callback
+watchedConfig.ui.theme = 'light';           // Does NOT trigger callback
+```
+
+## Implementation Notes
+
+- Performance-optimized to avoid overhead on un-watched properties.
+- Returns a standard Proxy object that can be used anywhere the original object is accepted.
+- Throws `TypeError` if `item` is not a proxy-able object (e.g., a primitive).
+
+## See Also
+
+- [memo](./memo.md): Cache results of function calls.
+- [path](../object/path.md): Safely access nested data.
+- [merge](../object/merge.md): Combine multiple objects.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

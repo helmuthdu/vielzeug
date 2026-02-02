@@ -1,52 +1,96 @@
 # assert
 
-Asserts that a condition (or array of conditions) is true. Throws an error or logs a warning if the assertion fails, with support for custom error types, debugging info, and bypass mode.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-312_B-success" alt="Size">
+</div>
+
+The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It features advanced debugging options, support for various error types, and a "bypass" mode for soft warnings.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Multiple Conditions**: Pass a single boolean or an array of conditions.
+- **Customizable Errors**: Specify the error message and the Error class to throw (e.g., `TypeError`).
+- **Debugging Info**: Attach metadata to errors for easier troubleshooting.
+- **Soft Assertions**: Use `bypass` mode to log warnings instead of throwing.
 
 ## API
 
 ```ts
-assert(
-  condition: boolean | boolean[],
-  message?: string,
-  options?: {
-    type?: ErrorConstructor;
-    args?: Obj;
-    bypass?: boolean;
-  }
-): void
+interface AssertOptions {
+  type?: ErrorConstructor;
+  args?: Record<string, any>;
+  bypass?: boolean;
+}
+
+interface AssertFunction {
+  (condition: boolean | boolean[], message?: string, options?: AssertOptions): void
+}
 ```
 
-- `condition`: Boolean or array of booleans to assert. If any are false, the assertion fails.
-- `message`: Optional error message (default: 'Assertion failed').
-- `options.type`: Error class to throw (default: `Error`).
-- `options.args`: Object with debugging info (included in error message).
-- `options.bypass`: If true, logs a warning instead of throwing.
-- Throws: Error (or custom error type) if assertion fails and `bypass` is not set.
+### Parameters
 
-## Example
+- `condition`: A boolean or an array of booleans to check.
+- `message`: Optional. The error message to display (defaults to `'Assertion failed'`).
+- `options`: Optional configuration:
+  - `type`: The constructor of the error to throw (defaults to `Error`).
+  - `args`: An object containing variables or state to include in the error details.
+  - `bypass`: If `true`, logs a warning to the console instead of throwing an exception.
+
+### Returns
+
+- `void` (Nothing) if the assertion passes.
+
+## Examples
+
+### Basic Validation
 
 ```ts
 import { assert } from '@vielzeug/toolkit';
 
-assert(Array.isArray([])); // Passes, does nothing
-assert(typeof 'foo' === 'string', 'Must be string'); // Passes
-assert(false, 'This will throw'); // Throws Error: This will throw
-
-assert([true, false], 'Some failed'); // Throws Error: Some failed
-
-assert(1 > 2, 'Should fail', { type: TypeError }); // Throws TypeError
-assert(1 > 2, 'Debug info', { args: { value: 1 } }); // Error includes args
-assert(false, 'Soft fail', { bypass: true }); // Logs warning instead of throwing
+assert(1 + 1 === 2); // OK
+assert(users.length > 0, 'Users list cannot be empty'); // Throws if empty
 ```
 
-## Notes
+### Advanced Debugging
 
-- Supports multiple conditions via array.
-- Use `args` to include variable values for debugging.
-- Use `bypass` for soft assertions (logs warning).
-- Custom error types supported via `type`.
+```ts
+import { assert } from '@vielzeug/toolkit';
 
-## Related
+function process(data: any) {
+  assert(data.id, 'Missing ID', { 
+    type: TypeError,
+    args: { received: data }
+  });
+}
+```
 
-- [attempt](./attempt.md)
-- [compare](./compare.md)
+### Soft Assertion (Bypass)
+
+```ts
+import { assert } from '@vielzeug/toolkit';
+
+// Logs warning instead of crashing the app
+assert(isLoaded, 'Not loaded yet, continuing anyway...', { bypass: true });
+```
+
+## Implementation Notes
+
+- If an array of conditions is provided, it returns `true` only if **every** item is truthy.
+- In `bypass` mode, it uses `console.warn` to log the failure.
+- Performance is optimized for minimal overhead when assertions pass.
+
+## See Also
+
+- [assertParams](./assertParams.md): Validate function arguments against types.
+- [attempt](./attempt.md): Safely execute logic and ignore errors.
+- [isDefined](../typed/isDefined.md): Common check used within assertions.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>

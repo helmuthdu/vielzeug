@@ -36,7 +36,12 @@ type ComposeReturn<T extends FnDynamic[]> = (
 export function compose<T extends FnDynamic[]>(...fns: T): ComposeReturn<T> {
   assert(fns.length > 0, 'compose requires at least one function', { args: { fns } });
 
-  const lastFn = fns.pop()!;
+  const lastFn = fns[fns.length - 1];
+  const restFns = fns.slice(0, -1);
+
   return ((...args: LastParameters<T>) =>
-    fns.reduceRight((prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)), lastFn(...args))) as ComposeReturn<T>;
+    restFns.reduceRight(
+      (prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)),
+      lastFn(...args),
+    )) as ComposeReturn<T>;
 }

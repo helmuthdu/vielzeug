@@ -36,8 +36,20 @@ export function memo<T extends Fn>(
   { ttl, maxSize }: MemoizeOptions = {},
 ): (...args: Parameters<T>) => ReturnType<T> {
   const cache = new Map<string, CacheEntry<T>>();
-  const keyGen = (args: Parameters<T>) =>
-    args.length === 1 && typeof args[0] !== 'object' ? args[0] : JSON.stringify(args);
+
+  const keyGen = (args: Parameters<T>): string => {
+    if (args.length === 0) return '__empty__';
+    if (args.length === 1) {
+      const arg = args[0];
+      const argType = typeof arg;
+      if (argType === 'string' || argType === 'number' || argType === 'boolean') {
+        return `${argType}:${arg}`;
+      }
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+    }
+    return JSON.stringify(args);
+  };
 
   return (...args: Parameters<T>): ReturnType<T> => {
     const key = keyGen(args);

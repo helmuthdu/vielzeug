@@ -21,16 +21,10 @@ import { isEqual } from '../typed/isEqual';
  */
 
 // biome-ignore lint/suspicious/noExplicitAny: -
-export function contains<T>(array: T[], value: any) {
+export function contains<T>(array: T[], value: any): boolean {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  for (const val of array) {
-    if (isEqual(val, value)) {
-      return true;
-    }
-  }
-
-  return false;
+  return array.some((val) => isEqual(val, value));
 }
 
 contains.fp = true;

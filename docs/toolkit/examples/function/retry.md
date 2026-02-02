@@ -1,44 +1,91 @@
 # retry
 
-Retries an asynchronous function a specified number of times with delay and optional exponential backoff and abort support.
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-484_B-success" alt="Size">
+</div>
+
+The `retry` utility automatically re-executes an asynchronous function if it fails. It features customizable retry attempts, configurable delays, exponential backoff, and full support for `AbortSignal` to cancel pending retries.
+
+## Features
+
+- **Isomorphic**: Works in both Browser and Node.js.
+- **Exponential Backoff**: Gradually increase delay between attempts to reduce system load.
+- **Abortable**: Integration with `AbortSignal` for clean cancellation.
+- **Type-safe**: Properly infers the return type of the retried function.
 
 ## API
 
 ```ts
-retry<T>(
-  fn: () => Promise<T>,
-  options?: {
-    times?: number;
-    delay?: number;
-    backoff?: number;
-    signal?: AbortSignal;
-  }
-): Promise<T>
+interface RetryOptions {
+  times?: number;
+  delay?: number;
+  backoff?: number;
+  signal?: AbortSignal;
+}
+
+interface RetryFunction {
+  <T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>
+}
 ```
 
-- `fn`: Async function to retry.
-- `options.times`: Number of retry attempts (default: 3).
-- `options.delay`: Delay in ms between retries (default: 250).
-- `options.backoff`: Exponential backoff factor (default: 1 = no backoff).
-- `options.signal`: Optional AbortSignal to cancel retries.
-- Returns: Promise resolving to result or rejecting after all retries fail or if aborted.
+### Parameters
 
-## Example
+- `fn`: The asynchronous function to execute.
+- `options`: Optional configuration:
+  - `times`: Total number of attempts (defaults to `3`).
+  - `delay`: Initial wait time in milliseconds between retries (defaults to `250`).
+  - `backoff`: Multiplier for the delay after each failure (defaults to `1`, meaning no backoff).
+  - `signal`: An `AbortSignal` to cancel the retry loop.
+
+### Returns
+
+- A Promise that resolves with the value from `fn`.
+- Rejects with the last error if all attempts fail, or an `AbortError` if cancelled.
+
+## Examples
+
+### Basic Network Retry
 
 ```ts
 import { retry } from '@vielzeug/toolkit';
 
-await retry(() => fetch('/api/data'), { times: 3, delay: 1000, backoff: 2 });
+const data = await retry(async () => {
+  const response = await fetch('/api/stats');
+  if (!response.ok) throw new Error('Failed');
+  return response.json();
+}, { times: 5, delay: 1000 });
 ```
 
-## Notes
+### With Exponential Backoff
 
-- Supports exponential backoff and aborting with AbortSignal.
-- Useful for network or unreliable async operations.
-- Backoff is exponential: `delay * backoff ^ (attempt - 1)`.
-- If `signal` is aborted, pending retries are rejected with an `AbortError`.
+```ts
+import { retry } from '@vielzeug/toolkit';
 
-## Related
+// Delay sequence: 500ms, 1000ms, 2000ms...
+await retry(heavyTask, { 
+  times: 3, 
+  delay: 500, 
+  backoff: 2 
+});
+```
 
-- [predict](./predict.md)
-- [sleep](./sleep.md)
+## Implementation Notes
+
+- Performance-optimized retry loop using `await sleep()`.
+- If the `signal` is aborted, any pending delay is cleared immediately.
+- Throws `TypeError` if `fn` is not a function.
+
+## See Also
+
+- [predict](./predict.md): Wait for a condition to become true.
+- [sleep](./sleep.md): Pause execution for a specified duration.
+- [debounce](./debounce.md): Rate-limit function execution.
+
+<style>
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+</style>
