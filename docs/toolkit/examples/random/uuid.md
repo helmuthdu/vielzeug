@@ -11,7 +11,7 @@ The `uuid` utility generates a cryptographically strong Universally Unique Ident
 
 - **Isomorphic**: Works in both Browser and Node.js.
 - **Secure**: Uses `crypto.getRandomValues()` in the browser and `crypto.randomUUID()` or `crypto.randomBytes()` in Node.js for high-quality randomness.
-- **Collission-Resistant**: Provides 122 bits of randomness, making collisions practically impossible for most applications.
+- **Collision-Resistant**: Provides 122 bits of randomness, making collisions practically impossible for most applications.
 
 ## API
 
@@ -60,6 +60,8 @@ const items = [
 - [random](./random.md): Generate random numbers in a range.
 - [draw](./draw.md): Pick a random element from an array.
 - [shuffle](./shuffle.md): Randomly reorder an array.
+
+<style>
 .badges {
   display: flex;
   gap: 4px;

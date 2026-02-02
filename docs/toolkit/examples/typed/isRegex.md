@@ -33,6 +33,8 @@ isRegex('abc'); // false
 
 - [isString](./isString.md)
 - [isObject](./isObject.md)
+
+<style>
 .badges {
   display: flex;
   gap: 4px;
