@@ -22,6 +22,10 @@
     "preview": "vite preview",
     "test": "vitest"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "devDependencies": {
     "typescript": "~5.9.3",
     "vite": "^7.3.1",

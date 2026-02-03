@@ -133,10 +133,6 @@ jobs:
           git push origin HEAD:${{ github.ref_name }}
           git push origin --tags
 
-      - name: Setup npm authentication
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > $HOME/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> $HOME/.npmrc
 
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}

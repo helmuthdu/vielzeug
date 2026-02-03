@@ -22,6 +22,10 @@
     "preview": "vite preview",
     "test": "vitest"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "@vielzeug/logit": "workspace:*",
     "@vielzeug/toolkit": "workspace:*"
