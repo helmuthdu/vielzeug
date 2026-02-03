@@ -1,11 +1,17 @@
-# fp
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
 </div>
 
+# fp
+
 The `fp` utility enables "Functional Programming" mode for compatible toolkit functions. It converts a standard utility (where the array is usually the first argument) into a partially applied function where the data argument is moved to the end.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/fp.ts
+:::
 
 ## Features
 
@@ -69,11 +75,3 @@ process([5, 12, 8, 20]); // [144, 400]
 - [pipe](./pipe.md): Compose multiple FP functions together.
 - [curry](./curry.md): Manual currying for any custom function.
 - [map](../array/map.md): The standard version of the map utility.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

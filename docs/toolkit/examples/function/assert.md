@@ -1,11 +1,17 @@
-# assert
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-312_B-success" alt="Size">
 </div>
 
+# assert
+
 The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It features advanced debugging options, support for various error types, and a "bypass" mode for soft warnings.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/assert.ts
+:::
 
 ## Features
 
@@ -86,11 +92,3 @@ assert(isLoaded, 'Not loaded yet, continuing anyway...', { bypass: true });
 - [assertParams](./assertParams.md): Validate function arguments against types.
 - [attempt](./attempt.md): Safely execute logic and ignore errors.
 - [isDefined](../typed/isDefined.md): Common check used within assertions.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

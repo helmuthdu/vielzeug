@@ -1,11 +1,17 @@
-# draw
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-148_B-success" alt="Size">
 </div>
 
+# draw
+
 The `draw` utility picks a single random element from an array. It is perfect for sampling data, picking winners in a game, or selecting random items for display.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/random/draw.ts
+:::
 
 ## Features
 
@@ -69,11 +75,3 @@ const winner = draw(users);
 - [random](./random.md): Generate a random number in a range.
 - [shuffle](./shuffle.md): Randomly reorder an entire array.
 - [uuid](./uuid.md): Generate a unique identifier.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

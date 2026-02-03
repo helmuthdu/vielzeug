@@ -1,11 +1,17 @@
-# interval
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-342_B-success" alt="Size">
 </div>
 
-The `interval` utility generates an array of dates between a start and end point using a specific time unit and step size. It is highly useful for creating calendars, timeline visualizations, or scheduling tasks.
+# interval
+
+The `interval` utility creates an array of dates between a start and end date, separated by a specified time unit (e.g., days, weeks, months). It's ideal for generating date series for calendars, charts, or timelines.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/date/interval.ts
+:::
 
 ## Features
 
@@ -78,11 +84,3 @@ const weeks = interval('2024-01-01', '2024-02-01', {
 
 - [expires](./expires.md): Check if a date has passed.
 - [timeDiff](./timeDiff.md): Calculate the duration between two dates.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

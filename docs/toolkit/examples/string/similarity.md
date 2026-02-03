@@ -1,11 +1,17 @@
-# similarity
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-248_B-success" alt="Size">
 </div>
 
+# similarity
+
 The `similarity` utility calculates a score between `0` and `1` representing how similar two strings are. A score of `1` means the strings are identical, while `0` means they have nothing in common.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/string/similarity.ts
+:::
 
 ## Features
 
@@ -66,11 +72,3 @@ similarity(s1.toLowerCase(), s2.toLowerCase()); // 1
 - [search](../array/search.md): Use similarity to perform fuzzy searches in arrays.
 - [seek](../object/seek.md): Use similarity to find values in deep objects.
 - [truncate](./truncate.md): Shorten long strings.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

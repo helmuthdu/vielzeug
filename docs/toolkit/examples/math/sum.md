@@ -1,11 +1,17 @@
-# sum
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1511_B-success" alt="Size">
 </div>
 
+# sum
+
 Calculates the sum of an array of numbers.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/sum.ts
+:::
 
 ## API
 
@@ -34,12 +40,3 @@ sum([]); // 0
 
 - [average](./average.md)
 - [boil](./boil.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

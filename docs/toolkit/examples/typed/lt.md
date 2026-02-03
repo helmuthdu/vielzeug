@@ -1,11 +1,17 @@
-# lt
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# lt
+
 The `lt` utility checks if the first value is strictly less than the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/lt.ts
+:::
 
 ## Features
 
@@ -54,11 +60,3 @@ lt('a', 'b'); // true
 - [le](./le.md): Less than or equal to.
 - [gt](./gt.md): Greater than.
 - [ge](./ge.md): Greater than or equal to.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

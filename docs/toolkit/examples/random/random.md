@@ -1,11 +1,17 @@
-# random
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-132_B-success" alt="Size">
 </div>
 
+# random
+
 The `random` utility generates a pseudo-random integer between two specified values (inclusive). It simplifies common randomization tasks like picking a range, rolling dice, or generating random offsets.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/random/random.ts
+:::
 
 ## Features
 
@@ -68,11 +74,3 @@ console.log(`You rolled a ${rollDie()}`);
 - [draw](./draw.md): Pick a random element from an array.
 - [shuffle](./shuffle.md): Randomly reorder an entire array.
 - [uuid](./uuid.md): Generate a unique identifier.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

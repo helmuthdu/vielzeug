@@ -1,11 +1,17 @@
-# predict
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# predict
+
 The `predict` utility returns a Promise that resolves when a given condition becomes true. It periodically checks the condition based on a specified interval and can be configured with a timeout to prevent infinite waiting.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/predict.ts
+:::
 
 ## Features
 
@@ -76,11 +82,3 @@ await predict(
 - [retry](./retry.md): Re-run an entire action multiple times.
 - [sleep](./sleep.md): Pause execution for a fixed duration.
 - [worker](./worker.md): Run heavy logic in a separate thread.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

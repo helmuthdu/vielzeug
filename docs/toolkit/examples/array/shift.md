@@ -1,11 +1,17 @@
-# shift
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1297_B-success" alt="Size">
 </div>
 
-The `shift` utility rearranges elements in an array by moving them to the left by a specified number of positions. It also supports rotation, where elements shifted off the front are moved to the end of the array.
+# shift
+
+The `shift` utility rotates the elements of an array by a specified number of positions. Positive numbers rotate to the right, while negative numbers rotate to the left.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/shift.ts
+:::
 
 ## Features
 
@@ -70,11 +76,3 @@ shift(letters, -1, true); // ['D', 'A', 'B', 'C']
 - [substitute](./substitute.md): Replace elements in an array.
 - [chunk](./chunk.md): Split an array into smaller segments.
 - [list](./list.md): Create arrays from ranges or values.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# seek
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1608_B-success" alt="Size">
 </div>
 
+# seek
+
 The `seek` utility performs a deep fuzzy search within an object or array. It recursively scans all properties and values to determine if any of them match the search query based on a similarity threshold (tone).
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/seek.ts
+:::
 
 ## Features
 
@@ -80,11 +86,3 @@ seek(item, 'viel', 1.0); // false
 - [path](./path.md): Safely retrieve a value at a specific known path.
 - [similarity](../string/similarity.md): The underlying string comparison helper.
 - [isEqual](../typed/isEqual.md): Check for exact deep equality.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

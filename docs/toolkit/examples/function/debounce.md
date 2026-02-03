@@ -1,11 +1,17 @@
-# debounce
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-256_B-success" alt="Size">
 </div>
 
+# debounce
+
 The `debounce` utility creates a version of a function that delays its execution until a specified amount of time has passed since it was last called. This is ideal for handling rapid-fire events like window resizing, scrolling, or keystrokes.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/debounce.ts
+:::
 
 ## Features
 
@@ -76,11 +82,3 @@ window.addEventListener('resize', handleResize);
 - [throttle](./throttle.md): Execute a function at most once in a specified interval.
 - [delay](./delay.md): Pause execution for a specified duration.
 - [retry](./retry.md): Automatically retry an asynchronous operation.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# select
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1420_B-success" alt="Size">
 </div>
 
+# select
+
 The `select` utility is a high-performance combined transformation and filtering tool. It allows you to simultaneously map and filter an array in a single pass, and it provides built-in support for asynchronous operations.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/select.ts
+:::
 
 ## Features
 
@@ -90,11 +96,3 @@ const doubled = select(data, x => x * 2);
 - [filter](./filter.md): Standard array filtering.
 - [compact](./compact.md): Remove falsy values from an array.
 - [pick](./pick.md): Extract specific properties from an array of objects.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,6 +1,17 @@
+<div class="badges">
+  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-724_B-success" alt="Size">
+</div>
+
 # aggregate
 
 The `aggregate` utility transforms an array of objects into a single object, where each key is determined by a selector. If multiple items result in the same key, the last one processed "wins."
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/aggregate.ts
+:::
 
 ## Features
 

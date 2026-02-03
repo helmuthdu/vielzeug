@@ -1,11 +1,17 @@
-# kebabCase
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-368_B-success" alt="Size">
 </div>
 
+# kebabCase
+
 The `kebabCase` utility transforms a string into `kebab-case` format (all lower case with words separated by dashes). It is perfect for generating CSS class names, URL slugs, or CLI flags.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/string/kebabCase.ts
+:::
 
 ## Features
 
@@ -63,11 +69,3 @@ kebabCase('multiple___underscores'); // 'multiple-underscores'
 - [camelCase](./camelCase.md): Convert strings to `camelCase`.
 - [snakeCase](./snakeCase.md): Convert strings to `snake_case`.
 - [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

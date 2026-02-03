@@ -1,11 +1,17 @@
-# assertParams
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-384_B-success" alt="Size">
 </div>
 
+# assertParams
+
 The `assertParams` utility ensures that specific keys are present and non-empty in a given object. It is designed for validating function arguments or API payloads, providing clear error messages and TypeScript type narrowing.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/assertParams.ts
+:::
 
 ## Features
 
@@ -87,11 +93,3 @@ assertParams(config, ['port'], 'ConfigLoader', { type: TypeError });
 - [assert](./assert.md): The underlying generic assertion helper.
 - [isEmpty](../typed/isEmpty.md): Check if a value is considered empty.
 - [isDefined](../typed/isDefined.md): Check if a value is neither null nor undefined.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

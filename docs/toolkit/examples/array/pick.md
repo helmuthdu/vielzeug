@@ -1,11 +1,17 @@
-# pick
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1344_B-success" alt="Size">
 </div>
 
+# pick
+
 The `pick` utility finds the first element in an array that satisfies a condition and then transforms it using a callback function. It is a more powerful version of `find` that includes a built-in transformation step and support for asynchronous operations.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/pick.ts
+:::
 
 ## Features
 
@@ -82,13 +88,3 @@ const data = await pick(ids, async (id) => {
 - [select](./select.md): Transform and filter *multiple* elements.
 - [find](./find.md): Find an element without transforming it.
 - [compact](./compact.md): Remove falsy values from an array.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-
-

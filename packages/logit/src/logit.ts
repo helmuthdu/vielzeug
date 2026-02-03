@@ -1,10 +1,5 @@
 /** biome-ignore-all lint/suspicious/noAssignInExpressions: - */
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
-declare global {
-  interface Window {
-    Logit: LogitInstance;
-  }
-}
 
 /**
  * Environment indicator symbols.
@@ -22,8 +17,26 @@ const CONSOLE_METHOD_MAP: Record<string, keyof Console> = {
 
 /**
  * Checks if the current environment is production.
+ * Cached for performance - evaluated once at a module load.
  */
-const isProd = (): boolean => (import.meta as any)?.env?.NODE_ENV === 'production';
+const isProduction = (): boolean => {
+  // Browser environment (Vite, Webpack, etc.)
+  if (typeof window !== 'undefined' && (import.meta as any)?.env?.NODE_ENV) {
+    return (import.meta as any).env.NODE_ENV === 'production';
+  }
+
+  // Node.js environment
+  // @ts-expect-error
+  if (typeof process !== 'undefined' && (process as any).env?.NODE_ENV) {
+    // @ts-expect-error
+    return (process as any).env.NODE_ENV === 'production';
+  }
+
+  return false;
+};
+
+// Cache the result to avoid repeated checks
+const IS_PROD = isProduction();
 
 export type LogitInstance = typeof Logit;
 export type LogitType = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'warn' | 'error';
@@ -43,7 +56,12 @@ export type LogitOptions = {
 };
 export type LogitTheme = { color: string; bg: string; border: string; icon?: string; symbol?: string };
 
+/**
+ * Detects dark mode preference at module load time.
+ * Note: This is intentionally static and won't update if the user changes their theme.
+ */
 const isDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+
 const Theme: Readonly<Record<LogitColors, LogitTheme>> = {
   debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '\u2615', symbol: '\uD83C\uDD73' },
   error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '\u2718', symbol: '\uD83C\uDD74' },
@@ -88,12 +106,12 @@ const shouldLog = (type: LogitType): boolean => logLevel[state.logLevel] <= logL
 /**
  * Gets the current timestamp in ISO format (HH:MM:SS.mmm).
  */
-const getTimestamp = (): string => new Date().toISOString().slice(11, 23);
+const getCurrentTimestamp = (): string => new Date().toISOString().slice(11, 23);
 
 /**
  * Gets the environment indicator symbol.
  */
-const getEnvIndicator = (): string => (isProd() ? ENV_PROD : ENV_DEV);
+const getEnvIndicator = (): string => (IS_PROD ? ENV_PROD : ENV_DEV);
 
 /**
  * Sends log data to remote handler if configured.
@@ -112,45 +130,66 @@ const getConsoleMethod = (type: LogitType): keyof Console => {
 };
 
 /**
+ * CSS style constants for consistent formatting.
+ */
+const BASE_BORDER_STYLE = 'border: 1px solid';
+const BASE_BORDER_RADIUS = 'border-radius: 4px';
+const NAMESPACE_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter';
+
+/**
  * Generates CSS styles for log messages based on theme and variant.
  */
 const style = (type: LogitColors, extra = ''): string => {
   const { bg, color, border } = Theme[type];
-  const baseStyle = `color: ${bg}; border: 1px solid ${border}; border-radius: 4px;`;
+  const baseStyle = `color: ${bg}; ${BASE_BORDER_STYLE} ${border}; ${BASE_BORDER_RADIUS}`;
 
   switch (state.variant) {
     case 'symbol':
-      return `${baseStyle} padding: 1px 1px 0;${extra};`;
+      return `${baseStyle}; padding: 1px 1px 0${extra}`;
     case 'icon':
-      return `${baseStyle} padding: 0 3px;${extra};`;
+      return `${baseStyle}; padding: 0 3px${extra}`;
     default:
-      return `background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 4px; font-weight: bold; padding: 0 3px;${extra}`;
+      return `background: ${bg}; color: ${color}; ${BASE_BORDER_STYLE} ${border}; ${BASE_BORDER_RADIUS}; font-weight: bold; padding: 0 3px${extra}`;
   }
+};
+
+/**
+ * Gets the display value for a log type based on current variant.
+ */
+const getDisplayValue = (type: LogitType): string => {
+  const theme = Theme[type as LogitColors];
+  const { variant } = state;
+
+  // For 'text' variant or if the variant key doesn't exist, use uppercase type
+  if (variant === 'text' || !theme[variant]) {
+    return type.toUpperCase();
+  }
+
+  return theme[variant] as string;
 };
 
 /**
  * Builds the format string and style parts for browser console logging.
  */
 function buildBrowserLogParts(type: LogitType): { format: string; parts: string[] } {
-  const theme = Theme[type as LogitColors];
-  const { namespace, variant, timestamp, environment } = state;
+  const { namespace, timestamp, environment } = state;
 
-  let format = `%c${theme[variant as keyof LogitTheme] ?? type.toUpperCase()}%c`;
-  const parts: string[] = [style(type as any), ''];
+  let format = `%c${getDisplayValue(type)}%c`;
+  const parts: string[] = [style(type as LogitColors), ''];
 
   if (namespace) {
     format += ` %c${namespace}%c`;
-    parts.push(style('ns', ' border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter;'), '');
+    parts.push(style('ns', `; ${NAMESPACE_STYLE}`), '');
   }
 
   if (environment) {
     format += ` %c${getEnvIndicator()}%c`;
-    parts.push('color: darkgray;', '');
+    parts.push('color: darkgray', '');
   }
 
   if (timestamp) {
-    format += ` %c${getTimestamp()}%c`;
-    parts.push('color: gray;', '');
+    format += ` %c${getCurrentTimestamp()}%c`;
+    parts.push('color: gray', '');
   }
 
   return { format, parts };
@@ -162,10 +201,8 @@ function buildBrowserLogParts(type: LogitType): { format: string; parts: string[
 const log = (type: LogitType, ...args: any[]): void => {
   // Server-side logging (Node.js)
   if (typeof window === 'undefined') {
-    const theme = Theme[type as LogitColors];
-    const { variant } = state;
-    const consoleMethod = console[getConsoleMethod(type)] as (...a: any) => void;
-    consoleMethod(`${theme[variant as keyof LogitTheme] ?? type.toUpperCase()} | ${getEnvIndicator()} |`, ...args);
+    const consoleMethod = console[getConsoleMethod(type)] as (...a: any[]) => void;
+    consoleMethod(`${getDisplayValue(type)} | ${getEnvIndicator()} |`, ...args);
     return;
   }
 
@@ -174,7 +211,7 @@ const log = (type: LogitType, ...args: any[]): void => {
 
   // Browser-side logging with styling
   const { format, parts } = buildBrowserLogParts(type);
-  const consoleMethod = console[getConsoleMethod(type)] as (...a: any) => void;
+  const consoleMethod = console[getConsoleMethod(type)] as (...a: any[]) => void;
 
   consoleMethod(format, ...parts, ...args);
   sendRemoteLog(type, args);
@@ -221,15 +258,16 @@ export const Logit = {
 
     const elapsed = formatElapsedTime(time);
     const env = getEnvIndicator();
+    const timestamp = state.timestamp ? getCurrentTimestamp() : '';
 
     console.groupCollapsed(
-      `%c${label}%c${state.namespace}%c${env}%c${state.timestamp ? getTimestamp() : ''}%c${elapsed}%c${text}`,
-      style('group', 'margin-right: 6px; padding: 1px 3px 0'),
-      style('ns', ' border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter;margin-right: 6px;'),
-      'color: darkgray; margin-right: 6px;',
-      'color: gray;font-weight: lighter;margin-right: 6px;',
-      'color: gray; font-weight: lighter;margin-right: 6px;',
-      'color: inherit;font-weight: lighter;',
+      `%c${label}%c${state.namespace}%c${env}%c${timestamp}%c${elapsed}%c${text}`,
+      style('group', '; margin-right: 6px; padding: 1px 3px 0'),
+      style('ns', `; ${NAMESPACE_STYLE}; margin-right: 6px`),
+      'color: darkgray; margin-right: 6px',
+      'color: gray; font-weight: lighter; margin-right: 6px',
+      'color: gray; font-weight: lighter; margin-right: 6px',
+      'color: inherit; font-weight: lighter',
     );
   },
 
@@ -325,6 +363,3 @@ export const Logit = {
   warn: (...args: any[]): void => log('warn', ...args),
 };
 
-if (typeof window !== 'undefined') {
-  window.Logit = Logit;
-}

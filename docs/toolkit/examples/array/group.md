@@ -1,11 +1,17 @@
-# group
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1258_B-success" alt="Size">
 </div>
 
+# group
+
 The `group` utility partitions an array into an object of collections, based on a provided key or selection function.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/group.ts
+:::
 
 ## Problem Statement
 
@@ -354,12 +360,3 @@ const byName = group(users, u => u.name);
 - [filter](./filter.md): Subset an array
 - [aggregate](./aggregate.md): For more complex grouping and reduction patterns
 - [sortBy](./sortBy.md): Sort before/after grouping
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

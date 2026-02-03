@@ -1,11 +1,17 @@
-# proxy
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-412_B-success" alt="Size">
 </div>
 
+# proxy
+
 The `proxy` utility creates an enhanced JavaScript Proxy for an object, allowing you to intercept and react to property access (`get`) and modifications (`set`). It features support for selective property watching and optional deep proxying for nested structures.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/proxy.ts
+:::
 
 ## Features
 
@@ -93,11 +99,3 @@ watchedConfig.ui.theme = 'light';           // Does NOT trigger callback
 - [memo](./memo.md): Cache results of function calls.
 - [path](../object/path.md): Safely access nested data.
 - [merge](../object/merge.md): Combine multiple objects.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

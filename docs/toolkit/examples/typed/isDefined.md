@@ -1,11 +1,17 @@
-# isDefined
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# isDefined
+
 The `isDefined` utility is a type guard that checks if a value is NOT `undefined` or `null`. It is essential for safely handling optional values and cleaning up data sets.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isDefined.ts
+:::
 
 ## Features
 
@@ -65,11 +71,3 @@ const cleanData = filter(data, isDefined);
 - [isNil](./isNil.md): The inverse check (returns true for null/undefined).
 - [isEmpty](./isEmpty.md): Check if a value is empty (includes length checks).
 - [compact](../array/compact.md): Remove all falsy values from an array.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

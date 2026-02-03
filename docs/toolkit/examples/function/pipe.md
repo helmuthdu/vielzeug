@@ -1,11 +1,17 @@
-# pipe
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
 </div>
 
+# pipe
+
 The `pipe` utility performs functional composition from left to right. It takes multiple functions and returns a single function that passes its result from one call to the next, creating a processing pipeline.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/pipe.ts
+:::
 
 ## Features
 
@@ -78,11 +84,3 @@ await getUserName(1); // 'Alice'
 - [compose](./compose.md): Functional composition from right to left.
 - [fp](./fp.md): Wrap functions for better functional programming support.
 - [map](../array/map.md): Use `pipe` within a map for complex transformations.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

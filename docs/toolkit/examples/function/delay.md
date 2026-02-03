@@ -1,11 +1,17 @@
-# delay
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-144_B-success" alt="Size">
 </div>
 
+# delay
+
 The `delay` utility provides a clean, Promise-based way to execute a function after a specified amount of time. It combines a timer with a callback, allowing you to easily chain asynchronous operations.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/delay.ts
+:::
 
 ## Features
 
@@ -67,11 +73,3 @@ await step2();
 - [sleep](./sleep.md): Pause execution without a mandatory callback.
 - [debounce](./debounce.md): Rate-limit execution based on inactivity.
 - [retry](./retry.md): Automatically retry a failed operation with a delay.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

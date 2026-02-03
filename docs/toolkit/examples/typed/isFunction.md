@@ -1,11 +1,17 @@
-# isFunction
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-529_B-success" alt="Size">
 </div>
 
+# isFunction
+
 Checks if a value is a function.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isFunction.ts
+:::
 
 ## API
 
@@ -33,11 +39,3 @@ isFunction(123); // false
 
 - [isObject](./isObject.md)
 - [isArray](./isArray.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

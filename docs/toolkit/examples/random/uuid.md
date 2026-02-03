@@ -1,11 +1,17 @@
-# uuid
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-361_B-success" alt="Size">
 </div>
 
+# uuid
+
 The `uuid` utility generates a cryptographically strong Universally Unique Identifier (UUID) version 4, as specified in RFC 4122.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/random/uuid.ts
+:::
 
 ## Features
 
@@ -60,11 +66,3 @@ const items = [
 - [random](./random.md): Generate random numbers in a range.
 - [draw](./draw.md): Pick a random element from an array.
 - [shuffle](./shuffle.md): Randomly reorder an array.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,13 +1,13 @@
-<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
-
-# Toolkit
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-100+_utilities-success" alt="Utilities">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
+
+<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+
+# Toolkit
 
 **Toolkit** is a comprehensive, type-safe utility library for modern JavaScript and TypeScript projects. It provides a wide range of helpers for arrays, objects, strings, dates, math, random, and more — all with zero dependencies and full TypeScript support.
 
@@ -418,10 +418,3 @@ Found a bug or want to add a utility? We welcome contributions!
 
 > **Tip:** Toolkit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for logging, HTTP clients, state management, and more.
 
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# compose
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
 </div>
 
+# compose
+
 The `compose` utility performs functional composition from right to left. It takes multiple functions and returns a single function that passes its result from one call to the previous one, following standard mathematical notation $f(g(x))$.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/compose.ts
+:::
 
 ## Features
 
@@ -78,11 +84,3 @@ await processAndSave('  hello  '); // { success: true, data: 'HELLO' }
 - [pipe](./pipe.md): Functional composition from left to right.
 - [curry](./curry.md): Transform a function into a sequence of unary functions.
 - [fp](./fp.md): Wrap functions for functional programming styles.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

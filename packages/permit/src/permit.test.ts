@@ -4,6 +4,8 @@ import { Permit } from './permit';
 vi.mock('@vielzeug/logit', () => ({
   Logit: {
     debug: vi.fn(),
+    setPrefix: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
@@ -37,13 +39,13 @@ describe('Permit', () => {
     it('throws error when role is missing', () => {
       expect(() => {
         Permit.register('', 'posts', { view: true });
-      }).toThrow('Role and resource are required');
+      }).toThrow('Role is required');
     });
 
     it('throws error when resource is missing', () => {
       expect(() => {
         Permit.register('admin', '', { view: true });
-      }).toThrow('Role and resource are required');
+      }).toThrow('Resource is required');
     });
   });
 

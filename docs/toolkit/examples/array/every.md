@@ -1,11 +1,17 @@
-# every
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-929_B-success" alt="Size">
 </div>
 
+# every
+
 The `every` utility checks if all elements in an array pass the provided test function. It returns `true` only if the predicate returns truthy for every single element. It short-circuits and returns `false` as soon as a non-matching element is found.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/every.ts
+:::
 
 ## Features
 
@@ -72,11 +78,3 @@ const allDone = every(tasks, t => t.completed); // false
 - [some](./some.md): Check if *any* element satisfies a condition.
 - [filter](./filter.md): Get all elements that satisfy a condition.
 - [find](./find.md): Get the first element that satisfies a condition.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

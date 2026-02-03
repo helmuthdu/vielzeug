@@ -1,11 +1,17 @@
-# map
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# map
+
 The `map` utility transforms an array by applying a callback function to each of its elements. It creates a new array with the results, leaving the original array unchanged.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/map.ts
+:::
 
 ## Problem Statement
 
@@ -299,11 +305,3 @@ const ids = map(users, u => u.id);
 - [reduce](./reduce.md): Reduce an array to a single value
 - [group](./group.md): Group elements by key
 - [Native Array.map()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map): For basic use cases without async support
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

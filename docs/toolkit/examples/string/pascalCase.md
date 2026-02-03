@@ -1,11 +1,17 @@
-# pascalCase
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-444_B-success" alt="Size">
 </div>
 
+# pascalCase
+
 The `pascalCase` utility transforms a string into `PascalCase` format (every word capitalized, no separators). It is typically used for naming classes, components, or TypeScript types.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/string/pascalCase.ts
+:::
 
 ## Features
 
@@ -63,11 +69,3 @@ pascalCase('  spaced   text '); // 'SpacedText'
 - [camelCase](./camelCase.md): Convert strings to `camelCase`.
 - [snakeCase](./snakeCase.md): Convert strings to `snake_case`.
 - [kebabCase](./kebabCase.md): Convert strings to `kebab-case`.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

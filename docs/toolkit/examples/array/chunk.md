@@ -1,11 +1,17 @@
-# chunk
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1533_B-success" alt="Size">
 </div>
 
+# chunk
+
 The `chunk` utility splits an array or string into smaller pieces (chunks) of a specified size.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/chunk.ts
+:::
 
 ## Features
 
@@ -77,11 +83,3 @@ chunk('abc', 2, { overlap: true }); // [' a', 'ab', 'bc', 'c ']
 
 - [flatten](./flatten.md): The inverse operation for arrays.
 - [group](./group.md): Group array elements by a criterion.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

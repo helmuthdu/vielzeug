@@ -1,11 +1,17 @@
-# isPromise
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-528_B-success" alt="Size">
 </div>
 
+# isPromise
+
 Checks if a value is a Promise.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isPromise.ts
+:::
 
 ## API
 
@@ -33,11 +39,3 @@ isPromise(42); // false
 
 - [isFunction](./isFunction.md)
 - [isObject](./isObject.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

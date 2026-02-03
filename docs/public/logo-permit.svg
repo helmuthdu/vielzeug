@@ -7,7 +7,7 @@
    version="1.1"
    id="svg2"
    sodipodi:docname="logo-permit.svg"
-   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -25,13 +25,13 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="7.3772929"
-     inkscape:cx="23.85699"
-     inkscape:cy="53.407124"
+     inkscape:cx="24.738072"
+     inkscape:cy="55.237064"
      inkscape:window-width="1920"
-     inkscape:window-height="1027"
+     inkscape:window-height="1022"
      inkscape:window-x="0"
-     inkscape:window-y="680"
-     inkscape:window-maximized="1"
+     inkscape:window-y="359"
+     inkscape:window-maximized="0"
      inkscape:current-layer="g6" />
   <g
      id="g6"
@@ -46,7 +46,7 @@
        transform="matrix(-0.20567069,0.97862126,-0.99997263,-0.00739852,0,0)" />
     <g
        id="g14"
-       transform="translate(117.04084,7.8665001)"
+       transform="matrix(1.1667726,0,0,1.1667726,112.2182,6.3451002)"
        style="stroke-width:1.03313;stroke-dasharray:none">
       <g
          id="g13"

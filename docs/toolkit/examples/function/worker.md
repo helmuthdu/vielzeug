@@ -1,11 +1,17 @@
-# worker
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-612_B-success" alt="Size">
 </div>
 
+# worker
+
 The `worker` utility simplifies the use of Web Workers by allowing you to run heavy computations in a background thread without creating separate files. It supports importing external dependencies and handles all the complex message-passing logic for you.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/worker.ts
+:::
 
 ## Features
 
@@ -78,11 +84,3 @@ const hash = await calculateHash('Hello World');
 - [predict](./predict.md): Wait for async conditions.
 - [retry](./retry.md): Re-run failed operations.
 - [attempt](./attempt.md): Safely execute logic that might crash.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

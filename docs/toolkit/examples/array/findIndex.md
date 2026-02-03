@@ -1,11 +1,17 @@
-# findIndex
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1014_B-success" alt="Size">
 </div>
 
-The `findIndex` utility returns the index of the first element in an array that satisfies the provided test function. If no element passes the test, it returns `-1`.
+# findIndex
+
+The `findIndex` utility returns the index of the first element in an array that passes the provided test function. If no element matches, it returns `-1`.
+
+## Implementation
+
+:::details View Source Code
+<<< @/../packages/toolkit/src/array/findIndex.ts
+:::
 
 ## Features
 
@@ -74,11 +80,3 @@ const bobIndex = findIndex(users, u => u.name === 'Bob'); // 1
 - [find](./find.md): Get the first matching element itself.
 - [findLast](./findLast.md): Get the *last* matching element.
 - [search](./search.md): Find elements based on a query.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

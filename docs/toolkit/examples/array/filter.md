@@ -1,11 +1,17 @@
-# filter
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# filter
+
 The `filter` utility creates a new array with all elements that pass the test implemented by the provided predicate function.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/filter.ts
+:::
 
 ## Features
 
@@ -82,11 +88,3 @@ const validIds = await filter(ids, async (id) => {
 - [map](./map.md): Transform elements of an array.
 - [reduce](./reduce.md): Reduce an array to a single value.
 - [select](./select.md): Alias for filter in some contexts.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# compare
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
 </div>
 
+# compare
+
 The `compare` utility is a generic comparator function that determines the relative order of two values. It returns `-1` if the first value is smaller, `1` if it is larger, and `0` if they are equal.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/compare.ts
+:::
 
 ## Features
 
@@ -65,11 +71,3 @@ numbers.sort(compare); // [1, 2, 4, 10, 33]
 - [compareBy](./compareBy.md): Create a comparator for complex objects.
 - [sort](../array/sort.md): Functional sorting helper.
 - [isEqual](../typed/isEqual.md): Check for structural identity.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

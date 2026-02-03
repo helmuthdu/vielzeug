@@ -1,11 +1,17 @@
-# timeDiff
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-284_B-success" alt="Size">
 </div>
 
-The `timeDiff` utility calculates the duration between the current time and a target date, returning the result in the most appropriate human-readable unit (e.g., "5 days" or "2 months"). It is ideal for countdowns, relative time displays, and expiration notices.
+# timeDiff
+
+The `timeDiff` utility calculates the time difference between two dates and returns it in a human-readable format (e.g., "5 days ago" or "in 2 hours"). It's perfect for displaying relative timestamps in user interfaces.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/date/timeDiff.ts
+:::
 
 ## Features
 
@@ -85,11 +91,3 @@ timeDiff(futureDate, 'FUTURE', ['HOUR']);
 
 - [expires](./expires.md): Categorize a date's expiration status.
 - [interval](./interval.md): Generate a sequence of dates.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

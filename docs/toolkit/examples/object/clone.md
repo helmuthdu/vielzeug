@@ -1,11 +1,17 @@
-# clone
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-435_B-success" alt="Size">
 </div>
 
+# clone
+
 The `clone` utility creates a complete deep copy of an object or array. This ensures that any modifications made to the cloned version do not affect the original data structure, which is essential for maintaining immutability in complex applications.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/clone.ts
+:::
 
 ## Features
 
@@ -79,11 +85,3 @@ console.log(list[0]); // [1, 2]
 - [merge](./merge.md): Combine multiple objects.
 - [diff](./diff.md): Find differences between two objects.
 - [isEqual](../typed/isEqual.md): Check for deep equality.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

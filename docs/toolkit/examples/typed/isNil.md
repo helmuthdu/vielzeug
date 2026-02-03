@@ -1,11 +1,17 @@
-# isNil
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# isNil
+
 The `isNil` utility is a type guard that checks if a value is strictly `null` or `undefined`. It is the inverse of `isDefined` and is useful for identifying missing or uninitialized data.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isNil.ts
+:::
 
 ## Features
 
@@ -67,11 +73,3 @@ function cleanup(text: string | null | undefined) {
 - [isDefined](./isDefined.md): The inverse check (returns true for defined values).
 - [isEmpty](./isEmpty.md): Check if a value is empty (broader than just nil).
 - [isArray](./isArray.md): Dedicated array type guard.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

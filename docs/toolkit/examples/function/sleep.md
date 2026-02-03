@@ -1,11 +1,17 @@
-# sleep
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
 </div>
 
+# sleep
+
 The `sleep` utility returns a Promise that resolves after a specified amount of time. It is a modern replacement for `setTimeout` when working with `async/await`, allowing you to pause execution in a clean, readable way.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/sleep.ts
+:::
 
 ## Features
 
@@ -70,11 +76,3 @@ async function checkStatus() {
 - [delay](./delay.md): Pause execution and then run a callback.
 - [retry](./retry.md): Automatically retry failed operations with a delay.
 - [predict](./predict.md): Wait until a specific condition is met.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

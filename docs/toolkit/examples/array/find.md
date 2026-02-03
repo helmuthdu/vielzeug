@@ -1,11 +1,17 @@
-# find
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1137_B-success" alt="Size">
 </div>
 
+# find
+
 The `find` utility returns the first element in an array that passes the provided test function. It also supports an optional default value to be returned if no match is found, providing a more ergonomic alternative to the native `Array.prototype.find()`.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/find.ts
+:::
 
 ## Features
 
@@ -79,13 +85,3 @@ const user = find(users, u => u.id === 99, { id: 0, name: 'Guest' });
 - [findLast](./findLast.md): Get the *last* matching element.
 - [filter](./filter.md): Get *all* matching elements.
 - [some](./some.md): Check if *any* match exists.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-
-

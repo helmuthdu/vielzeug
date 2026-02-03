@@ -1,11 +1,17 @@
-# isArray
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-84_B-success" alt="Size">
 </div>
 
+# isArray
+
 The `isArray` utility is a type guard that checks if a given value is an array. It provides reliable detection across different execution environments.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isArray.ts
+:::
 
 ## Features
 
@@ -65,11 +71,3 @@ function process(data: unknown) {
 - [isObject](./isObject.md): Check if a value is a plain object.
 - [isEmpty](./isEmpty.md): Check if an array (or object/string) is empty.
 - [isDefined](./isDefined.md): Check if a value is not `null` or `undefined`.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

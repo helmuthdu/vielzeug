@@ -1,11 +1,17 @@
-# parseJSON
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1856_B-success" alt="Size">
 </div>
 
+# parseJSON
+
 The `parseJSON` utility provides a safe and robust way to parse JSON strings. It includes built-in error handling, support for default values, optional validation, and a customizable reviver function, ensuring that your application doesn't crash on malformed input.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/parseJSON.ts
+:::
 
 ## Features
 
@@ -97,11 +103,3 @@ const doubled = parseJSON(raw, {
 - [clone](./clone.md): Create a copy of a parsed object.
 - [path](./path.md): Safely access nested properties of the parsed object.
 - [merge](./merge.md): Combine the parsed object with default settings.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

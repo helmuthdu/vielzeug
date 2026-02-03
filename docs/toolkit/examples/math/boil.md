@@ -1,11 +1,17 @@
-# boil
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-148_B-success" alt="Size">
 </div>
 
+# boil
+
 The `boil` utility reduces an array to a single "best" value based on a custom comparison function. It is a specialized version of a "winner-takes-all" reduction, ideal for finding maximums, minimums, or other extreme values based on complex logic.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/boil.ts
+:::
 
 ## Features
 
@@ -70,11 +76,3 @@ const highScorer = boil(users, (a, b) => a.score > b.score ? a : b);
 - [max](./max.md): Specialized boil for finding the maximum number.
 - [min](./min.md): Specialized boil for finding the minimum number.
 - [reduce](../array/reduce.md): The general-purpose reduction utility.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

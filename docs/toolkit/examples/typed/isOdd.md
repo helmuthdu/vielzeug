@@ -1,11 +1,17 @@
-# isOdd
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# isOdd
+
 The `isOdd` utility is a type guard that checks if a given number is an odd integer.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isOdd.ts
+:::
 
 ## Features
 
@@ -52,11 +58,3 @@ isOdd(0);  // false
 - [isEven](./isEven.md): Check if a number is even.
 - [isNumber](./isNumber.md): Check if a value is a number.
 - [isWithin](./isWithin.md): Check if a number is within a range.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

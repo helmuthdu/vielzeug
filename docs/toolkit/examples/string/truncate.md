@@ -1,11 +1,17 @@
-# truncate
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1004_B-success" alt="Size">
 </div>
 
+# truncate
+
 The `truncate` utility shortens a string to a specified length and appends a customizable suffix (like an ellipsis) if the string exceeds that length.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/string/truncate.ts
+:::
 
 ## Features
 
@@ -70,11 +76,3 @@ truncate('Hello', 10); // 'Hello'
 
 - [similarity](./similarity.md): Compare two strings for similarity.
 - [camelCase](./camelCase.md): Convert strings to camelCase.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

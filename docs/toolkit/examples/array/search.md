@@ -1,11 +1,17 @@
-# search
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1253_B-success" alt="Size">
 </div>
 
+# search
+
 The `search` utility performs a fuzzy search across an array of objects. It checks all string properties of each object and returns a filtered list of items that match the query based on a similarity threshold (tone).
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/search.ts
+:::
 
 ## Features
 
@@ -76,13 +82,3 @@ search(products, 'phone', 0.25); // [{ name: 'iPhone 15' }]
 - [filter](./filter.md): Filter items based on exact conditions.
 - [similarity](../string/similarity.md): The underlying string comparison helper.
 - [contains](./contains.md): Check for existence using deep equality.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-
-

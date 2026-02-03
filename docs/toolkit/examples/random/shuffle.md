@@ -1,11 +1,17 @@
-# shuffle
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-196_B-success" alt="Size">
 </div>
 
+# shuffle
+
 The `shuffle` utility creates a new array with the elements of the original array in a randomized order. It uses the efficient Fisher-Yates algorithm to ensure a truly uniform shuffle.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/random/shuffle.ts
+:::
 
 ## Features
 
@@ -64,11 +70,3 @@ const randomOrder = shuffle(players);
 - [draw](./draw.md): Pick a single random element from an array.
 - [random](./random.md): Generate a random number in a range.
 - [sort](../array/sort.md): Sort an array based on a specific criteria.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

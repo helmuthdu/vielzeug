@@ -1,11 +1,17 @@
-# merge
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-4078_B-success" alt="Size">
 </div>
 
+# merge
+
 The `merge` utility combines multiple objects into a single new object using a variety of configurable strategies.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/merge.ts
+:::
 
 ## Features
 
@@ -97,11 +103,3 @@ merge(custom, { val: 10 }, { val: 5 }); // { val: 15 }
 - [clone](./clone.md): Create a deep copy of a single object.
 - [diff](./diff.md): Find the differences between two objects.
 - [patch](./patch.md): Apply a diff to an object.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# alternate
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1329_B-success" alt="Size">
 </div>
 
+# alternate
+
 The `alternate` utility toggles an item's presence in an array. If the item exists (based on a value or a custom selector), it is removed. If it doesn't exist, it is added to the array using a specified strategy.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/alternate.ts
+:::
 
 ## Features
 
@@ -98,11 +104,3 @@ alternate(list, 'A', undefined, { strategy: 'prepend' }); // ['A', 'B', 'C']
 - [filter](./filter.md): Manually remove items from an array.
 - [uniq](./uniq.md): Ensure all elements in an array are unique.
 - [aggregate](./aggregate.md): Transform arrays into lookup objects.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

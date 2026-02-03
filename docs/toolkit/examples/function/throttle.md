@@ -1,11 +1,17 @@
-# throttle
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-244_B-success" alt="Size">
 </div>
 
+# throttle
+
 The `throttle` utility ensures that a function is called at most once in a specified time interval. It is perfect for limiting the execution rate of heavy handlers like scroll, mouse movement, or continuous API polling.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/throttle.ts
+:::
 
 ## Features
 
@@ -74,11 +80,3 @@ rateLimitedSearch('app');
 - [debounce](./debounce.md): Delay execution until a period of inactivity.
 - [delay](./delay.md): Pause execution for a specified duration.
 - [once](./once.md): Ensure a function is only ever called once.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

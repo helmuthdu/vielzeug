@@ -1,11 +1,17 @@
-# compact
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-618_B-success" alt="Size">
 </div>
 
+# compact
+
 The `compact` utility creates a new array with all falsy values removed. This is particularly useful for cleaning up sparse arrays or removing optional values that weren't provided.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/compact.ts
+:::
 
 ## Features
 
@@ -68,11 +74,3 @@ const validUsers = compact(users);
 - [filter](./filter.md): Filter elements based on a custom predicate.
 - [uniq](./uniq.md): Remove duplicate values from an array.
 - [flatten](./flatten.md): Flatten nested arrays into a single level.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

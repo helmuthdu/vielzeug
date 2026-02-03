@@ -1,11 +1,17 @@
-# sortBy
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-912_B-success" alt="Size">
 </div>
 
+# sortBy
+
 The `sortBy` utility enables advanced multi-field sorting for arrays of objects. It allows you to specify multiple properties to sort by, each with its own independent sort direction (ascending or descending).
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/sortBy.ts
+:::
 
 ## Features
 
@@ -95,11 +101,3 @@ sortBy(products, { category: 'desc', price: 'asc' });
 - [sort](./sort.md): Simple sorting by a single selector.
 - [compareBy](../function/compareBy.md): Generate a comparator for use with native sort.
 - [aggregate](./aggregate.md): Transform arrays into lookup maps.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

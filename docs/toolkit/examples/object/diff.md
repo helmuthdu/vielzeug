@@ -1,11 +1,17 @@
-# diff
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1237_B-success" alt="Size">
 </div>
 
+# diff
+
 The `diff` utility compares two objects and returns an object containing only the properties that were changed or added in the second object. This is ideal for change tracking, auditing, and generating minimal data patches.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/diff.ts
+:::
 
 ## Features
 
@@ -80,11 +86,3 @@ diff(v1, v2);
 - [merge](./merge.md): Combine objects (often used with the result of `diff`).
 - [clone](./clone.md): Create a copy of an object.
 - [isEqual](../typed/isEqual.md): The comparison engine used by `diff`.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

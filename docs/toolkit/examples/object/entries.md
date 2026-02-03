@@ -1,11 +1,17 @@
-# entries
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-799_B-success" alt="Size">
 </div>
 
+# entries
+
 The `entries` utility returns an array of an object's own enumerable string-keyed property `[key, value]` pairs. It is a type-safe wrapper around the native `Object.entries()`, providing significantly better type inference for the resulting tuples.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/entries.ts
+:::
 
 ## Features
 
@@ -77,11 +83,3 @@ const summary = map(entries(counts), ([key, val]) => {
 - [keys](./keys.md): Extract only the keys from an object.
 - [values](./values.md): Extract only the values from an object.
 - [path](./path.md): Retrieve a value at a specific path.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# range
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-184_B-success" alt="Size">
 </div>
 
+# range
+
 The `range` utility generates an array of numbers starting from a base value up to (but not including) an end value, using a specified step increment. It is highly versatile for creating numeric sequences, loops, or lookup tables.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/range.ts
+:::
 
 ## Features
 
@@ -79,11 +85,3 @@ const dates = map(range(0, 5), day => {
 - [list](../array/list.md): Create more complex data structures from arrays.
 - [clamp](./clamp.md): Restrict a number to a specific range.
 - [sum](./sum.md): Calculate the total of a generated range.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

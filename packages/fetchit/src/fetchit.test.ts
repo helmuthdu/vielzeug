@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { buildUrl, createFetchService } from './fetchit';
+import { buildUrl, createHttpClient } from './fetchit';
 
 vi.mock('@vielzeug/logit', () => ({
   Logit: {
@@ -40,7 +40,7 @@ describe('buildUrl', () => {
   });
 });
 
-describe('createFetchService', () => {
+describe('createHttpClient', () => {
   let fetchMock: any;
   const mockJsonResponse = (data: any, status = 200) => ({
     headers: new Headers({ 'content-type': 'application/json' }),
@@ -62,7 +62,7 @@ describe('createFetchService', () => {
 
   describe('HTTP methods and response parsing', () => {
     test('handles different HTTP methods with proper configuration', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       const mockData = { id: 1 };
 
       fetchMock.mockResolvedValue(mockJsonResponse(mockData));
@@ -102,7 +102,7 @@ describe('createFetchService', () => {
     });
 
     test('parses different content types correctly', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
 
       // JSON
       fetchMock.mockResolvedValueOnce(mockJsonResponse({ id: 1 }));
@@ -134,7 +134,7 @@ describe('createFetchService', () => {
 
   describe('Caching behavior', () => {
     test('caches GET requests and invalidates on demand', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       let callCount = 0;
 
       fetchMock.mockImplementation(async () => {
@@ -158,7 +158,7 @@ describe('createFetchService', () => {
     });
 
     test('does not cache non-GET requests', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       fetchMock.mockResolvedValue(mockJsonResponse({ id: 1 }));
 
       await service.post('users', { body: { name: 'Test' } });
@@ -168,7 +168,7 @@ describe('createFetchService', () => {
     });
 
     test('caches successful responses even with error status codes', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       let callCount = 0;
 
       fetchMock.mockImplementation(async () => {
@@ -190,7 +190,7 @@ describe('createFetchService', () => {
 
   describe('Headers and configuration', () => {
     test('merges context headers with request headers', async () => {
-      const service = createFetchService({
+      const service = createHttpClient({
         headers: { Authorization: 'Bearer token123' },
         url: 'https://api.example.com',
       });
@@ -208,7 +208,7 @@ describe('createFetchService', () => {
     });
 
     test('setHeaders updates and removes headers', async () => {
-      const service = createFetchService({
+      const service = createHttpClient({
         headers: { Authorization: 'old', 'X-Keep': 'value' },
         url: 'https://api.example.com',
       });
@@ -228,11 +228,11 @@ describe('createFetchService', () => {
     test('constructs URLs correctly with and without context', async () => {
       fetchMock.mockResolvedValue(mockJsonResponse({}));
 
-      const serviceWithContext = createFetchService({ url: 'https://api.example.com' });
+      const serviceWithContext = createHttpClient({ url: 'https://api.example.com' });
       await serviceWithContext.get('users', { id: `url-1-${Date.now()}` });
       expect(fetchMock).toHaveBeenLastCalledWith('https://api.example.com/users', expect.any(Object));
 
-      const serviceWithoutContext = createFetchService();
+      const serviceWithoutContext = createHttpClient();
       await serviceWithoutContext.get('https://full.url.com/users', { id: `url-2-${Date.now()}` });
       expect(fetchMock).toHaveBeenLastCalledWith('https://full.url.com/users', expect.any(Object));
     });
@@ -240,7 +240,7 @@ describe('createFetchService', () => {
 
   describe('Error handling and retries', () => {
     test('retries on network errors up to 3 times', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       let attempts = 0;
 
       fetchMock.mockImplementation(async () => {
@@ -249,14 +249,14 @@ describe('createFetchService', () => {
         return mockJsonResponse({ success: true });
       });
 
-      const result = await service.get<{success: boolean}>('data', { id: `retry-${Date.now()}` });
+      const result = await service.get<{ success: boolean }>('data', { id: `retry-${Date.now()}` });
 
       expect(attempts).toBe(3);
       expect(result.data.success).toBe(true);
     });
 
     test('fails after max retries on persistent network errors', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       let attempts = 0;
 
       fetchMock.mockImplementation(async () => {
@@ -269,7 +269,7 @@ describe('createFetchService', () => {
     });
 
     test('does not retry on non-network errors', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
       let attempts = 0;
 
       fetchMock.mockImplementation(async () => {
@@ -282,11 +282,11 @@ describe('createFetchService', () => {
     });
 
     test('handles HTTP error responses without throwing', async () => {
-      const service = createFetchService({ url: 'https://api.example.com' });
+      const service = createHttpClient({ url: 'https://api.example.com' });
 
       fetchMock.mockResolvedValue(mockJsonResponse({ error: 'Not found' }, 404));
 
-      const response = await service.get<{error: string}>('missing', { id: `404-${Date.now()}` });
+      const response = await service.get<{ error: string }>('missing', { id: `404-${Date.now()}` });
 
       expect(response.ok).toBe(false);
       expect(response.status).toBe(404);
@@ -296,7 +296,7 @@ describe('createFetchService', () => {
 
   describe('Request cancellation and timeout', () => {
     test('includes AbortSignal for request cancellation', async () => {
-      const service = createFetchService({
+      const service = createHttpClient({
         timeout: 10000,
         url: 'https://api.example.com',
       });

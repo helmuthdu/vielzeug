@@ -54,6 +54,10 @@ type PatchOperation<T, K = any> =
   | { type: 'delete'; key: K }
   | { type: 'clear' };
 
+/**
+ * Extracts the key type for a given table in the schema.
+ * Returns the type of the record's key field.
+ */
 type KeyType<S extends DepositDataSchema, K extends keyof S> = S[K]['record'][S[K]['key']];
 
 type AdapterConfig<S extends DepositDataSchema> = {
@@ -140,7 +144,7 @@ export class Deposit<S extends DepositDataSchema> {
       await fn(proxy as T);
       await this.commitStores(tables, proxy, ttl);
     } catch (err) {
-      throw new Error('Transaction failed', { cause: err });
+      throw new Error(`Transaction failed for tables: ${tables.map(String).join(', ')}`, { cause: err });
     }
   }
 
@@ -486,6 +490,8 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
     this.schema = schema;
   }
 
+  /** ---- Public API Methods ---- */
+
   bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]) => {
     const promises = keys.map((key) => this.delete(table, key));
     await Promise.all(promises);
@@ -557,6 +563,8 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
     localStorage.setItem(this.getStorageKey(table, String(key)), JSON.stringify(wrapWithExpiry(value, ttl)));
   }, 'PUT_FAILED');
 
+  /** ---- Private Helper Methods ---- */
+
   private getTableKeys(prefix: string): string[] {
     return Object.keys(localStorage).filter((k) => k.startsWith(prefix));
   }
@@ -611,25 +619,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     this.migrationFn = migrationFn;
   }
 
-  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
-      await Promise.all(promises);
-    });
-  }, 'BULK_DELETE_FAILED');
-
-  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
-      await Promise.all(promises);
-    });
-  }, 'BULK_PUT_FAILED');
-
-  clear = runSafe(async <K extends keyof S>(table: K): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.clear());
-    });
-  }, 'CLEAR_FAILED');
+  /** ---- Public API Methods ---- */
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -652,48 +642,25 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     });
   }
 
-  private createObjectStores(db: IDBDatabase): void {
-    for (const [name, def] of Object.entries(this.schema)) {
-      if (db.objectStoreNames.contains(name)) continue;
+  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
+      await Promise.all(promises);
+    });
+  }, 'BULK_DELETE_FAILED');
 
-      const keyPath = (def as DepotDataRecord<any>).key as string;
-      const store = db.createObjectStore(name, { keyPath });
+  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
+      await Promise.all(promises);
+    });
+  }, 'BULK_PUT_FAILED');
 
-      const indexes = (def as DepotDataRecord<any>).indexes;
-      if (indexes) {
-        for (const index of indexes) {
-          store.createIndex(index as string, index as string);
-        }
-      }
-    }
-  }
-
-  private executeMigration(
-    db: IDBDatabase,
-    event: IDBVersionChangeEvent,
-    tx: IDBTransaction,
-    reject: (error: Error) => void,
-  ): void {
-    if (!this.migrationFn) return;
-
-    try {
-      const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx, this.schema);
-
-      if (result && typeof (result as Promise<void>).then === 'function') {
-        (result as Promise<void>).catch((err) => {
-          this.abortTransaction(tx);
-          reject(new Error('Migration failed', { cause: err }));
-        });
-      }
-    } catch (err) {
-      this.abortTransaction(tx);
-      reject(new Error('Migration failed', { cause: err }));
-    }
-  }
-
-  private abortTransaction(tx: IDBTransaction): void {
-    runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED')();
-  }
+  clear = runSafe(async <K extends keyof S>(table: K): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      await this.requestToPromise(store.clear());
+    });
+  }, 'CLEAR_FAILED');
 
   count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
     const records = await this.getAll(table);
@@ -740,6 +707,50 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     });
   }, 'PUT_FAILED');
 
+  /** ---- Private Helper Methods ---- */
+
+  private createObjectStores(db: IDBDatabase): void {
+    for (const [name, def] of Object.entries(this.schema)) {
+      if (db.objectStoreNames.contains(name)) continue;
+
+      const keyPath = (def as DepotDataRecord<any>).key as string;
+      const store = db.createObjectStore(name, { keyPath });
+
+      const indexes = (def as DepotDataRecord<any>).indexes;
+      if (indexes) {
+        for (const index of indexes) {
+          store.createIndex(index as string, index as string);
+        }
+      }
+    }
+  }
+
+  private executeMigration(
+    db: IDBDatabase,
+    event: IDBVersionChangeEvent,
+    tx: IDBTransaction,
+    reject: (error: Error) => void,
+  ): void {
+    if (!this.migrationFn) return;
+
+    try {
+      const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx, this.schema);
+
+      // Wrap result in Promise.resolve to handle both sync and async
+      Promise.resolve(result).catch((err) => {
+        this.abortTransaction(tx);
+        reject(new Error('Migration failed', { cause: err }));
+      });
+    } catch (err) {
+      this.abortTransaction(tx);
+      reject(new Error('Migration failed', { cause: err }));
+    }
+  }
+
+  private abortTransaction(tx: IDBTransaction): void {
+    runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED')();
+  }
+
   private async withTransaction<T>(
     tables: keyof S | (keyof S)[],
     mode: 'readonly' | 'readwrite',
@@ -758,14 +769,14 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
         .then((r) => {
           result = r;
         })
-        .catch((e) => {
+        .catch((err) => {
           this.abortTransaction(tx);
-          reject(e);
+          reject(new Error(`Transaction callback failed for ${tableNames.join(', ')}`, { cause: err }));
         });
 
       tx.oncomplete = () => resolve(result as T);
-      tx.onerror = (event) => reject(event);
-      tx.onabort = (event) => reject(event);
+      tx.onerror = () => reject(new Error(`Transaction error for ${tableNames.join(', ')}`, { cause: tx.error }));
+      tx.onabort = () => reject(new Error(`Transaction aborted for ${tableNames.join(', ')}`));
     });
   }
 
@@ -787,16 +798,27 @@ function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: numbe
 
 /**
  * Unwraps a value from an expiry wrapper, returns undefined if expired.
+ * If expired, calls onExpire callback synchronously (fire-and-forget for async cleanup).
  */
 function unwrapWithExpiry<T extends Record<string, unknown>>(
   value: T & { expiresAt?: number },
   now: number,
-  onExpire?: () => Promise<void>,
+  onExpire?: () => void | Promise<void>,
 ): T | undefined {
   if (value.expiresAt === undefined) return value;
 
   if (now >= value.expiresAt) {
-    onExpire?.();
+    // Fire-and-forget cleanup - don't block on async deletion
+    if (onExpire) {
+      const result = onExpire();
+      // If it's a promise, catch errors to prevent unhandled rejections
+      if (result && typeof (result as Promise<void>).then === 'function') {
+        (result as Promise<void>).catch((err) => {
+          Logit.setPrefix('Deposit');
+          Logit.warn('Failed to clean up expired entry', err);
+        });
+      }
+    }
     return undefined;
   }
 
@@ -806,14 +828,28 @@ function unwrapWithExpiry<T extends Record<string, unknown>>(
 /** -------------------- runSafe -------------------- **/
 
 /**
- * Wraps a function to suppress errors and log them to the console.
+ * Wraps a function to suppress errors and log them with consistent prefix.
+ * For async functions, catches both sync and async errors.
  */
-export function runSafe<T extends (...args: any[]) => any>(fn: T, label = 'runSafe'): T {
+export function runSafe<T extends (...args: any[]) => any>(fn: T, label = 'OPERATION_FAILED'): T {
   return ((...args: any[]) => {
     try {
-      return fn(...args);
+      const result = fn(...args);
+
+      // Handle async functions
+      if (result && typeof result.then === 'function') {
+        return result.catch((err: Error) => {
+          Logit.setPrefix('Deposit');
+          Logit.error(label, err);
+          return undefined;
+        });
+      }
+
+      return result;
     } catch (err) {
+      Logit.setPrefix('Deposit');
       Logit.error(label, err);
+      return undefined;
     }
   }) as unknown as T;
 }

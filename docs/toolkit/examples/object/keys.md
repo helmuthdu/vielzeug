@@ -1,11 +1,17 @@
-# keys
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-620_B-success" alt="Size">
 </div>
 
+# keys
+
 The `keys` utility returns an array of an object's own enumerable property names. It is a type-safe wrapper around the native `Object.keys()`, providing better type inference for the resulting array.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/keys.ts
+:::
 
 ## Features
 
@@ -71,11 +77,3 @@ const cKeys = keys(config); // Typed as ('port' | 'host')[]
 - [values](./values.md): Extract the values from an object.
 - [entries](./entries.md): Extract both keys and values as pairs.
 - [path](./path.md): Retrieve a value at a specific path.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

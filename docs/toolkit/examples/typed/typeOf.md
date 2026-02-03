@@ -1,11 +1,17 @@
-# typeOf
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-148_B-success" alt="Size">
 </div>
 
+# typeOf
+
 The `typeOf` utility returns a lowercase string representing the precise type of a value. It provides more detailed and accurate results than the native `typeof` operator, correctly identifying arrays, `null`, and other built-in objects.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/typeOf.ts
+:::
 
 ## Features
 
@@ -57,11 +63,3 @@ typeOf(new Date()); // 'date'
 - [is](./is.md): The unified type-checking engine.
 - [isObject](./isObject.md): Dedicated object type guard.
 - [isArray](./isArray.md): Dedicated array type guard.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

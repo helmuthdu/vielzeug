@@ -1,11 +1,17 @@
-# path
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-2617_B-success" alt="Size">
 </div>
 
+# path
+
 The `path` utility safely retrieves a nested value from an object using a dot-notation string or an array of keys. It prevents runtime errors when accessing properties of `undefined` or `null` objects and supports a customizable fallback value.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/path.ts
+:::
 
 ## Features
 
@@ -86,11 +92,3 @@ path(data, ['users', 5, 'name'], 'Unknown'); // 'Unknown'
 - [seek](./seek.md): Find a value anywhere in an object by key.
 - [merge](./merge.md): Combine objects.
 - [clone](./clone.md): Create a copy of an object.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

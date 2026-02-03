@@ -1,11 +1,17 @@
-# substitute
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1031_B-success" alt="Size">
 </div>
 
+# substitute
+
 The `substitute` utility replaces the first element in an array that satisfies a given predicate with a new value. It provides a clean, functional way to perform "find and replace" operations on arrays without mutating the original data.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/substitute.ts
+:::
 
 ## Features
 
@@ -87,11 +93,3 @@ const updated = substitute(
 - [map](./map.md): Transform all elements in an array.
 - [find](./find.md): Find an element without replacing it.
 - [filter](./filter.md): Remove elements based on a condition.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

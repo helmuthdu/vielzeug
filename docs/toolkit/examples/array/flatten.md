@@ -1,11 +1,17 @@
-# flatten
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-434_B-success" alt="Size">
 </div>
 
-The `flatten` utility takes a nested array and collapses it into a single-level array. It handles any level of nesting, ensuring that all elements are brought to the top level.
+# flatten
+
+The `flatten` utility recursively flattens nested arrays into a single-level array. It can handle arbitrarily deep nesting.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/flatten.ts
+:::
 
 ## Features
 
@@ -67,11 +73,3 @@ flatten(matrix);
 - [chunk](./chunk.md): The inverse operation; split an array into chunks.
 - [compact](./compact.md): Remove falsy values from an array.
 - [map](./map.md): Transform elements (can be used with `flatten` for `flatMap` behavior).
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

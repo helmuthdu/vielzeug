@@ -1,11 +1,17 @@
-# ge
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# ge
+
 The `ge` utility checks if the first value is greater than or equal to the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/ge.ts
+:::
 
 ## Features
 
@@ -54,11 +60,3 @@ ge('b', 'a'); // true
 - [gt](./gt.md): Greater than.
 - [le](./le.md): Less than or equal to.
 - [lt](./lt.md): Less than.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

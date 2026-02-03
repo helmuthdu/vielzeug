@@ -1,11 +1,17 @@
-# attempt
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
 </div>
 
+# attempt
+
 The `attempt` utility safely executes a function and returns a tuple containing either the result or the error. It follows the "Go-style" error handling pattern, allowing you to handle failures without `try/catch` blocks.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/attempt.ts
+:::
 
 ## Features
 

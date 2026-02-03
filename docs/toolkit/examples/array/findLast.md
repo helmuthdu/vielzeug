@@ -1,11 +1,17 @@
-# findLast
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1237_B-success" alt="Size">
 </div>
 
-The `findLast` utility searches an array from right to left and returns the last element that satisfies the provided test function. Like `find`, it also supports an optional default value if no match is found.
+# findLast
+
+The `findLast` utility returns the last element in an array that passes the provided test function. Conceptually, it works like `find()` but searches backwards from the end of the array.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/findLast.ts
+:::
 
 ## Features
 
@@ -79,11 +85,3 @@ const lastError = findLast(logs, l => l.level === 'error', { level: 'none', mess
 - [find](./find.md): Get the *first* matching element.
 - [findIndex](./findIndex.md): Get the index of the first matching element.
 - [filter](./filter.md): Get *all* matching elements.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

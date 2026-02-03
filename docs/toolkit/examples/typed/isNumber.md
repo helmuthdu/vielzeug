@@ -1,11 +1,17 @@
-# isNumber
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-429_B-success" alt="Size">
 </div>
 
-Checks if a value is a number (not NaN).
+# isNumber
+
+Checks if a value is a number (excluding NaN).
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isNumber.ts
+:::
 
 ## API
 
@@ -35,11 +41,3 @@ isNumber('42'); // false
 
 - [isString](./isString.md)
 - [isBoolean](./isBoolean.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

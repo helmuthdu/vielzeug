@@ -1,11 +1,17 @@
-# isMatch
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# isMatch
+
 The `isMatch` utility checks if an object contains a specific pattern of properties and values. It performs a partial comparison, meaning the checked object can have additional properties not present in the pattern.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isMatch.ts
+:::
 
 ## Features
 
@@ -84,11 +90,3 @@ isMatch(data, { meta: { status: 200 } }); // true
 - [isEqual](./isEqual.md): Check for total structural identity.
 - [search](../array/search.md): Fuzzy search across objects in an array.
 - [path](../object/path.md): Retrieve a specific nested value.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

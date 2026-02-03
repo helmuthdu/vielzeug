@@ -1,11 +1,17 @@
-# le
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# le
+
 The `le` utility checks if the first value is less than or equal to the second value. It works with any comparable types, including numbers, strings, and Dates.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/le.ts
+:::
 
 ## Features
 
@@ -54,11 +60,3 @@ le('a', 'b'); // true
 - [lt](./lt.md): Less than.
 - [ge](./ge.md): Greater than or equal to.
 - [gt](./gt.md): Greater than.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

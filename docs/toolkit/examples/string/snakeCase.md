@@ -1,11 +1,17 @@
-# snakeCase
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-124_B-success" alt="Size">
 </div>
 
+# snakeCase
+
 The `snake_case` utility transforms a string into `snake_case` format (all lower case with words separated by underscores). It is commonly used for database column names, file naming conventions, or environment variables.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/string/snakeCase.ts
+:::
 
 ## Features
 
@@ -63,11 +69,3 @@ snakeCase('multiple---dashes');    // 'multiple_dashes'
 - [camelCase](./camelCase.md): Convert strings to `camelCase`.
 - [kebabCase](./kebabCase.md): Convert strings to `kebab-case`.
 - [pascalCase](./pascalCase.md): Convert strings to `PascalCase`.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

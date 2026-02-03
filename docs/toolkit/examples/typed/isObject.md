@@ -1,11 +1,17 @@
-# isObject
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-553_B-success" alt="Size">
 </div>
 
-Checks if a value is a plain object (not null, array, or function).
+# isObject
+
+Checks if a value is a plain object.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isObject.ts
+:::
 
 ## API
 
@@ -35,11 +41,3 @@ isObject(null); // false
 
 - [isArray](./isArray.md)
 - [isFunction](./isFunction.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

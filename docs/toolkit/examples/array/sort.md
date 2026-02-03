@@ -1,11 +1,17 @@
-# sort
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1066_B-success" alt="Size">
 </div>
 
+# sort
+
 The `sort` utility provides a simple, functional way to sort arrays. Unlike the native `Array.prototype.sort()`, it returns a new array and allows sorting based on a selector function with an optional descending flag.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/sort.ts
+:::
 
 ## Features
 
@@ -75,11 +81,3 @@ const byAge = sort(users, u => u.age);
 - [sortBy](./sortBy.md): Sort by multiple properties with different orders.
 - [compareBy](../function/compareBy.md): Create a comparator function for native sort.
 - [group](./group.md): Organize elements into collections.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

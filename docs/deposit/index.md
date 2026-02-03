@@ -1,13 +1,13 @@
-<img src="/logo-depot.svg" alt="Deposit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
-
-# Deposit
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-28.2_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
+
+<img src="/logo-depot.svg" alt="Deposit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+
+# Deposit
 
 **Deposit** is a powerful, type-safe browser storage utility for modern web apps. It provides a unified, developer-friendly API for **IndexedDB** and **LocalStorage**, featuring advanced querying, migrations, and transactions.
 
@@ -81,16 +81,21 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 ### Installation
 
-```sh
-# pnpm (recommended)
+::: code-group
+
+```sh [pnpm]
 pnpm add @vielzeug/deposit
+```
 
-# npm
+```sh [npm]
 npm install @vielzeug/deposit
+```
 
-# yarn
+```sh [yarn]
 yarn add @vielzeug/deposit
 ```
+
+:::
 
 ### Basic Setup
 
@@ -150,23 +155,24 @@ await db.put('todos', {
   createdAt: Date.now()
 });
 
-// Query todos
+// Query active todos
 const activeTodos = await db.query('todos')
-  .where('completed', '==', false)
-  .sortBy('createdAt', 'desc')
-  .execute();
+  .equals('completed', false)
+  .orderBy('createdAt', 'desc')
+  .toArray();
 
-// Update todo
-await db.update('todos', 'todo-id', { completed: true });
+// Update todo (put with same id)
+const todo = await db.get('todos', 'todo-id');
+if (todo) {
+  await db.put('todos', { ...todo, completed: true });
+}
 
 // Delete completed todos
 const completed = await db.query('todos')
-  .where('completed', '==', true)
-  .execute();
+  .equals('completed', true)
+  .toArray();
 
-for (const todo of completed) {
-  await db.delete('todos', todo.id);
-}
+await db.bulkDelete('todos', completed.map(t => t.id));
 ```
 
 ## 📚 Documentation
@@ -205,9 +211,12 @@ Yes! Create multiple Deposit instances with different adapters and database name
 
 ### QuotaExceededError
 
-**Problem**: Storage quota exceeded.
+::: danger Problem
+Storage quota exceeded.
+:::
 
-**Solution**: 
+::: tip Solution
+Check available storage and clean up old data:
 ```ts
 // Check available storage
 if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -216,16 +225,22 @@ if ('storage' in navigator && 'estimate' in navigator.storage) {
 }
 
 // Clean up old data
-await db.query('todos')
-  .where('createdAt', '<', Date.now() - 30 * 24 * 60 * 60 * 1000)
-  .delete();
+const oldTodos = await db.query('todos')
+  .filter((todo) => todo.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000)
+  .toArray();
+
+await db.bulkDelete('todos', oldTodos.map(t => t.id));
 ```
+:::
 
 ### TypeScript errors with schema
 
-**Problem**: Type inference not working.
+::: danger Problem
+Type inference not working.
+:::
 
-**Solution**: Ensure you're using type assertions in schema:
+::: tip Solution
+Ensure you're using type assertions in schema:
 ```ts
 const schema = {
   users: {
@@ -234,12 +249,16 @@ const schema = {
   }
 };
 ```
+:::
 
 ### Migration not running
 
-**Problem**: Schema changes not applied.
+::: danger Problem
+Schema changes not applied.
+:::
 
-**Solution**: Increment the version number:
+::: tip Solution
+Increment the version number:
 ```ts
 // Old
 const adapter = new IndexedDBAdapter('my-db', 1, schema);
@@ -247,6 +266,7 @@ const adapter = new IndexedDBAdapter('my-db', 1, schema);
 // New
 const adapter = new IndexedDBAdapter('my-db', 2, schema);
 ```
+:::
 
 ## 🤝 Contributing
 
@@ -268,12 +288,3 @@ MIT © [Helmuth Duarte](https://github.com/helmuthdu)
 ---
 
 > **Tip:** Deposit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for logging, HTTP clients, permissions, and more.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

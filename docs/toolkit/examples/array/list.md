@@ -1,11 +1,17 @@
-# list
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-2864_B-success" alt="Size">
 </div>
 
+# list
+
 The `list` utility creates a stateful, paginated, and filterable data structure from an initial array. It provides a convenient API for managing UI components like tables or searchable lists, handling sorting, filtering, and page navigation automatically.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/list.ts
+:::
 
 ## Features
 
@@ -105,11 +111,3 @@ console.log(userList.current.length); // 1 (Charlie)
 - [search](./search.md): Fuzzy search functionality used internally.
 - [sort](./sort.md): Functional sorting utility.
 - [chunk](./chunk.md): Basic array splitting without state management.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# max
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1048_B-success" alt="Size">
 </div>
 
+# max
+
 Returns the largest number in an array.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/max.ts
+:::
 
 ## API
 
@@ -34,12 +40,3 @@ max([]); // undefined
 
 - [min](./min.md)
 - [clamp](./clamp.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

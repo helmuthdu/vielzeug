@@ -1,11 +1,17 @@
-# some
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-957_B-success" alt="Size">
 </div>
 
-The `some` utility checks if at least one element in an array passes the provided test function. It returns `true` as soon as it finds a matching element (short-circuiting), otherwise it returns `false`.
+# some
+
+The `some` utility checks if **at least one element** in an array satisfies a given condition. It stops iterating as soon as it finds a match, making it efficient for large datasets. Unlike the native `Array.prototype.some`, this version supports asynchronous predicates.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/some.ts
+:::
 
 ## Features
 
@@ -72,11 +78,3 @@ const hasAdmin = some(users, u => u.role === 'admin'); // false
 - [every](./every.md): Check if *all* elements satisfy a condition.
 - [filter](./filter.md): Get all elements that satisfy a condition.
 - [find](./find.md): Get the first element that satisfies a condition.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

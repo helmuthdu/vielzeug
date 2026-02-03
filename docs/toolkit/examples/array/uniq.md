@@ -1,11 +1,17 @@
-# uniq
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1350_B-success" alt="Size">
 </div>
 
-The `uniq` utility creates a new array with all duplicate values removed. It supports custom selectors for complex data structures like objects.
+# uniq
+
+The `uniq` utility creates a new array containing only unique values from the input array. It removes duplicates, preserving the first occurrence of each unique value.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/uniq.ts
+:::
 
 ## Features
 
@@ -83,11 +89,3 @@ const uniqueCaseInsensitive = uniq(data, s => s.toLowerCase());
 - [filter](./filter.md): Create a subset of an array based on a predicate.
 - [compact](./compact.md): Remove falsy values from an array.
 - [aggregate](./aggregate.md): Group and aggregate array elements.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

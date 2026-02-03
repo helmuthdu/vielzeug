@@ -1,6 +1,11 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { Logit } from '@vielzeug/logit';
 
+/**
+ * Type alias for contextual data used in permission checks.
+ */
+export type PermissionData = Record<string, any>;
+
 export type BaseUser = {
   id: string;
   roles: string[];
@@ -8,16 +13,16 @@ export type BaseUser = {
 
 export type PermissionAction = 'view' | 'create' | 'update' | 'delete';
 
-export type PermissionCheck<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> =
+export type PermissionCheck<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> =
   | boolean
   | ((user: T, data: D) => boolean);
 
-type ResourcePermissions<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> = Map<
+type ResourcePermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
   string,
   Partial<Record<PermissionAction, PermissionCheck<T, D>>>
 >;
 
-type RolesWithPermissions<T extends BaseUser = BaseUser, D extends Record<string, any> = Record<string, any>> = Map<
+type RolesWithPermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
   string,
   ResourcePermissions<T, D>
 >;
@@ -29,21 +34,30 @@ const Roles: RolesWithPermissions = new Map();
 
 /**
  * Wildcard role/resource identifier that matches any role or resource.
+ * Can be used to define permissions that apply to all roles or all resources.
  */
-const WILDCARD = '*';
+export const WILDCARD = '*';
 
 /**
  * Gets all roles for a user including the wildcard role.
+ * Validates that the user has the required structure.
  */
 function getUserRoles(user: BaseUser): Set<string> {
-  return new Set([...(user.roles || []), WILDCARD]);
+  if (!user?.id || !Array.isArray(user.roles)) {
+    Logit.warn('Invalid user object provided to permission check', { user });
+    return new Set([WILDCARD]);
+  }
+
+  const roles = new Set(user.roles);
+  roles.add(WILDCARD);
+  return roles;
 }
 
 /**
  * Gets resource permissions for a specific role and resource.
  * Returns permissions for the specific resource or wildcard resource.
  */
-function getResourcePermissions<T extends BaseUser, D extends Record<string, any>>(
+function getResourcePermissions<T extends BaseUser, D extends PermissionData>(
   role: string,
   resource: string,
 ): Partial<Record<PermissionAction, PermissionCheck<T, D>>> | undefined {
@@ -55,25 +69,26 @@ function getResourcePermissions<T extends BaseUser, D extends Record<string, any
 
 /**
  * Evaluates a permission check (boolean or function).
+ * Function-based permissions require data to be provided.
  */
-function evaluatePermission<T extends BaseUser, D extends Record<string, any>>(
+function evaluatePermission<T extends BaseUser, D extends PermissionData>(
   permission: PermissionCheck<T, D>,
   user: T,
   data?: D,
 ): boolean {
   if (typeof permission === 'function') {
     // Function permissions require data to evaluate
-    if (data === undefined) return false;
-    return permission(user, data);
+    return data !== undefined && permission(user, data);
   }
 
   return Boolean(permission);
 }
 
 /**
- * Logs the result of a permission check.
+ * Logs the result of a permission check with a consistent prefix.
  */
 function logPermissionCheck(user: BaseUser, resource: string, action: PermissionAction, allowed: boolean): void {
+  Logit.setPrefix('Permit');
   Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> ${allowed}`);
 }
 
@@ -95,7 +110,7 @@ export const Permit = {
    *
    * @return Returns true if the user is allowed to perform the action on the resource; otherwise, false.
    */
-  check<T extends BaseUser, D extends Record<string, any>>(
+  check<T extends BaseUser, D extends PermissionData>(
     user: T,
     resource: string,
     action: PermissionAction,
@@ -129,6 +144,7 @@ export const Permit = {
    */
   clear(): void {
     Roles.clear();
+    Logit.setPrefix('Permit');
     Logit.debug('All permissions have been cleared.');
   },
 
@@ -156,25 +172,32 @@ export const Permit = {
    *
    * @throws {Error} If the role or resource is not provided.
    */
-  register<T extends BaseUser, D extends Record<string, any>>(
+  register<T extends BaseUser, D extends PermissionData>(
     role: string,
     resource: string,
     actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>,
   ): void {
-    if (!role || !resource) {
-      throw new Error('Role and resource are required to register permissions.');
+    if (!role) {
+      throw new Error('Role is required to register permissions.');
+    }
+    if (!resource) {
+      throw new Error('Resource is required to register permissions.');
     }
 
     if (!Roles.has(role)) {
       Roles.set(role, new Map());
     }
 
-    const rolePermissions = Roles.get(role)!;
-    const existingPermissions = rolePermissions.get(resource) || {};
+    const rolePermissions = Roles.get(role);
+    if (rolePermissions) {
+      const existingPermissions = rolePermissions.get(resource) || {};
 
-    // Merge new actions with existing ones
-    rolePermissions.set(resource, { ...existingPermissions, ...actions } as any);
+      // Merge new actions with existing ones
+      const mergedPermissions = { ...existingPermissions, ...actions };
+      rolePermissions.set(resource, mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>);
+    }
 
+    Logit.setPrefix('Permit');
     Logit.debug(`Permissions for role '${role}' and resource '${resource}' registered/updated.`);
   },
 
@@ -182,7 +205,8 @@ export const Permit = {
    * Returns a copy of all registered roles and their permissions.
    *
    * @remarks
-   * This is a defensive copy to prevent external modification of the internal state.
+   * This returns a shallow copy of the permissions registry to prevent direct external modification.
+   * Note: Nested Maps are not deep-cloned, so modifying nested structures may affect the internal state.
    * Useful for debugging or inspecting the current permission configuration.
    */
   get roles(): RolesWithPermissions {

@@ -1,11 +1,17 @@
-# isNegative
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
 </div>
 
+# isNegative
+
 The `isNegative` utility is a type guard that checks if a given number is strictly less than zero.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isNegative.ts
+:::
 
 ## Features
 
@@ -52,11 +58,3 @@ isNegative(5);    // false
 - [isPositive](./isPositive.md): Check if a number is greater than zero.
 - [isZero](./isZero.md): Check if a number is exactly zero.
 - [isNumber](./isNumber.md): Check if a value is a number.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

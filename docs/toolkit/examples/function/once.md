@@ -1,11 +1,17 @@
-# once
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-184_B-success" alt="Size">
 </div>
 
+# once
+
 The `once` utility restricts a function so that it can only be executed a single time. Subsequent calls to the restricted function will return the result of the first invocation. It also includes a `reset` method to allow the function to be run again if needed.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/once.ts
+:::
 
 ## Features
 
@@ -73,11 +79,3 @@ await getData(); // Performs new fetch
 - [memo](./memo.md): Cache results based on multiple different arguments.
 - [throttle](./throttle.md): Rate-limit execution based on time.
 - [debounce](./debounce.md): Delay execution until a quiet period.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

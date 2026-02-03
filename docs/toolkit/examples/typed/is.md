@@ -1,11 +1,17 @@
-# is
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1.2_KB-success" alt="Size">
 </div>
 
+# is
+
 The `is` utility is a highly flexible and unified type-checking engine. It acts as a single entry point for nearly all type guards and comparison helpers available in the toolkit, supporting a wide range of string-based predicates and constructor-based checks.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/is.ts
+:::
 
 ## Features
 
@@ -97,11 +103,3 @@ is(new MyClass(), MyClass); // true
 - [isEqual](./isEqual.md): Deep equality checking.
 - [isMatch](./isMatch.md): Pattern matching helper.
 - [isArray](./isArray.md): Dedicated array type guard.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

@@ -1,11 +1,17 @@
-# values
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-667_B-success" alt="Size">
 </div>
 
+# values
+
 The `values` utility returns an array of an object's own enumerable property values. It is a type-safe wrapper around the native `Object.values()`, providing better type inference for the elements in the resulting array.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/object/values.ts
+:::
 
 ## Features
 
@@ -71,11 +77,3 @@ const data = values(mixed); // Typed as (string | number | boolean)[]
 - [keys](./keys.md): Extract the keys from an object.
 - [entries](./entries.md): Extract both keys and values as pairs.
 - [path](./path.md): Retrieve a value at a specific path.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

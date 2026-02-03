@@ -1,11 +1,17 @@
-# clamp
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-128_B-success" alt="Size">
 </div>
 
+# clamp
+
 The `clamp` utility restricts a numeric value to be within a specified range. If the value is smaller than the minimum, it returns the minimum. If it's larger than the maximum, it returns the maximum. Otherwise, it returns the value itself.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/clamp.ts
+:::
 
 ## Features
 
@@ -71,11 +77,3 @@ function setProgress(percent: number) {
 - [min](./min.md): Find the minimum value in a set.
 - [max](./max.md): Find the maximum value in a set.
 - [isWithin](../typed/isWithin.md): Check if a number is within a range without changing it.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

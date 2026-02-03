@@ -1,13 +1,13 @@
-<img src="/logo-permit.svg" alt="Permit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
-
-# Permit
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-6.5_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
+
+<img src="/logo-permit.svg" alt="Permit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+
+# Permit
 
 **Permit** is a flexible, type-safe permission and role management utility for modern web apps. It provides a simple API for registering, checking, and managing permissions and roles, with support for dynamic rules and full TypeScript support.
 
@@ -37,18 +37,25 @@ function canDeletePost(user: User, post: Post): boolean {
 **With Permit**:
 ```ts
 // Centralized, declarative permission system
-Permit.register('admin', 'posts', { edit: true, delete: true });
-Permit.register('moderator', 'posts', { 
-  edit: (user, post) => post.status === 'pending'
+Permit.register('admin', 'posts', { 
+  view: true,
+  create: true, 
+  update: true, 
+  delete: true 
 });
+
+Permit.register('moderator', 'posts', { 
+  update: (user, post) => post.status === 'pending'
+});
+
 Permit.register('author', 'posts', {
-  edit: (user, post) => user.id === post.authorId,
+  update: (user, post) => user.id === post.authorId,
   delete: (user, post) => user.id === post.authorId && post.status === 'draft'
 });
 
 // Clean, testable permission checks
-if (Permit.check(user, 'posts', 'edit', post)) {
-  // Edit allowed
+if (Permit.check(user, 'posts', 'update', post)) {
+  // Update allowed
 }
 ```
 
@@ -96,16 +103,21 @@ if (Permit.check(user, 'posts', 'edit', post)) {
 
 ### Installation
 
-```sh
-# pnpm (recommended)
+::: code-group
+
+```sh [pnpm]
 pnpm add @vielzeug/permit
+```
 
-# npm
+```sh [npm]
 npm install @vielzeug/permit
+```
 
-# yarn
+```sh [yarn]
 yarn add @vielzeug/permit
 ```
+
+:::
 
 ### Basic Setup
 
@@ -116,14 +128,14 @@ import { Permit } from '@vielzeug/permit';
 Permit.register('admin', 'posts', { 
   view: true, 
   create: true, 
-  edit: true,
+  update: true,
   delete: true 
 });
 
 Permit.register('editor', 'posts', { 
   view: true, 
   create: true,
-  edit: true 
+  update: true 
 });
 
 Permit.register('viewer', 'posts', { 
@@ -159,13 +171,18 @@ interface Post {
 }
 
 // Define permission rules
-Permit.register('admin', '*', { '*': true }); // Admin has all permissions
+Permit.register('admin', '*', { 
+  view: true,
+  create: true,
+  update: true,
+  delete: true
+}); // Admin has all permissions on all resources
 
 Permit.register('editor', 'posts', {
   view: true,
   create: true,
-  edit: (user: User, post: Post) => {
-    // Editors can edit published posts or drafts
+  update: (user: User, post: Post) => {
+    // Editors can update published posts or drafts
     return post.status === 'draft' || post.status === 'published';
   },
   delete: false
@@ -174,8 +191,8 @@ Permit.register('editor', 'posts', {
 Permit.register('author', 'posts', {
   view: true,
   create: true,
-  edit: (user: User, post: Post) => {
-    // Authors can only edit their own posts
+  update: (user: User, post: Post) => {
+    // Authors can only update their own posts
     return user.id === post.authorId;
   },
   delete: (user: User, post: Post) => {
@@ -186,7 +203,7 @@ Permit.register('author', 'posts', {
 
 // Use throughout your application
 function EditPostButton({ user, post }: { user: User; post: Post }) {
-  const canEdit = Permit.check(user, 'posts', 'edit', post);
+  const canEdit = Permit.check(user, 'posts', 'update', post);
   
   if (!canEdit) return null;
   
@@ -209,12 +226,18 @@ import express from 'express';
 import { Permit } from '@vielzeug/permit';
 
 // Setup permissions
-Permit.register('admin', 'api', { '*': true });
-Permit.register('user', 'api', {
-  'GET': true,
-  'POST': (user, resource) => resource.isPublic,
-  'PUT': (user, resource) => user.id === resource.ownerId,
-  'DELETE': false
+Permit.register('admin', 'posts', { 
+  view: true,
+  create: true,
+  update: true,
+  delete: true 
+});
+
+Permit.register('user', 'posts', {
+  view: true,
+  create: true,
+  update: (user, post) => user.id === post.authorId,
+  delete: (user, post) => user.id === post.authorId
 });
 
 // Middleware
@@ -254,18 +277,20 @@ import { useAuth } from './auth-context';
 
 function ProtectedAction({ 
   resource, 
-  action, 
+  action,
+  data,
   children,
   fallback = null 
 }: {
   resource: string;
   action: string;
+  data?: any;
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }) {
   const { user } = useAuth();
   
-  if (!Permit.check(user, resource, action)) {
+  if (!Permit.check(user, resource, action, data)) {
     return <>{fallback}</>;
   }
   
@@ -276,11 +301,11 @@ function ProtectedAction({
 function PostActions({ post }: { post: Post }) {
   return (
     <div>
-      <ProtectedAction resource="posts" action="edit">
+      <ProtectedAction resource="posts" action="update" data={post}>
         <button>Edit</button>
       </ProtectedAction>
       
-      <ProtectedAction resource="posts" action="delete">
+      <ProtectedAction resource="posts" action="delete" data={post}>
         <button>Delete</button>
       </ProtectedAction>
     </div>
@@ -311,17 +336,34 @@ Yes! Use function-based rules:
 
 ```ts
 Permit.register('manager', 'projects', {
-  edit: (user, project) => project.managerId === user.id
+  update: (user, project) => project.managerId === user.id
 });
 ```
 
 ### How do wildcards work?
 
-Use `*` for "any" resource or action:
+::: tip Wildcard Constant
+Use the exported `WILDCARD` constant (value: `'*'`) for "any" resource or all permissions.
+:::
 
 ```ts
-Permit.register('admin', '*', { '*': true }); // All permissions
-Permit.register('moderator', 'comments', { '*': true }); // All comment actions
+import { Permit, WILDCARD } from '@vielzeug/permit';
+
+// Admin has all permissions on all resources
+Permit.register('admin', WILDCARD, { 
+  view: true,
+  create: true,
+  update: true,
+  delete: true 
+});
+
+// Moderator has all permissions on comments
+Permit.register('moderator', 'comments', { 
+  view: true,
+  create: true,
+  update: true,
+  delete: true 
+});
 ```
 
 ### Is Permit production-ready?
@@ -333,10 +375,23 @@ Yes! Permit is used in production applications with comprehensive test coverage.
 Permissions are easy to test:
 
 ```ts
+import { Permit } from '@vielzeug/permit';
+
 describe('Permissions', () => {
-  it('allows editors to edit posts', () => {
-    const user = { roles: ['editor'] };
-    expect(Permit.check(user, 'posts', 'edit')).toBe(true);
+  beforeEach(() => {
+    Permit.clear(); // Clear permissions before each test
+  });
+
+  it('allows editors to update posts', () => {
+    Permit.register('editor', 'posts', { update: true });
+    const user = { id: '1', roles: ['editor'] };
+    expect(Permit.check(user, 'posts', 'update')).toBe(true);
+  });
+  
+  it('denies editors from deleting posts', () => {
+    Permit.register('editor', 'posts', { update: true });
+    const user = { id: '1', roles: ['editor'] };
+    expect(Permit.check(user, 'posts', 'delete')).toBe(false);
   });
 });
 ```
@@ -356,9 +411,12 @@ permissions.forEach(perm => {
 
 ### Permission check always returns false
 
-**Problem**: `Permit.check()` returns false unexpectedly.
+::: danger Problem
+`Permit.check()` returns false unexpectedly.
+:::
 
-**Solution**: Ensure permissions are registered before checking:
+::: tip Solution
+Ensure permissions are registered before checking:
 
 ```ts
 // ✅ Register first
@@ -367,35 +425,51 @@ Permit.register('user', 'posts', { view: true });
 // Then check
 const canView = Permit.check(user, 'posts', 'view');
 ```
+:::
 
 ### TypeScript errors with dynamic rules
 
-**Problem**: Type errors in permission functions.
+::: danger Problem
+Type errors in permission functions.
+:::
 
-**Solution**: Type your permission functions:
+::: tip Solution
+Type your permission functions properly:
 
 ```ts
 interface User { id: string; roles: string[]; }
 interface Post { authorId: string; }
 
-Permit.register('author', 'posts', {
-  edit: (user: User, post: Post) => user.id === post.authorId
+Permit.register<User, Post>('author', 'posts', {
+  update: (user: User, post: Post) => user.id === post.authorId
 });
 ```
+:::
 
 ### Wildcards not working
 
-**Problem**: Wildcard permissions not being recognized.
+::: danger Problem
+Wildcard permissions not being recognized.
+:::
 
-**Solution**: Ensure wildcard syntax is correct:
+::: tip Solution
+Import and use the WILDCARD constant:
 
 ```ts
-// ✅ Correct
-Permit.register('admin', '*', { '*': true });
+import { Permit, WILDCARD } from '@vielzeug/permit';
 
-// ❌ Wrong
-Permit.register('admin', 'all', { 'all': true });
+// ✅ Correct
+Permit.register('admin', WILDCARD, { 
+  view: true, 
+  create: true, 
+  update: true, 
+  delete: true 
+});
+
+// ❌ Wrong - don't use string literals for actions
+Permit.register('admin', '*', { 'all': true });
 ```
+:::
 
 ### User has multiple roles but permissions don't combine
 
@@ -430,12 +504,3 @@ MIT © [Helmuth Duarte](https://github.com/helmuthdu)
 ---
 
 > **Tip:** Permit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for storage, HTTP clients, logging, and more.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

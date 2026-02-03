@@ -1,11 +1,17 @@
-# expires
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# expires
+
 The `expires` utility determines the expiration status of a given date relative to the current time. It categorizes the date into states like `EXPIRED`, `SOON`, or `LATER`, making it ideal for subscription management, token validation, or deadline tracking.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/date/expires.ts
+:::
 
 ## Features
 
@@ -69,11 +75,3 @@ expires(someDate, 2);
 
 - [timeDiff](./timeDiff.md): Calculate the precise difference between two dates.
 - [interval](./interval.md): Get a breakdown of days, hours, and minutes.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

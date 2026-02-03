@@ -1,11 +1,17 @@
-# curry
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# curry
+
 The `curry` utility transforms a function that takes multiple arguments into a sequence of functions, each taking a single argument. It is a fundamental tool for functional programming, enabling easy partial application and better logic reuse.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/curry.ts
+:::
 
 ## Features
 
@@ -67,11 +73,3 @@ map([1, 2, 3], double); // [2, 4, 6]
 - [compose](./compose.md): Functional composition from right to left.
 - [pipe](./pipe.md): Functional composition from left to right.
 - [fp](./fp.md): Wrap functions for functional programming styles.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

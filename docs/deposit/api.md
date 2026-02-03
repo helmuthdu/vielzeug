@@ -1,103 +1,734 @@
-# Depot API Reference
+# Deposit API Reference
 
-This document describes the public API of the `@vielzeug/deposit` package.
+Complete API documentation for `@vielzeug/deposit`.
 
-## Classes
+## Core Classes
 
-### Depot
+### `Deposit<S>`
 
-A generic database abstraction for browser storage, supporting both IndexedDB and LocalStorage adapters.
+Main class for interacting with browser storage. Provides a unified, type-safe API for both IndexedDB and LocalStorage.
 
-#### Depot Constructor
+**Type Parameters:**
+- `S extends DepositDataSchema` - Your schema type defining all tables and their records
 
+---
+
+## Deposit Methods
+
+### `new Deposit(adapterOrConfig)`
+
+Creates a new Deposit instance.
+
+**Parameters:**
+- `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` - Either a custom adapter or configuration object
+
+**Example:**
 ```ts
-new Depot(adapter: DepositStorageAdapter<S>)
-new Depot(config: AdapterConfig<S>)
+// With adapter instance
+const adapter = new IndexedDBAdapter('my-db', 1, schema);
+const db = new Deposit(adapter);
+
+// With configuration object
+const db = new Deposit({
+  type: 'indexedDB',
+  dbName: 'my-db',
+  version: 1,
+  schema
+});
 ```
 
-- `adapter`: A custom storage adapter implementing the DepositStorageAdapter interface.
-- `config`: An object specifying the adapter type, dbName, version, schema, and optional migration function.
+---
 
-#### Depot Methods
+### `put(table, value, ttl?)`
 
-- `bulkDelete(table, keys)` – Delete multiple records by key.
-- `bulkPut(table, values, ttl?)` – Insert or update multiple records.
-- `clear(table)` – Remove all records from a table.
-- `count(table)` – Get the number of records in a table.
-- `delete(table, key)` – Delete a record by key.
-- `get(table, key, defaultValue?)` – Get a record by key.
-- `getAll(table)` – Get all records from a table.
-- `put(table, value, ttl?)` – Insert or update a record.
-- `query(table)` – Create a QueryBuilder for advanced queries.
-- `transaction(tables, fn, ttl?)` – Perform a transaction across tables.
-- `patch(table, patches)` – Apply a batch of put/delete/clear operations.
+Inserts or updates a single record.
 
-### QueryBuilder
+**Parameters:**
+- `table: keyof S` - Table name
+- `value: S[K]['record']` - Record to store
+- `ttl?: number` - Optional time-to-live in milliseconds
 
-A fluent API for querying and transforming data in a table.
+**Returns:** `Promise<void>`
 
-#### QueryBuilder Constructor
-
+**Example:**
 ```ts
-new QueryBuilder(adapter: DepositStorageAdapter<any>, table: string)
+// Insert/update
+await db.put('users', { 
+  id: 'u1', 
+  name: 'Alice',
+  email: 'alice@example.com' 
+});
+
+// With TTL (expires in 1 hour)
+await db.put('sessions', { 
+  id: 's1', 
+  token: 'abc123' 
+}, 3600000);
 ```
 
-#### QueryBuilder Methods
+---
 
-- `where(field, predicate)` – Filter by predicate on a field.
-- `equals(field, value)` – Filter by equality.
-- `between(field, lower, upper)` – Filter by range.
-- `startsWith(field, prefix, ignoreCase?)` – Filter by string prefix.
-- `filter(fn)` – Filter by custom predicate.
-- `not(fn)` – Negate a predicate.
-- `and(...fns)` – Combine predicates with AND.
-- `or(...fns)` – Combine predicates with OR.
-- `orderBy(field, direction)` – Sort results.
-- `limit(n)` – Limit result count.
-- `offset(n)` – Skip n results.
-- `page(pageNumber, pageSize)` – Paginate results.
-- `reverse()` – Reverse result order.
-- `count()` – Get result count.
-- `first()` – Get first result.
-- `last()` – Get last result.
-- `average(field)` – Average a field.
-- `min(field)` – Minimum value.
-- `max(field)` – Maximum value.
-- `sum(field)` – Sum a field.
-- `modify(callback, context?)` – Mutate records in-place.
-- `groupBy(field)` – Group by field.
-- `search(query, tone?)` – Fuzzy search.
-- `reset()` – Reset query builder.
-- `toArray()` – Execute and return results.
-- `build(conditions)` – Build query from conditions.
+### `get(table, key, defaultValue?)`
 
-### LocalStorageAdapter
+Retrieves a single record by its key.
 
-Implements DepositStorageAdapter using browser localStorage.
+**Parameters:**
+- `table: keyof S` - Table name
+- `key: KeyType<S, K>` - Record key
+- `defaultValue?: T` - Optional default value if not found
 
-#### LocalStorageAdapter Constructor
+**Returns:** `Promise<T | undefined>`
 
+**Example:**
+```ts
+const user = await db.get('users', 'u1');
+
+// With default value
+const user = await db.get('users', 'u1', { 
+  id: 'u1', 
+  name: 'Guest',
+  email: '' 
+});
+```
+
+---
+
+### `getAll(table)`
+
+Retrieves all records from a table.
+
+**Parameters:**
+- `table: keyof S` - Table name
+
+**Returns:** `Promise<S[K]['record'][]>`
+
+**Example:**
+```ts
+const allUsers = await db.getAll('users');
+console.log(`Found ${allUsers.length} users`);
+```
+
+---
+
+### `delete(table, key)`
+
+Deletes a single record by its key.
+
+**Parameters:**
+- `table: keyof S` - Table name
+- `key: KeyType<S, K>` - Record key
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.delete('users', 'u1');
+```
+
+---
+
+### `clear(table)`
+
+Removes all records from a table.
+
+**Parameters:**
+- `table: keyof S` - Table name
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.clear('users');
+```
+
+---
+
+### `count(table)`
+
+Returns the number of records in a table.
+
+**Parameters:**
+- `table: keyof S` - Table name
+
+**Returns:** `Promise<number>`
+
+**Example:**
+```ts
+const userCount = await db.count('users');
+console.log(`${userCount} users in database`);
+```
+
+---
+
+### `bulkPut(table, values, ttl?)`
+
+Inserts or updates multiple records in a single operation.
+
+**Parameters:**
+- `table: keyof S` - Table name
+- `values: S[K]['record'][]` - Array of records
+- `ttl?: number` - Optional TTL for all records
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.bulkPut('users', [
+  { id: 'u1', name: 'Alice', email: 'alice@example.com' },
+  { id: 'u2', name: 'Bob', email: 'bob@example.com' },
+  { id: 'u3', name: 'Carol', email: 'carol@example.com' }
+]);
+```
+
+---
+
+### `bulkDelete(table, keys)`
+
+Deletes multiple records by their keys.
+
+**Parameters:**
+- `table: keyof S` - Table name
+- `keys: KeyType<S, K>[]` - Array of keys to delete
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.bulkDelete('users', ['u1', 'u2', 'u3']);
+```
+
+---
+
+### `query(table)`
+
+Creates a QueryBuilder for advanced querying.
+
+**Parameters:**
+- `table: keyof S` - Table name
+
+**Returns:** `QueryBuilder<S[K]['record']>`
+
+**Example:**
+```ts
+const adults = await db.query('users')
+  .filter(user => user.age >= 18)
+  .orderBy('name', 'asc')
+  .toArray();
+```
+
+---
+
+### `transaction(tables, fn, ttl?)`
+
+Performs an atomic transaction across multiple tables.
+
+**Parameters:**
+- `tables: K[]` - Array of table names
+- `fn: (stores: T) => Promise<void>` - Transaction callback
+- `ttl?: number` - Optional TTL for modified records
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.transaction(['users', 'posts'], async (stores) => {
+  // Add user
+  stores.users.push({ 
+    id: 'u1', 
+    name: 'Alice', 
+    email: 'alice@example.com' 
+  });
+  
+  // Add post
+  stores.posts.push({ 
+    id: 'p1', 
+    userId: 'u1', 
+    title: 'Hello World',
+    content: 'My first post' 
+  });
+  
+  // Changes are committed atomically
+});
+```
+
+**Note:** If an error occurs, all changes are rolled back.
+
+---
+
+### `patch(table, patches)`
+
+Applies a batch of operations (put, delete, clear) atomically.
+
+**Parameters:**
+- `table: keyof S` - Table name
+- `patches: PatchOperation[]` - Array of operations
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await db.patch('users', [
+  { type: 'put', value: { id: 'u1', name: 'Alice', email: 'a@example.com' } },
+  { type: 'put', value: { id: 'u2', name: 'Bob', email: 'b@example.com' }, ttl: 3600000 },
+  { type: 'delete', key: 'u3' },
+  { type: 'clear' } // Clears all, then applies puts
+]);
+```
+
+---
+
+## QueryBuilder Methods
+
+### `equals(field, value)`
+
+Filters records where field equals value.
+
+**Example:**
+```ts
+const admins = await db.query('users')
+  .equals('role', 'admin')
+  .toArray();
+```
+
+---
+
+### `between(field, lower, upper)`
+
+Filters records where field is between lower and upper (inclusive).
+
+**Example:**
+```ts
+const youngAdults = await db.query('users')
+  .between('age', 18, 30)
+  .toArray();
+```
+
+---
+
+### `startsWith(field, prefix, ignoreCase?)`
+
+Filters string fields that start with prefix.
+
+**Example:**
+```ts
+const aliceUsers = await db.query('users')
+  .startsWith('name', 'Alice', true)
+  .toArray();
+```
+
+---
+
+### `where(field, predicate)`
+
+Filters using custom predicate function.
+
+**Example:**
+```ts
+const verified = await db.query('users')
+  .where('email', (email) => email.endsWith('@company.com'))
+  .toArray();
+```
+
+---
+
+### `filter(fn)`
+
+Filters using predicate on entire record.
+
+**Example:**
+```ts
+const special = await db.query('users')
+  .filter(user => user.age > 18 && user.email.includes('gmail'))
+  .toArray();
+```
+
+---
+
+### `not(fn)`, `and(...fns)`, `or(...fns)`
+
+Logical operators for combining predicates.
+
+**Example:**
+```ts
+const result = await db.query('users')
+  .and(
+    u => u.age >= 18,
+    u => u.verified === true
+  )
+  .toArray();
+```
+
+---
+
+### `orderBy(field, direction)`
+
+Sorts results by field.
+
+**Parameters:**
+- `field: keyof T` - Field to sort by
+- `direction: 'asc' | 'desc'` - Sort direction (default: 'asc')
+
+**Example:**
+```ts
+const sorted = await db.query('users')
+  .orderBy('name', 'asc')
+  .toArray();
+```
+
+---
+
+### `limit(n)`, `offset(n)`, `page(pageNumber, pageSize)`
+
+Pagination methods.
+
+**Example:**
+```ts
+// First 10 users
+const first10 = await db.query('users')
+  .limit(10)
+  .toArray();
+
+// Skip first 10, get next 10
+const next10 = await db.query('users')
+  .offset(10)
+  .limit(10)
+  .toArray();
+
+// Page 2 (10 per page)
+const page2 = await db.query('users')
+  .page(2, 10)
+  .toArray();
+```
+
+---
+
+### `reverse()`
+
+Reverses the order of results.
+
+**Example:**
+```ts
+const reversed = await db.query('users')
+  .orderBy('createdAt', 'asc')
+  .reverse()
+  .toArray();
+```
+
+---
+
+### `count()`, `first()`, `last()`
+
+Aggregation helpers.
+
+**Example:**
+```ts
+const count = await db.query('users').count();
+const firstUser = await db.query('users').first();
+const lastUser = await db.query('users').last();
+```
+
+---
+
+### `average(field)`, `min(field)`, `max(field)`, `sum(field)`
+
+Numeric aggregations.
+
+**Example:**
+```ts
+const avgAge = await db.query('users').average('age');
+const youngest = await db.query('users').min('age');
+const oldest = await db.query('users').max('age');
+const totalAge = await db.query('users').sum('age');
+```
+
+---
+
+### `modify(callback, context?)`
+
+Transforms records in the query.
+
+**Example:**
+```ts
+const uppercased = await db.query('users')
+  .modify(user => ({ 
+    ...user, 
+    name: user.name.toUpperCase() 
+  }))
+  .toArray();
+```
+
+---
+
+### `groupBy(field)`, `search(query, tone?)`
+
+Advanced operations.
+
+**Example:**
+```ts
+const byRole = await db.query('users')
+  .groupBy('role')
+  .toArray();
+
+const searchResults = await db.query('users')
+  .search('alice')
+  .toArray();
+```
+
+---
+
+### `reset()`
+
+Resets the query builder to start fresh.
+
+**Example:**
+```ts
+const builder = db.query('users')
+  .equals('role', 'admin')
+  .reset()
+  .equals('role', 'user'); // Start over
+```
+
+---
+
+### `toArray()`
+
+Executes the query and returns results.
+
+**Returns:** `Promise<T[]>`
+
+**Example:**
+```ts
+const results = await db.query('users')
+  .filter(u => u.active)
+  .orderBy('name', 'asc')
+  .toArray();
+```
+
+---
+
+### `build(conditions)`
+
+Builds query from condition objects (useful for dynamic queries).
+
+**Example:**
+```ts
+const conditions = [
+  { type: 'equals', field: 'role', value: 'admin' },
+  { type: 'orderBy', field: 'name', value: 'asc' },
+  { type: 'limit', value: 10 }
+];
+
+const results = await db.query('users')
+  .build(conditions)
+  .toArray();
+```
+
+---
+
+## Adapters
+
+### `LocalStorageAdapter<S>`
+
+Storage adapter using browser LocalStorage.
+
+**Constructor:**
 ```ts
 new LocalStorageAdapter(dbName: string, version: number, schema: S)
 ```
 
-#### LocalStorageAdapter Methods
-
-Implements all DepositStorageAdapter methods: `bulkDelete`, `bulkPut`, `clear`, `count`, `delete`, `get`, `getAll`, `put`.
-
-### IndexedDBAdapter
-
-Implements DepositStorageAdapter using browser IndexedDB.
-
-#### IndexedDBAdapter Constructor
-
+**Example:**
 ```ts
-new IndexedDBAdapter(dbName: string, version: number, schema: S, migrationFn?)
+const adapter = new LocalStorageAdapter('my-app', 1, schema);
+const db = new Deposit(adapter);
 ```
 
-- `migrationFn`: Optional migration function for schema upgrades.
+**Characteristics:**
+- Synchronous operations (wrapped in promises for API consistency)
+- ~5-10MB storage limit
+- String-based storage (JSON serialization)
+- Survives page reloads
+- Shared across all tabs/windows
 
-#### IndexedDBAdapter Methods
+---
+
+### `IndexedDBAdapter<S>`
+
+Storage adapter using browser IndexedDB.
+
+**Constructor:**
+```ts
+new IndexedDBAdapter(
+  dbName: string, 
+  version: number, 
+  schema: S, 
+  migrationFn?: DepositMigrationFn<S>
+)
+```
+
+**Example:**
+```ts
+const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
+  if (oldVersion < 1) {
+    // Migration logic
+  }
+});
+
+const db = new Deposit(adapter);
+```
+
+**Characteristics:**
+- Asynchronous operations
+- ~50MB+ storage (quota-based)
+- Supports indexes for fast lookups
+- Survives page reloads
+- Isolated per origin
+
+---
+
+## Types
+
+### `DepositDataSchema`
+
+Schema definition type.
+
+```ts
+type DepositDataSchema = {
+  [tableName: string]: {
+    key: string;           // Primary key field name
+    indexes?: string[];    // Optional index fields
+    record: any;           // Record type
+  };
+};
+```
+
+**Example:**
+```ts
+const schema = {
+  users: {
+    key: 'id',
+    indexes: ['email', 'role'],
+    record: {} as { id: string; name: string; email: string; role: string }
+  },
+  posts: {
+    key: 'id',
+    indexes: ['userId', 'createdAt'],
+    record: {} as { id: string; userId: string; title: string; createdAt: number }
+  }
+} satisfies DepositDataSchema;
+```
+
+---
+
+### `DepositMigrationFn<S>`
+
+Migration function type for IndexedDB schema changes.
+
+```ts
+type DepositMigrationFn<S> = (
+  db: IDBDatabase,
+  oldVersion: number,
+  newVersion: number | null,
+  transaction: IDBTransaction,
+  schema: S
+) => void | Promise<void>;
+```
+
+**Example:**
+```ts
+const migration: DepositMigrationFn<typeof schema> = async (
+  db,
+  oldVersion,
+  newVersion,
+  tx,
+  schema
+) => {
+  if (oldVersion < 2) {
+    // Migrate data from version 1 to 2
+    const store = tx.objectStore('users');
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      for (const user of request.result) {
+        user.role = user.role || 'user';
+        store.put(user);
+      }
+    };
+  }
+};
+```
+
+---
+
+### `PatchOperation<T, K>`
+
+Operation types for `patch()` method.
+
+```ts
+type PatchOperation<T, K> =
+  | { type: 'put'; value: T; ttl?: number }
+  | { type: 'delete'; key: K }
+  | { type: 'clear' };
+```
+
+---
+
+## Utility Functions
+
+### `runSafe(fn, label?)`
+
+Wraps a function to catch and log errors without throwing.
+
+**Example:**
+```ts
+import { runSafe } from '@vielzeug/deposit';
+
+const safeFetch = runSafe(async () => {
+  const data = await fetch('/api/data').then(r => r.json());
+  return data;
+}, 'FETCH_FAILED');
+
+const result = await safeFetch(); // Returns undefined on error
+```
+
+---
+
+## Advanced Usage
+
+### Memoization
+
+QueryBuilder automatically memoizes results for performance:
+
+```ts
+const query = db.query('users').equals('role', 'admin');
+
+const result1 = await query.toArray(); // Executes query
+const result2 = await query.toArray(); // Returns cached result
+```
+
+### TTL (Time-To-Live)
+
+Records can expire automatically:
+
+```ts
+// Expires in 1 hour
+await db.put('sessions', { id: 's1', token: 'abc' }, 3600000);
+
+// After 1 hour
+const session = await db.get('sessions', 's1'); // undefined (expired)
+```
+
+### Type Safety
+
+Deposit provides full type inference:
+
+```ts
+const user = await db.get('users', 'u1');
+// user is typed as: { id: string; name: string; email: string } | undefined
+
+const users = await db.query('users')
+  .filter(u => u.name.includes('Alice')) // Full autocomplete
+  .toArray();
+```
 
 Implements all DepositStorageAdapter methods and `connect()`.
 

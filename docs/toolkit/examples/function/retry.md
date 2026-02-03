@@ -1,11 +1,17 @@
-# retry
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-484_B-success" alt="Size">
 </div>
 
+# retry
+
 The `retry` utility automatically re-executes an asynchronous function if it fails. It features customizable retry attempts, configurable delays, exponential backoff, and full support for `AbortSignal` to cancel pending retries.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/retry.ts
+:::
 
 ## Features
 
@@ -81,11 +87,3 @@ await retry(heavyTask, {
 - [predict](./predict.md): Wait for a condition to become true.
 - [sleep](./sleep.md): Pause execution for a specified duration.
 - [debounce](./debounce.md): Rate-limit function execution.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

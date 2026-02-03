@@ -1,11 +1,17 @@
-# average
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-112_B-success" alt="Size">
 </div>
 
+# average
+
 The `average` utility calculates the arithmetic mean of an array of numbers. It provides a simple, functional way to find the average value in a collection.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/average.ts
+:::
 
 ## Features
 
@@ -60,11 +66,3 @@ const result = average([]); // NaN
 - [sum](./sum.md): Calculate the total of an array of numbers.
 - [median](./median.md): Find the middle value in a set of numbers.
 - [round](./round.md): Round the average result to a specific precision.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

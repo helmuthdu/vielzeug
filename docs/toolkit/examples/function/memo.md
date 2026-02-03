@@ -1,11 +1,17 @@
-# memo
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-512_B-success" alt="Size">
 </div>
 
+# memo
+
 The `memo` utility creates a memoized version of a function that caches its results based on the provided arguments. It is highly configurable, featuring support for Time-To-Live (TTL) expiration and a maximum cache size with LRU (Least Recently Used) eviction.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/function/memo.ts
+:::
 
 ## Features
 
@@ -86,11 +92,3 @@ const formatData = memo(formatter, { maxSize: 100 });
 - [once](./once.md): Cache a result that never changes.
 - [retry](./retry.md): Automatically re-run failed operations.
 - [throttle](./throttle.md): Rate-limit execution based on time.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

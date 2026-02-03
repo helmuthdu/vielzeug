@@ -1,11 +1,17 @@
-# isEmpty
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-212_B-success" alt="Size">
 </div>
 
+# isEmpty
+
 The `isEmpty` utility checks if a given value is considered "empty". It supports a wide variety of data types, including strings, arrays, objects, Maps, and Sets.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isEmpty.ts
+:::
 
 ## Features
 
@@ -75,11 +81,3 @@ isEmpty(undefined); // true
 - [isNil](./isNil.md): Check if a value is strictly `null` or `undefined`.
 - [isDefined](./isDefined.md): Check if a value is not `null` or `undefined`.
 - [isArray](./isArray.md): Check if a value is an array.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

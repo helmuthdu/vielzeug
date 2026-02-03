@@ -1,11 +1,17 @@
-# rate
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-96_B-success" alt="Size">
 </div>
 
+# rate
+
 The `rate` utility calculates the percentage of a value relative to a total. It is a simple but essential tool for generating progress indicators, statistics, or normalized values.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/rate.ts
+:::
 
 ## Features
 
@@ -63,13 +69,6 @@ rate(10, 0); // 0
 - [clamp](./clamp.md): Ensure the rate stays within a `0-100` range if `value > total`.
 - [average](./average.md): Calculate the mean of multiple rates.
 
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
 
 ## Related
 

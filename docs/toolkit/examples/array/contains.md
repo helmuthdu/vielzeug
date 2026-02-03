@@ -1,11 +1,17 @@
-# contains
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-834_B-success" alt="Size">
 </div>
 
+# contains
+
 The `contains` utility checks if a specific value exists within an array. Unlike the native `Array.prototype.includes()`, `contains` uses deep equality, making it suitable for finding objects and arrays within a list.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/contains.ts
+:::
 
 ## Features
 
@@ -76,11 +82,3 @@ contains(nested, [1, 2]); // true
 - [isEqual](../typed/isEqual.md): The deep equality helper used by `contains`.
 - [find](./find.md): Get the matching element itself.
 - [some](./some.md): Check if any element satisfies a custom predicate.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

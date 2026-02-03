@@ -1,11 +1,17 @@
-# isWithin
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-128_B-success" alt="Size">
 </div>
 
+# isWithin
+
 The `isWithin` utility checks if a numeric value falls within a specified inclusive range. It is perfect for validating inputs, checking UI bounds, or coordinating logic that requires values to be between certain limits.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isWithin.ts
+:::
 
 ## Features
 
@@ -57,11 +63,3 @@ isWithin(15, 0, 10); // false
 - [clamp](../math/clamp.md): Restrict a number to a specific range (returning the clamped value).
 - [isNumber](./isNumber.md): Check if a value is a number.
 - [isPositive](./isPositive.md): Check if a number is greater than zero.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

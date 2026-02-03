@@ -1,11 +1,17 @@
-# reduce
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-248_B-success" alt="Size">
 </div>
 
+# reduce
+
 The `reduce` utility reduces an array to a single value by executing a reducer function on each element, passing in the return value from the calculation on the preceding element.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/array/reduce.ts
+:::
 
 ## Features
 
@@ -86,11 +92,3 @@ const result = await reduce(tasks, async (acc, task) => {
 - [map](./map.md): Transform each element in an array.
 - [filter](./filter.md): Subset an array.
 - [aggregate](./aggregate.md): For more complex aggregation patterns.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

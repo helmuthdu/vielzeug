@@ -1,11 +1,17 @@
-# min
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1047_B-success" alt="Size">
 </div>
 
+# min
+
 Returns the smallest number in an array.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/min.ts
+:::
 
 ## API
 
@@ -34,12 +40,3 @@ min([]); // undefined
 
 - [max](./max.md)
 - [clamp](./clamp.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

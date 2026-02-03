@@ -1,13 +1,13 @@
-<img src="/logo-http.svg" alt="Fetchit Logo" width="156" style="padding: 1rem; margin: 0 auto;"/>
-
-# Fetchit
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-9.8_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
+
+<img src="/logo-http.svg" alt="Fetchit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+
+# Fetchit
 
 **Fetchit** is a modern, type-safe HTTP client for browser and Node.js. It provides a powerful, unified API for making requests with built-in support for caching, cancellation, timeouts, and more.
 
@@ -62,7 +62,7 @@ return res.data;
 | Bundle Size (gzip) | ~9.8KB | ~13KB | ~4KB | 0KB |
 | Node.js Support | ✅ | ✅ | ✅ | ✅ (v18+) |
 | Dependencies | 0 | 7+ | 0 | N/A |
-| Interceptors | ✅ | ✅ | ✅ Hooks | ❌ |
+| Request Retry | ✅ Built-in | ⚠️ Via plugins | ⚠️ Manual | ❌ |
 
 ## When to Use Fetchit
 
@@ -84,10 +84,11 @@ return res.data;
 
 - **Unified API**: Consistent interface for GET, POST, PUT, PATCH, and DELETE
 - **Type-safe**: Robust request and response typing with full TypeScript support
-- **Smart Caching**: Built-in caching mechanism to reduce redundant network calls
+- **Smart Caching**: Built-in caching mechanism with cache management utilities
 - **Deduplication**: Automatically prevent concurrent identical requests
 - **Auto Parsing**: Intelligent handling of JSON, text, and binary data
-- **Interceptors**: Request and response interceptors for auth, logging, etc.
+- **Request Retry**: Automatic retry on network errors
+- **Rich Error Context**: Custom HttpError class with URL, method, and status
 - **Modern Defaults**: Sensible timeouts, headers, and error handling out of the box
 - **Zero Dependencies**: Lightweight and self-contained
 
@@ -95,25 +96,30 @@ return res.data;
 
 ### Installation
 
-```sh
-# pnpm (recommended)
+::: code-group
+
+```sh [pnpm]
 pnpm add @vielzeug/fetchit
+```
 
-# npm
+```sh [npm]
 npm install @vielzeug/fetchit
+```
 
-# yarn
+```sh [yarn]
 yarn add @vielzeug/fetchit
 ```
+
+:::
 
 ### Basic Usage
 
 ```ts
-import { createFetchService } from '@vielzeug/fetchit';
+import { createHttpClient } from '@vielzeug/fetchit';
 
 // 1. Create a service instance with configuration
-const api = createFetchService({
-  baseURL: 'https://api.example.com',
+const api = createHttpClient({
+  url: 'https://api.example.com',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
@@ -131,87 +137,115 @@ interface User {
 const res = await api.get<User>('/users/1');
 console.log(res.data.name); // Type-safe!
 
-// POST request
+// POST request with body
 const created = await api.post<User>('/users', {
-  name: 'Alice',
-  email: 'alice@example.com'
+  body: {
+    name: 'Alice',
+    email: 'alice@example.com'
+  }
 });
 
 // PUT request
 const updated = await api.put<User>('/users/1', {
-  name: 'Alice Smith'
+  body: { name: 'Alice Smith' }
 });
 
 // DELETE request
 await api.delete('/users/1');
 ```
 
-### Real-World Example: API Client
+### Real-World Example: API Client with Auth
 
 ```ts
-import { createFetchService } from '@vielzeug/fetchit';
+import { createHttpClient, HttpError } from '@vielzeug/fetchit';
 
 // Create authenticated API client
-const api = createFetchService({
-  baseURL: 'https://api.example.com',
+const api = createHttpClient({
+  url: 'https://api.example.com',
   timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
-// Add auth interceptor
-api.interceptors.request.use(async (config) => {
-  const token = await getAuthToken();
-  config.headers = {
-    ...config.headers,
+// Update auth token dynamically
+export function setAuthToken(token: string) {
+  api.setHeaders({
     Authorization: `Bearer ${token}`
-  };
-  return config;
-});
+  });
+}
 
-// Add error handling interceptor
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      await refreshToken();
-      return api.request(error.config);
+// Remove auth token (e.g., on logout)
+export function clearAuth() {
+  api.setHeaders({
+    Authorization: undefined // Removes the header
+  });
+  api.clearCache(); // Clear cached authenticated requests
+}
+
+// Wrapper with error handling
+async function apiRequest<T>(
+  method: 'get' | 'post' | 'put' | 'delete',
+  url: string,
+  options?: { body?: unknown }
+): Promise<T> {
+  try {
+    const res = await api[method]<T>(url, options);
+    return res.data;
+  } catch (error) {
+    if (error instanceof HttpError) {
+      if (error.status === 401) {
+        // Handle unauthorized - redirect to login
+        window.location.href = '/login';
+      }
+      throw new Error(`Request failed: ${error.message}`);
     }
     throw error;
   }
-);
+}
 
 // Use throughout your app
 export const fetchUser = (id: string) => 
-  api.get<User>(`/users/${id}`);
+  apiRequest<User>('get', `/users/${id}`);
 
 export const updateProfile = (data: Partial<User>) =>
-  api.put<User>('/profile', data);
+  apiRequest<User>('put', '/profile', { body: data });
 ```
 
 ### Framework Integration: React
 
 ```tsx
-import { createFetchService } from '@vielzeug/fetchit';
+import { createHttpClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const api = createFetchService({
-  baseURL: 'https://api.example.com'
+const api = createHttpClient({
+  url: 'https://api.example.com'
 });
 
 function UserProfile({ userId }: { userId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   
   useEffect(() => {
     let cancelled = false;
     
     const fetchUser = async () => {
       try {
-        const res = await api.get<User>(`/users/${userId}`);
+        setLoading(true);
+        const res = await api.get<User>(`/users/${userId}`, {
+          // Use request ID for better caching
+          id: `user-${userId}`
+        });
+        
         if (!cancelled) {
           setUser(res.data);
+          setError(null);
         }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Failed to fetch user'));
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -227,9 +261,15 @@ function UserProfile({ userId }: { userId: string }) {
   }, [userId]);
   
   if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
   if (!user) return <div>User not found</div>;
   
-  return <div>{user.name}</div>;
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  );
 }
 ```
 
@@ -243,7 +283,7 @@ function UserProfile({ userId }: { userId: string }) {
 
 ### How is Fetchit different from Axios?
 
-Fetchit is TypeScript-first with zero dependencies and built-in request deduplication. Axios has more plugins but larger bundle size and dependencies.
+Fetchit is TypeScript-first with zero dependencies and built-in request deduplication and caching. Axios has a larger ecosystem but bigger bundle size and dependencies.
 
 ### Does Fetchit work in Node.js?
 
@@ -255,32 +295,60 @@ Absolutely! Fetchit works great as the data fetching layer for these libraries.
 
 ### How do I handle file uploads?
 
+Fetchit automatically detects FormData and handles it correctly:
+
 ```ts
 const formData = new FormData();
 formData.append('file', file);
 
-await api.post('/upload', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-});
+// Content-Type is set automatically by the browser
+await api.post('/upload', { body: formData });
 ```
 
 ### Is request deduplication automatic?
 
 Yes! Concurrent identical requests are automatically deduplicated to prevent redundant network calls.
 
-### How do I disable caching for specific requests?
+### How do I manage the cache?
+
+Use the built-in cache management methods:
 
 ```ts
-await api.get('/users', { cache: 'no-cache' });
+// Clear all cached requests
+api.clearCache();
+
+// Invalidate a specific cache entry
+api.invalidateCache('user-123');
+
+// Get cache size
+const size = api.getCacheSize();
+
+// Clean up expired entries
+const removed = api.cleanupCache();
+```
+
+### How do I handle authentication tokens?
+
+Use `setHeaders` to update auth headers dynamically:
+
+```ts
+// Set token
+api.setHeaders({ Authorization: `Bearer ${token}` });
+
+// Remove token (set to undefined)
+api.setHeaders({ Authorization: undefined });
 ```
 
 ## 🐛 Troubleshooting
 
 ### CORS errors
 
-**Problem**: Cross-origin requests blocked.
+::: danger Problem
+Cross-origin requests blocked.
+:::
 
-**Solution**: Ensure your server has proper CORS headers:
+::: tip Solution
+Ensure your server has proper CORS headers:
 ```ts
 // Server-side (Express example)
 app.use(cors({
@@ -288,46 +356,74 @@ app.use(cors({
   credentials: true
 }));
 ```
+:::
 
 ### Timeout errors
 
-**Problem**: Requests timeout unexpectedly.
+::: danger Problem
+Requests timeout unexpectedly.
+:::
 
-**Solution**: Adjust timeout or use per-request timeout:
+::: tip Solution
+Adjust timeout globally or per-request:
 ```ts
 // Global timeout
-const api = createFetchService({ timeout: 30000 });
+const api = createHttpClient({ timeout: 30000 });
 
-// Per-request timeout
-await api.get('/slow-endpoint', { timeout: 60000 });
+// The default timeout is 5000ms (5 seconds)
 ```
+:::
 
 ### TypeScript type inference not working
 
-**Problem**: Response data type not inferred.
+::: danger Problem
+Response data type not inferred.
+:::
 
-**Solution**: Explicitly specify response type:
+::: tip Solution
+Explicitly specify response type:
 ```ts
 // ✅ Correct
 const res = await api.get<User>('/users/1');
+const user: User = res.data;
 
 // ❌ Type is 'unknown'
 const res = await api.get('/users/1');
 ```
+:::
+```
 
-### Request not cancelled on component unmount
+### Request cancelled errors
 
-**Problem**: Memory leaks from unmounted components.
+**Problem**: Getting abort/cancellation errors.
 
-**Solution**: Use AbortController:
+**Solution**: Handle cancellation properly:
 ```ts
-const controller = new AbortController();
+import { HttpError } from '@vielzeug/fetchit';
 
-useEffect(() => {
-  api.get('/users', { signal: controller.signal });
-  
-  return () => controller.abort();
-}, []);
+try {
+  await api.get('/users');
+} catch (error) {
+  if (error instanceof HttpError) {
+    console.error(`${error.method} ${error.url} failed:`, error.message);
+  }
+}
+```
+
+### Cache not working as expected
+
+**Problem**: Getting stale data or cache not invalidating.
+
+**Solution**: Use cache management methods:
+```ts
+// Invalidate specific request
+await api.get('/users/1', { invalidate: true });
+
+// Clear all cache
+api.clearCache();
+
+// Manually invalidate by ID
+api.invalidateCache('user-1');
 ```
 
 ## 🤝 Contributing
@@ -350,12 +446,3 @@ MIT © [Helmuth Duarte](https://github.com/helmuthdu)
 ---
 
 > **Tip:** Fetchit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for storage, logging, permissions, and more.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-

@@ -1,11 +1,17 @@
-# isRegex
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-545_B-success" alt="Size">
 </div>
 
-Checks if a value is a RegExp object.
+# isRegex
+
+Checks if a value is a regular expression.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isRegex.ts
+:::
 
 ## API
 
@@ -33,11 +39,3 @@ isRegex('abc'); // false
 
 - [isString](./isString.md)
 - [isObject](./isObject.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

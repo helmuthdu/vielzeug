@@ -1,11 +1,17 @@
-# isZero
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-48_B-success" alt="Size">
 </div>
 
+# isZero
+
 The `isZero` utility is a type guard that checks if a given number is exactly equal to zero.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isZero.ts
+:::
 
 ## Features
 
@@ -52,11 +58,3 @@ isZero(0.1);  // false
 - [isPositive](./isPositive.md): Check if a number is greater than zero.
 - [isNegative](./isNegative.md): Check if a number is less than zero.
 - [isNumber](./isNumber.md): Check if a value is a number.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

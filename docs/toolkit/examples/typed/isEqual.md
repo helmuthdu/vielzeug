@@ -1,11 +1,17 @@
-# isEqual
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-412_B-success" alt="Size">
 </div>
 
+# isEqual
+
 The `isEqual` utility performs a deep equality comparison between two values. It determines if two values are structurally identical, recursively checking nested objects and arrays.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/typed/isEqual.ts
+:::
 
 ## Features
 
@@ -79,11 +85,3 @@ isEqual(/abc/g, /abc/g); // true
 - [isMatch](./isMatch.md): Check if an object matches a partial pattern.
 - [contains](../array/contains.md): Search for a value in an array using deep equality.
 - [diff](../object/diff.md): Calculate the difference between two objects.
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>

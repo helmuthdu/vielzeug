@@ -1,11 +1,17 @@
-# median
-
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-1165_B-success" alt="Size">
 </div>
 
-Calculates the median value of an array of numbers.
+# median
+
+Returns the median value of an array of numbers.
+
+## Implementation
+
+::: details View Source Code
+<<< @/../packages/toolkit/src/math/median.ts
+:::
 
 ## API
 
@@ -35,12 +41,3 @@ median([]); // undefined
 
 - [average](./average.md)
 - [sum](./sum.md)
-
-<style>
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-</style>
-
