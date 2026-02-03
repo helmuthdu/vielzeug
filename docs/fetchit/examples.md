@@ -21,8 +21,8 @@ interface User {
 
 const res = await api.get<User>('/users/1');
 console.log(res.data.name);
-console.log(res.ok);      // true if 2xx status
-console.log(res.status);  // HTTP status code
+console.log(res.ok); // true if 2xx status
+console.log(res.status); // HTTP status code
 ```
 
 ### POST Request
@@ -31,8 +31,8 @@ console.log(res.status);  // HTTP status code
 const res = await api.post<User>('/users', {
   body: {
     name: 'Alice',
-    email: 'alice@example.com'
-  }
+    email: 'alice@example.com',
+  },
 });
 
 console.log('Created user:', res.data);
@@ -44,8 +44,8 @@ console.log('Created user:', res.data);
 const res = await api.put<User>('/users/1', {
   body: {
     name: 'Alice Smith',
-    email: 'alice.smith@example.com'
-  }
+    email: 'alice.smith@example.com',
+  },
 });
 ```
 
@@ -53,7 +53,7 @@ const res = await api.put<User>('/users/1', {
 
 ```ts
 const res = await api.patch<User>('/users/1', {
-  body: { email: 'newemail@example.com' }
+  body: { email: 'newemail@example.com' },
 });
 ```
 
@@ -75,16 +75,16 @@ const api = createHttpClient({
 // After login
 function login(token: string) {
   api.setHeaders({
-    Authorization: `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   });
 }
 
 // On logout
 function logout() {
   api.setHeaders({
-    Authorization: undefined  // Removes the header
+    Authorization: undefined, // Removes the header
   });
-  api.clearCache();  // Clear cached authenticated data
+  api.clearCache(); // Clear cached authenticated data
 }
 ```
 
@@ -93,11 +93,7 @@ function logout() {
 ```ts
 import { HttpError } from '@vielzeug/fetchit';
 
-async function apiRequest<T>(
-  method: 'get' | 'post' | 'put' | 'delete',
-  url: string,
-  options?: any
-): Promise<T> {
+async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: string, options?: any): Promise<T> {
   try {
     const res = await api[method]<T>(url, options);
     return res.data;
@@ -106,7 +102,7 @@ async function apiRequest<T>(
       // Token expired, refresh it
       const newToken = await refreshAuthToken();
       api.setHeaders({ Authorization: `Bearer ${newToken}` });
-      
+
       // Retry the request
       const res = await api[method]<T>(url, options);
       return res.data;
@@ -123,7 +119,7 @@ async function apiRequest<T>(
 ```ts
 // Use custom ID for better cache control
 await api.get<User>('/users/1', {
-  id: 'user-1'
+  id: 'user-1',
 });
 
 // Later, invalidate this specific request
@@ -149,13 +145,13 @@ console.log(user1.data === user2.data); // true
 // The second request will cancel the first one
 await api.get('/users', {
   id: 'users-list',
-  cancelable: true
+  cancelable: true,
 });
 
 // This cancels the previous request
 await api.get('/users', {
   id: 'users-list',
-  cancelable: true
+  cancelable: true,
 });
 ```
 
@@ -164,7 +160,7 @@ await api.get('/users', {
 ```ts
 // Bypass cache and make a fresh request
 await api.get('/users/1', {
-  invalidate: true
+  invalidate: true,
 });
 ```
 
@@ -194,7 +190,7 @@ const url = buildUrl('/api/users', {
   page: 1,
   limit: 10,
   sort: 'name',
-  active: true
+  active: true,
 });
 // Result: "/api/users?page=1&limit=10&sort=name&active=true"
 
@@ -226,7 +222,7 @@ formData.append('file', fileInput.files[0]);
 formData.append('description', 'Profile picture');
 
 await api.post('/upload', {
-  body: formData
+  body: formData,
   // Content-Type is set automatically
 });
 ```
@@ -240,7 +236,7 @@ for (const file of files) {
 }
 
 await api.post('/upload/multiple', {
-  body: formData
+  body: formData,
 });
 ```
 
@@ -308,9 +304,7 @@ try {
 ### Global Error Handler
 
 ```ts
-async function safeRequest<T>(
-  requestFn: () => Promise<RequestResponse<T>>
-): Promise<T | null> {
+async function safeRequest<T>(requestFn: () => Promise<RequestResponse<T>>): Promise<T | null> {
   try {
     const res = await requestFn();
     return res.data;
@@ -321,9 +315,9 @@ async function safeRequest<T>(
         url: error.url,
         method: error.method,
         status: error.status,
-        message: error.message
+        message: error.message,
       });
-      
+
       // Show user-friendly message
       showNotification('Something went wrong. Please try again.');
     }
@@ -344,7 +338,7 @@ import { createHttpClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
 const api = createHttpClient({
-  url: 'https://api.example.com'
+  url: 'https://api.example.com',
 });
 
 function useUser(userId: string) {
@@ -359,9 +353,9 @@ function useUser(userId: string) {
       try {
         setLoading(true);
         const res = await api.get<User>(`/users/${userId}`, {
-          id: `user-${userId}`
+          id: `user-${userId}`,
         });
-        
+
         if (!cancelled) {
           setData(res.data);
           setError(null);
@@ -406,7 +400,7 @@ import { createHttpClient } from '@vielzeug/fetchit';
 import { ref, watchEffect } from 'vue';
 
 const api = createHttpClient({
-  url: 'https://api.example.com'
+  url: 'https://api.example.com',
 });
 
 export function useUser(userId: Ref<string>) {
@@ -437,14 +431,14 @@ export function useUser(userId: Ref<string>) {
 import { createHttpClient } from '@vielzeug/fetchit';
 
 const api = createHttpClient({
-  url: 'https://api.example.com'
+  url: 'https://api.example.com',
 });
 
 // +page.server.ts
 export async function load({ params }) {
   const res = await api.get<User>(`/users/${params.id}`);
   return {
-    user: res.data
+    user: res.data,
   };
 }
 ```
@@ -456,17 +450,14 @@ export async function load({ params }) {
 The built-in retry only works for network errors. For custom retry:
 
 ```ts
-async function fetchWithRetry<T>(
-  fn: () => Promise<RequestResponse<T>>,
-  retries = 3
-): Promise<T> {
+async function fetchWithRetry<T>(fn: () => Promise<RequestResponse<T>>, retries = 3): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fn();
       return res.data;
     } catch (error) {
       if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
   throw new Error('Max retries reached');
@@ -479,11 +470,7 @@ const user = await fetchWithRetry(() => api.get<User>('/users/1'));
 ### Polling
 
 ```ts
-function startPolling(
-  url: string,
-  interval: number,
-  onData: (data: any) => void
-) {
+function startPolling(url: string, interval: number, onData: (data: any) => void) {
   const pollId = setInterval(async () => {
     try {
       const res = await api.get(url, { invalidate: true });
@@ -508,12 +495,10 @@ const stopPolling = startPolling('/status', 5000, (status) => {
 
 ```ts
 async function batchFetch<T>(ids: string[]): Promise<T[]> {
-  const requests = ids.map(id => 
-    api.get<T>(`/users/${id}`, { id: `user-${id}` })
-  );
-  
+  const requests = ids.map((id) => api.get<T>(`/users/${id}`, { id: `user-${id}` }));
+
   const responses = await Promise.all(requests);
-  return responses.map(res => res.data);
+  return responses.map((res) => res.data);
 }
 
 // Usage

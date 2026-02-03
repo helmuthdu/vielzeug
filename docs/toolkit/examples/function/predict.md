@@ -29,7 +29,7 @@ interface PredictOptions {
 }
 
 interface PredictFunction {
-  (fn: () => boolean | Promise<boolean>, options?: PredictOptions): Promise<void>
+  (fn: () => boolean | Promise<boolean>, options?: PredictOptions): Promise<void>;
 }
 ```
 
@@ -67,7 +67,7 @@ await predict(
     const status = await checkStatus();
     return status === 'COMPLETED';
   },
-  { interval: 500, timeout: 10000 }
+  { interval: 500, timeout: 10000 },
 );
 ```
 

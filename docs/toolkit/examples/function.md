@@ -6,32 +6,32 @@ Function utilities provide a powerful set of tools to control execution, compose
 
 ### Execution Control
 
-| Method | Description |
-| :--- | :--- |
+| Method                               | Description                                                                     |
+| :----------------------------------- | :------------------------------------------------------------------------------ |
 | [`debounce`](./function/debounce.md) | Delay function execution until a specified time has passed since the last call. |
-| [`throttle`](./function/throttle.md) | Ensure a function is called at most once in a specified time interval. |
-| [`once`](./function/once.md) | Ensure a function is only executed once. |
-| [`retry`](./function/retry.md) | Automatically retry an asynchronous function on failure. |
-| [`delay`](./function/delay.md) | Returns a promise that resolves after a specified time. |
-| [`sleep`](./function/sleep.md) | Pause execution for a specified duration (alias for `delay`). |
+| [`throttle`](./function/throttle.md) | Ensure a function is called at most once in a specified time interval.          |
+| [`once`](./function/once.md)         | Ensure a function is only executed once.                                        |
+| [`retry`](./function/retry.md)       | Automatically retry an asynchronous function on failure.                        |
+| [`delay`](./function/delay.md)       | Returns a promise that resolves after a specified time.                         |
+| [`sleep`](./function/sleep.md)       | Pause execution for a specified duration (alias for `delay`).                   |
 
 ### Composition & Logic
 
-| Method | Description |
-| :--- | :--- |
-| [`pipe`](./function/pipe.md) | Compose functions from left to right. |
-| [`compose`](./function/compose.md) | Compose functions from right to left. |
-| [`curry`](./function/curry.md) | Transform a function that takes multiple arguments into a sequence of functions. |
-| [`memo`](./function/memo.md) | Cache the results of a function based on its arguments. |
-| [`attempt`](./function/attempt.md) | Safely execute a function and return `undefined` instead of throwing an error. |
+| Method                             | Description                                                                      |
+| :--------------------------------- | :------------------------------------------------------------------------------- |
+| [`pipe`](./function/pipe.md)       | Compose functions from left to right.                                            |
+| [`compose`](./function/compose.md) | Compose functions from right to left.                                            |
+| [`curry`](./function/curry.md)     | Transform a function that takes multiple arguments into a sequence of functions. |
+| [`memo`](./function/memo.md)       | Cache the results of a function based on its arguments.                          |
+| [`attempt`](./function/attempt.md) | Safely execute a function and return `undefined` instead of throwing an error.   |
 
 ### Validation & Concurrency
 
-| Method | Description |
-| :--- | :--- |
-| [`assert`](./function/assert.md) | Throw an error if a condition is not met (with advanced options). |
-| [`assertParams`](./function/assertParams.md) | Validate function parameters against expected types. |
-| [`worker`](./function/worker.md) | Easily run heavy functions in a Web Worker. |
+| Method                                       | Description                                                       |
+| :------------------------------------------- | :---------------------------------------------------------------- |
+| [`assert`](./function/assert.md)             | Throw an error if a condition is not met (with advanced options). |
+| [`assertParams`](./function/assertParams.md) | Validate function parameters against expected types.              |
+| [`worker`](./function/worker.md)             | Easily run heavy functions in a Web Worker.                       |
 
 ## 💡 Practical Examples
 
@@ -51,9 +51,12 @@ const handleScroll = throttle(() => {
 }, 100);
 
 // Robust API calls
-const data = await retry(async () => {
-  return fetch('/api/data').then(res => res.json());
-}, { retries: 3, delay: 1000 });
+const data = await retry(
+  async () => {
+    return fetch('/api/data').then((res) => res.json());
+  },
+  { retries: 3, delay: 1000 },
+);
 ```
 
 ### Functional Composition

@@ -24,7 +24,7 @@ The `delay` utility provides a clean, Promise-based way to execute a function af
 
 ```ts
 interface DelayFunction {
-  <T>(fn: () => T | Promise<T>, wait: number): Promise<T>
+  <T>(fn: () => T | Promise<T>, wait: number): Promise<T>;
 }
 ```
 

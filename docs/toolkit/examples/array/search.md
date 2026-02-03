@@ -24,7 +24,7 @@ The `search` utility performs a fuzzy search across an array of objects. It chec
 
 ```ts
 interface SearchFunction {
-  <T>(array: T[], query: string, tone?: number): T[]
+  <T>(array: T[], query: string, tone?: number): T[];
 }
 ```
 
@@ -48,7 +48,7 @@ import { search } from '@vielzeug/toolkit';
 const users = [
   { name: 'John Doe', city: 'New York' },
   { name: 'Jane Smith', city: 'London' },
-  { name: 'Alice Jones', city: 'Paris' }
+  { name: 'Alice Jones', city: 'Paris' },
 ];
 
 // Searches across both 'name' and 'city'

@@ -24,7 +24,7 @@ The `compareBy` utility is a factory function that creates a comparator based on
 
 ```ts
 interface CompareByFunction {
-  <T>(selector: (item: T) => any): (a: T, b: T) => -1 | 0 | 1
+  <T>(selector: (item: T) => any): (a: T, b: T) => -1 | 0 | 1;
 }
 ```
 
@@ -46,13 +46,13 @@ import { compareBy } from '@vielzeug/toolkit';
 const users = [
   { name: 'Charlie', age: 35 },
   { name: 'Alice', age: 30 },
-  { name: 'Bob', age: 25 }
+  { name: 'Bob', age: 25 },
 ];
 
 // Create a comparator for the 'age' property
-const byAge = compareBy(u => u.age);
+const byAge = compareBy((u) => u.age);
 
-users.sort(byAge); 
+users.sort(byAge);
 // Results in: Bob (25), Alice (30), Charlie (35)
 ```
 
@@ -64,7 +64,7 @@ import { compareBy } from '@vielzeug/toolkit';
 const files = ['data.json', 'report.pdf', 'README.md'];
 
 // Sort by extension length
-const byExtLength = compareBy(f => f.split('.').pop()?.length || 0);
+const byExtLength = compareBy((f) => f.split('.').pop()?.length || 0);
 
 files.sort(byExtLength);
 ```

@@ -24,11 +24,7 @@ The `findLast` utility returns the last element in an array that passes the prov
 
 ```ts
 interface FindLastFunction {
-  <T>(
-    array: T[], 
-    predicate: (item: T, index: number, array: T[]) => boolean, 
-    defaultValue?: T
-  ): T | undefined
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, defaultValue?: T): T | undefined;
 }
 ```
 
@@ -55,7 +51,7 @@ import { findLast } from '@vielzeug/toolkit';
 const numbers = [1, 2, 3, 4, 5, 6];
 
 // Find the last even number
-findLast(numbers, x => x % 2 === 0); // 6
+findLast(numbers, (x) => x % 2 === 0); // 6
 ```
 
 ### Using a Default Value
@@ -66,11 +62,11 @@ import { findLast } from '@vielzeug/toolkit';
 const logs = [
   { level: 'info', message: 'Startup' },
   { level: 'warn', message: 'High memory' },
-  { level: 'info', message: 'Processing' }
+  { level: 'info', message: 'Processing' },
 ];
 
 // Find the last error with fallback
-const lastError = findLast(logs, l => l.level === 'error', { level: 'none', message: 'No errors' });
+const lastError = findLast(logs, (l) => l.level === 'error', { level: 'none', message: 'No errors' });
 // { level: 'none', message: 'No errors' }
 ```
 
@@ -82,6 +78,6 @@ const lastError = findLast(logs, l => l.level === 'error', { level: 'none', mess
 
 ## See Also
 
-- [find](./find.md): Get the *first* matching element.
+- [find](./find.md): Get the _first_ matching element.
 - [findIndex](./findIndex.md): Get the index of the first matching element.
-- [filter](./filter.md): Get *all* matching elements.
+- [filter](./filter.md): Get _all_ matching elements.

@@ -23,10 +23,7 @@ The `debounce` utility creates a version of a function that delays its execution
 
 ```ts
 interface DebounceFunction {
-  <T extends (...args: any[]) => any>(
-    fn: T, 
-    wait: number
-  ): (...args: any[]) => void;
+  <T extends (...args: any[]) => any>(fn: T, wait: number): (...args: any[]) => void;
 }
 ```
 

@@ -4,14 +4,14 @@ String utilities provide essential tools to transform, compare, and format strin
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :--- | :--- |
-| [`camelCase`](./string/camelCase.md) | Convert a string to `camelCase`. |
-| [`kebabCase`](./string/kebabCase.md) | Convert a string to `kebab-case`. |
-| [`pascalCase`](./string/pascalCase.md) | Convert a string to `PascalCase`. |
-| [`snakeCase`](./string/snakeCase.md) | Convert a string to `snake_case`. |
-| [`truncate`](./string/truncate.md) | Truncate a string to a given length with an optional suffix. |
-| [`similarity`](./string/similarity.md) | Compute the similarity score (0 to 1) between two strings. |
+| Method                                 | Description                                                  |
+| :------------------------------------- | :----------------------------------------------------------- |
+| [`camelCase`](./string/camelCase.md)   | Convert a string to `camelCase`.                             |
+| [`kebabCase`](./string/kebabCase.md)   | Convert a string to `kebab-case`.                            |
+| [`pascalCase`](./string/pascalCase.md) | Convert a string to `PascalCase`.                            |
+| [`snakeCase`](./string/snakeCase.md)   | Convert a string to `snake_case`.                            |
+| [`truncate`](./string/truncate.md)     | Truncate a string to a given length with an optional suffix. |
+| [`similarity`](./string/similarity.md) | Compute the similarity score (0 to 1) between two strings.   |
 
 ## 💡 Practical Examples
 
@@ -22,10 +22,10 @@ import { camelCase, kebabCase, pascalCase, snakeCase } from '@vielzeug/toolkit';
 
 const input = 'Hello World-from Vielzeug';
 
-camelCase(input);  // 'helloWorldFromVielzeug'
-kebabCase(input);  // 'hello-world-from-vielzeug'
+camelCase(input); // 'helloWorldFromVielzeug'
+kebabCase(input); // 'hello-world-from-vielzeug'
 pascalCase(input); // 'HelloWorldFromVielzeug'
-snakeCase(input);  // 'hello_world_from_vielzeug'
+snakeCase(input); // 'hello_world_from_vielzeug'
 ```
 
 ### Formatting & Comparison

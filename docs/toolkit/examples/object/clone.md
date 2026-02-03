@@ -24,7 +24,7 @@ The `clone` utility creates a complete deep copy of an object or array. This ens
 
 ```ts
 interface CloneFunction {
-  <T>(value: T): T
+  <T>(value: T): T;
 }
 ```
 
@@ -47,8 +47,8 @@ const original = {
   id: 1,
   meta: {
     tags: ['new', 'featured'],
-    settings: { theme: 'dark' }
-  }
+    settings: { theme: 'dark' },
+  },
 };
 
 const copy = clone(original);
@@ -66,7 +66,10 @@ console.log(original.meta.tags.length); // 2
 ```ts
 import { clone } from '@vielzeug/toolkit';
 
-const list = [[1, 2], [3, 4]];
+const list = [
+  [1, 2],
+  [3, 4],
+];
 const listCopy = clone(list);
 
 listCopy[0].push(3);

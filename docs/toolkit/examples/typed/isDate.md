@@ -23,7 +23,7 @@ The `isDate` utility is a type guard that checks if a given value is a valid Jav
 
 ```ts
 interface IsDateFunction {
-  (value: unknown): value is Date
+  (value: unknown): value is Date;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsDateFunction {
 ```ts
 import { isDate } from '@vielzeug/toolkit';
 
-isDate(new Date());       // true
-isDate(new Date('abc'));  // false (Invalid Date)
-isDate('2024-01-01');     // false (String, not Date object)
-isDate(Date.now());       // false (Number, not Date object)
+isDate(new Date()); // true
+isDate(new Date('abc')); // false (Invalid Date)
+isDate('2024-01-01'); // false (String, not Date object)
+isDate(Date.now()); // false (Number, not Date object)
 ```
 
 ### Type Guarding

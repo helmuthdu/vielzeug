@@ -23,7 +23,7 @@ The `pascalCase` utility transforms a string into `PascalCase` format (every wor
 
 ```ts
 interface PascalCaseFunction {
-  (input: string): string
+  (input: string): string;
 }
 ```
 
@@ -42,10 +42,10 @@ interface PascalCaseFunction {
 ```ts
 import { pascalCase } from '@vielzeug/toolkit';
 
-pascalCase('hello world');   // 'HelloWorld'
-pascalCase('foo-bar');       // 'FooBar'
-pascalCase('user_profile');  // 'UserProfile'
-pascalCase('api.version');   // 'ApiVersion'
+pascalCase('hello world'); // 'HelloWorld'
+pascalCase('foo-bar'); // 'FooBar'
+pascalCase('user_profile'); // 'UserProfile'
+pascalCase('api.version'); // 'ApiVersion'
 ```
 
 ### Handling Case Transitions
@@ -54,7 +54,7 @@ pascalCase('api.version');   // 'ApiVersion'
 import { pascalCase } from '@vielzeug/toolkit';
 
 pascalCase('camelCaseString'); // 'CamelCaseString'
-pascalCase('web-api-v1');      // 'WebApiV1'
+pascalCase('web-api-v1'); // 'WebApiV1'
 pascalCase('  spaced   text '); // 'SpacedText'
 ```
 

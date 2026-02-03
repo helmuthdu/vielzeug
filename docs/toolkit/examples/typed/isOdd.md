@@ -23,7 +23,7 @@ The `isOdd` utility is a type guard that checks if a given number is an odd inte
 
 ```ts
 interface IsOddFunction {
-  (value: number): boolean
+  (value: number): boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsOddFunction {
 ```ts
 import { isOdd } from '@vielzeug/toolkit';
 
-isOdd(3);  // true
+isOdd(3); // true
 isOdd(41); // true
-isOdd(2);  // false
-isOdd(0);  // false
+isOdd(2); // false
+isOdd(0); // false
 ```
 
 ## Implementation Notes

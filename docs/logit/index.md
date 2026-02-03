@@ -8,6 +8,7 @@
 <img src="/logo-logger.svg" alt="Logit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
 
 # Logit
+
 **Logit** is a flexible, zero-dependency logging utility designed for both browser and Node.js environments. It provides a powerful set of features including log levels, custom themes, remote logging, and scoped loggers, all while maintaining a tiny footprint.
 
 ## What Problem Does Logit Solve?
@@ -15,6 +16,7 @@
 Console logging is great for development but lacks structure for production apps. You need log levels, namespacing, remote logging, and environment-specific filtering—all without adding complexity or dependencies.
 
 **Without Logit**:
+
 ```ts
 // Unstructured, hard to filter, no remote logging
 console.log('[API] User login:', user);
@@ -28,11 +30,12 @@ if (process.env.NODE_ENV !== 'production') {
 // Manual remote logging setup
 fetch('/api/logs', {
   method: 'POST',
-  body: JSON.stringify({ level: 'error', message: error.message })
+  body: JSON.stringify({ level: 'error', message: error.message }),
 });
 ```
 
 **With Logit**:
+
 ```ts
 // Structured, filterable, styled output
 import { Logit } from '@vielzeug/logit';
@@ -48,32 +51,33 @@ Logit.setLogLevel('warn'); // Debug/info logs now silent
 Logit.setRemote({
   handler: (type, ...args) => {
     if (type === 'error') {
-      fetch('/api/logs', { 
-        method: 'POST', 
-        body: JSON.stringify({ type, args }) 
+      fetch('/api/logs', {
+        method: 'POST',
+        body: JSON.stringify({ type, args }),
       });
     }
   },
-  logLevel: 'error'
+  logLevel: 'error',
 });
 ```
 
 ### Comparison with Alternatives
 
-| Feature | Logit | Winston | Pino | Console |
-|---------|-------|---------|------|---------|
-| TypeScript Support | ✅ First-class | ✅ Good | ✅ Good | ⚠️ Basic |
-| Browser Support | ✅ Native | ❌ | ❌ | ✅ |
-| Namespacing | ✅ Built-in | ⚠️ Manual | ⚠️ Child | ❌ |
-| Remote Logging | ✅ Built-in | ✅ Transports | ✅ Streams | ❌ |
-| Bundle Size (gzip) | ~7.1KB | ~50KB+ | ~12KB | 0KB |
-| Node.js Support | ✅ | ✅ | ✅ | ✅ |
-| Dependencies | 0 | 15+ | 5+ | N/A |
-| Colored Output | ✅ Auto | ✅ | ✅ | ⚠️ Manual |
+| Feature            | Logit          | Winston       | Pino       | Console   |
+| ------------------ | -------------- | ------------- | ---------- | --------- |
+| TypeScript Support | ✅ First-class | ✅ Good       | ✅ Good    | ⚠️ Basic  |
+| Browser Support    | ✅ Native      | ❌            | ❌         | ✅        |
+| Namespacing        | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
+| Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Streams | ❌        |
+| Bundle Size (gzip) | ~7.1KB         | ~50KB+        | ~12KB      | 0KB       |
+| Node.js Support    | ✅             | ✅            | ✅         | ✅        |
+| Dependencies       | 0              | 15+           | 5+         | N/A       |
+| Colored Output     | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |
 
 ## When to Use Logit
 
 **✅ Use Logit when you:**
+
 - Need isomorphic logging (browser + Node.js) with styled output
 - Want namespace/prefix support for different modules
 - Require remote logging capabilities
@@ -83,6 +87,7 @@ Logit.setRemote({
 - Need visual themes and customizable output formats
 
 **❌ Consider alternatives when you:**
+
 - Only need Node.js logging with file rotation (use Winston/Pino)
 - Need advanced log rotation and file management
 - Require high-throughput server logging (use Pino)
@@ -144,7 +149,10 @@ Logit.info('Connection established');
 Logit.setLogLevel('warn'); // Only warn and error will show
 
 // Advanced features
-Logit.table([{ name: 'Alice', age: 30 }, { name: 'Bob', age: 25 }]);
+Logit.table([
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+]);
 Logit.time('operation');
 // ... do work ...
 Logit.timeEnd('operation');
@@ -158,7 +166,7 @@ import { Logit } from '@vielzeug/logit';
 // Configure for production
 if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   Logit.setLogLevel('warn');
-  
+
   // Send errors to remote logging service
   Logit.setRemote({
     handler: async (type, ...args) => {
@@ -170,14 +178,12 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
             timestamp: new Date().toISOString(),
             level: type,
             prefix: Logit.getPrefix(),
-            args: args.map(arg => 
-              arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg
-            )
-          })
+            args: args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
+          }),
         });
       }
     },
-    logLevel: 'error'
+    logLevel: 'error',
   });
 }
 
@@ -186,7 +192,7 @@ Logit.initialise({
   variant: 'symbol',
   timestamp: true,
   environment: true,
-  namespace: 'MyApp'
+  namespace: 'MyApp',
 });
 
 // Use throughout your application
@@ -210,12 +216,12 @@ function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {
     Logit.setPrefix('UserProfile');
     Logit.debug('Component mounted', { userId });
-    
+
     return () => {
       Logit.debug('Component unmounted', { userId });
     };
   }, [userId]);
-  
+
   const handleClick = () => {
     try {
       // ... do something
@@ -226,7 +232,7 @@ function UserProfile({ userId }: { userId: string }) {
       Logit.error('Action failed', error);
     }
   };
-  
+
   return <button onClick={handleClick}>Click me</button>;
 }
 ```
@@ -244,31 +250,31 @@ Logit.setPrefix('Server');
 // Request logging middleware
 app.use((req, res, next) => {
   Logit.setPrefix(`${req.method} ${req.path}`);
-  Logit.info('Request started', { 
-    method: req.method, 
+  Logit.info('Request started', {
+    method: req.method,
     path: req.path,
-    ip: req.ip 
+    ip: req.ip,
   });
-  
+
   const start = Date.now();
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     Logit.setPrefix(`${req.method} ${req.path}`);
-    
+
     if (res.statusCode >= 400) {
       Logit.error('Request failed', {
         status: res.statusCode,
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
       });
     } else {
       Logit.info('Request completed', {
         status: res.statusCode,
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
       });
     }
   });
-  
+
   next();
 });
 
@@ -303,17 +309,14 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
 ### Can I send logs to multiple destinations?
 
 The `setRemote` handler can call multiple services:
+
 ```ts
 Logit.setRemote({
   handler: async (type, ...args) => {
     // Send to multiple destinations
-    await Promise.all([
-      sendToSentry(type, args),
-      sendToCloudWatch(type, args),
-      writeToFile(type, args)
-    ]);
+    await Promise.all([sendToSentry(type, args), sendToCloudWatch(type, args), writeToFile(type, args)]);
   },
-  logLevel: 'error'
+  logLevel: 'error',
 });
 ```
 
@@ -347,6 +350,7 @@ Minimal impact. When log level filters out messages, they're skipped before proc
 ### Can I use structured logging?
 
 Yes! Pass objects as additional arguments:
+
 ```ts
 Logit.info('User action', { userId: '123', action: 'login', duration: 250 });
 ```
@@ -361,6 +365,7 @@ Console is empty.
 
 ::: tip Solution
 Check log level:
+
 ```ts
 // Make sure level allows your logs through
 Logit.setLogLevel('debug'); // Show all logs
@@ -368,6 +373,7 @@ Logit.setLogLevel('debug'); // Show all logs
 // Or check current level
 console.log(Logit.getLevel());
 ```
+
 :::
 
 ### Colors not showing in browser
@@ -388,6 +394,7 @@ Remote handler doesn't execute.
 
 ::: tip Solution
 Ensure handler is set correctly and log level matches:
+
 ```ts
 Logit.setRemote({
   handler: async (type, ...args) => {
@@ -398,13 +405,15 @@ Logit.setRemote({
       console.error('Failed to send log:', error);
     }
   },
-  logLevel: 'error' // Must match or be lower than the log type
+  logLevel: 'error', // Must match or be lower than the log type
 });
 ```
+
 :::
-  logLevel: 'error' // Must match or be lower than the log type
+logLevel: 'error' // Must match or be lower than the log type
 });
-```
+
+````
 
 ### TypeScript types not working
 
@@ -419,13 +428,14 @@ const options: LogitOptions = {
   variant: 'symbol'
 };
 Logit.initialise(options);
-```
+````
 
 ### Namespace/prefix not showing
 
 **Problem**: Logs don't show the namespace.
 
 **Solution**: Ensure you've set a prefix:
+
 ```ts
 Logit.setPrefix('MyModule');
 Logit.info('This will show with [MyModule] prefix');

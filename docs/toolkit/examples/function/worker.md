@@ -26,14 +26,14 @@ The `worker` utility simplifies the use of Web Workers by allowing you to run he
 interface WorkerFunction {
   <T extends (...args: any[]) => any>(
     callback: (context: any) => T,
-    dependencies?: string[]
-  ): (...args: any[]) => Promise<any>
+    dependencies?: string[],
+  ): (...args: any[]) => Promise<any>;
 }
 ```
 
 ### Parameters
 
-- `callback`: A factory function that runs *inside* the worker. It receives a context (including `self`) and must return the function that will perform the work.
+- `callback`: A factory function that runs _inside_ the worker. It receives a context (including `self`) and must return the function that will perform the work.
 - `dependencies`: Optional. An array of URLs for external scripts to be imported into the worker using `importScripts`.
 
 ### Returns
@@ -51,7 +51,7 @@ import { worker } from '@vielzeug/toolkit';
 const processLargeDataset = worker(() => {
   return (data: number[]) => {
     // Perform complex calculations...
-    return data.map(n => Math.sqrt(n) * Math.PI).reduce((a, b) => a + b);
+    return data.map((n) => Math.sqrt(n) * Math.PI).reduce((a, b) => a + b);
   };
 });
 

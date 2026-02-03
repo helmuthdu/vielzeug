@@ -23,7 +23,7 @@ The `filter` utility creates a new array with all elements that pass the test im
 
 ```ts
 interface FilterFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean | Promise<boolean>): T[] | Promise<T[]>
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean | Promise<boolean>): T[] | Promise<T[]>;
 }
 ```
 
@@ -48,7 +48,7 @@ interface FilterFunction {
 import { filter } from '@vielzeug/toolkit';
 
 const numbers = [1, 2, 3, 4, 5, 6];
-const evens = filter(numbers, x => x % 2 === 0); // [2, 4, 6]
+const evens = filter(numbers, (x) => x % 2 === 0); // [2, 4, 6]
 ```
 
 ### Filtering Objects
@@ -59,10 +59,10 @@ import { filter } from '@vielzeug/toolkit';
 const users = [
   { id: 1, name: 'Alice', active: true },
   { id: 2, name: 'Bob', active: false },
-  { id: 3, name: 'Charlie', active: true }
+  { id: 3, name: 'Charlie', active: true },
 ];
 
-const activeUsers = filter(users, u => u.active);
+const activeUsers = filter(users, (u) => u.active);
 // [{ id: 1, ... }, { id: 3, ... }]
 ```
 

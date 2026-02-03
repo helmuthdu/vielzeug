@@ -61,7 +61,7 @@ import { merge } from '@vielzeug/toolkit';
 const obj1 = { a: 1, b: { x: 10 } };
 const obj2 = { b: { y: 20 } };
 
-merge('deep', obj1, obj2);    // { a: 1, b: { x: 10, y: 20 } }
+merge('deep', obj1, obj2); // { a: 1, b: { x: 10, y: 20 } }
 merge('shallow', obj1, obj2); // { a: 1, b: { y: 20 } }
 ```
 
@@ -73,7 +73,7 @@ import { merge } from '@vielzeug/toolkit';
 const defaults = { tags: ['new'] };
 const overrides = { tags: ['featured'] };
 
-merge('arrayConcat', defaults, overrides);  // { tags: ['new', 'featured'] }
+merge('arrayConcat', defaults, overrides); // { tags: ['new', 'featured'] }
 merge('arrayReplace', defaults, overrides); // { tags: ['featured'] }
 ```
 

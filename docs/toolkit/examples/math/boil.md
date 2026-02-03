@@ -23,7 +23,7 @@ The `boil` utility reduces an array to a single "best" value based on a custom c
 
 ```ts
 interface BoilFunction {
-  <T>(array: T[], compare: (a: T, b: T) => T): T
+  <T>(array: T[], compare: (a: T, b: T) => T): T;
 }
 ```
 
@@ -46,7 +46,7 @@ import { boil } from '@vielzeug/toolkit';
 
 const fruits = ['apple', 'banana', 'cherry', 'date'];
 
-const longest = boil(fruits, (a, b) => a.length > b.length ? a : b);
+const longest = boil(fruits, (a, b) => (a.length > b.length ? a : b));
 // 'banana'
 ```
 
@@ -58,10 +58,10 @@ import { boil } from '@vielzeug/toolkit';
 const users = [
   { name: 'Alice', score: 100 },
   { name: 'Bob', score: 150 },
-  { name: 'Charlie', score: 120 }
+  { name: 'Charlie', score: 120 },
 ];
 
-const highScorer = boil(users, (a, b) => a.score > b.score ? a : b);
+const highScorer = boil(users, (a, b) => (a.score > b.score ? a : b));
 // { name: 'Bob', score: 150 }
 ```
 

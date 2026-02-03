@@ -28,12 +28,7 @@ interface AlternateOptions {
 }
 
 interface AlternateFunction {
-  <T>(
-    array: T[],
-    item: T,
-    selector?: (item: T) => Primitive,
-    options?: AlternateOptions
-  ): T[]
+  <T>(array: T[], item: T, selector?: (item: T) => Primitive, options?: AlternateOptions): T[];
 }
 ```
 
@@ -70,15 +65,18 @@ alternate(numbers, 2); // [1, 3]
 ```ts
 import { alternate } from '@vielzeug/toolkit';
 
-const users = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
+const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+];
 const newUser = { id: 3, name: 'Charlie' };
 const existingUser = { id: 1, name: 'Alice Smith' };
 
 // Toggle based on ID
-const result1 = alternate(users, newUser, u => u.id);
+const result1 = alternate(users, newUser, (u) => u.id);
 // [{ id: 1, ... }, { id: 2, ... }, { id: 3, ... }]
 
-const result2 = alternate(users, existingUser, u => u.id);
+const result2 = alternate(users, existingUser, (u) => u.id);
 // [{ id: 2, name: 'Bob' }]
 ```
 

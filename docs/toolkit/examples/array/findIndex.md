@@ -23,7 +23,7 @@ The `findIndex` utility returns the index of the first element in an array that 
 
 ```ts
 interface FindIndexFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number;
 }
 ```
 
@@ -49,10 +49,10 @@ import { findIndex } from '@vielzeug/toolkit';
 const fruits = ['apple', 'banana', 'cherry', 'date'];
 
 // Find index of 'cherry'
-findIndex(fruits, f => f === 'cherry'); // 2
+findIndex(fruits, (f) => f === 'cherry'); // 2
 
 // Find index of a fruit starting with 'z'
-findIndex(fruits, f => f.startsWith('z')); // -1
+findIndex(fruits, (f) => f.startsWith('z')); // -1
 ```
 
 ### Finding Object Index
@@ -63,10 +63,10 @@ import { findIndex } from '@vielzeug/toolkit';
 const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
-  { id: 3, name: 'Charlie' }
+  { id: 3, name: 'Charlie' },
 ];
 
-const bobIndex = findIndex(users, u => u.name === 'Bob'); // 1
+const bobIndex = findIndex(users, (u) => u.name === 'Bob'); // 1
 ```
 
 ## Implementation Notes
@@ -78,5 +78,5 @@ const bobIndex = findIndex(users, u => u.name === 'Bob'); // 1
 ## See Also
 
 - [find](./find.md): Get the first matching element itself.
-- [findLast](./findLast.md): Get the *last* matching element.
+- [findLast](./findLast.md): Get the _last_ matching element.
 - [search](./search.md): Find elements based on a query.

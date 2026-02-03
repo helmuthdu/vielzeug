@@ -24,11 +24,7 @@ The `find` utility returns the first element in an array that passes the provide
 
 ```ts
 interface FindFunction {
-  <T>(
-    array: T[], 
-    predicate: (item: T, index: number, array: T[]) => boolean, 
-    defaultValue?: T
-  ): T | undefined
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, defaultValue?: T): T | undefined;
 }
 ```
 
@@ -55,7 +51,7 @@ import { find } from '@vielzeug/toolkit';
 const numbers = [1, 3, 4, 7, 8];
 
 // Find the first even number
-find(numbers, x => x % 2 === 0); // 4
+find(numbers, (x) => x % 2 === 0); // 4
 ```
 
 ### Using a Default Value
@@ -65,11 +61,11 @@ import { find } from '@vielzeug/toolkit';
 
 const users = [
   { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' }
+  { id: 2, name: 'Bob' },
 ];
 
 // Find user by ID with fallback
-const user = find(users, u => u.id === 99, { id: 0, name: 'Guest' });
+const user = find(users, (u) => u.id === 99, { id: 0, name: 'Guest' });
 // { id: 0, name: 'Guest' }
 ```
 
@@ -82,6 +78,6 @@ const user = find(users, u => u.id === 99, { id: 0, name: 'Guest' });
 ## See Also
 
 - [findIndex](./findIndex.md): Get the index of the first matching element.
-- [findLast](./findLast.md): Get the *last* matching element.
-- [filter](./filter.md): Get *all* matching elements.
-- [some](./some.md): Check if *any* match exists.
+- [findLast](./findLast.md): Get the _last_ matching element.
+- [filter](./filter.md): Get _all_ matching elements.
+- [some](./some.md): Check if _any_ match exists.

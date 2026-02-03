@@ -24,7 +24,7 @@ The `range` utility generates an array of numbers starting from a base value up 
 
 ```ts
 interface RangeFunction {
-  (start: number, end: number, step?: number): number[]
+  (start: number, end: number, step?: number): number[];
 }
 ```
 
@@ -45,8 +45,8 @@ interface RangeFunction {
 ```ts
 import { range } from '@vielzeug/toolkit';
 
-range(0, 5);      // [0, 1, 2, 3, 4]
-range(1, 10, 2);  // [1, 3, 5, 7, 9]
+range(0, 5); // [0, 1, 2, 3, 4]
+range(1, 10, 2); // [1, 3, 5, 7, 9]
 ```
 
 ### Descending Ranges
@@ -55,7 +55,7 @@ range(1, 10, 2);  // [1, 3, 5, 7, 9]
 import { range } from '@vielzeug/toolkit';
 
 // Automatic step detection
-range(5, 0);      // [5, 4, 3, 2, 1]
+range(5, 0); // [5, 4, 3, 2, 1]
 
 // Explicit negative step
 range(10, 0, -2); // [10, 8, 6, 4, 2]
@@ -67,7 +67,7 @@ range(10, 0, -2); // [10, 8, 6, 4, 2]
 import { range, map } from '@vielzeug/toolkit';
 
 // Create 5 localized dates
-const dates = map(range(0, 5), day => {
+const dates = map(range(0, 5), (day) => {
   const d = new Date();
   d.setDate(d.getDate() + day);
   return d;

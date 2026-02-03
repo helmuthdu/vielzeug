@@ -23,7 +23,7 @@ The `lt` utility checks if the first value is strictly less than the second valu
 
 ```ts
 interface LTFunction {
-  <T>(a: T, b: T): boolean
+  <T>(a: T, b: T): boolean;
 }
 ```
 
@@ -43,9 +43,9 @@ interface LTFunction {
 ```ts
 import { lt } from '@vielzeug/toolkit';
 
-lt(5, 10);    // true
-lt(10, 5);    // false
-lt(5, 5);     // false
+lt(5, 10); // true
+lt(10, 5); // false
+lt(5, 5); // false
 lt('a', 'b'); // true
 ```
 

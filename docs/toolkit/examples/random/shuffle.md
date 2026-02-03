@@ -24,7 +24,7 @@ The `shuffle` utility creates a new array with the elements of the original arra
 
 ```ts
 interface ShuffleFunction {
-  <T>(array: T[]): T[]
+  <T>(array: T[]): T[];
 }
 ```
 

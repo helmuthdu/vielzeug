@@ -23,7 +23,7 @@ The `flatten` utility recursively flattens nested arrays into a single-level arr
 
 ```ts
 interface FlattenFunction {
-  <T>(array: any[]): T[]
+  <T>(array: any[]): T[];
 }
 ```
 
@@ -43,7 +43,7 @@ interface FlattenFunction {
 import { flatten } from '@vielzeug/toolkit';
 
 const nested = [1, [2, [3, [4, [5]]]]];
-const flat = flatten(nested); 
+const flat = flatten(nested);
 // [1, 2, 3, 4, 5]
 ```
 
@@ -55,10 +55,10 @@ import { flatten } from '@vielzeug/toolkit';
 const matrix = [
   [1, 2],
   [3, 4],
-  [5, 6]
+  [5, 6],
 ];
 
-flatten(matrix); 
+flatten(matrix);
 // [1, 2, 3, 4, 5, 6]
 ```
 

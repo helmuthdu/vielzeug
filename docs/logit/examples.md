@@ -25,10 +25,10 @@ Logit.warn('Deprecated method called', { method: 'oldAPI', replacement: 'newAPI'
 Logit.error('Database connection failed', new Error('ECONNREFUSED'));
 
 // Trace - very detailed trace information
-Logit.trace('Function execution trace', { 
+Logit.trace('Function execution trace', {
   function: 'processData',
   args: [1, 2, 3],
-  caller: 'main'
+  caller: 'main',
 });
 ```
 
@@ -39,14 +39,14 @@ Logit.trace('Function execution trace', {
 const users = [
   { id: 1, name: 'Alice', role: 'Admin', active: true },
   { id: 2, name: 'Bob', role: 'User', active: true },
-  { id: 3, name: 'Charlie', role: 'User', active: false }
+  { id: 3, name: 'Charlie', role: 'User', active: false },
 ];
 Logit.table(users);
 
 // Display with custom properties
 const metrics = [
   { endpoint: '/api/users', requests: 1234, avgTime: '45ms' },
-  { endpoint: '/api/posts', requests: 567, avgTime: '23ms' }
+  { endpoint: '/api/posts', requests: 567, avgTime: '23ms' },
 ];
 Logit.table(metrics);
 ```
@@ -169,27 +169,27 @@ dbLogger.error('Connection failed', new Error('Timeout'));
 ```ts
 // Symbol variant (emoji-like)
 Logit.setVariant('symbol');
-Logit.debug('Debug');   // 🅳 Debug
-Logit.info('Info');     // 🅸 Info
+Logit.debug('Debug'); // 🅳 Debug
+Logit.info('Info'); // 🅸 Info
 Logit.success('Success'); // 🅂 Success
-Logit.warn('Warning');  // 🆆 Warning
-Logit.error('Error');   // 🅴 Error
+Logit.warn('Warning'); // 🆆 Warning
+Logit.error('Error'); // 🅴 Error
 
 // Icon variant (unicode icons)
 Logit.setVariant('icon');
-Logit.debug('Debug');   // ☕ Debug
-Logit.info('Info');     // ℹ Info
+Logit.debug('Debug'); // ☕ Debug
+Logit.info('Info'); // ℹ Info
 Logit.success('Success'); // ✔ Success
-Logit.warn('Warning');  // ⚠ Warning
-Logit.error('Error');   // ✘ Error
+Logit.warn('Warning'); // ⚠ Warning
+Logit.error('Error'); // ✘ Error
 
 // Text variant (plain text)
 Logit.setVariant('text');
-Logit.debug('Debug');   // [DEBUG] Debug
-Logit.info('Info');     // [INFO] Info
+Logit.debug('Debug'); // [DEBUG] Debug
+Logit.info('Info'); // [INFO] Info
 Logit.success('Success'); // [SUCCESS] Success
-Logit.warn('Warning');  // [WARN] Warning
-Logit.error('Error');   // [ERROR] Error
+Logit.warn('Warning'); // [WARN] Warning
+Logit.error('Error'); // [ERROR] Error
 ```
 
 ## Log Level Management
@@ -200,26 +200,26 @@ Logit.error('Error');   // [ERROR] Error
 // Development configuration
 if (process.env.NODE_ENV === 'development') {
   Logit.initialise({
-    logLevel: 'debug',     // Show all logs
-    variant: 'symbol',     // Use symbols
+    logLevel: 'debug', // Show all logs
+    variant: 'symbol', // Use symbols
     timestamp: true,
-    environment: true
+    environment: true,
   });
-  
+
   Logit.debug('App in development mode');
 }
 
 // Production configuration
 if (process.env.NODE_ENV === 'production') {
   Logit.initialise({
-    logLevel: 'warn',      // Only warnings and errors
-    variant: 'text',       // Plain text for log aggregators
+    logLevel: 'warn', // Only warnings and errors
+    variant: 'text', // Plain text for log aggregators
     timestamp: true,
     environment: false,
     remote: {
       handler: sendToLoggingService,
-      logLevel: 'error'
-    }
+      logLevel: 'error',
+    },
   });
 }
 ```
@@ -261,12 +261,12 @@ Logit.setRemote({
           timestamp: new Date().toISOString(),
           level: type,
           prefix: Logit.getPrefix(),
-          args: args
-        })
+          args: args,
+        }),
       });
     }
   },
-  logLevel: 'warn'
+  logLevel: 'warn',
 });
 
 // These will be sent remotely
@@ -284,13 +284,13 @@ Logit.debug('Debug info'); // Not sent
 Logit.setRemote({
   handler: async (type, ...args) => {
     // Serialize errors properly
-    const serialized = args.map(arg => {
+    const serialized = args.map((arg) => {
       if (arg instanceof Error) {
         return {
           name: arg.name,
           message: arg.message,
           stack: arg.stack,
-          ...arg // Include any custom properties
+          ...arg, // Include any custom properties
         };
       }
       return arg;
@@ -303,21 +303,21 @@ Logit.setRemote({
       environment: process.env.NODE_ENV,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'node',
       url: typeof window !== 'undefined' ? window.location.href : undefined,
-      args: serialized
+      args: serialized,
     };
 
     try {
       await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry)
+        body: JSON.stringify(logEntry),
       });
     } catch (error) {
       // Fallback: log to console if remote logging fails
       console.error('Remote logging failed:', error);
     }
   },
-  logLevel: 'error'
+  logLevel: 'error',
 });
 ```
 
@@ -327,23 +327,25 @@ Logit.setRemote({
 Logit.setRemote({
   handler: async (type, ...args) => {
     const logData = { type, args, timestamp: Date.now() };
-    
+
     // Send to multiple services in parallel
-    await Promise.all([
-      // Send to your backend
-      fetch('/api/logs', {
-        method: 'POST',
-        body: JSON.stringify(logData)
-      }),
-      
-      // Send to third-party service (e.g., Sentry)
-      type === 'error' && sendToSentry(args[0]),
-      
-      // Write to local storage for offline support
-      saveToLocalStorage(logData)
-    ].filter(Boolean));
+    await Promise.all(
+      [
+        // Send to your backend
+        fetch('/api/logs', {
+          method: 'POST',
+          body: JSON.stringify(logData),
+        }),
+
+        // Send to third-party service (e.g., Sentry)
+        type === 'error' && sendToSentry(args[0]),
+
+        // Write to local storage for offline support
+        saveToLocalStorage(logData),
+      ].filter(Boolean),
+    );
   },
-  logLevel: 'warn'
+  logLevel: 'warn',
 });
 ```
 
@@ -359,9 +361,9 @@ try {
     operation: 'riskyOperation',
     error: error instanceof Error ? error.message : 'Unknown error',
     stack: error instanceof Error ? error.stack : undefined,
-    context: { userId: user.id, timestamp: Date.now() }
+    context: { userId: user.id, timestamp: Date.now() },
   });
-  
+
   // Re-throw if needed
   throw error;
 }
@@ -374,14 +376,14 @@ try {
 const user = getCurrentUser();
 Logit.assert(user !== null, 'User must be logged in', {
   route: '/protected',
-  timestamp: Date.now()
+  timestamp: Date.now(),
 });
 
 // Validate data
 const isValidEmail = validateEmail(email);
 Logit.assert(isValidEmail, 'Invalid email format', {
   email,
-  validator: 'validateEmail'
+  validator: 'validateEmail',
 });
 ```
 
@@ -399,13 +401,13 @@ function useLogger(componentName: string) {
   useEffect(() => {
     Logit.setPrefix(componentName);
     Logit.debug('Component mounted', {
-      mountTime: new Date().toISOString()
+      mountTime: new Date().toISOString(),
     });
 
     return () => {
       const duration = Date.now() - mountTime.current;
       Logit.debug('Component unmounted', {
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
       });
     };
   }, [componentName]);
@@ -422,7 +424,7 @@ function useLogger(componentName: string) {
     error: (...args: any[]) => {
       Logit.setPrefix(componentName);
       Logit.error(...args);
-    }
+    },
   };
 }
 
@@ -454,26 +456,26 @@ const app = express();
 app.use((req, res, next) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).slice(2);
-  
+
   Logit.setPrefix(`Request-${requestId}`);
   Logit.info('Incoming request', {
     method: req.method,
     path: req.path,
     ip: req.ip,
-    userAgent: req.get('user-agent')
+    userAgent: req.get('user-agent'),
   });
 
   // Log response
   res.on('finish', () => {
     const duration = Date.now() - startTime;
     const level = res.statusCode >= 400 ? 'error' : 'info';
-    
+
     Logit.setPrefix(`Request-${requestId}`);
     Logit[level]('Request completed', {
       method: req.method,
       path: req.path,
       status: res.statusCode,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
     });
   });
 
@@ -487,9 +489,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
     error: err.message,
     stack: err.stack,
     path: req.path,
-    method: req.method
+    method: req.method,
   });
-  
+
   res.status(500).json({ error: 'Internal server error' });
 });
 ```
@@ -527,7 +529,7 @@ export function useComponentLogger(componentName: string) {
     error: (...args: any[]) => {
       Logit.setPrefix(componentName);
       Logit.error(...args);
-    }
+    },
   };
 }
 ```
@@ -543,9 +545,9 @@ class StructuredLogger {
     const structuredLog = {
       event,
       timestamp: new Date().toISOString(),
-      ...data
+      ...data,
     };
-    
+
     Logit[level](event, structuredLog);
   }
 }
@@ -556,14 +558,14 @@ const logger = new StructuredLogger();
 logger.log('info', 'user.login', {
   userId: '123',
   method: 'email',
-  source: 'web'
+  source: 'web',
 });
 
 logger.log('error', 'payment.failed', {
   orderId: 'ord_123',
   amount: 99.99,
   currency: 'USD',
-  errorCode: 'CARD_DECLINED'
+  errorCode: 'CARD_DECLINED',
 });
 ```
 
@@ -587,16 +589,16 @@ class PerformanceMonitor {
 
     const duration = Date.now() - startTime;
     Logit.timeEnd(label);
-    
+
     // Log slow operations
     if (duration > 1000) {
       Logit.warn('Slow operation detected', {
         operation: label,
         duration: `${duration}ms`,
-        ...metadata
+        ...metadata,
       });
     }
-    
+
     this.timers.delete(label);
   }
 }
@@ -624,7 +626,7 @@ function prodError(message: string, error: Error) {
   if (process.env.NODE_ENV === 'production') {
     Logit.error(message, {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
   }
 }
@@ -655,7 +657,7 @@ class BatchLogger {
     this.batch.push({
       type,
       args,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     if (this.batch.length >= this.batchSize) {
@@ -673,7 +675,7 @@ class BatchLogger {
       await fetch('/api/logs/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logs: logsToSend })
+        body: JSON.stringify({ logs: logsToSend }),
       });
     } catch (error) {
       Logit.error('Failed to send batch logs', error);

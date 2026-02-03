@@ -23,7 +23,7 @@ The `rate` utility calculates the percentage of a value relative to a total. It 
 
 ```ts
 interface RateFunction {
-  (value: number, total: number): number
+  (value: number, total: number): number;
 }
 ```
 
@@ -44,8 +44,8 @@ interface RateFunction {
 import { rate } from '@vielzeug/toolkit';
 
 rate(50, 100); // 50
-rate(1, 4);    // 25
-rate(3, 10);   // 30
+rate(1, 4); // 25
+rate(3, 10); // 30
 ```
 
 ### Safety with Zero
@@ -68,7 +68,6 @@ rate(10, 0); // 0
 - [round](./round.md): Round the calculated rate to a specific precision.
 - [clamp](./clamp.md): Ensure the rate stays within a `0-100` range if `value > total`.
 - [average](./average.md): Calculate the mean of multiple rates.
-
 
 ## Related
 

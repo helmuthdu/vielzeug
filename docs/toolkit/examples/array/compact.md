@@ -23,7 +23,7 @@ The `compact` utility creates a new array with all falsy values removed. This is
 
 ```ts
 interface CompactFunction {
-  <T>(array: (T | null | undefined | false | "" | 0 | typeof NaN)[]): T[]
+  <T>(array: (T | null | undefined | false | '' | 0 | typeof NaN)[]): T[];
 }
 ```
 
@@ -43,7 +43,7 @@ interface CompactFunction {
 import { compact } from '@vielzeug/toolkit';
 
 const mixed = [0, 1, false, 2, '', 3, null, undefined, NaN, 'hello'];
-const clean = compact(mixed); 
+const clean = compact(mixed);
 // [1, 2, 3, 'hello']
 ```
 
@@ -52,12 +52,7 @@ const clean = compact(mixed);
 ```ts
 import { compact, map } from '@vielzeug/toolkit';
 
-const users = [
-  { id: 1, name: 'Alice' },
-  null,
-  { id: 2, name: 'Bob' },
-  undefined
-];
+const users = [{ id: 1, name: 'Alice' }, null, { id: 2, name: 'Bob' }, undefined];
 
 const validUsers = compact(users);
 // [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]

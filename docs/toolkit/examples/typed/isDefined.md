@@ -23,7 +23,7 @@ The `isDefined` utility is a type guard that checks if a value is NOT `undefined
 
 ```ts
 interface IsDefinedFunction {
-  <T>(value: T | undefined | null): value is T
+  <T>(value: T | undefined | null): value is T;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsDefinedFunction {
 ```ts
 import { isDefined } from '@vielzeug/toolkit';
 
-isDefined('hello');   // true
-isDefined(0);         // true
-isDefined(false);     // true
-isDefined(null);      // false
+isDefined('hello'); // true
+isDefined(0); // true
+isDefined(false); // true
+isDefined(null); // false
 isDefined(undefined); // false
 ```
 
@@ -57,7 +57,7 @@ import { isDefined, filter } from '@vielzeug/toolkit';
 const data = ['a', undefined, 'b', null, 'c'];
 
 // TypeScript correctly infers the result as string[]
-const cleanData = filter(data, isDefined); 
+const cleanData = filter(data, isDefined);
 // ['a', 'b', 'c']
 ```
 

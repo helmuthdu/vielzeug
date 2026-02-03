@@ -32,7 +32,7 @@ interface ProxyOptions<T extends object> {
 }
 
 interface ProxyFunction {
-  <T extends object>(item: T, options?: ProxyOptions<T>): T
+  <T extends object>(item: T, options?: ProxyOptions<T>): T;
 }
 ```
 
@@ -61,7 +61,7 @@ const user = { name: 'Alice', age: 25 };
 const observableUser = proxy(user, {
   set: (prop, next, prev) => {
     console.log(`${String(prop)} changed from ${prev} to ${next}`);
-  }
+  },
 });
 
 observableUser.name = 'Bob'; // Logs: name changed from Alice to Bob
@@ -72,20 +72,20 @@ observableUser.name = 'Bob'; // Logs: name changed from Alice to Bob
 ```ts
 import { proxy } from '@vielzeug/toolkit';
 
-const config = { 
+const config = {
   api: { host: 'localhost' },
-  ui: { theme: 'dark' }
+  ui: { theme: 'dark' },
 };
 
 // Only watch the 'api' key, and do it deeply
 const watchedConfig = proxy(config, {
   deep: true,
   watch: ['api'],
-  set: (prop) => console.log(`API config updated: ${String(prop)}`)
+  set: (prop) => console.log(`API config updated: ${String(prop)}`),
 });
 
 watchedConfig.api.host = 'api.example.com'; // Triggers callback
-watchedConfig.ui.theme = 'light';           // Does NOT trigger callback
+watchedConfig.ui.theme = 'light'; // Does NOT trigger callback
 ```
 
 ## Implementation Notes

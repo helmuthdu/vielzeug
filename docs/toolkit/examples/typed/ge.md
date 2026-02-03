@@ -23,7 +23,7 @@ The `ge` utility checks if the first value is greater than or equal to the secon
 
 ```ts
 interface GEFunction {
-  <T>(a: T, b: T): boolean
+  <T>(a: T, b: T): boolean;
 }
 ```
 
@@ -43,9 +43,9 @@ interface GEFunction {
 ```ts
 import { ge } from '@vielzeug/toolkit';
 
-ge(10, 5);    // true
-ge(5, 5);     // true
-ge(3, 10);    // false
+ge(10, 5); // true
+ge(5, 5); // true
+ge(3, 10); // false
 ge('b', 'a'); // true
 ```
 

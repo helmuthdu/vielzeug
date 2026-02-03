@@ -23,7 +23,7 @@ The `isEven` utility is a type guard that checks if a given number is an even in
 
 ```ts
 interface IsEvenFunction {
-  (value: number): boolean
+  (value: number): boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsEvenFunction {
 ```ts
 import { isEven } from '@vielzeug/toolkit';
 
-isEven(2);  // true
+isEven(2); // true
 isEven(42); // true
-isEven(3);  // false
-isEven(0);  // true
+isEven(3); // false
+isEven(0); // true
 ```
 
 ## Implementation Notes

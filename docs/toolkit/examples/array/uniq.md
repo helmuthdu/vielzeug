@@ -25,7 +25,7 @@ The `uniq` utility creates a new array containing only unique values from the in
 type Selector<T> = keyof T | ((item: T) => Primitive);
 
 interface UniqFunction {
-  <T>(array: T[], selector?: Selector<T>): T[]
+  <T>(array: T[], selector?: Selector<T>): T[];
 }
 ```
 
@@ -58,7 +58,7 @@ const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
   { id: 2, name: 'Robert' }, // Duplicate ID
-  { id: 3, name: 'Charlie' }
+  { id: 3, name: 'Charlie' },
 ];
 
 // Deduplicate by 'id' key
@@ -74,7 +74,7 @@ import { uniq } from '@vielzeug/toolkit';
 const data = ['apple', 'Apple', 'banana', 'BANANA'];
 
 // Deduplicate ignoring case
-const uniqueCaseInsensitive = uniq(data, s => s.toLowerCase());
+const uniqueCaseInsensitive = uniq(data, (s) => s.toLowerCase());
 // ['apple', 'banana']
 ```
 

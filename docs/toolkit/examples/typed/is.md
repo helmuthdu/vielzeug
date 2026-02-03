@@ -31,16 +31,16 @@ interface IsFunction {
   (type: 'array', value: unknown): value is any[];
   (type: 'object', value: unknown): value is object;
   (type: 'nil', value: unknown): value is null | undefined;
-  
+
   // Logical predicates
   (type: 'empty', value: unknown): boolean;
   (type: 'match', value: any, pattern: any): boolean;
   (type: 'within', value: number, min: number, max: number): boolean;
-  
+
   // Comparisons
   (type: 'gt', a: any, b: any): boolean;
   (type: 'ge', a: any, b: any): boolean;
-  
+
   // ... and many more
 }
 ```
@@ -61,10 +61,10 @@ interface IsFunction {
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is('array', []);       // true
-is('string', 'hello');  // true
-is('nil', null);        // true
-is('primitive', true);  // true
+is('array', []); // true
+is('string', 'hello'); // true
+is('nil', null); // true
+is('primitive', true); // true
 ```
 
 ### Using Predicates & Comparisons
@@ -72,10 +72,10 @@ is('primitive', true);  // true
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is('empty', {});        // true
-is('even', 42);         // true
+is('empty', {}); // true
+is('even', 42); // true
 is('within', 5, 0, 10); // true
-is('gt', 10, 5);        // true
+is('gt', 10, 5); // true
 is('match', { a: 1 }, { a: 1 }); // true
 ```
 
@@ -84,8 +84,8 @@ is('match', { a: 1 }, { a: 1 }); // true
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is(new Date(), Date);   // true
-is([], Array);          // true
+is(new Date(), Date); // true
+is([], Array); // true
 
 class MyClass {}
 is(new MyClass(), MyClass); // true

@@ -24,7 +24,7 @@ The `draw` utility picks a single random element from an array. It is perfect fo
 
 ```ts
 interface DrawFunction {
-  <T>(array: T[]): T | undefined
+  <T>(array: T[]): T | undefined;
 }
 ```
 
@@ -45,7 +45,7 @@ interface DrawFunction {
 import { draw } from '@vielzeug/toolkit';
 
 const fruits = ['apple', 'banana', 'cherry', 'date'];
-const randomFruit = draw(fruits); 
+const randomFruit = draw(fruits);
 // returns one of the fruits randomly
 ```
 
@@ -57,7 +57,7 @@ import { draw } from '@vielzeug/toolkit';
 const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
-  { id: 3, name: 'Charlie' }
+  { id: 3, name: 'Charlie' },
 ];
 
 const winner = draw(users);

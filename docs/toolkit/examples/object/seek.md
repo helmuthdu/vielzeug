@@ -24,7 +24,7 @@ The `seek` utility performs a deep fuzzy search within an object or array. It re
 
 ```ts
 interface SeekFunction {
-  <T>(item: T, query: string, tone?: number): boolean
+  <T>(item: T, query: string, tone?: number): boolean;
 }
 ```
 
@@ -49,14 +49,14 @@ const data = {
   id: 1,
   meta: {
     title: 'Hello World',
-    author: { name: 'Alice' }
+    author: { name: 'Alice' },
   },
-  tags: ['coding', 'typescript']
+  tags: ['coding', 'typescript'],
 };
 
 seek(data, 'hello'); // true (matches title)
 seek(data, 'alice'); // true (matches nested author name)
-seek(data, 'type');  // true (matches tag)
+seek(data, 'type'); // true (matches tag)
 seek(data, 'missing'); // false
 ```
 

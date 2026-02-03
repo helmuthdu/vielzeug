@@ -23,7 +23,7 @@ The `contains` utility checks if a specific value exists within an array. Unlike
 
 ```ts
 interface ContainsFunction {
-  <T>(array: T[], value: any): boolean
+  <T>(array: T[], value: any): boolean;
 }
 ```
 
@@ -55,7 +55,7 @@ import { contains } from '@vielzeug/toolkit';
 
 const users = [
   { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' }
+  { id: 2, name: 'Bob' },
 ];
 
 // native includes() would return false here for a new object literal
@@ -67,7 +67,10 @@ contains(users, { id: 1, name: 'Alice' }); // true
 ```ts
 import { contains } from '@vielzeug/toolkit';
 
-const nested = [[1, 2], [3, 4]];
+const nested = [
+  [1, 2],
+  [3, 4],
+];
 contains(nested, [1, 2]); // true
 ```
 

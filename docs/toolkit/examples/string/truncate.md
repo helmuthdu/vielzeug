@@ -30,7 +30,7 @@ interface TruncateFunction {
 ### Parameters
 
 - `input`: The string to be truncated.
-- `length`: The maximum allowed length of the resulting string, *including* the suffix.
+- `length`: The maximum allowed length of the resulting string, _including_ the suffix.
 - `suffix`: The string to append to the end of the truncated result (default: `'...'`).
 
 ### Returns

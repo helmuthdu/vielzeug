@@ -23,7 +23,7 @@ The `isEmpty` utility checks if a given value is considered "empty". It supports
 
 ```ts
 interface IsEmptyFunction {
-  (value: unknown): boolean
+  (value: unknown): boolean;
 }
 ```
 
@@ -42,7 +42,7 @@ interface IsEmptyFunction {
 ```ts
 import { isEmpty } from '@vielzeug/toolkit';
 
-isEmpty([]);        // true
+isEmpty([]); // true
 isEmpty([1, 2, 3]); // false
 
 isEmpty(new Set()); // true
@@ -54,11 +54,11 @@ isEmpty(new Map()); // true
 ```ts
 import { isEmpty } from '@vielzeug/toolkit';
 
-isEmpty('');        // true
-isEmpty('hello');   // false
+isEmpty(''); // true
+isEmpty('hello'); // false
 
-isEmpty({});        // true
-isEmpty({ a: 1 });  // false
+isEmpty({}); // true
+isEmpty({ a: 1 }); // false
 ```
 
 ### Checking Nullable Values
@@ -66,7 +66,7 @@ isEmpty({ a: 1 });  // false
 ```ts
 import { isEmpty } from '@vielzeug/toolkit';
 
-isEmpty(null);      // true
+isEmpty(null); // true
 isEmpty(undefined); // true
 ```
 

@@ -23,7 +23,7 @@ The `camelCase` utility transforms a string into `camelCase` format (lower case 
 
 ```ts
 interface CamelCaseFunction {
-  (input: string): string
+  (input: string): string;
 }
 ```
 
@@ -42,10 +42,10 @@ interface CamelCaseFunction {
 ```ts
 import { camelCase } from '@vielzeug/toolkit';
 
-camelCase('hello world');   // 'helloWorld'
-camelCase('foo-bar');       // 'fooBar'
-camelCase('USER_PROFILE');  // 'userProfile'
-camelCase('data.meta.id');  // 'dataMetaId'
+camelCase('hello world'); // 'helloWorld'
+camelCase('foo-bar'); // 'fooBar'
+camelCase('USER_PROFILE'); // 'userProfile'
+camelCase('data.meta.id'); // 'dataMetaId'
 ```
 
 ### Handling Complex Strings
@@ -54,8 +54,8 @@ camelCase('data.meta.id');  // 'dataMetaId'
 import { camelCase } from '@vielzeug/toolkit';
 
 camelCase('  multiple   spaces  '); // 'multipleSpaces'
-camelCase('--kebab--case--');      // 'kebabCase'
-camelCase('mixed_Case-string');    // 'mixedCaseString'
+camelCase('--kebab--case--'); // 'kebabCase'
+camelCase('mixed_Case-string'); // 'mixedCaseString'
 ```
 
 ## Implementation Notes

@@ -24,11 +24,7 @@ The `substitute` utility replaces the first element in an array that satisfies a
 
 ```ts
 interface SubstituteFunction {
-  <T>(
-    array: T[], 
-    predicate: (item: T, index: number, array: T[]) => boolean, 
-    value: T
-  ): T[]
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, value: T): T[];
 }
 ```
 
@@ -55,7 +51,7 @@ import { substitute } from '@vielzeug/toolkit';
 const numbers = [1, 2, 3, 4];
 
 // Replace the value 2 with 20
-substitute(numbers, n => n === 2, 20); // [1, 20, 3, 4]
+substitute(numbers, (n) => n === 2, 20); // [1, 20, 3, 4]
 ```
 
 ### Updating Objects
@@ -65,15 +61,11 @@ import { substitute } from '@vielzeug/toolkit';
 
 const users = [
   { id: 1, name: 'Alice', status: 'pending' },
-  { id: 2, name: 'Bob', status: 'pending' }
+  { id: 2, name: 'Bob', status: 'pending' },
 ];
 
 // Update Bob's status
-const updated = substitute(
-  users, 
-  u => u.id === 2, 
-  { ...users[1], status: 'active' }
-);
+const updated = substitute(users, (u) => u.id === 2, { ...users[1], status: 'active' });
 /*
 [
   { id: 1, name: 'Alice', ... },

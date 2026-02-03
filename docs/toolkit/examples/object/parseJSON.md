@@ -32,7 +32,7 @@ interface ParseJSONOptions<T> {
 }
 
 interface ParseJSONFunction {
-  <T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined
+  <T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined;
 }
 ```
 
@@ -60,7 +60,7 @@ import { parseJSON } from '@vielzeug/toolkit';
 parseJSON('{"active": true}'); // { active: true }
 
 // Invalid JSON with fallback
-parseJSON('invalid { json', { defaultValue: { active: false } }); 
+parseJSON('invalid { json', { defaultValue: { active: false } });
 // { active: false }
 ```
 
@@ -73,8 +73,8 @@ const raw = '{"id": 123, "name": "Alice"}';
 
 // Validate that 'id' is a number
 const user = parseJSON(raw, {
-  validator: v => typeof v.id === 'number',
-  defaultValue: { id: 0, name: 'Guest' }
+  validator: (v) => typeof v.id === 'number',
+  defaultValue: { id: 0, name: 'Guest' },
 });
 ```
 
@@ -87,7 +87,7 @@ const raw = '{"amount": 42}';
 
 // Double all numbers during parsing
 const doubled = parseJSON(raw, {
-  reviver: (k, v) => (typeof v === 'number' ? v * 2 : v)
+  reviver: (k, v) => (typeof v === 'number' ? v * 2 : v),
 });
 // { amount: 84 }
 ```

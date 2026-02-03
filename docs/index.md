@@ -20,19 +20,19 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
-  - title: "@vielzeug/toolkit"
+  - title: '@vielzeug/toolkit'
     details: "<img src='/vielzeug/logo-utils.svg' alt='Utils Logo' width='32' style='float: right; margin: -24px 0 16px;'/>100+ type-safe, dependency-free utilities for arrays, objects, strings, dates, math, random, and more."
     link: /toolkit/
-  - title: "@vielzeug/deposit"
+  - title: '@vielzeug/deposit'
     details: "<img src='/vielzeug/logo-depot.svg' alt='Depot Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Unified, type-safe IndexedDB & LocalStorage with advanced querying, transactions, and migrations."
     link: /deposit/
-  - title: "@vielzeug/logit"
+  - title: '@vielzeug/logit'
     details: "<img src='/vielzeug/logo-logger.svg' alt='Logit Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Flexible, zero-dependency logger for browser & Node.js. Log levels, color themes, remote logging, and more."
     link: /logit/
-  - title: "@vielzeug/permit"
+  - title: '@vielzeug/permit'
     details: "<img src='/vielzeug/logo-permit.svg' alt='Permit Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Type-safe, extensible permission & role management for any app. Centralized, testable, and dynamic."
     link: /permit/
-  - title: "@vielzeug/fetchit"
+  - title: '@vielzeug/fetchit'
     details: "<img src='/vielzeug/logo-http.svg' alt='Http Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Modern, type-safe HTTP client for browser & Node.js. Unified API, caching, cancellation, and more."
     link: /fetchit/
 ---

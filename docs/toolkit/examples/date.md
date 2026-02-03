@@ -4,11 +4,11 @@ Date utilities provide a set of helpers to work with dates and times in a type-s
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :--- | :--- |
-| [`expires`](./date/expires.md) | Check if a given date or timestamp has already passed. |
+| Method                           | Description                                                       |
+| :------------------------------- | :---------------------------------------------------------------- |
+| [`expires`](./date/expires.md)   | Check if a given date or timestamp has already passed.            |
 | [`interval`](./date/interval.md) | Calculate the duration between two dates in human-readable units. |
-| [`timeDiff`](./date/timeDiff.md) | Get the raw difference between two dates in specific units. |
+| [`timeDiff`](./date/timeDiff.md) | Get the raw difference between two dates in specific units.       |
 
 ## 💡 Practical Examples
 
@@ -33,7 +33,7 @@ const start = new Date('2024-01-01');
 const end = new Date('2024-01-02 12:30:00');
 
 // Detailed interval breakdown
-const duration = interval(start, end); 
+const duration = interval(start, end);
 // { days: 1, hours: 12, minutes: 30, seconds: 0 }
 
 // Specific difference

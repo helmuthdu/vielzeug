@@ -23,7 +23,7 @@ The `some` utility checks if **at least one element** in an array satisfies a gi
 
 ```ts
 interface SomeFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean;
 }
 ```
 
@@ -49,7 +49,7 @@ import { some } from '@vielzeug/toolkit';
 const numbers = [1, 3, 5, 7, 8];
 
 // Check for even numbers
-const hasEven = some(numbers, x => x % 2 === 0); // true
+const hasEven = some(numbers, (x) => x % 2 === 0); // true
 ```
 
 ### Checking Object Properties
@@ -60,11 +60,11 @@ import { some } from '@vielzeug/toolkit';
 const users = [
   { id: 1, role: 'user' },
   { id: 2, role: 'editor' },
-  { id: 3, role: 'user' }
+  { id: 3, role: 'user' },
 ];
 
 // Check if any admin exists
-const hasAdmin = some(users, u => u.role === 'admin'); // false
+const hasAdmin = some(users, (u) => u.role === 'admin'); // false
 ```
 
 ## Implementation Notes
@@ -75,6 +75,6 @@ const hasAdmin = some(users, u => u.role === 'admin'); // false
 
 ## See Also
 
-- [every](./every.md): Check if *all* elements satisfy a condition.
+- [every](./every.md): Check if _all_ elements satisfy a condition.
 - [filter](./filter.md): Get all elements that satisfy a condition.
 - [find](./find.md): Get the first element that satisfies a condition.

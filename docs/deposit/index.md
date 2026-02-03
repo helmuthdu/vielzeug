@@ -16,6 +16,7 @@
 Browser storage APIs are powerful but notoriously complex. IndexedDB requires verbose boilerplate, lacks type safety, and has inconsistent error handling. LocalStorage is simple but limited to strings and lacks advanced features.
 
 **Without Deposit**:
+
 ```ts
 // IndexedDB - verbose and error-prone
 const request = indexedDB.open('myDB', 1);
@@ -32,6 +33,7 @@ request.onsuccess = (event) => {
 ```
 
 **With Deposit**:
+
 ```ts
 // Clean, type-safe, one-liner
 await db.put('users', { id: '1', name: 'Alice' });
@@ -39,20 +41,21 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 ### Comparison with Alternatives
 
-| Feature | Deposit | Dexie.js | LocalForage | Native IndexedDB |
-|---------|---------|----------|-------------|------------------|
-| TypeScript Support | ✅ First-class | ✅ Good | ⚠️ Limited | ❌ |
-| Query Builder | ✅ Advanced | ✅ Good | ❌ | ❌ |
-| Migrations | ✅ Built-in | ✅ Advanced | ❌ | ⚠️ Manual |
-| LocalStorage Support | ✅ Unified API | ❌ | ✅ | ❌ |
-| Bundle Size (gzip) | ~28KB | ~20KB | ~8KB | 0KB |
-| TTL Support | ✅ Native | ❌ | ❌ | ❌ |
-| Transactions | ✅ Yes | ✅ Yes | ❌ | ✅ Complex |
-| Dependencies | 0 | 0 | 0 | N/A |
+| Feature              | Deposit        | Dexie.js    | LocalForage | Native IndexedDB |
+| -------------------- | -------------- | ----------- | ----------- | ---------------- |
+| TypeScript Support   | ✅ First-class | ✅ Good     | ⚠️ Limited  | ❌               |
+| Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
+| Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
+| LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
+| Bundle Size (gzip)   | ~28KB          | ~20KB       | ~8KB        | 0KB              |
+| TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
+| Transactions         | ✅ Yes         | ✅ Yes      | ❌          | ✅ Complex       |
+| Dependencies         | 0              | 0           | 0           | N/A              |
 
 ## When to Use Deposit
 
 **✅ Use Deposit when you:**
+
 - Need type-safe client-side storage with autocompletion
 - Want to abstract IndexedDB complexity without losing power
 - Require advanced querying (filters, sorting, grouping)
@@ -61,6 +64,7 @@ await db.put('users', { id: '1', name: 'Alice' });
 - Build offline-first or PWA applications
 
 **❌ Consider alternatives when you:**
+
 - Only need simple key-value storage (use LocalStorage directly)
 - Already invested heavily in Dexie.js ecosystem
 - Need extremely minimal bundle size (use native APIs)
@@ -104,16 +108,16 @@ import { Deposit, IndexedDBAdapter } from '@vielzeug/deposit';
 
 // 1. Define your schema with types
 const schema = {
-  users: { 
-    key: 'id', 
-    indexes: ['email'], 
-    record: {} as { id: string; name: string; email: string } 
+  users: {
+    key: 'id',
+    indexes: ['email'],
+    record: {} as { id: string; name: string; email: string },
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as { id: string; userId: string; title: string; createdAt: number }
-  }
+    record: {} as { id: string; userId: string; title: string; createdAt: number },
+  },
 };
 
 // 2. Initialize the depot
@@ -141,8 +145,8 @@ const schema = {
   todos: {
     key: 'id',
     indexes: ['completed', 'createdAt'],
-    record: {} as Todo
-  }
+    record: {} as Todo,
+  },
 };
 
 const db = new Deposit(new IndexedDBAdapter('todos-db', 1, schema));
@@ -152,14 +156,11 @@ await db.put('todos', {
   id: crypto.randomUUID(),
   text: 'Learn Deposit',
   completed: false,
-  createdAt: Date.now()
+  createdAt: Date.now(),
 });
 
 // Query active todos
-const activeTodos = await db.query('todos')
-  .equals('completed', false)
-  .orderBy('createdAt', 'desc')
-  .toArray();
+const activeTodos = await db.query('todos').equals('completed', false).orderBy('createdAt', 'desc').toArray();
 
 // Update todo (put with same id)
 const todo = await db.get('todos', 'todo-id');
@@ -168,11 +169,12 @@ if (todo) {
 }
 
 // Delete completed todos
-const completed = await db.query('todos')
-  .equals('completed', true)
-  .toArray();
+const completed = await db.query('todos').equals('completed', true).toArray();
 
-await db.bulkDelete('todos', completed.map(t => t.id));
+await db.bulkDelete(
+  'todos',
+  completed.map((t) => t.id),
+);
 ```
 
 ## 📚 Documentation
@@ -217,6 +219,7 @@ Storage quota exceeded.
 
 ::: tip Solution
 Check available storage and clean up old data:
+
 ```ts
 // Check available storage
 if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -225,12 +228,17 @@ if ('storage' in navigator && 'estimate' in navigator.storage) {
 }
 
 // Clean up old data
-const oldTodos = await db.query('todos')
+const oldTodos = await db
+  .query('todos')
   .filter((todo) => todo.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000)
   .toArray();
 
-await db.bulkDelete('todos', oldTodos.map(t => t.id));
+await db.bulkDelete(
+  'todos',
+  oldTodos.map((t) => t.id),
+);
 ```
+
 :::
 
 ### TypeScript errors with schema
@@ -241,14 +249,16 @@ Type inference not working.
 
 ::: tip Solution
 Ensure you're using type assertions in schema:
+
 ```ts
 const schema = {
   users: {
-    record: {} as User  // ✅ Correct
+    record: {} as User, // ✅ Correct
     // record: User     // ❌ Wrong
-  }
+  },
 };
 ```
+
 :::
 
 ### Migration not running
@@ -259,6 +269,7 @@ Schema changes not applied.
 
 ::: tip Solution
 Increment the version number:
+
 ```ts
 // Old
 const adapter = new IndexedDBAdapter('my-db', 1, schema);
@@ -266,6 +277,7 @@ const adapter = new IndexedDBAdapter('my-db', 1, schema);
 // New
 const adapter = new IndexedDBAdapter('my-db', 2, schema);
 ```
+
 :::
 
 ## 🤝 Contributing

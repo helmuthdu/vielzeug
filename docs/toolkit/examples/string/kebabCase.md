@@ -23,7 +23,7 @@ The `kebabCase` utility transforms a string into `kebab-case` format (all lower 
 
 ```ts
 interface KebabCaseFunction {
-  (input: string): string
+  (input: string): string;
 }
 ```
 
@@ -42,10 +42,10 @@ interface KebabCaseFunction {
 ```ts
 import { kebabCase } from '@vielzeug/toolkit';
 
-kebabCase('hello world');   // 'hello-world'
-kebabCase('fooBar');       // 'foo-bar'
-kebabCase('USER_PROFILE');  // 'user-profile'
-kebabCase('data.meta.id');  // 'data-meta-id'
+kebabCase('hello world'); // 'hello-world'
+kebabCase('fooBar'); // 'foo-bar'
+kebabCase('USER_PROFILE'); // 'user-profile'
+kebabCase('data.meta.id'); // 'data-meta-id'
 ```
 
 ### Advanced Scenarios
@@ -54,7 +54,7 @@ kebabCase('data.meta.id');  // 'data-meta-id'
 import { kebabCase } from '@vielzeug/toolkit';
 
 kebabCase('  leading trailing  '); // 'leading-trailing'
-kebabCase('XMLHttpRequest');       // 'xml-http-request'
+kebabCase('XMLHttpRequest'); // 'xml-http-request'
 kebabCase('multiple___underscores'); // 'multiple-underscores'
 ```
 

@@ -23,7 +23,7 @@ The `gt` utility checks if the first value is strictly greater than the second v
 
 ```ts
 interface GTFunction {
-  <T>(a: T, b: T): boolean
+  <T>(a: T, b: T): boolean;
 }
 ```
 
@@ -43,9 +43,9 @@ interface GTFunction {
 ```ts
 import { gt } from '@vielzeug/toolkit';
 
-gt(10, 5);    // true
-gt(5, 10);    // false
-gt(5, 5);     // false
+gt(10, 5); // true
+gt(5, 10); // false
+gt(5, 5); // false
 gt('b', 'a'); // true
 ```
 

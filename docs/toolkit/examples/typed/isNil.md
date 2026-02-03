@@ -23,7 +23,7 @@ The `isNil` utility is a type guard that checks if a value is strictly `null` or
 
 ```ts
 interface IsNilFunction {
-  (value: unknown): value is null | undefined
+  (value: unknown): value is null | undefined;
 }
 ```
 
@@ -42,11 +42,11 @@ interface IsNilFunction {
 ```ts
 import { isNil } from '@vielzeug/toolkit';
 
-isNil(null);      // true
+isNil(null); // true
 isNil(undefined); // true
-isNil(0);         // false
-isNil('');        // false
-isNil(false);     // false
+isNil(0); // false
+isNil(''); // false
+isNil(false); // false
 ```
 
 ### Type Guarding

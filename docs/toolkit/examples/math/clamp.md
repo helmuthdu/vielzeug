@@ -23,7 +23,7 @@ The `clamp` utility restricts a numeric value to be within a specified range. If
 
 ```ts
 interface ClampFunction {
-  (value: number, min: number, max: number): number
+  (value: number, min: number, max: number): number;
 }
 ```
 

@@ -25,7 +25,7 @@ for (let i = 0; i < numbers.length; i++) {
 }
 
 // Async with native map - awkward
-const promises = ids.map(id => fetchUser(id));
+const promises = ids.map((id) => fetchUser(id));
 const users = await Promise.all(promises);
 ```
 
@@ -33,10 +33,10 @@ const users = await Promise.all(promises);
 
 ```ts
 // Sync transformation
-const doubled = map(numbers, x => x * 2);
+const doubled = map(numbers, (x) => x * 2);
 
 // Async transformation - automatic
-const users = await map(ids, async id => fetchUser(id));
+const users = await map(ids, async (id) => fetchUser(id));
 ```
 
 ## Features
@@ -49,10 +49,7 @@ const users = await map(ids, async id => fetchUser(id));
 ## API
 
 ```ts
-function map<T, R>(
-  array: T[], 
-  callback: (item: T, index: number, array: T[]) => R | Promise<R>
-): R[] | Promise<R[]>
+function map<T, R>(array: T[], callback: (item: T, index: number, array: T[]) => R | Promise<R>): R[] | Promise<R[]>;
 ```
 
 ### Parameters
@@ -80,10 +77,10 @@ function map<T, R>(
 import { map } from '@vielzeug/toolkit';
 
 const numbers = [1, 2, 3];
-const doubled = map(numbers, x => x * 2); 
+const doubled = map(numbers, (x) => x * 2);
 // [2, 4, 6]
 
-const squared = map(numbers, x => x ** 2);
+const squared = map(numbers, (x) => x ** 2);
 // [1, 4, 9]
 ```
 
@@ -93,18 +90,18 @@ const squared = map(numbers, x => x ** 2);
 import { map } from '@vielzeug/toolkit';
 
 const users = [
-  { id: 1, name: 'Alice', email: 'alice@example.com' }, 
-  { id: 2, name: 'Bob', email: 'bob@example.com' }
+  { id: 1, name: 'Alice', email: 'alice@example.com' },
+  { id: 2, name: 'Bob', email: 'bob@example.com' },
 ];
 
 // Extract property
-const names = map(users, u => u.name); 
+const names = map(users, (u) => u.name);
 // ['Alice', 'Bob']
 
 // Transform to new structure
-const publicProfiles = map(users, u => ({ 
-  name: u.name, 
-  email: u.email 
+const publicProfiles = map(users, (u) => ({
+  name: u.name,
+  email: u.email,
 }));
 ```
 
@@ -142,15 +139,12 @@ import { map } from '@vielzeug/toolkit';
 const productIds = [101, 102, 103];
 
 const enrichedProducts = await map(productIds, async (id, index) => {
-  const [product, reviews] = await Promise.all([
-    fetchProduct(id),
-    fetchReviews(id)
-  ]);
-  
+  const [product, reviews] = await Promise.all([fetchProduct(id), fetchReviews(id)]);
+
   return {
     ...product,
     averageRating: reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length,
-    position: index + 1
+    position: index + 1,
   };
 });
 ```
@@ -163,14 +157,15 @@ import { useMemo } from 'react';
 
 function ProductList({ products }: { products: Product[] }) {
   const enrichedProducts = useMemo(
-    () => map(products, p => ({
-      ...p,
-      displayPrice: `$${p.price.toFixed(2)}`,
-      inStockLabel: p.quantity > 0 ? 'In Stock' : 'Out of Stock'
-    })),
-    [products]
+    () =>
+      map(products, (p) => ({
+        ...p,
+        displayPrice: `$${p.price.toFixed(2)}`,
+        inStockLabel: p.quantity > 0 ? 'In Stock' : 'Out of Stock',
+      })),
+    [products],
   );
-  
+
   return (
     <div>
       {map(enrichedProducts, (product, index) => (
@@ -190,18 +185,16 @@ import { map } from '@vielzeug/toolkit';
 
 const products = ref<Product[]>([]);
 
-const displayProducts = computed(() => 
-  map(products.value, p => ({
+const displayProducts = computed(() =>
+  map(products.value, (p) => ({
     ...p,
-    formattedPrice: `$${p.price.toFixed(2)}`
-  }))
+    formattedPrice: `$${p.price.toFixed(2)}`,
+  })),
 );
 </script>
 
 <template>
-  <div v-for="product in displayProducts" :key="product.id">
-    {{ product.name }} - {{ product.formattedPrice }}
-  </div>
+  <div v-for="product in displayProducts" :key="product.id">{{ product.name }} - {{ product.formattedPrice }}</div>
 </template>
 ```
 
@@ -215,16 +208,16 @@ const displayProducts = computed(() =>
 
 ```ts
 // ✅ Good - Direct property access
-const names = map(users, u => u.name);
+const names = map(users, (u) => u.name);
 
 // ⚠️ Slower - Additional computation in callback
-const names = map(users, u => {
+const names = map(users, (u) => {
   console.log('Processing:', u); // Side effect on every iteration
   return u.name;
 });
 
 // ✅ Better - Minimize work in callback
-const names = map(users, u => u.name);
+const names = map(users, (u) => u.name);
 console.log('Result:', names);
 ```
 
@@ -232,16 +225,16 @@ console.log('Result:', names);
 
 ```ts
 // Empty array
-map([], x => x * 2); // []
+map([], (x) => x * 2); // []
 
 // Mixed types (with proper typing)
-map([1, '2', 3], x => String(x)); // ['1', '2', '3']
+map([1, '2', 3], (x) => String(x)); // ['1', '2', '3']
 
 // Undefined/null in array
-map([1, null, 3], x => x ? x * 2 : 0); // [2, 0, 6]
+map([1, null, 3], (x) => (x ? x * 2 : 0)); // [2, 0, 6]
 
 // Callback returns undefined
-map([1, 2, 3], x => undefined); // [undefined, undefined, undefined]
+map([1, 2, 3], (x) => undefined); // [undefined, undefined, undefined]
 ```
 
 ## Common Pitfalls
@@ -252,41 +245,41 @@ map([1, 2, 3], x => undefined); // [undefined, undefined, undefined]
 const users = [{ name: 'Alice' }];
 
 // ❌ Don't mutate
-map(users, u => {
+map(users, (u) => {
   u.name = u.name.toUpperCase(); // Mutates original!
   return u;
 });
 
 // ✅ Create new objects
-map(users, u => ({ ...u, name: u.name.toUpperCase() }));
+map(users, (u) => ({ ...u, name: u.name.toUpperCase() }));
 ```
 
 ### ❌ Forgetting await with Async
 
 ```ts
 // ❌ Returns Promise<User[]>, not User[]
-const users = map(ids, async id => fetchUser(id));
+const users = map(ids, async (id) => fetchUser(id));
 
 // ✅ Await the result
-const users = await map(ids, async id => fetchUser(id));
+const users = await map(ids, async (id) => fetchUser(id));
 ```
 
 ## Comparison with Native
 
-| Feature | Toolkit `map` | Native `Array.map()` |
-|---------|---------------|----------------------|
-| Basic mapping | ✅ | ✅ |
-| Type inference | ✅ Full | ✅ Full |
-| Async support | ✅ Built-in | ❌ Manual `Promise.all` |
-| Error handling | `TypeError` on non-array | Silent failure |
-| Browser support | Modern (ES2020+) | All browsers |
+| Feature         | Toolkit `map`            | Native `Array.map()`    |
+| --------------- | ------------------------ | ----------------------- |
+| Basic mapping   | ✅                       | ✅                      |
+| Type inference  | ✅ Full                  | ✅ Full                 |
+| Async support   | ✅ Built-in              | ❌ Manual `Promise.all` |
+| Error handling  | `TypeError` on non-array | Silent failure          |
+| Browser support | Modern (ES2020+)         | All browsers            |
 
 ## TypeScript
 
 ```ts
 // Full type inference
 const numbers: number[] = [1, 2, 3];
-const strings = map(numbers, n => String(n)); 
+const strings = map(numbers, n => String(n));
 // Type: string[]
 
 // Explicit types (optional)
@@ -295,7 +288,7 @@ const result = map<number, string>(numbers, n => String(n));
 // Generic objects
 interface User { id: number; name: string; }
 const users: User[] = [...];
-const ids = map(users, u => u.id); 
+const ids = map(users, u => u.id);
 // Type: number[]
 ```
 

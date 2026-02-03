@@ -24,7 +24,7 @@ The `isEqual` utility performs a deep equality comparison between two values. It
 
 ```ts
 interface IsEqualFunction {
-  (a: unknown, b: unknown): boolean
+  (a: unknown, b: unknown): boolean;
 }
 ```
 

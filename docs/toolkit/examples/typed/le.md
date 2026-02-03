@@ -23,7 +23,7 @@ The `le` utility checks if the first value is less than or equal to the second v
 
 ```ts
 interface LEFunction {
-  <T>(a: T, b: T): boolean
+  <T>(a: T, b: T): boolean;
 }
 ```
 
@@ -43,9 +43,9 @@ interface LEFunction {
 ```ts
 import { le } from '@vielzeug/toolkit';
 
-le(5, 10);    // true
-le(5, 5);     // true
-le(10, 3);    // false
+le(5, 10); // true
+le(5, 5); // true
+le(10, 3); // false
 le('a', 'b'); // true
 ```
 

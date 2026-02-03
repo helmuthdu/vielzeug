@@ -23,7 +23,7 @@ The `isPositive` utility is a type guard that checks if a given number is strict
 
 ```ts
 interface IsPositiveFunction {
-  (value: number): boolean
+  (value: number): boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsPositiveFunction {
 ```ts
 import { isPositive } from '@vielzeug/toolkit';
 
-isPositive(10);   // true
-isPositive(0.1);  // true
-isPositive(0);    // false
-isPositive(-5);   // false
+isPositive(10); // true
+isPositive(0.1); // true
+isPositive(0); // false
+isPositive(-5); // false
 ```
 
 ## Implementation Notes

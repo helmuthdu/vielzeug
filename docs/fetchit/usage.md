@@ -35,8 +35,8 @@ const api = createHttpClient({
   url: 'https://api.example.com',
   timeout: 5000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 ```
 
@@ -49,17 +49,17 @@ console.log(res.data);
 
 // POST
 await api.post('/users', {
-  body: { name: 'Alice', email: 'alice@example.com' }
+  body: { name: 'Alice', email: 'alice@example.com' },
 });
 
 // PUT
 await api.put('/users/1', {
-  body: { name: 'Alice Smith' }
+  body: { name: 'Alice Smith' },
 });
 
 // PATCH
 await api.patch('/users/1', {
-  body: { email: 'newemail@example.com' }
+  body: { email: 'newemail@example.com' },
 });
 
 // DELETE
@@ -74,14 +74,14 @@ Update headers after client creation:
 
 ```ts
 // Add or update headers
-api.setHeaders({ 
+api.setHeaders({
   Authorization: 'Bearer token123',
-  'X-Custom-Header': 'value'
+  'X-Custom-Header': 'value',
 });
 
 // Remove headers (set to undefined)
-api.setHeaders({ 
-  Authorization: undefined 
+api.setHeaders({
+  Authorization: undefined,
 });
 ```
 
@@ -104,8 +104,10 @@ const size = api.getCacheSize();
 // Clean up expired entries
 api.clearExpiredCache();
 ```
+
 const removed = api.cleanupCache();
-```
+
+````
 
 ### Custom Cache Keys
 
@@ -115,7 +117,7 @@ await api.get('/users/1', { id: 'user-1' });
 
 // Later, invalidate this specific request
 api.invalidateCache('user-1');
-```
+````
 
 ### Request Cancellation
 
@@ -123,13 +125,13 @@ api.invalidateCache('user-1');
 // Cancel pending requests with the same ID
 await api.get('/users', {
   id: 'users-list',
-  cancelable: true
+  cancelable: true,
 });
 
 // The second request will cancel the first one
 await api.get('/users', {
   id: 'users-list',
-  cancelable: true
+  cancelable: true,
 });
 ```
 
@@ -145,10 +147,10 @@ await api.get('/users', { invalidate: true });
 ```ts
 import { buildUrl } from '@vielzeug/fetchit';
 
-const url = buildUrl('/api/users', { 
-  page: 1, 
+const url = buildUrl('/api/users', {
+  page: 1,
   limit: 10,
-  active: true 
+  active: true,
 });
 // Result: "/api/users?page=1&limit=10&active=true"
 ```

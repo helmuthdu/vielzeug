@@ -34,8 +34,8 @@ interface AssertParamsFunction {
     params: T,
     keys: K[],
     name?: string,
-    options?: AssertParamsOptions
-  ): asserts params is T & Required<Pick<T, K>>
+    options?: AssertParamsOptions,
+  ): asserts params is T & Required<Pick<T, K>>;
 }
 ```
 
@@ -65,7 +65,7 @@ interface User {
 function saveUser(user: User) {
   // Narrow type to ensure id and name exist
   assertParams(user, ['id', 'name'], 'saveUser');
-  
+
   // No need for optional chaining here
   console.log(user.id.toUpperCase());
 }

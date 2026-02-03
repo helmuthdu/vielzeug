@@ -24,7 +24,7 @@ The `isWithin` utility checks if a numeric value falls within a specified inclus
 
 ```ts
 interface IsWithinFunction {
-  (value: number, min: number, max: number): boolean
+  (value: number, min: number, max: number): boolean;
 }
 ```
 
@@ -45,8 +45,8 @@ interface IsWithinFunction {
 ```ts
 import { isWithin } from '@vielzeug/toolkit';
 
-isWithin(5, 0, 10);  // true
-isWithin(0, 0, 10);  // true
+isWithin(5, 0, 10); // true
+isWithin(0, 0, 10); // true
 isWithin(10, 0, 10); // true
 isWithin(-5, 0, 10); // false
 isWithin(15, 0, 10); // false

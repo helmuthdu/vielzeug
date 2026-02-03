@@ -9,6 +9,7 @@ Complete API documentation for `@vielzeug/deposit`.
 Main class for interacting with browser storage. Provides a unified, type-safe API for both IndexedDB and LocalStorage.
 
 **Type Parameters:**
+
 - `S extends DepositDataSchema` - Your schema type defining all tables and their records
 
 ---
@@ -20,9 +21,11 @@ Main class for interacting with browser storage. Provides a unified, type-safe A
 Creates a new Deposit instance.
 
 **Parameters:**
+
 - `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` - Either a custom adapter or configuration object
 
 **Example:**
+
 ```ts
 // With adapter instance
 const adapter = new IndexedDBAdapter('my-db', 1, schema);
@@ -33,7 +36,7 @@ const db = new Deposit({
   type: 'indexedDB',
   dbName: 'my-db',
   version: 1,
-  schema
+  schema,
 });
 ```
 
@@ -44,6 +47,7 @@ const db = new Deposit({
 Inserts or updates a single record.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `value: S[K]['record']` - Record to store
 - `ttl?: number` - Optional time-to-live in milliseconds
@@ -51,19 +55,24 @@ Inserts or updates a single record.
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 // Insert/update
-await db.put('users', { 
-  id: 'u1', 
+await db.put('users', {
+  id: 'u1',
   name: 'Alice',
-  email: 'alice@example.com' 
+  email: 'alice@example.com',
 });
 
 // With TTL (expires in 1 hour)
-await db.put('sessions', { 
-  id: 's1', 
-  token: 'abc123' 
-}, 3600000);
+await db.put(
+  'sessions',
+  {
+    id: 's1',
+    token: 'abc123',
+  },
+  3600000,
+);
 ```
 
 ---
@@ -73,6 +82,7 @@ await db.put('sessions', {
 Retrieves a single record by its key.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `key: KeyType<S, K>` - Record key
 - `defaultValue?: T` - Optional default value if not found
@@ -80,14 +90,15 @@ Retrieves a single record by its key.
 **Returns:** `Promise<T | undefined>`
 
 **Example:**
+
 ```ts
 const user = await db.get('users', 'u1');
 
 // With default value
-const user = await db.get('users', 'u1', { 
-  id: 'u1', 
+const user = await db.get('users', 'u1', {
+  id: 'u1',
   name: 'Guest',
-  email: '' 
+  email: '',
 });
 ```
 
@@ -98,11 +109,13 @@ const user = await db.get('users', 'u1', {
 Retrieves all records from a table.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 
 **Returns:** `Promise<S[K]['record'][]>`
 
 **Example:**
+
 ```ts
 const allUsers = await db.getAll('users');
 console.log(`Found ${allUsers.length} users`);
@@ -115,12 +128,14 @@ console.log(`Found ${allUsers.length} users`);
 Deletes a single record by its key.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `key: KeyType<S, K>` - Record key
 
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.delete('users', 'u1');
 ```
@@ -132,11 +147,13 @@ await db.delete('users', 'u1');
 Removes all records from a table.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.clear('users');
 ```
@@ -148,11 +165,13 @@ await db.clear('users');
 Returns the number of records in a table.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 
 **Returns:** `Promise<number>`
 
 **Example:**
+
 ```ts
 const userCount = await db.count('users');
 console.log(`${userCount} users in database`);
@@ -165,6 +184,7 @@ console.log(`${userCount} users in database`);
 Inserts or updates multiple records in a single operation.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `values: S[K]['record'][]` - Array of records
 - `ttl?: number` - Optional TTL for all records
@@ -172,11 +192,12 @@ Inserts or updates multiple records in a single operation.
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.bulkPut('users', [
   { id: 'u1', name: 'Alice', email: 'alice@example.com' },
   { id: 'u2', name: 'Bob', email: 'bob@example.com' },
-  { id: 'u3', name: 'Carol', email: 'carol@example.com' }
+  { id: 'u3', name: 'Carol', email: 'carol@example.com' },
 ]);
 ```
 
@@ -187,12 +208,14 @@ await db.bulkPut('users', [
 Deletes multiple records by their keys.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `keys: KeyType<S, K>[]` - Array of keys to delete
 
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.bulkDelete('users', ['u1', 'u2', 'u3']);
 ```
@@ -204,14 +227,17 @@ await db.bulkDelete('users', ['u1', 'u2', 'u3']);
 Creates a QueryBuilder for advanced querying.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 
 **Returns:** `QueryBuilder<S[K]['record']>`
 
 **Example:**
+
 ```ts
-const adults = await db.query('users')
-  .filter(user => user.age >= 18)
+const adults = await db
+  .query('users')
+  .filter((user) => user.age >= 18)
   .orderBy('name', 'asc')
   .toArray();
 ```
@@ -223,6 +249,7 @@ const adults = await db.query('users')
 Performs an atomic transaction across multiple tables.
 
 **Parameters:**
+
 - `tables: K[]` - Array of table names
 - `fn: (stores: T) => Promise<void>` - Transaction callback
 - `ttl?: number` - Optional TTL for modified records
@@ -230,23 +257,24 @@ Performs an atomic transaction across multiple tables.
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.transaction(['users', 'posts'], async (stores) => {
   // Add user
-  stores.users.push({ 
-    id: 'u1', 
-    name: 'Alice', 
-    email: 'alice@example.com' 
+  stores.users.push({
+    id: 'u1',
+    name: 'Alice',
+    email: 'alice@example.com',
   });
-  
+
   // Add post
-  stores.posts.push({ 
-    id: 'p1', 
-    userId: 'u1', 
+  stores.posts.push({
+    id: 'p1',
+    userId: 'u1',
     title: 'Hello World',
-    content: 'My first post' 
+    content: 'My first post',
   });
-  
+
   // Changes are committed atomically
 });
 ```
@@ -260,18 +288,20 @@ await db.transaction(['users', 'posts'], async (stores) => {
 Applies a batch of operations (put, delete, clear) atomically.
 
 **Parameters:**
+
 - `table: keyof S` - Table name
 - `patches: PatchOperation[]` - Array of operations
 
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```ts
 await db.patch('users', [
   { type: 'put', value: { id: 'u1', name: 'Alice', email: 'a@example.com' } },
   { type: 'put', value: { id: 'u2', name: 'Bob', email: 'b@example.com' }, ttl: 3600000 },
   { type: 'delete', key: 'u3' },
-  { type: 'clear' } // Clears all, then applies puts
+  { type: 'clear' }, // Clears all, then applies puts
 ]);
 ```
 
@@ -284,10 +314,9 @@ await db.patch('users', [
 Filters records where field equals value.
 
 **Example:**
+
 ```ts
-const admins = await db.query('users')
-  .equals('role', 'admin')
-  .toArray();
+const admins = await db.query('users').equals('role', 'admin').toArray();
 ```
 
 ---
@@ -297,10 +326,9 @@ const admins = await db.query('users')
 Filters records where field is between lower and upper (inclusive).
 
 **Example:**
+
 ```ts
-const youngAdults = await db.query('users')
-  .between('age', 18, 30)
-  .toArray();
+const youngAdults = await db.query('users').between('age', 18, 30).toArray();
 ```
 
 ---
@@ -310,10 +338,9 @@ const youngAdults = await db.query('users')
 Filters string fields that start with prefix.
 
 **Example:**
+
 ```ts
-const aliceUsers = await db.query('users')
-  .startsWith('name', 'Alice', true)
-  .toArray();
+const aliceUsers = await db.query('users').startsWith('name', 'Alice', true).toArray();
 ```
 
 ---
@@ -323,8 +350,10 @@ const aliceUsers = await db.query('users')
 Filters using custom predicate function.
 
 **Example:**
+
 ```ts
-const verified = await db.query('users')
+const verified = await db
+  .query('users')
   .where('email', (email) => email.endsWith('@company.com'))
   .toArray();
 ```
@@ -336,9 +365,11 @@ const verified = await db.query('users')
 Filters using predicate on entire record.
 
 **Example:**
+
 ```ts
-const special = await db.query('users')
-  .filter(user => user.age > 18 && user.email.includes('gmail'))
+const special = await db
+  .query('users')
+  .filter((user) => user.age > 18 && user.email.includes('gmail'))
   .toArray();
 ```
 
@@ -349,11 +380,13 @@ const special = await db.query('users')
 Logical operators for combining predicates.
 
 **Example:**
+
 ```ts
-const result = await db.query('users')
+const result = await db
+  .query('users')
   .and(
-    u => u.age >= 18,
-    u => u.verified === true
+    (u) => u.age >= 18,
+    (u) => u.verified === true,
   )
   .toArray();
 ```
@@ -365,14 +398,14 @@ const result = await db.query('users')
 Sorts results by field.
 
 **Parameters:**
+
 - `field: keyof T` - Field to sort by
 - `direction: 'asc' | 'desc'` - Sort direction (default: 'asc')
 
 **Example:**
+
 ```ts
-const sorted = await db.query('users')
-  .orderBy('name', 'asc')
-  .toArray();
+const sorted = await db.query('users').orderBy('name', 'asc').toArray();
 ```
 
 ---
@@ -382,22 +415,16 @@ const sorted = await db.query('users')
 Pagination methods.
 
 **Example:**
+
 ```ts
 // First 10 users
-const first10 = await db.query('users')
-  .limit(10)
-  .toArray();
+const first10 = await db.query('users').limit(10).toArray();
 
 // Skip first 10, get next 10
-const next10 = await db.query('users')
-  .offset(10)
-  .limit(10)
-  .toArray();
+const next10 = await db.query('users').offset(10).limit(10).toArray();
 
 // Page 2 (10 per page)
-const page2 = await db.query('users')
-  .page(2, 10)
-  .toArray();
+const page2 = await db.query('users').page(2, 10).toArray();
 ```
 
 ---
@@ -407,11 +434,9 @@ const page2 = await db.query('users')
 Reverses the order of results.
 
 **Example:**
+
 ```ts
-const reversed = await db.query('users')
-  .orderBy('createdAt', 'asc')
-  .reverse()
-  .toArray();
+const reversed = await db.query('users').orderBy('createdAt', 'asc').reverse().toArray();
 ```
 
 ---
@@ -421,6 +446,7 @@ const reversed = await db.query('users')
 Aggregation helpers.
 
 **Example:**
+
 ```ts
 const count = await db.query('users').count();
 const firstUser = await db.query('users').first();
@@ -434,6 +460,7 @@ const lastUser = await db.query('users').last();
 Numeric aggregations.
 
 **Example:**
+
 ```ts
 const avgAge = await db.query('users').average('age');
 const youngest = await db.query('users').min('age');
@@ -448,11 +475,13 @@ const totalAge = await db.query('users').sum('age');
 Transforms records in the query.
 
 **Example:**
+
 ```ts
-const uppercased = await db.query('users')
-  .modify(user => ({ 
-    ...user, 
-    name: user.name.toUpperCase() 
+const uppercased = await db
+  .query('users')
+  .modify((user) => ({
+    ...user,
+    name: user.name.toUpperCase(),
   }))
   .toArray();
 ```
@@ -464,14 +493,11 @@ const uppercased = await db.query('users')
 Advanced operations.
 
 **Example:**
-```ts
-const byRole = await db.query('users')
-  .groupBy('role')
-  .toArray();
 
-const searchResults = await db.query('users')
-  .search('alice')
-  .toArray();
+```ts
+const byRole = await db.query('users').groupBy('role').toArray();
+
+const searchResults = await db.query('users').search('alice').toArray();
 ```
 
 ---
@@ -481,11 +507,9 @@ const searchResults = await db.query('users')
 Resets the query builder to start fresh.
 
 **Example:**
+
 ```ts
-const builder = db.query('users')
-  .equals('role', 'admin')
-  .reset()
-  .equals('role', 'user'); // Start over
+const builder = db.query('users').equals('role', 'admin').reset().equals('role', 'user'); // Start over
 ```
 
 ---
@@ -497,9 +521,11 @@ Executes the query and returns results.
 **Returns:** `Promise<T[]>`
 
 **Example:**
+
 ```ts
-const results = await db.query('users')
-  .filter(u => u.active)
+const results = await db
+  .query('users')
+  .filter((u) => u.active)
   .orderBy('name', 'asc')
   .toArray();
 ```
@@ -511,16 +537,15 @@ const results = await db.query('users')
 Builds query from condition objects (useful for dynamic queries).
 
 **Example:**
+
 ```ts
 const conditions = [
   { type: 'equals', field: 'role', value: 'admin' },
   { type: 'orderBy', field: 'name', value: 'asc' },
-  { type: 'limit', value: 10 }
+  { type: 'limit', value: 10 },
 ];
 
-const results = await db.query('users')
-  .build(conditions)
-  .toArray();
+const results = await db.query('users').build(conditions).toArray();
 ```
 
 ---
@@ -532,17 +557,20 @@ const results = await db.query('users')
 Storage adapter using browser LocalStorage.
 
 **Constructor:**
+
 ```ts
 new LocalStorageAdapter(dbName: string, version: number, schema: S)
 ```
 
 **Example:**
+
 ```ts
 const adapter = new LocalStorageAdapter('my-app', 1, schema);
 const db = new Deposit(adapter);
 ```
 
 **Characteristics:**
+
 - Synchronous operations (wrapped in promises for API consistency)
 - ~5-10MB storage limit
 - String-based storage (JSON serialization)
@@ -556,16 +584,18 @@ const db = new Deposit(adapter);
 Storage adapter using browser IndexedDB.
 
 **Constructor:**
+
 ```ts
 new IndexedDBAdapter(
-  dbName: string, 
-  version: number, 
-  schema: S, 
+  dbName: string,
+  version: number,
+  schema: S,
   migrationFn?: DepositMigrationFn<S>
 )
 ```
 
 **Example:**
+
 ```ts
 const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
   if (oldVersion < 1) {
@@ -577,6 +607,7 @@ const db = new Deposit(adapter);
 ```
 
 **Characteristics:**
+
 - Asynchronous operations
 - ~50MB+ storage (quota-based)
 - Supports indexes for fast lookups
@@ -594,26 +625,27 @@ Schema definition type.
 ```ts
 type DepositDataSchema = {
   [tableName: string]: {
-    key: string;           // Primary key field name
-    indexes?: string[];    // Optional index fields
-    record: any;           // Record type
+    key: string; // Primary key field name
+    indexes?: string[]; // Optional index fields
+    record: any; // Record type
   };
 };
 ```
 
 **Example:**
+
 ```ts
 const schema = {
   users: {
     key: 'id',
     indexes: ['email', 'role'],
-    record: {} as { id: string; name: string; email: string; role: string }
+    record: {} as { id: string; name: string; email: string; role: string },
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as { id: string; userId: string; title: string; createdAt: number }
-  }
+    record: {} as { id: string; userId: string; title: string; createdAt: number },
+  },
 } satisfies DepositDataSchema;
 ```
 
@@ -629,24 +661,19 @@ type DepositMigrationFn<S> = (
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-  schema: S
+  schema: S,
 ) => void | Promise<void>;
 ```
 
 **Example:**
+
 ```ts
-const migration: DepositMigrationFn<typeof schema> = async (
-  db,
-  oldVersion,
-  newVersion,
-  tx,
-  schema
-) => {
+const migration: DepositMigrationFn<typeof schema> = async (db, oldVersion, newVersion, tx, schema) => {
   if (oldVersion < 2) {
     // Migrate data from version 1 to 2
     const store = tx.objectStore('users');
     const request = store.getAll();
-    
+
     request.onsuccess = () => {
       for (const user of request.result) {
         user.role = user.role || 'user';
@@ -664,10 +691,7 @@ const migration: DepositMigrationFn<typeof schema> = async (
 Operation types for `patch()` method.
 
 ```ts
-type PatchOperation<T, K> =
-  | { type: 'put'; value: T; ttl?: number }
-  | { type: 'delete'; key: K }
-  | { type: 'clear' };
+type PatchOperation<T, K> = { type: 'put'; value: T; ttl?: number } | { type: 'delete'; key: K } | { type: 'clear' };
 ```
 
 ---
@@ -679,11 +703,12 @@ type PatchOperation<T, K> =
 Wraps a function to catch and log errors without throwing.
 
 **Example:**
+
 ```ts
 import { runSafe } from '@vielzeug/deposit';
 
 const safeFetch = runSafe(async () => {
-  const data = await fetch('/api/data').then(r => r.json());
+  const data = await fetch('/api/data').then((r) => r.json());
   return data;
 }, 'FETCH_FAILED');
 
@@ -725,8 +750,9 @@ Deposit provides full type inference:
 const user = await db.get('users', 'u1');
 // user is typed as: { id: string; name: string; email: string } | undefined
 
-const users = await db.query('users')
-  .filter(u => u.name.includes('Alice')) // Full autocomplete
+const users = await db
+  .query('users')
+  .filter((u) => u.name.includes('Alice')) // Full autocomplete
   .toArray();
 ```
 

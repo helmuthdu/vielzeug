@@ -32,7 +32,7 @@ interface IntervalOptions {
 }
 
 interface IntervalFunction {
-  (start: Date | string | number, end: Date | string | number, options?: IntervalOptions): Date[]
+  (start: Date | string | number, end: Date | string | number, options?: IntervalOptions): Date[];
 }
 ```
 
@@ -57,7 +57,7 @@ interface IntervalFunction {
 import { interval } from '@vielzeug/toolkit';
 
 // Generate 5 consecutive days
-const days = interval('2024-01-01', '2024-01-05'); 
+const days = interval('2024-01-01', '2024-01-05');
 // [Jan 1, Jan 2, Jan 3, Jan 4, Jan 5]
 ```
 
@@ -66,10 +66,10 @@ const days = interval('2024-01-01', '2024-01-05');
 ```ts
 import { interval } from '@vielzeug/toolkit';
 
-const weeks = interval('2024-01-01', '2024-02-01', { 
-  interval: 'W', 
+const weeks = interval('2024-01-01', '2024-02-01', {
+  interval: 'W',
   steps: 2,
-  latest: true
+  latest: true,
 });
 // [Jan 29, Jan 15, Jan 1]
 ```

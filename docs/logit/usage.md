@@ -48,7 +48,7 @@ Logit.trace('Detailed trace information');
 // Display data in table format
 const users = [
   { name: 'Alice', age: 30, role: 'Admin' },
-  { name: 'Bob', age: 25, role: 'User' }
+  { name: 'Bob', age: 25, role: 'User' },
 ];
 Logit.table(users);
 ```
@@ -101,10 +101,10 @@ Control verbosity with log levels:
 ```ts
 // Set minimum log level
 Logit.setLogLevel('warn'); // Only warn and error will show
-Logit.debug('Not shown');  // Hidden
-Logit.info('Not shown');   // Hidden
-Logit.warn('Visible');     // Shown
-Logit.error('Visible');    // Shown
+Logit.debug('Not shown'); // Hidden
+Logit.info('Not shown'); // Hidden
+Logit.warn('Visible'); // Shown
+Logit.error('Visible'); // Shown
 
 // Available levels (in order)
 // 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'warn' | 'error' | 'off'
@@ -164,7 +164,7 @@ Logit.setRemote({
   handler: async (type, ...args) => {
     // type is the log level: 'debug' | 'info' | 'warn' | 'error' | etc.
     // args are the original arguments passed to the log method
-    
+
     if (type === 'error' || type === 'warn') {
       await fetch('/api/logs', {
         method: 'POST',
@@ -173,16 +173,12 @@ Logit.setRemote({
           timestamp: new Date().toISOString(),
           level: type,
           prefix: Logit.getPrefix(),
-          args: args.map(arg => 
-            arg instanceof Error 
-              ? { message: arg.message, stack: arg.stack }
-              : arg
-          )
-        })
+          args: args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
+        }),
       });
     }
   },
-  logLevel: 'warn' // Only send warn and error to remote
+  logLevel: 'warn', // Only send warn and error to remote
 });
 
 // Change remote log level
@@ -204,8 +200,8 @@ Logit.initialise({
     handler: async (type, ...args) => {
       await sendToLoggingService(type, args);
     },
-    logLevel: 'error'
-  }
+    logLevel: 'error',
+  },
 });
 ```
 
@@ -215,10 +211,10 @@ Log errors when conditions fail:
 
 ```ts
 const isValid = checkUserPermissions(user);
-Logit.assert(isValid, 'User lacks required permissions', { 
+Logit.assert(isValid, 'User lacks required permissions', {
   userId: user.id,
   required: ['admin'],
-  actual: user.roles 
+  actual: user.roles,
 });
 // If isValid is false, logs an error to console
 ```
@@ -231,12 +227,12 @@ Complete configuration interface:
 
 ```ts
 interface LogitOptions {
-  environment?: boolean;           // Show environment indicator (default: true)
+  environment?: boolean; // Show environment indicator (default: true)
   variant?: 'text' | 'symbol' | 'icon'; // Display variant (default: 'symbol')
-  logLevel?: LogitLevel;          // Minimum log level (default: 'debug')
-  namespace?: string;             // Prefix/namespace (default: '')
-  remote?: LogitRemoteOptions;    // Remote logging config
-  timestamp?: boolean;            // Show timestamps (default: true)
+  logLevel?: LogitLevel; // Minimum log level (default: 'debug')
+  namespace?: string; // Prefix/namespace (default: '')
+  remote?: LogitRemoteOptions; // Remote logging config
+  timestamp?: boolean; // Show timestamps (default: true)
 }
 ```
 
@@ -256,16 +252,16 @@ interface LogitRemoteOptions {
 Available log levels:
 
 ```ts
-type LogitLevel = 
-  | 'debug'   // Lowest - shows everything
-  | 'trace'   
-  | 'time'    
-  | 'table'   
-  | 'info'    
-  | 'success' 
-  | 'warn'    
-  | 'error'   
-  | 'off';    // Highest - shows nothing
+type LogitLevel =
+  | 'debug' // Lowest - shows everything
+  | 'trace'
+  | 'time'
+  | 'table'
+  | 'info'
+  | 'success'
+  | 'warn'
+  | 'error'
+  | 'off'; // Highest - shows nothing
 ```
 
 ### LogitType
@@ -273,15 +269,7 @@ type LogitLevel =
 Available log methods:
 
 ```ts
-type LogitType = 
-  | 'debug' 
-  | 'trace' 
-  | 'time' 
-  | 'table' 
-  | 'info' 
-  | 'success' 
-  | 'warn' 
-  | 'error';
+type LogitType = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'warn' | 'error';
 ```
 
 ## Environment-Specific Configuration
@@ -291,10 +279,10 @@ type LogitType =
 ```ts
 if (process.env.NODE_ENV === 'development') {
   Logit.initialise({
-    logLevel: 'debug',     // Show all logs
-    variant: 'symbol',     // Use symbols
-    timestamp: true,       // Show timestamps
-    environment: true      // Show dev/prod indicator
+    logLevel: 'debug', // Show all logs
+    variant: 'symbol', // Use symbols
+    timestamp: true, // Show timestamps
+    environment: true, // Show dev/prod indicator
   });
 }
 ```
@@ -304,10 +292,10 @@ if (process.env.NODE_ENV === 'development') {
 ```ts
 if (process.env.NODE_ENV === 'production') {
   Logit.initialise({
-    logLevel: 'warn',      // Only warnings and errors
-    variant: 'text',       // Plain text (better for log aggregators)
-    timestamp: true,       // Keep timestamps
-    environment: false,    // Hide dev/prod indicator
+    logLevel: 'warn', // Only warnings and errors
+    variant: 'text', // Plain text (better for log aggregators)
+    timestamp: true, // Keep timestamps
+    environment: false, // Hide dev/prod indicator
     remote: {
       handler: async (type, ...args) => {
         // Send to error tracking service
@@ -315,8 +303,8 @@ if (process.env.NODE_ENV === 'production') {
           await Sentry.captureException(args[0]);
         }
       },
-      logLevel: 'error'
-    }
+      logLevel: 'error',
+    },
   });
 }
 ```
@@ -326,7 +314,7 @@ if (process.env.NODE_ENV === 'production') {
 ```ts
 if (process.env.NODE_ENV === 'test') {
   Logit.setLogLevel('off'); // Silence logs during tests
-  
+
   // Or only show errors
   Logit.setLogLevel('error');
 }
@@ -353,14 +341,14 @@ Logit.setPrefix('Auth');
 export const authLog = {
   login: (userId: string) => Logit.info('User logged in', { userId }),
   logout: (userId: string) => Logit.info('User logged out', { userId }),
-  error: (error: Error) => Logit.error('Auth error', error)
+  error: (error: Error) => Logit.error('Auth error', error),
 };
 
 // database.service.ts
 Logit.setPrefix('Database');
 export const dbLog = {
   query: (sql: string) => Logit.debug('Query executed', { sql }),
-  error: (error: Error) => Logit.error('Database error', error)
+  error: (error: Error) => Logit.error('Database error', error),
 };
 ```
 
@@ -373,7 +361,7 @@ Logit.info('User action', {
   userId: user.id,
   amount: 99.99,
   currency: 'USD',
-  timestamp: Date.now()
+  timestamp: Date.now(),
 });
 
 // Bad - unstructured string
@@ -390,7 +378,7 @@ try {
     operation: 'riskyOperation',
     error: error instanceof Error ? error.message : 'Unknown error',
     stack: error instanceof Error ? error.stack : undefined,
-    context: { userId: user.id }
+    context: { userId: user.id },
   });
   throw error; // Re-throw after logging
 }
@@ -400,4 +388,3 @@ try {
 
 - [API Reference](./api.md) - Complete API documentation
 - [Examples](./examples.md) - Practical code examples
-

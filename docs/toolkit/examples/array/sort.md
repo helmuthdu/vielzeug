@@ -24,7 +24,7 @@ The `sort` utility provides a simple, functional way to sort arrays. Unlike the 
 
 ```ts
 interface SortFunction {
-  <T>(array: T[], selector: (item: T) => any, desc?: boolean): T[]
+  <T>(array: T[], selector: (item: T) => any, desc?: boolean): T[];
 }
 ```
 
@@ -48,10 +48,10 @@ import { sort } from '@vielzeug/toolkit';
 const numbers = [10, 2, 33, 4, 1];
 
 // Ascending (default)
-sort(numbers, n => n); // [1, 2, 4, 10, 33]
+sort(numbers, (n) => n); // [1, 2, 4, 10, 33]
 
 // Descending
-sort(numbers, n => n, true); // [33, 10, 4, 2, 1]
+sort(numbers, (n) => n, true); // [33, 10, 4, 2, 1]
 ```
 
 ### Sorting Objects
@@ -62,11 +62,11 @@ import { sort } from '@vielzeug/toolkit';
 const users = [
   { name: 'Alice', age: 25 },
   { name: 'Bob', age: 20 },
-  { name: 'Charlie', age: 30 }
+  { name: 'Charlie', age: 30 },
 ];
 
 // Sort by age
-const byAge = sort(users, u => u.age);
+const byAge = sort(users, (u) => u.age);
 // [{ name: 'Bob', ... }, { name: 'Alice', ... }, { name: 'Charlie', ... }]
 ```
 

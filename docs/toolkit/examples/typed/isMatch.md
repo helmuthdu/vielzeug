@@ -24,7 +24,7 @@ The `isMatch` utility checks if an object contains a specific pattern of propert
 
 ```ts
 interface IsMatchFunction {
-  (obj: any, pattern: any): boolean
+  (obj: any, pattern: any): boolean;
 }
 ```
 
@@ -72,8 +72,8 @@ import { isMatch } from '@vielzeug/toolkit';
 const data = {
   meta: {
     status: 200,
-    tags: ['new']
-  }
+    tags: ['new'],
+  },
 };
 
 isMatch(data, { meta: { status: 200 } }); // true

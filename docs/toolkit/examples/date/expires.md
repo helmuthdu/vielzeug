@@ -26,7 +26,7 @@ The `expires` utility determines the expiration status of a given date relative 
 type ExpiryStatus = 'EXPIRED' | 'SOON' | 'LATER' | 'NEVER' | 'UNKNOWN';
 
 interface ExpiresFunction {
-  (date: string | number | Date, days?: number): ExpiryStatus
+  (date: string | number | Date, days?: number): ExpiryStatus;
 }
 ```
 
@@ -62,7 +62,7 @@ expires('2024-02-01'); // 'LATER'
 import { expires } from '@vielzeug/toolkit';
 
 // Consider only the next 48 hours as "SOON"
-expires(someDate, 2); 
+expires(someDate, 2);
 ```
 
 ## Implementation Notes

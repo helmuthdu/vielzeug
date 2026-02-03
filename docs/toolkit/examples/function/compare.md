@@ -24,7 +24,7 @@ The `compare` utility is a generic comparator function that determines the relat
 
 ```ts
 interface CompareFunction {
-  <T>(a: T, b: T): -1 | 0 | 1
+  <T>(a: T, b: T): -1 | 0 | 1;
 }
 ```
 

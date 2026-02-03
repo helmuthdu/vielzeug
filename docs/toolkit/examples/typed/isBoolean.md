@@ -23,7 +23,7 @@ The `isBoolean` utility is a type guard that checks if a given value is a boolea
 
 ```ts
 interface IsBooleanFunction {
-  (value: unknown): value is boolean
+  (value: unknown): value is boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsBooleanFunction {
 ```ts
 import { isBoolean } from '@vielzeug/toolkit';
 
-isBoolean(true);  // true
+isBoolean(true); // true
 isBoolean(false); // true
-isBoolean(1);     // false
-isBoolean('true');// false
+isBoolean(1); // false
+isBoolean('true'); // false
 ```
 
 ### Type Guarding

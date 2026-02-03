@@ -23,7 +23,7 @@ The `average` utility calculates the arithmetic mean of an array of numbers. It 
 
 ```ts
 interface AverageFunction {
-  (numbers: number[]): number
+  (numbers: number[]): number;
 }
 ```
 

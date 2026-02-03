@@ -19,21 +19,24 @@ The `group` utility partitions an array into an object of collections, based on 
 
 ```ts
 // Manual grouping - verbose and error-prone
-const byRole = users.reduce((acc, user) => {
-  const role = user.role;
-  if (!acc[role]) {
-    acc[role] = [];
-  }
-  acc[role].push(user);
-  return acc;
-}, {} as Record<string, User[]>);
+const byRole = users.reduce(
+  (acc, user) => {
+    const role = user.role;
+    if (!acc[role]) {
+      acc[role] = [];
+    }
+    acc[role].push(user);
+    return acc;
+  },
+  {} as Record<string, User[]>,
+);
 ```
 
 **With group**: Clean, type-safe grouping in one line.
 
 ```ts
 // Simple and clear
-const byRole = group(users, u => u.role);
+const byRole = group(users, (u) => u.role);
 // or even simpler
 const byRole = group(users, 'role');
 ```
@@ -49,14 +52,11 @@ const byRole = group(users, 'role');
 
 ```ts
 function group<T, K extends PropertyKey>(
-  array: T[], 
-  selector: (item: T, index: number, array: T[]) => K
+  array: T[],
+  selector: (item: T, index: number, array: T[]) => K,
 ): Record<K, T[]>;
 
-function group<T, K extends keyof T>(
-  array: T[], 
-  selector: K
-): Record<string, T[]>;
+function group<T, K extends keyof T>(array: T[], selector: K): Record<string, T[]>;
 ```
 
 ### Parameters
@@ -87,11 +87,11 @@ import { group } from '@vielzeug/toolkit';
 const numbers = [1, 2, 3, 4, 5, 6];
 
 // Group by parity
-const byParity = group(numbers, n => n % 2 === 0 ? 'even' : 'odd');
+const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
 // { odd: [1, 3, 5], even: [2, 4, 6] }
 
 // Group by range
-const byRange = group(numbers, n => {
+const byRange = group(numbers, (n) => {
   if (n <= 2) return 'low';
   if (n <= 4) return 'medium';
   return 'high';
@@ -147,10 +147,10 @@ const products: Product[] = [
 const byCategory = group(products, 'category');
 
 // Group by availability
-const byAvailability = group(products, p => p.inStock ? 'available' : 'unavailable');
+const byAvailability = group(products, (p) => (p.inStock ? 'available' : 'unavailable'));
 
 // Group by price range
-const byPriceRange = group(products, p => {
+const byPriceRange = group(products, (p) => {
   if (p.price < 50) return 'budget';
   if (p.price < 500) return 'mid-range';
   return 'premium';
@@ -172,9 +172,7 @@ import { group } from '@vielzeug/toolkit';
 const items = ['a', 'b', 'c', 'd', 'e', 'f'];
 
 // Group by position (first half vs second half)
-const byPosition = group(items, (item, index, array) => 
-  index < array.length / 2 ? 'first-half' : 'second-half'
-);
+const byPosition = group(items, (item, index, array) => (index < array.length / 2 ? 'first-half' : 'second-half'));
 // { 'first-half': ['a', 'b', 'c'], 'second-half': ['d', 'e', 'f'] }
 ```
 
@@ -194,12 +192,7 @@ const transactions = [
 const byUser = group(transactions, 'user');
 
 // Then group each user's transactions by category
-const nested = Object.fromEntries(
-  map(Object.entries(byUser), ([user, txns]) => [
-    user,
-    group(txns, 'category')
-  ])
-);
+const nested = Object.fromEntries(map(Object.entries(byUser), ([user, txns]) => [user, group(txns, 'category')]));
 /*
 {
   Alice: { food: [...], transport: [...] },
@@ -215,18 +208,15 @@ import { group } from '@vielzeug/toolkit';
 import { useMemo } from 'react';
 
 function ProductCatalog({ products }: { products: Product[] }) {
-  const productsByCategory = useMemo(
-    () => group(products, p => p.category),
-    [products]
-  );
-  
+  const productsByCategory = useMemo(() => group(products, (p) => p.category), [products]);
+
   return (
     <div>
       {Object.entries(productsByCategory).map(([category, items]) => (
         <section key={category}>
           <h2>{category}</h2>
           <div>
-            {items.map(product => (
+            {items.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -245,16 +235,16 @@ import { group, map } from '@vielzeug/toolkit';
 
 app.get('/api/analytics/by-category', async (req, res) => {
   const products = await fetchProducts();
-  
+
   const grouped = group(products, 'category');
-  
+
   const analytics = map(Object.entries(grouped), ([category, items]) => ({
     category,
     count: items.length,
     totalValue: items.reduce((sum, p) => sum + p.price, 0),
     avgPrice: items.reduce((sum, p) => sum + p.price, 0) / items.length,
   }));
-  
+
   res.json(analytics);
 });
 ```
@@ -269,19 +259,19 @@ app.get('/api/analytics/by-category', async (req, res) => {
 
 ```ts
 // Empty array
-group([], x => x); // {}
+group([], (x) => x); // {}
 
 // Single element
-group([1], x => 'key'); // { key: [1] }
+group([1], (x) => 'key'); // { key: [1] }
 
 // All elements in one group
 group([1, 2, 3], () => 'same'); // { same: [1, 2, 3] }
 
 // Numeric keys
-group([1, 2, 3], x => x % 2); // { '0': [2], '1': [1, 3] }
+group([1, 2, 3], (x) => x % 2); // { '0': [2], '1': [1, 3] }
 
 // Undefined/null keys - coerced to strings
-group([1, 2], x => x === 1 ? undefined : null);
+group([1, 2], (x) => (x === 1 ? undefined : null));
 // { 'undefined': [1], 'null': [2] }
 ```
 
@@ -290,7 +280,7 @@ group([1, 2], x => x === 1 ? undefined : null);
 ### ❌ Assuming Ordered Keys
 
 ```ts
-const grouped = group([3, 1, 2], x => x);
+const grouped = group([3, 1, 2], (x) => x);
 // Object key order is not guaranteed in all JS environments
 // Use Object.keys().sort() if order matters
 ```
@@ -299,18 +289,18 @@ const grouped = group([3, 1, 2], x => x);
 
 ```ts
 // ❌ Don't use objects as keys (converted to '[object Object]')
-group(items, item => ({ type: item.type }));
+group(items, (item) => ({ type: item.type }));
 
 // ✅ Use string/number/symbol keys
-group(items, item => item.type);
+group(items, (item) => item.type);
 ```
 
 ### ✅ Type-Safe Property Access
 
 ```ts
-interface User { 
-  id: number; 
-  role: 'admin' | 'user'; 
+interface User {
+  id: number;
+  role: 'admin' | 'user';
 }
 
 const users: User[] = [...];
@@ -324,13 +314,13 @@ const byRole = group(users, 'role');
 
 ## Comparison with Native
 
-| Feature | Toolkit `group` | Native `reduce` | `Object.groupBy` (ES2024) |
-|---------|-----------------|-----------------|---------------------------|
-| Clean syntax | ✅ | ❌ Verbose | ✅ |
-| Type inference | ✅ Full | ⚠️ Manual | ✅ |
-| Property selector | ✅ | ❌ Manual | ❌ |
-| Browser support | Modern (ES2020+) | All | Very new |
-| Error handling | `TypeError` | Silent | `TypeError` |
+| Feature           | Toolkit `group`  | Native `reduce` | `Object.groupBy` (ES2024) |
+| ----------------- | ---------------- | --------------- | ------------------------- |
+| Clean syntax      | ✅               | ❌ Verbose      | ✅                        |
+| Type inference    | ✅ Full          | ⚠️ Manual       | ✅                        |
+| Property selector | ✅               | ❌ Manual       | ❌                        |
+| Browser support   | Modern (ES2020+) | All             | Very new                  |
+| Error handling    | `TypeError`      | Silent          | `TypeError`               |
 
 ## TypeScript
 

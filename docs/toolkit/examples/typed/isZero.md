@@ -23,7 +23,7 @@ The `isZero` utility is a type guard that checks if a given number is exactly eq
 
 ```ts
 interface IsZeroFunction {
-  (value: number): boolean
+  (value: number): boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsZeroFunction {
 ```ts
 import { isZero } from '@vielzeug/toolkit';
 
-isZero(0);    // true
-isZero(-0);   // true (JavaScript considers 0 and -0 equal)
-isZero(1);    // false
-isZero(0.1);  // false
+isZero(0); // true
+isZero(-0); // true (JavaScript considers 0 and -0 equal)
+isZero(1); // false
+isZero(0.1); // false
 ```
 
 ## Implementation Notes

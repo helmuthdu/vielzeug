@@ -24,7 +24,7 @@ The `random` utility generates a pseudo-random integer between two specified val
 
 ```ts
 interface RandomFunction {
-  (min?: number, max?: number): number
+  (min?: number, max?: number): number;
 }
 ```
 
@@ -45,10 +45,10 @@ interface RandomFunction {
 import { random } from '@vielzeug/toolkit';
 
 // Random number between 0 and 100
-random(); 
+random();
 
 // Random number between 1 and 10
-random(1, 10); 
+random(1, 10);
 ```
 
 ### Die Roll Example

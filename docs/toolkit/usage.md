@@ -29,7 +29,7 @@ After installation, verify that Toolkit is installed correctly:
 ```ts
 import { map } from '@vielzeug/toolkit';
 
-console.log(map([1, 2, 3], x => x * 2)); // [2, 4, 6]
+console.log(map([1, 2, 3], (x) => x * 2)); // [2, 4, 6]
 ```
 
 ## Import Patterns
@@ -42,8 +42,8 @@ Import only the utilities you need for optimal tree-shaking:
 import { chunk, group, debounce } from '@vielzeug/toolkit';
 
 const batches = chunk([1, 2, 3, 4, 5], 2);
-const byRole = group(users, u => u.role);
-const search = debounce(query => fetchResults(query), 300);
+const byRole = group(users, (u) => u.role);
+const search = debounce((query) => fetchResults(query), 300);
 ```
 
 ### Category-Specific Imports
@@ -79,13 +79,13 @@ import { map, filter, group, chunk } from '@vielzeug/toolkit';
 const numbers = [1, 2, 3, 4, 5, 6];
 
 // Transform
-const doubled = map(numbers, n => n * 2); // [2, 4, 6, 8, 10, 12]
+const doubled = map(numbers, (n) => n * 2); // [2, 4, 6, 8, 10, 12]
 
 // Filter
-const evens = filter(numbers, n => n % 2 === 0); // [2, 4, 6]
+const evens = filter(numbers, (n) => n % 2 === 0); // [2, 4, 6]
 
 // Group
-const byParity = group(numbers, n => n % 2 === 0 ? 'even' : 'odd');
+const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
 // { even: [2, 4, 6], odd: [1, 3, 5] }
 
 // Chunk
@@ -136,11 +136,11 @@ function processInput(input: unknown) {
   if (isString(input)) {
     return input.toUpperCase(); // TypeScript knows input is string
   }
-  
+
   if (isArray(input)) {
     return input.length; // TypeScript knows input is array
   }
-  
+
   if (isObject(input)) {
     return Object.keys(input); // TypeScript knows input is object
   }
@@ -185,11 +185,11 @@ const products = [
 // Filter → Sort → Group
 const result = group(
   sortBy(
-    filter(products, p => p.inStock),
-    p => p.price,
-    'desc'
+    filter(products, (p) => p.inStock),
+    (p) => p.price,
+    'desc',
   ),
-  p => p.category
+  (p) => p.category,
 );
 ```
 
@@ -219,7 +219,7 @@ const fetchData = retry(
     const response = await fetch('/api/data');
     return response.json();
   },
-  { attempts: 3, delay: 1000 }
+  { attempts: 3, delay: 1000 },
 );
 ```
 
@@ -233,27 +233,21 @@ import { useState, useMemo, useCallback } from 'react';
 
 function ProductList({ products }: { products: Product[] }) {
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Debounced search
   const handleSearch = useCallback(
     debounce((query: string) => {
       setSearchQuery(query);
     }, 300),
-    []
+    [],
   );
-  
+
   // Memoized grouping
-  const groupedProducts = useMemo(
-    () => group(products, p => p.category),
-    [products]
-  );
-  
+  const groupedProducts = useMemo(() => group(products, (p) => p.category), [products]);
+
   // Pagination with chunk
-  const pages = useMemo(
-    () => chunk(products, 20),
-    [products]
-  );
-  
+  const pages = useMemo(() => chunk(products, 20), [products]);
+
   return (
     <div>
       <input onChange={(e) => handleSearch(e.target.value)} />
@@ -279,13 +273,11 @@ const handleSearch = debounce((query: string) => {
 }, 300);
 
 // Computed grouped products
-const groupedProducts = computed(() => 
+const groupedProducts = computed(() =>
   group(
-    filter(products.value, p => 
-      p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    ),
-    p => p.category
-  )
+    filter(products.value, (p) => p.name.toLowerCase().includes(searchQuery.value.toLowerCase())),
+    (p) => p.category,
+  ),
 );
 </script>
 
@@ -305,17 +297,17 @@ const app = express();
 
 app.get('/api/products', async (req, res) => {
   const products = await fetchProducts();
-  
+
   // Group by category
-  const grouped = group(products, p => p.category);
-  
+  const grouped = group(products, (p) => p.category);
+
   // Transform response
   const response = await map(Object.entries(grouped), async ([category, items]) => ({
     category,
     count: items.length,
     items: items.slice(0, 10), // First 10 items
   }));
-  
+
   res.json(response);
 });
 ```
@@ -359,13 +351,13 @@ import * as toolkit from '@vielzeug/toolkit';
 ✅ **Good**: Let TypeScript infer types
 
 ```ts
-const names = map(users, u => u.name); // string[]
+const names = map(users, (u) => u.name); // string[]
 ```
 
 ❌ **Bad**: Manual type assertions
 
 ```ts
-const names = map(users, u => u.name) as string[];
+const names = map(users, (u) => u.name) as string[];
 ```
 
 ### 3. Use Type Guards
@@ -389,10 +381,7 @@ return (value as string).toUpperCase();
 ✅ **Good**: Readable transformations
 
 ```ts
-const result = group(
-  filter(items, isValid),
-  item => item.category
-);
+const result = group(filter(items, isValid), (item) => item.category);
 ```
 
 ❌ **Bad**: Nested callbacks
@@ -411,13 +400,13 @@ const result = items.reduce((acc, item) => {
 ✅ **Good**: Use built-in async support
 
 ```ts
-const users = await map(ids, async id => fetchUser(id));
+const users = await map(ids, async (id) => fetchUser(id));
 ```
 
 ❌ **Bad**: Manual Promise.all
 
 ```ts
-const promises = ids.map(id => fetchUser(id));
+const promises = ids.map((id) => fetchUser(id));
 const users = await Promise.all(promises);
 ```
 

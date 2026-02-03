@@ -24,7 +24,7 @@ The `diff` utility compares two objects and returns an object containing only th
 
 ```ts
 interface DiffFunction {
-  <T extends object, U extends object>(a: T, b: U): Partial<T & U>
+  <T extends object, U extends object>(a: T, b: U): Partial<T & U>;
 }
 ```
 
@@ -56,21 +56,21 @@ const result = diff(original, updated);
 ```ts
 import { diff } from '@vielzeug/toolkit';
 
-const v1 = { 
-  user: { 
-    name: 'Alice', 
-    settings: { theme: 'dark' } 
-  } 
+const v1 = {
+  user: {
+    name: 'Alice',
+    settings: { theme: 'dark' },
+  },
 };
 
-const v2 = { 
-  user: { 
-    name: 'Alice', 
-    settings: { theme: 'light' } 
-  } 
+const v2 = {
+  user: {
+    name: 'Alice',
+    settings: { theme: 'light' },
+  },
 };
 
-diff(v1, v2); 
+diff(v1, v2);
 // { user: { settings: { theme: 'light' } } }
 ```
 

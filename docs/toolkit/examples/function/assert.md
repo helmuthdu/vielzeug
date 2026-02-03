@@ -31,7 +31,7 @@ interface AssertOptions {
 }
 
 interface AssertFunction {
-  (condition: boolean | boolean[], message?: string, options?: AssertOptions): void
+  (condition: boolean | boolean[], message?: string, options?: AssertOptions): void;
 }
 ```
 
@@ -65,9 +65,9 @@ assert(users.length > 0, 'Users list cannot be empty'); // Throws if empty
 import { assert } from '@vielzeug/toolkit';
 
 function process(data: any) {
-  assert(data.id, 'Missing ID', { 
+  assert(data.id, 'Missing ID', {
     type: TypeError,
-    args: { received: data }
+    args: { received: data },
   });
 }
 ```

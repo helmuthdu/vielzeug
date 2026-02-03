@@ -23,7 +23,7 @@ The `snake_case` utility transforms a string into `snake_case` format (all lower
 
 ```ts
 interface SnakeCaseFunction {
-  (input: string): string
+  (input: string): string;
 }
 ```
 
@@ -42,10 +42,10 @@ interface SnakeCaseFunction {
 ```ts
 import { snakeCase } from '@vielzeug/toolkit';
 
-snakeCase('hello world');   // 'hello_world'
-snakeCase('fooBar');       // 'foo_bar'
-snakeCase('Kebab-Case');   // 'kebab_case'
-snakeCase('data.meta.id');  // 'data_meta_id'
+snakeCase('hello world'); // 'hello_world'
+snakeCase('fooBar'); // 'foo_bar'
+snakeCase('Kebab-Case'); // 'kebab_case'
+snakeCase('data.meta.id'); // 'data_meta_id'
 ```
 
 ### Advanced Scenarios
@@ -54,8 +54,8 @@ snakeCase('data.meta.id');  // 'data_meta_id'
 import { snakeCase } from '@vielzeug/toolkit';
 
 snakeCase('  leading trailing  '); // 'leading_trailing'
-snakeCase('XMLHttpRequest');       // 'xml_http_request'
-snakeCase('multiple---dashes');    // 'multiple_dashes'
+snakeCase('XMLHttpRequest'); // 'xml_http_request'
+snakeCase('multiple---dashes'); // 'multiple_dashes'
 ```
 
 ## Implementation Notes

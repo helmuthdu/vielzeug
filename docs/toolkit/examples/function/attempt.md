@@ -26,9 +26,7 @@ The `attempt` utility safely executes a function and returns a tuple containing 
 type AttemptResult<T> = [T, null] | [null, any];
 
 interface AttemptFunction {
-  <T>(fn: () => T): T extends Promise<infer U> 
-    ? Promise<AttemptResult<U>> 
-    : AttemptResult<T>
+  <T>(fn: () => T): T extends Promise<infer U> ? Promise<AttemptResult<U>> : AttemptResult<T>;
 }
 ```
 
@@ -62,7 +60,7 @@ if (error) {
 ```ts
 import { attempt } from '@vielzeug/toolkit';
 
-const [user, fetchError] = await attempt(() => fetch('/api/user/1').then(r => r.json()));
+const [user, fetchError] = await attempt(() => fetch('/api/user/1').then((r) => r.json()));
 
 if (fetchError) {
   handleError(fetchError);

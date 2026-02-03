@@ -23,7 +23,7 @@ The `sleep` utility returns a Promise that resolves after a specified amount of 
 
 ```ts
 interface SleepFunction {
-  (ms: number): Promise<void>
+  (ms: number): Promise<void>;
 }
 ```
 

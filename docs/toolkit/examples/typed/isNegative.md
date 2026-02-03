@@ -23,7 +23,7 @@ The `isNegative` utility is a type guard that checks if a given number is strict
 
 ```ts
 interface IsNegativeFunction {
-  (value: number): boolean
+  (value: number): boolean;
 }
 ```
 
@@ -42,10 +42,10 @@ interface IsNegativeFunction {
 ```ts
 import { isNegative } from '@vielzeug/toolkit';
 
-isNegative(-10);  // true
+isNegative(-10); // true
 isNegative(-0.1); // true
-isNegative(0);    // false
-isNegative(5);    // false
+isNegative(0); // false
+isNegative(5); // false
 ```
 
 ## Implementation Notes

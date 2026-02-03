@@ -25,11 +25,7 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 
 ```ts
 interface PathFunction {
-  <T = any>(
-    obj: any, 
-    path: string | Array<string | number>, 
-    fallback?: T
-  ): T | undefined
+  <T = any>(obj: any, path: string | Array<string | number>, fallback?: T): T | undefined;
 }
 ```
 
@@ -53,9 +49,9 @@ import { path } from '@vielzeug/toolkit';
 const config = {
   api: {
     endpoints: {
-      login: '/api/v1/login'
-    }
-  }
+      login: '/api/v1/login',
+    },
+  },
 };
 
 path(config, 'api.endpoints.login'); // '/api/v1/login'
@@ -70,8 +66,8 @@ import { path } from '@vielzeug/toolkit';
 const data = {
   users: [
     { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' }
-  ]
+    { id: 2, name: 'Bob' },
+  ],
 };
 
 // Access array index

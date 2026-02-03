@@ -23,7 +23,7 @@ The `values` utility returns an array of an object's own enumerable property val
 
 ```ts
 interface ValuesFunction {
-  <T extends Record<string, any>>(obj: T): T[keyof T][]
+  <T extends Record<string, any>>(obj: T): T[keyof T][];
 }
 ```
 
@@ -45,10 +45,10 @@ import { values } from '@vielzeug/toolkit';
 const scores = {
   alice: 100,
   bob: 85,
-  charlie: 92
+  charlie: 92,
 };
 
-const allScores = values(scores); 
+const allScores = values(scores);
 // [100, 85, 92]
 ```
 
@@ -60,7 +60,7 @@ import { values } from '@vielzeug/toolkit';
 const mixed = {
   id: 1,
   active: true,
-  name: 'System'
+  name: 'System',
 };
 
 const data = values(mixed); // Typed as (string | number | boolean)[]

@@ -7,6 +7,7 @@ This guide explains how to safely test the release workflow before using it for 
 The `release-test.yml` workflow is a **dry run version** of the release workflow that:
 
 ✅ **Does everything except the risky parts:**
+
 - ✅ Installs dependencies
 - ✅ Builds packages
 - ✅ Bumps version numbers
@@ -15,6 +16,7 @@ The `release-test.yml` workflow is a **dry run version** of the release workflow
 - ✅ Creates a draft GitHub Release
 
 ❌ **Skips the permanent actions:**
+
 - ❌ Does NOT commit to repository
 - ❌ Does NOT push commits or tags
 - ❌ Does NOT publish to npm
@@ -44,6 +46,7 @@ git push
 ### Step 3: Watch the Workflow Run
 
 The workflow will execute all the steps. You can:
+
 - Click on the running workflow to see live logs
 - Check each step's output
 - Look for green checkmarks ✅
@@ -77,6 +80,7 @@ cat package.json
 #### C. Check the Workflow Logs
 
 In the Actions tab, review the logs for:
+
 - **"Show what would be committed"** - See version bump and changelog changes
 - **"Dry run - npm publish check"** - Verify package metadata
 - **"Test Summary"** - Overall results
@@ -107,6 +111,7 @@ In the Actions tab, review the logs for:
 **Problem**: The workflow can't find the package in rush.json
 
 **Solution**: Check that the package name matches exactly:
+
 ```bash
 grep -A2 "packageName" rush.json
 ```
@@ -115,7 +120,8 @@ grep -A2 "packageName" rush.json
 
 **Problem**: Package or dependencies don't build
 
-**Solution**: 
+**Solution**:
+
 ```bash
 # Test locally first
 node common/scripts/install-run-rush.js install
@@ -127,6 +133,7 @@ node common/scripts/install-run-rush.js build --to @vielzeug/package --verbose
 **Problem**: Package.json or build output issues
 
 **Solution**: Check that:
+
 - `package.json` has correct `files` field
 - `dist/` folder is created by build
 - No syntax errors in package.json
@@ -148,6 +155,7 @@ git push origin :refs/tags/test-@vielzeug/package@X.X.X
 ```
 
 Or via GitHub UI:
+
 1. Go to **Tags** page
 2. Find `test-@vielzeug/package@X.X.X`
 3. Delete it
@@ -163,6 +171,7 @@ Now that you've verified everything works:
 5. Click **"Run workflow"**
 
 This time it will:
+
 - ✅ Commit the changes
 - ✅ Push tags
 - ✅ Publish to npm
@@ -173,16 +182,19 @@ This time it will:
 You can run the test workflow multiple times to test:
 
 ### Test 1: Patch Release
+
 - Package: `@vielzeug/toolkit`
 - Bump: `patch`
 - Expected: 1.0.0 → 1.0.1
 
 ### Test 2: Minor Release
+
 - Package: `@vielzeug/fetchit`
 - Bump: `minor`
 - Expected: 1.0.0 → 1.1.0
 
 ### Test 3: Major Release
+
 - Package: `@vielzeug/logit`
 - Bump: `major`
 - Expected: 1.0.0 → 2.0.0
@@ -191,18 +203,18 @@ After each test, delete the draft release before running the next one.
 
 ## Comparing Test vs Real Workflow
 
-| Action | Test Workflow | Real Workflow |
-|--------|---------------|---------------|
-| Install dependencies | ✅ Yes | ✅ Yes |
-| Build package | ✅ Yes | ✅ Yes |
-| Bump version | ✅ Yes | ✅ Yes |
-| Update CHANGELOG | ✅ Yes | ✅ Yes |
-| Create tarball | ✅ Yes | ✅ Yes |
-| Git commit | ❌ No | ✅ Yes |
-| Git push | ❌ No | ✅ Yes |
-| Create tag | ⚠️ Test tag only | ✅ Real tag |
-| Publish to npm | ❌ No | ✅ Yes |
-| GitHub Release | ⚠️ Draft only | ✅ Public release |
+| Action               | Test Workflow    | Real Workflow     |
+| -------------------- | ---------------- | ----------------- |
+| Install dependencies | ✅ Yes           | ✅ Yes            |
+| Build package        | ✅ Yes           | ✅ Yes            |
+| Bump version         | ✅ Yes           | ✅ Yes            |
+| Update CHANGELOG     | ✅ Yes           | ✅ Yes            |
+| Create tarball       | ✅ Yes           | ✅ Yes            |
+| Git commit           | ❌ No            | ✅ Yes            |
+| Git push             | ❌ No            | ✅ Yes            |
+| Create tag           | ⚠️ Test tag only | ✅ Real tag       |
+| Publish to npm       | ❌ No            | ✅ Yes            |
+| GitHub Release       | ⚠️ Draft only    | ✅ Public release |
 
 ## Benefits of Testing First
 
@@ -236,4 +248,3 @@ Once the test workflow passes successfully:
 ---
 
 **Note**: The test workflow is safe to run multiple times. It never makes permanent changes to your repository or npm registry.
-

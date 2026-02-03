@@ -4,17 +4,17 @@ Object utilities provide robust tools to manipulate, compare, and traverse objec
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :--- | :--- |
-| [`clone`](./object/clone.md) | Create a deep clone of an object. |
-| [`merge`](./object/merge.md) | Merge multiple objects with configurable strategies (Deep, Shallow, etc.). |
-| [`diff`](./object/diff.md) | Compare two objects and return the structural differences. |
-| [`path`](./object/path.md) | Safely access nested properties using dot-notation strings. |
-| [`seek`](./object/seek.md) | Find a value anywhere within a deeply nested object by its key. |
-| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value. |
-| [`keys`](./object/keys.md) | Type-safe way to get an object's keys. |
-| [`values`](./object/values.md) | Type-safe way to get an object's values. |
-| [`entries`](./object/entries.md) | Type-safe way to get an object's entries. |
+| Method                               | Description                                                                |
+| :----------------------------------- | :------------------------------------------------------------------------- |
+| [`clone`](./object/clone.md)         | Create a deep clone of an object.                                          |
+| [`merge`](./object/merge.md)         | Merge multiple objects with configurable strategies (Deep, Shallow, etc.). |
+| [`diff`](./object/diff.md)           | Compare two objects and return the structural differences.                 |
+| [`path`](./object/path.md)           | Safely access nested properties using dot-notation strings.                |
+| [`seek`](./object/seek.md)           | Find a value anywhere within a deeply nested object by its key.            |
+| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value.                    |
+| [`keys`](./object/keys.md)           | Type-safe way to get an object's keys.                                     |
+| [`values`](./object/values.md)       | Type-safe way to get an object's values.                                   |
+| [`entries`](./object/entries.md)     | Type-safe way to get an object's entries.                                  |
 
 ## 💡 Practical Examples
 
@@ -42,9 +42,9 @@ import { path, seek } from '@vielzeug/toolkit';
 const data = {
   user: {
     profile: {
-      settings: { theme: 'dark' }
-    }
-  }
+      settings: { theme: 'dark' },
+    },
+  },
 };
 
 // Access via path string

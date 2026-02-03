@@ -23,10 +23,7 @@ The `throttle` utility ensures that a function is called at most once in a speci
 
 ```ts
 interface ThrottleFunction {
-  <T extends (...args: any[]) => any>(
-    fn: T, 
-    limit: number
-  ): (...args: any[]) => void;
+  <T extends (...args: any[]) => any>(fn: T, limit: number): (...args: any[]) => void;
 }
 ```
 

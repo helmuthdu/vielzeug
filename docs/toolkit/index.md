@@ -16,6 +16,7 @@
 Modern JavaScript projects often require common data manipulation tasks—grouping arrays, deep merging objects, debouncing functions, or checking types safely. While native JavaScript provides some of these capabilities, they're often verbose, error-prone, or missing entirely.
 
 **Toolkit solves this by providing:**
+
 - **Consistent API**: All utilities follow predictable patterns with unified error handling
 - **Type Safety**: Catch errors at compile-time with full TypeScript inference, not at runtime
 - **Zero Dependencies**: No supply chain risks, bloat, or version conflicts
@@ -24,19 +25,20 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ### Comparison with Alternatives
 
-| Feature | Toolkit | Lodash | Ramda | Native JS |
-|---------|---------|--------|-------|-----------|
-| TypeScript Support | ✅ First-class | ⚠️ Via @types | ⚠️ Via @types | ❌ Limited |
-| Tree-shakeable | ✅ By default | ⚠️ lodash-es only | ✅ Yes | N/A |
-| Bundle Size (min+gzip) | ~2-3KB per utility | ~24KB (full) | ~12KB (full) | 0KB |
-| Dependencies | 0 | 0 | 0 | N/A |
-| Learning Curve | Low | Low | High (FP focused) | Low |
-| Async Support | ✅ Built-in | ❌ Limited | ❌ Limited | ⚠️ Manual |
-| Isomorphic | ✅ Browser + Node.js | ✅ Yes | ✅ Yes | ✅ Yes |
+| Feature                | Toolkit              | Lodash            | Ramda             | Native JS  |
+| ---------------------- | -------------------- | ----------------- | ----------------- | ---------- |
+| TypeScript Support     | ✅ First-class       | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
+| Tree-shakeable         | ✅ By default        | ⚠️ lodash-es only | ✅ Yes            | N/A        |
+| Bundle Size (min+gzip) | ~2-3KB per utility   | ~24KB (full)      | ~12KB (full)      | 0KB        |
+| Dependencies           | 0                    | 0                 | 0                 | N/A        |
+| Learning Curve         | Low                  | Low               | High (FP focused) | Low        |
+| Async Support          | ✅ Built-in          | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
+| Isomorphic             | ✅ Browser + Node.js | ✅ Yes            | ✅ Yes            | ✅ Yes     |
 
 ## When to Use Toolkit
 
 **✅ Use Toolkit when you:**
+
 - Build TypeScript applications requiring full type safety and inference
 - Need modern, tree-shakeable utilities to minimize bundle sizes
 - Want zero dependencies for better security and maintainability
@@ -45,6 +47,7 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 - Work with async operations and need built-in Promise support
 
 **❌ Consider alternatives when you:**
+
 - Already heavily invested in the Lodash ecosystem with legacy code
 - Need pure functional programming with composition (consider Ramda)
 - Build micro-libraries where even small dependencies matter
@@ -86,8 +89,11 @@ import { chunk, group, isString } from '@vielzeug/toolkit';
 const chunks = chunk([1, 2, 3, 4, 5], 2); // [[1, 2], [3, 4], [5]]
 
 // Group by a property
-const users = [{ id: 1, role: 'admin' }, { id: 2, role: 'user' }];
-const grouped = group(users, u => u.role); // { admin: [...], user: [...] }
+const users = [
+  { id: 1, role: 'admin' },
+  { id: 2, role: 'user' },
+];
+const grouped = group(users, (u) => u.role); // { admin: [...], user: [...] }
 ```
 
 Or import from specific modules:
@@ -114,21 +120,21 @@ function paginateProducts(products: Product[], page: number, size: number) {
 
 // Grouping - verbose reduce logic
 function groupByCategory(products: Product[]) {
-  return products.reduce((acc, product) => {
-    const category = product.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(product);
-    return acc;
-  }, {} as Record<string, Product[]>);
+  return products.reduce(
+    (acc, product) => {
+      const category = product.category;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    },
+    {} as Record<string, Product[]>,
+  );
 }
 
 // Debounce - complex timing logic
-function debounce<T extends (...args: any[]) => any>(
-  fn: T,
-  delay: number
-): (...args: Parameters<T>) => void {
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
@@ -146,7 +152,7 @@ import { chunk, group, debounce } from '@vielzeug/toolkit';
 const page1 = chunk(products, 20)[0]; // First page of 20 items
 
 // Grouping - type-safe with full inference
-const byCategory = group(products, p => p.category);
+const byCategory = group(products, (p) => p.category);
 // Type: Record<string, Product[]> - automatically inferred!
 
 // Debounce - maintains original function signature
@@ -162,11 +168,11 @@ Toolkit provides excellent TypeScript support with **full type inference**:
 ```ts
 import { pick, isString, map } from '@vielzeug/toolkit';
 
-const user = { 
-  id: 1, 
-  name: 'Alice', 
-  email: 'alice@example.com', 
-  role: 'admin' 
+const user = {
+  id: 1,
+  name: 'Alice',
+  email: 'alice@example.com',
+  role: 'admin',
 };
 
 // ✅ Type is automatically inferred as { name: string; email: string }
@@ -222,16 +228,16 @@ import * as toolkit from '@vielzeug/toolkit';
 
 ### Bundle Size by Category
 
-| Category | Utilities | Approx. Size (gzipped) |
-|----------|-----------|------------------------|
-| Array | 24 utilities | ~8KB |
-| Object | 9 utilities | ~6KB |
-| String | 10 utilities | ~3KB |
-| Typed | 25+ type guards | ~2KB |
-| Function | 8 utilities | ~4KB |
-| Math | 10 utilities | ~2KB |
-| Date | 5 utilities | ~2KB |
-| Random | 8 utilities | ~3KB |
+| Category | Utilities       | Approx. Size (gzipped) |
+| -------- | --------------- | ---------------------- |
+| Array    | 24 utilities    | ~8KB                   |
+| Object   | 9 utilities     | ~6KB                   |
+| String   | 10 utilities    | ~3KB                   |
+| Typed    | 25+ type guards | ~2KB                   |
+| Function | 8 utilities     | ~4KB                   |
+| Math     | 10 utilities    | ~2KB                   |
+| Date     | 5 utilities     | ~2KB                   |
+| Random   | 8 utilities     | ~3KB                   |
 
 > **Note**: Sizes are approximate and depend on your bundler configuration and which utilities you import.
 
@@ -287,6 +293,7 @@ See individual utility docs for specific migration notes.
 ### Is Toolkit production-ready?
 
 **Yes!** Toolkit is:
+
 - ✅ Battle-tested in production applications
 - ✅ Comprehensive test coverage (>95%)
 - ✅ Follows semantic versioning
@@ -296,6 +303,7 @@ See individual utility docs for specific migration notes.
 ### How often is Toolkit updated?
 
 We follow **semantic versioning** and release:
+
 - **Patch releases**: Bug fixes and docs (as needed)
 - **Minor releases**: New utilities and features (monthly)
 - **Major releases**: Breaking changes (rare, with migration guides)
@@ -316,8 +324,8 @@ export default {
   build: {
     target: 'esnext',
     minify: 'terser',
-  }
-}
+  },
+};
 ```
 
 ```js
@@ -327,8 +335,8 @@ module.exports = {
   optimization: {
     usedExports: true,
     sideEffects: false,
-  }
-}
+  },
+};
 ```
 
 ### TypeScript errors with imports
@@ -351,17 +359,18 @@ module.exports = {
 
 **Problem**: TypeScript doesn't infer types correctly.
 
-**Solution**: 
+**Solution**:
+
 1. Ensure you're using TypeScript 5.0+
 2. Don't use type assertions that hide inference
 3. Let the utility infer types naturally:
 
 ```ts
 // ❌ Don't do this
-const result = map(items, x => x.name) as string[];
+const result = map(items, (x) => x.name) as string[];
 
 // ✅ Let TypeScript infer
-const result = map(items, x => x.name); // Type: string[]
+const result = map(items, (x) => x.name); // Type: string[]
 ```
 
 ### Utilities not available in older browsers
@@ -371,15 +380,19 @@ const result = map(items, x => x.name); // Type: string[]
 **Solution**: Toolkit targets modern JavaScript (ES2020+). For older browsers:
 
 1. Use a transpiler (Babel, SWC):
+
 ```js
 // babel.config.js
 module.exports = {
   presets: [
-    ['@babel/preset-env', {
-      targets: '> 0.25%, not dead'
-    }]
-  ]
-}
+    [
+      '@babel/preset-env',
+      {
+        targets: '> 0.25%, not dead',
+      },
+    ],
+  ],
+};
 ```
 
 2. Or consider polyfills for specific features.
@@ -389,6 +402,7 @@ module.exports = {
 **Problem**: Operations are slow on very large datasets (100k+ items).
 
 **Solution**:
+
 - Use pagination (`chunk`) for rendering
 - Consider streaming/lazy evaluation for massive datasets
 - Profile with DevTools to identify bottlenecks
@@ -417,4 +431,3 @@ Found a bug or want to add a utility? We welcome contributions!
 ---
 
 > **Tip:** Toolkit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for logging, HTTP clients, state management, and more.
-

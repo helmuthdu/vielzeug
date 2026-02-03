@@ -25,10 +25,7 @@ The `aggregate` utility transforms an array of objects into a single object, whe
 type Selector<T> = keyof T | ((item: T) => Primitive);
 
 interface AggregateFunction {
-  <T, K extends string | number | symbol>(
-    array: T[], 
-    selector: Selector<T>
-  ): Record<K, T>
+  <T, K extends string | number | symbol>(array: T[], selector: Selector<T>): Record<K, T>;
 }
 ```
 
@@ -51,7 +48,7 @@ import { aggregate } from '@vielzeug/toolkit';
 const data = [
   { id: 'u1', name: 'Alice' },
   { id: 'u2', name: 'Bob' },
-  { id: 'u1', name: 'Alice Smith' } // Duplicate ID
+  { id: 'u1', name: 'Alice Smith' }, // Duplicate ID
 ];
 
 const byId = aggregate(data, 'id');
@@ -71,10 +68,10 @@ import { aggregate } from '@vielzeug/toolkit';
 const products = [
   { sku: 'APL', price: 1.5, category: 'fruit' },
   { sku: 'BAN', price: 0.8, category: 'fruit' },
-  { sku: 'CHX', price: 5.0, category: 'meat' }
+  { sku: 'CHX', price: 5.0, category: 'meat' },
 ];
 
-const byCategory = aggregate(products, p => p.category);
+const byCategory = aggregate(products, (p) => p.category);
 /*
 {
   fruit: { sku: 'BAN', price: 0.8, category: 'fruit' },

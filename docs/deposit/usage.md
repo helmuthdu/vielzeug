@@ -54,15 +54,15 @@ interface Post {
 // Define the schema
 const schema = {
   users: {
-    key: 'id',                    // Primary key field
-    indexes: ['email', 'role'],   // Indexed fields for fast lookups
-    record: {} as User            // Type assertion for the record
+    key: 'id', // Primary key field
+    indexes: ['email', 'role'], // Indexed fields for fast lookups
+    record: {} as User, // Type assertion for the record
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as Post
-  }
+    record: {} as Post,
+  },
 } satisfies DepositDataSchema;
 ```
 
@@ -81,7 +81,7 @@ const db = new Deposit({
   type: 'localStorage',
   dbName: 'my-app-db',
   version: 1,
-  schema
+  schema,
 });
 ```
 
@@ -94,14 +94,9 @@ const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
 const db = new Deposit(adapter);
 
 // With migration function
-const adapter = new IndexedDBAdapter(
-  'my-app-db', 
-  1, 
-  schema,
-  (db, oldVersion, newVersion, tx, schema) => {
-    // Migration logic here
-  }
-);
+const adapter = new IndexedDBAdapter('my-app-db', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
+  // Migration logic here
+});
 
 // Or use the shorthand config
 const db = new Deposit({
@@ -111,7 +106,7 @@ const db = new Deposit({
   schema,
   migrationFn: (db, oldVersion, newVersion, tx, schema) => {
     // Migration logic
-  }
+  },
 });
 ```
 
@@ -127,17 +122,17 @@ await db.put('users', {
   email: 'alice@example.com',
   age: 30,
   role: 'admin',
-  createdAt: Date.now()
+  createdAt: Date.now(),
 });
 
 // Update (just put with same id)
 await db.put('users', {
   id: 'u1',
-  name: 'Alice Smith',  // Updated name
+  name: 'Alice Smith', // Updated name
   email: 'alice@example.com',
-  age: 31,              // Updated age
+  age: 31, // Updated age
   role: 'admin',
-  createdAt: Date.now()
+  createdAt: Date.now(),
 });
 ```
 
@@ -157,7 +152,7 @@ const user = await db.get('users', 'u1', {
   email: '',
   age: 0,
   role: 'user',
-  createdAt: Date.now()
+  createdAt: Date.now(),
 });
 
 // Get all users
@@ -190,7 +185,7 @@ console.log(`Total users: ${userCount}`);
 const newUsers = [
   { id: 'u2', name: 'Bob', email: 'bob@example.com', age: 25, role: 'user', createdAt: Date.now() },
   { id: 'u3', name: 'Carol', email: 'carol@example.com', age: 28, role: 'user', createdAt: Date.now() },
-  { id: 'u4', name: 'Dave', email: 'dave@example.com', age: 35, role: 'admin', createdAt: Date.now() }
+  { id: 'u4', name: 'Dave', email: 'dave@example.com', age: 35, role: 'admin', createdAt: Date.now() },
 ];
 
 await db.bulkPut('users', newUsers);
@@ -210,12 +205,16 @@ Records can automatically expire after a specified time:
 
 ```ts
 // Session expires in 1 hour (3600000 ms)
-await db.put('sessions', {
-  id: 's1',
-  userId: 'u1',
-  token: 'abc123',
-  createdAt: Date.now()
-}, 3600000);
+await db.put(
+  'sessions',
+  {
+    id: 's1',
+    userId: 'u1',
+    token: 'abc123',
+    createdAt: Date.now(),
+  },
+  3600000,
+);
 
 // After 1 hour, this returns undefined
 const session = await db.get('sessions', 's1'); // undefined
@@ -230,27 +229,24 @@ Build complex queries with a fluent API:
 
 ```ts
 // Find all admin users sorted by name
-const admins = await db.query('users')
-  .equals('role', 'admin')
-  .orderBy('name', 'asc')
-  .toArray();
+const admins = await db.query('users').equals('role', 'admin').orderBy('name', 'asc').toArray();
 
 // Find users between ages 20-30
-const youngUsers = await db.query('users')
-  .between('age', 20, 30)
-  .toArray();
+const youngUsers = await db.query('users').between('age', 20, 30).toArray();
 
 // Complex filtering
-const special = await db.query('users')
-  .filter(user => user.age > 18 && user.email.includes('example.com'))
+const special = await db
+  .query('users')
+  .filter((user) => user.age > 18 && user.email.includes('example.com'))
   .orderBy('createdAt', 'desc')
   .limit(10)
   .toArray();
 
 // Pagination
-const page2 = await db.query('users')
+const page2 = await db
+  .query('users')
   .orderBy('name', 'asc')
-  .page(2, 10)  // Page 2, 10 items per page
+  .page(2, 10) // Page 2, 10 items per page
   .toArray();
 
 // Aggregations
@@ -273,18 +269,18 @@ await db.transaction(['users', 'posts'], async (stores) => {
     email: 'eve@example.com',
     age: 22,
     role: 'user',
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
-  
+
   // Add their first post
   stores.posts.push({
     id: 'p1',
     userId: 'u5',
     title: 'Hello World',
     content: 'My first post!',
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
-  
+
   // Both changes are committed together
   // If any error occurs, all changes are rolled back
 });
@@ -296,10 +292,17 @@ Apply multiple operations atomically:
 
 ```ts
 await db.patch('users', [
-  { type: 'put', value: { id: 'u6', name: 'Frank', email: 'f@example.com', age: 40, role: 'user', createdAt: Date.now() } },
-  { type: 'put', value: { id: 'u7', name: 'Grace', email: 'g@example.com', age: 33, role: 'admin', createdAt: Date.now() }, ttl: 3600000 },
+  {
+    type: 'put',
+    value: { id: 'u6', name: 'Frank', email: 'f@example.com', age: 40, role: 'user', createdAt: Date.now() },
+  },
+  {
+    type: 'put',
+    value: { id: 'u7', name: 'Grace', email: 'g@example.com', age: 33, role: 'admin', createdAt: Date.now() },
+    ttl: 3600000,
+  },
   { type: 'delete', key: 'u2' },
-  { type: 'clear' } // Clears all, then applies puts
+  { type: 'clear' }, // Clears all, then applies puts
 ]);
 ```
 
@@ -308,18 +311,12 @@ await db.patch('users', [
 When using IndexedDB, you can migrate data when the schema changes:
 
 ```ts
-const migrationFn: DepositMigrationFn<typeof schema> = (
-  db,
-  oldVersion,
-  newVersion,
-  tx,
-  schema
-) => {
+const migrationFn: DepositMigrationFn<typeof schema> = (db, oldVersion, newVersion, tx, schema) => {
   if (oldVersion < 2) {
     // Version 1 -> 2: Add default role to existing users
     const store = tx.objectStore('users');
     const request = store.getAll();
-    
+
     request.onsuccess = () => {
       for (const user of request.result) {
         if (!user.role) {
@@ -329,12 +326,12 @@ const migrationFn: DepositMigrationFn<typeof schema> = (
       }
     };
   }
-  
+
   if (oldVersion < 3) {
     // Version 2 -> 3: Add createdAt to posts
     const store = tx.objectStore('posts');
     const request = store.getAll();
-    
+
     request.onsuccess = () => {
       for (const post of request.result) {
         if (!post.createdAt) {
@@ -359,7 +356,7 @@ const db = new Deposit({
   type: 'localStorage', // Faster for development
   dbName: 'my-app-dev',
   version: 1,
-  schema
+  schema,
 });
 ```
 
@@ -371,7 +368,7 @@ const db = new Deposit({
   dbName: 'my-app-prod',
   version: 1,
   schema,
-  migrationFn
+  migrationFn,
 });
 ```
 
@@ -383,9 +380,9 @@ beforeEach(async () => {
     type: 'localStorage',
     dbName: `test-${Date.now()}`, // Unique per test
     version: 1,
-    schema
+    schema,
   });
-  
+
   await db.clear('users');
   await db.clear('posts');
 });
@@ -413,16 +410,20 @@ beforeEach(async () => {
 async function fetchWithCache(url: string) {
   const cached = await db.get('api-cache', url);
   if (cached) return cached.data;
-  
+
   const response = await fetch(url);
   const data = await response.json();
-  
-  await db.put('api-cache', { 
-    id: url, 
-    data, 
-    fetchedAt: Date.now() 
-  }, 300000); // 5 minutes
-  
+
+  await db.put(
+    'api-cache',
+    {
+      id: url,
+      data,
+      fetchedAt: Date.now(),
+    },
+    300000,
+  ); // 5 minutes
+
   return data;
 }
 ```
@@ -435,14 +436,14 @@ async function saveForLater(action: any) {
   await db.put('offline-queue', {
     id: crypto.randomUUID(),
     action,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   });
 }
 
 // Process queue when online
 async function processQueue() {
   const queue = await db.getAll('offline-queue');
-  
+
   for (const item of queue) {
     try {
       await processAction(item.action);
@@ -458,8 +459,9 @@ async function processQueue() {
 
 ```ts
 async function searchUsers(query: string) {
-  return await db.query('users')
-    .search(query)  // Fuzzy search
+  return await db
+    .query('users')
+    .search(query) // Fuzzy search
     .limit(10)
     .toArray();
 }

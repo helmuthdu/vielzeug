@@ -43,7 +43,7 @@ interface ListResult<T> {
 }
 
 interface ListFunction {
-  <T>(initialData: T[], config?: ListConfig<T>): ListResult<T>
+  <T>(initialData: T[], config?: ListConfig<T>): ListResult<T>;
 }
 ```
 
@@ -71,7 +71,7 @@ const myList = list(numbers, { limit: 3 });
 
 console.log(myList.current); // [1, 2, 3]
 
-myList.next(); 
+myList.next();
 console.log(myList.current); // [4, 5, 6]
 
 myList.prev();
@@ -86,7 +86,7 @@ import { list } from '@vielzeug/toolkit';
 const users = [
   { name: 'Charlie', age: 35 },
   { name: 'Alice', age: 30 },
-  { name: 'Bob', age: 25 }
+  { name: 'Bob', age: 25 },
 ];
 
 const userList = list(users, { limit: 10 });
@@ -96,7 +96,7 @@ userList.setSort((a, b) => a.name.localeCompare(b.name));
 console.log(userList.current[0].name); // 'Alice'
 
 // Filter by age
-userList.setFilter(u => u.age > 30);
+userList.setFilter((u) => u.age > 30);
 console.log(userList.current.length); // 1 (Charlie)
 ```
 

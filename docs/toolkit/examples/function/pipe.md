@@ -24,11 +24,9 @@ The `pipe` utility performs functional composition from left to right. It takes 
 
 ```ts
 interface PipeFunction {
-  <T extends any[], R>(...fns: [
-    (...args: T) => any,
-    ...Array<(arg: any) => any>,
-    (arg: any) => R
-  ]): (...args: T) => R | Promise<R>
+  <T extends any[], R>(
+    ...fns: [(...args: T) => any, ...Array<(arg: any) => any>, (arg: any) => R]
+  ): (...args: T) => R | Promise<R>;
 }
 ```
 

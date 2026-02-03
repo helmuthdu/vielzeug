@@ -16,6 +16,7 @@
 The native `fetch` API is powerful but requires significant boilerplate for common tasks. Managing base URLs, timeouts, JSON parsing, error handling, and request cancellation becomes repetitive and error-prone.
 
 **Without Fetchit**:
+
 ```ts
 // Verbose fetch with manual error handling
 const controller = new AbortController();
@@ -24,13 +25,13 @@ const timeout = setTimeout(() => controller.abort(), 5000);
 try {
   const response = await fetch('https://api.example.com/users/1', {
     signal: controller.signal,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   });
-  
+
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  
+
   const data = await response.json();
   return data;
 } catch (error) {
@@ -44,6 +45,7 @@ try {
 ```
 
 **With Fetchit**:
+
 ```ts
 // Clean, type-safe, one-liner
 const res = await api.get<User>('/users/1');
@@ -52,21 +54,22 @@ return res.data;
 
 ### Comparison with Alternatives
 
-| Feature | Fetchit | Axios | Ky | Native Fetch |
-|---------|---------|-------|-----|--------------|
-| TypeScript Support | ✅ First-class | ✅ Good | ✅ Good | ⚠️ Basic |
-| Request Deduplication | ✅ Built-in | ❌ | ❌ | ❌ |
-| Smart Caching | ✅ Built-in | ⚠️ Via plugins | ❌ | ❌ |
-| Auto JSON Parsing | ✅ | ✅ | ✅ | ⚠️ Manual |
-| Timeout Support | ✅ Built-in | ✅ | ✅ | ⚠️ AbortController |
-| Bundle Size (gzip) | ~9.8KB | ~13KB | ~4KB | 0KB |
-| Node.js Support | ✅ | ✅ | ✅ | ✅ (v18+) |
-| Dependencies | 0 | 7+ | 0 | N/A |
-| Request Retry | ✅ Built-in | ⚠️ Via plugins | ⚠️ Manual | ❌ |
+| Feature               | Fetchit        | Axios          | Ky        | Native Fetch       |
+| --------------------- | -------------- | -------------- | --------- | ------------------ |
+| TypeScript Support    | ✅ First-class | ✅ Good        | ✅ Good   | ⚠️ Basic           |
+| Request Deduplication | ✅ Built-in    | ❌             | ❌        | ❌                 |
+| Smart Caching         | ✅ Built-in    | ⚠️ Via plugins | ❌        | ❌                 |
+| Auto JSON Parsing     | ✅             | ✅             | ✅        | ⚠️ Manual          |
+| Timeout Support       | ✅ Built-in    | ✅             | ✅        | ⚠️ AbortController |
+| Bundle Size (gzip)    | ~9.8KB         | ~13KB          | ~4KB      | 0KB                |
+| Node.js Support       | ✅             | ✅             | ✅        | ✅ (v18+)          |
+| Dependencies          | 0              | 7+             | 0         | N/A                |
+| Request Retry         | ✅ Built-in    | ⚠️ Via plugins | ⚠️ Manual | ❌                 |
 
 ## When to Use Fetchit
 
 **✅ Use Fetchit when you:**
+
 - Build TypeScript applications requiring full type safety
 - Need automatic request deduplication to prevent redundant calls
 - Want built-in caching without external dependencies
@@ -75,6 +78,7 @@ return res.data;
 - Want sensible defaults (timeouts, JSON parsing, error handling)
 
 **❌ Consider alternatives when you:**
+
 - Need extremely minimal bundle size (use native fetch)
 - Already heavily invested in Axios ecosystem
 - Building simple scripts with few HTTP requests
@@ -122,8 +126,8 @@ const api = createHttpClient({
   url: 'https://api.example.com',
   timeout: 5000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 // 2. Make type-safe requests
@@ -141,13 +145,13 @@ console.log(res.data.name); // Type-safe!
 const created = await api.post<User>('/users', {
   body: {
     name: 'Alice',
-    email: 'alice@example.com'
-  }
+    email: 'alice@example.com',
+  },
 });
 
 // PUT request
 const updated = await api.put<User>('/users/1', {
-  body: { name: 'Alice Smith' }
+  body: { name: 'Alice Smith' },
 });
 
 // DELETE request
@@ -164,21 +168,21 @@ const api = createHttpClient({
   url: 'https://api.example.com',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 // Update auth token dynamically
 export function setAuthToken(token: string) {
   api.setHeaders({
-    Authorization: `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   });
 }
 
 // Remove auth token (e.g., on logout)
 export function clearAuth() {
   api.setHeaders({
-    Authorization: undefined // Removes the header
+    Authorization: undefined, // Removes the header
   });
   api.clearCache(); // Clear cached authenticated requests
 }
@@ -187,7 +191,7 @@ export function clearAuth() {
 async function apiRequest<T>(
   method: 'get' | 'post' | 'put' | 'delete',
   url: string,
-  options?: { body?: unknown }
+  options?: { body?: unknown },
 ): Promise<T> {
   try {
     const res = await api[method]<T>(url, options);
@@ -205,11 +209,9 @@ async function apiRequest<T>(
 }
 
 // Use throughout your app
-export const fetchUser = (id: string) => 
-  apiRequest<User>('get', `/users/${id}`);
+export const fetchUser = (id: string) => apiRequest<User>('get', `/users/${id}`);
 
-export const updateProfile = (data: Partial<User>) =>
-  apiRequest<User>('put', '/profile', { body: data });
+export const updateProfile = (data: Partial<User>) => apiRequest<User>('put', '/profile', { body: data });
 ```
 
 ### Framework Integration: React
@@ -219,25 +221,25 @@ import { createHttpClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
 const api = createHttpClient({
-  url: 'https://api.example.com'
+  url: 'https://api.example.com',
 });
 
 function UserProfile({ userId }: { userId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
   useEffect(() => {
     let cancelled = false;
-    
+
     const fetchUser = async () => {
       try {
         setLoading(true);
         const res = await api.get<User>(`/users/${userId}`, {
           // Use request ID for better caching
-          id: `user-${userId}`
+          id: `user-${userId}`,
         });
-        
+
         if (!cancelled) {
           setUser(res.data);
           setError(null);
@@ -252,18 +254,18 @@ function UserProfile({ userId }: { userId: string }) {
         }
       }
     };
-    
+
     fetchUser();
-    
+
     return () => {
       cancelled = true;
     };
   }, [userId]);
-  
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
   if (!user) return <div>User not found</div>;
-  
+
   return (
     <div>
       <h1>{user.name}</h1>
@@ -349,13 +351,17 @@ Cross-origin requests blocked.
 
 ::: tip Solution
 Ensure your server has proper CORS headers:
+
 ```ts
 // Server-side (Express example)
-app.use(cors({
-  origin: 'https://your-domain.com',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: 'https://your-domain.com',
+    credentials: true,
+  }),
+);
 ```
+
 :::
 
 ### Timeout errors
@@ -366,12 +372,14 @@ Requests timeout unexpectedly.
 
 ::: tip Solution
 Adjust timeout globally or per-request:
+
 ```ts
 // Global timeout
 const api = createHttpClient({ timeout: 30000 });
 
 // The default timeout is 5000ms (5 seconds)
 ```
+
 :::
 
 ### TypeScript type inference not working
@@ -382,6 +390,7 @@ Response data type not inferred.
 
 ::: tip Solution
 Explicitly specify response type:
+
 ```ts
 // ✅ Correct
 const res = await api.get<User>('/users/1');
@@ -390,8 +399,10 @@ const user: User = res.data;
 // ❌ Type is 'unknown'
 const res = await api.get('/users/1');
 ```
+
 :::
-```
+
+````
 
 ### Request cancelled errors
 
@@ -408,13 +419,14 @@ try {
     console.error(`${error.method} ${error.url} failed:`, error.message);
   }
 }
-```
+````
 
 ### Cache not working as expected
 
 **Problem**: Getting stale data or cache not invalidating.
 
 **Solution**: Use cache management methods:
+
 ```ts
 // Invalidate specific request
 await api.get('/users/1', { invalidate: true });

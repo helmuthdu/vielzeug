@@ -7,28 +7,137 @@
           <div class="header-title">
             <h3>Editor</h3>
             <button @click="toggleExpand" class="btn-icon" :title="isExpanded ? 'Collapse' : 'Expand'">
-              <svg v-if="!isExpanded" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>
+              <svg
+                v-if="!isExpanded"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="4 14 10 14 10 20" />
+                <polyline points="20 10 14 10 14 4" />
+                <line x1="14" y1="10" x2="21" y2="3" />
+                <line x1="10" y1="14" x2="3" y2="21" />
+              </svg>
             </button>
           </div>
           <div class="controls">
             <button @click="formatCode" class="btn-icon" title="Format Code">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/><path d="M12 7v10"/><path d="M8 11l4 4 4-4"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" />
+                <path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2" />
+                <path d="M12 7v10" />
+                <path d="M8 11l4 4 4-4" />
+              </svg>
             </button>
             <button @click="copyCode" class="btn-icon" title="Copy to Clipboard">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              </svg>
             </button>
             <button @click="shareCode" class="btn-icon" title="Share Code">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+              </svg>
             </button>
             <button @click="resetEditor" class="btn-icon" title="Reset to Default">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
             </button>
             <button @click="clearEditor" class="btn-icon" title="Clear Editor">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+              </svg>
             </button>
             <button @click="runCode" class="btn-primary btn-with-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
               <span>Run</span>
             </button>
             <select v-model="selectedExample" @change="loadExample" id="example-selector">
@@ -88,7 +197,22 @@
         <div class="output-header">
           <h3>Output</h3>
           <button @click="clearOutput" class="btn-icon" title="Clear Output">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" x2="10" y1="11" y2="17" />
+              <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
           </button>
         </div>
         <div ref="outputContainer" class="output-area"></div>
@@ -100,27 +224,36 @@
       <div class="reference-header">
         <h3>Available Functions</h3>
         <div class="search-container">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search functions..." 
-            class="search-input"
-          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="search-icon">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input v-model="searchQuery" type="text" placeholder="Search functions..." class="search-input" />
         </div>
       </div>
       <div class="function-categories">
         <div v-for="category in filteredCategories" :key="category.name" class="category">
           <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
           <div class="function-list">
-            <code 
-              v-for="fn in category.functions" 
-              :key="fn" 
+            <code
+              v-for="fn in category.functions"
+              :key="fn"
               @click="insertFunction(fn)"
               class="clickable-fn"
               :class="{ 'is-match': isMatch(fn) }"
               title="Click to insert"
-            >{{ fn }}</code>
+              >{{ fn }}</code
+            >
           </div>
         </div>
         <div v-if="filteredCategories.length === 0" class="no-results">
@@ -166,56 +299,132 @@ console.log('Even numbers doubled:', evenDoubled)
 const categories = [
   {
     name: 'Array',
-    functions: ['aggregate', 'alternate', 'chunk', 'compact', 'contains', 'every', 'filter', 'find', 'findIndex', 'findLast', 'flatten', 'group', 'list', 'map', 'pick', 'reduce', 'search', 'select', 'shift', 'some', 'sort', 'sortBy', 'substitute', 'uniq']
+    functions: [
+      'aggregate',
+      'alternate',
+      'chunk',
+      'compact',
+      'contains',
+      'every',
+      'filter',
+      'find',
+      'findIndex',
+      'findLast',
+      'flatten',
+      'group',
+      'list',
+      'map',
+      'pick',
+      'reduce',
+      'search',
+      'select',
+      'shift',
+      'some',
+      'sort',
+      'sortBy',
+      'substitute',
+      'uniq',
+    ],
   },
   {
     name: 'Object',
-    functions: ['clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values']
+    functions: ['clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values'],
   },
   {
     name: 'String',
-    functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate']
+    functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate'],
   },
   {
     name: 'Math',
-    functions: ['average', 'boil', 'clamp', 'max', 'median', 'min', 'range', 'rate', 'round', 'sum']
+    functions: ['average', 'boil', 'clamp', 'max', 'median', 'min', 'range', 'rate', 'round', 'sum'],
   },
   {
     name: 'Date',
-    functions: ['expires', 'interval', 'timeDiff']
+    functions: ['expires', 'interval', 'timeDiff'],
   },
   {
     name: 'Function',
-    functions: ['assert', 'assertParams', 'attempt', 'compare', 'compareBy', 'compose', 'curry', 'debounce', 'delay', 'fp', 'memo', 'once', 'pipe', 'predict', 'proxy', 'retry', 'sleep', 'throttle', 'worker']
+    functions: [
+      'assert',
+      'assertParams',
+      'attempt',
+      'compare',
+      'compareBy',
+      'compose',
+      'curry',
+      'debounce',
+      'delay',
+      'fp',
+      'memo',
+      'once',
+      'pipe',
+      'predict',
+      'proxy',
+      'retry',
+      'sleep',
+      'throttle',
+      'worker',
+    ],
   },
   {
     name: 'Typed',
-    functions: ['ge', 'gt', 'is', 'isArray', 'isBoolean', 'isDate', 'isDefined', 'isEmpty', 'isEqual', 'isEven', 'isFunction', 'isMatch', 'isNegative', 'isNil', 'isNumber', 'isObject', 'isOdd', 'isPositive', 'isPrimitive', 'isPromise', 'isRegex', 'isString', 'isWithin', 'isZero', 'le', 'lt', 'typeOf']
+    functions: [
+      'ge',
+      'gt',
+      'is',
+      'isArray',
+      'isBoolean',
+      'isDate',
+      'isDefined',
+      'isEmpty',
+      'isEqual',
+      'isEven',
+      'isFunction',
+      'isMatch',
+      'isNegative',
+      'isNil',
+      'isNumber',
+      'isObject',
+      'isOdd',
+      'isPositive',
+      'isPrimitive',
+      'isPromise',
+      'isRegex',
+      'isString',
+      'isWithin',
+      'isZero',
+      'le',
+      'lt',
+      'typeOf',
+    ],
   },
   {
     name: 'Random',
-    functions: ['draw', 'random', 'shuffle', 'uuid']
-  }
+    functions: ['draw', 'random', 'shuffle', 'uuid'],
+  },
 ];
 
 const allExportedFunctions = Object.keys(toolkit);
-const categorizedFunctions = categories.flatMap(c => c.functions);
-const missingFunctions = allExportedFunctions.filter(f => !categorizedFunctions.includes(f) && f !== 'default');
+const categorizedFunctions = categories.flatMap((c) => c.functions);
+const missingFunctions = allExportedFunctions.filter((f) => !categorizedFunctions.includes(f) && f !== 'default');
 
 if (missingFunctions.length > 0) {
-  console.warn('The following functions are exported from the toolkit but not categorized in the REPL:', missingFunctions);
+  console.warn(
+    'The following functions are exported from the toolkit but not categorized in the REPL:',
+    missingFunctions,
+  );
 }
 
 const filteredCategories = computed(() => {
   if (!searchQuery.value) return categories;
-  
+
   const query = searchQuery.value.toLowerCase();
   return categories
-    .map(cat => ({
+    .map((cat) => ({
       ...cat,
-      functions: cat.functions.filter(fn => fn.toLowerCase().includes(query))
+      functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),
     }))
-    .filter(cat => cat.functions.length > 0);
+    .filter((cat) => cat.functions.length > 0);
 });
 
 const isMatch = (fn) => {
@@ -330,7 +539,7 @@ const runCode = () => {
         if (item instanceof Error) return `Error: ${item.message}`;
         // Handle RegEx
         if (item instanceof RegExp) return String(item);
-        
+
         return JSON.stringify(item, null, 2);
       } catch (e) {
         return String(item);
@@ -380,13 +589,15 @@ const runCode = () => {
 
     // If it's a promise (from the async wrapper), handle it
     if (result instanceof Promise) {
-      result.then(res => {
-        if (res !== undefined) {
-          addOutput(['→', res], 'result');
-        }
-      }).catch(err => {
-        addOutput(['Error:', err.message], 'error');
-      });
+      result
+        .then((res) => {
+          if (res !== undefined) {
+            addOutput(['→', res], 'result');
+          }
+        })
+        .catch((err) => {
+          addOutput(['Error:', err.message], 'error');
+        });
     } else if (result !== undefined) {
       addOutput(['→', result], 'result');
     }
@@ -471,12 +682,10 @@ const insertFunction = (fnName) => {
       selection.startLineNumber,
       selection.startColumn,
       selection.endLineNumber,
-      selection.endColumn
+      selection.endColumn,
     );
     const text = `${fnName}()`;
-    editor.executeEdits('insert-function', [
-      { range: range, text: text, forceMoveMarkers: true }
-    ]);
+    editor.executeEdits('insert-function', [{ range: range, text: text, forceMoveMarkers: true }]);
     editor.focus();
   }
 };
@@ -498,7 +707,9 @@ const insertFunction = (fnName) => {
   overflow: hidden;
   background: var(--vp-c-bg);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .editor-section:hover,

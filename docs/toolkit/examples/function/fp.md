@@ -24,7 +24,7 @@ The `fp` utility enables "Functional Programming" mode for compatible toolkit fu
 
 ```ts
 interface FPFunction {
-  <T, R>(callback: (...args: any[]) => any, ...args: any[]): (data: T[]) => R
+  <T, R>(callback: (...args: any[]) => any, ...args: any[]): (data: T[]) => R;
 }
 ```
 
@@ -48,7 +48,7 @@ import { fp, map, chunk } from '@vielzeug/toolkit';
 const doubleAll = fp(map, (n: number) => n * 2);
 
 doubleAll([1, 2, 3]); // [2, 4, 6]
-doubleAll([10, 20]);  // [20, 40]
+doubleAll([10, 20]); // [20, 40]
 ```
 
 ### Within a Pipeline
@@ -58,7 +58,7 @@ import { fp, pipe, map, filter } from '@vielzeug/toolkit';
 
 const process = pipe(
   fp(filter, (n: number) => n > 10),
-  fp(map, (n: number) => n * n)
+  fp(map, (n: number) => n * n),
 );
 
 process([5, 12, 8, 20]); // [144, 400]

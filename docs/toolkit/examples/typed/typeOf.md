@@ -23,7 +23,7 @@ The `typeOf` utility returns a lowercase string representing the precise type of
 
 ```ts
 interface TypeOfFunction {
-  (value: unknown): string
+  (value: unknown): string;
 }
 ```
 
@@ -42,13 +42,13 @@ interface TypeOfFunction {
 ```ts
 import { typeOf } from '@vielzeug/toolkit';
 
-typeOf('hello');   // 'string'
-typeOf(123);       // 'number'
-typeOf([]);        // 'array'
-typeOf({});        // 'object'
-typeOf(null);      // 'null'
+typeOf('hello'); // 'string'
+typeOf(123); // 'number'
+typeOf([]); // 'array'
+typeOf({}); // 'object'
+typeOf(null); // 'null'
 typeOf(undefined); // 'undefined'
-typeOf(/abc/);     // 'regexp'
+typeOf(/abc/); // 'regexp'
 typeOf(new Date()); // 'date'
 ```
 

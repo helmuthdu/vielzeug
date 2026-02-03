@@ -31,11 +31,7 @@ interface TimeDiffResult {
 }
 
 interface TimeDiffFunction {
-  (
-    date: Date | string | number, 
-    direction?: 'FUTURE' | 'PAST', 
-    allowedUnits?: TimeUnit[]
-  ): TimeDiffResult
+  (date: Date | string | number, direction?: 'FUTURE' | 'PAST', allowedUnits?: TimeUnit[]): TimeDiffResult;
 }
 ```
 
@@ -58,7 +54,7 @@ interface TimeDiffFunction {
 import { timeDiff } from '@vielzeug/toolkit';
 
 // Target is 5 days from now
-timeDiff(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)); 
+timeDiff(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000));
 // { value: 5, unit: 'DAY' }
 ```
 

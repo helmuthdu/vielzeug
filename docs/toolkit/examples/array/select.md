@@ -25,10 +25,10 @@ The `select` utility is a high-performance combined transformation and filtering
 ```ts
 interface SelectFunction {
   <T, R>(
-    array: T[], 
-    callback: (item: T, index: number, array: T[]) => R | Promise<R>, 
-    predicate?: (item: T, index: number, array: T[]) => boolean
-  ): R[] | Promise<R[]>
+    array: T[],
+    callback: (item: T, index: number, array: T[]) => R | Promise<R>,
+    predicate?: (item: T, index: number, array: T[]) => boolean,
+  ): R[] | Promise<R[]>;
 }
 ```
 
@@ -36,7 +36,7 @@ interface SelectFunction {
 
 - `array`: The array to process.
 - `callback`: A transformation function that receives each element and returns a new value (or a Promise for one).
-- `predicate`: Optional. A function that decides which elements from the *original* array should be processed by the callback. Defaults to a check that excludes `null` or `undefined` items.
+- `predicate`: Optional. A function that decides which elements from the _original_ array should be processed by the callback. Defaults to a check that excludes `null` or `undefined` items.
 
 ### Returns
 
@@ -53,7 +53,11 @@ import { select } from '@vielzeug/toolkit';
 const numbers = [10, 20, 30, 40];
 
 // Double only the numbers greater than 20
-const result = select(numbers, x => x * 2, x => x > 20); 
+const result = select(
+  numbers,
+  (x) => x * 2,
+  (x) => x > 20,
+);
 // [60, 80]
 ```
 
@@ -65,10 +69,14 @@ import { select, delay } from '@vielzeug/toolkit';
 const ids = [1, 2, 3];
 
 // Fetch data for specific IDs
-const details = await select(ids, async (id) => {
-  await delay(50); // Simulate API latency
-  return { id, status: 'ok' };
-}, id => id !== 2);
+const details = await select(
+  ids,
+  async (id) => {
+    await delay(50); // Simulate API latency
+    return { id, status: 'ok' };
+  },
+  (id) => id !== 2,
+);
 // [{ id: 1, ... }, { id: 3, ... }]
 ```
 
@@ -80,7 +88,7 @@ import { select } from '@vielzeug/toolkit';
 const data = [1, null, 2, undefined, 3];
 
 // Automatically skips the null/undefined values
-const doubled = select(data, x => x * 2);
+const doubled = select(data, (x) => x * 2);
 // [2, 4, 6]
 ```
 

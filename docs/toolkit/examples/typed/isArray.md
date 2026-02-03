@@ -23,7 +23,7 @@ The `isArray` utility is a type guard that checks if a given value is an array. 
 
 ```ts
 interface IsArrayFunction {
-  (value: unknown): value is any[]
+  (value: unknown): value is any[];
 }
 ```
 
@@ -43,8 +43,8 @@ interface IsArrayFunction {
 import { isArray } from '@vielzeug/toolkit';
 
 isArray([1, 2, 3]); // true
-isArray('hello');   // false
-isArray({});        // false
+isArray('hello'); // false
+isArray({}); // false
 ```
 
 ### Type Narrowing

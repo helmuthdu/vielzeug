@@ -24,10 +24,7 @@ The `sortBy` utility enables advanced multi-field sorting for arrays of objects.
 
 ```ts
 interface SortByFunction {
-  <T>(
-    array: T[], 
-    selectors: Partial<Record<keyof T, 'asc' | 'desc'>>
-  ): T[]
+  <T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
 }
 ```
 
@@ -51,7 +48,7 @@ const users = [
   { name: 'Alice', age: 30 },
   { name: 'Bob', age: 25 },
   { name: 'Alice', age: 25 },
-  { name: 'Bob', age: 30 }
+  { name: 'Bob', age: 30 },
 ];
 
 // Sort by name (asc) then age (desc)
@@ -75,7 +72,7 @@ const products = [
   { category: 'Fruit', price: 2.0 },
   { category: 'Meat', price: 5.0 },
   { category: 'Fruit', price: 1.5 },
-  { category: 'Meat', price: 10.0 }
+  { category: 'Meat', price: 10.0 },
 ];
 
 // Sort by category (desc) then price (asc)

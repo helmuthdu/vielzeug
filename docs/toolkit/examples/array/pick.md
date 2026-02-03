@@ -25,10 +25,10 @@ The `pick` utility finds the first element in an array that satisfies a conditio
 ```ts
 interface PickFunction {
   <T, R>(
-    array: T[], 
-    callback: (item: T, index: number, array: T[]) => R | Promise<R>, 
-    predicate?: (item: T, index: number, array: T[]) => boolean
-  ): R | Promise<R> | undefined
+    array: T[],
+    callback: (item: T, index: number, array: T[]) => R | Promise<R>,
+    predicate?: (item: T, index: number, array: T[]) => boolean,
+  ): R | Promise<R> | undefined;
 }
 ```
 
@@ -54,11 +54,15 @@ import { pick } from '@vielzeug/toolkit';
 const products = [
   { id: 1, price: 100, name: 'Basic' },
   { id: 2, price: 200, name: 'Pro' },
-  { id: 3, price: 300, name: 'Enterprise' }
+  { id: 3, price: 300, name: 'Enterprise' },
 ];
 
 // Pick the name of the first product over 150
-const result = pick(products, p => p.name, p => p.price > 150); 
+const result = pick(
+  products,
+  (p) => p.name,
+  (p) => p.price > 150,
+);
 // 'Pro'
 ```
 
@@ -70,21 +74,25 @@ import { pick, delay } from '@vielzeug/toolkit';
 const ids = [1, 2, 3, 4, 5];
 
 // Fetch and return data for the first valid ID
-const data = await pick(ids, async (id) => {
-  await delay(100);
-  return { id, data: 'fetched' };
-}, id => id % 2 === 0);
+const data = await pick(
+  ids,
+  async (id) => {
+    await delay(100);
+    return { id, data: 'fetched' };
+  },
+  (id) => id % 2 === 0,
+);
 // { id: 2, data: 'fetched' }
 ```
 
 ## Implementation Notes
 
 - Throws `TypeError` if the first argument is not an array.
-- Short-circuiting: The callback is only executed *once* for the first item that passes the predicate.
+- Short-circuiting: The callback is only executed _once_ for the first item that passes the predicate.
 - If no predicate is provided, it returns the result of the callback for the first non-nil element in the array.
 
 ## See Also
 
-- [select](./select.md): Transform and filter *multiple* elements.
+- [select](./select.md): Transform and filter _multiple_ elements.
 - [find](./find.md): Find an element without transforming it.
 - [compact](./compact.md): Remove falsy values from an array.

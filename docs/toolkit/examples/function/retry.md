@@ -31,7 +31,7 @@ interface RetryOptions {
 }
 
 interface RetryFunction {
-  <T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>
+  <T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>;
 }
 ```
 
@@ -56,11 +56,14 @@ interface RetryFunction {
 ```ts
 import { retry } from '@vielzeug/toolkit';
 
-const data = await retry(async () => {
-  const response = await fetch('/api/stats');
-  if (!response.ok) throw new Error('Failed');
-  return response.json();
-}, { times: 5, delay: 1000 });
+const data = await retry(
+  async () => {
+    const response = await fetch('/api/stats');
+    if (!response.ok) throw new Error('Failed');
+    return response.json();
+  },
+  { times: 5, delay: 1000 },
+);
 ```
 
 ### With Exponential Backoff
@@ -69,10 +72,10 @@ const data = await retry(async () => {
 import { retry } from '@vielzeug/toolkit';
 
 // Delay sequence: 500ms, 1000ms, 2000ms...
-await retry(heavyTask, { 
-  times: 3, 
-  delay: 500, 
-  backoff: 2 
+await retry(heavyTask, {
+  times: 3,
+  delay: 500,
+  backoff: 2,
 });
 ```
 

@@ -6,25 +6,25 @@ Typed utilities provide a comprehensive set of type guards and comparison helper
 
 ### Type Guards
 
-| Method | Description |
-| :--- | :--- |
-| [`isString`](./typed/isString.md) | Check if a value is a string. |
-| [`isNumber`](./typed/isNumber.md) | Check if a value is a number. |
-| [`isArray`](./typed/isArray.md) | Check if a value is an array. |
-| [`isObject`](./typed/isObject.md) | Check if a value is a plain object. |
-| [`isFunction`](./typed/isFunction.md) | Check if a value is a function. |
-| [`isDefined`](./typed/isDefined.md) | Check if a value is neither `null` nor `undefined`. |
-| [`isNil`](./typed/isNil.md) | Check if a value is `null` or `undefined`. |
-| [`isEmpty`](./typed/isEmpty.md) | Check if a value is an empty string, array, or object. |
+| Method                                | Description                                            |
+| :------------------------------------ | :----------------------------------------------------- |
+| [`isString`](./typed/isString.md)     | Check if a value is a string.                          |
+| [`isNumber`](./typed/isNumber.md)     | Check if a value is a number.                          |
+| [`isArray`](./typed/isArray.md)       | Check if a value is an array.                          |
+| [`isObject`](./typed/isObject.md)     | Check if a value is a plain object.                    |
+| [`isFunction`](./typed/isFunction.md) | Check if a value is a function.                        |
+| [`isDefined`](./typed/isDefined.md)   | Check if a value is neither `null` nor `undefined`.    |
+| [`isNil`](./typed/isNil.md)           | Check if a value is `null` or `undefined`.             |
+| [`isEmpty`](./typed/isEmpty.md)       | Check if a value is an empty string, array, or object. |
 
 ### Comparison & Pattern Matching
 
-| Method | Description |
-| :--- | :--- |
-| [`isEqual`](./typed/isEqual.md) | Perform a deep equality comparison between two values. |
-| [`isMatch`](./typed/isMatch.md) | Check if an object matches a partial pattern or regex. |
-| [`is`](./typed/is.md) | Multi-purpose type and value checker. |
-| [`isWithin`](./typed/isWithin.md) | Check if a number is within a given range. |
+| Method                            | Description                                            |
+| :-------------------------------- | :----------------------------------------------------- |
+| [`isEqual`](./typed/isEqual.md)   | Perform a deep equality comparison between two values. |
+| [`isMatch`](./typed/isMatch.md)   | Check if an object matches a partial pattern or regex. |
+| [`is`](./typed/is.md)             | Multi-purpose type and value checker.                  |
+| [`isWithin`](./typed/isWithin.md) | Check if a number is within a given range.             |
 
 ## 💡 Practical Examples
 
@@ -38,12 +38,12 @@ function process(data: unknown) {
     // data is inferred as string
     return data.toUpperCase();
   }
-  
+
   if (isArray(data)) {
     // data is inferred as any[]
     return data.length;
   }
-  
+
   if (isNil(data)) {
     return 'N/A';
   }

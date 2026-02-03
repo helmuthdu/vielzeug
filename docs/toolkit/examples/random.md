@@ -4,12 +4,12 @@ Random utilities provide tools to generate random values, shuffle data, and crea
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :--- | :--- |
-| [`random`](./random/random.md) | Generate a random integer between a minimum and maximum value. |
-| [`draw`](./random/draw.md) | Pick a random element from an array. |
+| Method                           | Description                                                                 |
+| :------------------------------- | :-------------------------------------------------------------------------- |
+| [`random`](./random/random.md)   | Generate a random integer between a minimum and maximum value.              |
+| [`draw`](./random/draw.md)       | Pick a random element from an array.                                        |
 | [`shuffle`](./random/shuffle.md) | Create a new array with the elements of the original array in random order. |
-| [`uuid`](./random/uuid.md) | Generate a cryptographically strong unique identifier (v4). |
+| [`uuid`](./random/uuid.md)       | Generate a cryptographically strong unique identifier (v4).                 |
 
 ## 💡 Practical Examples
 
@@ -36,7 +36,7 @@ const shuffledDeck = shuffle(deck);
 import { uuid } from '@vielzeug/toolkit';
 
 // Generate a unique ID for a new record
-const newUserId = uuid(); 
+const newUserId = uuid();
 // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 ```
 

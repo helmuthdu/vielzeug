@@ -4,22 +4,22 @@ Array utilities provide a powerful set of tools to transform, query, and manipul
 
 ## 📚 Quick Reference
 
-| Method | Category | Description |
-| :--- | :--- | :--- |
-| [`map`](./array/map.md) | Transformation | Map each element to a new value (supports async) |
-| [`filter`](./array/filter.md) | Query | Filter elements by predicate (supports async) |
-| [`reduce`](./array/reduce.md) | Transformation | Reduce array to a single value |
-| [`group`](./array/group.md) | Aggregation | Group elements by a key or function |
-| [`uniq`](./array/uniq.md) | Set | Remove duplicate values |
-| [`chunk`](./array/chunk.md) | Transformation | Split array into chunks of a specific size |
-| [`flatten`](./array/flatten.md) | Transformation | Flatten nested arrays |
-| [`compact`](./array/compact.md) | Transformation | Remove `null` or `undefined` values |
-| [`sort`](./array/sort.md) | Sorting | Sort array with a custom comparator |
-| [`sortBy`](./array/sortBy.md) | Sorting | Sort array by a property or function |
-| [`find`](./array/find.md) | Query | Find the first element matching a predicate |
-| [`some`](./array/some.md) | Query | Check if any element matches a predicate |
-| [`every`](./array/every.md) | Query | Check if all elements match a predicate |
-| [`aggregate`](./array/aggregate.md) | Aggregation | Perform complex aggregations on an array |
+| Method                              | Category       | Description                                      |
+| :---------------------------------- | :------------- | :----------------------------------------------- |
+| [`map`](./array/map.md)             | Transformation | Map each element to a new value (supports async) |
+| [`filter`](./array/filter.md)       | Query          | Filter elements by predicate (supports async)    |
+| [`reduce`](./array/reduce.md)       | Transformation | Reduce array to a single value                   |
+| [`group`](./array/group.md)         | Aggregation    | Group elements by a key or function              |
+| [`uniq`](./array/uniq.md)           | Set            | Remove duplicate values                          |
+| [`chunk`](./array/chunk.md)         | Transformation | Split array into chunks of a specific size       |
+| [`flatten`](./array/flatten.md)     | Transformation | Flatten nested arrays                            |
+| [`compact`](./array/compact.md)     | Transformation | Remove `null` or `undefined` values              |
+| [`sort`](./array/sort.md)           | Sorting        | Sort array with a custom comparator              |
+| [`sortBy`](./array/sortBy.md)       | Sorting        | Sort array by a property or function             |
+| [`find`](./array/find.md)           | Query          | Find the first element matching a predicate      |
+| [`some`](./array/some.md)           | Query          | Check if any element matches a predicate         |
+| [`every`](./array/every.md)         | Query          | Check if all elements match a predicate          |
+| [`aggregate`](./array/aggregate.md) | Aggregation    | Perform complex aggregations on an array         |
 
 ## 💡 Practical Examples
 
@@ -37,7 +37,7 @@ const clean = compact(rawData); // [1, 2, 2, 3, 4]
 const unique = uniq(clean); // [1, 2, 3, 4]
 
 // 3. Transform values
-const doubled = map(unique, x => x * 2); // [2, 4, 6, 8]
+const doubled = map(unique, (x) => x * 2); // [2, 4, 6, 8]
 
 // 4. Batch for processing
 const batches = chunk(doubled, 2); // [[2, 4], [6, 8]]
@@ -55,7 +55,7 @@ const users = [
 ];
 
 // Group by role
-const byRole = group(users, u => u.role);
+const byRole = group(users, (u) => u.role);
 /*
 {
   admin: [{ name: 'Alice', ... }],
@@ -64,7 +64,7 @@ const byRole = group(users, u => u.role);
 */
 
 // Sort by age (descending)
-const oldestFirst = sortBy(users, u => u.age, 'desc');
+const oldestFirst = sortBy(users, (u) => u.age, 'desc');
 ```
 
 ## 🔗 All Array Utilities

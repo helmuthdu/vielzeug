@@ -39,14 +39,14 @@ Permit.register('admin', 'posts', {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 
 Permit.register('viewer', 'posts', {
   view: true,
   create: false,
   update: false,
-  delete: false
+  delete: false,
 });
 ```
 
@@ -68,7 +68,7 @@ const canDelete = Permit.check(user, 'posts', 'delete'); // false
 // Function-based permissions for context-aware checks
 Permit.register('author', 'posts', {
   update: (user, post) => user.id === post.authorId,
-  delete: (user, post) => user.id === post.authorId && post.status === 'draft'
+  delete: (user, post) => user.id === post.authorId && post.status === 'draft',
 });
 
 const user = { id: '123', roles: ['author'] };
@@ -93,12 +93,12 @@ Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 
 // All roles can view posts
 Permit.register(WILDCARD, 'posts', {
-  view: true
+  view: true,
 });
 ```
 
@@ -113,7 +113,7 @@ Permit.register('creator', 'posts', { create: true });
 const user = { id: '1', roles: ['viewer', 'creator'] };
 
 // User has permissions from both roles
-Permit.check(user, 'posts', 'view');   // true
+Permit.check(user, 'posts', 'view'); // true
 Permit.check(user, 'posts', 'create'); // true
 ```
 
@@ -148,7 +148,7 @@ Permit.register<User, Post>('manager', 'posts', {
   update: (user, post) => {
     // Full type inference
     return user.department === post.department;
-  }
+  },
 });
 ```
 
@@ -170,7 +170,7 @@ const allPermissions = Permit.roles;
 // Iterate over roles
 for (const [role, resources] of allPermissions) {
   console.log(`Role: ${role}`);
-  
+
   for (const [resource, actions] of resources) {
     console.log(`  Resource: ${resource}`, actions);
   }
@@ -183,20 +183,20 @@ for (const [role, resources] of allPermissions) {
 
 ```ts
 // Define roles with specific permissions
-Permit.register('admin', 'users', { 
-  view: true, 
-  create: true, 
-  update: true, 
-  delete: true 
+Permit.register('admin', 'users', {
+  view: true,
+  create: true,
+  update: true,
+  delete: true,
 });
 
-Permit.register('moderator', 'users', { 
-  view: true, 
-  update: true 
+Permit.register('moderator', 'users', {
+  view: true,
+  update: true,
 });
 
-Permit.register('user', 'users', { 
-  view: true 
+Permit.register('user', 'users', {
+  view: true,
 });
 ```
 
@@ -207,7 +207,7 @@ Permit.register('user', 'users', {
 Permit.register('user', 'profile', {
   view: true,
   update: (user, profile) => user.id === profile.userId,
-  delete: (user, profile) => user.id === profile.userId
+  delete: (user, profile) => user.id === profile.userId,
 });
 ```
 
@@ -221,7 +221,7 @@ Permit.register('editor', 'articles', {
   },
   delete: (user, article) => {
     return article.status === 'draft';
-  }
+  },
 });
 ```
 
@@ -233,21 +233,21 @@ Permit.register('admin', 'documents', {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 
 Permit.register('manager', 'documents', {
   view: true,
   create: true,
   update: (user, doc) => doc.department === user.department,
-  delete: (user, doc) => doc.department === user.department
+  delete: (user, doc) => doc.department === user.department,
 });
 
 Permit.register('employee', 'documents', {
   view: (user, doc) => doc.department === user.department,
   create: true,
   update: (user, doc) => doc.authorId === user.id,
-  delete: (user, doc) => doc.authorId === user.id
+  delete: (user, doc) => doc.authorId === user.id,
 });
 ```
 
@@ -260,8 +260,8 @@ Permit.register('employee', 'documents', {
 function onLogin(user) {
   // Load user-specific permissions
   const permissions = await fetchUserPermissions(user.id);
-  
-  permissions.forEach(perm => {
+
+  permissions.forEach((perm) => {
     Permit.register(perm.role, perm.resource, perm.actions);
   });
 }
@@ -281,9 +281,9 @@ function usePermission(resource: string, action: string, data?: any) {
 // Usage
 function DeleteButton({ post }) {
   const canDelete = usePermission('posts', 'delete', post);
-  
+
   if (!canDelete) return null;
-  
+
   return <button onClick={() => deletePost(post)}>Delete</button>;
 }
 ```
@@ -318,7 +318,7 @@ import { useAuth } from './auth';
 
 export function usePermission(resource: string, action: string, data?: any) {
   const { user } = useAuth();
-  
+
   return computed(() => {
     return Permit.check(user.value, resource, action, data?.value);
   });
@@ -343,13 +343,13 @@ export function usePermission(resource: string, action: string, data?: any) {
 ```ts
 async function initializePermissions() {
   const permissions = await db.permissions.findAll();
-  
+
   for (const perm of permissions) {
     Permit.register(perm.role, perm.resource, {
       view: perm.canView,
       create: perm.canCreate,
       update: perm.canUpdate,
-      delete: perm.canDelete
+      delete: perm.canDelete,
     });
   }
 }
@@ -364,7 +364,7 @@ if (process.env.NODE_ENV === 'development') {
     view: true,
     create: true,
     update: true,
-    delete: true
+    delete: true,
   });
 }
 ```
@@ -377,14 +377,14 @@ const permissionCache = new Map<string, boolean>();
 
 function checkWithCache(user, resource, action, data?) {
   const key = `${user.id}-${resource}-${action}`;
-  
+
   if (permissionCache.has(key)) {
     return permissionCache.get(key);
   }
-  
+
   const result = Permit.check(user, resource, action, data);
   permissionCache.set(key, result);
-  
+
   return result;
 }
 ```

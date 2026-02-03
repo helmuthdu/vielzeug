@@ -23,7 +23,7 @@ The `every` utility checks if all elements in an array pass the provided test fu
 
 ```ts
 interface EveryFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean
+  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean;
 }
 ```
 
@@ -49,7 +49,7 @@ import { every } from '@vielzeug/toolkit';
 const numbers = [2, 4, 6, 8];
 
 // Check if all numbers are even
-const allEven = every(numbers, x => x % 2 === 0); // true
+const allEven = every(numbers, (x) => x % 2 === 0); // true
 ```
 
 ### Checking Object Collections
@@ -60,11 +60,11 @@ import { every } from '@vielzeug/toolkit';
 const tasks = [
   { id: 1, completed: true },
   { id: 2, completed: true },
-  { id: 3, completed: false }
+  { id: 3, completed: false },
 ];
 
 // Check if all tasks are finished
-const allDone = every(tasks, t => t.completed); // false
+const allDone = every(tasks, (t) => t.completed); // false
 ```
 
 ## Implementation Notes
@@ -75,6 +75,6 @@ const allDone = every(tasks, t => t.completed); // false
 
 ## See Also
 
-- [some](./some.md): Check if *any* element satisfies a condition.
+- [some](./some.md): Check if _any_ element satisfies a condition.
 - [filter](./filter.md): Get all elements that satisfy a condition.
 - [find](./find.md): Get the first element that satisfies a condition.

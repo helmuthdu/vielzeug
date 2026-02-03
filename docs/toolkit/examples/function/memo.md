@@ -30,7 +30,7 @@ interface MemoOptions {
 }
 
 interface MemoFunction {
-  <T extends (...args: any[]) => any>(fn: T, options?: MemoOptions): T
+  <T extends (...args: any[]) => any>(fn: T, options?: MemoOptions): T;
 }
 ```
 

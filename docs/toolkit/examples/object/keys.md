@@ -23,7 +23,7 @@ The `keys` utility returns an array of an object's own enumerable property names
 
 ```ts
 interface KeysFunction {
-  <T extends Record<string, any>>(obj: T): (keyof T)[]
+  <T extends Record<string, any>>(obj: T): (keyof T)[];
 }
 ```
 
@@ -45,10 +45,10 @@ import { keys } from '@vielzeug/toolkit';
 const user = {
   id: 1,
   name: 'Alice',
-  role: 'admin'
+  role: 'admin',
 };
 
-const userKeys = keys(user); 
+const userKeys = keys(user);
 // ['id', 'name', 'role']
 ```
 

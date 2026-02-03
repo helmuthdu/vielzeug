@@ -23,7 +23,7 @@ The `entries` utility returns an array of an object's own enumerable string-keye
 
 ```ts
 interface EntriesFunction {
-  <T extends Record<string, any>>(obj: T): [keyof T, T[keyof T]][]
+  <T extends Record<string, any>>(obj: T): [keyof T, T[keyof T]][];
 }
 ```
 
@@ -45,10 +45,10 @@ import { entries } from '@vielzeug/toolkit';
 const settings = {
   theme: 'dark',
   notifications: true,
-  retries: 3
+  retries: 3,
 };
 
-const settingPairs = entries(settings); 
+const settingPairs = entries(settings);
 /*
 [
   ['theme', 'dark'],

@@ -9,24 +9,26 @@ Complete API documentation for `@vielzeug/permit`.
 Registers permissions for a specific role and resource combination.
 
 **Parameters:**
+
 - `role: string` - The role identifier (e.g., 'admin', 'editor', 'user')
 - `resource: string` - The resource identifier (e.g., 'posts', 'comments')
 - `actions: Partial<Record<PermissionAction, PermissionCheck>>` - Permission definitions for each action
 
 **Example:**
+
 ```ts
 // Static permissions
 Permit.register('admin', 'posts', {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 
 // Dynamic permissions with functions
 Permit.register('author', 'posts', {
   update: (user, post) => user.id === post.authorId,
-  delete: (user, post) => user.id === post.authorId && post.status === 'draft'
+  delete: (user, post) => user.id === post.authorId && post.status === 'draft',
 });
 
 // Using wildcards
@@ -36,11 +38,12 @@ Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 ```
 
 **Throws:**
+
 - `Error` - If role is empty or missing
 - `Error` - If resource is empty or missing
 
@@ -51,6 +54,7 @@ Permit.register('admin', WILDCARD, {
 Checks if a user has permission to perform a specific action on a resource.
 
 **Parameters:**
+
 - `user: T extends BaseUser` - User object with `id` and `roles` properties
 - `resource: string` - The resource to check permissions for
 - `action: PermissionAction` - The action to check ('view' | 'create' | 'update' | 'delete')
@@ -59,6 +63,7 @@ Checks if a user has permission to perform a specific action on a resource.
 **Returns:** `boolean` - `true` if permission is granted, `false` otherwise
 
 **Example:**
+
 ```ts
 const user = { id: '123', roles: ['editor'] };
 
@@ -71,6 +76,7 @@ const canDelete = Permit.check(user, 'posts', 'delete', post);
 ```
 
 **Behavior:**
+
 - Checks all user roles (including wildcard role `*`)
 - Returns `true` if ANY role grants permission
 - Function-based permissions require `data` parameter
@@ -85,6 +91,7 @@ Clears all registered permissions from the registry.
 **Returns:** `void`
 
 **Example:**
+
 ```ts
 // Clear all permissions (useful for testing)
 Permit.clear();
@@ -94,6 +101,7 @@ Permit.register('admin', 'posts', { view: true });
 ```
 
 **Use Cases:**
+
 - Resetting permissions between tests
 - Re-initializing permission system
 - Clearing permissions before loading from database
@@ -107,6 +115,7 @@ Getter that returns a shallow copy of all registered roles and their permissions
 **Returns:** `RolesWithPermissions` - Map of roles to their resource permissions
 
 **Example:**
+
 ```ts
 const allRoles = Permit.roles;
 
@@ -137,14 +146,16 @@ interface BaseUser {
 ```
 
 **Properties:**
+
 - `id: string` - Unique user identifier
 - `roles: string[]` - Array of role identifiers
 
 **Example:**
+
 ```ts
 const user: BaseUser = {
   id: 'user-123',
-  roles: ['editor', 'viewer']
+  roles: ['editor', 'viewer'],
 };
 ```
 
@@ -159,6 +170,7 @@ type PermissionAction = 'view' | 'create' | 'update' | 'delete';
 ```
 
 **Actions:**
+
 - `'view'` - Read/view permission
 - `'create'` - Create/add permission
 - `'update'` - Modify/edit permission
@@ -171,16 +183,16 @@ type PermissionAction = 'view' | 'create' | 'update' | 'delete';
 A permission can be either a static boolean or a dynamic function.
 
 ```ts
-type PermissionCheck<T extends BaseUser, D extends PermissionData> = 
-  | boolean
-  | ((user: T, data: D) => boolean);
+type PermissionCheck<T extends BaseUser, D extends PermissionData> = boolean | ((user: T, data: D) => boolean);
 ```
 
 **Variants:**
+
 - `boolean` - Static permission (always true/false)
 - `(user, data) => boolean` - Dynamic permission based on context
 
 **Example:**
+
 ```ts
 // Static permission
 const staticPermission: PermissionCheck = true;
@@ -204,6 +216,7 @@ type PermissionData = Record<string, any>;
 This can be any object structure relevant to your permission logic.
 
 **Example:**
+
 ```ts
 interface Post extends PermissionData {
   id: string;
@@ -225,6 +238,7 @@ export const WILDCARD = '*';
 Use this constant to define permissions that apply to all resources or roles.
 
 **Example:**
+
 ```ts
 import { Permit, WILDCARD } from '@vielzeug/permit';
 
@@ -233,7 +247,7 @@ Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 ```
 
@@ -262,7 +276,7 @@ Permit.register<CustomUser, Post>('manager', 'posts', {
   update: (user, post) => {
     // Full type inference for user and post
     return user.department === post.department;
-  }
+  },
 });
 ```
 
@@ -276,7 +290,7 @@ Permit.register('creator', 'posts', { create: true });
 
 const user = { id: '1', roles: ['viewer', 'creator'] };
 
-Permit.check(user, 'posts', 'view');   // true (from viewer role)
+Permit.check(user, 'posts', 'view'); // true (from viewer role)
 Permit.check(user, 'posts', 'create'); // true (from creator role)
 Permit.check(user, 'posts', 'delete'); // false (no role grants this)
 ```
@@ -284,17 +298,19 @@ Permit.check(user, 'posts', 'delete'); // false (no role grants this)
 ### Wildcard Patterns
 
 #### Wildcard Resource
+
 ```ts
 // Role has all permissions on ALL resources
 Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 ```
 
 #### Wildcard Role
+
 ```ts
 // ALL roles have view permission on posts
 Permit.register(WILDCARD, 'posts', { view: true });
@@ -312,7 +328,7 @@ Permit.register('author', 'posts', {
       return user.id === post.authorId;
     }
     return false;
-  }
+  },
 });
 
 // Must provide data when checking
@@ -361,7 +377,7 @@ describe('Post Permissions', () => {
 
   it('allows authors to update their own posts', () => {
     Permit.register('author', 'posts', {
-      update: (user, post) => user.id === post.authorId
+      update: (user, post) => user.id === post.authorId,
     });
 
     const user = { id: '123', roles: ['author'] };
@@ -372,7 +388,7 @@ describe('Post Permissions', () => {
 
   it('denies authors from updating others posts', () => {
     Permit.register('author', 'posts', {
-      update: (user, post) => user.id === post.authorId
+      update: (user, post) => user.id === post.authorId,
     });
 
     const user = { id: '123', roles: ['author'] };

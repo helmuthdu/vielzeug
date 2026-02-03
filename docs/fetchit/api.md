@@ -9,16 +9,18 @@ Complete API documentation for `@vielzeug/fetchit`.
 Creates a configured HTTP client instance.
 
 **Parameters:**
+
 - `context?: ContextProps` - Configuration object
 
 **Returns:** HTTP client instance with methods
 
 **Example:**
+
 ```ts
 const api = createHttpClient({
   url: 'https://api.example.com',
   timeout: 10000,
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
 });
 ```
 
@@ -27,12 +29,14 @@ const api = createHttpClient({
 Builds a URL with query parameters.
 
 **Parameters:**
+
 - `baseUrl: string` - Base URL
 - `params?: RequestParams` - Query parameters object
 
 **Returns:** `string` - URL with query params
 
 **Example:**
+
 ```ts
 buildUrl('/users', { id: 1, active: true });
 // Returns: "/users?id=1&active=true"
@@ -47,6 +51,7 @@ All methods return `Promise<RequestResponse<T>>`.
 Makes a GET request.
 
 **Example:**
+
 ```ts
 const res = await api.get<User>('/users/1');
 console.log(res.data);
@@ -57,9 +62,10 @@ console.log(res.data);
 Makes a POST request.
 
 **Example:**
+
 ```ts
 const res = await api.post<User>('/users', {
-  body: { name: 'Alice', email: 'alice@example.com' }
+  body: { name: 'Alice', email: 'alice@example.com' },
 });
 ```
 
@@ -68,9 +74,10 @@ const res = await api.post<User>('/users', {
 Makes a PUT request.
 
 **Example:**
+
 ```ts
 const res = await api.put<User>('/users/1', {
-  body: { name: 'Alice Smith' }
+  body: { name: 'Alice Smith' },
 });
 ```
 
@@ -79,9 +86,10 @@ const res = await api.put<User>('/users/1', {
 Makes a PATCH request.
 
 **Example:**
+
 ```ts
 const res = await api.patch<User>('/users/1', {
-  body: { email: 'newemail@example.com' }
+  body: { email: 'newemail@example.com' },
 });
 ```
 
@@ -90,6 +98,7 @@ const res = await api.patch<User>('/users/1', {
 Makes a DELETE request.
 
 **Example:**
+
 ```ts
 await api.delete('/users/1');
 ```
@@ -101,9 +110,11 @@ await api.delete('/users/1');
 Updates client headers. Headers with `undefined` values are removed.
 
 **Parameters:**
+
 - `payload: Record<string, string | undefined>` - Headers to set/remove
 
 **Example:**
+
 ```ts
 // Set headers
 api.setHeaders({ Authorization: 'Bearer token123' });
@@ -117,6 +128,7 @@ api.setHeaders({ Authorization: undefined });
 Clears all cached requests.
 
 **Example:**
+
 ```ts
 api.clearCache();
 ```
@@ -126,11 +138,13 @@ api.clearCache();
 Invalidates a specific cache entry.
 
 **Parameters:**
+
 - `idOrUrl: string` - Cache key or request ID
 
 **Returns:** `boolean` - True if entry was deleted
 
 **Example:**
+
 ```ts
 api.invalidateCache('user-123');
 ```
@@ -142,6 +156,7 @@ Returns the number of cached requests.
 **Returns:** `number`
 
 **Example:**
+
 ```ts
 const size = api.getCacheSize();
 console.log(`Cache has ${size} entries`);
@@ -154,6 +169,7 @@ Removes expired cache entries.
 **Returns:** `number` - Number of entries removed
 
 **Example:**
+
 ```ts
 const removed = api.cleanupCache();
 console.log(`Removed ${removed} expired entries`);
@@ -167,10 +183,10 @@ Request configuration options.
 
 ```ts
 type RequestConfig = Omit<RequestInit, 'body'> & {
-  id?: string;           // Custom cache key
-  cancelable?: boolean;  // Cancel pending requests with same ID
-  invalidate?: boolean;  // Force bypass cache
-  body?: unknown;        // Request body (auto-serialized)
+  id?: string; // Custom cache key
+  cancelable?: boolean; // Cancel pending requests with same ID
+  invalidate?: boolean; // Force bypass cache
+  body?: unknown; // Request body (auto-serialized)
 };
 ```
 
@@ -180,8 +196,8 @@ Response object returned by all HTTP methods.
 
 ```ts
 type RequestResponse<T> = {
-  data: T;        // Response data (typed)
-  ok: boolean;    // True if status is 2xx
+  data: T; // Response data (typed)
+  ok: boolean; // True if status is 2xx
   status: number; // HTTP status code
 };
 ```
@@ -192,10 +208,10 @@ Client configuration.
 
 ```ts
 type ContextProps = {
-  url: string;                                    // Base URL (required)
-  headers?: Record<string, string | undefined>;   // Default headers
-  timeout?: number;                               // Request timeout in ms (default: 5000)
-  expiresIn?: number;                             // Cache expiration in ms (default: 120000)
+  url: string; // Base URL (required)
+  headers?: Record<string, string | undefined>; // Default headers
+  timeout?: number; // Request timeout in ms (default: 5000)
+  expiresIn?: number; // Cache expiration in ms (default: 120000)
   params?: Record<string, string | number | undefined>; // Default query params
 };
 ```
@@ -214,6 +230,7 @@ class HttpError extends Error {
 ```
 
 **Example:**
+
 ```ts
 import { HttpError } from '@vielzeug/fetchit';
 
@@ -272,9 +289,9 @@ api.invalidateCache('user-1');
 
 ```ts
 // Cancel any pending request with the same ID
-await api.get('/users', { 
+await api.get('/users', {
   id: 'users-list',
-  cancelable: true 
+  cancelable: true,
 });
 ```
 

@@ -23,7 +23,7 @@ The `similarity` utility calculates a score between `0` and `1` representing how
 
 ```ts
 interface SimilarityFunction {
-  (a: string, b: string): number
+  (a: string, b: string): number;
 }
 ```
 

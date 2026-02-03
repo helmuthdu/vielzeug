@@ -24,10 +24,10 @@ The `reduce` utility reduces an array to a single value by executing a reducer f
 ```ts
 interface ReduceFunction {
   <T, R>(
-    array: T[], 
-    callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>, 
-    initialValue: R
-  ): R | Promise<R>
+    array: T[],
+    callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>,
+    initialValue: R,
+  ): R | Promise<R>;
 }
 ```
 
@@ -62,11 +62,19 @@ const sum = reduce(numbers, (acc, x) => acc + x, 0); // 10
 ```ts
 import { reduce } from '@vielzeug/toolkit';
 
-const pairs: [string, number][] = [['a', 1], ['b', 2], ['c', 3]];
-const obj = reduce(pairs, (acc, [key, val]) => {
-  acc[key] = val;
-  return acc;
-}, {} as Record<string, any>);
+const pairs: [string, number][] = [
+  ['a', 1],
+  ['b', 2],
+  ['c', 3],
+];
+const obj = reduce(
+  pairs,
+  (acc, [key, val]) => {
+    acc[key] = val;
+    return acc;
+  },
+  {} as Record<string, any>,
+);
 // { a: 1, b: 2, c: 3 }
 ```
 
@@ -76,10 +84,14 @@ const obj = reduce(pairs, (acc, [key, val]) => {
 import { reduce, delay } from '@vielzeug/toolkit';
 
 const tasks = [1, 2, 3];
-const result = await reduce(tasks, async (acc, task) => {
-  await delay(100); // Process task sequentially
-  return acc + task;
-}, 0); // 6
+const result = await reduce(
+  tasks,
+  async (acc, task) => {
+    await delay(100); // Process task sequentially
+    return acc + task;
+  },
+  0,
+); // 6
 ```
 
 ## Implementation Notes
