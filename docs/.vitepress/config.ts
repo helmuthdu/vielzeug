@@ -225,7 +225,7 @@ export default defineConfig({
         },
       ],
     },
-    socialLinks: [{ icon: 'github', link: 'https://github.com.com/helmuthdu/vielzeug' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/helmuthdu/vielzeug' }],
   },
   title: 'Vielzeug',
 });
