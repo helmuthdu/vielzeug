@@ -65,11 +65,7 @@ average(numbers, (num) => num * 2); // 6
 ```ts
 import { average } from '@vielzeug/toolkit';
 
-const dates = [
-  new Date('2024-01-01'),
-  new Date('2024-01-03'),
-  new Date('2024-01-05')
-];
+const dates = [new Date('2024-01-01'), new Date('2024-01-03'), new Date('2024-01-05')];
 average(dates); // Date object representing 2024-01-03
 ```
 

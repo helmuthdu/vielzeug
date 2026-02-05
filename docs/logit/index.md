@@ -424,10 +424,10 @@ import { Logit, type LogitOptions, type LogitType } from '@vielzeug/logit';
 
 const options: LogitOptions = {
   logLevel: 'info',
-  variant: 'symbol'
+  variant: 'symbol',
 };
 Logit.initialise(options);
-````
+```
 
 ### Namespace/prefix not showing
 

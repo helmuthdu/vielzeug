@@ -90,7 +90,7 @@ await retry(apiCall, {
   delay: 100,
   backoff: (attempt, currentDelay) => {
     // Fibonacci-like backoff
-    return currentDelay + (attempt * 100);
+    return currentDelay + attempt * 100;
   },
 });
 ```

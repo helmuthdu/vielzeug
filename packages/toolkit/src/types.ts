@@ -14,7 +14,7 @@ export type Result<C extends FnDynamic> = C extends FnAsync ? Promise<Awaited<Re
 
 export type Obj = Record<string, any>;
 
-export type Predicate<T> = (value: T, index: number, array: T[]) => boolean | boolean[];
+export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
 
 export type Primitive = string | number | boolean;
 

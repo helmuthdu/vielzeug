@@ -52,11 +52,9 @@ interface PredictFunction {
 ```ts
 import { predict } from '@vielzeug/toolkit';
 
-const slowFn = (signal: AbortSignal) =>
-  new Promise(resolve => setTimeout(() => resolve('slow'), 10000));
+const slowFn = (signal: AbortSignal) => new Promise((resolve) => setTimeout(() => resolve('slow'), 10000));
 
-const fastFn = (signal: AbortSignal) =>
-  new Promise(resolve => setTimeout(() => resolve('fast'), 5000));
+const fastFn = (signal: AbortSignal) => new Promise((resolve) => setTimeout(() => resolve('fast'), 5000));
 
 predict(slowFn); // rejects after 7 seconds (default timeout)
 predict(fastFn); // resolves with 'fast' after 5 seconds
@@ -72,7 +70,7 @@ const result = await predict(
     const response = await fetch('/api/data', { signal });
     return response.json();
   },
-  { timeout: 3000 }
+  { timeout: 3000 },
 );
 ```
 
@@ -88,7 +86,7 @@ const promise = predict(
     // Your async operation here
     return await fetchData(signal);
   },
-  { signal: controller.signal, timeout: 5000 }
+  { signal: controller.signal, timeout: 5000 },
 );
 
 // Abort from outside
