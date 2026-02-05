@@ -1,3 +1,4 @@
+import { assert } from '../function/assert';
 import { ge } from './ge';
 import { gt } from './gt';
 import { isDefined } from './isDefined';
@@ -95,9 +96,7 @@ export function is(type: 'nil', arg: unknown): arg is null | undefined;
 export function is(type: 'primitive', arg: unknown): arg is string | number | boolean;
 export function is(type: isType, arg: unknown): boolean;
 export function is(type: string, arg: unknown): boolean {
-  if (!type) {
-    throw new Error('Type must be provided');
-  }
+  assert(Boolean(type), 'Type must be provided', { args: { type }, type: Error });
 
   const compare = {
     defined: isDefined,

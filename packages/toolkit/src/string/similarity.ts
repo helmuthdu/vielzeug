@@ -32,30 +32,33 @@ export function similarity(str1: unknown, str2: unknown): number {
   const b = String(str2).toLowerCase();
 
   if (a === b) return 1;
-  if (!a.length || !b.length) return 0;
+  if (a.length === 0) return b.length === 0 ? 1 : 0;
+  if (b.length === 0) return 0;
 
-  const aLength = a.length;
-  const bLength = b.length;
+  // Swap to ensure we use the smaller string for columns (O(min(A,B)) space)
+  const [shorter, longer] = a.length < b.length ? [a, b] : [b, a];
+  const shorterLength = shorter.length;
+  const longerLength = longer.length;
 
-  // Initialize matrix with first row and column
-  const matrix: number[][] = Array.from({ length: aLength + 1 }, (_, i) => [i]);
-  for (let j = 0; j <= bLength; j++) {
-    matrix[0][j] = j;
-  }
+  let prevRow = Array.from({ length: shorterLength + 1 }, (_, i) => i);
+  let currRow = new Array(shorterLength + 1);
 
-  // Calculate Levenshtein distance
-  for (let i = 1; i <= aLength; i++) {
-    for (let j = 1; j <= bLength; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost, // substitution
+  for (let i = 1; i <= longerLength; i++) {
+    currRow[0] = i;
+    for (let j = 1; j <= shorterLength; j++) {
+      const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        currRow[j - 1] + 1, // insertion
+        prevRow[j] + 1, // deletion
+        prevRow[j - 1] + cost, // substitution
       );
     }
+    // Swap rows for the next iteration (avoid allocation)
+    [prevRow, currRow] = [currRow, prevRow];
   }
 
-  const distance = matrix[aLength][bLength];
+  // After the loop, a result is in prevRow because of the swap
+  const distance = prevRow[shorterLength];
 
-  return 1 - distance / Math.max(aLength, bLength);
+  return 1 - distance / Math.max(a.length, b.length);
 }

@@ -36,11 +36,17 @@ export function chunk<T>(input: T[] | string, size = 2, options: ChunkOptions = 
     type: TypeError,
   });
 
+  assert(size >= 1, 'Chunk size must be at least 1.', {
+    args: { size },
+    type: RangeError,
+  });
+
   const { overlap = false, pad = ' ' } = options;
 
   if (isString(input) && overlap) {
-    const padded = `${pad}${input}${pad}`;
-    return Array.from({ length: padded.length - size + 1 }, (_, i) => padded.slice(i, i + size)) as ChunkResult<T>;
+    const padded = pad + input + pad;
+    const numChunks = padded.length - size + 1;
+    return Array.from({ length: numChunks }, (_, i) => padded.slice(i, i + size)) as ChunkResult<T>;
   }
 
   return Array.from({ length: Math.ceil(input.length / size) }, (_, i) =>

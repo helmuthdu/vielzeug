@@ -413,13 +413,12 @@ Logit.setRemote({
 logLevel: 'error' // Must match or be lower than the log type
 });
 
-````
-
 ### TypeScript types not working
 
 **Problem**: Types not properly inferred.
 
 **Solution**: Import types explicitly:
+
 ```ts
 import { Logit, type LogitOptions, type LogitType } from '@vielzeug/logit';
 

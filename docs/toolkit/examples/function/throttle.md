@@ -22,19 +22,27 @@ The `throttle` utility ensures that a function is called at most once in a speci
 ## API
 
 ```ts
+interface ThrottledFunction {
+  (...args: any[]): void;
+  cancel: () => void;
+  flush: () => void;
+}
+
 interface ThrottleFunction {
-  <T extends (...args: any[]) => any>(fn: T, limit: number): (...args: any[]) => void;
+  <T extends (...args: any[]) => any>(fn: T, limit?: number): ThrottledFunction;
 }
 ```
 
 ### Parameters
 
 - `fn`: The function you want to throttle.
-- `limit`: The minimum time (in milliseconds) that must pass between successive calls to `fn`.
+- `limit`: The minimum time (in milliseconds) that must pass between successive calls to `fn` (defaults to `700`).
 
 ### Returns
 
-- A new function that, when called repeatedly, executes the original `fn` at most once every `limit` milliseconds.
+- A throttled function with two additional methods:
+  - `cancel()`: Resets the throttle timer and cancels any pending execution.
+  - `flush()`: Immediately executes any pending call.
 
 ## Examples
 
@@ -64,6 +72,27 @@ const rateLimitedSearch = throttle((query: string) => {
 rateLimitedSearch('a');
 rateLimitedSearch('ap');
 rateLimitedSearch('app');
+```
+
+### Using Cancel and Flush
+
+```ts
+import { throttle } from '@vielzeug/toolkit';
+
+const trackEvent = throttle((event) => {
+  console.log('Tracking:', event);
+}, 2000);
+
+trackEvent('click'); // Executes immediately
+trackEvent('click'); // Queued
+trackEvent('click'); // Replaces queued
+
+// Reset and cancel pending
+trackEvent.cancel();
+
+// Or execute pending immediately
+trackEvent('scroll');
+trackEvent.flush(); // Executes 'scroll' immediately
 ```
 
 ## Implementation Notes

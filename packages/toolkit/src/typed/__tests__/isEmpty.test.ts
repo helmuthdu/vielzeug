@@ -23,4 +23,14 @@ describe('isEmpty', () => {
     expect(isEmpty(123)).toBe(false);
     expect(isEmpty(true)).toBe(false);
   });
+
+  it('should return true for empty Map and Set', () => {
+    expect(isEmpty(new Map())).toBe(true);
+    expect(isEmpty(new Set())).toBe(true);
+  });
+
+  it('should return false for non-empty Map and Set', () => {
+    expect(isEmpty(new Map([['a', 1]]))).toBe(false);
+    expect(isEmpty(new Set([1, 2, 3]))).toBe(false);
+  });
 });

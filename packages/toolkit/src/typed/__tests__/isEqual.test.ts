@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { isEqual } from '../isEqual';
 
 describe('isEqual', () => {
@@ -57,5 +58,30 @@ describe('isEqual', () => {
     const setB = new Set([1, 2, 3]);
 
     expect(isEqual(setA, setB)).toBe(true);
+  });
+
+  it('should handle circular references in objects', () => {
+    const objA: any = { a: 1 };
+    objA.self = objA;
+    const objB: any = { a: 1 };
+    objB.self = objB;
+
+    expect(isEqual(objA, objB)).toBe(true);
+
+    const objC: any = { a: 1 };
+    objC.self = objC;
+    const objD: any = { a: 1 };
+    objD.self = { a: 1 }; // Not circular
+
+    expect(isEqual(objC, objD)).toBe(false);
+  });
+
+  it('should handle circular references in arrays', () => {
+    const arrA: any[] = [1];
+    arrA.push(arrA);
+    const arrB: any[] = [1];
+    arrB.push(arrB);
+
+    expect(isEqual(arrA, arrB)).toBe(true);
   });
 });

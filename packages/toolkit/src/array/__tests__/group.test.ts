@@ -29,10 +29,10 @@ describe('group', () => {
     expect(group([], 'type')).toEqual({});
   });
 
-  it('should handle grouping by a property with undefined values', () => {
-    const arr = [{ a: undefined }, { a: 'x' }];
+  it('should handle grouping by a property with undefined or null values', () => {
+    const arr = [{ a: undefined }, { a: 'x' }, { a: null }];
     expect(group(arr, 'a')).toEqual({
-      _: [{ a: undefined }],
+      _: [{ a: undefined }, { a: null }],
       x: [{ a: 'x' }],
     });
   });

@@ -70,7 +70,7 @@ chunk('vielzeug', 3); // ['vie', 'lze', 'ug '] (padded with space by default)
 chunk('hello', 2, { pad: '_' }); // ['he', 'll', 'o_']
 
 // Overlapping chunks
-chunk('abc', 2, { overlap: true }); // [' a', 'ab', 'bc', 'c ']
+chunk('abc', 2, { overlap: true }); // ['ab', 'bc']
 ```
 
 ## Implementation Notes

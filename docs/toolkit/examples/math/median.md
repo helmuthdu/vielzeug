@@ -16,10 +16,11 @@ Returns the median value of an array of numbers.
 ## API
 
 ```ts
-median(numbers: number[]): number | undefined
+median<T>(arr: T[], callback?: (item: T) => number | Date): number | Date | undefined
 ```
 
-- `numbers`: Array of numbers.
+- `arr`: Array of values.
+- `callback`: Optional. A function to map each item to a number or Date before calculating median.
 - Returns: The median value, or `undefined` if the array is empty.
 
 ## Example
@@ -30,6 +31,18 @@ import { median } from '@vielzeug/toolkit';
 median([1, 2, 3, 4, 5]); // 3
 median([1, 2, 3, 4]); // 2.5
 median([]); // undefined
+
+// With callback
+const items = [{ score: 85 }, { score: 90 }, { score: 95 }];
+median(items, (item) => item.score); // 90
+
+// With Dates
+const dates = [
+  new Date('2024-01-01'),
+  new Date('2024-01-05'),
+  new Date('2024-01-10')
+];
+median(dates); // Date object representing 2024-01-05
 ```
 
 ## Notes

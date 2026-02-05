@@ -25,9 +25,11 @@ import { isObject } from './isObject';
  */
 // biome-ignore lint/suspicious/noExplicitAny: -
 export function isEmpty(arg: any): boolean {
-  return (
-    isNil(arg) || arg === '' || (isArray(arg) && arg.length === 0) || (isObject(arg) && Object.keys(arg).length === 0)
-  );
+  if (isNil(arg) || arg === '') return true;
+  if (isArray(arg)) return arg.length === 0;
+  if (arg instanceof Map || arg instanceof Set) return arg.size === 0;
+  if (isObject(arg)) return Object.keys(arg).length === 0;
+  return false;
 }
 
 export const IS_EMPTY_ERROR_MSG = 'Expected an empty value';

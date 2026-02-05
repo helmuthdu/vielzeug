@@ -53,6 +53,25 @@ describe('retry', () => {
     expect(sleep).toHaveBeenNthCalledWith(2, 200);
   });
 
+  it('should support custom backoff function', async () => {
+    const mockFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('failure'))
+      .mockRejectedValueOnce(new Error('failure'))
+      .mockResolvedValueOnce('success');
+
+    const customBackoff = (attempt: number, delay: number) => delay + attempt * 100;
+
+    await retry(mockFn, { backoff: customBackoff, delay: 100, times: 3 });
+
+    // First attempt fails, delay is 100.
+    // Next delay = 100 + 1*100 = 200.
+    // Retry 1: sleeps 100.
+    // Retry 2: sleeps 200.
+    expect(sleep).toHaveBeenNthCalledWith(1, 100);
+    expect(sleep).toHaveBeenNthCalledWith(2, 200);
+  });
+
   it('should abort if the signal is aborted', async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error('failure'));
 

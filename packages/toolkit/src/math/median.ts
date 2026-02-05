@@ -27,5 +27,5 @@ export function median<T>(arr: T[], callback?: (item: T) => number | Date): numb
   const medianValue =
     numericValues.length % 2 === 0 ? (numericValues[mid - 1] + numericValues[mid]) / 2 : numericValues[mid];
 
-  return allDates ? new Date(medianValue) : medianValue;
+  return (allDates ? new Date(medianValue) : medianValue) as unknown as number | Date;
 }

@@ -362,4 +362,3 @@ export const Logit = {
   trace: (...args: any[]): void => log('trace', ...args),
   warn: (...args: any[]): void => log('warn', ...args),
 };
-

@@ -56,4 +56,13 @@ describe('memoize', () => {
     expect(memoizedFn()).toBe(42);
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
+
+  it('should use contentHash resolver', () => {
+    const mockFn = vi.fn((obj: { a: number }) => obj.a);
+    const memoizedFn = memo(mockFn, { resolver: (obj: { a: number }) => `obj-${obj.a}` });
+
+    expect(memoizedFn({ a: 1 })).toBe(1);
+    expect(memoizedFn({ a: 1 })).toBe(1);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
 });

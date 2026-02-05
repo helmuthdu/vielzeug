@@ -5,7 +5,7 @@
 
 # predict
 
-The `predict` utility returns a Promise that resolves when a given condition becomes true. It periodically checks the condition based on a specified interval and can be configured with a timeout to prevent infinite waiting.
+The `predict` utility creates a Promise that can be aborted using an `AbortController`. It allows you to set a timeout for asynchronous operations and provides a way to gracefully cancel them before completion.
 
 ## Implementation
 
@@ -16,66 +16,90 @@ The `predict` utility returns a Promise that resolves when a given condition bec
 ## Features
 
 - **Isomorphic**: Works in both Browser and Node.js.
-- **Polling Logic**: Efficiently waits for external states or async flags to change.
-- **Timeout Support**: Automatically rejects if the condition is not met within the allowed time.
-- **Type-safe**: Proper Promise-based flow control.
+- **Abortable**: Integration with `AbortSignal` for clean cancellation.
+- **Timeout Support**: Automatically aborts if the operation exceeds the specified timeout.
+- **Type-safe**: Properly infers the return type of the executed function.
 
 ## API
 
 ```ts
 interface PredictOptions {
-  interval?: number;
+  signal?: AbortSignal;
   timeout?: number;
 }
 
 interface PredictFunction {
-  (fn: () => boolean | Promise<boolean>, options?: PredictOptions): Promise<void>;
+  <T>(fn: (signal: AbortSignal) => Promise<T>, options?: PredictOptions): Promise<T>;
 }
 ```
 
 ### Parameters
 
-- `fn`: A function that returns a boolean (or a Promise resolving to one). Polling stops when this returns `true`.
+- `fn`: An asynchronous function that receives an `AbortSignal` and returns a Promise.
 - `options`: Optional configuration:
-  - `interval`: Time in milliseconds between each check (defaults to `100`).
-  - `timeout`: Maximum time in milliseconds to wait before rejecting (defaults to `5000`).
+  - `signal`: An external `AbortSignal` to use for aborting the operation.
+  - `timeout`: Maximum time in milliseconds before the operation is aborted (defaults to `7000`).
 
 ### Returns
 
-- A Promise that resolves when `fn()` returns `true`.
-- Rejects with a "Timeout" error if the `timeout` is reached first.
+- A Promise that resolves with the result of `fn`.
+- Rejects with an "Operation aborted" error if the timeout is reached or the signal is aborted.
 
 ## Examples
 
-### Waiting for global state
+### Basic Timeout Control
 
 ```ts
 import { predict } from '@vielzeug/toolkit';
 
-// Wait until a specific variable is set by an external script
-await predict(() => window.myLibraryReady === true);
-console.log('Library is ready!');
+const slowFn = (signal: AbortSignal) =>
+  new Promise(resolve => setTimeout(() => resolve('slow'), 10000));
+
+const fastFn = (signal: AbortSignal) =>
+  new Promise(resolve => setTimeout(() => resolve('fast'), 5000));
+
+predict(slowFn); // rejects after 7 seconds (default timeout)
+predict(fastFn); // resolves with 'fast' after 5 seconds
 ```
 
-### With Custom Timing
+### With Custom Timeout
 
 ```ts
 import { predict } from '@vielzeug/toolkit';
 
-await predict(
-  async () => {
-    const status = await checkStatus();
-    return status === 'COMPLETED';
+const result = await predict(
+  async (signal) => {
+    const response = await fetch('/api/data', { signal });
+    return response.json();
   },
-  { interval: 500, timeout: 10000 },
+  { timeout: 3000 }
 );
+```
+
+### With External AbortSignal
+
+```ts
+import { predict } from '@vielzeug/toolkit';
+
+const controller = new AbortController();
+
+const promise = predict(
+  async (signal) => {
+    // Your async operation here
+    return await fetchData(signal);
+  },
+  { signal: controller.signal, timeout: 5000 }
+);
+
+// Abort from outside
+controller.abort();
 ```
 
 ## Implementation Notes
 
-- Uses a recursive `setTimeout` loop to avoid blocking the event loop.
-- Throws a `TypeError` if `fn` is not a function.
-- If `timeout` is set to `0` or less, it will only check the condition once.
+- Uses `AbortSignal.timeout()` and `AbortSignal.any()` for efficient timeout handling.
+- The function receives the combined abort signal that triggers on either timeout or external abort.
+- The promise races between the function execution and the abort signal.
 
 ## See Also
 

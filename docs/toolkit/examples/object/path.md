@@ -24,16 +24,24 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 ## API
 
 ```ts
+interface PathOptions {
+  throwOnMissing?: boolean;
+  allowArrayIndex?: boolean;
+}
+
 interface PathFunction {
-  <T = any>(obj: any, path: string | Array<string | number>, fallback?: T): T | undefined;
+  <T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined;
 }
 ```
 
 ### Parameters
 
 - `obj`: The object to query.
-- `path`: The path to the desired property. Can be a dot-separated string or an array of strings/numbers.
+- `path`: The path to the desired property as a dot-separated string.
 - `fallback`: Optional. A value to return if the path does not exist or resolves to `undefined`.
+- `options`: Optional configuration:
+  - `throwOnMissing`: If `true`, throws an error instead of returning the fallback value (defaults to `false`).
+  - `allowArrayIndex`: If `true`, supports bracket notation for array indices (e.g., `'d[1]'`) (defaults to `false`).
 
 ### Returns
 
@@ -56,9 +64,10 @@ const config = {
 
 path(config, 'api.endpoints.login'); // '/api/v1/login'
 path(config, 'api.version'); // undefined
+path(config, 'api.version', 'v1'); // 'v1'
 ```
 
-### Using Array Paths & Fallbacks
+### Using Array Index with allowArrayIndex
 
 ```ts
 import { path } from '@vielzeug/toolkit';
@@ -70,11 +79,20 @@ const data = {
   ],
 };
 
-// Access array index
-path(data, 'users.0.name'); // 'Alice'
+// Access array index with bracket notation
+path(data, 'd[1]', undefined, { allowArrayIndex: true }); // 2
+path(data, 'users[0].name', undefined, { allowArrayIndex: true }); // 'Alice'
+```
 
-// Using array path and fallback
-path(data, ['users', 5, 'name'], 'Unknown'); // 'Unknown'
+### Throwing on Missing Paths
+
+```ts
+import { path } from '@vielzeug/toolkit';
+
+const obj = { a: { b: 1 } };
+
+// Throws an error instead of returning fallback
+path(obj, 'e.f.g', 'default', { throwOnMissing: true }); // throws Error
 ```
 
 ## Implementation Notes

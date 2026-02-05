@@ -41,7 +41,7 @@ interface RetryFunction {
 - `options`: Optional configuration:
   - `times`: Total number of attempts (defaults to `3`).
   - `delay`: Initial wait time in milliseconds between retries (defaults to `250`).
-  - `backoff`: Multiplier for the delay after each failure (defaults to `1`, meaning no backoff).
+  - `backoff`: Multiplier for the delay after each failure (defaults to `1`, meaning no backoff). Can also be a function `(attempt: number, delay: number) => number` for custom backoff strategies.
   - `signal`: An `AbortSignal` to cancel the retry loop.
 
 ### Returns
@@ -76,6 +76,22 @@ await retry(heavyTask, {
   times: 3,
   delay: 500,
   backoff: 2,
+});
+```
+
+### With Custom Backoff Function
+
+```ts
+import { retry } from '@vielzeug/toolkit';
+
+// Custom backoff strategy
+await retry(apiCall, {
+  times: 5,
+  delay: 100,
+  backoff: (attempt, currentDelay) => {
+    // Fibonacci-like backoff
+    return currentDelay + (attempt * 100);
+  },
 });
 ```
 

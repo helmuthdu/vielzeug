@@ -402,13 +402,12 @@ const res = await api.get('/users/1');
 
 :::
 
-````
-
 ### Request cancelled errors
 
 **Problem**: Getting abort/cancellation errors.
 
 **Solution**: Handle cancellation properly:
+
 ```ts
 import { HttpError } from '@vielzeug/fetchit';
 
