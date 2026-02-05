@@ -1,27 +1,66 @@
 import type { Fn } from '../types';
+import { assert } from './assert';
+
+export type Debounced<T extends Fn> = ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) & {
+  cancel(): void;
+  flush(): ReturnType<T> | undefined;
+  pending(): boolean;
+};
 
 /**
- * Creates a debounced function that delays invoking the provided function until after
- * a specified wait time has elapsed since the last invocation.
- *
- * @example
- * ```ts
- * const debouncedLog = debounce(console.log, 1000);
- *
- * debouncedLog('Hello'); // Will log after 1 second if not called again
- * debouncedLog('World'); // Resets the timer, will log 'World' after 1 second
- * ```
- *
- * @param fn - The function to debounce.
- * @param [delay=300] - - The number of milliseconds to delay invoking the function.
- *
- * @returns - A debounced function
+ * Debounce a function (trailing). Use `flush` to invoke immediately,
+ * `cancel` to clear, and `pending` to check if an invocation is scheduled.
  */
-export function debounce<T extends Fn>(fn: T, delay = 300): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
+export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
+  assert(typeof fn === 'function', 'First argument must be a function', {
+    args: { fn },
+    type: TypeError,
+  });
+  assert(typeof delay === 'number' && delay >= 0, 'Delay must be a non-negative number', {
+    args: { delay },
+    type: TypeError,
+  });
 
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastArgs: Parameters<T> | undefined;
+  let lastThis: ThisParameterType<T> | undefined;
+  let lastResult: ReturnType<T> | undefined;
+
+  const clearTimer = () => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
   };
+
+  const invoke = () => {
+    clearTimer();
+    if (!lastArgs) return undefined; // nothing to invoke
+    const args = lastArgs;
+    const ctx = lastThis as ThisParameterType<T>;
+    lastArgs = undefined;
+    lastThis = undefined;
+    // biome-ignore lint/suspicious/noExplicitAny: -
+    lastResult = fn.apply(ctx as any, args);
+    return lastResult;
+  };
+
+  const debounced = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+    lastArgs = args;
+    lastThis = this;
+    clearTimer();
+    timer = setTimeout(invoke, delay);
+  } as Debounced<T>;
+
+  debounced.cancel = () => {
+    clearTimer();
+    lastArgs = undefined;
+    lastThis = undefined;
+  };
+
+  debounced.flush = () => invoke() as ReturnType<T> | undefined;
+
+  debounced.pending = () => timer !== undefined;
+
+  return debounced;
 }

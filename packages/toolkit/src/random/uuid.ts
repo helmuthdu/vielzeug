@@ -9,7 +9,13 @@
  * @returns A unique identifier.
  */
 export function uuid(): string {
-  return (
-    crypto?.randomUUID() ?? [12, 6, 6, 6, 18].map((val) => Math.floor(Math.random() * 10 ** val).toString(36)).join('-')
-  );
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'.replace(/x/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }

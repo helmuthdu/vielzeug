@@ -16,11 +16,12 @@ Calculates the sum of an array of numbers.
 ## API
 
 ```ts
-sum(numbers: number[]): number
+sum<T>(array: T[], callback?: (item: T) => number): number | undefined
 ```
 
-- `numbers`: Array of numbers to sum.
-- Returns: The sum of the numbers (0 if the array is empty).
+- `array`: Array of values to sum.
+- `callback`: Optional. A function to map each item to a number before summing.
+- Returns: The sum of the numbers (undefined if the array is empty).
 
 ## Example
 
@@ -28,13 +29,17 @@ sum(numbers: number[]): number
 import { sum } from '@vielzeug/toolkit';
 
 sum([1, 2, 3, 4, 5]); // 15
-sum([]); // 0
+sum([]); // undefined
+
+// With callback function
+const items = [{ price: 10 }, { price: 20 }, { price: 30 }];
+sum(items, (item) => item.price); // 60
 ```
 
 ## Notes
 
-- Returns 0 for an empty array.
-- Ignores non-numeric values (if any).
+- Returns `undefined` for an empty array.
+- Throws `TypeError` if a non-numeric value is encountered (does not ignore them).
 
 ## Related
 

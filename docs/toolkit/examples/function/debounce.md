@@ -22,19 +22,27 @@ The `debounce` utility creates a version of a function that delays its execution
 ## API
 
 ```ts
+interface DebouncedFunction {
+  (...args: any[]): void;
+  cancel: () => void;
+  flush: () => void;
+}
+
 interface DebounceFunction {
-  <T extends (...args: any[]) => any>(fn: T, wait: number): (...args: any[]) => void;
+  <T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction;
 }
 ```
 
 ### Parameters
 
 - `fn`: The function you want to debounce.
-- `wait`: The number of milliseconds to wait for "silence" before actually calling `fn`.
+- `wait`: The number of milliseconds to wait for "silence" before actually calling `fn` (defaults to `300`).
 
 ### Returns
 
-- A new function that, when called, resets the timer and waits for `wait` milliseconds before executing the original `fn`.
+- A debounced function with two additional methods:
+  - `cancel()`: Cancels any pending execution.
+  - `flush()`: Immediately executes any pending call and cancels the timer.
 
 ## Examples
 
@@ -66,6 +74,26 @@ const handleResize = debounce(() => {
 }, 250);
 
 window.addEventListener('resize', handleResize);
+```
+
+### Using Cancel and Flush
+
+```ts
+import { debounce } from '@vielzeug/toolkit';
+
+const saveData = debounce((data) => {
+  console.log('Saving:', data);
+}, 1000);
+
+saveData({ name: 'Alice' });
+saveData({ name: 'Bob' });
+
+// Cancel pending save
+saveData.cancel();
+
+// Or immediately execute pending save
+saveData({ name: 'Charlie' });
+saveData.flush(); // Saves 'Charlie' immediately
 ```
 
 ## Implementation Notes

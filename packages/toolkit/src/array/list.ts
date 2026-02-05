@@ -34,7 +34,10 @@ export function list<T>(initialData: T[], config: Config<T> = {}) {
   const update = () => {
     data = getData(rawData, filterFn, query);
     pages = getPages(data, limit, sortFn);
-    offset = Math.max(0, Math.min(offset, pages.length - 1));
+    // Ensure offset is valid for the new page count
+    // If pages is empty, offset should be 0. Max index is pages.length - 1
+    const maxOffset = Math.max(0, pages.length - 1);
+    offset = Math.max(0, Math.min(offset, maxOffset));
     return pages[offset] ?? [];
   };
 

@@ -18,7 +18,7 @@ import type { Selector } from '../types';
  *
  * @throws {TypeError} If the provided array is not an array.
  */
-export function group<T, K extends keyof T, R extends T[K] extends string ? T[K] : never>(
+export function group<T, _K extends keyof T, R extends string | number | symbol>(
   array: T[],
   selector: Selector<T>,
 ): Record<R, T[]> {
@@ -28,7 +28,8 @@ export function group<T, K extends keyof T, R extends T[K] extends string ? T[K]
   const getKey = typeof selector === 'function' ? selector : (item: T) => item[selector];
 
   for (const item of array) {
-    const key = (getKey(item) || '_') as R;
+    const rawKey = getKey(item);
+    const key = (rawKey === undefined || rawKey === null ? '_' : String(rawKey)) as R;
 
     if (!result[key]) {
       result[key] = [];

@@ -32,4 +32,8 @@ describe('range', () => {
   it('should handle large ranges', () => {
     expect(range(0, 100, 25)).toEqual([0, 25, 50, 75]);
   });
+  it('should throw an error if range is too large', () => {
+    // 10,000,001 items
+    expect(() => range(0, 10_000_001, 1)).toThrow('Range exceeds maximum allowed size of 10,000,000');
+  });
 });

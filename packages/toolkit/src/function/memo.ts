@@ -1,9 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import type { Fn } from '../types';
 
-type MemoizeOptions = {
+type MemoizeOptions<T extends Fn> = {
   ttl?: number; // Time-to-live in milliseconds
   maxSize?: number; // Maximum number of items in cache
+  resolver?: (...args: Parameters<T>) => string; // Custom key generator
 };
 
 type CacheEntry<T extends Fn> = {
@@ -28,16 +29,19 @@ type CacheEntry<T extends Fn> = {
  * @param options - Memoization options.
  * @param [options.ttl] - (optional) time-to-live (TTL) for cache expiration (in milliseconds).
  * @param [options.maxSize] - (optional) maximum cache size (LRU eviction).
+ * @param [options.resolver] - (optional) custom function to resolve the cache key.
  *
  * @returns A new function that memorizes the input function.
  */
 export function memo<T extends Fn>(
   fn: T,
-  { ttl, maxSize }: MemoizeOptions = {},
+  { ttl, maxSize, resolver }: MemoizeOptions<T> = {},
 ): (...args: Parameters<T>) => ReturnType<T> {
   const cache = new Map<string, CacheEntry<T>>();
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   const keyGen = (args: Parameters<T>): string => {
+    if (resolver) return resolver(...args);
     if (args.length === 0) return '__empty__';
     if (args.length === 1) {
       const arg = args[0];

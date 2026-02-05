@@ -73,7 +73,7 @@ isEmpty(undefined); // true
 ## Implementation Notes
 
 - For objects, it checks for own enumerable property names using `Object.keys()`.
-- For `Map` and `Set`, it checks the `.size` property.
+- For `Map` and `Set`, they are treated as objects. An empty Map or Set will return `true` since `Object.keys()` returns an empty array for them.
 - For all other types (numbers, booleans, etc.), it returns `false` unless the value is `null` or `undefined`.
 
 ## See Also

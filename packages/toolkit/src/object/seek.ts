@@ -30,22 +30,24 @@ import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
 export function seek<T>(item: T, query: string, tone = 1): boolean {
   assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
 
+  if (is('nil', item)) return false;
+
   if (is('string', item) || is('number', item)) {
     // Lowercase both sides for case-insensitive comparison
     return similarity(item, query) >= tone;
   }
 
-  return Object.values(item as Record<string, unknown>).some((value) => {
-    if (is('nil', value)) return false;
+  // Handle arrays
+  if (is('array', item)) {
+    return (item as unknown[]).some((value) => seek(value, query, tone));
+  }
 
-    if (is('array', value)) {
-      return value.some((v) => (is('object', v) ? seek(v, query, tone) : similarity(v, query) >= tone));
-    }
+  // Handle objects but skip dates/regex/etc which are technically objects
+  if (is('object', item)) {
+    return Object.values(item as Record<string, unknown>).some((value) =>
+      is('nil', value) ? false : seek(value, query, tone),
+    );
+  }
 
-    if (is('object', value)) {
-      return seek(value, query, tone);
-    }
-
-    return similarity(value, query) >= tone;
-  });
+  return false;
 }

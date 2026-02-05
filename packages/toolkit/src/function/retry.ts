@@ -30,7 +30,7 @@ export async function retry<T>(
   }: {
     times?: number;
     delay?: number;
-    backoff?: number;
+    backoff?: number | ((attempt: number, delay: number) => number);
     signal?: AbortSignal;
   } = {},
 ): Promise<T> {
@@ -49,7 +49,8 @@ export async function retry<T>(
 
       Logit.warn(`retry() -> ${err}, attempt ${attempt}/${times}, retrying in ${currentDelay}ms`);
       if (currentDelay > 0) await sleep(currentDelay);
-      currentDelay *= backoff;
+
+      currentDelay = typeof backoff === 'function' ? backoff(attempt, currentDelay) : currentDelay * backoff;
     }
   }
 

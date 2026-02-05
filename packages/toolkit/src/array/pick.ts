@@ -1,7 +1,6 @@
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 import { isNil } from '../typed/isNil';
-import type { CallbackDynamic, Predicate, Result } from '../types';
 
 /**
  * Picks the first element from an array that satisfies a predicate function
@@ -21,18 +20,18 @@ import type { CallbackDynamic, Predicate, Result } from '../types';
  *
  * @throws {TypeError} If the first argument is not an array.
  */
-export function pick<T, R, C extends CallbackDynamic<T, R>>(
+export function pick<T, R = T>(
   array: T[],
-  callback: C,
-  predicate?: Predicate<T>,
-): Result<C> | undefined {
+  callback: (item: T, index: number, array: T[]) => R,
+  predicate?: (item: T, index: number, array: T[]) => boolean,
+): R | undefined {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
   const isValid = predicate ?? ((value: T) => !isNil(value));
 
   for (let index = 0; index < array.length; index++) {
     if (isValid(array[index], index, array)) {
-      return callback(array[index], index, array) as Result<C>;
+      return callback(array[index], index, array);
     }
   }
 

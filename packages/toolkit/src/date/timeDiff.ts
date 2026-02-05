@@ -59,10 +59,11 @@ export function timeDiff(
     return { unit: smallestUnit, value: 0 };
   }
 
-  for (const { ms, unit } of units) {
-    if (diff >= ms) {
-      return { unit, value: Math.floor(diff / ms) };
-    }
+  // Find the largest unit that fits
+  const bestUnit = units.find((u) => diff >= u.ms);
+
+  if (bestUnit) {
+    return { unit: bestUnit.unit, value: Math.floor(diff / bestUnit.ms) };
   }
 
   return { unit: smallestUnit, value: 0 };

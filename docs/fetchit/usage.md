@@ -107,8 +107,6 @@ api.clearExpiredCache();
 
 const removed = api.cleanupCache();
 
-````
-
 ### Custom Cache Keys
 
 ```ts

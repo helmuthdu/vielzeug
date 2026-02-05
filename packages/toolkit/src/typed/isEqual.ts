@@ -19,19 +19,30 @@
  * @param b - Second value to compare.
  * @returns Whether the values are deeply equal.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
 export function isEqual(a: unknown, b: unknown): boolean {
+  return safeIsEqual(a, b, new WeakMap());
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
+function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): boolean {
   // Check for strict equality (handles primitives and references)
   if (a === b) return true;
 
   // If either is null or not an object, they're not equal
   if (a == null || b == null || typeof a !== typeof b || typeof a !== 'object' || typeof b !== 'object') return false;
 
+  // Check for circular references
+  // We only track 'a' because if 'a' is cyclical, 'b' must also be cyclic to be equal
+  if (visited.has(a as object)) {
+    return visited.get(a as object) === b;
+  }
+  visited.set(a as object, b as object);
+
   // Array comparison
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let idx = 0; idx < a.length; idx++) {
-      if (!isEqual(a[idx], b[idx])) return false;
+      if (!safeIsEqual(a[idx], b[idx], visited)) return false;
     }
     return true;
   }
@@ -51,7 +62,10 @@ export function isEqual(a: unknown, b: unknown): boolean {
   if (keysA.length !== keysB.length) return false;
 
   for (const key of keysA) {
-    if (!Object.hasOwn(b, key) || !isEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
+    if (
+      !Object.hasOwn(b, key) ||
+      !safeIsEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], visited)
+    )
       return false;
   }
 
