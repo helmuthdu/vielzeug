@@ -22,9 +22,7 @@ The `isPositive` utility is a type guard that checks if a given number is strict
 ## API
 
 ```ts
-interface IsPositiveFunction {
-  (value: number): boolean;
-}
+function isPositive(value: number): boolean
 ```
 
 ### Parameters

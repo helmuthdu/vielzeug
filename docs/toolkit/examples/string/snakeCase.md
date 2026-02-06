@@ -22,9 +22,7 @@ The `snake_case` utility transforms a string into `snake_case` format (all lower
 ## API
 
 ```ts
-interface SnakeCaseFunction {
-  (input: string): string;
-}
+function snakeCase(input: string): string
 ```
 
 ### Parameters

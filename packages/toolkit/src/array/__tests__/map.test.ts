@@ -24,8 +24,8 @@ describe('map', () => {
   it('should return a promise if lazy is true', async () => {
     const array = [1, 2, 3];
     const callback = async (value: number) => value * 2;
-
     const result = map(array, callback);
+
     expect(result).toBeInstanceOf(Promise);
     await expect(result).resolves.toEqual([2, 4, 6]);
   });
@@ -41,15 +41,17 @@ describe('map', () => {
   it('should handle an empty array', () => {
     const array: number[] = [];
     const callback = (value: number) => value * 2;
+    const result = map(array, callback);
 
-    expect(map(array, callback)).toEqual([]);
+    expect(result).toEqual([]);
   });
 
   it('should work with a callback that returns different types', () => {
     const array = [1, 2, 3];
     const callback = (value: number) => `Value: ${value}`;
+    const result = map(array, callback);
 
-    expect(map(array, callback)).toEqual(['Value: 1', 'Value: 2', 'Value: 3']);
+    expect(result).toEqual(['Value: 1', 'Value: 2', 'Value: 3']);
   });
 
   it('should handle null or undefined values in the array', () => {

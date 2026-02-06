@@ -22,13 +22,11 @@ The `reduce` utility reduces an array to a single value by executing a reducer f
 ## API
 
 ```ts
-interface ReduceFunction {
-  <T, R>(
-    array: T[],
-    callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>,
-    initialValue: R,
-  ): R | Promise<R>;
-}
+function reduce<T, R>(
+  array: T[],
+  callback: (acc: R, item: T, index: number, array: T[]) => R | Promise<R>,
+  initialValue: R
+): R | Promise<R>
 ```
 
 ### Parameters

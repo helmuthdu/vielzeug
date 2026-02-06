@@ -22,9 +22,7 @@ The `isEmpty` utility checks if a given value is considered "empty". It supports
 ## API
 
 ```ts
-interface IsEmptyFunction {
-  (value: unknown): boolean;
-}
+function isEmpty(value: unknown): boolean
 ```
 
 ### Parameters

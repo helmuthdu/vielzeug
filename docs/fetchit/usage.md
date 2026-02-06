@@ -115,7 +115,7 @@ await api.get('/users/1', { id: 'user-1' });
 
 // Later, invalidate this specific request
 api.invalidateCache('user-1');
-````
+```
 
 ### Request Cancellation
 

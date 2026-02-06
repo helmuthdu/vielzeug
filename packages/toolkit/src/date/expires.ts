@@ -1,4 +1,6 @@
+// #region Expires
 export type Expires = 'EXPIRED' | 'SOON' | 'LATER' | 'NEVER' | 'UNKNOWN';
+// #endregion Expires
 
 /**
  * Determines the expiry status of a given date.

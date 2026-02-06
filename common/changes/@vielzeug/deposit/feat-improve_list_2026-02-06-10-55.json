@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "update dependencies",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}

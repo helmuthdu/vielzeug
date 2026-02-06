@@ -13,31 +13,64 @@ Checks if a value is a plain object.
 <<< @/../packages/toolkit/src/typed/isObject.ts
 :::
 
+## Features
+
+- **Type Guard**: Narrows `unknown` to `object`
+- **Plain Object Detection**: Excludes arrays, functions, and null
+- **Isomorphic**: Works in both Browser and Node.js
+
 ## API
 
 ```ts
-isObject(value: unknown): value is object
+function isObject(value: unknown): value is object
 ```
 
-- `value`: Value to check.
-- Returns: `true` if value is a plain object, else `false`.
+### Parameters
 
-## Example
+- `value`: The value to check
+
+### Returns
+
+- `true` if the value is a plain object, `false` otherwise
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { isObject } from '@vielzeug/toolkit';
 
 isObject({}); // true
+isObject({ name: 'Alice' }); // true
 isObject([]); // false
 isObject(null); // false
+isObject(new Date()); // true
 ```
 
-## Notes
+### Type Guard Usage
 
-- Excludes arrays, functions, and null.
-- Useful for type guards and validation.
+```ts
+import { isObject } from '@vielzeug/toolkit';
 
-## Related
+function process(value: unknown) {
+  if (isObject(value)) {
+    // TypeScript knows value is object here
+    return Object.keys(value);
+  }
+  return [];
+}
+```
 
-- [isArray](./isArray.md)
-- [isFunction](./isFunction.md)
+## Implementation Notes
+
+- Returns `false` for arrays (use `isArray` for arrays)
+- Returns `false` for functions (use `isFunction` for functions)  
+- Returns `false` for `null` (common JavaScript gotcha)
+- Returns `true` for class instances and built-in objects like `Date`, `RegExp`
+
+## See Also
+
+- [isArray](./isArray.md): Check if value is an array
+- [isFunction](./isFunction.md): Check if value is a function
+- [isPrimitive](./isPrimitive.md): Check if value is a primitive type
+- [typeOf](./typeOf.md): Get the type of any value

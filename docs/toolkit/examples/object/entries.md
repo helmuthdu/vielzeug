@@ -22,9 +22,7 @@ The `entries` utility returns an array of an object's own enumerable string-keye
 ## API
 
 ```ts
-interface EntriesFunction {
-  <T extends Record<string, any>>(obj: T): [keyof T, T[keyof T]][];
-}
+function entries<T extends object>(obj: T): [keyof T, T[keyof T]][]
 ```
 
 ### Parameters

@@ -22,9 +22,7 @@ The `every` utility checks if all elements in an array pass the provided test fu
 ## API
 
 ```ts
-interface EveryFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean;
-}
+function every<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean
 ```
 
 ### Parameters

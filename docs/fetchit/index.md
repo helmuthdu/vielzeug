@@ -418,7 +418,7 @@ try {
     console.error(`${error.method} ${error.url} failed:`, error.message);
   }
 }
-````
+```
 
 ### Cache not working as expected
 

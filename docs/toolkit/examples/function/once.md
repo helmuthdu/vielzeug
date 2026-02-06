@@ -23,9 +23,7 @@ The `once` utility restricts a function so that it can only be executed a single
 ## API
 
 ```ts
-interface OnceFunction {
-  <T extends (...args: any[]) => any>(fn: T): T & { reset: () => void };
-}
+function once<T extends (...args: any[]) => any>(fn: T): T
 ```
 
 ### Parameters

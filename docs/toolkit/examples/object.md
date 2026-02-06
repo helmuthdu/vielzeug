@@ -69,16 +69,3 @@ const themeAnywhere = seek(data, 'theme'); // 'dark'
 - [values](./object/values.md)
 
 </div>
-
-<style>
-.grid-links ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
-  list-style: none !important;
-  padding: 0 !important;
-}
-.grid-links li {
-  margin: 0 !important;
-}
-</style>

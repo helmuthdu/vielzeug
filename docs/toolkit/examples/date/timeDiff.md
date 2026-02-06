@@ -22,17 +22,16 @@ The `timeDiff` utility calculates the time difference between two dates and retu
 
 ## API
 
+::: details Type Definitions
+<<< @/../packages/toolkit/src/date/timeDiff.ts#TimeDiffTypes
+:::
+
 ```ts
-type TimeUnit = 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND';
-
-interface TimeDiffResult {
-  value: number;
-  unit: TimeUnit | 'INVALID_DATE';
-}
-
-interface TimeDiffFunction {
-  (date: Date | string | number, direction?: 'FUTURE' | 'PAST', allowedUnits?: TimeUnit[]): TimeDiffResult;
-}
+function timeDiff(
+  a: Date | string, 
+  b?: Date | string, 
+  allowedUnits?: TimeUnit[]
+): TimeResult
 ```
 
 ### Parameters

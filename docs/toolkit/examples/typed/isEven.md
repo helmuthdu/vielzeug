@@ -22,9 +22,7 @@ The `isEven` utility is a type guard that checks if a given number is an even in
 ## API
 
 ```ts
-interface IsEvenFunction {
-  (value: number): boolean;
-}
+function isEven(value: number): boolean
 ```
 
 ### Parameters

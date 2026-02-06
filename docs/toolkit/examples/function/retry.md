@@ -23,16 +23,15 @@ The `retry` utility automatically re-executes an asynchronous function if it fai
 ## API
 
 ```ts
-interface RetryOptions {
-  times?: number;
-  delay?: number;
-  backoff?: number;
-  signal?: AbortSignal;
-}
-
-interface RetryFunction {
-  <T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T>;
-}
+function retry<T>(
+  fn: () => Promise<T>, 
+  options?: {
+    times?: number;
+    delay?: number;
+    backoff?: number | ((attempt: number, delay: number) => number);
+    signal?: AbortSignal;
+  }
+): Promise<T>
 ```
 
 ### Parameters
@@ -90,7 +89,7 @@ await retry(apiCall, {
   delay: 100,
   backoff: (attempt, currentDelay) => {
     // Fibonacci-like backoff
-    return currentDelay + (attempt * 100);
+    return currentDelay + attempt * 100;
   },
 });
 ```

@@ -2,12 +2,14 @@ import { assert } from '../function/assert';
 import { isArray } from '../typed/isArray';
 import { isString } from '../typed/isString';
 
+// #region ChunkTypes
 type ChunkOptions = {
   overlap?: boolean;
   pad?: string;
 };
 
 type ChunkResult<T> = (T extends string ? string : T[])[];
+// #endregion ChunkTypes
 
 /**
  * Splits an array or string into chunks of a specified size.

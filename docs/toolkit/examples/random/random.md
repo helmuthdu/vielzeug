@@ -23,9 +23,7 @@ The `random` utility generates a pseudo-random integer between two specified val
 ## API
 
 ```ts
-interface RandomFunction {
-  (min?: number, max?: number): number;
-}
+function random(min?: number, max?: number): number
 ```
 
 ### Parameters

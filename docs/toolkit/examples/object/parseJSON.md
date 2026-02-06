@@ -23,17 +23,12 @@ The `parseJSON` utility provides a safe and robust way to parse JSON strings. It
 
 ## API
 
-```ts
-interface ParseJSONOptions<T> {
-  defaultValue?: T;
-  reviver?: (key: string, value: any) => any;
-  validator?: (value: any) => boolean;
-  silent?: boolean;
-}
+::: details Type Definitions
+<<< @/../packages/toolkit/src/object/parseJSON.ts#ParseJSONOptions
+:::
 
-interface ParseJSONFunction {
-  <T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined;
-}
+```ts
+function parseJSON<T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined
 ```
 
 ### Parameters

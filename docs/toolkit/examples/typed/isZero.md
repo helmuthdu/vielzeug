@@ -22,9 +22,7 @@ The `isZero` utility is a type guard that checks if a given number is exactly eq
 ## API
 
 ```ts
-interface IsZeroFunction {
-  (value: number): boolean;
-}
+function isZero(value: number): boolean
 ```
 
 ### Parameters

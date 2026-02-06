@@ -23,15 +23,12 @@ The `memo` utility creates a memoized version of a function that caches its resu
 
 ## API
 
-```ts
-interface MemoOptions {
-  ttl?: number;
-  maxSize?: number;
-}
+::: details Type Definitions
+<<< @/../packages/toolkit/src/function/memo.ts#MemoizeOptions
+:::
 
-interface MemoFunction {
-  <T extends (...args: any[]) => any>(fn: T, options?: MemoOptions): T;
-}
+```ts
+function memo<T extends (...args: any[]) => any>(fn: T, options?: MemoizeOptions<T>): T
 ```
 
 ### Parameters

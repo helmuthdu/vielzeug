@@ -21,12 +21,12 @@ The `uniq` utility creates a new array containing only unique values from the in
 
 ## API
 
-```ts
-type Selector<T> = keyof T | ((item: T) => Primitive);
+::: details Type Definitions
+<<< @/../packages/toolkit/src/types.ts#Selector
+:::
 
-interface UniqFunction {
-  <T>(array: T[], selector?: Selector<T>): T[];
-}
+```ts
+function uniq<T>(array: T[], selector?: Selector<T>): T[]
 ```
 
 ### Parameters

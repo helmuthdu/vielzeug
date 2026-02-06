@@ -24,19 +24,15 @@ The `assertParams` utility ensures that specific keys are present and non-empty 
 ## API
 
 ```ts
-interface AssertParamsOptions {
-  type?: ErrorConstructor;
-  bypass?: boolean;
-}
-
-interface AssertParamsFunction {
-  <T extends object, K extends keyof T>(
-    params: T,
-    keys: K[],
-    name?: string,
-    options?: AssertParamsOptions,
-  ): asserts params is T & Required<Pick<T, K>>;
-}
+function assertParams<T extends object, K extends keyof T>(
+  params: T,
+  keys: K[],
+  name?: string,
+  options?: {
+    type?: ErrorConstructor;
+    bypass?: boolean;
+  }
+): asserts params is T & Required<Pick<T, K>>
 ```
 
 ### Parameters

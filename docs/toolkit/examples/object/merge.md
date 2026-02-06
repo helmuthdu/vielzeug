@@ -22,18 +22,12 @@ The `merge` utility combines multiple objects into a single new object using a v
 
 ## API
 
-```ts
-type MergeStrategy =
-  | 'deep'
-  | 'shallow'
-  | 'lastWins'
-  | 'arrayConcat'
-  | 'arrayReplace'
-  | ((target: any, source: any) => any);
+::: details Type Definitions
+<<< @/../packages/toolkit/src/object/merge.ts#MergeStrategy
+:::
 
-interface MergeFunction {
-  <T extends object[]>(strategy: MergeStrategy, ...items: T): any;
-}
+```ts
+function merge<T extends object[]>(strategy: MergeStrategy, ...items: T): any
 ```
 
 ### Parameters

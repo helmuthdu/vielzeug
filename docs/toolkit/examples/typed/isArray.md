@@ -22,9 +22,7 @@ The `isArray` utility is a type guard that checks if a given value is an array. 
 ## API
 
 ```ts
-interface IsArrayFunction {
-  (value: unknown): value is any[];
-}
+function isArray(value: unknown): value is any[]
 ```
 
 ### Parameters

@@ -23,9 +23,11 @@ The `findLast` utility returns the last element in an array that passes the prov
 ## API
 
 ```ts
-interface FindLastFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, defaultValue?: T): T | undefined;
-}
+function findLast<T>(
+  array: T[], 
+  predicate: (item: T, index: number, array: T[]) => boolean, 
+  defaultValue?: T
+): T | undefined
 ```
 
 ### Parameters

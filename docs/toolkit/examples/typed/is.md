@@ -24,26 +24,14 @@ The `is` utility is a highly flexible and unified type-checking engine. It acts 
 ## API
 
 ```ts
-interface IsFunction {
-  // Common type guards
-  (type: 'string', value: unknown): value is string;
-  (type: 'number', value: unknown): value is number;
-  (type: 'array', value: unknown): value is any[];
-  (type: 'object', value: unknown): value is object;
-  (type: 'nil', value: unknown): value is null | undefined;
-
-  // Logical predicates
-  (type: 'empty', value: unknown): boolean;
-  (type: 'match', value: any, pattern: any): boolean;
-  (type: 'within', value: number, min: number, max: number): boolean;
-
-  // Comparisons
-  (type: 'gt', a: any, b: any): boolean;
-  (type: 'ge', a: any, b: any): boolean;
-
-  // ... and many more
-}
+function is(type: string | Function, value: unknown, ...args: any[]): boolean
 ```
+
+::: tip
+Supports many type checks: `'string'`, `'number'`, `'array'`, `'object'`, `'nil'`, `'empty'`, 
+`'match'`, `'within'`, `'gt'`, `'ge'`, `'lt'`, `'le'`, `'even'`, `'odd'`, `'positive'`, `'negative'`, 
+`'zero'`, `'defined'`, `'promise'`, `'function'`, `'boolean'`, `'date'`, `'regex'`, `'primitive'`, `'equal'`
+:::
 
 ### Parameters
 

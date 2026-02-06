@@ -23,15 +23,12 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 
 ## API
 
-```ts
-interface PathOptions {
-  throwOnMissing?: boolean;
-  allowArrayIndex?: boolean;
-}
+::: details Type Definitions
+<<< @/../packages/toolkit/src/object/path.ts#PathOptions
+:::
 
-interface PathFunction {
-  <T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined;
-}
+```ts
+function path<T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined
 ```
 
 ### Parameters

@@ -22,12 +22,12 @@ The `expires` utility determines the expiration status of a given date relative 
 
 ## API
 
-```ts
-type ExpiryStatus = 'EXPIRED' | 'SOON' | 'LATER' | 'NEVER' | 'UNKNOWN';
+::: details Type Definitions
+<<< @/../packages/toolkit/src/date/expires.ts#Expires
+:::
 
-interface ExpiresFunction {
-  (date: string | number | Date, days?: number): ExpiryStatus;
-}
+```ts
+function expires(date: string | Date, days?: number): Expires
 ```
 
 ### Parameters

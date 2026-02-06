@@ -22,9 +22,7 @@ The `values` utility returns an array of an object's own enumerable property val
 ## API
 
 ```ts
-interface ValuesFunction {
-  <T extends Record<string, any>>(obj: T): T[keyof T][];
-}
+function values<T extends object>(obj: T): T[keyof T][]
 ```
 
 ### Parameters

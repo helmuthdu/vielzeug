@@ -23,13 +23,11 @@ The `select` utility is a high-performance combined transformation and filtering
 ## API
 
 ```ts
-interface SelectFunction {
-  <T, R>(
-    array: T[],
-    callback: (item: T, index: number, array: T[]) => R | Promise<R>,
-    predicate?: (item: T, index: number, array: T[]) => boolean,
-  ): R[] | Promise<R[]>;
-}
+function select<T, R>(
+  array: T[],
+  callback: (item: T, index: number, array: T[]) => R | Promise<R>,
+  predicate?: (item: T, index: number, array: T[]) => boolean
+): R[] | Promise<R[]>
 ```
 
 ### Parameters

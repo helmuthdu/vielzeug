@@ -22,9 +22,7 @@ The `truncate` utility shortens a string to a specified length and appends a cus
 ## API
 
 ```ts
-interface TruncateFunction {
-  (input: string, length: number, suffix?: string): string;
-}
+function truncate(input: string, length: number, suffix?: string): string
 ```
 
 ### Parameters

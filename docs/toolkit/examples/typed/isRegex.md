@@ -16,26 +16,36 @@ Checks if a value is a regular expression.
 ## API
 
 ```ts
-isRegex(value: unknown): value is RegExp
+function isRegex(value: unknown): value is RegExp
 ```
 
-- `value`: Value to check.
-- Returns: `true` if value is a RegExp, else `false`.
+### Parameters
 
-## Example
+- `value`: The value to check
+
+### Returns
+
+- `true` if the value is a RegExp, `false` otherwise
+
+## Examples
+
+### Basic Usage
 
 ```ts
 import { isRegex } from '@vielzeug/toolkit';
 
 isRegex(/abc/); // true
+isRegex(new RegExp('abc')); // true
 isRegex('abc'); // false
 ```
 
-## Notes
+## Implementation Notes
 
-- Useful for type guards and validation.
+- Detects both literal and constructed regular expressions
+- Useful for type guards and validation
 
-## Related
+## See Also
 
-- [isString](./isString.md)
-- [isObject](./isObject.md)
+- [isString](./isString.md): Check if value is a string
+- [isObject](./isObject.md): Check if value is an object
+- [typeOf](./typeOf.md): Get the type of any value

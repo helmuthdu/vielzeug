@@ -23,17 +23,12 @@ The `proxy` utility creates an enhanced JavaScript Proxy for an object, allowing
 
 ## API
 
-```ts
-interface ProxyOptions<T extends object> {
-  set?: (prop: string | symbol, next: any, prev: any, target: T) => void;
-  get?: (prop: string | symbol, value: any, target: T) => void;
-  deep?: boolean;
-  watch?: (keyof T)[];
-}
+::: details Type Definitions
+<<< @/../packages/toolkit/src/function/proxy.ts#ProxyOptions
+:::
 
-interface ProxyFunction {
-  <T extends object>(item: T, options?: ProxyOptions<T>): T;
-}
+```ts
+function proxy<T extends object>(item: T, options?: ProxyOptions<T>): T
 ```
 
 ### Parameters
