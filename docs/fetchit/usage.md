@@ -23,47 +23,206 @@ yarn add @vielzeug/fetchit
 ## Import
 
 ```ts
-import { createHttpClient, buildUrl, HttpError } from '@vielzeug/fetchit';
+import { fetchit, HttpError } from '@vielzeug/fetchit';
 ```
 
-## Basic Usage
+## Two Ways to Use Fetchit
+
+Fetchit provides two APIs:
+
+1. **Query API** - Modern query management with caching (recommended for data fetching)
+2. **REST API** - Simple HTTP methods (recommended for quick requests)
+
+## Query API (Recommended for Data Fetching)
+
+The Query API provides intelligent caching, request deduplication, and optimistic updates.
+
+### Basic Query
+
+```ts
+const client = fetchit({
+  baseUrl: 'https://api.example.com',
+  defaultStaleTime: 5000, // Data fresh for 5 seconds
+});
+
+// Fetch user with caching
+const user = await client.query({
+  queryKey: ['users', userId],
+  queryFn: async () => {
+    const response = await client.get(`/users/${userId}`);
+    return response.data;
+  },
+  staleTime: 5000, // Fresh for 5 seconds
+  cacheTime: 60000, // Keep in cache for 60 seconds
+});
+```
+
+### Query with Parameters
+
+```ts
+// Query key includes all parameters that affect the data
+async function fetchUsers(filters: { role?: string; age?: number }) {
+  return client.query({
+    queryKey: ['users', filters], // Include filters in key
+    queryFn: async () => {
+      const response = await client.get('/users', { params: filters });
+      return response.data;
+    },
+  });
+}
+
+const admins = await fetchUsers({ role: 'admin' });
+const adults = await fetchUsers({ age: 18 });
+```
+
+### Mutations (POST/PUT/DELETE)
+
+```ts
+// Create user
+const newUser = await client.mutate({
+  mutationFn: async (userData: CreateUserInput) => {
+    const response = await client.post('/users', { body: userData });
+    return response.data;
+  },
+  onSuccess: (data) => {
+    // Invalidate users list to refetch
+    client.invalidateQueries(['users']);
+  },
+}, {
+  name: 'John Doe',
+  email: 'john@example.com'
+});
+```
+
+### Optimistic Updates
+
+```ts
+// Update user optimistically
+client.setQueryData<User>(['users', userId], (old) => ({
+  ...old,
+  name: 'Updated Name'
+}));
+
+try {
+  await client.mutate({
+    mutationFn: async (updates) => {
+      const response = await client.put(`/users/${userId}`, { body: updates });
+      return response.data;
+    },
+    onSuccess: () => {
+      // Refetch to get server data
+      client.invalidateQueries(['users', userId]);
+    }
+  }, { name: 'Updated Name' });
+} catch (error) {
+  // Rollback on error
+  client.invalidateQueries(['users', userId]);
+}
+```
+
+### Cache Management
+
+```ts
+// Invalidate specific query
+client.invalidateQueries(['users', userId]);
+
+// Manually set cache data
+client.setQueryData(['users', 1], { id: 1, name: 'John' });
+
+// Get cached data
+const cachedUser = client.getQueryData(['users', 1]);
+
+// Clear all cache
+client.clearCache();
+```
+
+## REST API (Simple HTTP Methods)
+
+For simple requests without caching, use the REST methods directly.
 
 ### Creating a Client
 
 ```ts
-const api = createHttpClient({
-  url: 'https://api.example.com',
-  timeout: 5000,
+const client = fetchit({
+  baseUrl: 'https://api.example.com',
+  timeout: 30000, // 30 seconds
   headers: {
-    'Content-Type': 'application/json',
+    'Authorization': 'Bearer token',
   },
 });
 ```
 
-### Making Requests
+### Making REST Requests
 
 ```ts
 // GET
-const res = await api.get<User>('/users/1');
-console.log(res.data);
+const response = await client.get<User>('/users/1');
+console.log(response.data);
 
 // POST
-await api.post('/users', {
+await client.post('/users', {
   body: { name: 'Alice', email: 'alice@example.com' },
 });
 
 // PUT
-await api.put('/users/1', {
+await client.put('/users/1', {
   body: { name: 'Alice Smith' },
 });
 
 // PATCH
-await api.patch('/users/1', {
+await client.patch('/users/1', {
   body: { email: 'newemail@example.com' },
 });
 
 // DELETE
-await api.delete('/users/1');
+await client.delete('/users/1');
+```
+
+## Common Patterns
+
+### Query with Retry
+
+```ts
+const user = await client.query({
+  queryKey: ['users', userId],
+  queryFn: fetchUser,
+  retry: 3, // Retry 3 times on failure
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+});
+```
+
+### Dependent Queries
+
+```ts
+// Fetch user first
+const user = await client.query({
+  queryKey: ['users', userId],
+  queryFn: () => fetchUser(userId),
+});
+
+// Then fetch their posts
+const posts = await client.query({
+  queryKey: ['users', userId, 'posts'],
+  queryFn: () => fetchUserPosts(userId),
+  enabled: !!user, // Only run if user exists
+});
+```
+
+### Mutation with Invalidation
+
+```ts
+await client.mutate({
+  mutationFn: async (postData) => {
+    const response = await client.post('/posts', { body: postData });
+    return response.data;
+  },
+  onSuccess: () => {
+    // Invalidate posts list to refetch
+    client.invalidateQueries(['posts']);
+    // Also invalidate user's posts
+    client.invalidateQueries(['users', userId, 'posts']);
+  },
+}, postData);
 ```
 
 ## Advanced Features
@@ -74,29 +233,99 @@ Update headers after client creation:
 
 ```ts
 // Add or update headers
-api.setHeaders({
-  Authorization: 'Bearer token123',
+client.setHeaders({
+  Authorization: 'Bearer new-token',
   'X-Custom-Header': 'value',
 });
 
 // Remove headers (set to undefined)
-api.setHeaders({
+client.setHeaders({
   Authorization: undefined,
 });
+
+// Get current headers
+const headers = client.getHeaders();
+```
+
+### Query Options
+
+All available query options:
+
+```ts
+await client.query({
+  queryKey: ['users', userId],
+  queryFn: fetchUser,
+  
+  // Caching
+  staleTime: 5000,        // Data fresh for 5 seconds
+  cacheTime: 60000,       // Keep in cache for 60 seconds
+  
+  // Execution
+  enabled: true,          // Enable/disable query
+  
+  // Retry
+  retry: 3,               // Number of retries (or false)
+  retryDelay: 1000,       // Delay between retries (or function)
+  
+  // Refetching
+  refetchOnFocus: false,  // Refetch when window gains focus
+  refetchOnReconnect: false, // Refetch when going online
+  
+  // Callbacks
+  onSuccess: (data) => {
+    console.log('Success:', data);
+  },
+  onError: (error) => {
+    console.error('Error:', error);
+  },
+});
+```
+
+### Mutation Options
+
+All available mutation options:
+
+```ts
+await client.mutate({
+  mutationFn: createUser,
+  
+  // Retry
+  retry: false,           // Don't retry mutations by default
+  
+  // Callbacks
+  onSuccess: (data, variables) => {
+    console.log('Created:', data);
+  },
+  onError: (error, variables) => {
+    console.error('Failed:', error);
+  },
+  onSettled: (data, error, variables) => {
+    // Always called (success or error)
+  },
+}, userData);
 ```
 
 ### Cache Management
 
-::: warning Cache Size
-Be mindful of cache size in browser environments. Clear cache periodically in long-running applications.
-:::
-
 ```ts
-// Clear all cached requests
-api.clearCache();
+// Invalidate specific query
+client.invalidateQueries(['users', 1]);
 
-// Invalidate specific cache entry
-api.invalidateCache('user-1');
+// Set query data manually (optimistic updates)
+client.setQueryData(['users', 1], { id: 1, name: 'John' });
+
+// Update with function
+client.setQueryData<User[]>(['users'], (old = []) => [...old, newUser]);
+
+// Get cached data
+const cachedUser = client.getQueryData(['users', 1]);
+
+// Clear all cache
+client.clearCache();
+
+// Get cache size
+const size = client.getCacheSize();
+```
 
 // Check cache size
 const size = api.getCacheSize();

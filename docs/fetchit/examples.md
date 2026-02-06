@@ -7,9 +7,9 @@ Practical examples showing common use cases and patterns.
 ### GET Request
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -68,7 +68,7 @@ await api.delete('/users/1');
 ### Setting Auth Headers
 
 ```ts
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -334,10 +334,10 @@ const user = await safeRequest(() => api.get<User>('/users/1'));
 ### React Hook
 
 ```tsx
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -396,10 +396,10 @@ function UserProfile({ userId }: { userId: string }) {
 ### Vue Composable
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 import { ref, watchEffect } from 'vue';
 
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -428,9 +428,9 @@ export function useUser(userId: Ref<string>) {
 ### SvelteKit
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -447,24 +447,39 @@ export async function load({ params }) {
 
 ### Retry Logic
 
-The built-in retry only works for network errors. For custom retry:
+Fetchit uses [@vielzeug/toolkit's retry()](../toolkit/examples/function/retry.md) utility for intelligent retry logic with exponential backoff:
 
 ```ts
-async function fetchWithRetry<T>(fn: () => Promise<RequestResponse<T>>, retries = 3): Promise<T> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const res = await fn();
-      return res.data;
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-    }
-  }
-  throw new Error('Max retries reached');
-}
+// Query with automatic retry
+const user = await api.query({
+  queryKey: ['users', userId],
+  queryFn: async () => {
+    const res = await api.get(`/users/${userId}`);
+    return res.data;
+  },
+  retry: 3, // Retry 3 times with exponential backoff (1s, 2s, 4s)
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+});
 
-// Usage
-const user = await fetchWithRetry(() => api.get<User>('/users/1'));
+// Mutation with retry
+await api.mutate(
+  {
+    mutationFn: async (data) => {
+      const res = await api.post('/users', { body: data });
+      return res.data;
+    },
+    retry: 2, // Retry POST operations 2 times
+  },
+  { name: 'Alice' }
+);
+
+// Custom fixed retry delay
+const data = await api.query({
+  queryKey: ['status'],
+  queryFn: fetchStatus,
+  retry: 5,
+  retryDelay: 2000, // Fixed 2s delay between retries
+});
 ```
 
 ### Polling

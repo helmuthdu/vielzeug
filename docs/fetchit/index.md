@@ -9,48 +9,86 @@
 
 # Fetchit
 
-**Fetchit** is a modern, type-safe HTTP client for browser and Node.js. It provides a powerful, unified API for making requests with built-in support for caching, cancellation, timeouts, and more.
+**Fetchit** is a modern, type-safe HTTP client with intelligent caching and query management for browser and Node.js. Inspired by TanStack Query but simpler, it provides both a powerful query API for data fetching and a clean REST API for direct requests.
 
 ## What Problem Does Fetchit Solve?
 
-The native `fetch` API is powerful but requires significant boilerplate for common tasks. Managing base URLs, timeouts, JSON parsing, error handling, and request cancellation becomes repetitive and error-prone.
+Modern applications need more than just HTTP requests - they need intelligent caching, request deduplication, optimistic updates, and retry logic. Fetchit provides all of this out of the box with a clean, type-safe API.
 
-**Without Fetchit**:
+**Traditional Approach**:
 
 ```ts
-// Verbose fetch with manual error handling
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 5000);
+// Manual caching, deduplication, and error handling
+const cache = new Map();
+const pending = new Map();
 
-try {
-  const response = await fetch('https://api.example.com/users/1', {
-    signal: controller.signal,
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+async function fetchUser(id: number) {
+  // Check cache
+  if (cache.has(id)) return cache.get(id);
+  
+  // Deduplicate requests
+  if (pending.has(id)) return pending.get(id);
+  
+  // Make request
+  const promise = fetch(`/users/${id}`).then(r => r.json());
+  pending.set(id, promise);
+  
+  try {
+    const data = await promise;
+    cache.set(id, data);
+    return data;
+  } finally {
+    pending.delete(id);
   }
-
-  const data = await response.json();
-  return data;
-} catch (error) {
-  if (error.name === 'AbortError') {
-    console.error('Request timeout');
-  }
-  throw error;
-} finally {
-  clearTimeout(timeout);
 }
 ```
 
-**With Fetchit**:
+**With Fetchit Query API**:
 
 ```ts
-// Clean, type-safe, one-liner
-const res = await api.get<User>('/users/1');
-return res.data;
+// Automatic caching, deduplication, and smart refetching
+const user = await client.query({
+  queryKey: ['users', userId],
+  queryFn: () => client.get(`/users/${userId}`).then(r => r.data),
+  staleTime: 5000, // Fresh for 5 seconds
+});
 ```
+
+**Or use the simple REST API**:
+
+```ts
+// Clean, type-safe REST API
+const response = await client.get('/users/1');
+const user = response.data;
+```
+
+## Features
+
+### 🎯 Modern Query Management
+- **Structured Query Keys** - Array-based keys like `['users', 1]` for easy invalidation
+- **Smart Caching** - Automatic caching with configurable staleness
+- **Request Deduplication** - Multiple identical requests = single network call
+- **Stale-While-Revalidate** - Return cached data immediately while fetching fresh
+- **Optimistic Updates** - Update cache before server confirms
+
+### 🚀 Powerful Mutations
+- **Clear Separation** - Queries (GET) vs Mutations (POST/PUT/DELETE/PATCH)
+- **Callbacks** - `onSuccess`, `onError`, `onSettled` hooks
+- **Automatic Retry** - Configurable retry logic with exponential backoff
+
+### 💪 REST API (Simple Mode)
+- **Clean HTTP Methods** - `get()`, `post()`, `put()`, `patch()`, `delete()`
+- **Auto JSON Parsing** - Automatic request/response transformation
+- **Global Headers** - Set authentication headers once
+- **Query Parameters** - Easy parameter handling
+
+### ⚡ Advanced Features
+- **TypeScript First** - Full type inference and safety
+- **Timeout Handling** - Automatic request timeouts
+- **Cache Management** - Manual invalidation and updates powered by [@vielzeug/toolkit](../toolkit/index.md)
+- **Smart Retry Logic** - Built on toolkit's proven retry utility with exponential backoff
+- **Minimal Dependencies** - Only depends on @vielzeug/toolkit and @vielzeug/logit
+- **Isomorphic** - Works in Browser and Node.js
 
 ### Comparison with Alternatives
 
@@ -63,7 +101,7 @@ return res.data;
 | Timeout Support       | ✅ Built-in    | ✅             | ✅        | ⚠️ AbortController |
 | Bundle Size (gzip)    | ~9.8KB         | ~13KB          | ~4KB      | 0KB                |
 | Node.js Support       | ✅             | ✅             | ✅        | ✅ (v18+)          |
-| Dependencies          | 0              | 7+             | 0         | N/A                |
+| Dependencies          | 2 (toolkit)    | 7+             | 0         | N/A                |
 | Request Retry         | ✅ Built-in    | ⚠️ Via plugins | ⚠️ Manual | ❌                 |
 
 ## When to Use Fetchit
@@ -88,13 +126,13 @@ return res.data;
 
 - **Unified API**: Consistent interface for GET, POST, PUT, PATCH, and DELETE
 - **Type-safe**: Robust request and response typing with full TypeScript support
-- **Smart Caching**: Built-in caching mechanism with cache management utilities
+- **Smart Caching**: Built-in caching powered by [@vielzeug/toolkit](../toolkit/examples/object/cache.md)
 - **Deduplication**: Automatically prevent concurrent identical requests
 - **Auto Parsing**: Intelligent handling of JSON, text, and binary data
-- **Request Retry**: Automatic retry on network errors
+- **Request Retry**: Automatic retry powered by [toolkit's retry utility](../toolkit/examples/function/retry.md)
 - **Rich Error Context**: Custom HttpError class with URL, method, and status
 - **Modern Defaults**: Sensible timeouts, headers, and error handling out of the box
-- **Zero Dependencies**: Lightweight and self-contained
+- **Minimal Dependencies**: Depends only on @vielzeug/toolkit and @vielzeug/logit
 
 ## 🏁 Quick Start
 
@@ -119,10 +157,10 @@ yarn add @vielzeug/fetchit
 ### Basic Usage
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 
 // 1. Create a service instance with configuration
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
   timeout: 5000,
   headers: {
@@ -161,10 +199,10 @@ await api.delete('/users/1');
 ### Real-World Example: API Client with Auth
 
 ```ts
-import { createHttpClient, HttpError } from '@vielzeug/fetchit';
+import { fetchit, HttpError } from '@vielzeug/fetchit';
 
 // Create authenticated API client
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
   timeout: 10000,
   headers: {
@@ -217,10 +255,10 @@ export const updateProfile = (data: Partial<User>) => apiRequest<User>('put', '/
 ### Framework Integration: React
 
 ```tsx
-import { createHttpClient } from '@vielzeug/fetchit';
+import { fetchit } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const api = createHttpClient({
+const api = fetchit({
   url: 'https://api.example.com',
 });
 
@@ -313,20 +351,28 @@ Yes! Concurrent identical requests are automatically deduplicated to prevent red
 
 ### How do I manage the cache?
 
-Use the built-in cache management methods:
+Use the built-in cache management methods powered by [@vielzeug/toolkit's cache()](../toolkit/examples/function/cache.md):
 
 ```ts
-// Clear all cached requests
-api.clearCache();
+// Invalidate specific query (removes from cache and aborts in-flight requests)
+api.invalidateQueries(['users', userId]);
 
-// Invalidate a specific cache entry
-api.invalidateCache('user-123');
+// Manually set cache data
+api.setQueryData(['users', 1], { id: 1, name: 'Alice' });
+
+// Get cached data
+const user = api.getQueryData(['users', 1]);
+
+// Clear all cache
+api.clearCache();
 
 // Get cache size
 const size = api.getCacheSize();
 
-// Clean up expired entries
-const removed = api.cleanupCache();
+// Subscribe to cache changes
+const unsubscribe = api.subscribe(['users', userId], () => {
+  console.log('User data changed');
+});
 ```
 
 ### How do I handle authentication tokens?
@@ -375,7 +421,7 @@ Adjust timeout globally or per-request:
 
 ```ts
 // Global timeout
-const api = createHttpClient({ timeout: 30000 });
+const api = fetchit({ timeout: 30000 });
 
 // The default timeout is 5000ms (5 seconds)
 ```
@@ -424,17 +470,20 @@ try {
 
 **Problem**: Getting stale data or cache not invalidating.
 
-**Solution**: Use cache management methods:
+**Solution**: Use Query API cache management methods:
 
 ```ts
-// Invalidate specific request
-await api.get('/users/1', { invalidate: true });
+// Invalidate specific query to force refetch
+api.invalidateQueries(['users', userId]);
+
+// Invalidate all user queries
+api.invalidateQueries(['users']);
 
 // Clear all cache
 api.clearCache();
 
-// Manually invalidate by ID
-api.invalidateCache('user-1');
+// Manually update cache
+api.setQueryData(['users', userId], updatedData);
 ```
 
 ## 🤝 Contributing

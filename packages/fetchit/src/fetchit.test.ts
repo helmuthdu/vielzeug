@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { buildUrl, createHttpClient } from './fetchit';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchit, HttpError } from './fetchit';
 
 vi.mock('@vielzeug/logit', () => ({
   Logit: {
@@ -9,40 +8,10 @@ vi.mock('@vielzeug/logit', () => ({
   },
 }));
 
-describe('buildUrl', () => {
-  test('returns base URL when params are empty or undefined', () => {
-    expect(buildUrl('https://api.example.com/users')).toBe('https://api.example.com/users');
-    expect(buildUrl('https://api.example.com/users', {})).toBe('https://api.example.com/users');
-  });
+describe('Fetchit - Modern Query Management', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
 
-  test('builds URL with query parameters and skips undefined values', () => {
-    const url = buildUrl('https://api.example.com/users', {
-      age: 30,
-      id: 1,
-      name: undefined,
-    });
-
-    const params = new URL(url).searchParams;
-    expect(params.get('id')).toBe('1');
-    expect(params.get('age')).toBe('30');
-    expect(params.has('name')).toBe(false);
-  });
-
-  test('properly encodes special characters', () => {
-    const url = buildUrl('https://api.example.com/search', {
-      filter: 'type=user&status=active',
-      query: 'hello world',
-    });
-
-    const params = new URL(url).searchParams;
-    expect(params.get('query')).toBe('hello world');
-    expect(params.get('filter')).toBe('type=user&status=active');
-  });
-});
-
-describe('createHttpClient', () => {
-  let fetchMock: any;
-  const mockJsonResponse = (data: any, status = 200) => ({
+  const mockJsonResponse = (data: unknown, status = 200) => ({
     headers: new Headers({ 'content-type': 'application/json' }),
     json: async () => data,
     ok: status >= 200 && status < 300,
@@ -51,8 +20,8 @@ describe('createHttpClient', () => {
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    globalThis.fetch = fetchMock;
-    vi.resetModules();
+    globalThis.fetch = fetchMock as typeof fetch;
+    vi.clearAllTimers();
   });
 
   afterEach(() => {
@@ -60,253 +29,517 @@ describe('createHttpClient', () => {
     vi.restoreAllMocks();
   });
 
-  describe('HTTP methods and response parsing', () => {
-    test('handles different HTTP methods with proper configuration', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-      const mockData = { id: 1 };
+  // ========================================================================
+  // REST API (Backward Compatibility)
+  // ========================================================================
+
+  describe('REST API methods', () => {
+    it('should support GET requests', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+      const mockData = { id: 1, name: 'Test' };
 
       fetchMock.mockResolvedValue(mockJsonResponse(mockData));
 
-      await service.get('users/1');
-      expect(fetchMock).toHaveBeenLastCalledWith(
+      const response = await client.get('/users/1');
+
+      expect(response.data).toEqual(mockData);
+      expect(response.ok).toBe(true);
+      expect(response.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledWith(
         'https://api.example.com/users/1',
         expect.objectContaining({ method: 'GET' }),
       );
+    });
 
-      await service.post('users', { body: { name: 'Test' } });
-      expect(fetchMock).toHaveBeenLastCalledWith(
+    it('should support POST requests with body', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+      const mockData = { id: 1, name: 'Created' };
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData, 201));
+
+      const response = await client.post('/users', {
+        body: { name: 'Created' },
+      });
+
+      expect(response.data).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledWith(
         'https://api.example.com/users',
         expect.objectContaining({
-          body: JSON.stringify({ name: 'Test' }),
           method: 'POST',
+          body: JSON.stringify({ name: 'Created' }),
         }),
       );
+    });
 
-      await service.put('users/1', { body: { name: 'Updated' } });
+    it('should support PUT, PATCH, DELETE methods', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(mockJsonResponse({}));
+
+      await client.put('/users/1', { body: { name: 'Updated' } });
       expect(fetchMock).toHaveBeenLastCalledWith(
-        'https://api.example.com/users/1',
+        expect.any(String),
         expect.objectContaining({ method: 'PUT' }),
       );
 
-      await service.patch('users/1', { body: { status: 'active' } });
+      await client.patch('/users/1', { body: { status: 'active' } });
       expect(fetchMock).toHaveBeenLastCalledWith(
-        'https://api.example.com/users/1',
+        expect.any(String),
         expect.objectContaining({ method: 'PATCH' }),
       );
 
-      await service.delete('users/1');
+      await client.delete('/users/1');
       expect(fetchMock).toHaveBeenLastCalledWith(
-        'https://api.example.com/users/1',
+        expect.any(String),
         expect.objectContaining({ method: 'DELETE' }),
       );
     });
 
-    test('parses different content types correctly', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
+    it('should handle query parameters', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
 
-      // JSON
-      fetchMock.mockResolvedValueOnce(mockJsonResponse({ id: 1 }));
-      const jsonResponse = await service.get('data.json');
-      expect(jsonResponse.data).toEqual({ id: 1 });
+      fetchMock.mockResolvedValue(mockJsonResponse([]));
 
-      // Text
-      fetchMock.mockResolvedValueOnce({
-        headers: new Headers({ 'content-type': 'text/plain' }),
-        ok: true,
-        status: 200,
-        text: async () => 'Hello',
+      await client.get('/users', {
+        params: { age: 25, role: 'admin' },
       });
-      const textResponse = await service.get('data.txt');
-      expect(textResponse.data).toBe('Hello');
 
-      // Blob
-      const blob = new Blob(['test']);
-      fetchMock.mockResolvedValueOnce({
-        blob: async () => blob,
-        headers: new Headers({ 'content-type': 'application/octet-stream' }),
-        ok: true,
-        status: 200,
-      });
-      const blobResponse = await service.get('file.bin');
-      expect(blobResponse.data).toBe(blob);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.example.com/users?age=25&role=admin',
+        expect.any(Object),
+      );
     });
   });
 
-  describe('Caching behavior', () => {
-    test('caches GET requests and invalidates on demand', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-      let callCount = 0;
+  // ========================================================================
+  // QUERY API (New V2 Features)
+  // ========================================================================
 
-      fetchMock.mockImplementation(async () => {
-        callCount++;
-        return mockJsonResponse({ count: callCount });
+  describe('Query API - Caching', () => {
+    it('should cache query results', async () => {
+      const client = fetchit();
+      const mockData = { id: 1, name: 'User' };
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+
+      const fetchUser = async () => {
+        const response = await client.get('/users/1');
+        return response.data;
+      };
+
+      // First call - fetches from network
+      const result1 = await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 5000,
       });
 
-      const id = `cache-${Date.now()}`;
+      expect(result1).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
 
-      // First call
-      await service.get('data', { id });
-      expect(callCount).toBe(1);
+      // Second call - returns from cache (no fetch)
+      const result2 = await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 5000,
+      });
 
-      // Cached call
-      await service.get('data', { id });
-      expect(callCount).toBe(1);
-
-      // Invalidate cache
-      await service.get('data', { id, invalidate: true });
-      expect(callCount).toBe(2);
+      expect(result2).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(1); // Still 1!
     });
 
-    test('does not cache non-GET requests', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1 }));
+    it('should refetch when data becomes stale', async () => {
+      vi.useFakeTimers();
 
-      await service.post('users', { body: { name: 'Test' } });
-      await service.post('users', { body: { name: 'Test' } });
+      const client = fetchit();
+      const mockData = { id: 1, name: 'User' };
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+
+      const fetchUser = async () => {
+        const response = await client.get('/users/1');
+        return response.data;
+      };
+
+      // First call
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 1000, // 1 second
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Wait for stale time to pass
+      vi.advanceTimersByTime(1001);
+
+      // Second call - should refetch
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 1000,
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it('should deduplicate in-flight requests', async () => {
+      const client = fetchit();
+      const mockData = { id: 1, name: 'User' };
+
+      fetchMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve(mockJsonResponse(mockData)), 100);
+          }),
+      );
+
+      const fetchUser = async () => {
+        const response = await client.get('/users/1');
+        return response.data;
+      };
+
+      // Fire multiple requests simultaneously
+      const [result1, result2, result3] = await Promise.all([
+        client.query({ queryKey: ['users', 1], queryFn: fetchUser }),
+        client.query({ queryKey: ['users', 1], queryFn: fetchUser }),
+        client.query({ queryKey: ['users', 1], queryFn: fetchUser }),
+      ]);
+
+      // All should return same data
+      expect(result1).toEqual(mockData);
+      expect(result2).toEqual(mockData);
+      expect(result3).toEqual(mockData);
+
+      // But fetch should only be called once
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ========================================================================
+  // MUTATION API
+  // ========================================================================
+
+  describe('Mutation API', () => {
+    it('should execute mutations', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+      const mockData = { id: 1, name: 'Created' };
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData, 201));
+
+      const result = await client.mutate(
+        {
+          mutationFn: async (data: { name: string }) => {
+            const response = await client.post('/users', { body: data });
+            return response.data;
+          },
+        },
+        { name: 'Created' },
+      );
+
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onSuccess callback', async () => {
+      const client = fetchit();
+      const mockData = { id: 1 };
+      const onSuccess = vi.fn();
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+
+      await client.mutate(
+        {
+          mutationFn: async () => {
+            const response = await client.post('/users', { body: {} });
+            return response.data;
+          },
+          onSuccess,
+        },
+        {},
+      );
+
+      expect(onSuccess).toHaveBeenCalledWith(mockData, {});
+    });
+
+    it('should call onError callback on failure', async () => {
+      const client = fetchit();
+      const onError = vi.fn();
+
+      fetchMock.mockRejectedValue(new Error('Network error'));
+
+      await expect(
+        client.mutate(
+          {
+            mutationFn: async () => {
+              const response = await client.post('/users', { body: {} });
+              return response.data;
+            },
+            onError,
+          },
+          {},
+        ),
+      ).rejects.toThrow();
+
+      expect(onError).toHaveBeenCalled();
+    });
+  });
+
+  // ========================================================================
+  // CACHE MANAGEMENT
+  // ========================================================================
+
+  describe('Cache Management', () => {
+    it('should invalidate queries', async () => {
+      const client = fetchit();
+      const mockData = { id: 1, name: 'User' };
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+
+      const fetchUser = async () => {
+        const response = await client.get('/users/1');
+        return response.data;
+      };
+
+      // First call - fetches
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 10000,
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Invalidate cache
+      client.invalidateQueries(['users', 1]);
+
+      // Second call - should refetch even with stale time
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        staleTime: 10000,
+      });
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    test('caches successful responses even with error status codes', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-      let callCount = 0;
+    it('should set query data manually', async () => {
+      const client = fetchit();
 
-      fetchMock.mockImplementation(async () => {
-        callCount++;
-        return mockJsonResponse({ error: 'Not found' }, 404);
-      });
+      // Set data without fetching
+      client.setQueryData(['users', 1], { id: 1, name: 'Manual' });
 
-      const id = `error-${Date.now()}`;
+      // Get data back
+      const data = client.getQueryData(['users', 1]);
 
-      // First request - will get 404 but still cache it (successful fetch, just error status)
-      await service.get('missing', { id });
-      expect(callCount).toBe(1);
+      expect(data).toEqual({ id: 1, name: 'Manual' });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
 
-      // Second request - should use cache since the fetch succeeded (even though HTTP status was 404)
-      await service.get('missing', { id });
-      expect(callCount).toBe(1); // Still 1 because it's cached
+    it('should update existing data with function', async () => {
+      const client = fetchit();
+
+      client.setQueryData(['users'], [{ id: 1 }]);
+
+      client.setQueryData<Array<{ id: number }>>(['users'], (old = []) => [...old, { id: 2 }]);
+
+      const data = client.getQueryData(['users']);
+
+      expect(data).toEqual([{ id: 1 }, { id: 2 }]);
+    });
+
+    it('should clear all cache', async () => {
+      const client = fetchit();
+
+      client.setQueryData(['users', 1], { id: 1 });
+      client.setQueryData(['posts', 1], { id: 1 });
+
+      expect(client.getCacheSize()).toBe(2);
+
+      client.clearCache();
+
+      expect(client.getCacheSize()).toBe(0);
     });
   });
 
-  describe('Headers and configuration', () => {
-    test('merges context headers with request headers', async () => {
-      const service = createHttpClient({
-        headers: { Authorization: 'Bearer token123' },
-        url: 'https://api.example.com',
-      });
+  // ========================================================================
+  // RETRY LOGIC
+  // ========================================================================
 
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-
-      await service.get('data', {
-        headers: { 'X-Custom': 'value' },
-        id: `headers-${Date.now()}`,
-      });
-
-      const [, config] = fetchMock.mock.calls[0];
-      expect(config.headers.Authorization).toBe('Bearer token123');
-      expect(config.headers['X-Custom']).toBe('value');
-    });
-
-    test('setHeaders updates and removes headers', async () => {
-      const service = createHttpClient({
-        headers: { Authorization: 'old', 'X-Keep': 'value' },
-        url: 'https://api.example.com',
-      });
-
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-
-      service.setHeaders({ Authorization: undefined, 'X-New': 'header' });
-
-      await service.get('data', { id: `set-headers-${Date.now()}` });
-
-      const [, config] = fetchMock.mock.calls[0];
-      expect(config.headers.Authorization).toBeUndefined();
-      expect(config.headers['X-Keep']).toBe('value');
-      expect(config.headers['X-New']).toBe('header');
-    });
-
-    test('constructs URLs correctly with and without context', async () => {
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-
-      const serviceWithContext = createHttpClient({ url: 'https://api.example.com' });
-      await serviceWithContext.get('users', { id: `url-1-${Date.now()}` });
-      expect(fetchMock).toHaveBeenLastCalledWith('https://api.example.com/users', expect.any(Object));
-
-      const serviceWithoutContext = createHttpClient();
-      await serviceWithoutContext.get('https://full.url.com/users', { id: `url-2-${Date.now()}` });
-      expect(fetchMock).toHaveBeenLastCalledWith('https://full.url.com/users', expect.any(Object));
-    });
-  });
-
-  describe('Error handling and retries', () => {
-    test('retries on network errors up to 3 times', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
+  describe('Retry Logic', () => {
+    it('should retry failed queries', async () => {
+      const client = fetchit();
       let attempts = 0;
 
-      fetchMock.mockImplementation(async () => {
+      const fetchUser = async () => {
         attempts++;
-        if (attempts < 3) throw new TypeError('Network error');
-        return mockJsonResponse({ success: true });
-      });
+        if (attempts < 3) {
+          throw new Error('Network error');
+        }
+        const response = await client.get('/users/1');
+        return response.data;
+      };
 
-      const result = await service.get<{ success: boolean }>('data', { id: `retry-${Date.now()}` });
+      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1 }));
+
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: fetchUser,
+        retry: 3,
+      });
 
       expect(attempts).toBe(3);
-      expect(result.data.success).toBe(true);
     });
 
-    test('fails after max retries on persistent network errors', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
+    it('should not retry when retry is false', async () => {
+      const client = fetchit();
       let attempts = 0;
 
-      fetchMock.mockImplementation(async () => {
+      const fetchUser = async () => {
         attempts++;
-        throw new TypeError('Network error');
-      });
+        throw new Error('Network error');
+      };
 
-      await expect(service.get('data', { id: `fail-${Date.now()}` })).rejects.toThrow('Network error');
-      expect(attempts).toBe(3); // Initial + 2 retries
-    });
+      await expect(
+        client.query({
+          queryKey: ['users', 1],
+          queryFn: fetchUser,
+          retry: false,
+        }),
+      ).rejects.toThrow();
 
-    test('does not retry on non-network errors', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-      let attempts = 0;
-
-      fetchMock.mockImplementation(async () => {
-        attempts++;
-        throw new Error('Server error');
-      });
-
-      await expect(service.get('data', { id: `no-retry-${Date.now()}` })).rejects.toThrow('Server error');
       expect(attempts).toBe(1);
-    });
-
-    test('handles HTTP error responses without throwing', async () => {
-      const service = createHttpClient({ url: 'https://api.example.com' });
-
-      fetchMock.mockResolvedValue(mockJsonResponse({ error: 'Not found' }, 404));
-
-      const response = await service.get<{ error: string }>('missing', { id: `404-${Date.now()}` });
-
-      expect(response.ok).toBe(false);
-      expect(response.status).toBe(404);
-      expect(response.data.error).toBe('Not found');
     });
   });
 
-  describe('Request cancellation and timeout', () => {
-    test('includes AbortSignal for request cancellation', async () => {
-      const service = createHttpClient({
-        timeout: 10000,
-        url: 'https://api.example.com',
+  // ========================================================================
+  // CALLBACKS
+  // ========================================================================
+
+  describe('Query Callbacks', () => {
+    it('should call onSuccess when query succeeds', async () => {
+      const client = fetchit();
+      const mockData = { id: 1 };
+      const onSuccess = vi.fn();
+
+      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+
+      await client.query({
+        queryKey: ['users', 1],
+        queryFn: async () => {
+          const response = await client.get('/users/1');
+          return response.data;
+        },
+        onSuccess,
+      });
+
+      expect(onSuccess).toHaveBeenCalledWith(mockData);
+    });
+
+    it('should call onError when query fails', async () => {
+      const client = fetchit();
+      const onError = vi.fn();
+
+      await expect(
+        client.query({
+          queryKey: ['users', 1],
+          queryFn: async () => {
+            throw new Error('Failed');
+          },
+          onError,
+          retry: false,
+        }),
+      ).rejects.toThrow();
+
+      expect(onError).toHaveBeenCalled();
+    });
+  });
+
+  // ========================================================================
+  // ERROR HANDLING
+  // ========================================================================
+
+  describe('Error Handling', () => {
+    it('should throw HttpError with context', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockRejectedValue(new Error('Network error'));
+
+      try {
+        await client.get('/users/1');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpError);
+        expect((error as HttpError).url).toBe('https://api.example.com/users/1');
+        expect((error as HttpError).method).toBe('GET');
+      }
+    });
+  });
+
+  // ========================================================================
+  // HEADERS MANAGEMENT
+  // ========================================================================
+
+  describe('Headers Management', () => {
+    it('should set global headers', async () => {
+      const client = fetchit({
+        baseUrl: 'https://api.example.com',
+        headers: { Authorization: 'Bearer token' },
       });
 
       fetchMock.mockResolvedValue(mockJsonResponse({}));
 
-      await service.get('data', { id: `timeout-${Date.now()}` });
+      await client.get('/users');
 
-      const [, config] = fetchMock.mock.calls[0];
-      expect(config.signal).toBeInstanceOf(AbortSignal);
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token',
+          }),
+        }),
+      );
+    });
+
+    it('should update headers dynamically', async () => {
+      const client = fetchit({ baseUrl: 'https://api.example.com' });
+
+      client.setHeaders({ Authorization: 'Bearer new-token' });
+
+      fetchMock.mockResolvedValue(mockJsonResponse({}));
+
+      await client.get('/users');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer new-token',
+          }),
+        }),
+      );
+    });
+  });
+
+  // ========================================================================
+  // ENABLED OPTION
+  // ========================================================================
+
+  describe('Enabled Option', () => {
+    it('should not execute query when disabled', async () => {
+      const client = fetchit();
+
+      await expect(
+        client.query({
+          queryKey: ['users', 1],
+          queryFn: async () => ({ id: 1 }),
+          enabled: false,
+        }),
+      ).rejects.toThrow('Query is disabled');
+
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 });
