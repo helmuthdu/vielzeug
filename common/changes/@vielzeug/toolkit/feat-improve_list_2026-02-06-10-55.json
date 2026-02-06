@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/toolkit",
+      "comment": "update dependencies",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/toolkit"
+}
