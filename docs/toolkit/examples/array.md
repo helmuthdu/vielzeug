@@ -6,20 +6,22 @@ Array utilities provide a powerful set of tools to transform, query, and manipul
 
 | Method                              | Category       | Description                                      |
 | :---------------------------------- | :------------- | :----------------------------------------------- |
-| [`map`](./array/map.md)             | Transformation | Map each element to a new value (supports async) |
-| [`filter`](./array/filter.md)       | Query          | Filter elements by predicate (supports async)    |
-| [`reduce`](./array/reduce.md)       | Transformation | Reduce array to a single value                   |
-| [`group`](./array/group.md)         | Aggregation    | Group elements by a key or function              |
-| [`uniq`](./array/uniq.md)           | Set            | Remove duplicate values                          |
-| [`chunk`](./array/chunk.md)         | Transformation | Split array into chunks of a specific size       |
-| [`flatten`](./array/flatten.md)     | Transformation | Flatten nested arrays                            |
-| [`compact`](./array/compact.md)     | Transformation | Remove `null` or `undefined` values              |
-| [`sort`](./array/sort.md)           | Sorting        | Sort array with a custom comparator              |
-| [`sortBy`](./array/sortBy.md)       | Sorting        | Sort array by a property or function             |
-| [`find`](./array/find.md)           | Query          | Find the first element matching a predicate      |
-| [`some`](./array/some.md)           | Query          | Check if any element matches a predicate         |
-| [`every`](./array/every.md)         | Query          | Check if all elements match a predicate          |
 | [`aggregate`](./array/aggregate.md) | Aggregation    | Perform complex aggregations on an array         |
+| [`arrange`](./array/arrange.md)     | Sorting        | Sort array by a property or function             |
+| [`chunk`](./array/chunk.md)         | Transformation | Split array into chunks of a specific size       |
+| [`compact`](./array/compact.md)     | Transformation | Remove `null` or `undefined` values              |
+| [`every`](./array/every.md)         | Query          | Check if all elements match a predicate          |
+| [`filter`](./array/filter.md)       | Query          | Filter elements by predicate (supports async)    |
+| [`find`](./array/find.md)           | Query          | Find the first element matching a predicate      |
+| [`flatten`](./array/flatten.md)     | Transformation | Flatten nested arrays                            |
+| [`group`](./array/group.md)         | Aggregation    | Group elements by a key or function              |
+| [`list`](./array/list.md)           | Pagination     | Client-side reactive pagination with filtering   |
+| [`map`](./array/map.md)             | Transformation | Map each element to a new value (supports async) |
+| [`reduce`](./array/reduce.md)       | Transformation | Reduce array to a single value                   |
+| [`remoteList`](./array/remoteList.md) | Pagination   | Server-side reactive pagination with caching     |
+| [`some`](./array/some.md)           | Query          | Check if any element matches a predicate         |
+| [`sort`](./array/sort.md)           | Sorting        | Sort array with custom comparator               |
+| [`uniq`](./array/uniq.md)           | Set            | Remove duplicate values                          |
 
 ## 💡 Practical Examples
 
@@ -46,7 +48,7 @@ const batches = chunk(doubled, 2); // [[2, 4], [6, 8]]
 ### Advanced Grouping & Sorting
 
 ```ts
-import { group, sortBy } from '@vielzeug/toolkit';
+import { group, arrange } from '@vielzeug/toolkit';
 
 const users = [
   { name: 'Alice', role: 'admin', age: 30 },
@@ -64,7 +66,7 @@ const byRole = group(users, (u) => u.role);
 */
 
 // Sort by age (descending)
-const oldestFirst = sortBy(users, (u) => u.age, 'desc');
+const oldestFirst = arrange(users, (u) => u.age, 'desc');
 ```
 
 ## 🔗 All Array Utilities
@@ -73,40 +75,28 @@ const oldestFirst = sortBy(users, (u) => u.age, 'desc');
 
 - [aggregate](./array/aggregate.md)
 - [alternate](./array/alternate.md)
+- [arrange](./array/arrange.md)
 - [chunk](./array/chunk.md)
 - [compact](./array/compact.md)
 - [contains](./array/contains.md)
 - [every](./array/every.md)
 - [filter](./array/filter.md)
-- [find](./array/find.md)
 - [findIndex](./array/findIndex.md)
 - [findLast](./array/findLast.md)
+- [find](./array/find.md)
 - [flatten](./array/flatten.md)
 - [group](./array/group.md)
 - [list](./array/list.md)
 - [map](./array/map.md)
 - [pick](./array/pick.md)
 - [reduce](./array/reduce.md)
+- [remoteList](./array/remoteList.md)
 - [search](./array/search.md)
 - [select](./array/select.md)
 - [shift](./array/shift.md)
 - [some](./array/some.md)
 - [sort](./array/sort.md)
-- [sortBy](./array/sortBy.md)
 - [substitute](./array/substitute.md)
 - [uniq](./array/uniq.md)
 
 </div>
-
-<style>
-.grid-links ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
-  list-style: none !important;
-  padding: 0 !important;
-}
-.grid-links li {
-  margin: 0 !important;
-}
-</style>

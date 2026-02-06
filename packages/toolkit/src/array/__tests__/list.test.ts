@@ -89,7 +89,7 @@ describe('list', () => {
     const data = [1, 2, 3, 4, 5, 6];
     const instance = list(data);
 
-    instance.filter((item) => item % 2 === 0);
+    instance.setFilter((item) => item % 2 === 0);
     expect(instance.current).toEqual([2, 4, 6]);
     expect(instance.meta.page).toBe(1); // resets to page 1
   });
@@ -98,54 +98,49 @@ describe('list', () => {
     const data = [3, 1, 4, 2];
     const instance = list(data);
 
-    instance.sort((a, b) => a - b);
+    instance.setSort((a, b) => a - b);
     expect(instance.current).toEqual([1, 2, 3, 4]);
 
-    instance.sort((a, b) => b - a);
+    instance.setSort((a, b) => b - a);
     expect(instance.current).toEqual([4, 3, 2, 1]);
 
-    instance.sort(); // remove sort
+    instance.setSort(); // remove sort
     expect(instance.current).toEqual([3, 1, 4, 2]);
   });
 
-  it('should search data with debounce', () => {
+  it('should search data with debounce', async () => {
     const data = ['apple', 'banana', 'cherry'];
-    const searchFn = (items: readonly string[], query: string) =>
-      items.filter(item => item.includes(query));
+    const searchFn = (items: readonly string[], query: string) => items.filter((item) => item.includes(query));
     const instance = list(data, { searchFn });
 
-    instance.search('ban');
+    instance.search('ban'); // default: debounced
     expect(instance.current).toEqual(['apple', 'banana', 'cherry']); // not updated yet
 
     vi.advanceTimersByTime(300);
+    vi.runAllTimers();
     expect(instance.current).toEqual(['banana']);
   });
 
-  it('should search data immediately with searchNow', () => {
+  it('should search data immediately when immediate=true', async () => {
     const data = ['apple', 'banana', 'cherry'];
-    const searchFn = (items: readonly string[], query: string) =>
-      items.filter(item => item.includes(query));
+    const searchFn = (items: readonly string[], query: string) => items.filter((item) => item.includes(query));
     const instance = list(data, { searchFn });
 
-    instance.searchNow('ban');
+    instance.search('ban', { immediate: true });
     expect(instance.current).toEqual(['banana']); // immediate update
   });
 
-  it('should reset to the initial state', () => {
+  it('should reset to the initial state', async () => {
     const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const instance = list(data, { limit: 2, filterFn: (x) => x > 2 });
+    const instance = list(data, { filterFn: (x) => x > 2, limit: 2 });
 
-    instance.filter((item) => item % 2 === 0);
-    // filtered: [2, 4, 6, 8, 10] - with limit 2
-    // Page 1: [2, 4], Page 2: [6, 8], Page 3: [10]
-    instance.next(); // move to page 2
+    instance.setFilter((item) => item % 2 === 0);
+    instance.next();
 
     expect(instance.meta.page).toBe(2);
     expect(instance.current).toEqual([6, 8]);
 
     instance.reset();
-    // After reset: filterFn is (x > 2), so data becomes [3, 4, 5, 6, 7, 8, 9, 10]
-    // Page 1 with limit 2: [3, 4]
     expect(instance.current).toEqual([3, 4]);
     expect(instance.meta.page).toBe(1);
   });
@@ -160,41 +155,16 @@ describe('list', () => {
     expect(instance.meta.end).toBe(0);
   });
 
-  it('should iterate over all pages', () => {
-    const data = [1, 2, 3, 4, 5, 6];
-    const instance = list(data, { limit: 2 });
-
-    const allPages = [...instance];
-    expect(allPages).toEqual([[1, 2], [3, 4], [5, 6]]);
-  });
-
-  it('should iterate pages using pages() generator', () => {
-    const data = [1, 2, 3, 4, 5];
-    const instance = list(data, { limit: 2 });
-
-    const allPages = [...instance.pages()];
-    expect(allPages).toEqual([[1, 2], [3, 4], [5]]);
-  });
-
-  it('should update data dynamically', () => {
+  it('should update data dynamically', async () => {
     const data = [1, 2, 3];
     const instance = list(data);
 
-    instance.data = [4, 5, 6];
+    instance.setData?.([4, 5, 6]);
     expect(instance.current).toEqual([4, 5, 6]);
     expect(instance.meta.page).toBe(1); // resets to page 1
   });
 
-  it('should get raw data', () => {
-    const data = [1, 2, 3, 4, 5];
-    const instance = list(data);
-
-    instance.filter((x) => x > 3);
-    expect(instance.current).toEqual([4, 5]);
-    expect(instance.data).toEqual([1, 2, 3, 4, 5]); // raw data unchanged
-  });
-
-  it('should handle goTo with out-of-bounds page numbers', () => {
+  it('should handle goTo with out-of-bounds page numbers', async () => {
     const data = [1, 2, 3, 4, 5, 6];
     const instance = list(data, { limit: 2 });
 
@@ -205,16 +175,16 @@ describe('list', () => {
     expect(instance.current).toEqual([1, 2]);
   });
 
-  it('should handle changing page size dynamically', () => {
+  it('should handle changing page size dynamically', async () => {
     const data = [1, 2, 3, 4, 5, 6];
     const instance = list(data);
 
-    instance.limit = 2;
+    instance.setLimit(2);
     expect(instance.current).toEqual([1, 2]);
-    expect([...instance.pages()]).toEqual([[1, 2], [3, 4], [5, 6]]);
+    expect(instance.meta.pages).toBe(3);
   });
 
-  it('should check if it is the first or last page', () => {
+  it('should check if it is the first or last page', async () => {
     const data = [1, 2, 3, 4, 5, 6];
     const instance = list(data, { limit: 5 });
 
@@ -226,29 +196,28 @@ describe('list', () => {
     expect(instance.meta.isLast).toBe(true);
   });
 
-  it('should handle batch updates efficiently', () => {
+  it('should handle batch updates efficiently', async () => {
     const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const instance = list(data, { limit: 3 });
 
-    const result = instance.batch((ctx) => {
+    instance.batch((ctx) => {
       ctx.setLimit(2);
       ctx.setFilter((x) => x % 2 === 0);
       ctx.setSort((a, b) => b - a);
       ctx.goTo(2);
     });
 
-    expect(result).toEqual([6, 4]);
     expect(instance.current).toEqual([6, 4]);
     expect(instance.meta.page).toBe(2);
     expect(instance.meta.limit).toBe(2);
   });
 
-  it('should handle batch setData', () => {
+  it('should handle batch setData', async () => {
     const data = [1, 2, 3];
     const instance = list(data);
 
     instance.batch((ctx) => {
-      ctx.setData([7, 8, 9, 10]);
+      ctx.setData?.([7, 8, 9, 10]);
       ctx.setLimit(2);
     });
 
@@ -256,21 +225,20 @@ describe('list', () => {
     expect(instance.meta.page).toBe(1);
   });
 
-  it('should handle custom search function', () => {
+  it('should handle custom search function', async () => {
     const data = [{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }];
-    const searchFn = (items: readonly typeof data[number][], query: string) =>
+    const searchFn = (items: readonly (typeof data)[number][], query: string) =>
       items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()));
 
     const instance = list(data, { searchFn });
 
-    instance.searchNow('bob');
+    instance.search('bob', { immediate: true });
     expect(instance.current).toEqual([{ name: 'Bob' }]);
   });
 
-  it('should handle custom debounce time', () => {
+  it('should handle custom debounce time', async () => {
     const data = ['apple', 'banana', 'cherry'];
-    const searchFn = (items: readonly string[], query: string) =>
-      items.filter(item => item.includes(query));
+    const searchFn = (items: readonly string[], query: string) => items.filter((item) => item.includes(query));
     const instance = list(data, { debounceMs: 500, searchFn });
 
     instance.search('ban');
@@ -279,27 +247,72 @@ describe('list', () => {
     expect(instance.current).toEqual(['apple', 'banana', 'cherry']); // not yet
 
     vi.advanceTimersByTime(200);
+    vi.runAllTimers();
     expect(instance.current).toEqual(['banana']); // after 500ms total
   });
 
-  it('should not mutate original data', () => {
+  it('should not mutate original data', async () => {
     const data = [3, 1, 4, 2];
     const instance = list(data);
 
-    instance.sort((a, b) => a - b);
+    instance.setSort((a, b) => a - b);
     expect(instance.current).toEqual([1, 2, 3, 4]);
     expect(data).toEqual([3, 1, 4, 2]); // original unchanged
   });
 
-  it('should handle next/prev at boundaries gracefully', () => {
+  it('should handle next/prev at boundaries gracefully', async () => {
     const data = [1, 2, 3];
     const instance = list(data, { limit: 2 });
 
-    instance.prev(); // already at first page
+    instance.prev(); // already at the first page
     expect(instance.current).toEqual([1, 2]);
 
     instance.goTo(2);
-    instance.next(); // already at last page
+    instance.next(); // already at the last page
     expect(instance.current).toEqual([3]);
+  });
+
+  it('should support subscribe/unsubscribe pattern', async () => {
+    const data = [1, 2, 3, 4, 5];
+    const instance = list(data, { limit: 2 });
+
+    const listener = vi.fn();
+    const unsubscribe = instance.subscribe(listener);
+
+    instance.next();
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    instance.setLimit(3);
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+    instance.prev();
+    expect(listener).toHaveBeenCalledTimes(2); // not called after unsubscribe
+  });
+
+  it('should use default search function when no custom searchFn is provided', () => {
+    const data = [
+      { email: 'alice@example.com', name: 'Alice' },
+      { email: 'bob@example.com', name: 'Bob' },
+      { email: 'charlie@test.com', name: 'Charlie' },
+    ];
+
+    const instance = list(data);
+
+    // Search should work with the default search function
+    instance.search('alice', { immediate: true });
+    expect(instance.current).toEqual([{ email: 'alice@example.com', name: 'Alice' }]);
+
+    // Should search across all string fields
+    instance.search('example.com', { immediate: true });
+    expect(instance.current).toHaveLength(2); // Alice and Bob
+
+    // Should be case-insensitive
+    instance.search('CHARLIE', { immediate: true });
+    expect(instance.current).toEqual([{ email: 'charlie@test.com', name: 'Charlie' }]);
+
+    // Empty query should return all items
+    instance.search('', { immediate: true });
+    expect(instance.current).toEqual(data);
   });
 });

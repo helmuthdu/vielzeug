@@ -22,9 +22,7 @@ The `le` utility checks if the first value is less than or equal to the second v
 ## API
 
 ```ts
-interface LEFunction {
-  <T>(a: T, b: T): boolean;
-}
+function le(a: number, b: number): boolean
 ```
 
 ### Parameters

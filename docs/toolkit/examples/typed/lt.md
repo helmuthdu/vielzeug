@@ -22,9 +22,7 @@ The `lt` utility checks if the first value is strictly less than the second valu
 ## API
 
 ```ts
-interface LTFunction {
-  <T>(a: T, b: T): boolean;
-}
+function lt(a: number, b: number): boolean
 ```
 
 ### Parameters

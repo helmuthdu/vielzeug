@@ -1,11 +1,13 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import type { Fn } from '../types';
 
+// #region MemoizeOptions
 type MemoizeOptions<T extends Fn> = {
   ttl?: number; // Time-to-live in milliseconds
   maxSize?: number; // Maximum number of items in cache
   resolver?: (...args: Parameters<T>) => string; // Custom key generator
 };
+// #endregion MemoizeOptions
 
 type CacheEntry<T extends Fn> = {
   value: ReturnType<T>;

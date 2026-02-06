@@ -22,9 +22,7 @@ The `typeOf` utility returns a lowercase string representing the precise type of
 ## API
 
 ```ts
-interface TypeOfFunction {
-  (value: unknown): string;
-}
+function typeOf(value: unknown): string
 ```
 
 ### Parameters

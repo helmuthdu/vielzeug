@@ -22,9 +22,7 @@ The `compact` utility creates a new array with all falsy values removed. This is
 ## API
 
 ```ts
-interface CompactFunction {
-  <T>(array: (T | null | undefined | false | '' | 0 | typeof NaN)[]): T[];
-}
+function compact<T>(array: T[]): NonNullable<T>[]
 ```
 
 ### Parameters

@@ -23,9 +23,7 @@ The `clone` utility creates a complete deep copy of an object or array. This ens
 ## API
 
 ```ts
-interface CloneFunction {
-  <T>(value: T): T;
-}
+function clone<T>(value: T): T
 ```
 
 ### Parameters

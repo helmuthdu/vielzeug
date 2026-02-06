@@ -23,9 +23,7 @@ The `fp` utility enables "Functional Programming" mode for compatible toolkit fu
 ## API
 
 ```ts
-interface FPFunction {
-  <T, R>(callback: (...args: any[]) => any, ...args: any[]): (data: T[]) => R;
-}
+function fp<T, R>(callback: (...args: any[]) => any, ...args: any[]): (data: T[]) => R
 ```
 
 ### Parameters

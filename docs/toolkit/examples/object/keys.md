@@ -22,9 +22,7 @@ The `keys` utility returns an array of an object's own enumerable property names
 ## API
 
 ```ts
-interface KeysFunction {
-  <T extends Record<string, any>>(obj: T): (keyof T)[];
-}
+function keys<T extends object>(obj: T): (keyof T)[]
 ```
 
 ### Parameters

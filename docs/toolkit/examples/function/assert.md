@@ -24,15 +24,15 @@ The `assert` utility validates conditions during runtime. If a condition (or any
 ## API
 
 ```ts
-interface AssertOptions {
-  type?: ErrorConstructor;
-  args?: Record<string, any>;
-  bypass?: boolean;
-}
-
-interface AssertFunction {
-  (condition: boolean | boolean[], message?: string, options?: AssertOptions): void;
-}
+function assert(
+  condition: boolean | boolean[], 
+  message?: string, 
+  options?: {
+    type?: ErrorConstructor;
+    args?: Record<string, any>;
+    bypass?: boolean;
+  }
+): void
 ```
 
 ### Parameters

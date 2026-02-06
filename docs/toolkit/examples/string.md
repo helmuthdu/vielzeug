@@ -54,16 +54,3 @@ similarity('hello', 'world'); // 0.2
 - [truncate](./string/truncate.md)
 
 </div>
-
-<style>
-.grid-links ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
-  list-style: none !important;
-  padding: 0 !important;
-}
-.grid-links li {
-  margin: 0 !important;
-}
-</style>

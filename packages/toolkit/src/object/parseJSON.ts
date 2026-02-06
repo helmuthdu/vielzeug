@@ -4,14 +4,16 @@ import { isString } from '../typed/isString';
 
 type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
 
-interface ParseJSONOptions<T> {
+// #region ParseJSONOptions
+type ParseJSONOptions<T> = {
   defaultValue?: T;
   // biome-ignore lint/suspicious/noExplicitAny: -
   reviver?: (key: string, value: any) => any;
   // biome-ignore lint/suspicious/noExplicitAny: -
   validator?: (value: any) => boolean;
   silent?: boolean;
-}
+};
+// #endregion ParseJSONOptions
 
 /**
  * Parses a JSON string and returns the resulting object.

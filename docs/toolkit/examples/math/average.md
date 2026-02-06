@@ -22,9 +22,7 @@ The `average` utility calculates the arithmetic mean of an array of numbers. It 
 ## API
 
 ```ts
-interface AverageFunction {
-  <T>(array: T[], callback?: (item: T) => number | Date): number | Date | undefined;
-}
+function average<T>(array: T[], callback?: (item: T) => number): number | undefined
 ```
 
 ### Parameters

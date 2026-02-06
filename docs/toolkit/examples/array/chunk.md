@@ -22,16 +22,12 @@ The `chunk` utility splits an array or string into smaller pieces (chunks) of a 
 
 ## API
 
-```ts
-interface ChunkOptions {
-  overlap?: boolean;
-  pad?: string;
-}
+::: details Type Definitions
+<<< @/../packages/toolkit/src/array/chunk.ts#ChunkTypes
+:::
 
-interface ChunkFunction {
-  <T>(array: T[], size?: number): T[][];
-  (str: string, size?: number, options?: ChunkOptions): string[];
-}
+```ts
+function chunk<T>(input: T[] | string, size?: number, options?: ChunkOptions): ChunkResult<T>
 ```
 
 ### Parameters

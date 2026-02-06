@@ -22,9 +22,7 @@ The `curry` utility transforms a function that takes multiple arguments into a s
 ## API
 
 ```ts
-interface CurryFunction {
-  <T extends (...args: any[]) => any>(fn: T): (...args: any[]) => any;
-}
+function curry<T extends (...args: any[]) => any>(fn: T): (...args: any[]) => any
 ```
 
 ### Parameters

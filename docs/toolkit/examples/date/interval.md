@@ -22,18 +22,16 @@ The `interval` utility creates an array of dates between a start and end date, s
 
 ## API
 
+::: details Type Definitions
+<<< @/../packages/toolkit/src/date/interval.ts#IntervalTypes
+:::
+
 ```ts
-type IntervalType = 'D' | 'W' | 'M' | 'MS' | 'ME' | 'Y' | 'YS' | 'YE';
-
-interface IntervalOptions {
-  interval?: IntervalType;
-  steps?: number;
-  latest?: boolean;
-}
-
-interface IntervalFunction {
-  (start: Date | string | number, end: Date | string | number, options?: IntervalOptions): Date[];
-}
+function interval(
+  start: Date | string, 
+  end: Date | string, 
+  options?: IntervalOptions
+): Date[]
 ```
 
 ### Parameters

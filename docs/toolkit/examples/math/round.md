@@ -16,12 +16,8 @@ Rounds a number to a specified precision.
 ## API
 
 ```ts
-round(value: number, decimals?: number): number
+function round(value: number, decimals?: number): number
 ```
-
-- `value`: Number to round.
-- `decimals`: Number of decimal places (default: 0).
-- Returns: Rounded number.
 
 ## Example
 

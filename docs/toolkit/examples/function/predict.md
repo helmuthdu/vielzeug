@@ -23,14 +23,13 @@ The `predict` utility creates a Promise that can be aborted using an `AbortContr
 ## API
 
 ```ts
-interface PredictOptions {
-  signal?: AbortSignal;
-  timeout?: number;
-}
-
-interface PredictFunction {
-  <T>(fn: (signal: AbortSignal) => Promise<T>, options?: PredictOptions): Promise<T>;
-}
+function predict<T>(
+  fn: (signal: AbortSignal) => Promise<T>, 
+  options?: {
+    signal?: AbortSignal;
+    timeout?: number;
+  }
+): Promise<T>
 ```
 
 ### Parameters

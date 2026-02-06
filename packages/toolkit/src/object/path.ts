@@ -12,10 +12,12 @@ type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
     ? T[P]
     : undefined;
 
+// #region PathOptions
 type PathOptions = {
   throwOnMissing?: boolean;
   allowArrayIndex?: boolean;
 };
+// #endregion PathOptions
 
 /**
  * Retrieves the value at a given path of the object. If the value is undefined, the default value is returned.

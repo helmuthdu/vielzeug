@@ -23,13 +23,12 @@ The `alternate` utility toggles an item's presence in an array. If the item exis
 ## API
 
 ```ts
-interface AlternateOptions {
-  strategy?: 'prepend' | 'append';
-}
-
-interface AlternateFunction {
-  <T>(array: T[], item: T, selector?: (item: T) => Primitive, options?: AlternateOptions): T[];
-}
+function alternate<T>(
+  array: T[], 
+  item: T, 
+  selector?: (item: T) => Primitive, 
+  options?: { strategy?: 'prepend' | 'append' }
+): T[]
 ```
 
 ### Parameters

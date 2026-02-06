@@ -16,11 +16,8 @@ Returns the largest number in an array.
 ## API
 
 ```ts
-max(numbers: number[]): number | undefined
+function max(numbers: number[]): number | undefined
 ```
-
-- `numbers`: Array of numbers.
-- Returns: The largest number, or `undefined` if the array is empty.
 
 ## Example
 

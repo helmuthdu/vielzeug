@@ -11,6 +11,10 @@
 
 **Logit** is a flexible, zero-dependency logging utility designed for both browser and Node.js environments. It provides a powerful set of features including log levels, custom themes, remote logging, and scoped loggers, all while maintaining a tiny footprint.
 
+## Screenshot
+
+![Logit Screenshot](/logit_ss.png)
+
 ## What Problem Does Logit Solve?
 
 Console logging is great for development but lacks structure for production apps. You need log levels, namespacing, remote logging, and environment-specific filtering—all without adding complexity or dependencies.

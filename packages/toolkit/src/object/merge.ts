@@ -2,6 +2,7 @@ import { isArray } from '../typed/isArray';
 import { isObject } from '../typed/isObject';
 import type { Obj } from '../types';
 
+// #region MergeStrategy
 type MergeStrategy =
   | 'deep'
   | 'shallow'
@@ -10,6 +11,7 @@ type MergeStrategy =
   | 'arrayReplace'
   // biome-ignore lint/suspicious/noExplicitAny: -
   | ((target: any, source: any) => any);
+// #endregion MergeStrategy
 
 type DeepMerge<T, U> = T extends Obj
   ? U extends Obj

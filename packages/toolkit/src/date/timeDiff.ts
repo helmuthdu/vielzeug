@@ -1,6 +1,8 @@
+// #region TimeDiffTypes
 export type TimeUnit = 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'INVALID_DATE';
 export type TimeDirection = 'FUTURE' | 'PAST';
 export type TimeResult = { unit: TimeUnit; value: number };
+// #endregion TimeDiffTypes
 
 let defaultUnits: TimeUnit[] = ['YEAR', 'MONTH', 'WEEK', 'DAY', 'HOUR', 'MINUTE', 'SECOND'];
 

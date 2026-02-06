@@ -23,9 +23,7 @@ The `shift` utility rotates the elements of an array by a specified number of po
 ## API
 
 ```ts
-interface ShiftFunction {
-  <T>(array: T[], positions: number, rotate?: boolean): T[];
-}
+function shift<T>(array: T[], positions: number, rotate?: boolean): T[]
 ```
 
 ### Parameters

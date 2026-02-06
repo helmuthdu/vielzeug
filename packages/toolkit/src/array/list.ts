@@ -1,112 +1,121 @@
-/** biome-ignore-all lint/suspicious/noAssignInExpressions: - */
-import { debounce } from '../function/debounce';
-import type { Predicate } from '../types';
+import type { Predicate, Sorter } from '../types';
+import { search as defaultSearch } from './search';
 
-type Sorter<T> = (a: T, b: T) => number;
-type Searcher<T> = (items: readonly T[], query: string, tone: number) => readonly T[];
-
-type Config<T> = {
-  filterFn?: Predicate<T>;
-  limit?: number;
-  sortFn?: Sorter<T>;
-  searchFn?: Searcher<T>;
-  searchTone?: number; // intensity/threshold passed to searchFn
-  debounceMs?: number; // debounce for search()
-};
-
-type Meta = Readonly<{
-  start: number; // 1-based
+// #region Meta
+export type Meta = Readonly<{
   end: number; // inclusive
-  total: number;
-  page: number; // 1-based
-  pages: number;
+  isEmpty: boolean;
   isFirst: boolean;
   isLast: boolean;
-  isEmpty: boolean;
   limit: number;
+  page: number; // 1-based
+  pages: number;
+  start: number; // 1-based
+  total: number;
 }>;
+// #endregion Meta
 
-type BatchParams<T> = (ctx: {
-  setLimit: (n: number) => void;
-  setFilter: (p: Predicate<T>) => void;
-  setSort: (s?: Sorter<T>) => void;
-  setQuery: (q: string) => void;
-  setData: (d: readonly T[]) => void;
-  goTo: (p: number) => void;
-}) => void;
+// #region List
+export type List<T, F, S> = {
+  readonly current: readonly T[];
+  readonly meta: Meta;
+  subscribe(listener: () => void): () => void;
 
-const DEFAULTS = {
-  debounceMs: 300,
-  limit: 10,
-  minLimit: 1,
-  searchTone: 0.5,
-} as const;
+  goTo(page: number): void;
+  next(): void;
+  prev(): void;
+  reset(): void;
+  search(query: string, opts?: { immediate?: boolean }): void;
+  setData?(data: readonly T[]): void; // implemented by local
+  setFilter(filter: F): void;
+  setLimit(n: number): void;
+  setSort(sort?: S): void;
 
-export function list<T>(initialData: readonly T[], config: Config<T> = {}) {
-  // state
+  // Batch updates across properties in one recompute/refetch
+  batch(
+    mutator: (ctx: {
+      setLimit(n: number): void;
+      setFilter(f: F): void;
+      setSort(s?: S): void;
+      setQuery(q: string): void;
+      setData?(d: readonly T[]): void; // local-only
+      goTo(p: number): void; // 1-based
+    }) => void,
+  ): void;
+};
+// #endregion List
+
+// #region LocalConfig
+type LocalConfig<T> = Readonly<{
+  debounceMs?: number;
+  filterFn?: Predicate<T>;
+  limit?: number;
+  searchFn?: (items: readonly T[], query: string, tone: number) => readonly T[];
+  searchTone?: number;
+  sortFn?: Sorter<T>;
+}>;
+// #endregion LocalConfig
+
+export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): List<T, Predicate<T>, Sorter<T>> {
+  const listeners = new Set<() => void>();
+
+  const DEFAULTS = { debounceMs: 300, limit: 10, searchTone: 0.5 } as const;
+
   let rawData: readonly T[] = [...initialData];
-  let limit = Math.max(DEFAULTS.minLimit, config.limit ?? DEFAULTS.limit);
-  let filterFn: Predicate<T> = config.filterFn ?? (() => true);
-  let sortFn: Sorter<T> | undefined = config.sortFn;
-  const searchFn: Searcher<T> | undefined = config.searchFn;
-  const searchTone = config.searchTone ?? DEFAULTS.searchTone;
-  const debounceMs = config.debounceMs ?? DEFAULTS.debounceMs;
+  let limit = Math.max(1, cfg.limit ?? DEFAULTS.limit);
+  let filterFn: Predicate<T> = cfg.filterFn ?? (() => true);
+  let sortFn: Sorter<T> | undefined = cfg.sortFn;
+  const searchFn = cfg.searchFn ?? ((items: readonly T[], q: string, t: number) => defaultSearch([...items], q, t));
+  const searchTone = cfg.searchTone ?? DEFAULTS.searchTone;
 
   let query = '';
-  let offset = 0; // zero-based page index
-  let view: readonly T[] = recomputeView();
+  let offset = 0;
+  let view: readonly T[] = [];
 
-  function recomputeView(): readonly T[] {
-    let result = rawData;
-
-    if (searchFn && query) {
-      result = searchFn(result, query, searchTone);
+  const notify = () => {
+    for (const l of listeners) {
+      l();
     }
+  };
 
-    if (filterFn) {
-      result = result.filter(filterFn);
-    }
+  const recompute = () => {
+    let arr = rawData;
 
-    if (sortFn) {
-      // Copy before sort to avoid mutating the original array
-      result = [...result].sort(sortFn);
-    } else {
-      // Keep a shallow copy to avoid accidental external mutation
-      result = [...result];
-    }
+    if (query) arr = searchFn(arr, query, searchTone);
+    if (filterFn) arr = arr.filter(filterFn);
+    arr = sortFn ? [...arr].sort(sortFn) : [...arr];
 
-    // Clamp offset to new bounds
-    const maxOffset = Math.max(0, Math.ceil(result.length / limit) - 1);
-    offset = Math.min(offset, maxOffset);
+    const pages = Math.max(1, Math.ceil(arr.length / limit));
+    offset = Math.min(offset, pages - 1);
+    view = arr;
+  };
 
-    return result;
-  }
-
-  function currentSlice(): readonly T[] {
-    if (view.length === 0) return [];
+  const slice = (): readonly T[] => {
+    if (!view.length) return [];
     const start = offset * limit;
-    const end = start + limit;
-    return view.slice(start, end);
-  }
+    return view.slice(start, start + limit);
+  };
 
-  function update(): readonly T[] {
-    view = recomputeView();
-    return currentSlice();
-  }
+  const update = () => {
+    recompute();
+    notify();
+  };
 
-  function clampPageIndex(i: number) {
-    return Math.max(0, Math.min(i, Math.max(0, Math.ceil(view.length / limit) - 1)));
-  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const debouncedSearch = (q: string, ms: number) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      query = q;
+      timer = undefined;
+      void update();
+    }, ms);
+  };
 
-  // Debounced search that updates view; expose cancel/flush/pending if your debouncing returns them
-  const search = debounce((q: string) => {
-    query = q;
-    return update();
-  }, debounceMs);
+  // initial compute
+  recompute();
 
   return {
-    // batch updates without multiple recomputing
-    batch(mutator: BatchParams<T>): readonly T[] {
+    batch(mutator) {
       let nextLimit = limit;
       let nextFilter = filterFn;
       let nextSort = sortFn;
@@ -114,19 +123,33 @@ export function list<T>(initialData: readonly T[], config: Config<T> = {}) {
       let nextData = rawData;
       let nextOffset = offset;
 
+      const clamp = (i: number, total: number, lim: number) =>
+        Math.max(0, Math.min(i, Math.max(0, Math.ceil(total / lim) - 1)));
+
       mutator({
-        goTo: (p: number) => (nextOffset = clampPageIndex(p - 1)),
-        setData: (d: readonly T[]) => {
+        goTo: (p) => {
+          nextOffset = clamp(p - 1, view.length, nextLimit);
+        },
+        setData: (d) => {
           nextData = [...d];
           nextOffset = 0;
         },
-        setFilter: (p: Predicate<T>) => (nextFilter = p),
-        setLimit: (n: number) => (nextLimit = Math.max(DEFAULTS.minLimit, n)),
-        setQuery: (q: string) => (nextQuery = q),
-        setSort: (s?: Sorter<T>) => (nextSort = s),
+        setFilter: (f) => {
+          nextFilter = f;
+        },
+        setLimit: (n) => {
+          nextLimit = Math.max(1, n);
+        },
+        setQuery: (q) => {
+          nextQuery = q;
+          nextOffset = 0;
+        },
+        setSort: (s) => {
+          nextSort = s;
+        },
       });
 
-      // apply changes and update once
+      // apply once
       limit = nextLimit;
       filterFn = nextFilter;
       sortFn = nextSort;
@@ -134,47 +157,23 @@ export function list<T>(initialData: readonly T[], config: Config<T> = {}) {
       rawData = nextData;
       offset = nextOffset;
 
-      return update();
-    },
-    // read current page items
-    get current(): readonly T[] {
-      return currentSlice();
-    },
-    // data setters
-    set data(newData: readonly T[]) {
-      rawData = [...newData];
-      offset = 0;
       update();
     },
-    get data(): readonly T[] {
-      return rawData;
+    get current() {
+      return slice();
     },
-    filter(predicate: Predicate<T>): readonly T[] {
-      filterFn = predicate;
-      offset = 0;
-      return update();
+    goTo(page) {
+      const pages = Math.max(1, Math.ceil(view.length / limit));
+      offset = Math.max(0, Math.min(page - 1, pages - 1));
+      notify();
     },
-    goTo(page: number): readonly T[] {
-      // page is 1-based
-      offset = clampPageIndex(page - 1);
-      return currentSlice();
-    },
-    // configuration setters (mutators return current page for consistency)
-    set limit(newLimit: number) {
-      const next = Math.max(DEFAULTS.minLimit, newLimit);
-      if (next !== limit) {
-        limit = next;
-        update();
-      }
-    },
-    // read meta
-    get meta(): Meta {
+    get meta() {
       const total = view.length;
       const pages = Math.max(1, Math.ceil(total / limit));
       const isEmpty = total === 0;
       const page = Math.min(offset + 1, pages);
-      const start = isEmpty ? 0 : offset * limit + 1;
-      const end = isEmpty ? 0 : Math.min(offset * limit + limit, total);
+      const start = isEmpty ? 0 : (page - 1) * limit + 1;
+      const end = isEmpty ? 0 : Math.min(page * limit, total);
       return {
         end,
         isEmpty,
@@ -187,49 +186,58 @@ export function list<T>(initialData: readonly T[], config: Config<T> = {}) {
         total,
       };
     },
-    // navigation
-    next(): readonly T[] {
-      if (offset < Math.ceil(view.length / limit) - 1) {
+    next() {
+      const pages = Math.max(1, Math.ceil(view.length / limit));
+      if (offset < pages - 1) {
         offset++;
-      }
-      return currentSlice();
-    },
-    // get all pages lazily (generator)
-    *pages(): IterableIterator<readonly T[]> {
-      const totalPages = Math.ceil(view.length / limit);
-      for (let i = 0; i < totalPages; i++) {
-        const start = i * limit;
-        yield view.slice(start, start + limit);
+        notify();
       }
     },
-    prev(): readonly T[] {
+    prev() {
       if (offset > 0) {
         offset--;
+        notify();
       }
-      return currentSlice();
     },
-    // reset helper
-    reset(): readonly T[] {
-      offset = 0;
+    reset() {
+      limit = Math.max(1, cfg.limit ?? DEFAULTS.limit);
+      filterFn = cfg.filterFn ?? (() => true);
+      sortFn = cfg.sortFn;
       query = '';
-      filterFn = config.filterFn ?? (() => true);
-      sortFn = config.sortFn;
-      limit = Math.max(DEFAULTS.minLimit, config.limit ?? DEFAULTS.limit);
-      return update();
+      offset = 0;
+      update();
     },
-    // search
-    search, // debounced; use search.flush() to force immediate update
-    searchNow(q: string): readonly T[] {
+    search(q, opts) {
       query = q;
-      return update();
+      offset = 0;
+      if (opts?.immediate) {
+        update();
+      } else {
+        debouncedSearch(q, cfg.debounceMs ?? DEFAULTS.debounceMs);
+      }
     },
-    sort(fn?: Sorter<T>): readonly T[] {
-      sortFn = fn;
-      return update();
+    setData(data) {
+      rawData = [...data];
+      offset = 0;
+      update();
     },
-    // iterable (pages) – lazy
-    *[Symbol.iterator](): IterableIterator<readonly T[]> {
-      yield* this.pages();
+    setFilter(f) {
+      filterFn = f;
+      offset = 0;
+      update();
+    },
+    setLimit(n) {
+      limit = Math.max(1, n);
+      offset = 0;
+      update();
+    },
+    setSort(s) {
+      sortFn = s;
+      update();
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
 }

@@ -1,12 +1,14 @@
 import { assert } from '../function/assert';
 import { isDate } from '../typed/isDate';
 
+// #region IntervalTypes
 type IntervalType = 'D' | 'W' | 'M' | 'MS' | 'ME' | 'Y' | 'YS' | 'YE';
 type IntervalOptions = {
   interval?: IntervalType;
   steps?: number;
   latest?: boolean;
 };
+// #endregion IntervalTypes
 
 /**
  * Generates an array of dates between a start and end date, with a specified interval and step size.

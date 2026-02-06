@@ -21,12 +21,15 @@ The `aggregate` utility transforms an array of objects into a single object, whe
 
 ## API
 
-```ts
-type Selector<T> = keyof T | ((item: T) => Primitive);
+::: details Type Definitions
+<<< @/../packages/toolkit/src/types.ts#Selector
+:::
 
-interface AggregateFunction {
-  <T, K extends string | number | symbol>(array: T[], selector: Selector<T>): Record<K, T>;
-}
+```ts
+function aggregate<T, K extends keyof T, R extends T[K] extends string ? T[K] : never>(
+  array: T[],
+  selector: Selector<T>
+): Record<R, T>
 ```
 
 ### Parameters

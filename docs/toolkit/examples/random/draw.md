@@ -23,9 +23,7 @@ The `draw` utility picks a single random element from an array. It is perfect fo
 ## API
 
 ```ts
-interface DrawFunction {
-  <T>(array: T[]): T | undefined;
-}
+function draw<T>(array: T[]): T | undefined
 ```
 
 ### Parameters

@@ -1,12 +1,14 @@
 import { isObject } from '../typed/isObject';
 import type { Obj } from '../types';
 
+// #region ProxyOptions
 type ProxyOptions<T> = {
   set?: <K extends PropertyKey>(prop: K, curr: unknown, prev: unknown, target: T) => unknown;
   get?: <K extends PropertyKey>(prop: K, val: unknown, target: T) => unknown;
   deep?: boolean;
   watch?: (keyof T)[];
 };
+// #endregion ProxyOptions
 
 /**
  * Creates a new Proxy for the given object that invokes functions when properties are accessed or modified.

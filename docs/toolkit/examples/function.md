@@ -12,6 +12,7 @@ Function utilities provide a powerful set of tools to control execution, compose
 | [`throttle`](./function/throttle.md) | Ensure a function is called at most once in a specified time interval.          |
 | [`once`](./function/once.md)         | Ensure a function is only executed once.                                        |
 | [`retry`](./function/retry.md)       | Automatically retry an asynchronous function on failure.                        |
+| [`parallel`](./function/parallel.md) | Process array with async callback with controlled parallelism.                  |
 | [`delay`](./function/delay.md)       | Returns a promise that resolves after a specified time.                         |
 | [`sleep`](./function/sleep.md)       | Pause execution for a specified duration (alias for `delay`).                   |
 
@@ -94,25 +95,14 @@ const heavyCalc = memo((n: number) => {
 - [fp](./function/fp.md)
 - [memo](./function/memo.md)
 - [once](./function/once.md)
+- [parallel](./function/parallel.md)
 - [pipe](./function/pipe.md)
 - [predict](./function/predict.md)
 - [proxy](./function/proxy.md)
+- [prune](./function/prune.md)
 - [retry](./function/retry.md)
 - [sleep](./function/sleep.md)
 - [throttle](./function/throttle.md)
 - [worker](./function/worker.md)
 
 </div>
-
-<style>
-.grid-links ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.5rem;
-  list-style: none !important;
-  padding: 0 !important;
-}
-.grid-links li {
-  margin: 0 !important;
-}
-</style>

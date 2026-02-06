@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { Logit } from '@vielzeug/logit';
-import { group, max, min, type Predicate, search, sortBy } from '@vielzeug/toolkit';
+import { arrange, group, max, min, type Predicate, search } from '@vielzeug/toolkit';
 
 export type DepotDataRecord<T, K extends keyof T = keyof T> = {
   indexes?: K[];
@@ -304,7 +304,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): this {
     return this.pushOp(
-      (data) => sortBy(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
+      (data) => arrange(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
       'orderBy',
       [field, direction],
     );

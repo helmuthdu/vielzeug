@@ -22,15 +22,13 @@ The `throttle` utility ensures that a function is called at most once in a speci
 ## API
 
 ```ts
-interface ThrottledFunction {
+type ThrottledFunction = {
   (...args: any[]): void;
   cancel: () => void;
   flush: () => void;
 }
 
-interface ThrottleFunction {
-  <T extends (...args: any[]) => any>(fn: T, limit?: number): ThrottledFunction;
-}
+function throttle<T extends (...args: any[]) => any>(fn: T, limit?: number): ThrottledFunction
 ```
 
 ### Parameters

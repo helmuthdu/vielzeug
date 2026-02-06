@@ -4,7 +4,7 @@ Complete reference for all utilities available in `@vielzeug/toolkit`.
 
 ## Overview
 
-Toolkit provides **100+ utilities** organized into 8 categories. All utilities are:
+Toolkit provides **110+ utilities** organized into 9 categories. All utilities are:
 
 - ✅ **Type-safe** with full TypeScript inference
 - ✅ **Tree-shakeable** for minimal bundle sizes
@@ -18,6 +18,7 @@ Toolkit provides **100+ utilities** organized into 8 categories. All utilities a
 - [String Utilities](#string-utilities) - Formatting, casing, and manipulation
 - [Function Utilities](#function-utilities) - Debounce, throttle, memoize, and retry
 - [Math Utilities](#math-utilities) - Statistics, calculations, and ranges
+- [Money Utilities](#money-utilities) - Currency formatting and conversion
 - [Date Utilities](#date-utilities) - Time intervals and differences
 - [Random Utilities](#random-utilities) - Random values, shuffling, and sampling
 - [Typed Utilities](#typed-utilities) - Type guards and runtime checks
@@ -40,8 +41,8 @@ See [Array Examples](./examples/array.md) for detailed usage.
 | [`chunk`](./examples/array/chunk.md)           | Split into chunks of specific size             | `chunk([1,2,3,4,5], 2)` → `[[1,2],[3,4],[5]]`      |
 | [`flatten`](./examples/array/flatten.md)       | Flatten nested arrays                          | `flatten([[1,2],[3,4]])` → `[1,2,3,4]`             |
 | [`compact`](./examples/array/compact.md)       | Remove null/undefined values                   | `compact([1,null,2])` → `[1,2]`                    |
-| [`alternate`](./examples/array/alternate.md)   | Alternate elements from multiple arrays        | `alternate([1,2],[3,4])` → `[1,3,2,4]`             |
-| [`shift`](./examples/array/shift.md)           | Rotate array elements                          | `shift([1,2,3], 1)` → `[3,1,2]`                    |
+| [`alternate`](./examples/array/alternate.md)   | Toggle item in array (add/remove)              | `alternate([1,2], 2)` → `[1]`                      |
+| [`shift`](./examples/array/shift.md)           | Rotate array elements                          | `shift([1,2,3], 1)` → `[2,3,1]`                    |
 | [`substitute`](./examples/array/substitute.md) | Replace elements conditionally                 | `substitute([1,2,3], x => x === 2, 0)` → `[1,0,3]` |
 
 ### Aggregation
@@ -49,7 +50,7 @@ See [Array Examples](./examples/array.md) for detailed usage.
 | Utility                                      | Description                             | Example                            |
 | -------------------------------------------- | --------------------------------------- | ---------------------------------- |
 | [`group`](./examples/array/group.md)         | Group elements by key or function       | `group(users, u => u.role)`        |
-| [`aggregate`](./examples/array/aggregate.md) | Complex aggregations (sum, count, etc.) | `aggregate(items, {sum: 'price'})` |
+| [`aggregate`](./examples/array/aggregate.md) | Aggregate array to object by key        | `aggregate(items, 'id')`           |
 | [`uniq`](./examples/array/uniq.md)           | Remove duplicate values                 | `uniq([1,2,2,3])` → `[1,2,3]`      |
 
 ### Querying
@@ -62,27 +63,28 @@ See [Array Examples](./examples/array.md) for detailed usage.
 | [`some`](./examples/array/some.md)           | Check if any element matches  | `some([1,2,3], x => x > 2)` → `true`   |
 | [`every`](./examples/array/every.md)         | Check if all elements match   | `every([1,2,3], x => x > 0)` → `true`  |
 | [`contains`](./examples/array/contains.md)   | Check if array contains value | `contains([1,2,3], 2)` → `true`        |
-| [`search`](./examples/array/search.md)       | Search elements by query      | `search(users, 'name', 'alice')`       |
+| [`search`](./examples/array/search.md)       | Fuzzy search in array         | `search(users, 'alice')`               |
 
 ### Sorting
 
 | Utility                                | Description                  | Example                                   |
 | -------------------------------------- | ---------------------------- | ----------------------------------------- |
 | [`sort`](./examples/array/sort.md)     | Sort with custom comparator  | `sort([3,1,2], (a,b) => a-b)` → `[1,2,3]` |
-| [`sortBy`](./examples/array/sortBy.md) | Sort by property or function | `sortBy(users, u => u.age)`               |
+| [`arrange`](./examples/array/arrange.md) | Sort by property or function | `arrange(users, {age: 'asc'})`             |
 
 ### Selection
 
-| Utility                                | Description                 | Example                              |
-| -------------------------------------- | --------------------------- | ------------------------------------ |
-| [`pick`](./examples/array/pick.md)     | Pick specific elements      | `pick([1,2,3,4], [0,2])` → `[1,3]`   |
-| [`select`](./examples/array/select.md) | Select elements by criteria | `select(items, {category: 'books'})` |
+| Utility                                | Description                 | Example                                       |
+| -------------------------------------- | --------------------------- | --------------------------------------------- |
+| [`pick`](./examples/array/pick.md)     | Pick and transform element  | `pick([1,2,3], x => x*2, x => x > 1)` → `4`   |
+| [`select`](./examples/array/select.md) | Map and filter in one step  | `select([1,2,3], x => x > 1 ? x*2 : null)`    |
 
-### Utilities
+### Pagination
 
-| Utility                            | Description                          | Example                      |
-| ---------------------------------- | ------------------------------------ | ---------------------------- |
-| [`list`](./examples/array/list.md) | Create array from range or generator | `list(1, 5)` → `[1,2,3,4,5]` |
+| Utility                                          | Description                                  | Example                                   |
+| ------------------------------------------------ | -------------------------------------------- | ----------------------------------------- |
+| [`list`](./examples/array/list.md)               | Client-side reactive pagination              | `list(data, {limit: 10})`                 |
+| [`remoteList`](./examples/array/remoteList.md)   | Server-side reactive pagination with caching | `remoteList({fetch: fetchFn, limit: 20})` |
 
 ---
 
@@ -119,22 +121,19 @@ See [String Examples](./examples/string.md) for detailed usage.
 | [`camelCase`](./examples/string/camelCase.md)   | Convert to camelCase    | `camelCase('hello-world')` → `'helloWorld'` |
 | [`snakeCase`](./examples/string/snakeCase.md)   | Convert to snake_case   | `snakeCase('helloWorld')` → `'hello_world'` |
 | [`kebabCase`](./examples/string/kebabCase.md)   | Convert to kebab-case   | `kebabCase('helloWorld')` → `'hello-world'` |
-| [`capitalize`](./examples/string/capitalize.md) | Capitalize first letter | `capitalize('hello')` → `'Hello'`           |
+| [`pascalCase`](./examples/string/pascalCase.md) | Convert to PascalCase   | `pascalCase('hello-world')` → `'HelloWorld'`|
 
 ### Manipulation
 
-| Utility                                     | Description                   | Example                                       |
-| ------------------------------------------- | ----------------------------- | --------------------------------------------- |
-| [`truncate`](./examples/string/truncate.md) | Truncate string with ellipsis | `truncate('long text', 5)` → `'long...'`      |
-| [`pad`](./examples/string/pad.md)           | Pad string to length          | `pad('5', 3, '0')` → `'005'`                  |
-| [`template`](./examples/string/template.md) | Simple string templates       | `template('Hello {{name}}', {name: 'Alice'})` |
+| Utility                                     | Description                   | Example                                  |
+| ------------------------------------------- | ----------------------------- | ---------------------------------------- |
+| [`truncate`](./examples/string/truncate.md) | Truncate string with ellipsis | `truncate('long text', 5)` → `'long...'` |
 
 ### Analysis
 
-| Utility                                           | Description                 | Example                                  |
-| ------------------------------------------------- | --------------------------- | ---------------------------------------- |
-| [`similarity`](./examples/string/similarity.md)   | Calculate string similarity | `similarity('hello', 'hallo')` → `0.8`   |
-| [`levenshtein`](./examples/string/levenshtein.md) | Levenshtein distance        | `levenshtein('kitten', 'sitting')` → `3` |
+| Utility                                         | Description                 | Example                                |
+| ----------------------------------------------- | --------------------------- | -------------------------------------- |
+| [`similarity`](./examples/string/similarity.md) | Calculate string similarity | `similarity('hello', 'hallo')` → `0.8` |
 
 ---
 
@@ -150,10 +149,12 @@ See [Function Examples](./examples/function.md) for detailed usage.
 | [`throttle`](./examples/function/throttle.md) | Limit execution rate            | `throttle(fn, 100)`             |
 | [`memo`](./examples/function/memo.md)         | Memoize/cache function results  | `memo(expensiveFn)`             |
 | [`retry`](./examples/function/retry.md)       | Retry failed operations         | `retry(asyncFn, {attempts: 3})` |
+| [`parallel`](./examples/function/parallel.md) | Process array with controlled concurrency | `parallel(5, items, asyncFn)` |
 | [`compose`](./examples/function/compose.md)   | Compose functions right-to-left | `compose(f, g, h)`              |
 | [`pipe`](./examples/function/pipe.md)         | Compose functions left-to-right | `pipe(f, g, h)`                 |
 | [`once`](./examples/function/once.md)         | Execute function only once      | `once(fn)`                      |
 | [`delay`](./examples/function/delay.md)       | Delay execution                 | `await delay(1000)`             |
+| [`prune`](./examples/function/prune.md)       | Remove nullable/empty values    | `prune({ a: 1, b: null })` → `{ a: 1 }` |
 
 ---
 
@@ -163,41 +164,69 @@ See [Function Examples](./examples/function.md) for detailed usage.
 
 See [Math Examples](./examples/math.md) for detailed usage.
 
+### Arithmetic Operations
+
+| Utility                                 | Description                    | Example                        |
+| --------------------------------------- | ------------------------------ | ------------------------------ |
+| [`add`](./examples/math/add.md)         | Add two numbers                | `add(10, 20)` → `30`           |
+| [`subtract`](./examples/math/subtract.md) | Subtract numbers             | `subtract(20, 10)` → `10`      |
+| [`multiply`](./examples/math/multiply.md) | Multiply numbers             | `multiply(10, 5)` → `50`       |
+| [`divide`](./examples/math/divide.md)   | Divide numbers                 | `divide(20, 5)` → `4`          |
+| [`abs`](./examples/math/abs.md)         | Absolute value                 | `abs(-5)` → `5`                |
+
+### Distribution
+
+| Utility                                     | Description                    | Example                        |
+| ------------------------------------------- | ------------------------------ | ------------------------------ |
+| [`allocate`](./examples/math/allocate.md)   | Distribute proportionally      | `allocate(100, [1,2,3])` → `[16,33,51]` |
+| [`distribute`](./examples/math/distribute.md) | Distribute evenly            | `distribute(100, 3)` → `[34,33,33]` |
+
 ### Statistics
 
-| Utility                                   | Description              | Example                     |
-| ----------------------------------------- | ------------------------ | --------------------------- |
-| [`sum`](./examples/math/sum.md)           | Sum of numbers           | `sum([1,2,3])` → `6`        |
-| [`average`](./examples/math/average.md)   | Calculate average/mean   | `average([1,2,3])` → `2`    |
-| [`median`](./examples/math/median.md)     | Find median value        | `median([1,2,3,4,5])` → `3` |
-| [`mode`](./examples/math/mode.md)         | Find most frequent value | `mode([1,2,2,3])` → `2`     |
-| [`variance`](./examples/math/variance.md) | Calculate variance       | `variance([1,2,3])`         |
-| [`stddev`](./examples/math/stddev.md)     | Standard deviation       | `stddev([1,2,3])`           |
+| Utility                                 | Description              | Example                        |
+| --------------------------------------- | ------------------------ | ------------------------------ |
+| [`sum`](./examples/math/sum.md)         | Sum of numbers           | `sum([1,2,3])` → `6`           |
+| [`average`](./examples/math/average.md) | Calculate average/mean   | `average([1,2,3])` → `2`       |
+| [`median`](./examples/math/median.md)   | Find median value        | `median([1,2,3,4,5])` → `3`    |
+| [`min`](./examples/math/min.md)         | Find minimum value       | `min([1,2,3])` → `1`           |
+| [`max`](./examples/math/max.md)         | Find maximum value       | `max([1,2,3])` → `3`           |
 
-### Operations
+### Number Utilities
 
-| Utility                                       | Description             | Example                       |
-| --------------------------------------------- | ----------------------- | ----------------------------- |
-| [`clamp`](./examples/math/clamp.md)           | Clamp value to range    | `clamp(10, 0, 5)` → `5`       |
-| [`range`](./examples/math/range.md)           | Generate number range   | `range(1, 5)` → `[1,2,3,4,5]` |
-| [`round`](./examples/math/round.md)           | Round to decimal places | `round(3.14159, 2)` → `3.14`  |
-| [`percentage`](./examples/math/percentage.md) | Calculate percentage    | `percentage(25, 100)` → `25`  |
+| Utility                                 | Description              | Example                        |
+| --------------------------------------- | ------------------------ | ------------------------------ |
+| [`clamp`](./examples/math/clamp.md)     | Clamp value to range     | `clamp(10, 0, 5)` → `5`        |
+| [`range`](./examples/math/range.md)     | Generate number range    | `range(1, 5)` → `[1,2,3,4,5]`  |
+| [`round`](./examples/math/round.md)     | Round to decimal places  | `round(3.14159, 2)` → `3.14`   |
+| [`rate`](./examples/math/rate.md)       | Calculate percentage     | `rate(25, 100)` → `25`         |
+| [`boil`](./examples/math/boil.md)       | Reduce with comparator   | `boil([1,2,3], (a,b) => a+b)`  |
+
+---
+
+## Money Utilities
+
+**Currency formatting and conversion with precision.**
+
+See [Money Examples](./examples/money.md) for detailed usage.
+
+| Utility                                     | Description                    | Example                        |
+| ------------------------------------------- | ------------------------------ | ------------------------------ |
+| [`currency`](./examples/money/currency.md)  | Format money for display       | `currency({amount: 123456n, currency: 'USD'})` → `'$1,234.56'` |
+| [`exchange`](./examples/money/exchange.md)  | Convert between currencies     | `exchange(usd, {from: 'USD', to: 'EUR', rate: 0.85})` |
 
 ---
 
 ## Date Utilities
 
-**Time intervals, differences, and formatting.**
+**Time intervals, differences, and expiration checks.**
 
 See [Date Examples](./examples/date.md) for detailed usage.
 
-| Utility                                     | Description               | Example                      |
-| ------------------------------------------- | ------------------------- | ---------------------------- |
-| [`interval`](./examples/date/interval.md)   | Create time interval      | `interval('1 hour')`         |
-| [`expires`](./examples/date/expires.md)     | Calculate expiration      | `expires(date, '30 days')`   |
-| [`timeDiff`](./examples/date/timeDiff.md)   | Calculate time difference | `timeDiff(date1, date2)`     |
-| [`isExpired`](./examples/date/isExpired.md) | Check if date is expired  | `isExpired(expiryDate)`      |
-| [`format`](./examples/date/format.md)       | Format date string        | `format(date, 'YYYY-MM-DD')` |
+| Utility                                   | Description                  | Example                                              |
+| ----------------------------------------- | ---------------------------- | ---------------------------------------------------- |
+| [`expires`](./examples/date/expires.md)   | Check expiration status      | `expires('2026-01-01')` → `'SOON'`                   |
+| [`interval`](./examples/date/interval.md) | Generate date range          | `interval('2024-01-01', '2024-01-31', {interval: 'D'})` |
+| [`timeDiff`](./examples/date/timeDiff.md) | Calculate time difference    | `timeDiff(date1, date2)` → `{value: 5, unit: 'DAY'}` |
 
 ---
 
@@ -207,16 +236,12 @@ See [Date Examples](./examples/date.md) for detailed usage.
 
 See [Random Examples](./examples/random.md) for detailed usage.
 
-| Utility                                             | Description               | Example                                  |
-| --------------------------------------------------- | ------------------------- | ---------------------------------------- |
-| [`random`](./examples/random/random.md)             | Random number in range    | `random(1, 10)` → `7`                    |
-| [`randomInt`](./examples/random/randomInt.md)       | Random integer            | `randomInt(1, 10)` → `5`                 |
-| [`randomItem`](./examples/random/randomItem.md)     | Random array element      | `randomItem([1,2,3])` → `2`              |
-| [`shuffle`](./examples/random/shuffle.md)           | Shuffle array             | `shuffle([1,2,3])` → `[3,1,2]`           |
-| [`sample`](./examples/random/sample.md)             | Random sample from array  | `sample([1,2,3,4,5], 3)`                 |
-| [`uuid`](./examples/random/uuid.md)                 | Generate UUID v4          | `uuid()` → `'550e8400-...'`              |
-| [`randomString`](./examples/random/randomString.md) | Random string             | `randomString(10)` → `'aBc123XyZ9'`      |
-| [`weighted`](./examples/random/weighted.md)         | Weighted random selection | `weighted([{val: 'a', weight: 2}, ...])` |
+| Utility                                 | Description           | Example                     |
+| --------------------------------------- | --------------------- | --------------------------- |
+| [`random`](./examples/random/random.md) | Random number in range| `random(1, 10)` → `7`       |
+| [`draw`](./examples/random/draw.md)     | Random array element  | `draw([1,2,3])` → `2`       |
+| [`shuffle`](./examples/random/shuffle.md) | Shuffle array       | `shuffle([1,2,3])` → `[3,1,2]` |
+| [`uuid`](./examples/random/uuid.md)     | Generate UUID v4      | `uuid()` → `'550e8400-...'` |
 
 ---
 
@@ -226,47 +251,52 @@ See [Random Examples](./examples/random.md) for detailed usage.
 
 See [Typed Examples](./examples/typed.md) for detailed usage.
 
-### Primitives
+### Type Guards
 
-| Utility                                          | Description                | TypeScript Narrowing            |
-| ------------------------------------------------ | -------------------------- | ------------------------------- |
-| [`isString`](./examples/typed/isString.md)       | Check if string            | `unknown` → `string`            |
-| [`isNumber`](./examples/typed/isNumber.md)       | Check if number            | `unknown` → `number`            |
-| [`isBoolean`](./examples/typed/isBoolean.md)     | Check if boolean           | `unknown` → `boolean`           |
-| [`isSymbol`](./examples/typed/isSymbol.md)       | Check if symbol            | `unknown` → `symbol`            |
-| [`isBigInt`](./examples/typed/isBigInt.md)       | Check if bigint            | `unknown` → `bigint`            |
-| [`isNull`](./examples/typed/isNull.md)           | Check if null              | `unknown` → `null`              |
-| [`isUndefined`](./examples/typed/isUndefined.md) | Check if undefined         | `unknown` → `undefined`         |
-| [`isNullish`](./examples/typed/isNullish.md)     | Check if null or undefined | `unknown` → `null \| undefined` |
+| Utility                                        | Description                | TypeScript Narrowing            |
+| ---------------------------------------------- | -------------------------- | ------------------------------- |
+| [`isString`](./examples/typed/isString.md)     | Check if string            | `unknown` → `string`            |
+| [`isNumber`](./examples/typed/isNumber.md)     | Check if number            | `unknown` → `number`            |
+| [`isBoolean`](./examples/typed/isBoolean.md)   | Check if boolean           | `unknown` → `boolean`           |
+| [`isArray`](./examples/typed/isArray.md)       | Check if array             | `unknown` → `Array<unknown>`    |
+| [`isObject`](./examples/typed/isObject.md)     | Check if object            | `unknown` → `object`            |
+| [`isFunction`](./examples/typed/isFunction.md) | Check if function          | `unknown` → `Function`          |
+| [`isDate`](./examples/typed/isDate.md)         | Check if Date              | `unknown` → `Date`              |
+| [`isRegex`](./examples/typed/isRegex.md)       | Check if RegExp            | `unknown` → `RegExp`            |
+| [`isPromise`](./examples/typed/isPromise.md)   | Check if Promise           | `unknown` → `Promise<unknown>`  |
+| [`isDefined`](./examples/typed/isDefined.md)   | Check if not null/undefined| `T` → `NonNullable<T>`          |
+| [`isNil`](./examples/typed/isNil.md)           | Check if null or undefined | `unknown` → `null \| undefined` |
+| [`isPrimitive`](./examples/typed/isPrimitive.md) | Check if primitive type  | `unknown` → `boolean`           |
 
-### Objects & Collections
+### Value Checks
 
-| Utility                                      | Description      | TypeScript Narrowing         |
-| -------------------------------------------- | ---------------- | ---------------------------- |
-| [`isObject`](./examples/typed/isObject.md)   | Check if object  | `unknown` → `object`         |
-| [`isArray`](./examples/typed/isArray.md)     | Check if array   | `unknown` → `Array<unknown>` |
-| [`isDate`](./examples/typed/isDate.md)       | Check if Date    | `unknown` → `Date`           |
-| [`isRegExp`](./examples/typed/isRegExp.md)   | Check if RegExp  | `unknown` → `RegExp`         |
-| [`isMap`](./examples/typed/isMap.md)         | Check if Map     | `unknown` → `Map`            |
-| [`isSet`](./examples/typed/isSet.md)         | Check if Set     | `unknown` → `Set`            |
-| [`isWeakMap`](./examples/typed/isWeakMap.md) | Check if WeakMap | `unknown` → `WeakMap`        |
-| [`isWeakSet`](./examples/typed/isWeakSet.md) | Check if WeakSet | `unknown` → `WeakSet`        |
+| Utility                                      | Description                   | Example                          |
+| -------------------------------------------- | ----------------------------- | -------------------------------- |
+| [`isEmpty`](./examples/typed/isEmpty.md)     | Check if empty                | `isEmpty([])` → `true`           |
+| [`isEqual`](./examples/typed/isEqual.md)     | Deep equality comparison      | `isEqual({a:1}, {a:1})` → `true` |
+| [`isMatch`](./examples/typed/isMatch.md)     | Pattern matching              | `isMatch(obj, {role: 'admin'})`  |
+| [`isWithin`](./examples/typed/isWithin.md)   | Check if number in range      | `isWithin(5, 0, 10)` → `true`    |
+| [`isEven`](./examples/typed/isEven.md)       | Check if even number          | `isEven(4)` → `true`             |
+| [`isOdd`](./examples/typed/isOdd.md)         | Check if odd number           | `isOdd(3)` → `true`              |
+| [`isPositive`](./examples/typed/isPositive.md) | Check if positive           | `isPositive(5)` → `true`         |
+| [`isNegative`](./examples/typed/isNegative.md) | Check if negative           | `isNegative(-5)` → `true`        |
+| [`isZero`](./examples/typed/isZero.md)       | Check if zero                 | `isZero(0)` → `true`             |
 
-### Functions & Special
+### Comparison
 
-| Utility                                        | Description       | TypeScript Narrowing           |
-| ---------------------------------------------- | ----------------- | ------------------------------ |
-| [`isFunction`](./examples/typed/isFunction.md) | Check if function | `unknown` → `Function`         |
-| [`isPromise`](./examples/typed/isPromise.md)   | Check if Promise  | `unknown` → `Promise<unknown>` |
-| [`isError`](./examples/typed/isError.md)       | Check if Error    | `unknown` → `Error`            |
+| Utility                            | Description            | Example                    |
+| ---------------------------------- | ---------------------- | -------------------------- |
+| [`gt`](./examples/typed/gt.md)     | Greater than           | `gt(5, 3)` → `true`        |
+| [`ge`](./examples/typed/ge.md)     | Greater or equal       | `ge(5, 5)` → `true`        |
+| [`lt`](./examples/typed/lt.md)     | Less than              | `lt(3, 5)` → `true`        |
+| [`le`](./examples/typed/le.md)     | Less or equal          | `le(5, 5)` → `true`        |
 
-### Composite Checks
+### Multi-Purpose
 
-| Utility                                              | Description                                  |
-| ---------------------------------------------------- | -------------------------------------------- |
-| [`isEmpty`](./examples/typed/isEmpty.md)             | Check if empty (array, object, string, etc.) |
-| [`isPrimitive`](./examples/typed/isPrimitive.md)     | Check if primitive type                      |
-| [`isPlainObject`](./examples/typed/isPlainObject.md) | Check if plain object (not class instance)   |
+| Utility                              | Description                      | Example                       |
+| ------------------------------------ | -------------------------------- | ----------------------------- |
+| [`is`](./examples/typed/is.md)       | Multi-purpose type checker       | `is('string', val)` → `boolean` |
+| [`typeOf`](./examples/typed/typeOf.md) | Get type of value              | `typeOf([])` → `'array'`      |
 
 ---
 

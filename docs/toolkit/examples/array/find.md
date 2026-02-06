@@ -23,9 +23,11 @@ The `find` utility returns the first element in an array that passes the provide
 ## API
 
 ```ts
-interface FindFunction {
-  <T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, defaultValue?: T): T | undefined;
-}
+function find<T>(
+  array: T[], 
+  predicate: (item: T, index: number, array: T[]) => boolean, 
+  defaultValue?: T
+): T | undefined
 ```
 
 ### Parameters

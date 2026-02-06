@@ -22,15 +22,13 @@ The `debounce` utility creates a version of a function that delays its execution
 ## API
 
 ```ts
-interface DebouncedFunction {
+type DebouncedFunction = {
   (...args: any[]): void;
   cancel: () => void;
   flush: () => void;
 }
 
-interface DebounceFunction {
-  <T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction;
-}
+function debounce<T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction
 ```
 
 ### Parameters

@@ -3,14 +3,14 @@
   <img src="https://img.shields.io/badge/size-912_B-success" alt="Size">
 </div>
 
-# sortBy
+# arrange
 
-The `sortBy` utility enables advanced multi-field sorting for arrays of objects. It allows you to specify multiple properties to sort by, each with its own independent sort direction (ascending or descending).
+The `arrange` utility enables advanced multi-field sorting for arrays of objects. It allows you to specify multiple properties to sort by, each with its own independent sort direction (ascending or descending).
 
 ## Implementation
 
 ::: details View Source Code
-<<< @/../packages/toolkit/src/array/sortBy.ts
+<<< @/../packages/toolkit/src/array/arrange.ts
 :::
 
 ## Features
@@ -23,9 +23,7 @@ The `sortBy` utility enables advanced multi-field sorting for arrays of objects.
 ## API
 
 ```ts
-interface SortByFunction {
-  <T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
-}
+function arrange<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[]
 ```
 
 ### Parameters
@@ -42,7 +40,7 @@ interface SortByFunction {
 ### Basic Multi-Field Sorting
 
 ```ts
-import { sortBy } from '@vielzeug/toolkit';
+import { arrange } from '@vielzeug/toolkit';
 
 const users = [
   { name: 'Alice', age: 30 },
@@ -52,7 +50,7 @@ const users = [
 ];
 
 // Sort by name (asc) then age (desc)
-const sorted = sortBy(users, { name: 'asc', age: 'desc' });
+const sorted = arrange(users, { name: 'asc', age: 'desc' });
 /*
 [
   { name: 'Alice', age: 30 },
@@ -66,7 +64,7 @@ const sorted = sortBy(users, { name: 'asc', age: 'desc' });
 ### Complex Object Sorting
 
 ```ts
-import { sortBy } from '@vielzeug/toolkit';
+import { arrange } from '@vielzeug/toolkit';
 
 const products = [
   { category: 'Fruit', price: 2.0 },
@@ -76,7 +74,7 @@ const products = [
 ];
 
 // Sort by category (desc) then price (asc)
-sortBy(products, { category: 'desc', price: 'asc' });
+arrange(products, { category: 'desc', price: 'asc' });
 /*
 [
   { category: 'Meat', price: 5.0 },
