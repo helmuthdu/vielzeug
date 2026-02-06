@@ -69,6 +69,7 @@ export default defineConfig({
               items: [
                 { link: '/toolkit/examples/array/aggregate', text: 'aggregate' },
                 { link: '/toolkit/examples/array/alternate', text: 'alternate' },
+                { link: '/toolkit/examples/array/arrange', text: 'arrange' },
                 { link: '/toolkit/examples/array/chunk', text: 'chunk' },
                 { link: '/toolkit/examples/array/compact', text: 'compact' },
                 { link: '/toolkit/examples/array/contains', text: 'contains' },
@@ -89,7 +90,6 @@ export default defineConfig({
                 { link: '/toolkit/examples/array/shift', text: 'shift' },
                 { link: '/toolkit/examples/array/some', text: 'some' },
                 { link: '/toolkit/examples/array/sort', text: 'sort' },
-                { link: '/toolkit/examples/array/arrange', text: 'arrange' },
                 { link: '/toolkit/examples/array/substitute', text: 'substitute' },
                 { link: '/toolkit/examples/array/uniq', text: 'uniq' },
               ],
