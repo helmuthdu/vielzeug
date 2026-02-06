@@ -67,6 +67,7 @@ export * from './math/sum';
 export * from './money/currency';
 export * from './money/exchange';
 export * from './money/types';
+export * from './object/cache';
 export * from './object/clone';
 export * from './object/diff';
 export * from './object/entries';

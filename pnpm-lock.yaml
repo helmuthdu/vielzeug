@@ -78,6 +78,9 @@ importers:
       '@vielzeug/logit':
         specifier: workspace:*
         version: link:../logit
+      '@vielzeug/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
     devDependencies:
       typescript:
         specifier: ~5.9.3

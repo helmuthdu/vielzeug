@@ -23,47 +23,325 @@ yarn add @vielzeug/fetchit
 ## Import
 
 ```ts
-import { createHttpClient, buildUrl, HttpError } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
 ```
 
-## Basic Usage
+## Two Ways to Use Fetchit
 
-### Creating a Client
+Fetchit provides flexible architecture with separate clients:
+
+1. **HTTP Client** - Pure HTTP operations without query overhead
+2. **Query Client** - Advanced caching and state management
+3. **Use Together or Independently** - Mix and match based on your needs
+
+## HTTP Client (Simple HTTP Requests)
+
+The HTTP client provides clean REST API methods without caching overhead. Perfect for simple requests.
+
+### Creating an HTTP Client
 
 ```ts
-const api = createHttpClient({
-  url: 'https://api.example.com',
-  timeout: 5000,
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
+  timeout: 30000, // 30 seconds (default: 30000)
   headers: {
+    'Authorization': 'Bearer token',
     'Content-Type': 'application/json',
+  },
+  dedupe: true, // Automatic request deduplication (default: true)
+  logger: (level, msg, meta) => {
+    // Optional: Custom logger for debugging
+    console.log(`[${level.toUpperCase()}]`, msg, meta);
   },
 });
 ```
 
+**Options:**
+- `baseUrl` - Base URL for all requests
+- `timeout` - Request timeout in milliseconds (default: 30000)
+- `headers` - Default headers for all requests
+- `dedupe` - Enable request deduplication (default: true)
+- `logger` - Optional logger function for debugging requests
+
 ### Making Requests
 
 ```ts
-// GET
-const res = await api.get<User>('/users/1');
-console.log(res.data);
+// GET request - returns raw data
+const user = await http.get<User>('/users/1');
+console.log(user.name);
 
-// POST
-await api.post('/users', {
-  body: { name: 'Alice', email: 'alice@example.com' },
+// POST request
+const created = await http.post<User>('/users', {
+  body: {
+    name: 'Alice',
+    email: 'alice@example.com',
+  },
 });
 
-// PUT
-await api.put('/users/1', {
+// PUT request
+const updated = await http.put<User>('/users/1', {
   body: { name: 'Alice Smith' },
 });
 
-// PATCH
-await api.patch('/users/1', {
+// PATCH request
+const patched = await http.patch<User>('/users/1', {
   body: { email: 'newemail@example.com' },
 });
 
-// DELETE
-await api.delete('/users/1');
+// DELETE request
+await http.delete('/users/1');
+
+// Custom method
+const data = await http.request<DataType>('CUSTOM', '/endpoint');
+```
+
+### Query Parameters
+
+```ts
+const users = await http.get<User[]>('/users', {
+  params: {
+    role: 'admin',
+    age: 18,
+    page: 1,
+  },
+});
+// Calls: /users?role=admin&age=18&page=1
+```
+
+### Managing Headers
+
+```ts
+// Update headers dynamically
+http.setHeaders({
+  'Authorization': `Bearer ${newToken}`,
+});
+
+// Remove a header
+http.setHeaders({
+  'Authorization': undefined,
+});
+
+// Get current headers
+const headers = http.getHeaders();
+console.log(headers);
+```
+
+## Query Client (Advanced Caching)
+
+The Query client provides intelligent caching, request deduplication, and state management. Works with any HTTP client or fetch function.
+
+### Creating a Query Client
+
+```ts
+import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
+
+const queryClient = createQueryClient({
+  cache: {
+    staleTime: 5000, // Data fresh for 5 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
+    enabled: true,
+  },
+  refetch: {
+    onFocus: true, // Refetch when window regains focus
+    onReconnect: true, // Refetch when network reconnects
+  },
+});
+
+// Use with HTTP client
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+```
+
+### Type-Safe Query Keys
+
+```ts
+// Define query keys manually with `as const` for type safety
+const queryKeys = {
+  users: {
+    all: () => ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+    list: (filters: { role?: string }) => ['users', 'list', filters] as const,
+  },
+} as const;
+
+// Type-safe and autocomplete works!
+const user = await queryClient.fetch({
+  queryKey: queryKeys.users.detail('123'),
+  queryFn: () => http.get(`/users/123`),
+});
+```
+
+### Basic Query
+
+```ts
+// Fetch user with caching
+const user = await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+  staleTime: 5000, // Fresh for 5 seconds
+  gcTime: 60000, // Keep in cache for 60 seconds
+});
+```
+
+### Query with Parameters
+
+```ts
+// Query key includes all parameters that affect the data
+async function fetchUsers(filters: { role?: string; age?: number }) {
+  return queryClient.fetch({
+    queryKey: ['users', filters], // Include filters in key
+    queryFn: () => http.get<User[]>('/users', { params: filters }),
+  });
+}
+
+const admins = await fetchUsers({ role: 'admin' });
+const adults = await fetchUsers({ age: 18 });
+```
+
+### Mutations (POST/PUT/DELETE)
+
+```ts
+// Create user
+const newUser = await queryClient.mutate({
+  mutationFn: (userData: CreateUserInput) => http.post<User>('/users', { body: userData }),
+  onSuccess: (data) => {
+    // Invalidate users list to refetch
+    queryClient.invalidate(['users']);
+  },
+}, {
+  name: 'John Doe',
+  email: 'john@example.com'
+});
+```
+
+### Optimistic Updates
+
+```ts
+// Update user optimistically
+queryClient.setData<User>(['users', userId], (old) => ({
+  ...old,
+  name: 'Updated Name'
+}));
+
+try {
+  await queryClient.mutate({
+    mutationFn: (updates) => http.put<User>(`/users/${userId}`, { body: updates }),
+    onSuccess: () => {
+      // Refetch to get server data
+      queryClient.invalidate(['users', userId]);
+    }
+  }, { name: 'Updated Name' });
+} catch (error) {
+  // Rollback on error
+  queryClient.invalidate(['users', userId]);
+}
+```
+
+### Cache Management
+
+```ts
+// Invalidate specific query
+queryClient.invalidate(['users', userId]);
+
+// Manually set cache data
+queryClient.setData(['users', 1], { id: 1, name: 'John' });
+
+// Get cached data
+const cachedUser = queryClient.getData(['users', 1]);
+
+// Get query state (includes status, error, etc.)
+const state = queryClient.getState(['users', 1]);
+console.log(state?.status, state?.data);
+
+// Subscribe to query changes
+const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
+  console.log('User data changed:', state.data);
+  console.log('Loading:', state.isLoading);
+});
+
+// Prefetch data
+await queryClient.prefetch({
+  queryKey: ['users', '2'],
+  queryFn: () => http.get('/users/2'),
+});
+
+// Clear all cache
+queryClient.clearCache();
+
+// Get cache size
+const size = queryClient.getCacheSize();
+```
+
+### Observable State
+
+Subscribe to query state changes for real-time updates:
+
+```ts
+const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
+  console.log('Status:', state.status); // 'idle' | 'pending' | 'success' | 'error'
+  console.log('Data:', state.data);
+  console.log('Error:', state.error);
+  console.log('Loading:', state.isLoading);
+  console.log('Success:', state.isSuccess);
+  console.log('HTTP Status:', state.httpStatus);
+  console.log('HTTP OK:', state.httpOk);
+});
+
+// Don't forget to cleanup
+unsubscribe();
+```
+
+## Common Patterns
+
+### Query with Retry
+
+```ts
+import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+const user = await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+  retry: 3, // Retry 3 times on failure
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+});
+```
+
+### Dependent Queries
+
+```ts
+// Fetch user first
+const user = await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+});
+
+// Then fetch their posts
+const posts = await queryClient.fetch({
+  queryKey: ['users', userId, 'posts'],
+  queryFn: () => http.get<Post[]>(`/users/${userId}/posts`),
+  enabled: !!user, // Only run if user exists
+});
+```
+
+### Mutation with Invalidation
+
+```ts
+await queryClient.mutate(
+  {
+    mutationFn: (postData) => http.post<Post>('/posts', { body: postData }),
+    onSuccess: () => {
+      // Invalidate posts list to refetch
+      queryClient.invalidate(['posts']);
+      // Also invalidate user's posts
+      queryClient.invalidate(['users', userId, 'posts']);
+    },
+  },
+  postData
+);
 ```
 
 ## Advanced Features
@@ -73,71 +351,120 @@ await api.delete('/users/1');
 Update headers after client creation:
 
 ```ts
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 // Add or update headers
-api.setHeaders({
-  Authorization: 'Bearer token123',
+http.setHeaders({
+  Authorization: 'Bearer new-token',
   'X-Custom-Header': 'value',
 });
 
 // Remove headers (set to undefined)
-api.setHeaders({
+http.setHeaders({
   Authorization: undefined,
 });
+
+// Get current headers
+const headers = http.getHeaders();
+```
+
+### Query Options
+
+All available query options:
+
+```ts
+import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+  
+  // Caching
+  staleTime: 5000,        // Data fresh for 5 seconds
+  gcTime: 60000,          // Keep in cache for 60 seconds
+  
+  // Execution
+  enabled: true,          // Enable/disable query
+  
+  // Retry
+  retry: 3,               // Number of retries (or false)
+  retryDelay: 1000,       // Delay between retries (or function)
+  
+  // Refetching
+  refetchOnFocus: false,  // Refetch when window gains focus
+  refetchOnReconnect: false, // Refetch when going online
+  
+  // Callbacks
+  onSuccess: (data) => {
+    console.log('Success:', data);
+  },
+  onError: (error) => {
+    console.error('Error:', error);
+  },
+});
+```
+
+### Mutation Options
+
+All available mutation options:
+
+```ts
+import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+await queryClient.mutate(
+  {
+    mutationFn: (userData) => http.post<User>('/users', { body: userData }),
+    
+    // Retry
+    retry: false,           // Don't retry mutations by default
+    
+    // Callbacks
+    onSuccess: (data, variables) => {
+      console.log('Created:', data);
+    },
+    onError: (error, variables) => {
+      console.error('Failed:', error);
+    },
+    onSettled: (data, error, variables) => {
+      // Always called (success or error)
+    },
+  },
+  userData
+);
 ```
 
 ### Cache Management
 
-::: warning Cache Size
-Be mindful of cache size in browser environments. Clear cache periodically in long-running applications.
-:::
-
 ```ts
-// Clear all cached requests
-api.clearCache();
+import { createQueryClient } from '@vielzeug/fetchit';
 
-// Invalidate specific cache entry
-api.invalidateCache('user-1');
+const queryClient = createQueryClient();
 
-// Check cache size
-const size = api.getCacheSize();
+// Invalidate specific query
+queryClient.invalidate(['users', 1]);
 
-// Clean up expired entries
-api.clearExpiredCache();
-```
+// Set query data manually (optimistic updates)
+queryClient.setData(['users', 1], { id: 1, name: 'John' });
 
-const removed = api.cleanupCache();
+// Update with function
+queryClient.setData<User[]>(['users'], (old = []) => [...old, newUser]);
 
-### Custom Cache Keys
+// Get cached data
+const cachedUser = queryClient.getData(['users', 1]);
 
-```ts
-// Use custom ID for better cache control
-await api.get('/users/1', { id: 'user-1' });
+// Clear all cache
+queryClient.clearCache();
 
-// Later, invalidate this specific request
-api.invalidateCache('user-1');
-```
-
-### Request Cancellation
-
-```ts
-// Cancel pending requests with the same ID
-await api.get('/users', {
-  id: 'users-list',
-  cancelable: true,
-});
-
-// The second request will cancel the first one
-await api.get('/users', {
-  id: 'users-list',
-  cancelable: true,
-});
-```
-
-### Force Cache Invalidation
-
-```ts
-// Bypass cache for this request
-await api.get('/users', { invalidate: true });
+// Get cache size
+const size = queryClient.getCacheSize();
 ```
 
 ### URL Building
@@ -174,29 +501,37 @@ try {
 Fetchit automatically handles FormData:
 
 ```ts
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 const formData = new FormData();
 formData.append('file', fileInput.files[0]);
 formData.append('description', 'My file');
 
 // Content-Type is set automatically by the browser
-await api.post('/upload', { body: formData });
+await http.post('/upload', { body: formData });
 ```
 
 ### Binary Data
 
 ```ts
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 // Blob
 const blob = new Blob(['content'], { type: 'text/plain' });
-await api.post('/upload', { body: blob });
+await http.post('/upload', { body: blob });
 
 // ArrayBuffer
 const buffer = new ArrayBuffer(8);
-await api.post('/data', { body: buffer });
+await http.post('/data', { body: buffer });
 
 // URLSearchParams
 const params = new URLSearchParams();
 params.append('key', 'value');
-await api.post('/form', { body: params });
+await http.post('/form', { body: params });
 ```
 
 ## Configuration Options

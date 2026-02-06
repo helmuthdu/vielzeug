@@ -1,16 +1,16 @@
 # Fetchit Examples
 
-Practical examples showing common use cases and patterns.
+Practical examples showing common use cases and patterns with the new separate client architecture.
 
-## Basic CRUD Operations
+## Basic CRUD Operations with HTTP Client
 
 ### GET Request
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
 
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
 
 interface User {
@@ -19,48 +19,53 @@ interface User {
   email: string;
 }
 
-const res = await api.get<User>('/users/1');
-console.log(res.data.name);
-console.log(res.ok); // true if 2xx status
-console.log(res.status); // HTTP status code
+// Returns data directly
+const user = await http.get<User>('/users/1');
+console.log(user.name); // Direct access
+console.log(user.email);
 ```
 
 ### POST Request
 
 ```ts
-const res = await api.post<User>('/users', {
+const user = await http.post<User>('/users', {
   body: {
     name: 'Alice',
     email: 'alice@example.com',
   },
 });
 
-console.log('Created user:', res.data);
+console.log('Created user:', user); // Direct access
 ```
 
 ### PUT Request
 
 ```ts
-const res = await api.put<User>('/users/1', {
+const user = await http.put<User>('/users/1', {
   body: {
     name: 'Alice Smith',
     email: 'alice.smith@example.com',
   },
 });
+
+console.log('Updated user:', user);
 ```
 
 ### PATCH Request
 
 ```ts
-const res = await api.patch<User>('/users/1', {
+const user = await http.patch<User>('/users/1', {
   body: { email: 'newemail@example.com' },
 });
+
+console.log('Updated email:', user.email);
 ```
 
 ### DELETE Request
 
 ```ts
-await api.delete('/users/1');
+await http.delete('/users/1');
+// Returns void or deletion confirmation
 ```
 
 ## Authentication
@@ -68,44 +73,44 @@ await api.delete('/users/1');
 ### Setting Auth Headers
 
 ```ts
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
 
 // After login
 function login(token: string) {
-  api.setHeaders({
+  http.setHeaders({
     Authorization: `Bearer ${token}`,
   });
 }
 
 // On logout
 function logout() {
-  api.setHeaders({
+  http.setHeaders({
     Authorization: undefined, // Removes the header
   });
-  api.clearCache(); // Clear cached authenticated data
+  queryClient.clearCache(); // Clear cached authenticated data
 }
 ```
 
 ### Auth Token Refresh
 
 ```ts
-import { HttpError } from '@vielzeug/fetchit';
+import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
 async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: string, options?: any): Promise<T> {
   try {
-    const res = await api[method]<T>(url, options);
-    return res.data;
+    return await http[method]<T>(url, options);
   } catch (error) {
     if (error instanceof HttpError && error.status === 401) {
       // Token expired, refresh it
       const newToken = await refreshAuthToken();
-      api.setHeaders({ Authorization: `Bearer ${newToken}` });
+      http.setHeaders({ Authorization: `Bearer ${newToken}` });
 
       // Retry the request
-      const res = await api[method]<T>(url, options);
-      return res.data;
+      return await http[method]<T>(url, options);
     }
     throw error;
   }
@@ -114,68 +119,67 @@ async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: str
 
 ## Cache Management
 
-### Custom Cache Keys
+### Query Keys
 
 ```ts
-// Use custom ID for better cache control
-await api.get<User>('/users/1', {
-  id: 'user-1',
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+// Use query keys for better cache control
+const user = await queryClient.fetch({
+  queryKey: ['users', '1'],
+  queryFn: () => http.get<User>('/users/1'),
 });
 
-// Later, invalidate this specific request
-api.invalidateCache('user-1');
+// Later, invalidate this specific query
+queryClient.invalidate(['users', '1']);
 ```
 
 ### Request Deduplication
 
 ```ts
-// These will only make ONE network request
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
+// HTTP client automatically deduplicates identical concurrent requests
 const [user1, user2, user3] = await Promise.all([
-  api.get<User>('/users/1'),
-  api.get<User>('/users/1'),
-  api.get<User>('/users/1'),
+  http.get<User>('/users/1'),
+  http.get<User>('/users/1'),
+  http.get<User>('/users/1'),
 ]);
 
-console.log(user1.data === user2.data); // true
-```
-
-### Canceling Pending Requests
-
-```ts
-// The second request will cancel the first one
-await api.get('/users', {
-  id: 'users-list',
-  cancelable: true,
-});
-
-// This cancels the previous request
-await api.get('/users', {
-  id: 'users-list',
-  cancelable: true,
-});
+console.log(user1 === user2); // true (same instance)
 ```
 
 ### Force Refresh
 
 ```ts
-// Bypass cache and make a fresh request
-await api.get('/users/1', {
-  invalidate: true,
+// Invalidate cache first, then fetch fresh data
+queryClient.invalidate(['users', '1']);
+const freshUser = await queryClient.fetch({
+  queryKey: ['users', '1'],
+  queryFn: () => http.get<User>('/users/1'),
 });
 ```
 
 ### Cache Cleanup
 
 ```ts
-// Remove all cached requests
-api.clearCache();
+// Remove all cached queries
+queryClient.clearCache();
 
-// Remove only expired entries
-const removed = api.cleanupCache();
-console.log(`Cleaned up ${removed} expired entries`);
+// Get cache size
+const size = queryClient.getCacheSize();
+console.log(`Cache has ${size} queries`);
+
+// Invalidate specific queries
+queryClient.invalidate(['users', '1']);
+
+// Invalidate all user queries (pattern matching)
+queryClient.invalidate(['users']);
 
 // Check cache size
-const size = api.getCacheSize();
 console.log(`Cache contains ${size} entries`);
 ```
 
@@ -184,30 +188,33 @@ console.log(`Cache contains ${size} entries`);
 ### Query Parameters
 
 ```ts
-import { buildUrl } from '@vielzeug/fetchit';
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
-const url = buildUrl('/api/users', {
-  page: 1,
-  limit: 10,
-  sort: 'name',
-  active: true,
+// Use params option for query parameters
+const users = await http.get<User[]>('/api/users', {
+  params: {
+    page: 1,
+    limit: 10,
+    sort: 'name',
+    active: true,
+  },
 });
-// Result: "/api/users?page=1&limit=10&sort=name&active=true"
-
-// Use in requests
-const res = await api.get<User[]>(url);
+// Actual request: "/api/users?page=1&limit=10&sort=name&active=true"
 ```
 
 ### Dynamic URLs
 
 ```ts
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 function getUser(id: string) {
-  return api.get<User>(`/users/${id}`);
+  return http.get<User>(`/users/${id}`);
 }
 
 function searchUsers(query: string, page: number) {
-  const url = buildUrl('/users/search', { q: query, page });
-  return api.get<User[]>(url);
+  return http.get<User[]>('/users/search', {
+    params: { q: query, page },
+  });
 }
 ```
 
@@ -216,12 +223,14 @@ function searchUsers(query: string, page: number) {
 ### Single File Upload
 
 ```ts
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 const fileInput = document.querySelector<HTMLInputElement>('#file');
 const formData = new FormData();
 formData.append('file', fileInput.files[0]);
 formData.append('description', 'Profile picture');
 
-await api.post('/upload', {
+await http.post('/upload', {
   body: formData,
   // Content-Type is set automatically
 });
@@ -235,7 +244,7 @@ for (const file of files) {
   formData.append('files[]', file);
 }
 
-await api.post('/upload/multiple', {
+await http.post('/upload/multiple', {
   body: formData,
 });
 ```
@@ -258,11 +267,13 @@ xhr.upload.addEventListener('progress', (e) => {
 ### Basic Error Handling
 
 ```ts
-import { HttpError } from '@vielzeug/fetchit';
+import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
 try {
-  const res = await api.get<User>('/users/1');
-  console.log(res.data);
+  const user = await http.get<User>('/users/1');
+  console.log(user);
 } catch (error) {
   if (error instanceof HttpError) {
     console.error(`${error.method} ${error.url} failed`);
@@ -277,21 +288,23 @@ try {
 ### Status Code Handling
 
 ```ts
-import { RequestErrorType } from '@vielzeug/fetchit';
+import { HttpError } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
 try {
-  await api.get('/users/1');
+  await http.get('/users/1');
 } catch (error) {
   if (error instanceof HttpError) {
     switch (error.status) {
-      case RequestErrorType.NOT_FOUND:
+      case 404:
         console.error('User not found');
         break;
-      case RequestErrorType.UNAUTHORIZED:
+      case 401:
         console.error('Not authenticated');
         redirectToLogin();
         break;
-      case RequestErrorType.FORBIDDEN:
+      case 403:
         console.error('No permission');
         break;
       default:
@@ -304,10 +317,13 @@ try {
 ### Global Error Handler
 
 ```ts
-async function safeRequest<T>(requestFn: () => Promise<RequestResponse<T>>): Promise<T | null> {
+import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
+async function safeRequest<T>(requestFn: () => Promise<T>): Promise<T | null> {
   try {
-    const res = await requestFn();
-    return res.data;
+    return await requestFn();
   } catch (error) {
     if (error instanceof HttpError) {
       // Log to error tracking service
@@ -326,7 +342,7 @@ async function safeRequest<T>(requestFn: () => Promise<RequestResponse<T>>): Pro
 }
 
 // Usage
-const user = await safeRequest(() => api.get<User>('/users/1'));
+const user = await safeRequest(() => http.get<User>('/users/1'));
 ```
 
 ## Framework Integration
@@ -334,12 +350,14 @@ const user = await safeRequest(() => api.get<User>('/users/1'));
 ### React Hook
 
 ```tsx
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
+
+const queryClient = createQueryClient();
 
 function useUser(userId: string) {
   const [data, setData] = useState<User | null>(null);
@@ -352,12 +370,13 @@ function useUser(userId: string) {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const res = await api.get<User>(`/users/${userId}`, {
-          id: `user-${userId}`,
+        const user = await queryClient.fetch({
+          queryKey: ['users', userId],
+          queryFn: () => http.get<User>(`/users/${userId}`),
         });
 
         if (!cancelled) {
-          setData(res.data);
+          setData(user);
           setError(null);
         }
       } catch (err) {
@@ -399,8 +418,8 @@ function UserProfile({ userId }: { userId: string }) {
 import { createHttpClient } from '@vielzeug/fetchit';
 import { ref, watchEffect } from 'vue';
 
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
 
 export function useUser(userId: Ref<string>) {
@@ -411,8 +430,8 @@ export function useUser(userId: Ref<string>) {
   watchEffect(async () => {
     try {
       loading.value = true;
-      const res = await api.get<User>(`/users/${userId.value}`);
-      data.value = res.data;
+      const user = await http.get<User>(`/users/${userId.value}`);
+      data.value = user;
       error.value = null;
     } catch (err) {
       error.value = err instanceof Error ? err : new Error('Failed');
@@ -430,15 +449,15 @@ export function useUser(userId: Ref<string>) {
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
 
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
 
 // +page.server.ts
 export async function load({ params }) {
-  const res = await api.get<User>(`/users/${params.id}`);
+  const user = await http.get<User>(`/users/${params.id}`);
   return {
-    user: res.data,
+    user,
   };
 }
 ```
@@ -447,34 +466,54 @@ export async function load({ params }) {
 
 ### Retry Logic
 
-The built-in retry only works for network errors. For custom retry:
+Fetchit uses [@vielzeug/toolkit's retry()](../toolkit/examples/function/retry.md) utility for intelligent retry logic with exponential backoff:
 
 ```ts
-async function fetchWithRetry<T>(fn: () => Promise<RequestResponse<T>>, retries = 3): Promise<T> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const res = await fn();
-      return res.data;
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-    }
-  }
-  throw new Error('Max retries reached');
-}
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
 
-// Usage
-const user = await fetchWithRetry(() => api.get<User>('/users/1'));
+// Query with automatic retry
+const user = await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+  retry: 3, // Retry 3 times with exponential backoff (1s, 2s, 4s)
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+});
+
+// Mutation with retry
+await queryClient.mutate(
+  {
+    mutationFn: (data) => http.post<User>('/users', { body: data }),
+    retry: 2, // Retry POST operations 2 times
+  },
+  { name: 'Alice' }
+);
+
+// Custom fixed retry delay
+const data = await queryClient.fetch({
+  queryKey: ['status'],
+  queryFn: () => http.get('/status'),
+  retry: 5,
+  retryDelay: 2000, // Fixed 2s delay between retries
+});
 ```
 
 ### Polling
 
 ```ts
-function startPolling(url: string, interval: number, onData: (data: any) => void) {
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+function startPolling(interval: number, onData: (data: any) => void) {
   const pollId = setInterval(async () => {
     try {
-      const res = await api.get(url, { invalidate: true });
-      onData(res.data);
+      // Invalidate to force refetch
+      queryClient.invalidate(['status']);
+      const data = await queryClient.fetch({
+        queryKey: ['status'],
+        queryFn: () => http.get('/status'),
+      });
+      onData(data);
     } catch (error) {
       console.error('Polling error:', error);
     }
@@ -494,11 +533,13 @@ const stopPolling = startPolling('/status', 5000, (status) => {
 ### Batch Requests
 
 ```ts
-async function batchFetch<T>(ids: string[]): Promise<T[]> {
-  const requests = ids.map((id) => api.get<T>(`/users/${id}`, { id: `user-${id}` }));
+import { createHttpClient } from '@vielzeug/fetchit';
 
-  const responses = await Promise.all(requests);
-  return responses.map((res) => res.data);
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
+async function batchFetch<T>(ids: string[]): Promise<T[]> {
+  const requests = ids.map((id) => http.get<T>(`/users/${id}`));
+  return await Promise.all(requests);
 }
 
 // Usage

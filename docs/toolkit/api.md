@@ -96,6 +96,7 @@ See [Object Examples](./examples/object.md) for detailed usage.
 
 | Utility                                       | Description                          | Example                          |
 | --------------------------------------------- | ------------------------------------ | -------------------------------- |
+| [`cache`](./examples/object/cache.md)         | Key-value cache with automatic GC    | `cache<T>()`                     |
 | [`clone`](./examples/object/clone.md)         | Deep clone an object                 | `clone({a: {b: 1}})`             |
 | [`merge`](./examples/object/merge.md)         | Merge objects (deep/shallow/etc.)    | `merge('deep', obj1, obj2)`      |
 | [`diff`](./examples/object/diff.md)           | Find differences between objects     | `diff(obj1, obj2)`               |
