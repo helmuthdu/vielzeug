@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/fetchit",
+      "comment": "improved fetchit lib",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/fetchit"
+}
