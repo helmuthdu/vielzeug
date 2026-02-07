@@ -86,17 +86,16 @@ export function cache<T>() {
   }
 
   return {
-    get,
-    set,
-    delete: del,
     clear,
-    size,
-    scheduleGc,
-    setMeta,
+    delete: del,
+    get,
     getMeta,
     getMetaByHash,
-    listMetaHashes,
     hash,
+    listMetaHashes,
+    scheduleGc,
+    set,
+    setMeta,
+    size,
   };
 }
-

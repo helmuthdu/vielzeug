@@ -186,6 +186,7 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
       init.body = body as BodyInit;
     }
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
     const p = (async () => {
       const start = Date.now();
       try {
@@ -464,6 +465,7 @@ export function createQueryClient(opts?: QueryClientOptions) {
     return fetchQuery({ ...opts, enabled: true }).catch(() => {}); // swallow errors
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   function invalidate(key: QueryKey) {
     const keyStr = keyToStr(key);
 
@@ -635,4 +637,3 @@ export function createQueryClient(opts?: QueryClientOptions) {
     unsubscribe,
   };
 }
-

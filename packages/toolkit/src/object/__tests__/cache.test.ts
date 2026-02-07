@@ -122,4 +122,3 @@ describe('cache', () => {
     expect(hash1).toBe(hash2);
   });
 });
-

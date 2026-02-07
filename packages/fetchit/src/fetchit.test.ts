@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHttpClient, createQueryClient, HttpError } from './fetchit';
 

@@ -1,5 +1,6 @@
 export * from './array/aggregate';
 export * from './array/alternate';
+export * from './array/arrange';
 export * from './array/chunk';
 export * from './array/compact';
 export * from './array/contains';
@@ -20,7 +21,6 @@ export * from './array/select';
 export * from './array/shift';
 export * from './array/some';
 export * from './array/sort';
-export * from './array/arrange';
 export * from './array/substitute';
 export * from './array/uniq';
 export * from './date/expires';
