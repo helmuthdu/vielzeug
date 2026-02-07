@@ -13,7 +13,7 @@ describe('parallel', () => {
     it('should maintain order regardless of completion time', async () => {
       const delays = [50, 10, 30, 5, 20];
       const results = await parallel(3, delays, async (delay, index) => {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         return index;
       });
 
@@ -40,7 +40,7 @@ describe('parallel', () => {
         concurrentCount++;
         maxConcurrent = Math.max(maxConcurrent, concurrentCount);
 
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         concurrentCount--;
         return n;
@@ -55,7 +55,7 @@ describe('parallel', () => {
 
       await parallel(1, [1, 2, 3], async (n) => {
         order.push(n);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return n;
       });
 
@@ -90,13 +90,9 @@ describe('parallel', () => {
 
   describe('error handling', () => {
     it('should throw error if limit is less than 1', async () => {
-      await expect(
-        parallel(0, [1, 2, 3], async (n) => n)
-      ).rejects.toThrow('Limit must be at least 1');
+      await expect(parallel(0, [1, 2, 3], async (n) => n)).rejects.toThrow('Limit must be at least 1');
 
-      await expect(
-        parallel(-1, [1, 2, 3], async (n) => n)
-      ).rejects.toThrow('Limit must be at least 1');
+      await expect(parallel(-1, [1, 2, 3], async (n) => n)).rejects.toThrow('Limit must be at least 1');
     });
 
     it('should propagate errors from callback', async () => {
@@ -106,7 +102,7 @@ describe('parallel', () => {
             throw new Error('Test error');
           }
           return n;
-        })
+        }),
       ).rejects.toThrow('Test error');
     });
 
@@ -116,12 +112,12 @@ describe('parallel', () => {
       await expect(
         parallel(2, [1, 2, 3, 4, 5], async (n) => {
           processed.push(n);
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
           if (n === 3) {
             throw new Error('Error at 3');
           }
           return n;
-        })
+        }),
       ).rejects.toThrow('Error at 3');
 
       // Should not process all items after error
@@ -134,9 +130,7 @@ describe('parallel', () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(
-        parallel(2, [1, 2, 3], async (n) => n, controller.signal)
-      ).rejects.toThrow('Aborted');
+      await expect(parallel(2, [1, 2, 3], async (n) => n, controller.signal)).rejects.toThrow('Aborted');
     });
 
     it('should abort processing when signal is triggered', async () => {
@@ -146,11 +140,16 @@ describe('parallel', () => {
       setTimeout(() => controller.abort(), 25);
 
       await expect(
-        parallel(2, [1, 2, 3, 4, 5], async (n) => {
-          processed.push(n);
-          await new Promise(resolve => setTimeout(resolve, 20));
-          return n;
-        }, controller.signal)
+        parallel(
+          2,
+          [1, 2, 3, 4, 5],
+          async (n) => {
+            processed.push(n);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            return n;
+          },
+          controller.signal,
+        ),
       ).rejects.toThrow('Aborted');
 
       // Should not process all items
@@ -160,12 +159,7 @@ describe('parallel', () => {
     it('should complete successfully if not aborted', async () => {
       const controller = new AbortController();
 
-      const results = await parallel(
-        2,
-        [1, 2, 3],
-        async (n) => n * 2,
-        controller.signal
-      );
+      const results = await parallel(2, [1, 2, 3], async (n) => n * 2, controller.signal);
 
       expect(results).toEqual([2, 4, 6]);
     });
@@ -175,19 +169,13 @@ describe('parallel', () => {
     it('should handle async API calls with rate limiting', async () => {
       const urls = ['url1', 'url2', 'url3', 'url4', 'url5'];
       const fetchMock = vi.fn(async (url: string) => {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return `data-${url}`;
       });
 
       const results = await parallel(2, urls, fetchMock);
 
-      expect(results).toEqual([
-        'data-url1',
-        'data-url2',
-        'data-url3',
-        'data-url4',
-        'data-url5',
-      ]);
+      expect(results).toEqual(['data-url1', 'data-url2', 'data-url3', 'data-url4', 'data-url5']);
       expect(fetchMock).toHaveBeenCalledTimes(5);
     });
 
@@ -196,7 +184,7 @@ describe('parallel', () => {
       const startTime = Date.now();
 
       const results = await parallel(10, items, async (n) => {
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
         return n * 2;
       });
 
@@ -216,12 +204,12 @@ describe('parallel', () => {
 
       await expect(
         parallel(2, items, async (n) => {
-          await new Promise(resolve => setTimeout(resolve, 5));
+          await new Promise((resolve) => setTimeout(resolve, 5));
           if (n === 4) {
             throw new Error('Failed at 4');
           }
           return n * 2;
-        })
+        }),
       ).rejects.toThrow('Failed at 4');
     });
   });

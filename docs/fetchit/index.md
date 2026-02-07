@@ -1,100 +1,162 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-9.8_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-9.7_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
 
 <img src="/logo-http.svg" alt="Fetchit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
 
 # Fetchit
 
-**Fetchit** is a modern, type-safe HTTP client for browser and Node.js. It provides a powerful, unified API for making requests with built-in support for caching, cancellation, timeouts, and more.
+**Fetchit** is a modern, type-safe HTTP client with intelligent caching and query management for browser and Node.js. Inspired by TanStack Query but significantly simpler, it provides separate HTTP and Query clients for maximum flexibility.
 
 ## What Problem Does Fetchit Solve?
 
-The native `fetch` API is powerful but requires significant boilerplate for common tasks. Managing base URLs, timeouts, JSON parsing, error handling, and request cancellation becomes repetitive and error-prone.
+Modern applications need more than just HTTP requests - they need intelligent caching, request deduplication, optimistic updates, and retry logic. Fetchit provides all of this out of the box with a clean, type-safe API.
 
-**Without Fetchit**:
+**Traditional Approach**:
 
 ```ts
-// Verbose fetch with manual error handling
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 5000);
+// Manual caching, deduplication, and error handling
+const cache = new Map();
+const pending = new Map();
 
-try {
-  const response = await fetch('https://api.example.com/users/1', {
-    signal: controller.signal,
-    headers: { 'Content-Type': 'application/json' },
-  });
+async function fetchUser(id: number) {
+  // Check cache
+  if (cache.has(id)) return cache.get(id);
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  // Deduplicate requests
+  if (pending.has(id)) return pending.get(id);
+
+  // Make request
+  const promise = fetch(`/users/${id}`).then((r) => r.json());
+  pending.set(id, promise);
+
+  try {
+    const data = await promise;
+    cache.set(id, data);
+    return data;
+  } finally {
+    pending.delete(id);
   }
-
-  const data = await response.json();
-  return data;
-} catch (error) {
-  if (error.name === 'AbortError') {
-    console.error('Request timeout');
-  }
-  throw error;
-} finally {
-  clearTimeout(timeout);
 }
 ```
 
-**With Fetchit**:
+**With Fetchit - Use HTTP client for simple requests**:
 
 ```ts
-// Clean, type-safe, one-liner
-const res = await api.get<User>('/users/1');
-return res.data;
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const user = await http.get('/users/1');
 ```
+
+**Or use Query client for advanced caching**:
+
+```ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+const user = await queryClient.fetch({
+  queryKey: ['users', userId],
+  queryFn: () => http.get(`/users/${userId}`),
+  staleTime: 5000, // Fresh for 5 seconds
+});
+```
+
+## Features
+
+### 🏗️ Flexible Architecture
+
+- **Separate HTTP Client** - Pure HTTP operations without query overhead
+- **Separate Query Client** - Advanced caching and state management when you need it
+- **Works Together or Independently** - Use only what you need
+- **Type-Safe Query Keys** - Use `as const` for autocomplete and type safety
+
+### 🎯 Query Management
+
+- **Structured Query Keys** - Array-based keys like `['users', 1]` for easy invalidation
+- **Smart Caching** - Automatic caching with configurable staleness
+- **Request Deduplication** - Multiple identical requests = single network call
+- **Observable State** - Subscribe to query changes for real-time updates
+- **Optimistic Updates** - Update cache before server confirms
+
+### 🚀 Powerful Mutations
+
+- **Clear Separation** - Queries (read) vs Mutations (write)
+- **Callbacks** - `onSuccess`, `onError`, `onSettled` hooks
+- **Automatic Retry** - Configurable retry logic with exponential backoff
+
+### 💪 HTTP Client Features
+
+- **Clean HTTP Methods** - `get()`, `post()`, `put()`, `patch()`, `delete()`
+- **Auto JSON Handling** - Automatic request/response transformation
+- **Global Headers** - Set authentication headers once
+- **Query Parameters** - Easy parameter handling
+- **Request Deduplication** - Built-in deduplication for GET requests
+
+### ⚡ Advanced Features
+
+- **TypeScript First** - Full type inference and safety
+- **Timeout Handling** - Automatic request timeouts
+- **Cache Management** - Manual invalidation and updates powered by [@vielzeug/toolkit](../toolkit/index.md)
+- **Smart Retry Logic** - Built on toolkit's proven retry utility with exponential backoff
+- **Minimal Dependencies** - Only depends on @vielzeug/toolkit and @vielzeug/logit
+- **Isomorphic** - Works in Browser and Node.js
 
 ### Comparison with Alternatives
 
-| Feature               | Fetchit        | Axios          | Ky        | Native Fetch       |
-| --------------------- | -------------- | -------------- | --------- | ------------------ |
-| TypeScript Support    | ✅ First-class | ✅ Good        | ✅ Good   | ⚠️ Basic           |
-| Request Deduplication | ✅ Built-in    | ❌             | ❌        | ❌                 |
-| Smart Caching         | ✅ Built-in    | ⚠️ Via plugins | ❌        | ❌                 |
-| Auto JSON Parsing     | ✅             | ✅             | ✅        | ⚠️ Manual          |
-| Timeout Support       | ✅ Built-in    | ✅             | ✅        | ⚠️ AbortController |
-| Bundle Size (gzip)    | ~9.8KB         | ~13KB          | ~4KB      | 0KB                |
-| Node.js Support       | ✅             | ✅             | ✅        | ✅ (v18+)          |
-| Dependencies          | 0              | 7+             | 0         | N/A                |
-| Request Retry         | ✅ Built-in    | ⚠️ Via plugins | ⚠️ Manual | ❌                 |
+| Feature               | Fetchit        | TanStack Query | Axios          | Native Fetch       |
+| --------------------- | -------------- | -------------- | -------------- | ------------------ |
+| TypeScript Support    | ✅ First-class | ✅ First-class | ✅ Good        | ⚠️ Basic           |
+| Request Deduplication | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
+| Smart Caching         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
+| Pattern Invalidation  | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
+| Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
+| Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
+| Bundle Size (gzip)    | ~3.2 KB        | ~13 KB         | ~13 KB         | 0 KB               |
+| Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
+| Dependencies          | 2              | 0              | 7+             | 0                  |
+| Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
+| React Hooks           | ❌             | ✅ Yes         | ❌             | ❌                 |
+| Framework Agnostic    | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ Yes             |
 
 ## When to Use Fetchit
 
 **✅ Use Fetchit when you:**
 
+- Need smart caching without the complexity of TanStack Query
+- Want a lightweight alternative to TanStack Query (~3.2 KB vs ~13 KB)
 - Build TypeScript applications requiring full type safety
 - Need automatic request deduplication to prevent redundant calls
-- Want built-in caching without external dependencies
-- Require consistent API across browser and Node.js
-- Need interceptors for auth tokens, logging, etc.
-- Want sensible defaults (timeouts, JSON parsing, error handling)
+- Want built-in caching and retry logic out of the box
+- Prefer a framework-agnostic solution (no React dependency)
+- Need both simple HTTP requests AND query management in one package
 
 **❌ Consider alternatives when you:**
 
-- Need extremely minimal bundle size (use native fetch)
+- Need React hooks integration (use TanStack Query directly)
 - Already heavily invested in Axios ecosystem
+- Need extremely minimal bundle size (use native fetch)
 - Building simple scripts with few HTTP requests
-- Need HTTP/2 server push or advanced streaming
+- Need GraphQL-specific features
 
 ## 🚀 Key Features
 
-- **Unified API**: Consistent interface for GET, POST, PUT, PATCH, and DELETE
-- **Type-safe**: Robust request and response typing with full TypeScript support
-- **Smart Caching**: Built-in caching mechanism with cache management utilities
+- **Separate Clients**: HTTP client and Query client work independently
+- **Type-Safe**: Full TypeScript support with generic types and inference
+- **Smart Caching**: Built-in caching with configurable staleness and GC
 - **Deduplication**: Automatically prevent concurrent identical requests
+- **Pattern Invalidation**: `invalidate(['users'])` matches all user-related queries
 - **Auto Parsing**: Intelligent handling of JSON, text, and binary data
-- **Request Retry**: Automatic retry on network errors
+- **Request Retry**: Automatic retry powered by [@vielzeug/toolkit](../toolkit/index.md)'s retry utility
+- **Observable State**: Subscribe to query changes for real-time updates
+- **Method Aliases**: TanStack Query-compatible naming for familiarity
 - **Rich Error Context**: Custom HttpError class with URL, method, and status
-- **Modern Defaults**: Sensible timeouts, headers, and error handling out of the box
-- **Zero Dependencies**: Lightweight and self-contained
+- **Minimal Dependencies**: Only @vielzeug/toolkit and @vielzeug/logit
 
 ## 🏁 Quick Start
 
@@ -118,12 +180,14 @@ yarn add @vielzeug/fetchit
 
 ### Basic Usage
 
+#### Option 1: HTTP Client Only (Simple)
+
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
 
-// 1. Create a service instance with configuration
-const api = createHttpClient({
-  url: 'https://api.example.com',
+// 1. Create HTTP client
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
@@ -137,12 +201,12 @@ interface User {
   email: string;
 }
 
-// GET request
-const res = await api.get<User>('/users/1');
-console.log(res.data.name); // Type-safe!
+// GET request - returns raw data
+const user = await http.get<User>('/users/1');
+console.log(user.name); // Type-safe!
 
 // POST request with body
-const created = await api.post<User>('/users', {
+const created = await http.post<User>('/users', {
   body: {
     name: 'Alice',
     email: 'alice@example.com',
@@ -150,41 +214,120 @@ const created = await api.post<User>('/users', {
 });
 
 // PUT request
-const updated = await api.put<User>('/users/1', {
+const updated = await http.put<User>('/users/1', {
   body: { name: 'Alice Smith' },
 });
 
 // DELETE request
-await api.delete('/users/1');
+await http.delete('/users/1');
+```
+
+#### Option 2: Query Client for Advanced Caching
+
+```ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+
+// 1. Create clients
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient({
+  cache: {
+    staleTime: 5000,
+    gcTime: 300000,
+  },
+});
+
+// 2. Define type-safe query keys manually
+const queryKeys = {
+  users: {
+    all: () => ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+    list: (filters: { role?: string }) => ['users', 'list', filters] as const,
+  },
+} as const;
+
+// 3. Fetch with caching
+const user = await queryClient.fetch({
+  queryKey: queryKeys.users.detail('1'),
+  queryFn: () => http.get<User>('/users/1'),
+  staleTime: 5000,
+});
+
+// 4. Mutations
+await queryClient.mutate(
+  {
+    mutationFn: (newUser: Partial<User>) => http.post('/users', { body: newUser }),
+    onSuccess: (data) => {
+      // Invalidate and refetch
+      queryClient.invalidate(queryKeys.users.all());
+    },
+  },
+  { name: 'Alice', email: 'alice@example.com' },
+);
+```
+
+#### Option 3: Use Any Fetch Function with Query Client
+
+```ts
+import { createQueryClient } from '@vielzeug/fetchit';
+
+const queryClient = createQueryClient();
+
+// Use with native fetch
+const data = await queryClient.fetch({
+  queryKey: ['todos', '1'],
+  queryFn: () => fetch('https://api.example.com/todos/1').then((r) => r.json()),
+});
+
+// Use with axios
+import axios from 'axios';
+
+const user = await queryClient.fetch({
+  queryKey: ['users', '1'],
+  queryFn: () => axios.get('/users/1').then((r) => r.data),
+});
 ```
 
 ### Real-World Example: API Client with Auth
 
 ```ts
-import { createHttpClient, HttpError } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
 
-// Create authenticated API client
-const api = createHttpClient({
-  url: 'https://api.example.com',
+// Create HTTP client
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// Create query client for caching
+const queryClient = createQueryClient({
+  cache: { staleTime: 5000, gcTime: 300000 },
+});
+
+// Define type-safe query keys manually
+export const queryKeys = {
+  users: {
+    all: () => ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+  },
+  profile: () => ['profile'] as const,
+} as const;
+
 // Update auth token dynamically
 export function setAuthToken(token: string) {
-  api.setHeaders({
+  http.setHeaders({
     Authorization: `Bearer ${token}`,
   });
 }
 
 // Remove auth token (e.g., on logout)
 export function clearAuth() {
-  api.setHeaders({
+  http.setHeaders({
     Authorization: undefined, // Removes the header
   });
-  api.clearCache(); // Clear cached authenticated requests
+  queryClient.clearCache(); // Clear cached authenticated requests
 }
 
 // Wrapper with error handling
@@ -194,8 +337,7 @@ async function apiRequest<T>(
   options?: { body?: unknown },
 ): Promise<T> {
   try {
-    const res = await api[method]<T>(url, options);
-    return res.data;
+    return await http[method]<T>(url, options);
   } catch (error) {
     if (error instanceof HttpError) {
       if (error.status === 401) {
@@ -208,68 +350,76 @@ async function apiRequest<T>(
   }
 }
 
-// Use throughout your app
-export const fetchUser = (id: string) => apiRequest<User>('get', `/users/${id}`);
+// Use throughout your app with query caching
+export const fetchUser = (id: string) =>
+  queryClient.fetch({
+    queryKey: queryKeys.users.detail(id),
+    queryFn: () => apiRequest<User>('get', `/users/${id}`),
+  });
 
-export const updateProfile = (data: Partial<User>) => apiRequest<User>('put', '/profile', { body: data });
+export const updateProfile = (data: Partial<User>) =>
+  queryClient.mutate(
+    {
+      mutationFn: (vars: Partial<User>) => apiRequest<User>('put', '/profile', { body: vars }),
+      onSuccess: () => queryClient.invalidate(queryKeys.profile()),
+    },
+    data,
+  );
 ```
 
 ### Framework Integration: React
 
 ```tsx
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const api = createHttpClient({
-  url: 'https://api.example.com',
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
 });
 
+const queryClient = createQueryClient();
+
 function UserProfile({ userId }: { userId: string }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [state, setState] = useState({
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  });
 
   useEffect(() => {
-    let cancelled = false;
+    // Subscribe to query state changes
+    const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
+      setState({
+        data: newState.data,
+        isLoading: newState.isLoading,
+        error: newState.error,
+      });
+    });
 
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get<User>(`/users/${userId}`, {
-          // Use request ID for better caching
-          id: `user-${userId}`,
-        });
-
-        if (!cancelled) {
-          setUser(res.data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch user'));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchUser();
+    // Fetch data
+    queryClient
+      .fetch({
+        queryKey: ['users', userId],
+        queryFn: () => http.get<User>(`/users/${userId}`),
+        staleTime: 5000,
+      })
+      .catch(() => {
+        // Error handled by subscription
+      });
 
     return () => {
-      cancelled = true;
+      unsubscribe();
     };
   }, [userId]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!user) return <div>User not found</div>;
+  if (state.isLoading) return <div>Loading...</div>;
+  if (state.error) return <div>Error: {state.error.message}</div>;
+  if (!state.data) return <div>User not found</div>;
 
   return (
     <div>
-      <h1>{user.name}</h1>
-      <p>{user.email}</p>
+      <h1>{state.data.name}</h1>
+      <p>{state.data.email}</p>
     </div>
   );
 }
@@ -283,9 +433,28 @@ function UserProfile({ userId }: { userId: string }) {
 
 ## ❓ FAQ
 
+### How is Fetchit different from TanStack Query?
+
+Fetchit is inspired by TanStack Query but significantly simpler and lighter:
+
+- **Smaller bundle**: ~3.2 KB vs ~13 KB (gzipped)
+- **No React dependency**: Works with any framework (Vue, Svelte, vanilla JS)
+- **Simpler API**: Fewer concepts, easier to learn
+- **Built-in HTTP client**: No need for separate fetch library
+- **No hooks**: Use with any framework or vanilla JS
+- **Pattern invalidation**: Built-in prefix matching for cache invalidation
+
+Use TanStack Query if you need React hooks integration. Use Fetchit for a simpler, framework-agnostic solution.
+
 ### How is Fetchit different from Axios?
 
-Fetchit is TypeScript-first with zero dependencies and built-in request deduplication and caching. Axios has a larger ecosystem but bigger bundle size and dependencies.
+Fetchit is TypeScript-first with modern caching built-in:
+
+- **TypeScript**: First-class TypeScript support with full type inference
+- **Smart caching**: Built-in query caching and deduplication
+- **Smaller bundle**: ~3.2 KB vs ~13 KB (gzipped)
+- **Modern**: Uses native fetch API under the hood
+- **Pattern invalidation**: Powerful cache management
 
 ### Does Fetchit work in Node.js?
 
@@ -304,7 +473,7 @@ const formData = new FormData();
 formData.append('file', file);
 
 // Content-Type is set automatically by the browser
-await api.post('/upload', { body: formData });
+await http.post('/upload', { body: formData });
 ```
 
 ### Is request deduplication automatic?
@@ -313,32 +482,55 @@ Yes! Concurrent identical requests are automatically deduplicated to prevent red
 
 ### How do I manage the cache?
 
-Use the built-in cache management methods:
+Use the Query Client's built-in cache management methods powered by [@vielzeug/toolkit's cache()](../toolkit/examples/function/cache.md):
 
 ```ts
-// Clear all cached requests
-api.clearCache();
+import { createQueryClient } from '@vielzeug/fetchit';
 
-// Invalidate a specific cache entry
-api.invalidateCache('user-123');
+const queryClient = createQueryClient();
+
+// Invalidate specific query (removes from cache and aborts in-flight requests)
+queryClient.invalidate(['users', userId]);
+
+// Manually set cache data
+queryClient.setData(['users', 1], { id: 1, name: 'Alice' });
+
+// Get cached data
+const user = queryClient.getData(['users', 1]);
+
+// Get query state
+const state = queryClient.getState(['users', 1]);
+console.log(state.status, state.data, state.error);
+
+// Clear all cache
+queryClient.clearCache();
 
 // Get cache size
-const size = api.getCacheSize();
+const size = queryClient.getCacheSize();
 
-// Clean up expired entries
-const removed = api.cleanupCache();
+// Subscribe to cache changes
+const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
+  console.log('User data changed:', state.data);
+});
 ```
 
 ### How do I handle authentication tokens?
 
-Use `setHeaders` to update auth headers dynamically:
+Use the HTTP client's `setHeaders` to update auth headers dynamically:
 
 ```ts
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
 // Set token
-api.setHeaders({ Authorization: `Bearer ${token}` });
+http.setHeaders({ Authorization: `Bearer ${token}` });
 
 // Remove token (set to undefined)
-api.setHeaders({ Authorization: undefined });
+http.setHeaders({ Authorization: undefined });
+
+// Get current headers
+const headers = http.getHeaders();
 ```
 
 ## 🐛 Troubleshooting
@@ -364,24 +556,6 @@ app.use(
 
 :::
 
-### Timeout errors
-
-::: danger Problem
-Requests timeout unexpectedly.
-:::
-
-::: tip Solution
-Adjust timeout globally or per-request:
-
-```ts
-// Global timeout
-const api = createHttpClient({ timeout: 30000 });
-
-// The default timeout is 5000ms (5 seconds)
-```
-
-:::
-
 ### TypeScript type inference not working
 
 ::: danger Problem
@@ -392,12 +566,12 @@ Response data type not inferred.
 Explicitly specify response type:
 
 ```ts
-// ✅ Correct
-const res = await api.get<User>('/users/1');
-const user: User = res.data;
+// ✅ Correct - returns data directly
+const user = await http.get<User>('/users/1');
+console.log(user.name); // Type-safe
 
 // ❌ Type is 'unknown'
-const res = await api.get('/users/1');
+const user = await http.get('/users/1');
 ```
 
 :::
@@ -412,7 +586,7 @@ const res = await api.get('/users/1');
 import { HttpError } from '@vielzeug/fetchit';
 
 try {
-  await api.get('/users');
+  await http.get('/users');
 } catch (error) {
   if (error instanceof HttpError) {
     console.error(`${error.method} ${error.url} failed:`, error.message);
@@ -424,17 +598,24 @@ try {
 
 **Problem**: Getting stale data or cache not invalidating.
 
-**Solution**: Use cache management methods:
+**Solution**: Use Query Client cache management methods:
 
 ```ts
-// Invalidate specific request
-await api.get('/users/1', { invalidate: true });
+import { createQueryClient } from '@vielzeug/fetchit';
+
+const queryClient = createQueryClient();
+
+// Invalidate specific query to force refetch
+queryClient.invalidate(['users', userId]);
+
+// Invalidate all user queries
+queryClient.invalidate(['users']);
 
 // Clear all cache
-api.clearCache();
+queryClient.clearCache();
 
-// Manually invalidate by ID
-api.invalidateCache('user-1');
+// Manually update cache
+queryClient.setData(['users', userId], updatedData);
 ```
 
 ## 🤝 Contributing
