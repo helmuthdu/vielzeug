@@ -1,0 +1,1036 @@
+# i18nit Usage Guide
+
+Complete guide to installing and using i18nit in your projects.
+
+## Installation
+
+::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/i18nit
+```
+
+```sh [npm]
+npm install @vielzeug/i18nit
+```
+
+```sh [yarn]
+yarn add @vielzeug/i18nit
+```
+
+:::
+
+## Import
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+// Optional: Import types
+import type { I18n, I18nConfig, Messages, TranslateParams } from '@vielzeug/i18nit';
+```
+
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+- [Basic Usage](#basic-usage)
+- [Pluralization](#pluralization)
+- [Variable Interpolation](#variable-interpolation)
+- [Async Loading](#async-loading)
+- [Framework Integration](#framework-integration)
+- [Advanced Patterns](#advanced-patterns)
+- [Best Practices](#best-practices)
+
+## Basic Usage
+
+### Creating an i18n Instance
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      greeting: 'Hello!',
+      farewell: 'Goodbye!',
+    },
+    es: {
+      greeting: '¡Hola!',
+      farewell: '¡Adiós!',
+    },
+  },
+});
+```
+
+### Basic Translation
+
+```ts
+// Simple translation
+i18n.t('greeting'); // "Hello!"
+
+// Change locale
+i18n.setLocale('es');
+i18n.t('greeting'); // "¡Hola!"
+
+// Get current locale
+const currentLocale = i18n.getLocale(); // "es"
+```
+
+### Using Specific Locale
+
+```ts
+// Override locale for single translation
+i18n.t('greeting', undefined, { locale: 'es' }); // "¡Hola!"
+
+// Current locale unchanged
+i18n.getLocale(); // Still "en"
+```
+
+### Fallback Translations
+
+```ts
+const i18n = createI18n({
+  locale: 'en-US',
+  fallback: 'en', // or ['en', 'es'] for multiple fallbacks
+  messages: {
+    en: {
+      greeting: 'Hello!',
+      settings: 'Settings',
+    },
+    'en-US': {
+      greeting: 'Howdy!',
+    },
+  },
+});
+
+// Found in en-US
+i18n.t('greeting'); // "Howdy!"
+
+// Falls back to en
+i18n.t('settings'); // "Settings"
+
+// Fallback chain: en-US → en → (base language)
+```
+
+### Nested Keys
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      user: {
+        profile: {
+          name: 'Name',
+          email: 'Email Address',
+        },
+        settings: {
+          privacy: 'Privacy',
+          security: 'Security',
+        },
+      },
+    },
+  },
+});
+
+// Access with dot notation
+i18n.t('user.profile.name'); // "Name"
+i18n.t('user.settings.privacy'); // "Privacy"
+```
+
+### Literal Keys with Dots
+
+```ts
+// Keys can contain dots as literals
+const i18n = createI18n({
+  messages: {
+    en: {
+      'errors.404': 'Page not found',
+      'errors.500': 'Server error',
+    },
+  },
+});
+
+i18n.t('errors.404'); // "Page not found"
+```
+
+---
+
+## Pluralization
+
+### Basic Plural Forms
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      items: {
+        one: 'One item',
+        other: '{count} items',
+      },
+    },
+  },
+});
+
+i18n.t('items', { count: 1 }); // "One item"
+i18n.t('items', { count: 5 }); // "5 items"
+i18n.t('items', { count: 0 }); // "0 items"
+```
+
+### Zero Form
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      notifications: {
+        zero: 'No notifications',
+        one: 'One notification',
+        other: '{count} notifications',
+      },
+    },
+  },
+});
+
+i18n.t('notifications', { count: 0 }); // "No notifications"
+i18n.t('notifications', { count: 1 }); // "One notification"
+i18n.t('notifications', { count: 10 }); // "10 notifications"
+```
+
+### Complex Plural Rules
+
+Different languages have different plural rules:
+
+#### French (0-1 is "one", rest is "other")
+
+```ts
+const i18n = createI18n({
+  locale: 'fr',
+  messages: {
+    fr: {
+      items: {
+        one: 'Un article', // Used for 0 and 1
+        other: '{count} articles',
+      },
+    },
+  },
+});
+
+i18n.t('items', { count: 0 }); // "Un article"
+i18n.t('items', { count: 1 }); // "Un article"
+i18n.t('items', { count: 2 }); // "2 articles"
+```
+
+#### Russian (one/few/many/other)
+
+```ts
+const i18n = createI18n({
+  locale: 'ru',
+  messages: {
+    ru: {
+      items: {
+        one: '{count} предмет', // 1, 21, 31, ...
+        few: '{count} предмета', // 2-4, 22-24, ...
+        many: '{count} предметов', // 0, 5-20, 25-30, ...
+        other: '{count} предметов',
+      },
+    },
+  },
+});
+
+i18n.t('items', { count: 1 }); // "1 предмет"
+i18n.t('items', { count: 2 }); // "2 предмета"
+i18n.t('items', { count: 5 }); // "5 предметов"
+i18n.t('items', { count: 21 }); // "21 предмет"
+```
+
+#### Arabic (zero/one/two/few/many/other)
+
+```ts
+const i18n = createI18n({
+  locale: 'ar',
+  messages: {
+    ar: {
+      items: {
+        zero: 'لا عناصر',
+        one: 'عنصر واحد',
+        two: 'عنصران',
+        few: 'عدة عناصر', // 3-10
+        many: 'عناصر كثيرة', // 11-99
+        other: 'عناصر',
+      },
+    },
+  },
+});
+
+i18n.t('items', { count: 0 }); // "لا عناصر"
+i18n.t('items', { count: 1 }); // "عنصر واحد"
+i18n.t('items', { count: 2 }); // "عنصران"
+i18n.t('items', { count: 5 }); // "عدة عناصر"
+i18n.t('items', { count: 15 }); // "عناصر كثيرة"
+i18n.t('items', { count: 100 }); // "لا عناصر"
+```
+
+---
+
+## Variable Interpolation
+
+### Simple Variables
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      greeting: 'Hello, {name}!',
+      welcome: 'Welcome, {firstName} {lastName}!',
+    },
+  },
+});
+
+i18n.t('greeting', { name: 'Alice' });
+// "Hello, Alice!"
+
+i18n.t('welcome', { firstName: 'John', lastName: 'Doe' });
+// "Welcome, John Doe!"
+```
+
+### Nested Object Variables
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      userInfo: 'User: {user.name} ({user.email})',
+      address: 'Address: {user.address.street}, {user.address.city}',
+    },
+  },
+});
+
+i18n.t('userInfo', {
+  user: {
+    name: 'Alice',
+    email: 'alice@example.com',
+  },
+});
+// "User: Alice (alice@example.com)"
+
+i18n.t('address', {
+  user: {
+    address: {
+      street: '123 Main St',
+      city: 'Boston',
+    },
+  },
+});
+// "Address: 123 Main St, Boston"
+```
+
+### Array Variables
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      firstItem: 'First: {items[0]}',
+      shopping: 'Shopping list: {items[0]}, {items[1]}, {items[2]}',
+    },
+  },
+});
+
+i18n.t('firstItem', { items: ['Apple', 'Banana', 'Orange'] });
+// "First: Apple"
+
+i18n.t('shopping', { items: ['Milk', 'Bread', 'Eggs'] });
+// "Shopping list: Milk, Bread, Eggs"
+```
+
+### Different Value Types
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      status: 'Active: {isActive}',
+      count: 'Count: {count}',
+      updated: 'Updated: {date}',
+    },
+  },
+});
+
+// Boolean
+i18n.t('status', { isActive: true });
+// "Active: true"
+
+// Number
+i18n.t('count', { count: 42 });
+// "Count: 42"
+
+// Date
+i18n.t('updated', { date: new Date('2024-01-15') });
+// "Updated: Mon Jan 15 2024..."
+```
+
+### Number Formatting in Interpolation
+
+```ts
+const i18n = createI18n({
+  locale: 'en-US',
+  messages: {
+    en: {
+      price: 'Price: {amount}',
+    },
+  },
+});
+
+// Numbers are automatically formatted based on locale
+i18n.t('price', { amount: 1234.56 });
+// "Price: 1,234.56" (en-US formatting)
+
+i18n.setLocale('de');
+i18n.t('price', { amount: 1234.56 });
+// "Price: 1.234,56" (German formatting)
+```
+
+### Missing Variable Handling
+
+```ts
+// Default: empty string
+const i18n = createI18n({
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+});
+i18n.t('greeting'); // "Hello, !"
+
+// Preserve placeholders
+const i18n2 = createI18n({
+  missingVar: 'preserve',
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+});
+i18n2.t('greeting'); // "Hello, {name}!"
+
+// Throw error
+const i18n3 = createI18n({
+  missingVar: 'error',
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+});
+i18n3.t('greeting'); // throws Error: Missing variable: name
+```
+
+---
+
+## Async Loading
+
+### Registering Loaders
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    es: async () => {
+      const response = await fetch('/locales/es.json');
+      return response.json();
+    },
+    fr: async () => {
+      const response = await fetch('/locales/fr.json');
+      return response.json();
+    },
+  },
+});
+```
+
+### Loading Translations
+
+```ts
+// Load explicitly
+await i18n.load('es');
+i18n.t('greeting', undefined, { locale: 'es' });
+
+// Or use tl() for automatic loading
+await i18n.tl('greeting', undefined, { locale: 'es' });
+```
+
+### Dynamic Loader Registration
+
+```ts
+// Register loader after creation
+i18n.register('de', async () => {
+  const response = await fetch('/locales/de.json');
+  return response.json();
+});
+
+await i18n.load('de');
+```
+
+### Loading with Error Handling
+
+```ts
+try {
+  await i18n.load('es');
+  console.log('Spanish translations loaded');
+} catch (error) {
+  console.error('Failed to load translations:', error);
+  // i18n will use fallback or missingKey handler
+}
+```
+
+### Checking if Locale is Loaded
+
+```ts
+// Sync check
+if (i18n.hasLocale('es')) {
+  console.log('Spanish is loaded');
+}
+
+// Async check (loads if needed)
+if (await i18n.hasAsync('greeting', 'es')) {
+  console.log('Spanish greeting exists');
+}
+```
+
+### Preloading Translations
+
+```ts
+// Preload multiple locales
+await Promise.all([i18n.load('es'), i18n.load('fr'), i18n.load('de')]);
+
+console.log('All translations loaded');
+```
+
+---
+
+## Message Functions
+
+### Basic Functions
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      dynamic: (vars) => {
+        const name = vars.name as string;
+        const time = new Date().getHours();
+        if (time < 12) return `Good morning, ${name}!`;
+        if (time < 18) return `Good afternoon, ${name}!`;
+        return `Good evening, ${name}!`;
+      },
+    },
+  },
+});
+
+i18n.t('dynamic', { name: 'Alice' });
+// "Good morning, Alice!" (depending on time)
+```
+
+### Using Helper Functions
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      price: (vars, helpers) => {
+        const amount = vars.amount as number;
+        return `Total: ${helpers.number(amount, { style: 'currency', currency: 'USD' })}`;
+      },
+      timestamp: (vars, helpers) => {
+        const date = vars.date as Date;
+        return `Posted ${helpers.date(date, { dateStyle: 'medium', timeStyle: 'short' })}`;
+      },
+    },
+  },
+});
+
+i18n.t('price', { amount: 99.99 });
+// "Total: $99.99"
+
+i18n.t('timestamp', { date: new Date() });
+// "Posted Feb 9, 2026, 2:30 PM"
+```
+
+### Complex Logic
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      scoreMessage: (vars, helpers) => {
+        const score = vars.score as number;
+        const maxScore = vars.maxScore as number;
+        const percentage = (score / maxScore) * 100;
+        const formattedScore = helpers.number(score);
+        const formattedMax = helpers.number(maxScore);
+
+        if (percentage >= 90) {
+          return `Excellent! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
+        }
+        if (percentage >= 70) {
+          return `Good job! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
+        }
+        return `Keep trying! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
+      },
+    },
+  },
+});
+
+i18n.t('scoreMessage', { score: 95, maxScore: 100 });
+// "Excellent! 95/100 (95.0%)"
+```
+
+---
+
+## Namespaces
+
+### Creating Namespaces
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      errors: {
+        required: 'This field is required',
+        invalid: 'Invalid value',
+      },
+      validation: {
+        email: 'Please enter a valid email',
+        password: 'Password must be at least 8 characters',
+      },
+    },
+  },
+});
+
+// Create namespaced translators
+const errors = i18n.namespace('errors');
+const validation = i18n.namespace('validation');
+```
+
+### Using Namespaces
+
+```ts
+// Instead of:
+i18n.t('errors.required');
+i18n.t('validation.email');
+
+// Use:
+errors.t('required'); // "This field is required"
+validation.t('email'); // "Please enter a valid email"
+```
+
+### Namespaces with Variables
+
+```ts
+const user = i18n.namespace('user');
+
+user.t('greeting', { name: 'Alice' });
+// Same as: i18n.t('user.greeting', { name: 'Alice' })
+```
+
+### Namespaces with Options
+
+```ts
+const common = i18n.namespace('common');
+
+common.t('save', undefined, { locale: 'es' });
+// Same as: i18n.t('common.save', undefined, { locale: 'es' })
+```
+
+### Async Namespaces
+
+```ts
+const auth = i18n.namespace('auth');
+
+await auth.tl('loginError', undefined, { locale: 'fr' });
+// Same as: await i18n.tl('auth.loginError', undefined, { locale: 'fr' })
+```
+
+---
+
+## Formatting Helpers
+
+### Number Formatting
+
+```ts
+// Basic number
+i18n.number(1234.56); // "1,234.56" (en-US)
+
+// Currency
+i18n.number(99.99, { style: 'currency', currency: 'USD' });
+// "$99.99"
+
+// Percentage
+i18n.number(0.856, { style: 'percent' });
+// "85.6%"
+
+// With specific locale
+i18n.number(1234.56, undefined, 'de');
+// "1.234,56" (German formatting)
+
+// Currency with locale
+i18n.number(99.99, { style: 'currency', currency: 'EUR' }, 'de');
+// "99,99 €"
+```
+
+### Date Formatting
+
+```ts
+const date = new Date('2024-01-15');
+
+// Basic date
+i18n.date(date); // "1/15/2024" (en-US)
+
+// Long format
+i18n.date(date, { dateStyle: 'long' });
+// "January 15, 2024"
+
+// Full format with time
+i18n.date(date, { dateStyle: 'full', timeStyle: 'short' });
+// "Monday, January 15, 2024 at 12:00 AM"
+
+// With specific locale
+i18n.date(date, { dateStyle: 'long' }, 'fr');
+// "15 janvier 2024"
+
+// Using timestamp
+i18n.date(Date.now(), { dateStyle: 'medium' });
+// "Feb 9, 2026"
+```
+
+---
+
+## HTML Escaping
+
+### Global Escaping
+
+```ts
+const i18n = createI18n({
+  escape: true, // Enable globally
+  messages: {
+    en: {
+      userContent: 'Posted by: {username}',
+    },
+  },
+});
+
+i18n.t('userContent', { username: '<script>alert("xss")</script>' });
+// "Posted by: &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+```
+
+### Per-Translation Escaping
+
+```ts
+const i18n = createI18n({
+  escape: false, // Disabled by default
+  messages: {
+    en: {
+      safe: 'This is safe: {content}',
+      html: 'This has HTML: {content}',
+    },
+  },
+});
+
+// Enable for specific translation
+i18n.t('safe', { content: '<script>xss</script>' }, { escape: true });
+// "This is safe: &lt;script&gt;xss&lt;/script&gt;"
+
+// Disable for specific translation (if globally enabled)
+i18n.t('html', { content: '<b>bold</b>' }, { escape: false });
+// "This has HTML: <b>bold</b>"
+```
+
+---
+
+## Message Management
+
+### Adding Messages
+
+```ts
+// Add messages to existing locale
+i18n.add('en', {
+  newKey: 'New translation',
+  another: 'Another one',
+});
+
+// Merges with existing messages
+```
+
+### Replacing Messages
+
+```ts
+// Replace all messages for a locale
+i18n.set('en', {
+  greeting: 'Hello!',
+  // All previous messages for 'en' are removed
+});
+```
+
+### Getting Messages
+
+```ts
+// Get all messages for a locale
+const messages = i18n.getMessages('en');
+console.log(messages);
+// { greeting: 'Hello!', farewell: 'Goodbye!' }
+```
+
+### Checking Messages
+
+```ts
+// Check if key exists
+if (i18n.has('greeting')) {
+  console.log('Greeting translation exists');
+}
+
+// Check in specific locale
+if (i18n.has('greeting', 'es')) {
+  console.log('Spanish greeting exists');
+}
+```
+
+---
+
+## Subscriptions
+
+### Basic Subscription
+
+```ts
+const unsubscribe = i18n.subscribe((locale) => {
+  console.log('Locale changed to:', locale);
+  // Update UI, re-render components, etc.
+});
+
+// Later...
+unsubscribe();
+```
+
+### React Integration
+
+```tsx
+function useI18n() {
+  const [, forceUpdate] = useState({});
+
+  useEffect(() => {
+    return i18n.subscribe(() => {
+      forceUpdate({});
+    });
+  }, []);
+
+  return {
+    t: i18n.t.bind(i18n),
+    setLocale: i18n.setLocale.bind(i18n),
+    locale: i18n.getLocale(),
+  };
+}
+```
+
+### Vue Integration
+
+```vue
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const locale = ref(i18n.getLocale());
+let unsubscribe;
+
+onMounted(() => {
+  unsubscribe = i18n.subscribe((newLocale) => {
+    locale.value = newLocale;
+  });
+});
+
+onUnmounted(() => {
+  unsubscribe?.();
+});
+</script>
+```
+
+---
+
+## Best Practices
+
+### 1. Organize Translations by Feature
+
+```ts
+const messages = {
+  en: {
+    auth: {
+      login: 'Log in',
+      logout: 'Log out',
+      register: 'Register',
+    },
+    user: {
+      profile: 'Profile',
+      settings: 'Settings',
+    },
+    errors: {
+      required: 'Required field',
+      invalid: 'Invalid value',
+    },
+  },
+};
+```
+
+### 2. Use Constants for Keys
+
+```ts
+// keys.ts
+export const KEYS = {
+  AUTH: {
+    LOGIN: 'auth.login',
+    LOGOUT: 'auth.logout',
+  },
+  ERRORS: {
+    REQUIRED: 'errors.required',
+  },
+} as const;
+
+// usage
+i18n.t(KEYS.AUTH.LOGIN);
+i18n.t(KEYS.ERRORS.REQUIRED);
+```
+
+### 3. Lazy Load Translations
+
+```ts
+// Only load translations when needed
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    es: () => import('./locales/es.json'),
+    fr: () => import('./locales/fr.json'),
+    de: () => import('./locales/de.json'),
+  },
+});
+```
+
+### 4. Extract Common Strings
+
+```ts
+const common = {
+  actions: {
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+  },
+  states: {
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+  },
+};
+```
+
+### 5. Validate Translations
+
+```ts
+// Ensure all locales have same keys
+const validateTranslations = (messages: Record<string, Messages>) => {
+  const keys = Object.keys(messages);
+  const baseKeys = new Set(Object.keys(messages[keys[0]]));
+
+  for (const locale of keys.slice(1)) {
+    const localeKeys = new Set(Object.keys(messages[locale]));
+    const missing = [...baseKeys].filter((k) => !localeKeys.has(k));
+    if (missing.length > 0) {
+      console.warn(`Missing keys in ${locale}:`, missing);
+    }
+  }
+};
+```
+
+### 6. Use Type Safety
+
+```ts
+// Define message keys as types
+type MessageKeys = 'greeting' | 'farewell' | 'welcome';
+
+const i18n = createI18n<Record<MessageKeys, string>>({
+  messages: {
+    en: {
+      greeting: 'Hello',
+      farewell: 'Goodbye',
+      welcome: 'Welcome',
+    },
+  },
+});
+
+// TypeScript will ensure keys are valid
+i18n.t('greeting'); // ✅
+i18n.t('invalid'); // ❌ Type error
+```
+
+### 7. Handle Missing Translations Gracefully
+
+```ts
+const i18n = createI18n({
+  missingKey: (key, locale) => {
+    // Log to monitoring service
+    console.warn(`Missing translation: ${key} (${locale})`);
+
+    // Return user-friendly fallback
+    return key.split('.').pop() || key;
+  },
+});
+```
+
+### 8. Optimize for Performance
+
+```ts
+// Avoid creating new instances
+// ❌ Don't do this
+function Component() {
+  const i18n = createI18n({ ... }); // New instance each render!
+}
+
+// ✅ Do this
+const i18n = createI18n({ ... }); // Single instance
+
+function Component() {
+  const { t } = useI18n(); // Reuse instance
+}
+```
+
+---
+
+## Migration Guide
+
+### From i18next
+
+```ts
+// i18next
+import i18next from 'i18next';
+i18next.t('greeting', { name: 'Alice' });
+
+// i18nit
+import { createI18n } from '@vielzeug/i18nit';
+const i18n = createI18n({ ... });
+i18n.t('greeting', { name: 'Alice' });
+```
+
+### From react-intl
+
+```tsx
+// react-intl
+import { FormattedMessage } from 'react-intl';
+<FormattedMessage id="greeting" values={{ name: 'Alice' }} />
+
+// i18nit
+const i18n = createI18n({ ... });
+{i18n.t('greeting', { name: 'Alice' })}
+```
+
+### Key Differences
+
+- **No Context**: i18nit doesn't have context feature (use different keys instead)
+- **No ICU**: i18nit doesn't support ICU message format (use functions instead)
+- **Simpler API**: Less configuration, more straightforward
+- **Smaller Bundle**: Much lighter weight
+
+---
+
+For complete application examples, see [Examples](./examples.md). For detailed API reference, see [API Reference](./api.md).
+

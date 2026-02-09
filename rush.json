@@ -31,6 +31,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/i18nit",
+      "projectFolder": "packages/i18nit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/logit",
       "projectFolder": "packages/logit",
       "shouldPublish": true,
