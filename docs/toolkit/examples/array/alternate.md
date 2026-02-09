@@ -24,11 +24,11 @@ The `alternate` utility toggles an item's presence in an array. If the item exis
 
 ```ts
 function alternate<T>(
-  array: T[], 
-  item: T, 
-  selector?: (item: T) => Primitive, 
-  options?: { strategy?: 'prepend' | 'append' }
-): T[]
+  array: T[],
+  item: T,
+  selector?: (item: T) => Primitive,
+  options?: { strategy?: 'prepend' | 'append' },
+): T[];
 ```
 
 ### Parameters

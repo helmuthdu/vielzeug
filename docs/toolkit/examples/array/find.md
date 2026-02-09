@@ -24,10 +24,10 @@ The `find` utility returns the first element in an array that passes the provide
 
 ```ts
 function find<T>(
-  array: T[], 
-  predicate: (item: T, index: number, array: T[]) => boolean, 
-  defaultValue?: T
-): T | undefined
+  array: T[],
+  predicate: (item: T, index: number, array: T[]) => boolean,
+  defaultValue?: T,
+): T | undefined;
 ```
 
 ### Parameters

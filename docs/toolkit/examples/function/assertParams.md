@@ -31,8 +31,8 @@ function assertParams<T extends object, K extends keyof T>(
   options?: {
     type?: ErrorConstructor;
     bypass?: boolean;
-  }
-): asserts params is T & Required<Pick<T, K>>
+  },
+): asserts params is T & Required<Pick<T, K>>;
 ```
 
 ### Parameters

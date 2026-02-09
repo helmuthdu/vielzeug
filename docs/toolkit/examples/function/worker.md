@@ -25,8 +25,8 @@ The `worker` utility simplifies the use of Web Workers by allowing you to run he
 ```ts
 function worker<T extends (...args: any[]) => any>(
   callback: (context: any) => T,
-  dependencies?: string[]
-): (...args: any[]) => Promise<any>
+  dependencies?: string[],
+): (...args: any[]) => Promise<any>;
 ```
 
 ### Parameters

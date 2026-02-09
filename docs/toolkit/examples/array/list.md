@@ -347,10 +347,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { List } from './list';
 import { list as createList } from './list';
 // Generic hook
-export function useList<T>(
-  initialData: readonly T[],
-  config?: Parameters<typeof createList<T>>[1],
-) {
+export function useList<T>(initialData: readonly T[], config?: Parameters<typeof createList<T>>[1]) {
   const instRef = useRef<List<T>>();
   // Create once
   if (!instRef.current) {
@@ -366,14 +363,11 @@ export function useList<T>(
     if (config?.filterFn) instRef.current!.filter(config.filterFn);
   }, [config?.limit, config?.sortFn, config?.filterFn]);
   const subscribe = (cb: () => void) => instRef.current!.subscribe(cb);
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    () => ({
-      current: instRef.current!.current,
-      meta: instRef.current!.meta,
-      // you can add other derived things here if needed
-    }),
-  );
+  const snapshot = useSyncExternalStore(subscribe, () => ({
+    current: instRef.current!.current,
+    meta: instRef.current!.meta,
+    // you can add other derived things here if needed
+  }));
   return {
     ...snapshot,
     api: instRef.current!, // full list API (next, prev, search, batch, etc.)

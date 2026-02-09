@@ -23,7 +23,7 @@ The `isMatch` utility checks if an object contains a specific pattern of propert
 ## API
 
 ```ts
-function isMatch(target: any, pattern: any): boolean
+function isMatch(target: any, pattern: any): boolean;
 ```
 
 ### Parameters

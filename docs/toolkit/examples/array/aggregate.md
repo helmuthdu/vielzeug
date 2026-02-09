@@ -28,8 +28,8 @@ The `aggregate` utility transforms an array of objects into a single object, whe
 ```ts
 function aggregate<T, K extends keyof T, R extends T[K] extends string ? T[K] : never>(
   array: T[],
-  selector: Selector<T>
-): Record<R, T>
+  selector: Selector<T>,
+): Record<R, T>;
 ```
 
 ### Parameters

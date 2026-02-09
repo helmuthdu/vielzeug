@@ -47,7 +47,7 @@ const http = createHttpClient({
   baseUrl: 'https://api.example.com',
   timeout: 30000, // 30 seconds (default: 30000)
   headers: {
-    'Authorization': 'Bearer token',
+    Authorization: 'Bearer token',
     'Content-Type': 'application/json',
   },
   dedupe: true, // Automatic request deduplication (default: true)
@@ -59,6 +59,7 @@ const http = createHttpClient({
 ```
 
 **Options:**
+
 - `baseUrl` - Base URL for all requests
 - `timeout` - Request timeout in milliseconds (default: 30000)
 - `headers` - Default headers for all requests
@@ -115,12 +116,12 @@ const users = await http.get<User[]>('/users', {
 ```ts
 // Update headers dynamically
 http.setHeaders({
-  'Authorization': `Bearer ${newToken}`,
+  Authorization: `Bearer ${newToken}`,
 });
 
 // Remove a header
 http.setHeaders({
-  'Authorization': undefined,
+  Authorization: undefined,
 });
 
 // Get current headers
@@ -203,16 +204,19 @@ const adults = await fetchUsers({ age: 18 });
 
 ```ts
 // Create user
-const newUser = await queryClient.mutate({
-  mutationFn: (userData: CreateUserInput) => http.post<User>('/users', { body: userData }),
-  onSuccess: (data) => {
-    // Invalidate users list to refetch
-    queryClient.invalidate(['users']);
+const newUser = await queryClient.mutate(
+  {
+    mutationFn: (userData: CreateUserInput) => http.post<User>('/users', { body: userData }),
+    onSuccess: (data) => {
+      // Invalidate users list to refetch
+      queryClient.invalidate(['users']);
+    },
   },
-}, {
-  name: 'John Doe',
-  email: 'john@example.com'
-});
+  {
+    name: 'John Doe',
+    email: 'john@example.com',
+  },
+);
 ```
 
 ### Optimistic Updates
@@ -221,17 +225,20 @@ const newUser = await queryClient.mutate({
 // Update user optimistically
 queryClient.setData<User>(['users', userId], (old) => ({
   ...old,
-  name: 'Updated Name'
+  name: 'Updated Name',
 }));
 
 try {
-  await queryClient.mutate({
-    mutationFn: (updates) => http.put<User>(`/users/${userId}`, { body: updates }),
-    onSuccess: () => {
-      // Refetch to get server data
-      queryClient.invalidate(['users', userId]);
-    }
-  }, { name: 'Updated Name' });
+  await queryClient.mutate(
+    {
+      mutationFn: (updates) => http.put<User>(`/users/${userId}`, { body: updates }),
+      onSuccess: () => {
+        // Refetch to get server data
+        queryClient.invalidate(['users', userId]);
+      },
+    },
+    { name: 'Updated Name' },
+  );
 } catch (error) {
   // Rollback on error
   queryClient.invalidate(['users', userId]);
@@ -340,7 +347,7 @@ await queryClient.mutate(
       queryClient.invalidate(['users', userId, 'posts']);
     },
   },
-  postData
+  postData,
 );
 ```
 
@@ -383,22 +390,22 @@ const queryClient = createQueryClient();
 await queryClient.fetch({
   queryKey: ['users', userId],
   queryFn: () => http.get<User>(`/users/${userId}`),
-  
+
   // Caching
-  staleTime: 5000,        // Data fresh for 5 seconds
-  gcTime: 60000,          // Keep in cache for 60 seconds
-  
+  staleTime: 5000, // Data fresh for 5 seconds
+  gcTime: 60000, // Keep in cache for 60 seconds
+
   // Execution
-  enabled: true,          // Enable/disable query
-  
+  enabled: true, // Enable/disable query
+
   // Retry
-  retry: 3,               // Number of retries (or false)
-  retryDelay: 1000,       // Delay between retries (or function)
-  
+  retry: 3, // Number of retries (or false)
+  retryDelay: 1000, // Delay between retries (or function)
+
   // Refetching
-  refetchOnFocus: false,  // Refetch when window gains focus
+  refetchOnFocus: false, // Refetch when window gains focus
   refetchOnReconnect: false, // Refetch when going online
-  
+
   // Callbacks
   onSuccess: (data) => {
     console.log('Success:', data);
@@ -422,10 +429,10 @@ const queryClient = createQueryClient();
 await queryClient.mutate(
   {
     mutationFn: (userData) => http.post<User>('/users', { body: userData }),
-    
+
     // Retry
-    retry: false,           // Don't retry mutations by default
-    
+    retry: false, // Don't retry mutations by default
+
     // Callbacks
     onSuccess: (data, variables) => {
       console.log('Created:', data);
@@ -437,7 +444,7 @@ await queryClient.mutate(
       // Always called (success or error)
     },
   },
-  userData
+  userData,
 );
 ```
 

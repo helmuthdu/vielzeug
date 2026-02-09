@@ -24,12 +24,12 @@ The `predict` utility creates a Promise that can be aborted using an `AbortContr
 
 ```ts
 function predict<T>(
-  fn: (signal: AbortSignal) => Promise<T>, 
+  fn: (signal: AbortSignal) => Promise<T>,
   options?: {
     signal?: AbortSignal;
     timeout?: number;
-  }
-): Promise<T>
+  },
+): Promise<T>;
 ```
 
 ### Parameters

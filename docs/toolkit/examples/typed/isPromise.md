@@ -16,7 +16,7 @@ Checks if a value is a Promise.
 ## API
 
 ```ts
-function isPromise(value: unknown): value is Promise<unknown>
+function isPromise(value: unknown): value is Promise<unknown>;
 ```
 
 ### Parameters

@@ -28,7 +28,7 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 :::
 
 ```ts
-function path<T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined
+function path<T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined;
 ```
 
 ### Parameters

@@ -22,7 +22,7 @@ Checks if a value is a primitive type (string, number, boolean, null, undefined,
 ## API
 
 ```ts
-function isPrimitive(value: unknown): boolean
+function isPrimitive(value: unknown): boolean;
 ```
 
 ### Parameters

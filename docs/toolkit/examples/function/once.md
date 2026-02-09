@@ -23,7 +23,7 @@ The `once` utility restricts a function so that it can only be executed a single
 ## API
 
 ```ts
-function once<T extends (...args: any[]) => any>(fn: T): T
+function once<T extends (...args: any[]) => any>(fn: T): T;
 ```
 
 ### Parameters

@@ -4,24 +4,24 @@ Array utilities provide a powerful set of tools to transform, query, and manipul
 
 ## 📚 Quick Reference
 
-| Method                              | Category       | Description                                      |
-| :---------------------------------- | :------------- | :----------------------------------------------- |
-| [`aggregate`](./array/aggregate.md) | Aggregation    | Perform complex aggregations on an array         |
-| [`arrange`](./array/arrange.md)     | Sorting        | Sort array by a property or function             |
-| [`chunk`](./array/chunk.md)         | Transformation | Split array into chunks of a specific size       |
-| [`compact`](./array/compact.md)     | Transformation | Remove `null` or `undefined` values              |
-| [`every`](./array/every.md)         | Query          | Check if all elements match a predicate          |
-| [`filter`](./array/filter.md)       | Query          | Filter elements by predicate (supports async)    |
-| [`find`](./array/find.md)           | Query          | Find the first element matching a predicate      |
-| [`flatten`](./array/flatten.md)     | Transformation | Flatten nested arrays                            |
-| [`group`](./array/group.md)         | Aggregation    | Group elements by a key or function              |
-| [`list`](./array/list.md)           | Pagination     | Client-side reactive pagination with filtering   |
-| [`map`](./array/map.md)             | Transformation | Map each element to a new value (supports async) |
-| [`reduce`](./array/reduce.md)       | Transformation | Reduce array to a single value                   |
-| [`remoteList`](./array/remoteList.md) | Pagination   | Server-side reactive pagination with caching     |
-| [`some`](./array/some.md)           | Query          | Check if any element matches a predicate         |
-| [`sort`](./array/sort.md)           | Sorting        | Sort array with custom comparator               |
-| [`uniq`](./array/uniq.md)           | Set            | Remove duplicate values                          |
+| Method                                | Category       | Description                                      |
+| :------------------------------------ | :------------- | :----------------------------------------------- |
+| [`aggregate`](./array/aggregate.md)   | Aggregation    | Perform complex aggregations on an array         |
+| [`arrange`](./array/arrange.md)       | Sorting        | Sort array by a property or function             |
+| [`chunk`](./array/chunk.md)           | Transformation | Split array into chunks of a specific size       |
+| [`compact`](./array/compact.md)       | Transformation | Remove `null` or `undefined` values              |
+| [`every`](./array/every.md)           | Query          | Check if all elements match a predicate          |
+| [`filter`](./array/filter.md)         | Query          | Filter elements by predicate (supports async)    |
+| [`find`](./array/find.md)             | Query          | Find the first element matching a predicate      |
+| [`flatten`](./array/flatten.md)       | Transformation | Flatten nested arrays                            |
+| [`group`](./array/group.md)           | Aggregation    | Group elements by a key or function              |
+| [`list`](./array/list.md)             | Pagination     | Client-side reactive pagination with filtering   |
+| [`map`](./array/map.md)               | Transformation | Map each element to a new value (supports async) |
+| [`reduce`](./array/reduce.md)         | Transformation | Reduce array to a single value                   |
+| [`remoteList`](./array/remoteList.md) | Pagination     | Server-side reactive pagination with caching     |
+| [`some`](./array/some.md)             | Query          | Check if any element matches a predicate         |
+| [`sort`](./array/sort.md)             | Sorting        | Sort array with custom comparator                |
+| [`uniq`](./array/uniq.md)             | Set            | Remove duplicate values                          |
 
 ## 💡 Practical Examples
 

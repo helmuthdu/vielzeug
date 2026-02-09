@@ -27,7 +27,7 @@ The `chunk` utility splits an array or string into smaller pieces (chunks) of a 
 :::
 
 ```ts
-function chunk<T>(input: T[] | string, size?: number, options?: ChunkOptions): ChunkResult<T>
+function chunk<T>(input: T[] | string, size?: number, options?: ChunkOptions): ChunkResult<T>;
 ```
 
 ### Parameters

@@ -24,10 +24,10 @@ The `findLast` utility returns the last element in an array that passes the prov
 
 ```ts
 function findLast<T>(
-  array: T[], 
-  predicate: (item: T, index: number, array: T[]) => boolean, 
-  defaultValue?: T
-): T | undefined
+  array: T[],
+  predicate: (item: T, index: number, array: T[]) => boolean,
+  defaultValue?: T,
+): T | undefined;
 ```
 
 ### Parameters

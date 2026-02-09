@@ -25,7 +25,7 @@ Removes all nullable and empty values from strings, arrays, or objects. This uti
 ## API
 
 ```ts
-function prune<T>(value: T): T | undefined
+function prune<T>(value: T): T | undefined;
 ```
 
 ### Parameters
@@ -91,7 +91,7 @@ prune({ a: 1, b: [], c: {}, d: 2 }); // { a: 1, d: 2 }
 prune({
   a: 1,
   b: { c: null, d: 2 },
-  e: 3
+  e: 3,
 }); // { a: 1, b: { d: 2 }, e: 3 }
 ```
 

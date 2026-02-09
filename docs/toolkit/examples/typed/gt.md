@@ -22,7 +22,7 @@ The `gt` utility checks if the first value is strictly greater than the second v
 ## API
 
 ```ts
-function gt(a: number, b: number): boolean
+function gt(a: number, b: number): boolean;
 ```
 
 ### Parameters

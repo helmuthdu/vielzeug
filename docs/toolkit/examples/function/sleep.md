@@ -22,7 +22,7 @@ The `sleep` utility returns a Promise that resolves after a specified amount of 
 ## API
 
 ```ts
-function sleep(ms: number): Promise<void>
+function sleep(ms: number): Promise<void>;
 ```
 
 ### Parameters

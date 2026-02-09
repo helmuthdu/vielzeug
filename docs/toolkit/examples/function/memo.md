@@ -28,7 +28,7 @@ The `memo` utility creates a memoized version of a function that caches its resu
 :::
 
 ```ts
-function memo<T extends (...args: any[]) => any>(fn: T, options?: MemoizeOptions<T>): T
+function memo<T extends (...args: any[]) => any>(fn: T, options?: MemoizeOptions<T>): T;
 ```
 
 ### Parameters

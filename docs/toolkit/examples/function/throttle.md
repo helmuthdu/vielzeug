@@ -26,9 +26,9 @@ type ThrottledFunction = {
   (...args: any[]): void;
   cancel: () => void;
   flush: () => void;
-}
+};
 
-function throttle<T extends (...args: any[]) => any>(fn: T, limit?: number): ThrottledFunction
+function throttle<T extends (...args: any[]) => any>(fn: T, limit?: number): ThrottledFunction;
 ```
 
 ### Parameters

@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-logger.svg" alt="Logit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-logger.svg" alt="Logit Logo" width="156" class="logo-highlight"/>
 
 # Logit
 
@@ -451,8 +451,6 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 ## 📄 License
 
 MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
----
 
 ## 🔗 Useful Links
 

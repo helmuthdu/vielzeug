@@ -23,7 +23,7 @@ The `seek` utility performs a deep fuzzy search within an object or array. It re
 ## API
 
 ```ts
-function seek(obj: any, searchValue: string, tolerance?: number): boolean
+function seek(obj: any, searchValue: string, tolerance?: number): boolean;
 ```
 
 ### Parameters

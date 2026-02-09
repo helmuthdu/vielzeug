@@ -22,7 +22,7 @@ The `some` utility checks if **at least one element** in an array satisfies a gi
 ## API
 
 ```ts
-function some<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean
+function some<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): boolean;
 ```
 
 ### Parameters

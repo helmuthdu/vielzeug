@@ -22,7 +22,7 @@ The `pascalCase` utility transforms a string into `PascalCase` format (every wor
 ## API
 
 ```ts
-function pascalCase(input: string): string
+function pascalCase(input: string): string;
 ```
 
 ### Parameters

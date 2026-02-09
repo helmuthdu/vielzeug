@@ -26,9 +26,9 @@ type DebouncedFunction = {
   (...args: any[]): void;
   cancel: () => void;
   flush: () => void;
-}
+};
 
-function debounce<T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction
+function debounce<T extends (...args: any[]) => any>(fn: T, wait?: number): DebouncedFunction;
 ```
 
 ### Parameters

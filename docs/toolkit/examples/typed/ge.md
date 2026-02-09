@@ -22,7 +22,7 @@ The `ge` utility checks if the first value is greater than or equal to the secon
 ## API
 
 ```ts
-function ge(a: number, b: number): boolean
+function ge(a: number, b: number): boolean;
 ```
 
 ### Parameters

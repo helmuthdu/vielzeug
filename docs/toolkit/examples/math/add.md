@@ -65,7 +65,7 @@ import { add } from '@vielzeug/toolkit';
 
 // Working with cents (amounts in minor units)
 const price1 = 10050n; // $100.50
-const price2 = 5025n;  // $50.25
+const price2 = 5025n; // $50.25
 
 add(price1, price2); // 15075n ($150.75)
 ```
@@ -78,7 +78,7 @@ import { add } from '@vielzeug/toolkit';
 // Prices in cents to avoid floating point issues
 const items = [
   { name: 'Laptop', price: 99999n }, // $999.99
-  { name: 'Mouse', price: 2499n },   // $24.99
+  { name: 'Mouse', price: 2499n }, // $24.99
   { name: 'Keyboard', price: 7999n }, // $79.99
 ];
 

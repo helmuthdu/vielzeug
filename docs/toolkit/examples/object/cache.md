@@ -31,7 +31,7 @@ function cache<T>(): {
   getMetaByHash: (keyHash: string) => Record<string, unknown> | undefined;
   listMetaHashes: () => string[];
   hash: (key: readonly unknown[]) => string;
-}
+};
 ```
 
 ### Parameters
@@ -97,10 +97,10 @@ const apiCache = cache<any>();
 
 // Store API response with metadata
 apiCache.set(['api', '/users'], { data: [...] });
-apiCache.setMeta(['api', '/users'], { 
-  staleTime: 60000, 
+apiCache.setMeta(['api', '/users'], {
+  staleTime: 60000,
   cacheTime: 300000,
-  enabled: true 
+  enabled: true
 });
 
 // Retrieve metadata
@@ -140,7 +140,7 @@ myCache.setMeta(['b'], { priority: 'low' });
 const hashes = myCache.listMetaHashes();
 
 // Inspect metadata for each
-hashes.forEach(hash => {
+hashes.forEach((hash) => {
   const meta = myCache.getMetaByHash(hash);
   console.log(meta);
 });
@@ -162,4 +162,3 @@ console.log(myCache.size()); // 0
 - [memo](../function/memo.md): Memoize function results with automatic caching.
 - [merge](./merge.md): Deep merge objects.
 - [clone](./clone.md): Deep clone objects for safe storage.
-

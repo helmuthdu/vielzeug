@@ -23,7 +23,7 @@ The `isWithin` utility checks if a numeric value falls within a specified inclus
 ## API
 
 ```ts
-function isWithin(value: number, min: number, max: number): boolean
+function isWithin(value: number, min: number, max: number): boolean;
 ```
 
 ### Parameters

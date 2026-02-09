@@ -22,7 +22,7 @@ The `contains` utility checks if a specific value exists within an array. Unlike
 ## API
 
 ```ts
-function contains<T>(array: T[], value: any): boolean
+function contains<T>(array: T[], value: any): boolean;
 ```
 
 ### Parameters

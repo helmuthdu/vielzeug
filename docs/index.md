@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /toolkit/usage
+      link: /toolkit/
     - theme: alt
       text: API Reference
       link: /toolkit/api
@@ -21,31 +21,24 @@ hero:
 
 features:
   - title: '@vielzeug/toolkit'
-    details: "<img src='/vielzeug/logo-utils.svg' alt='Utils Logo' width='32' style='float: right; margin: -24px 0 16px;'/>100+ type-safe, dependency-free utilities for arrays, objects, strings, dates, math, random, and more."
+    details: "<img src='/vielzeug/logo-utils.svg' class='logo-highlight-smaller' alt='Utils Logo' width='96'/>100+ type-safe, dependency-free utilities for arrays, objects, strings, dates, math, random, and more."
     link: /toolkit/
   - title: '@vielzeug/deposit'
-    details: "<img src='/vielzeug/logo-depot.svg' alt='Depot Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Unified, type-safe IndexedDB & LocalStorage with advanced querying, transactions, and migrations."
+    details: "<img src='/vielzeug/logo-depot.svg' class='logo-highlight-smaller' alt='Depot Logo' width='96'/>Unified, type-safe IndexedDB & LocalStorage with advanced querying, transactions, and migrations."
     link: /deposit/
+  - title: '@vielzeug/fetchit'
+    details: "<img src='/vielzeug/logo-http.svg' class='logo-highlight-smaller' alt='Http Logo' width='96'/>Modern, type-safe HTTP client for browser & Node.js. Unified API, caching, cancellation, and more."
+    link: /fetchit/
+  - title: '@vielzeug/formit'
+    details: "<img src='/vielzeug/logo-formit.svg' class='logo-highlight-smaller' alt='Http Logo' width='96'/>Agnostic, type-safe form state and validation with minimal code and maximum flexibility."
+    link: /formit/
   - title: '@vielzeug/logit'
-    details: "<img src='/vielzeug/logo-logger.svg' alt='Logit Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Flexible, zero-dependency logger for browser & Node.js. Log levels, color themes, remote logging, and more."
+    details: "<img src='/vielzeug/logo-logger.svg' class='logo-highlight-smaller' alt='Logit Logo' width='96'/>Flexible, zero-dependency logger for browser & Node.js. Log levels, color themes, remote logging, and more."
     link: /logit/
   - title: '@vielzeug/permit'
-    details: "<img src='/vielzeug/logo-permit.svg' alt='Permit Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Type-safe, extensible permission & role management for any app. Centralized, testable, and dynamic."
+    details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='96'/>Type-safe, extensible permission & role management for any app. Centralized, testable, and dynamic."
     link: /permit/
-  - title: '@vielzeug/fetchit'
-    details: "<img src='/vielzeug/logo-http.svg' alt='Http Logo' width='32' style='float: right; margin: -24px 0 16px;'/>Modern, type-safe HTTP client for browser & Node.js. Unified API, caching, cancellation, and more."
-    link: /fetchit/
 ---
-
-## 📦 Modular by Design
-
-Vielzeug is a Swiss-army knife for modern JavaScript and TypeScript development. Instead of one massive library, we provide a collection of specialized packages that work perfectly together but can be used independently.
-
-- [Toolkit](/toolkit/): 100+ utilities for every data type
-- [Deposit](/deposit/): Unified browser storage (IndexedDB & LocalStorage)
-- [Logit](/logit/): Flexible, zero-dependency logging
-- [Permit](/permit/): Type-safe permissions & roles
-- [Fetchit](/fetchit/): Modern HTTP client
 
 ## 🚀 Why Vielzeug?
 
@@ -54,16 +47,46 @@ Vielzeug is a Swiss-army knife for modern JavaScript and TypeScript development.
 - **Consistent API**: Learn one package, and you'll feel at home in all of them.
 - **Modern**: Optimized for ES Modules, tree-shaking, and modern runtimes.
 
-## 📚 Quick Links
+## 🎓 Quick Start
 
-- [Installation Guide](/toolkit/usage)
-- [Try it in the REPL](/repl)
-- [API Reference](/toolkit/api)
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+::: code-group
+
+```bash [npm]
+npm install @vielzeug/toolkit
+```
+
+```bash [pnpm]
+pnpm add @vielzeug/toolkit
+```
+
+```bash [yarn]
+yarn add @vielzeug/toolkit
+```
+
+:::
+
+```typescript
+import { chunk, debounce, formatCurrency } from '@vielzeug/toolkit';
+
+// Utilities that just work
+const batches = chunk([1, 2, 3, 4, 5], 2);
+const search = debounce((query) => api.search(query), 300);
+const price = formatCurrency(1234.56, 'USD'); // "$1,234.56"
+```
+
+## 💬 Community & Support
+
+Have questions? Found a bug? Want to contribute?
+
+- [GitHub Issues](https://github.com/helmuthdu/vielzeug/issues) — Report bugs or request features
+- [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions) — Ask questions and share ideas
+- [Contributing Guide](https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md) — Learn how to contribute
 
 ---
 
-<p align="center">
-  Released under the MIT License.<br>
-  Copyright © 2024-present Vielzeug Contributors.
-</p>
+<div style="text-align: center; color: var(--vp-c-text-2); font-size: 0.9em;">
+
+Released under the [MIT License](https://github.com/helmuthdu/vielzeug/blob/main/LICENSE).  
+[Vielzeug Contributors](https://github.com/helmuthdu/vielzeug/graphs/contributors).
+
+</div>

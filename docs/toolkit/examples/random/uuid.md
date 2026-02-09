@@ -22,7 +22,7 @@ The `uuid` utility generates a cryptographically strong Universally Unique Ident
 ## API
 
 ```ts
-function uuid(): string
+function uuid(): string;
 ```
 
 ### Returns

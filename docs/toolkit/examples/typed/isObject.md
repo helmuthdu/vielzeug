@@ -22,7 +22,7 @@ Checks if a value is a plain object.
 ## API
 
 ```ts
-function isObject(value: unknown): value is object
+function isObject(value: unknown): value is object;
 ```
 
 ### Parameters
@@ -64,7 +64,7 @@ function process(value: unknown) {
 ## Implementation Notes
 
 - Returns `false` for arrays (use `isArray` for arrays)
-- Returns `false` for functions (use `isFunction` for functions)  
+- Returns `false` for functions (use `isFunction` for functions)
 - Returns `false` for `null` (common JavaScript gotcha)
 - Returns `true` for class instances and built-in objects like `Date`, `RegExp`
 

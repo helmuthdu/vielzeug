@@ -486,7 +486,7 @@ await queryClient.mutate(
     mutationFn: (data) => http.post<User>('/users', { body: data }),
     retry: 2, // Retry POST operations 2 times
   },
-  { name: 'Alice' }
+  { name: 'Alice' },
 );
 
 // Custom fixed retry delay

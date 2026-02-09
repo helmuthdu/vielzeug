@@ -22,7 +22,7 @@ The `clamp` utility restricts a numeric value to be within a specified range. If
 ## API
 
 ```ts
-function clamp(value: number, min: number, max: number): number
+function clamp(value: number, min: number, max: number): number;
 ```
 
 ### Parameters

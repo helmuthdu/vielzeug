@@ -28,7 +28,7 @@ The `proxy` utility creates an enhanced JavaScript Proxy for an object, allowing
 :::
 
 ```ts
-function proxy<T extends object>(item: T, options?: ProxyOptions<T>): T
+function proxy<T extends object>(item: T, options?: ProxyOptions<T>): T;
 ```
 
 ### Parameters

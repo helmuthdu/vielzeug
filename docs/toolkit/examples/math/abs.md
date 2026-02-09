@@ -77,7 +77,7 @@ calculateDistance(5, 10); // 5
 import { abs } from '@vielzeug/toolkit';
 
 const expected = 100000n; // $1,000.00
-const actual = 95000n;    // $950.00
+const actual = 95000n; // $950.00
 
 const difference = abs(expected - actual);
 // 5000n ($50.00)

@@ -28,7 +28,7 @@ Converts money from one currency to another using the provided exchange rate. Ma
 :::
 
 ```ts
-function exchange(money: Money, rate: ExchangeRate): Money
+function exchange(money: Money, rate: ExchangeRate): Money;
 ```
 
 ### Parameters
@@ -108,9 +108,9 @@ const rates = [
   { from: 'USD', to: 'JPY', rate: 110.0 },
 ];
 
-const conversions = rates.map(rate => ({
+const conversions = rates.map((rate) => ({
   currency: rate.to,
-  amount: exchange(usd, rate)
+  amount: exchange(usd, rate),
 }));
 
 // EUR: { amount: 85000n, currency: 'EUR' }
@@ -151,13 +151,13 @@ import { exchange } from '@vielzeug/toolkit';
 async function convertCurrency(money: Money, targetCurrency: string) {
   // Simulated API call
   const apiRate = await fetchExchangeRate(money.currency, targetCurrency);
-  
+
   const rate = {
     from: money.currency,
     to: targetCurrency,
-    rate: apiRate
+    rate: apiRate,
   };
-  
+
   return exchange(money, rate);
 }
 
