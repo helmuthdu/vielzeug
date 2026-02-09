@@ -27,6 +27,7 @@ export default defineConfig({
       { link: '/deposit/', text: 'Deposit' },
       { link: '/fetchit/', text: 'Fetchit' },
       { link: '/formit/', text: 'Formit' },
+      { link: '/i18nit/', text: 'i18nit' },
       { link: '/logit/', text: 'Logit' },
       { link: '/permit/', text: 'Permit' },
       { link: '/repl', text: 'REPL' },
@@ -52,6 +53,12 @@ export default defineConfig({
         { link: '/formit/api', text: 'API Reference' },
         { link: '/formit/usage', text: 'Usage' },
         { link: '/formit/examples', text: 'Examples' },
+      ],
+      '/i18nit/': [
+        { link: '/i18nit/', text: 'Overview' },
+        { link: '/i18nit/api', text: 'API Reference' },
+        { link: '/i18nit/usage', text: 'Usage' },
+        { link: '/i18nit/examples', text: 'Examples' },
       ],
       '/logit/': [
         { link: '/logit/', text: 'Overview' },
