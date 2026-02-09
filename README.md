@@ -50,6 +50,26 @@ npm install @vielzeug/formit
 
 ---
 
+### [@vielzeug/i18nit](packages/i18nit) - Internationalization
+
+Lightweight, type-safe internationalization with pluralization, async loading, and framework-agnostic design.
+
+```bash
+npm install @vielzeug/i18nit
+```
+
+**Key Features:**
+
+- Type-safe translations with autocomplete
+- Pluralization and interpolation support
+- Async translation loading
+- Framework agnostic with React hooks
+- Locale fallback support (1.2 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/i18nit/) • [Examples](https://helmuthdu.github.io/vielzeug/i18nit/examples)
+
+---
+
 ### [@vielzeug/fetchit](packages/fetchit) - HTTP Client & Query Management
 
 Modern, type-safe HTTP client with intelligent caching and query management.
@@ -241,6 +261,7 @@ vielzeug/
 │   ├── deposit/       # Browser storage utility
 │   ├── fetchit/       # HTTP client & query management
 │   ├── formit/        # Form state management
+│   ├── i18nit/        # Internationalization
 │   ├── logit/         # Logging utility
 │   ├── permit/        # Permission management
 │   └── toolkit/       # Utility library
@@ -267,6 +288,7 @@ All sizes are measured as **minified + gzipped** production builds:
 
 | Package           | Gzipped Size               | Minified Size | Dependencies |
 | ----------------- | -------------------------- | ------------- | ------------ |
+| @vielzeug/i18nit  | **1.2 KB**                 | 3.2 KB        | 0            |
 | @vielzeug/permit  | **1.5 KB**                 | 3.8 KB        | 0            |
 | @vielzeug/logit   | **1.9 KB**                 | 5.4 KB        | 0            |
 | @vielzeug/formit  | **2.0 KB**                 | 6.2 KB        | 0            |
@@ -369,7 +391,7 @@ Yes! All packages are battle-tested in production applications with comprehensiv
 
 <div align="center">
 
-**Made with ❤️ by [Helmuth Duarte](https://github.com/helmuthdu)**
+**Made with ❤️ by [Helmuth Saatkamp](https://github.com/helmuthdu)**
 
 [⬆ Back to Top](#vielzeug)
 
