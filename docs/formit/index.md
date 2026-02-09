@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.2_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.0_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -71,7 +71,7 @@ form.submit(async (values) => {
 
 | Feature             | Formit       | Formik       | React Hook Form |
 | ------------------- | ------------ | ------------ | --------------- |
-| Bundle Size         | ~3KB         | ~13KB        | ~8KB            |
+| Bundle Size         | **2.0 KB**   | ~13KB        | ~8KB            |
 | Dependencies        | 0            | React        | React           |
 | TypeScript          | Native       | Good         | Excellent       |
 | Framework           | Agnostic     | React only   | React only      |

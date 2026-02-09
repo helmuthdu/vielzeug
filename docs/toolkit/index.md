@@ -231,18 +231,19 @@ import * as toolkit from '@vielzeug/toolkit';
 
 ### Bundle Size by Category
 
-| Category | Utilities       | Approx. Size (gzipped) |
-| -------- | --------------- | ---------------------- |
-| Array    | 24 utilities    | ~8KB                   |
-| Object   | 9 utilities     | ~6KB                   |
-| String   | 10 utilities    | ~3KB                   |
-| Typed    | 25+ type guards | ~2KB                   |
-| Function | 8 utilities     | ~4KB                   |
-| Math     | 10 utilities    | ~2KB                   |
-| Date     | 5 utilities     | ~2KB                   |
-| Random   | 8 utilities     | ~3KB                   |
+| Category | Utilities | Approx. Size (gzipped) |
+| -------- | --------- | ---------------------- |
+| Array    | 25        | ~8KB                   |
+| Date     | 3         | ~1KB                   |
+| Function | 21        | ~6KB                   |
+| Math     | 17        | ~4KB                   |
+| Money    | 2         | ~1KB                   |
+| Object   | 10        | ~3KB                   |
+| Random   | 4         | ~4KB                   |
+| String   | 7         | ~2KB                   |
+| Typed    | 27        | ~3KB                   |
 
-> **Note**: Sizes are approximate and depend on your bundler configuration and which utilities you import.
+> **Note**: Sizes are approximate totals if you import all utilities from that category. Individual utilities are typically **0.1-0.8 KB gzipped** each. Actual bundle size depends on which utilities you import.
 
 ### Performance Characteristics
 

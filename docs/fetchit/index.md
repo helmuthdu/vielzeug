@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-9.7_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.9_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
@@ -77,7 +77,7 @@ const user = await queryClient.fetch({
 | Pattern Invalidation  | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
 | Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
 | Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | ~3.2 KB        | ~13 KB         | ~13 KB         | 0 KB               |
+| Bundle Size (gzip)    | **2.9 KB**     | ~13 KB         | ~13 KB         | 0 KB               |
 | Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
 | Dependencies          | 2              | 0              | 7+             | 0                  |
 | Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
