@@ -11,6 +11,7 @@ on:
           - '@vielzeug/deposit'
           - '@vielzeug/fetchit'
           - '@vielzeug/formit'
+          - '@vielzeug/i18nit'
           - '@vielzeug/logit'
           - '@vielzeug/permit'
           - '@vielzeug/toolkit'

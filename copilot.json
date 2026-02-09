@@ -9,6 +9,8 @@
     "packages/toolkit",
     "packages/deposit",
     "packages/fetchit",
+    "packages/formit",
+    "packages/i18nit",
     "packages/logit",
     "packages/permit"
   ],
