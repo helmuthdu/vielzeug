@@ -29,6 +29,10 @@ import type { BaseUser, PermissionAction, PermissionCheck } from '@vielzeug/perm
 import { WILDCARD } from '@vielzeug/permit';
 ```
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Basic Usage
 
 ### Registering Permissions

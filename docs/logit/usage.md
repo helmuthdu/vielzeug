@@ -28,6 +28,10 @@ import { Logit } from '@vielzeug/logit';
 import type { LogitOptions, LogitLevel, LogitType } from '@vielzeug/logit';
 ```
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Basic Usage
 
 ### Standard Logging

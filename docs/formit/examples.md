@@ -2,6 +2,10 @@
 
 Real-world examples demonstrating common use cases and patterns with Formit.
 
+::: tip 💡 Complete Applications
+These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+:::
+
 ## Table of Contents
 
 - [Framework Integration Examples](#framework-integration-examples)
@@ -19,15 +23,29 @@ Real-world examples demonstrating common use cases and patterns with Formit.
 
 ## Framework Integration Examples
 
+::: details 🎯 Why Two Patterns?
+We provide both **inline** and **hook/composable** patterns because:
+- **Inline**: Quick prototyping, one-off forms
+- **Hook/Composable**: Reusable across components, better separation of concerns
+
+Choose based on your project structure and team preferences.
+:::
+
 Complete examples showing how to integrate Formit with React, Vue, and Svelte. Each framework has two patterns: inline usage and reusable hook/composable.
 
 ### React
 
+::: warning ⚠️ React-Specific Considerations
+- Always use `useState(() => createForm(...))` to avoid recreating the form on every render
+- Use `useEffect` to subscribe/unsubscribe properly
+- Mark fields as touched `onBlur` for better UX
+:::
+
 #### Inline Component Usage
 
-```tsx
-import { createForm } from '@vielzeug/formit';
-import { useEffect, useState } from 'react';
+```tsx {14-18,21-28,31-34,37-42}
+import { createForm } from \'@vielzeug/formit\';
+import { useEffect, useState } from \'react\';
 
 interface ContactFormData {
   name: string;
@@ -1713,6 +1731,8 @@ function ProfileSettings({ initialData }: { initialData: ProfileData }) {
 
 ## Multi-Step Form
 
+<Badge type="tip" text="Advanced" />
+
 Wizard-style multi-step form with progress tracking.
 
 ```tsx
@@ -2213,6 +2233,8 @@ function SearchForm({ onSearch }: { onSearch: (filters: SearchFilters) => void }
 ```
 
 ## File Upload Form
+
+<Badge type="tip" text="Advanced" />
 
 Form with file upload and preview.
 

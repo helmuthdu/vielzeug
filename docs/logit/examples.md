@@ -2,8 +2,29 @@
 
 Practical examples showing common use cases and patterns.
 
+::: tip 💡 Complete Applications
+These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+:::
+
+## Table of Contents
+
+- [Basic Logging Operations](#basic-logging-operations)
+- [Namespacing and Prefixes](#namespacing-and-prefixes)
+- [Display Variants](#display-variants)
+- [Log Level Management](#log-level-management)
+- [Remote Logging](#remote-logging)
+- [Error Handling](#error-handling)
+- [Framework Integration](#framework-integration)
+- [Advanced Patterns](#advanced-patterns)
+
 ## Basic Logging Operations
 
+::: details 🔍 Browser Console Tips
+- Press `F12` or `Cmd+Option+I` (Mac) / `Ctrl+Shift+I` (Windows) to open DevTools
+- Filter logs by level using the console filter
+- Use `console.clear()` or `Cmd+K` / `Ctrl+L` to clear console
+- Group logs are collapsible for better organization
+:::
 ### Standard Log Levels
 
 ```ts
@@ -193,6 +214,14 @@ Logit.error('Error'); // [ERROR] Error
 ```
 
 ## Log Level Management
+
+::: danger ⚠️ Production Logging
+Be careful with log levels in production:
+- Disable `trace` and `debug` in production
+- Consider remote logging for error tracking
+- Avoid logging sensitive data (passwords, tokens, PII)
+- Monitor log volume to avoid performance issues
+:::
 
 ### Development vs Production
 

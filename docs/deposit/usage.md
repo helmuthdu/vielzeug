@@ -28,6 +28,10 @@ import { Deposit, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposi
 import type { DepositDataSchema, DepositMigrationFn } from '@vielzeug/deposit';
 ```
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Define a Schema
 
 The schema defines your tables, their primary keys, indexes, and record types:

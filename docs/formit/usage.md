@@ -1,6 +1,36 @@
 # Formit Usage Guide
 
-Practical patterns and best practices for using Formit in your applications.
+Complete guide to installing and using Formit in your projects.
+
+## Installation
+
+::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/formit
+```
+
+```sh [npm]
+npm install @vielzeug/formit
+```
+
+```sh [yarn]
+yarn add @vielzeug/formit
+```
+
+:::
+
+## Import
+
+```ts
+import { createForm } from '@vielzeug/formit';
+// Optional: Import types
+import type { FormInstance, FormState, FormInit } from '@vielzeug/formit';
+```
+
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
 
 ## Table of Contents
 
@@ -238,624 +268,84 @@ form.resetErrors();
 ---
 
 ## Framework Integration
-
-Formit is framework-agnostic, but integrates seamlessly with popular frameworks. Below are examples for React, Vue, and Svelte, each showing both **inline usage** and a **reusable hook/composable pattern**.
-
+Formit is framework-agnostic. Below are generic integration patterns for popular frameworks.
 ### React
-
-::: code-group
-
-```tsx [Inline Usage]
+Create a custom hook to manage form state with React:
+```tsx
 import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
-
 function LoginForm() {
-  // Create form instance once
   const [form] = useState(() =>
     createForm({
       initialValues: { email: '', password: '' },
       fields: {
         email: {
-          validators: (value) => {
-            if (!value) return 'Email is required';
-            if (!value.includes('@')) return 'Invalid email';
-          },
-        },
-        password: {
-          validators: (value) => {
-            if (!value) return 'Password is required';
-            if (value.length < 8) return 'Password must be at least 8 characters';
-          },
+          validators: (value) => !value?.includes('@') && 'Invalid email',
         },
       },
     }),
   );
-
-  // Subscribe to form state changes
   const [state, setState] = useState(form.getStateSnapshot());
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Login failed');
-        return response.json();
-      });
-
-      // Handle success (e.g., redirect)
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Login error:', error);
-    }
-  };
-
+  useEffect(() => form.subscribe(setState), [form]);
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...form.bind('email')} onBlur={() => form.markTouched('email')} />
-        {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
-      </div>
-
-      <div>
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" {...form.bind('password')} onBlur={() => form.markTouched('password')} />
-        {state.touched.password && state.errors.password && <span className="error">{state.errors.password}</span>}
-      </div>
-
-      <button type="submit" disabled={state.isSubmitting}>
-        {state.isSubmitting ? 'Logging in...' : 'Login'}
-      </button>
+    <form onSubmit={(e) => { e.preventDefault(); form.submit(/* ... */); }}>
+      <input {...form.bind('email')} />
+      {state.errors.email && <span>{state.errors.email}</span>}
+      <button type="submit" disabled={state.isSubmitting}>Submit</button>
     </form>
   );
 }
 ```
-
-```tsx [useForm Hook]
-// hooks/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
-import { useEffect, useState, useMemo } from 'react';
-
-export function useForm<TForm extends Record<string, any>>(init: FormInit<TForm>) {
-  const form = useMemo(() => createForm(init), []);
-  const [state, setState] = useState<FormState<TForm>>(form.getStateSnapshot());
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  return { form, state };
-}
-
-// Usage in component
-import { useForm } from './hooks/useForm';
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-function LoginForm() {
-  const { form, state } = useForm<LoginData>({
-    initialValues: { email: '', password: '' },
-    fields: {
-      email: {
-        validators: (value) => {
-          if (!value) return 'Email is required';
-          if (!value.includes('@')) return 'Invalid email';
-        },
-      },
-      password: {
-        validators: (value) => {
-          if (!value) return 'Password is required';
-          if (value.length < 8) return 'Password must be at least 8 characters';
-        },
-      },
-    },
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Login failed');
-        return response.json();
-      });
-
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Login error:', error);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...form.bind('email')} onBlur={() => form.markTouched('email')} />
-        {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
-      </div>
-
-      <div>
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" {...form.bind('password')} onBlur={() => form.markTouched('password')} />
-        {state.touched.password && state.errors.password && <span className="error">{state.errors.password}</span>}
-      </div>
-
-      <button type="submit" disabled={state.isSubmitting}>
-        {state.isSubmitting ? 'Logging in...' : 'Login'}
-      </button>
-    </form>
-  );
-}
-```
-
-:::
-
 ### Vue 3
-
-::: code-group
-
-```vue [Inline Usage]
-<script setup lang="ts">
+Use Vue's composition API to integrate:
+```vue
+<script setup>
 import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-const form = createForm<LoginData>({
-  initialValues: {
-    email: '',
-    password: '',
-  },
+const form = createForm({
+  initialValues: { email: '', password: '' },
   fields: {
-    email: {
-      validators: (value) => {
-        if (!value) return 'Email is required';
-        if (!value.includes('@')) return 'Invalid email';
-      },
-    },
-    password: {
-      validators: (value) => {
-        if (!value) return 'Password is required';
-        if (value.length < 8) return 'Password must be at least 8 characters';
-      },
-    },
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
   },
 });
-
 const state = ref(form.getStateSnapshot());
-let unsubscribe: (() => void) | undefined;
-
-onMounted(() => {
-  unsubscribe = form.subscribe((newState) => {
-    state.value = newState;
-  });
-});
-
-onUnmounted(() => {
-  unsubscribe?.();
-});
-
-async function handleSubmit() {
-  try {
-    await form.submit(async (values) => {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) throw new Error('Login failed');
-      return response.json();
-    });
-
-    window.location.href = '/dashboard';
-  } catch (error) {
-    console.error('Login error:', error);
-  }
-}
-
-function handleBlur(field: keyof LoginData) {
-  form.markTouched(field);
-}
+let unsubscribe;
+onMounted(() => { unsubscribe = form.subscribe((s) => state.value = s); });
+onUnmounted(() => { unsubscribe?.(); });
 </script>
-
 <template>
-  <form @submit.prevent="handleSubmit">
-    <div>
-      <label for="email">Email</label>
-      <input id="email" type="email" v-bind="form.bind('email')" @blur="handleBlur('email')" />
-      <span v-if="state.touched.email && state.errors.email" class="error">
-        {{ state.errors.email }}
-      </span>
-    </div>
-
-    <div>
-      <label for="password">Password</label>
-      <input id="password" type="password" v-bind="form.bind('password')" @blur="handleBlur('password')" />
-      <span v-if="state.touched.password && state.errors.password" class="error">
-        {{ state.errors.password }}
-      </span>
-    </div>
-
-    <button type="submit" :disabled="state.isSubmitting">
-      {{ state.isSubmitting ? 'Logging in...' : 'Login' }}
-    </button>
+  <form @submit.prevent="form.submit(/* ... */)">
+    <input v-bind="form.bind('email')" />
+    <span v-if="state.errors.email">{{ state.errors.email }}</span>
+    <button type="submit" :disabled="state.isSubmitting">Submit</button>
   </form>
 </template>
 ```
-
-```ts [useForm Composable]
-// composables/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
-import { ref, onMounted, onUnmounted, Ref } from 'vue';
-
-export function useForm<TForm extends Record<string, any>>(
-  init: FormInit<TForm>
-) {
-  const form = createForm(init);
-  const state: Ref<FormState<TForm>> = ref(form.getStateSnapshot());
-
-  let unsubscribe: (() => void) | undefined;
-
-  onMounted(() => {
-    unsubscribe = form.subscribe((newState) => {
-      state.value = newState;
-    });
-  });
-
-  onUnmounted(() => {
-    unsubscribe?.();
-  });
-
-  return { form, state };
-}
-
-// Usage in component
-<script setup lang="ts">
-import { useForm } from './composables/useForm';
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-const { form, state } = useForm<LoginData>({
-  initialValues: {
-    email: '',
-    password: '',
-  },
-  fields: {
-    email: {
-      validators: (value) => {
-        if (!value) return 'Email is required';
-        if (!value.includes('@')) return 'Invalid email';
-      },
-    },
-    password: {
-      validators: (value) => {
-        if (!value) return 'Password is required';
-        if (value.length < 8) return 'Password must be at least 8 characters';
-      },
-    },
-  },
-});
-
-async function handleSubmit() {
-  try {
-    await form.submit(async (values) => {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) throw new Error('Login failed');
-      return response.json();
-    });
-
-    window.location.href = '/dashboard';
-  } catch (error) {
-    console.error('Login error:', error);
-  }
-}
-
-function handleBlur(field: keyof LoginData) {
-  form.markTouched(field);
-}
-</script>
-
-<template>
-  <form @submit.prevent="handleSubmit">
-    <div>
-      <label for="email">Email</label>
-      <input
-        id="email"
-        type="email"
-        v-bind="form.bind('email')"
-        @blur="handleBlur('email')"
-      />
-      <span v-if="state.touched.email && state.errors.email" class="error">
-        {{ state.errors.email }}
-      </span>
-    </div>
-
-    <div>
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        v-bind="form.bind('password')"
-        @blur="handleBlur('password')"
-      />
-      <span v-if="state.touched.password && state.errors.password" class="error">
-        {{ state.errors.password }}
-      </span>
-    </div>
-
-    <button type="submit" :disabled="state.isSubmitting">
-      {{ state.isSubmitting ? 'Logging in...' : 'Login' }}
-    </button>
-  </form>
-</template>
-```
-
-:::
-
 ### Svelte
-
-::: code-group
-
-```svelte [Inline Usage]
-<script lang="ts">
-  import { createForm } from '@vielzeug/formit';
-  import { onDestroy } from 'svelte';
-
-  interface LoginData {
-    email: string;
-    password: string;
-  }
-
-  const form = createForm<LoginData>({
-    initialValues: {
-      email: '',
-      password: '',
-    },
-    fields: {
-      email: {
-        validators: (value) => {
-          if (!value) return 'Email is required';
-          if (!value.includes('@')) return 'Invalid email';
-        },
-      },
-      password: {
-        validators: (value) => {
-          if (!value) return 'Password is required';
-          if (value.length < 8) return 'Password must be at least 8 characters';
-        },
-      },
-    },
-  });
-
-  let state = form.getStateSnapshot();
-
-  const unsubscribe = form.subscribe((newState) => {
-    state = newState;
-  });
-
-  onDestroy(() => {
-    unsubscribe();
-  });
-
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Login failed');
-        return response.json();
-      });
-
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Login error:', error);
-    }
-  }
-
-  function handleBlur(field: keyof LoginData) {
-    form.markTouched(field);
-  }
-</script>
-
-<form on:submit={handleSubmit}>
-  <div>
-    <label for="email">Email</label>
-    <input
-      id="email"
-      type="email"
-      {...form.bind('email')}
-      on:blur={() => handleBlur('email')}
-    />
-    {#if state.touched.email && state.errors.email}
-      <span class="error">{state.errors.email}</span>
-    {/if}
-  </div>
-
-  <div>
-    <label for="password">Password</label>
-    <input
-      id="password"
-      type="password"
-      {...form.bind('password')}
-      on:blur={() => handleBlur('password')}
-    />
-    {#if state.touched.password && state.errors.password}
-      <span class="error">{state.errors.password}</span>
-    {/if}
-  </div>
-
-  <button type="submit" disabled={state.isSubmitting}>
-    {state.isSubmitting ? 'Logging in...' : 'Login'}
-  </button>
-</form>
-
-<style>
-  .error {
-    color: red;
-    font-size: 0.875rem;
-  }
-</style>
-```
-
-```ts [useForm Store]
-// stores/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
+Use Svelte stores for reactive state:
+```svelte
+<script>
+import { createForm } from '@vielzeug/formit';
 import { writable } from 'svelte/store';
-import { onDestroy } from 'svelte';
-
-export function useForm<TForm extends Record<string, any>>(
-  init: FormInit<TForm>
-) {
-  const form = createForm(init);
-  const state = writable<FormState<TForm>>(form.getStateSnapshot());
-
-  const unsubscribe = form.subscribe((newState) => {
-    state.set(newState);
-  });
-
-  // Cleanup on component destroy
-  onDestroy(() => {
-    unsubscribe();
-  });
-
-  return { form, state };
-}
-
-// Usage in component
-<script lang="ts">
-  import { useForm } from './stores/useForm';
-
-  interface LoginData {
-    email: string;
-    password: string;
-  }
-
-  const { form, state } = useForm<LoginData>({
-    initialValues: {
-      email: '',
-      password: '',
-    },
-    fields: {
-      email: {
-        validators: (value) => {
-          if (!value) return 'Email is required';
-          if (!value.includes('@')) return 'Invalid email';
-        },
-      },
-      password: {
-        validators: (value) => {
-          if (!value) return 'Password is required';
-          if (value.length < 8) return 'Password must be at least 8 characters';
-        },
-      },
-    },
-  });
-
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Login failed');
-        return response.json();
-      });
-
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Login error:', error);
-    }
-  }
-
-  function handleBlur(field: keyof LoginData) {
-    form.markTouched(field);
-  }
+import { onMount, onDestroy } from 'svelte';
+const form = createForm({
+  initialValues: { email: '', password: '' },
+  fields: {
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+  },
+});
+const state = writable(form.getStateSnapshot());
+let unsubscribe;
+onMount(() => { unsubscribe = form.subscribe((s) => state.set(s)); });
+onDestroy(() => { unsubscribe?.(); });
 </script>
-
-<form on:submit={handleSubmit}>
-  <div>
-    <label for="email">Email</label>
-    <input
-      id="email"
-      type="email"
-      {...form.bind('email')}
-      on:blur={() => handleBlur('email')}
-    />
-    {#if $state.touched.email && $state.errors.email}
-      <span class="error">{$state.errors.email}</span>
-    {/if}
-  </div>
-
-  <div>
-    <label for="password">Password</label>
-    <input
-      id="password"
-      type="password"
-      {...form.bind('password')}
-      on:blur={() => handleBlur('password')}
-    />
-    {#if $state.touched.password && $state.errors.password}
-      <span class="error">{$state.errors.password}</span>
-    {/if}
-  </div>
-
-  <button type="submit" disabled={$state.isSubmitting}>
-    {$state.isSubmitting ? 'Logging in...' : 'Login'}
-  </button>
+<form on:submit|preventDefault={() => form.submit(/* ... */)}>
+  <input {...form.bind('email')} />
+  {#if $state.errors.email}<span>{$state.errors.email}</span>{/if}
+  <button type="submit" disabled={$state.isSubmitting}>Submit</button>
 </form>
-
-<style>
-  .error {
-    color: red;
-    font-size: 0.875rem;
-  }
-</style>
 ```
-
-:::
+> **💡 See Complete Examples**: For full implementation with hooks, composables, error handling, and success states, check [Examples](./examples.md#framework-integration-examples).
 
 ---
 

@@ -2,6 +2,18 @@
 
 Practical examples showing common use cases and patterns.
 
+::: tip 💡 Complete Applications
+These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+:::
+
+## Table of Contents
+
+- [Basic Operations](#basic-operations)
+- [Wildcard Patterns](#wildcard-patterns)
+- [Real-World Scenarios](#real-world-scenarios)
+- [Integration Patterns](#integration-patterns)
+- [Advanced Patterns](#advanced-patterns)
+
 ## Basic Operations
 
 ### Simple Permission Registration
@@ -150,6 +162,14 @@ Permit.check(mod, 'comments', 'create'); // true
 ```
 
 ## Real-World Scenarios
+
+::: warning 🔒 Security Considerations
+- Always validate permissions on the server-side
+- Client-side checks are for UX only (hiding buttons, etc.)
+- Never trust permissions stored in client storage
+- Implement permission caching carefully to avoid stale data
+- Re-validate permissions after critical operations
+:::
 
 ### Blog Platform
 

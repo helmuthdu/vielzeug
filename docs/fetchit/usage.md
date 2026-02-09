@@ -26,6 +26,10 @@ yarn add @vielzeug/fetchit
 import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
 ```
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Two Ways to Use Fetchit
 
 Fetchit provides flexible architecture with separate clients:
