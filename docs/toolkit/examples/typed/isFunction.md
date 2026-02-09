@@ -21,7 +21,7 @@ Checks if a value is a function.
 ## API
 
 ```ts
-function isFunction(value: unknown): value is Function
+function isFunction(value: unknown): value is Function;
 ```
 
 ### Parameters
@@ -40,7 +40,7 @@ function isFunction(value: unknown): value is Function
 import { isFunction } from '@vielzeug/toolkit';
 
 isFunction(() => {}); // true
-isFunction(function() {}); // true
+isFunction(function () {}); // true
 isFunction(async () => {}); // true
 isFunction(123); // false
 isFunction(null); // false

@@ -16,7 +16,7 @@ Returns the smallest number in an array.
 ## API
 
 ```ts
-function min(numbers: number[]): number | undefined
+function min(numbers: number[]): number | undefined;
 ```
 
 ## Example

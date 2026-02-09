@@ -13,12 +13,6 @@
   "pnpmVersion": "10.28.2",
   "projects": [
     {
-      "packageName": "@vielzeug/toolkit",
-      "projectFolder": "packages/toolkit",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
-    },
-    {
       "packageName": "@vielzeug/deposit",
       "projectFolder": "packages/deposit",
       "shouldPublish": true,
@@ -31,6 +25,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/formit",
+      "projectFolder": "packages/formit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/logit",
       "projectFolder": "packages/logit",
       "shouldPublish": true,
@@ -39,6 +39,12 @@
     {
       "packageName": "@vielzeug/permit",
       "projectFolder": "packages/permit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/toolkit",
+      "projectFolder": "packages/toolkit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

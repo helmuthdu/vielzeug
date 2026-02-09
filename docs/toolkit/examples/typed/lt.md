@@ -22,7 +22,7 @@ The `lt` utility checks if the first value is strictly less than the second valu
 ## API
 
 ```ts
-function lt(a: number, b: number): boolean
+function lt(a: number, b: number): boolean;
 ```
 
 ### Parameters

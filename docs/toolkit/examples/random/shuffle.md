@@ -23,7 +23,7 @@ The `shuffle` utility creates a new array with the elements of the original arra
 ## API
 
 ```ts
-function shuffle<T>(array: T[]): T[]
+function shuffle<T>(array: T[]): T[];
 ```
 
 ### Parameters

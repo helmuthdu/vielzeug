@@ -16,7 +16,7 @@ Returns the median value of an array of numbers.
 ## API
 
 ```ts
-function median<T>(arr: T[], callback?: (item: T) => number | Date): number | Date | undefined
+function median<T>(arr: T[], callback?: (item: T) => number | Date): number | Date | undefined;
 ```
 
 ## Example

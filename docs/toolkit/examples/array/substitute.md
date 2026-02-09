@@ -23,11 +23,7 @@ The `substitute` utility replaces the first element in an array that satisfies a
 ## API
 
 ```ts
-function substitute<T>(
-  array: T[], 
-  predicate: (item: T, index: number, array: T[]) => boolean, 
-  value: T
-): T[]
+function substitute<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean, value: T): T[];
 ```
 
 ### Parameters

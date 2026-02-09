@@ -24,12 +24,12 @@ The `is` utility is a highly flexible and unified type-checking engine. It acts 
 ## API
 
 ```ts
-function is(type: string | Function, value: unknown, ...args: any[]): boolean
+function is(type: string | Function, value: unknown, ...args: any[]): boolean;
 ```
 
 ::: tip
-Supports many type checks: `'string'`, `'number'`, `'array'`, `'object'`, `'nil'`, `'empty'`, 
-`'match'`, `'within'`, `'gt'`, `'ge'`, `'lt'`, `'le'`, `'even'`, `'odd'`, `'positive'`, `'negative'`, 
+Supports many type checks: `'string'`, `'number'`, `'array'`, `'object'`, `'nil'`, `'empty'`,
+`'match'`, `'within'`, `'gt'`, `'ge'`, `'lt'`, `'le'`, `'even'`, `'odd'`, `'positive'`, `'negative'`,
 `'zero'`, `'defined'`, `'promise'`, `'function'`, `'boolean'`, `'date'`, `'regex'`, `'primitive'`, `'equal'`
 :::
 

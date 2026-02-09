@@ -23,9 +23,9 @@ The `filter` utility creates a new array with all elements that pass the test im
 
 ```ts
 function filter<T>(
-  array: T[], 
-  predicate: (item: T, index: number, array: T[]) => boolean | Promise<boolean>
-): T[] | Promise<T[]>
+  array: T[],
+  predicate: (item: T, index: number, array: T[]) => boolean | Promise<boolean>,
+): T[] | Promise<T[]>;
 ```
 
 ### Parameters

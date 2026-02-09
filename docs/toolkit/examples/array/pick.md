@@ -26,8 +26,8 @@ The `pick` utility finds the first element in an array that satisfies a conditio
 function pick<T, R>(
   array: T[],
   callback: (item: T, index: number, array: T[]) => R | Promise<R>,
-  predicate?: (item: T, index: number, array: T[]) => boolean
-): R | Promise<R> | undefined
+  predicate?: (item: T, index: number, array: T[]) => boolean,
+): R | Promise<R> | undefined;
 ```
 
 ### Parameters

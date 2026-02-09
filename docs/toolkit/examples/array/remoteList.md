@@ -44,8 +44,8 @@ Creates a reactive, server-side paginated list with automatic data fetching, cac
 
 ```ts
 function remoteList<T, F = Record<string, unknown>, S = { key?: string; dir?: SortDir }>(
-  config: RemoteConfig<T, F, S>
-): RemoteList<T, F, S>
+  config: RemoteConfig<T, F, S>,
+): RemoteList<T, F, S>;
 ```
 
 ### Parameters
@@ -75,10 +75,10 @@ const fetchUsers = async (query) => {
     limit: query.limit,
     ...(query.search && { search: query.search }),
   });
-  
+
   const response = await fetch(`/api/users?${params}`);
   const data = await response.json();
-  
+
   return {
     items: data.users,
     total: data.total,
@@ -124,12 +124,12 @@ const fetchUsers = async (query) => {
     page: query.page,
     limit: query.limit,
   });
-  
+
   if (query.filter?.role) params.append('role', query.filter.role);
   if (query.filter?.status) params.append('status', query.filter.status);
   if (query.sort?.key) params.append('sortBy', query.sort.key);
   if (query.sort?.dir) params.append('sortDir', query.sort.dir);
-  
+
   const response = await fetch(`/api/users?${params}`);
   return await response.json();
 };
@@ -271,7 +271,7 @@ import { useEffect, useState } from 'react';
 function UserList() {
   const [users, setUsers] = useState([]);
   const [meta, setMeta] = useState(null);
-  
+
   useEffect(() => {
     const list = remoteList({
       fetch: async (query) => {
@@ -280,26 +280,34 @@ function UserList() {
       },
       limit: 20,
     });
-    
+
     const unsubscribe = list.subscribe(() => {
       setUsers(list.current);
       setMeta(list.meta);
     });
-    
+
     return unsubscribe;
   }, []);
-  
+
   if (meta?.loading) return <div>Loading...</div>;
   if (meta?.error) return <div>Error: {meta.error}</div>;
-  
+
   return (
     <div>
       <ul>
-        {users.map(user => <li key={user.id}>{user.name}</li>)}
+        {users.map((user) => (
+          <li key={user.id}>{user.name}</li>
+        ))}
       </ul>
-      <button onClick={() => list.prev()} disabled={meta?.isFirst}>Previous</button>
-      <span>Page {meta?.page} of {meta?.pages}</span>
-      <button onClick={() => list.next()} disabled={meta?.isLast}>Next</button>
+      <button onClick={() => list.prev()} disabled={meta?.isFirst}>
+        Previous
+      </button>
+      <span>
+        Page {meta?.page} of {meta?.pages}
+      </span>
+      <button onClick={() => list.next()} disabled={meta?.isLast}>
+        Next
+      </button>
     </div>
   );
 }
@@ -329,7 +337,7 @@ const products = remoteList<Product, ProductFilter, ProductSort>({
       page: String(query.page),
       limit: String(query.limit),
     });
-    
+
     if (query.search) params.append('q', query.search);
     if (query.filter?.category) params.append('category', query.filter.category);
     if (query.filter?.minPrice) params.append('minPrice', String(query.filter.minPrice));
@@ -339,10 +347,10 @@ const products = remoteList<Product, ProductFilter, ProductSort>({
       params.append('sortBy', query.sort.key);
       params.append('sortDir', query.sort.dir || 'asc');
     }
-    
+
     const response = await fetch(`/api/products?${params}`);
     const data = await response.json();
-    
+
     return {
       items: data.products,
       total: data.totalCount,
@@ -379,19 +387,19 @@ await products.setSort({ key: 'price', dir: 'asc' });
 
 ## Differences from `list`
 
-| Feature | `list` (Local) | `remoteList` (Server-Side) |
-|---------|----------------|----------------------------|
-| Data Source | In-memory array | Server API |
-| Operations | Synchronous | Asynchronous (promises) |
-| Loading State | N/A | Built-in `meta.loading` |
-| Error State | N/A | Built-in `meta.error` |
-| Caching | N/A | Automatic request caching |
-| Initial Data | Required | Fetched on first subscribe |
-| setData() | Available | Not available (use refresh) |
-| refresh() | N/A | Refetches current page |
-| invalidate() | N/A | Clears cache |
-| Search Implementation | Built-in fuzzy search | Server-defined |
-| Filter/Sort Logic | Client-side | Server-side |
+| Feature               | `list` (Local)        | `remoteList` (Server-Side)  |
+| --------------------- | --------------------- | --------------------------- |
+| Data Source           | In-memory array       | Server API                  |
+| Operations            | Synchronous           | Asynchronous (promises)     |
+| Loading State         | N/A                   | Built-in `meta.loading`     |
+| Error State           | N/A                   | Built-in `meta.error`       |
+| Caching               | N/A                   | Automatic request caching   |
+| Initial Data          | Required              | Fetched on first subscribe  |
+| setData()             | Available             | Not available (use refresh) |
+| refresh()             | N/A                   | Refetches current page      |
+| invalidate()          | N/A                   | Clears cache                |
+| Search Implementation | Built-in fuzzy search | Server-defined              |
+| Filter/Sort Logic     | Client-side           | Server-side                 |
 
 ## See Also
 

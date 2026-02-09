@@ -23,7 +23,7 @@ The `sort` utility provides a simple, functional way to sort arrays. Unlike the 
 ## API
 
 ```ts
-function sort<T>(array: T[], selector: (item: T) => any, desc?: boolean): T[]
+function sort<T>(array: T[], selector: (item: T) => any, desc?: boolean): T[];
 ```
 
 ### Parameters

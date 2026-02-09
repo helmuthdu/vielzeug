@@ -23,7 +23,7 @@ The `isEqual` utility performs a deep equality comparison between two values. It
 ## API
 
 ```ts
-function isEqual(a: unknown, b: unknown): boolean
+function isEqual(a: unknown, b: unknown): boolean;
 ```
 
 ### Parameters

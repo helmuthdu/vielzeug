@@ -22,7 +22,7 @@ The `isOdd` utility is a type guard that checks if a given number is an odd inte
 ## API
 
 ```ts
-function isOdd(value: number): boolean
+function isOdd(value: number): boolean;
 ```
 
 ### Parameters

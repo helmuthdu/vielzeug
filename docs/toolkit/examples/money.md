@@ -12,8 +12,8 @@ The money utilities provide essential functions for working with currency amount
 
 ```ts
 type Money = {
-  readonly amount: bigint;      // Amount in minor units (cents, pence, etc.)
-  readonly currency: string;    // ISO 4217 currency code (USD, EUR, GBP, etc.)
+  readonly amount: bigint; // Amount in minor units (cents, pence, etc.)
+  readonly currency: string; // ISO 4217 currency code (USD, EUR, GBP, etc.)
 };
 ```
 
@@ -23,10 +23,10 @@ Financial calculations require exact precision. Using `bigint` to store amounts 
 
 ```ts
 // ❌ Bad - floating point errors
-0.1 + 0.2 // 0.30000000000004
+0.1 + 0.2; // 0.30000000000004
 
 // ✅ Good - exact precision with bigint (cents)
-10n + 20n // 30n
+10n + 20n; // 30n
 ```
 
 ## 🔗 All Money Utilities
@@ -63,6 +63,7 @@ exchange(usd, rate); // { amount: 85000n, currency: 'EUR' }
 ## Related Utilities
 
 For arithmetic operations on monetary amounts, see:
+
 - [add](./math/add.md) - Add amounts
 - [subtract](./math/subtract.md) - Subtract amounts
 - [multiply](./math/multiply.md) - Multiply by scalars

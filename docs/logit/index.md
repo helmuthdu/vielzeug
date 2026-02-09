@@ -1,11 +1,11 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-7.1_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-1.9_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-logger.svg" alt="Logit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-logger.svg" alt="Logit Logo" width="156" class="logo-highlight"/>
 
 # Logit
 
@@ -73,7 +73,7 @@ Logit.setRemote({
 | Browser Support    | ✅ Native      | ❌            | ❌         | ✅        |
 | Namespacing        | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
 | Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Streams | ❌        |
-| Bundle Size (gzip) | ~7.1KB         | ~50KB+        | ~12KB      | 0KB       |
+| Bundle Size (gzip) | **1.9 KB**     | ~50KB+        | ~12KB      | 0KB       |
 | Node.js Support    | ✅             | ✅            | ✅         | ✅        |
 | Dependencies       | 0              | 15+           | 5+         | N/A       |
 | Colored Output     | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |
@@ -451,8 +451,6 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 ## 📄 License
 
 MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
----
 
 ## 🔗 Useful Links
 

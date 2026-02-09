@@ -22,7 +22,7 @@ The `isNil` utility is a type guard that checks if a value is strictly `null` or
 ## API
 
 ```ts
-function isNil(value: unknown): value is null | undefined
+function isNil(value: unknown): value is null | undefined;
 ```
 
 ### Parameters

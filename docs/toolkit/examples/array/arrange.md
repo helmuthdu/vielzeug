@@ -23,7 +23,7 @@ The `arrange` utility enables advanced multi-field sorting for arrays of objects
 ## API
 
 ```ts
-function arrange<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[]
+function arrange<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
 ```
 
 ### Parameters

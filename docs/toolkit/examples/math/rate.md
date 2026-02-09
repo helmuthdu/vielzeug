@@ -22,7 +22,7 @@ The `rate` utility calculates the percentage of a value relative to a total. It 
 ## API
 
 ```ts
-function rate(value: number, total: number, decimals?: number): number
+function rate(value: number, total: number, decimals?: number): number;
 ```
 
 ### Parameters

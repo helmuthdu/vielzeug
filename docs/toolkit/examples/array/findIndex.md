@@ -22,7 +22,7 @@ The `findIndex` utility returns the index of the first element in an array that 
 ## API
 
 ```ts
-function findIndex<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number
+function findIndex<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): number;
 ```
 
 ### Parameters

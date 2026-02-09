@@ -22,7 +22,7 @@ The `boil` utility reduces an array to a single "best" value based on a custom c
 ## API
 
 ```ts
-function boil<T>(array: T[], callback: (item: T) => number, initial?: number): number
+function boil<T>(array: T[], callback: (item: T) => number, initial?: number): number;
 ```
 
 ### Parameters

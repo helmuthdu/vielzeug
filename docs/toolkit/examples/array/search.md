@@ -23,7 +23,7 @@ The `search` utility performs a fuzzy search across an array of objects. It chec
 ## API
 
 ```ts
-function search<T>(array: T[], query: string, tone?: number): T[]
+function search<T>(array: T[], query: string, tone?: number): T[];
 ```
 
 ### Parameters

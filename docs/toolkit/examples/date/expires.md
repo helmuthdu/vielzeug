@@ -27,7 +27,7 @@ The `expires` utility determines the expiration status of a given date relative 
 :::
 
 ```ts
-function expires(date: string | Date, days?: number): Expires
+function expires(date: string | Date, days?: number): Expires;
 ```
 
 ### Parameters

@@ -21,7 +21,7 @@ Checks if a value is a string.
 ## API
 
 ```ts
-function isString(value: unknown): value is string
+function isString(value: unknown): value is string;
 ```
 
 ### Parameters

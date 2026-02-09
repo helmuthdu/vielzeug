@@ -23,7 +23,7 @@ The `compare` utility is a generic comparator function that determines the relat
 ## API
 
 ```ts
-function compare<T>(a: T, b: T): -1 | 0 | 1
+function compare<T>(a: T, b: T): -1 | 0 | 1;
 ```
 
 ### Parameters

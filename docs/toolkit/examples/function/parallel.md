@@ -29,8 +29,8 @@ function parallel<T, R>(
   limit: number,
   array: T[],
   callback: (item: T, index: number, array: T[]) => Promise<R>,
-  signal?: AbortSignal
-): Promise<R[]>
+  signal?: AbortSignal,
+): Promise<R[]>;
 ```
 
 ### Parameters
@@ -95,7 +95,7 @@ console.log(`Fetched ${users.length} users`);
 ```ts
 import { parallel } from '@vielzeug/toolkit';
 
-const imageFiles = ['img1.jpg', 'img2.jpg', 'img3.jpg', /* ... */];
+const imageFiles = ['img1.jpg', 'img2.jpg', 'img3.jpg' /* ... */];
 
 // Process 3 images at a time to avoid memory issues
 const processedImages = await parallel(3, imageFiles, async (filename) => {
@@ -117,7 +117,7 @@ const userIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const updates = await parallel(2, userIds, async (userId) => {
   return await db.users.update({
     where: { id: userId },
-    data: { lastSeen: new Date() }
+    data: { lastSeen: new Date() },
   });
 });
 
@@ -143,9 +143,9 @@ try {
       await processItem(item);
       return item;
     },
-    controller.signal
+    controller.signal,
   );
-  
+
   console.log('Completed:', results.length);
 } catch (error) {
   if (error.name === 'AbortError') {
@@ -159,21 +159,23 @@ try {
 ```ts
 import { parallel } from '@vielzeug/toolkit';
 
-const files = [/* File objects */];
+const files = [
+  /* File objects */
+];
 let completed = 0;
 
 const uploadedFiles = await parallel(3, files, async (file, index) => {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const response = await fetch('/upload', {
     method: 'POST',
-    body: formData
+    body: formData,
   });
-  
+
   completed++;
   console.log(`Progress: ${completed}/${files.length}`);
-  
+
   return response.json();
 });
 ```
@@ -248,19 +250,21 @@ console.log(`Processed ${processed.length} records`);
 ```ts
 import { parallel } from '@vielzeug/toolkit';
 
-const urls = [/* 100 URLs to scrape */];
+const urls = [
+  /* 100 URLs to scrape */
+];
 
 // Only 2 concurrent requests to be respectful
 const scrapedData = await parallel(2, urls, async (url, index) => {
   console.log(`Scraping ${index + 1}/${urls.length}: ${url}`);
-  
+
   const response = await fetch(url);
   const html = await response.text();
   const data = parseHTML(html);
-  
+
   // Add delay between requests
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
   return data;
 });
 ```
@@ -279,7 +283,7 @@ const scrapedData = await parallel(2, urls, async (url, index) => {
 
 ## Performance Tips
 
-- **Choose limit wisely**: 
+- **Choose limit wisely**:
   - Too low = slow processing
   - Too high = resource exhaustion
   - Good defaults: 5-20 for I/O, 2-4 for CPU-intensive

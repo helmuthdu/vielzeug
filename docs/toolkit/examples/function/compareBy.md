@@ -23,7 +23,7 @@ The `compareBy` utility is a factory function that creates a comparator based on
 ## API
 
 ```ts
-function compareBy<T>(selector: (item: T) => any): (a: T, b: T) => -1 | 0 | 1
+function compareBy<T>(selector: (item: T) => any): (a: T, b: T) => -1 | 0 | 1;
 ```
 
 ### Parameters

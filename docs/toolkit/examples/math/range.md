@@ -23,7 +23,7 @@ The `range` utility generates an array of numbers starting from a base value up 
 ## API
 
 ```ts
-function range(start: number, end?: number, step?: number): number[]
+function range(start: number, end?: number, step?: number): number[];
 ```
 
 ### Parameters

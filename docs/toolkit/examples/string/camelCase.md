@@ -22,7 +22,7 @@ The `camelCase` utility transforms a string into `camelCase` format (lower case 
 ## API
 
 ```ts
-function camelCase(input: string): string
+function camelCase(input: string): string;
 ```
 
 ### Parameters

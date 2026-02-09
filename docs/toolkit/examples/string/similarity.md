@@ -22,7 +22,7 @@ The `similarity` utility calculates a score between `0` and `1` representing how
 ## API
 
 ```ts
-function similarity(a: string, b: string): number
+function similarity(a: string, b: string): number;
 ```
 
 ### Parameters

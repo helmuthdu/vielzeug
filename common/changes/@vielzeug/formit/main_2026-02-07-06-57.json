@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/formit",
+      "comment": "initial release",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/formit"
+}

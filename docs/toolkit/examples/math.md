@@ -4,25 +4,25 @@ Math utilities provide essential tools for common mathematical operations. These
 
 ## 📚 Quick Reference
 
-| Method                             | Description                                                  |
-| :--------------------------------- | :----------------------------------------------------------- |
-| [`abs`](./math/abs.md)             | Get the absolute value of a number.                          |
-| [`add`](./math/add.md)             | Add two numbers with precision handling.                     |
-| [`subtract`](./math/subtract.md)   | Subtract one number from another.                            |
-| [`multiply`](./math/multiply.md)   | Multiply a number by a scalar.                               |
-| [`divide`](./math/divide.md)       | Divide a number by a divisor.                                |
-| [`allocate`](./math/allocate.md)   | Distribute amount proportionally by ratios.                  |
-| [`distribute`](./math/distribute.md) | Distribute amount evenly among N parties.                  |
-| [`sum`](./math/sum.md)             | Sum all values in an array.                                  |
-| [`average`](./math/average.md)     | Calculate the average of an array of numbers.                |
-| [`median`](./math/median.md)       | Find the median value in an array of numbers.                |
-| [`min`](./math/min.md)             | Find the minimum value in an array.                          |
-| [`max`](./math/max.md)             | Find the maximum value in an array.                          |
-| [`clamp`](./math/clamp.md)         | Clamp a number between a minimum and maximum value.          |
-| [`round`](./math/round.md)         | Round a number to a specific decimal precision.              |
-| [`range`](./math/range.md)         | Generate an array of numbers in a given range.               |
-| [`rate`](./math/rate.md)           | Calculate a percentage or rate.                              |
-| [`boil`](./math/boil.md)           | Reduce an array to a single value using a custom comparator. |
+| Method                               | Description                                                  |
+| :----------------------------------- | :----------------------------------------------------------- |
+| [`abs`](./math/abs.md)               | Get the absolute value of a number.                          |
+| [`add`](./math/add.md)               | Add two numbers with precision handling.                     |
+| [`subtract`](./math/subtract.md)     | Subtract one number from another.                            |
+| [`multiply`](./math/multiply.md)     | Multiply a number by a scalar.                               |
+| [`divide`](./math/divide.md)         | Divide a number by a divisor.                                |
+| [`allocate`](./math/allocate.md)     | Distribute amount proportionally by ratios.                  |
+| [`distribute`](./math/distribute.md) | Distribute amount evenly among N parties.                    |
+| [`sum`](./math/sum.md)               | Sum all values in an array.                                  |
+| [`average`](./math/average.md)       | Calculate the average of an array of numbers.                |
+| [`median`](./math/median.md)         | Find the median value in an array of numbers.                |
+| [`min`](./math/min.md)               | Find the minimum value in an array.                          |
+| [`max`](./math/max.md)               | Find the maximum value in an array.                          |
+| [`clamp`](./math/clamp.md)           | Clamp a number between a minimum and maximum value.          |
+| [`round`](./math/round.md)           | Round a number to a specific decimal precision.              |
+| [`range`](./math/range.md)           | Generate an array of numbers in a given range.               |
+| [`rate`](./math/rate.md)             | Calculate a percentage or rate.                              |
+| [`boil`](./math/boil.md)             | Reduce an array to a single value using a custom comparator. |
 
 ## 💡 Practical Examples
 

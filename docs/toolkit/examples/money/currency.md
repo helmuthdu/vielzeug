@@ -29,7 +29,7 @@ Formats a monetary amount as a currency string with proper locale and symbol. Ha
 :::
 
 ```ts
-function currency(money: Money, options?: CurrencyFormatOptions): string
+function currency(money: Money, options?: CurrencyFormatOptions): string;
 ```
 
 ### Parameters
@@ -143,7 +143,7 @@ const products = [
   { name: 'Keyboard', price: { amount: 7999n, currency: 'USD' } },
 ];
 
-products.forEach(product => {
+products.forEach((product) => {
   console.log(`${product.name}: ${currency(product.price)}`);
 });
 // Laptop: $999.99
@@ -191,9 +191,9 @@ import { currency } from '@vielzeug/toolkit';
 const money = { amount: 100000n, currency: 'USD' };
 
 // Force specific decimal places
-currency(money, { 
+currency(money, {
   minimumFractionDigits: 2,
-  maximumFractionDigits: 3 
+  maximumFractionDigits: 3,
 });
 // '$1,000.00'
 ```

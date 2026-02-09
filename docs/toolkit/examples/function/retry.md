@@ -24,14 +24,14 @@ The `retry` utility automatically re-executes an asynchronous function if it fai
 
 ```ts
 function retry<T>(
-  fn: () => Promise<T>, 
+  fn: () => Promise<T>,
   options?: {
     times?: number;
     delay?: number;
     backoff?: number | ((attempt: number, delay: number) => number);
     signal?: AbortSignal;
-  }
-): Promise<T>
+  },
+): Promise<T>;
 ```
 
 ### Parameters

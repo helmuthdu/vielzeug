@@ -27,7 +27,7 @@ The `merge` utility combines multiple objects into a single new object using a v
 :::
 
 ```ts
-function merge<T extends object[]>(strategy: MergeStrategy, ...items: T): any
+function merge<T extends object[]>(strategy: MergeStrategy, ...items: T): any;
 ```
 
 ### Parameters

@@ -23,7 +23,7 @@ The `diff` utility compares two objects and returns an object containing only th
 ## API
 
 ```ts
-function diff<T extends object, U extends object>(a: T, b: U): Partial<T & U>
+function diff<T extends object, U extends object>(a: T, b: U): Partial<T & U>;
 ```
 
 ### Parameters

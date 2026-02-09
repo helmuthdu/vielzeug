@@ -8,11 +8,12 @@ on:
         required: true
         type: choice
         options:
-          - '@vielzeug/toolkit'
           - '@vielzeug/deposit'
           - '@vielzeug/fetchit'
+          - '@vielzeug/formit'
           - '@vielzeug/logit'
           - '@vielzeug/permit'
+          - '@vielzeug/toolkit'
       bump:
         description: Version bump (patch|minor|major)
         required: true

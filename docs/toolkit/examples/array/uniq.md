@@ -26,7 +26,7 @@ The `uniq` utility creates a new array containing only unique values from the in
 :::
 
 ```ts
-function uniq<T>(array: T[], selector?: Selector<T>): T[]
+function uniq<T>(array: T[], selector?: Selector<T>): T[];
 ```
 
 ### Parameters

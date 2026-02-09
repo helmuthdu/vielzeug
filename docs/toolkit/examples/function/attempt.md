@@ -25,7 +25,7 @@ The `attempt` utility safely executes a function and returns a tuple containing 
 ```ts
 type AttemptResult<T> = [T, null] | [null, any];
 
-function attempt<T>(fn: () => T | Promise<T>): Promise<AttemptResult<T>>
+function attempt<T>(fn: () => T | Promise<T>): Promise<AttemptResult<T>>;
 ```
 
 ### Parameters

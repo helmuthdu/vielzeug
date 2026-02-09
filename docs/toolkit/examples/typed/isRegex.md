@@ -16,7 +16,7 @@ Checks if a value is a regular expression.
 ## API
 
 ```ts
-function isRegex(value: unknown): value is RegExp
+function isRegex(value: unknown): value is RegExp;
 ```
 
 ### Parameters

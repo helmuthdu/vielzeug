@@ -25,7 +25,7 @@ The `compose` utility performs functional composition from right to left. It tak
 ```ts
 function compose<T extends any[], R>(
   ...fns: [(arg: any) => R, ...Array<(arg: any) => any>, (...args: T) => any]
-): (...args: T) => R | Promise<R>
+): (...args: T) => R | Promise<R>;
 ```
 
 ### Parameters

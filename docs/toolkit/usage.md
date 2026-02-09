@@ -1,40 +1,45 @@
 # Toolkit Usage Guide
 
-A comprehensive guide to installing, importing, and using Toolkit in your projects.
+Complete guide to installing and using Toolkit in your projects.
 
 ## Installation
 
-### Package Managers
+::: code-group
 
-Install Toolkit using your preferred package manager:
-
-```sh
-# pnpm (recommended)
+```sh [pnpm]
 pnpm add @vielzeug/toolkit
-
-# npm
-npm install @vielzeug/toolkit
-
-# yarn
-yarn add @vielzeug/toolkit
-
-# bun
-bun add @vielzeug/toolkit
 ```
 
-### Verify Installation
+```sh [npm]
+npm install @vielzeug/toolkit
+```
 
-After installation, verify that Toolkit is installed correctly:
+```sh [yarn]
+yarn add @vielzeug/toolkit
+```
+
+:::
+
+## Import
 
 ```ts
-import { map } from '@vielzeug/toolkit';
+// Named imports (recommended for tree-shaking)
+import { chunk, group, debounce } from '@vielzeug/toolkit';
 
-console.log(map([1, 2, 3], (x) => x * 2)); // [2, 4, 6]
+// Category-specific imports
+import { chunk, map, filter } from '@vielzeug/toolkit/array';
+import { merge, clone } from '@vielzeug/toolkit/object';
+import { debounce, throttle } from '@vielzeug/toolkit/function';
+
+// Optional: Import types
+import type { ChunkOptions } from '@vielzeug/toolkit';
 ```
 
-## Import Patterns
+## Basic Usage
 
-### Named Imports (Recommended)
+### Import Patterns
+
+#### Named Imports (Recommended)
 
 Import only the utilities you need for optimal tree-shaking:
 
@@ -156,161 +161,111 @@ Many utilities support async callbacks:
 ```ts
 import { map, filter } from '@vielzeug/toolkit';
 
-// Async map - fetches all users in parallel
+// Async map - parallel execution
 const users = await map([1, 2, 3], async (id) => {
-  const response = await fetch(`/api/users/${id}`);
-  return response.json();
+  return await fetchUser(id);
 });
 
 // Async filter
-const activeUsers = await filter(users, async (user) => {
-  const status = await checkStatus(user.id);
-  return status === 'active';
+const active = await filter(users, async (user) => {
+  return await checkStatus(user.id) === 'active';
 });
 ```
 
 ### Composition
 
-Combine utilities for powerful transformations:
+Combine utilities for complex transformations:
 
 ```ts
-import { map, filter, group, sortBy } from '@vielzeug/toolkit';
+import { filter, group, arrange } from '@vielzeug/toolkit';
 
-const products = [
-  { name: 'Laptop', category: 'electronics', price: 999, inStock: true },
-  { name: 'Desk', category: 'furniture', price: 299, inStock: false },
-  { name: 'Mouse', category: 'electronics', price: 29, inStock: true },
-];
-
-// Filter → Sort → Group
+// Chain operations
 const result = group(
-  sortBy(
+  arrange(
     filter(products, (p) => p.inStock),
     (p) => p.price,
-    'desc',
+    'desc'
   ),
-  (p) => p.category,
+  (p) => p.category
 );
 ```
 
 ### Function Utilities
 
 ```ts
-import { debounce, throttle, memo, retry } from '@vielzeug/toolkit';
+import { debounce, throttle, memo } from '@vielzeug/toolkit';
 
-// Debounce - delays execution
-const search = debounce((query: string) => {
-  console.log(`Searching for: ${query}`);
+// Debounce - delay execution
+const search = debounce((query) => {
+  console.log('Searching:', query);
 }, 300);
 
-// Throttle - limits execution rate
+// Throttle - limit rate
 const trackScroll = throttle(() => {
-  console.log('Scroll position:', window.scrollY);
+  console.log('Scroll:', window.scrollY);
 }, 100);
 
-// Memoize - caches results
-const expensiveCalc = memo((n: number) => {
-  return n * n;
-});
-
-// Retry - retries failed operations
-const fetchData = retry(
-  async () => {
-    const response = await fetch('/api/data');
-    return response.json();
-  },
-  { attempts: 3, delay: 1000 },
-);
+// Memoize - cache results
+const calculate = memo((n) => n * n);
 ```
 
 ## Framework Integration
 
 ### React
 
+Use utilities with React hooks for optimal performance:
+
 ```tsx
-import { debounce, group, chunk } from '@vielzeug/toolkit';
-import { useState, useMemo, useCallback } from 'react';
+import { debounce, chunk } from '@vielzeug/toolkit';
+import { useState, useCallback, useMemo } from 'react';
 
-function ProductList({ products }: { products: Product[] }) {
-  const [searchQuery, setSearchQuery] = useState('');
+function ProductList({ products }) {
+  const [search, setSearch] = useState('');
 
-  // Debounced search
+  // Debounce search input
   const handleSearch = useCallback(
-    debounce((query: string) => {
-      setSearchQuery(query);
-    }, 300),
+    debounce((query) => setSearch(query), 300),
     [],
   );
 
-  // Memoized grouping
-  const groupedProducts = useMemo(() => group(products, (p) => p.category), [products]);
-
-  // Pagination with chunk
+  // Memoize expensive operations
   const pages = useMemo(() => chunk(products, 20), [products]);
 
-  return (
-    <div>
-      <input onChange={(e) => handleSearch(e.target.value)} />
-      {/* Render grouped products */}
-    </div>
-  );
+  return (/* ... */);
 }
 ```
 
 ### Vue 3
 
+Use utilities with Vue composition API:
+
 ```vue
-<script setup lang="ts">
-import { computed, ref } from 'vue';
-import { group, filter, debounce } from '@vielzeug/toolkit';
+<script setup>
+import { computed } from 'vue';
+import { group, filter } from '@vielzeug/toolkit';
 
-const products = ref<Product[]>([]);
-const searchQuery = ref('');
-
-// Debounced search
-const handleSearch = debounce((query: string) => {
-  searchQuery.value = query;
-}, 300);
-
-// Computed grouped products
-const groupedProducts = computed(() =>
-  group(
-    filter(products.value, (p) => p.name.toLowerCase().includes(searchQuery.value.toLowerCase())),
-    (p) => p.category,
-  ),
+const products = ref([]);
+const grouped = computed(() => 
+  group(products.value, (p) => p.category)
 );
 </script>
-
-<template>
-  <input @input="handleSearch($event.target.value)" />
-  <!-- Render grouped products -->
-</template>
 ```
 
 ### Node.js / Express
 
-```ts
-import express from 'express';
-import { map, group, isEmpty } from '@vielzeug/toolkit';
+Use utilities in server-side code:
 
-const app = express();
+```ts
+import { map, group } from '@vielzeug/toolkit';
 
 app.get('/api/products', async (req, res) => {
   const products = await fetchProducts();
-
-  // Group by category
   const grouped = group(products, (p) => p.category);
-
-  // Transform response
-  const response = await map(Object.entries(grouped), async ([category, items]) => ({
-    category,
-    count: items.length,
-    items: items.slice(0, 10), // First 10 items
-  }));
-
-  res.json(response);
+  res.json(grouped);
 });
 ```
+
+> **💡 Tip**: See [Examples](./examples.md) for complete application examples.
 
 ## TypeScript Configuration
 

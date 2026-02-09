@@ -22,7 +22,7 @@ The `kebabCase` utility transforms a string into `kebab-case` format (all lower 
 ## API
 
 ```ts
-function kebabCase(input: string): string
+function kebabCase(input: string): string;
 ```
 
 ### Parameters

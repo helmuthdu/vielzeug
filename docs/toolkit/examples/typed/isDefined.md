@@ -22,7 +22,7 @@ The `isDefined` utility is a type guard that checks if a value is NOT `undefined
 ## API
 
 ```ts
-function isDefined<T>(value: T): value is NonNullable<T>
+function isDefined<T>(value: T): value is NonNullable<T>;
 ```
 
 ### Parameters

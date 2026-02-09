@@ -36,7 +36,7 @@ import { createHttpClient } from '@vielzeug/fetchit';
 const http = createHttpClient({
   baseUrl: 'https://api.example.com',
   timeout: 10000,
-  headers: { 'Authorization': 'Bearer token' },
+  headers: { Authorization: 'Bearer token' },
   dedupe: true,
   logger: (level, msg, meta) => {
     console.log(`[${level}]`, msg, meta);
@@ -49,9 +49,10 @@ const created = await http.post('/users', { body: newUser });
 ```
 
 **Available Methods:**
+
 - `get<T>(url, config?): Promise<T>` - GET request
 - `post<T>(url, config?): Promise<T>` - POST request
-- `put<T>(url, config?): Promise<T>` - PUT request  
+- `put<T>(url, config?): Promise<T>` - PUT request
 - `patch<T>(url, config?): Promise<T>` - PATCH request
 - `delete<T>(url, config?): Promise<T>` - DELETE request
 - `request<T>(method, url, config?): Promise<T>` - Custom HTTP method
@@ -72,7 +73,7 @@ Creates a pure query management client. Works with any HTTP client or fetch func
   - `cache?: object` - Nested cache configuration (alternative)
     - `staleTime?: number` - Time before data is stale (default: 0)
     - `gcTime?: number` - Garbage collection time (default: 300000)
-  - `refetch?: object` - Refetch configuration  
+  - `refetch?: object` - Refetch configuration
     - `onFocus?: boolean` - Refetch on window focus (default: false)
     - `onReconnect?: boolean` - Refetch on reconnect (default: false)
 
@@ -106,13 +107,14 @@ const user = await queryClient.fetch({
 // Or with native fetch
 const data = await queryClient.fetch({
   queryKey: ['data'],
-  queryFn: () => fetch('/data').then(r => r.json()),
+  queryFn: () => fetch('/data').then((r) => r.json()),
 });
 ```
 
 **Available Methods:**
 
 **Core Methods:**
+
 - `fetch<T>(options): Promise<T>` - Execute a query with caching
 - `mutate<TData, TVariables>(options, variables): Promise<TData>` - Execute a mutation
 - `prefetch<T>(options): Promise<void>` - Prefetch a query
@@ -126,6 +128,7 @@ const data = await queryClient.fetch({
 - `getCacheSize(): number` - Get number of cached queries
 
 **Method Aliases (TanStack Query compatibility):**
+
 - `fetchQuery<T>(options): Promise<T>` - Alias for `fetch()`
 - `getQueryData<T>(queryKey): T | undefined` - Alias for `getData()`
 - `setQueryData<T>(queryKey, data): void` - Alias for `setData()`
@@ -177,7 +180,6 @@ The Query Client provides caching and state management. Use it with any HTTP cli
 ### `fetch<T>(options)`
 
 Execute a query with automatic caching, deduplication, and smart refetching.
-
 
 **Parameters:**
 
@@ -244,7 +246,7 @@ const newUser = await queryClient.mutate(
       queryClient.invalidate(['users']);
     },
   },
-  { name: 'Alice', email: 'alice@example.com' }
+  { name: 'Alice', email: 'alice@example.com' },
 );
 ```
 
@@ -261,6 +263,7 @@ All HTTP client methods return `Promise<T>` - the raw data directly (not wrapped
 Makes a GET request and returns the data directly.
 
 **Config Options:**
+
 - `params?: Record<string, string | number | undefined>` - Query parameters
 - `dedupe?: boolean` - Enable/disable deduplication (default: true)
 - `signal?: AbortSignal` - AbortSignal for request cancellation
@@ -274,11 +277,7 @@ const user = await http.get<User>('/users/1');
 console.log(user.name); // Direct access
 
 // Concurrent requests are automatically deduped
-const [u1, u2, u3] = await Promise.all([
-  http.get('/users/1'),
-  http.get('/users/1'),
-  http.get('/users/1'),
-]);
+const [u1, u2, u3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
 // Only 1 network request made!
 ```
 
@@ -394,6 +393,7 @@ Invalidates and removes queries from cache. Supports pattern matching!
 > **Note:** `invalidateQueries` is an alias for `invalidate` (TanStack Query compatibility).
 
 **Pattern Matching:**
+
 - Exact match: `['users', '1']` matches only `['users', '1']`
 - Prefix match: `['users']` matches `['users']`, `['users', '1']`, `['users', 'list', {...}]`, etc.
 
@@ -412,7 +412,6 @@ queryClient.invalidate(['users']);
 
 Manually set or update data in the query cache.
 
-
 **Parameters:**
 
 - `queryKey: QueryKey` - The query key
@@ -426,7 +425,6 @@ queryClient.setData(['users', '1'], { id: '1', name: 'Alice' });
 
 // Update existing data
 queryClient.setData(['users', '1'], (old) => ({ ...old, name: 'Alice Updated' }));
-
 ```
 
 ### `getData<T>(queryKey)`
@@ -459,6 +457,7 @@ Get the full state of a query including status, error, and metadata.
 **Returns:** `QueryState<T> | null` - Query state object or null if not found
 
 **QueryState Type:**
+
 ```ts
 {
   data: T | undefined;
@@ -529,6 +528,7 @@ Subscribe to changes in a query's cache entry. The listener receives the full qu
 - `listener: (state: QueryState<T>) => void` - Callback function called with state on changes
 
 **State Object:**
+
 ```ts
 {
   data: T | undefined;
@@ -550,7 +550,7 @@ Subscribe to changes in a query's cache entry. The listener receives the full qu
 
 **Example:**
 
-```ts
+````ts
 import { createQueryClient } from '@vielzeug/fetchit';
 
 const queryClient = createQueryClient();
@@ -577,7 +577,7 @@ useEffect(() => {
     setLoading(state.isLoading);
   });
 }, [userId]);
-```### `subscribe<T>(queryKey, listener)` 
+```### `subscribe<T>(queryKey, listener)`
 
 Subscribe to query state changes. Returns an unsubscribe function.
 
@@ -600,7 +600,7 @@ const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
 
 // Clean up when done
 unsubscribe();
-```
+````
 
 **React Hook Example:**
 
@@ -688,10 +688,7 @@ type QueryKey = readonly unknown[];
 **Examples:**
 
 ```ts
-['users']
-['users', 1]
-['posts', { status: 'published' }]
-['users', userId, 'posts']
+['users'][('users', 1)][('posts', { status: 'published' })][('users', userId, 'posts')];
 ```
 
 ### `QueryOptions<T>`
@@ -743,6 +740,7 @@ type HttpClientOptions = {
 ```
 
 **Note:** Fetchit uses [@vielzeug/toolkit](../toolkit/index.md)'s utilities:
+
 - **Cache Management**: Powered by [cache()](../toolkit/examples/function/cache.md)
 - **Retry Logic**: Powered by [retry()](../toolkit/examples/function/retry.md)
 - **Logging**: Powered by [@vielzeug/logit](../logit/index.md)
@@ -815,16 +813,16 @@ Use structured query keys for better cache management:
 
 ```ts
 // User details
-['users', userId]
-
-// User details
-['users', userId]
-
-// User posts
-['users', userId, 'posts']
-
-// Filtered posts
-['posts', { status: 'published', author: userId }]
+['users', userId][
+  // User details
+  ('users', userId)
+][
+  // User posts
+  ('users', userId, 'posts')
+][
+  // Filtered posts
+  ('posts', { status: 'published', author: userId })
+];
 
 // Invalidate all user-related queries
 queryClient.invalidate(['users']);
@@ -853,7 +851,7 @@ await queryClient.mutate(
       queryClient.invalidate(['users', userId]);
     },
   },
-  { name: 'New Name' }
+  { name: 'New Name' },
 );
 ```
 
@@ -992,4 +990,3 @@ queryClient.setData(['users', userId], newUserData);
 // Clean up
 unsubscribe();
 ```
-

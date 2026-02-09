@@ -27,11 +27,7 @@ The `timeDiff` utility calculates the time difference between two dates and retu
 :::
 
 ```ts
-function timeDiff(
-  a: Date | string, 
-  b?: Date | string, 
-  allowedUnits?: TimeUnit[]
-): TimeResult
+function timeDiff(a: Date | string, b?: Date | string, allowedUnits?: TimeUnit[]): TimeResult;
 ```
 
 ### Parameters

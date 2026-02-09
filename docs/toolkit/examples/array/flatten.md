@@ -22,7 +22,7 @@ The `flatten` utility recursively flattens nested arrays into a single-level arr
 ## API
 
 ```ts
-function flatten<T>(array: any[]): T[]
+function flatten<T>(array: any[]): T[];
 ```
 
 ### Parameters

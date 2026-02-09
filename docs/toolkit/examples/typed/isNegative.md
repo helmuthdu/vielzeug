@@ -22,7 +22,7 @@ The `isNegative` utility is a type guard that checks if a given number is strict
 ## API
 
 ```ts
-function isNegative(value: number): boolean
+function isNegative(value: number): boolean;
 ```
 
 ### Parameters

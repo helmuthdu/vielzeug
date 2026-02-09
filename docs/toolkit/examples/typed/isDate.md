@@ -22,7 +22,7 @@ The `isDate` utility is a type guard that checks if a given value is a valid Jav
 ## API
 
 ```ts
-function isDate(value: unknown): value is Date
+function isDate(value: unknown): value is Date;
 ```
 
 ### Parameters

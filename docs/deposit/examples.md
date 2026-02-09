@@ -2,6 +2,19 @@
 
 Practical examples showing common use cases and patterns.
 
+::: tip 💡 Complete Applications
+These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+:::
+
+## Table of Contents
+
+- [Basic Setup](#basic-setup)
+- [CRUD Operations](#crud-operations)
+- [Advanced Queries](#advanced-queries)
+- [Transactions](#transactions)
+- [Migrations](#migrations)
+- [Real-World Patterns](#real-world-patterns)
+
 ## Basic Setup
 
 ### Define Schema
@@ -54,6 +67,12 @@ const schema = {
 ```
 
 ### Create Instance
+
+::: warning 🔍 Choosing an Adapter
+- **IndexedDB**: Recommended for production (larger storage, better performance)
+- **LocalStorage**: Simple apps with small data (<5MB)
+- Use the shorthand config for quick setup
+:::
 
 ::: code-group
 

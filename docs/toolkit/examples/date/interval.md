@@ -27,11 +27,7 @@ The `interval` utility creates an array of dates between a start and end date, s
 :::
 
 ```ts
-function interval(
-  start: Date | string, 
-  end: Date | string, 
-  options?: IntervalOptions
-): Date[]
+function interval(start: Date | string, end: Date | string, options?: IntervalOptions): Date[];
 ```
 
 ### Parameters

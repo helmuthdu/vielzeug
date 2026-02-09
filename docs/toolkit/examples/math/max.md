@@ -16,7 +16,7 @@ Returns the largest number in an array.
 ## API
 
 ```ts
-function max(numbers: number[]): number | undefined
+function max(numbers: number[]): number | undefined;
 ```
 
 ## Example

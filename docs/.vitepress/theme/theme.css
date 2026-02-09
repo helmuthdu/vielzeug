@@ -237,3 +237,21 @@
 .grid-links li {
   margin: 0 !important;
 }
+
+.logo-highlight {
+  background: hsl(240, 7%, 10%);
+  border-radius: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--color-contrast-200);
+  float: left;
+  margin: 0.5rem 2rem 0.5rem 0;
+}
+
+.logo-highlight-smaller {
+  background: hsl(240, 7%, 10%);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-contrast-300);
+  float: left;
+  margin: 8px 16px 0 0;
+}

@@ -22,7 +22,7 @@ Checks if a value is a number (excluding NaN).
 ## API
 
 ```ts
-function isNumber(value: unknown): value is number
+function isNumber(value: unknown): value is number;
 ```
 
 ### Parameters

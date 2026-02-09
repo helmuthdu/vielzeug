@@ -16,7 +16,7 @@ Calculates the sum of an array of numbers.
 ## API
 
 ```ts
-function sum<T>(array: T[], callback?: (item: T) => number): number | undefined
+function sum<T>(array: T[], callback?: (item: T) => number): number | undefined;
 ```
 
 ### Parameters
@@ -50,7 +50,7 @@ sum(items, (item) => item.price); // 60
 
 const orders = [
   { total: 100, tax: 10 },
-  { total: 200, tax: 20 }
+  { total: 200, tax: 20 },
 ];
 sum(orders, (order) => order.total + order.tax); // 330
 ```

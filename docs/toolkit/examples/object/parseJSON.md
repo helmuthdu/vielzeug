@@ -28,7 +28,7 @@ The `parseJSON` utility provides a safe and robust way to parse JSON strings. It
 :::
 
 ```ts
-function parseJSON<T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined
+function parseJSON<T>(json: unknown, options?: ParseJSONOptions<T>): T | undefined;
 ```
 
 ### Parameters

@@ -1,11 +1,11 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-28.2_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-3.9_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-depot.svg" alt="Deposit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-depot.svg" alt="Deposit Logo" width="156" class="logo-highlight"/>
 
 # Deposit
 
@@ -47,7 +47,7 @@ await db.put('users', { id: '1', name: 'Alice' });
 | Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
 | Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
 | LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | ~28KB          | ~20KB       | ~8KB        | 0KB              |
+| Bundle Size (gzip)   | **3.9 KB**     | ~20KB       | ~8KB        | 0KB              |
 | TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
 | Transactions         | ✅ Yes         | ✅ Yes      | ❌          | ✅ Complex       |
 | Dependencies         | 0              | 0           | 0           | N/A              |
@@ -287,8 +287,6 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 ## 📄 License
 
 MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
----
 
 ## 🔗 Useful Links
 

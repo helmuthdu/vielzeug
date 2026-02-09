@@ -2,6 +2,19 @@
 
 Practical examples showing common use cases and patterns with the new separate client architecture.
 
+::: tip 💡 Complete Applications
+These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+:::
+
+## Table of Contents
+
+- [Basic CRUD Operations with HTTP Client](#basic-crud-operations-with-http-client)
+- [Authentication](#authentication)
+- [Query Client](#query-client)
+- [Caching Strategies](#caching-strategies)
+- [Error Handling](#error-handling)
+- [Advanced Patterns](#advanced-patterns)
+
 ## Basic CRUD Operations with HTTP Client
 
 ### GET Request
@@ -69,6 +82,13 @@ await http.delete('/users/1');
 ```
 
 ## Authentication
+
+::: warning 🔐 Security Best Practices
+- Never store tokens in localStorage (use httpOnly cookies when possible)
+- Implement token refresh logic
+- Clear cache on logout to prevent data leaks
+- Always validate tokens on the server-side
+:::
 
 ### Setting Auth Headers
 
@@ -486,7 +506,7 @@ await queryClient.mutate(
     mutationFn: (data) => http.post<User>('/users', { body: data }),
     retry: 2, // Retry POST operations 2 times
   },
-  { name: 'Alice' }
+  { name: 'Alice' },
 );
 
 // Custom fixed retry delay

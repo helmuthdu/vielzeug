@@ -1,11 +1,11 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-6.5_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-1.5_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-permit.svg" alt="Permit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-permit.svg" alt="Permit Logo" width="156" class="logo-highlight"/>
 
 # Permit
 
@@ -67,7 +67,7 @@ if (Permit.check(user, 'posts', 'update', post)) {
 | ------------------ | -------------- | ----------- | ---------- | -------------- |
 | TypeScript Support | ✅ First-class | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
 | Dynamic Rules      | ✅ Simple      | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | ~6.5KB         | ~10KB       | ~45KB      | 0KB            |
+| Bundle Size (gzip) | **1.5 KB**     | ~10KB       | ~45KB      | 0KB            |
 | Learning Curve     | Low            | Medium      | High       | None           |
 | Role-Based         | ✅             | ✅          | ✅         | ⚠️ Manual      |
 | Resource-Based     | ✅             | ✅          | ✅         | ⚠️ Manual      |
@@ -497,8 +497,6 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 ## 📄 License
 
 MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
----
 
 ## 🔗 Useful Links
 

@@ -1,11 +1,11 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-9.7_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.9_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
 
-<img src="/logo-http.svg" alt="Fetchit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-http.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
 
 # Fetchit
 
@@ -67,46 +67,6 @@ const user = await queryClient.fetch({
 });
 ```
 
-## Features
-
-### 🏗️ Flexible Architecture
-
-- **Separate HTTP Client** - Pure HTTP operations without query overhead
-- **Separate Query Client** - Advanced caching and state management when you need it
-- **Works Together or Independently** - Use only what you need
-- **Type-Safe Query Keys** - Use `as const` for autocomplete and type safety
-
-### 🎯 Query Management
-
-- **Structured Query Keys** - Array-based keys like `['users', 1]` for easy invalidation
-- **Smart Caching** - Automatic caching with configurable staleness
-- **Request Deduplication** - Multiple identical requests = single network call
-- **Observable State** - Subscribe to query changes for real-time updates
-- **Optimistic Updates** - Update cache before server confirms
-
-### 🚀 Powerful Mutations
-
-- **Clear Separation** - Queries (read) vs Mutations (write)
-- **Callbacks** - `onSuccess`, `onError`, `onSettled` hooks
-- **Automatic Retry** - Configurable retry logic with exponential backoff
-
-### 💪 HTTP Client Features
-
-- **Clean HTTP Methods** - `get()`, `post()`, `put()`, `patch()`, `delete()`
-- **Auto JSON Handling** - Automatic request/response transformation
-- **Global Headers** - Set authentication headers once
-- **Query Parameters** - Easy parameter handling
-- **Request Deduplication** - Built-in deduplication for GET requests
-
-### ⚡ Advanced Features
-
-- **TypeScript First** - Full type inference and safety
-- **Timeout Handling** - Automatic request timeouts
-- **Cache Management** - Manual invalidation and updates powered by [@vielzeug/toolkit](../toolkit/index.md)
-- **Smart Retry Logic** - Built on toolkit's proven retry utility with exponential backoff
-- **Minimal Dependencies** - Only depends on @vielzeug/toolkit and @vielzeug/logit
-- **Isomorphic** - Works in Browser and Node.js
-
 ### Comparison with Alternatives
 
 | Feature               | Fetchit        | TanStack Query | Axios          | Native Fetch       |
@@ -117,7 +77,7 @@ const user = await queryClient.fetch({
 | Pattern Invalidation  | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
 | Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
 | Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | ~3.2 KB        | ~13 KB         | ~13 KB         | 0 KB               |
+| Bundle Size (gzip)    | **2.9 KB**     | ~13 KB         | ~13 KB         | 0 KB               |
 | Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
 | Dependencies          | 2              | 0              | 7+             | 0                  |
 | Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
@@ -625,8 +585,6 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 ## 📄 License
 
 MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
----
 
 ## 🔗 Useful Links
 

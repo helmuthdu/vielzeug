@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" style="margin: 2rem; float: right; display: block;"/>
+<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" class="logo-highlight"/>
 
 # Toolkit
 
@@ -65,18 +65,21 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ### Installation
 
-Install via your favorite package manager:
+::: code-group
 
-```sh
-# pnpm (recommended)
+```sh [pnpm]
 pnpm add @vielzeug/toolkit
+```
 
-# npm
+```sh [npm]
 npm install @vielzeug/toolkit
+```
 
-# yarn
+```sh [yarn]
 yarn add @vielzeug/toolkit
 ```
+
+:::
 
 ### Basic Usage
 
@@ -195,11 +198,11 @@ const users = await map(ids, async (id) => {
 });
 ```
 
-## 📚 Explore the Library
+## 📚 Documentation
 
-- **[Usage Guide](./usage.md)**: Installation, importing, and best practices.
-- **[API Reference](./api.md)**: Complete list of all available functions.
-- **[REPL](/repl)**: Try the library right in your browser.
+- **[Usage Guide](./usage.md)**: Installation, importing, and best practices
+- **[API Reference](./api.md)**: Complete list of all available functions
+- **[REPL](/repl)**: Try the library right in your browser
 
 ### 🧩 Utilities by Category
 
@@ -228,18 +231,19 @@ import * as toolkit from '@vielzeug/toolkit';
 
 ### Bundle Size by Category
 
-| Category | Utilities       | Approx. Size (gzipped) |
-| -------- | --------------- | ---------------------- |
-| Array    | 24 utilities    | ~8KB                   |
-| Object   | 9 utilities     | ~6KB                   |
-| String   | 10 utilities    | ~3KB                   |
-| Typed    | 25+ type guards | ~2KB                   |
-| Function | 8 utilities     | ~4KB                   |
-| Math     | 10 utilities    | ~2KB                   |
-| Date     | 5 utilities     | ~2KB                   |
-| Random   | 8 utilities     | ~3KB                   |
+| Category | Utilities | Approx. Size (gzipped) |
+| -------- | --------- | ---------------------- |
+| Array    | 25        | ~8KB                   |
+| Date     | 3         | ~1KB                   |
+| Function | 21        | ~6KB                   |
+| Math     | 17        | ~4KB                   |
+| Money    | 2         | ~1KB                   |
+| Object   | 10        | ~3KB                   |
+| Random   | 4         | ~4KB                   |
+| String   | 7         | ~2KB                   |
+| Typed    | 27        | ~3KB                   |
 
-> **Note**: Sizes are approximate and depend on your bundler configuration and which utilities you import.
+> **Note**: Sizes are approximate totals if you import all utilities from that category. Individual utilities are typically **0.1-0.8 KB gzipped** each. Actual bundle size depends on which utilities you import.
 
 ### Performance Characteristics
 
@@ -408,10 +412,6 @@ module.exports = {
 - Profile with DevTools to identify bottlenecks
 - Some utilities have specific performance notes in their docs
 
-## 📄 License
-
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
-
 ## 🤝 Contributing
 
 Found a bug or want to add a utility? We welcome contributions!
@@ -419,6 +419,10 @@ Found a bug or want to add a utility? We welcome contributions!
 - **Report bugs**: [GitHub Issues](https://github.com/helmuthdu/vielzeug/issues)
 - **Suggest features**: [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions)
 - **Submit PRs**: See our [Contributing Guide](https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md)
+
+## 📄 License
+
+MIT © [Helmuth Duarte](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 
