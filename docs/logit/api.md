@@ -236,6 +236,41 @@ Logit.assert(isAuthenticated, 'User must be authenticated', {
 
 ---
 
+## Scoped Logger Methods
+
+### `Logit.scope(namespace)`
+
+Creates a scoped logger with a namespaced prefix without mutating global state.
+
+**Parameters:**
+
+- `namespace: string` - Namespace for the scoped logger
+
+**Returns:** `ScopedLogger` - Logger instance with all logging methods
+
+**Example:**
+
+```ts
+const apiLogger = Logit.scope('api');
+const dbLogger = Logit.scope('database');
+
+apiLogger.info('Request received');  // [API] Request received
+dbLogger.error('Connection failed'); // [DATABASE] Connection failed
+
+// Global namespace unchanged
+Logit.getPrefix(); // '' (empty)
+```
+
+**ScopedLogger Methods:**
+- `debug(...args): void`
+- `trace(...args): void`
+- `info(...args): void`
+- `success(...args): void`
+- `warn(...args): void`
+- `error(...args): void`
+
+---
+
 ## Configuration Methods
 
 ### `Logit.initialise(options)`
@@ -256,8 +291,8 @@ Logit.initialise({
   timestamp: true,
   environment: true,
   remote: {
-    handler: async (type, ...args) => {
-      await sendToServer(type, args);
+    handler: async (type, metadata) => {
+      await sendToServer(type, metadata);
     },
     logLevel: 'error',
   },
@@ -306,27 +341,48 @@ Logit.info('Connected'); // Shows [Database] in output
 
 ### `Logit.setRemote(remote)`
 
-Configures remote logging handler.
+Configures remote logging handler with rich metadata support.
 
 **Parameters:**
 
 - `remote: LogitRemoteOptions` - Remote logging configuration
 
+**Handler Signature:**
+```ts
+handler: (type: LogitType, metadata: {
+  args: any[],
+  timestamp?: string,
+  namespace?: string,
+  environment: 'production' | 'development'
+}) => void | Promise<void>
+```
+
 **Example:**
 
 ```ts
 Logit.setRemote({
-  handler: async (type, ...args) => {
+  handler: async (type, metadata) => {
     if (type === 'error') {
       await fetch('/api/logs', {
         method: 'POST',
-        body: JSON.stringify({ type, args }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level: type,
+          timestamp: metadata.timestamp,
+          namespace: metadata.namespace,
+          environment: metadata.environment,
+          args: metadata.args,
+        }),
       });
     }
   },
   logLevel: 'error', // Only send errors remotely
 });
 ```
+
+::: tip Non-Blocking
+The handler is invoked asynchronously using `Promise.resolve().then()`, ensuring non-blocking execution.
+:::
 
 ---
 
@@ -377,36 +433,44 @@ Logit.setVariant('text'); // [INFO] Message
 
 ---
 
-### `Logit.showEnvironment(value)`
+### `Logit.toggleEnvironment(value?)`
 
-Shows or hides the environment indicator (🅿 for production, 🅳 for development).
+Toggles or sets the environment indicator visibility (🅿 for production, 🅳 for development).
 
 **Parameters:**
 
-- `value: boolean` - Show environment indicator
+- `value?: boolean` - Optional: explicitly set the state. If omitted, toggles current state.
 
 **Example:**
 
 ```ts
-Logit.showEnvironment(true); // Show indicator
-Logit.showEnvironment(false); // Hide indicator
+// Toggle current state
+Logit.toggleEnvironment(); // Switches between shown/hidden
+
+// Explicitly set state
+Logit.toggleEnvironment(true);  // Show indicator
+Logit.toggleEnvironment(false); // Hide indicator
 ```
 
 ---
 
-### `Logit.showTimestamp(value)`
+### `Logit.toggleTimestamp(value?)`
 
-Shows or hides timestamps in log output.
+Toggles or sets timestamp visibility in log output.
 
 **Parameters:**
 
-- `value: boolean` - Show timestamps
+- `value?: boolean` - Optional: explicitly set the state. If omitted, toggles current state.
 
 **Example:**
 
 ```ts
-Logit.showTimestamp(true); // Show timestamps
-Logit.showTimestamp(false); // Hide timestamps
+// Toggle current state
+Logit.toggleTimestamp(); // Switches between shown/hidden
+
+// Explicitly set state
+Logit.toggleTimestamp(true);  // Show timestamps
+Logit.toggleTimestamp(false); // Hide timestamps
 ```
 
 ---
@@ -459,6 +523,36 @@ console.log(timestampsEnabled); // true or false
 
 ---
 
+### `Logit.getEnvironment()`
+
+Returns whether environment indicator is currently enabled.
+
+**Returns:** `boolean`
+
+**Example:**
+
+```ts
+const envEnabled = Logit.getEnvironment();
+console.log(envEnabled); // true or false
+```
+
+---
+
+### `Logit.getVariant()`
+
+Returns the current display variant.
+
+**Returns:** `'text' | 'icon' | 'symbol'`
+
+**Example:**
+
+```ts
+const variant = Logit.getVariant();
+console.log(variant); // 'symbol'
+```
+
+---
+
 ## Types
 
 ### `LogitOptions`
@@ -480,18 +574,50 @@ interface LogitOptions {
 
 ### `LogitRemoteOptions`
 
-Remote logging handler configuration.
+Remote logging handler configuration with metadata support.
 
 ```ts
 interface LogitRemoteOptions {
-  handler?: (type: LogitType, ...args: any[]) => void;
+  handler?: (type: LogitType, metadata: {
+    args: any[];
+    timestamp?: string;
+    namespace?: string;
+    environment: 'production' | 'development';
+  }) => void | Promise<void>;
   logLevel: LogitLevel;
 }
 ```
 
 **Properties:**
 
-- `handler` - Function called for remote logging
+- `handler` - Function called for remote logging with rich metadata
+- `logLevel` - Minimum level to send to remote handler
+
+---
+
+### `ScopedLogger`
+
+Type for scoped logger instances created by `Logit.scope()`.
+
+```ts
+interface ScopedLogger {
+  debug: (...args: any[]) => void;
+  trace: (...args: any[]) => void;
+  info: (...args: any[]) => void;
+  success: (...args: any[]) => void;
+  warn: (...args: any[]) => void;
+  error: (...args: any[]) => void;
+}
+```
+
+**Example:**
+
+```ts
+import type { ScopedLogger } from '@vielzeug/logit';
+
+const logger: ScopedLogger = Logit.scope('module');
+logger.info('Message');
+```
   - `type: LogitType` - The log level/type
   - `...args: any[]` - Original log arguments
 - `logLevel` - Minimum level to trigger remote logging

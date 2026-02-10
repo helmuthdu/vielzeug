@@ -18,17 +18,21 @@ const CONSOLE_METHOD_MAP: Record<string, keyof Console> = {
 /**
  * Checks if the current environment is production.
  * Cached for performance - evaluated once at a module load.
+ *
+ * Note: import.meta.env is available in Vite/Bundlers but may be undefined in some environments.
+ * Using 'any' cast is necessary for cross-environment compatibility.
  */
 const isProduction = (): boolean => {
   // Browser environment (Vite, Webpack, etc.)
+  // import.meta.env may be undefined in some bundlers - safe check with optional chaining
   if (typeof window !== 'undefined' && (import.meta as any)?.env?.NODE_ENV) {
     return (import.meta as any).env.NODE_ENV === 'production';
   }
 
   // Node.js environment
-  // @ts-expect-error
+  // @ts-expect-error - process.env exists in Node.js but not in browser
   if (typeof process !== 'undefined' && (process as any).env?.NODE_ENV) {
-    // @ts-expect-error
+    // @ts-expect-error - process.env exists in Node.js
     return (process as any).env.NODE_ENV === 'production';
   }
 
@@ -55,6 +59,18 @@ export type LogitOptions = {
   timestamp?: boolean;
 };
 export type LogitTheme = { color: string; bg: string; border: string; icon?: string; symbol?: string };
+
+/**
+ * Scoped logger interface with namespaced logging methods.
+ */
+export type ScopedLogger = {
+  debug: (...args: any[]) => void;
+  error: (...args: any[]) => void;
+  info: (...args: any[]) => void;
+  success: (...args: any[]) => void;
+  trace: (...args: any[]) => void;
+  warn: (...args: any[]) => void;
+};
 
 /**
  * Detects dark mode preference at module load time.
@@ -114,11 +130,18 @@ const getCurrentTimestamp = (): string => new Date().toISOString().slice(11, 23)
 const getEnvIndicator = (): string => (IS_PROD ? ENV_PROD : ENV_DEV);
 
 /**
- * Sends log data to remote handler if configured.
+ * Sends log data to a remote handler if configured.
  */
 const sendRemoteLog = (type: LogitType, args: any[]): void => {
   if (state.remote.handler && logLevel[state.remote.logLevel] <= logLevel[type]) {
-    state.remote.handler(type, ...args);
+    Promise.resolve().then(() => {
+      state.remote.handler?.(type, {
+        args,
+        environment: IS_PROD ? 'production' : 'development',
+        namespace: state.namespace || undefined,
+        timestamp: state.timestamp ? getCurrentTimestamp() : undefined,
+      });
+    });
   }
 };
 
@@ -134,34 +157,40 @@ const getConsoleMethod = (type: LogitType): keyof Console => {
  */
 const BASE_BORDER_STYLE = 'border: 1px solid';
 const BASE_BORDER_RADIUS = 'border-radius: 4px';
-const NAMESPACE_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter';
+const NAMESPACE_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
 
 /**
  * Generates CSS styles for log messages based on theme and variant.
+ *
+ * @param type - Log type color scheme
+ * @param extra - Additional CSS to append (should include leading semicolon if needed)
  */
 const style = (type: LogitColors, extra = ''): string => {
   const { bg, color, border } = Theme[type];
-  const baseStyle = `color: ${bg}; ${BASE_BORDER_STYLE} ${border}; ${BASE_BORDER_RADIUS}`;
+  const baseStyle = `${BASE_BORDER_STYLE} ${border}; ${BASE_BORDER_RADIUS}`;
 
   switch (state.variant) {
     case 'symbol':
-      return `${baseStyle}; padding: 1px 1px 0${extra}`;
+      // Symbol variant: colored text on a transparent background
+      return `color: ${bg}; ${baseStyle}; padding: 1px 1px 0${extra}`;
     case 'icon':
-      return `${baseStyle}; padding: 0 3px${extra}`;
+      // Icon variant: colored text on a transparent background
+      return `color: ${bg}; ${baseStyle}; padding: 0 3px${extra}`;
     default:
-      return `background: ${bg}; color: ${color}; ${BASE_BORDER_STYLE} ${border}; ${BASE_BORDER_RADIUS}; font-weight: bold; padding: 0 3px${extra}`;
+      // Text variant: white text on a colored background
+      return `background: ${bg}; color: ${color}; ${baseStyle}; font-weight: bold; padding: 0 3px${extra}`;
   }
 };
 
 /**
- * Gets the display value for a log type based on current variant.
+ * Gets the display value for a log type based on the current variant.
  */
 const getDisplayValue = (type: LogitType): string => {
   const theme = Theme[type as LogitColors];
   const { variant } = state;
 
-  // For 'text' variant or if the variant key doesn't exist, use uppercase type
-  if (variant === 'text' || !theme[variant]) {
+  // For 'text' variant or if the variant property doesn't exist in theme, use uppercase type
+  if (variant === 'text' || !theme || !theme[variant]) {
     return type.toUpperCase();
   }
 
@@ -206,7 +235,7 @@ const log = (type: LogitType, ...args: any[]): void => {
     return;
   }
 
-  // Check log level
+  // Check the log level
   if (!shouldLog(type)) return;
 
   // Browser-side logging with styling
@@ -236,6 +265,11 @@ export const Logit = {
   error: (...args: any[]): void => log('error', ...args),
 
   /**
+   * Gets whether the environment indicator is shown.
+   */
+  getEnvironment: (): boolean => state.environment,
+
+  /**
    * Gets the current log level.
    */
   getLevel: (): LogitLevel => state.logLevel,
@@ -249,6 +283,11 @@ export const Logit = {
    * Gets whether timestamps are shown.
    */
   getTimestamp: (): boolean => state.timestamp,
+
+  /**
+   * Gets the current display variant.
+   */
+  getVariant: (): 'text' | 'symbol' | 'icon' => state.variant,
 
   /**
    * Creates a collapsed group in the console.
@@ -282,9 +321,76 @@ export const Logit = {
 
   /**
    * Initializes Logit with custom options.
+   *
+   * Note: The remote option will be merged with existing remote config,
+   * not replaced entirely. To clear a remote handler, set remote.handler to undefined.
    */
   initialise: (options: LogitOptions): void => {
+    if (options.remote) {
+      state.remote = { ...state.remote, ...options.remote };
+      delete (options as any).remote; // Remove to avoid Object.assign overwrite
+    }
     Object.assign(state, options);
+  },
+
+  /**
+   * Creates a scoped logger with a namespaced prefix.
+   * Does not mutate global state - returns an isolated logger instance.
+   *
+   * @param namespace - The namespace to prepend to all log messages
+   * @returns A scoped logger with all logging methods
+   *
+   * @example
+   * ```ts
+   * const apiLogger = Logit.scope('api');
+   * apiLogger.info('Request received'); // [API] Request received
+   *
+   * const dbLogger = Logit.scope('database');
+   * dbLogger.error('Connection failed'); // [DATABASE] Connection failed
+   * ```
+   */
+  scope: (namespace: string): ScopedLogger => {
+    const originalNamespace = state.namespace;
+    const scopedNamespace = originalNamespace ? `${originalNamespace}.${namespace}` : namespace;
+
+    return {
+      debug: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('debug', ...args);
+        state.namespace = prev;
+      },
+      error: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('error', ...args);
+        state.namespace = prev;
+      },
+      info: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('info', ...args);
+        state.namespace = prev;
+      },
+      success: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('success', ...args);
+        state.namespace = prev;
+      },
+      trace: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('trace', ...args);
+        state.namespace = prev;
+      },
+      warn: (...args: any[]) => {
+        const prev = state.namespace;
+        state.namespace = scopedNamespace;
+        log('warn', ...args);
+        state.namespace = prev;
+      },
+    };
   },
 
   /**
@@ -322,20 +428,6 @@ export const Logit = {
     state.variant = variant;
   },
 
-  /**
-   * Shows or hides the environment indicator.
-   */
-  showEnvironment: (value: boolean): void => {
-    state.environment = value;
-  },
-
-  /**
-   * Shows or hides timestamps in logs.
-   */
-  showTimestamp: (value: boolean): void => {
-    state.timestamp = value;
-  },
-
   success: (...args: any[]): void => log('success', ...args),
 
   /**
@@ -357,6 +449,40 @@ export const Logit = {
    */
   timeEnd: (label: string): void => {
     if (shouldLog('time')) console.timeEnd(label);
+  },
+
+  /**
+   * Toggles or sets the environment indicator visibility.
+   * When called without arguments, toggles the current state.
+   *
+   * @param value - Optional boolean to explicitly set the state
+   *
+   * @example
+   * ```ts
+   * Logit.toggleEnvironment();      // Toggles current state
+   * Logit.toggleEnvironment(true);  // Shows environment indicator
+   * Logit.toggleEnvironment(false); // Hides environment indicator
+   * ```
+   */
+  toggleEnvironment: (value?: boolean): void => {
+    state.environment = value ?? !state.environment;
+  },
+
+  /**
+   * Toggles or sets timestamp visibility in logs.
+   * When called without arguments, toggles the current state.
+   *
+   * @param value - Optional boolean to explicitly set the state
+   *
+   * @example
+   * ```ts
+   * Logit.toggleTimestamp();      // Toggles current state
+   * Logit.toggleTimestamp(true);  // Shows timestamps
+   * Logit.toggleTimestamp(false); // Hides timestamps
+   * ```
+   */
+  toggleTimestamp: (value?: boolean): void => {
+    state.timestamp = value ?? !state.timestamp;
   },
 
   trace: (...args: any[]): void => log('trace', ...args),
