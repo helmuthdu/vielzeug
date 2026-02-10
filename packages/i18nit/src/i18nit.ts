@@ -32,6 +32,23 @@ export type I18nConfig = {
   missingVar?: 'preserve' | 'empty' | 'error';
 };
 
+/**
+ * Error thrown when a required variable is missing during interpolation.
+ */
+export class MissingVariableError extends Error {
+  readonly key: string;
+  readonly variable: string;
+  readonly locale: Locale;
+
+  constructor(key: string, variable: string, locale: Locale) {
+    super(`Missing variable '${variable}' for key '${key}' in locale '${locale}'`);
+    this.name = 'MissingVariableError';
+    this.key = key;
+    this.variable = variable;
+    this.locale = locale;
+  }
+}
+
 /* Helpers */
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -44,12 +61,19 @@ const HTML_ENTITIES: Record<string, string> = {
 
 const escapeHtml = (str: string): string => str.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
 
-// Resolve nested properties: "a.b", "a[0]", "a.b[0].c"
+/**
+ * Resolve nested properties using dot notation and numeric bracket notation.
+ *
+ * @param obj - Object to traverse
+ * @param path - Path string to resolve
+ * @returns Value at a path or undefined if not found
+ */
 const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
   // Try direct access first (supports literal keys with dots)
   if (path in obj) return obj[path];
 
-  // Parse and traverse path
+  // Parse and traverse path - matches: word characters, numbers
+  // Regex: /[^.[\]]+/g matches segments between dots and brackets
   const parts = path.match(/[^.[\]]+/g) || [];
   let value: unknown = obj;
 
@@ -61,22 +85,37 @@ const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
   return value;
 };
 
+/**
+ * Interpolate variables into a template string.
+ *
+ * Template format: {variableName} or {nested.path} or {array[0]}
+ *
+ * @param template - Template string with {variable} placeholders
+ * @param vars - Variables object
+ * @param options - Interpolation options
+ * @returns Interpolated string
+ * @throws {MissingVariableError} When missingVar is 'error' and a variable is not found
+ */
 const interpolate = (
   template: string,
   vars: Record<string, unknown>,
   options: {
     locale?: Locale;
     missingVar?: 'preserve' | 'empty' | 'error';
+    key?: string; // For better error messages
   } = {},
 ): string => {
   const missingVar = options.missingVar ?? 'empty';
 
-  return template.replace(/\{([\w.[\]]+)\}/g, (match, key) => {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Variable interpolation requires conditional logic
+  return template.replace(/\{([\w.[\]]+)}/g, (match, key) => {
     const value = resolvePath(vars, key);
 
     if (value == null) {
       if (missingVar === 'preserve') return match;
-      if (missingVar === 'error') throw new Error(`Missing variable: ${key}`);
+      if (missingVar === 'error') {
+        throw new MissingVariableError(options.key ?? 'unknown', key, options.locale ?? 'unknown');
+      }
       return '';
     }
 
@@ -97,49 +136,29 @@ const interpolate = (
 
 type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 
-const PLURAL_RULES: Record<string, (n: number) => PluralCategory> = {
-  // Arabic: complex rules
-  ar: (n) => {
-    if (n === 0) return 'zero';
-    if (n === 1) return 'one';
-    if (n === 2) return 'two';
-    const mod100 = n % 100;
-    if (mod100 === 0 && n !== 0) return 'zero';
-    if (mod100 >= 3 && mod100 <= 10) return 'few';
-    if (mod100 >= 11 && mod100 <= 99) return 'many';
-    return 'other';
-  },
-  // English: one/other
-  en: (n) => (n === 1 ? 'one' : 'other'),
-
-  // French: one (0-1) / other
-  fr: (n) => (n <= 1 ? 'one' : 'other'),
-
-  // Polish: one / few / many
-  pl: (n) => {
-    if (n === 1) return 'one';
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'few';
-    return 'many';
-  },
-
-  // Russian: similar to Polish
-  ru: (n) => {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'one';
-    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'few';
-    if (mod10 === 0 || [5, 6, 7, 8, 9].includes(mod10) || [11, 12, 13, 14].includes(mod100)) return 'many';
-    return 'other';
-  },
-};
-
+/**
+ * Get the plural form for a number in a given locale using Intl.PluralRules API.
+ *
+ * Automatically handles all locale-specific plural rules including:
+ * - English: one/other
+ * - Arabic: zero/one/two/few/many/other
+ * - Russian/Polish: one/few/many/other
+ * - And 100+ other languages
+ *
+ * @param locale - Locale string (e.g., 'en-US', 'fr')
+ * @param count - Number to pluralize
+ * @returns Plural category
+ */
 const getPluralForm = (locale: Locale, count: number): PluralCategory => {
   const n = Math.abs(Math.floor(count));
-  const lang = locale.split('-')[0].toLowerCase();
-  const rule = PLURAL_RULES[lang] ?? PLURAL_RULES.en;
-  return rule(n);
+
+  try {
+    const pluralRules = new Intl.PluralRules(locale);
+    return pluralRules.select(n) as PluralCategory;
+  } catch {
+    // Fallback to English-like behavior if locale is invalid
+    return n === 1 ? 'one' : 'other';
+  }
 };
 
 type LocaleChangeHandler = (locale: Locale) => void;
@@ -223,9 +242,19 @@ class I18n {
     const loader = this.loaders.get(locale);
     if (!loader) return;
 
-    const promise = loader()
-      .then((messages) => this.add(locale, messages))
-      .finally(() => this.loading.delete(locale));
+    const promise = (async () => {
+      try {
+        const messages = await loader();
+        this.add(locale, messages);
+      } catch (error) {
+        // Log loader failures for visibility
+        console.warn(`[I18n] Failed to load locale '${locale}':`, error);
+        // Re-throw so callers can handle errors
+        throw error;
+      } finally {
+        this.loading.delete(locale);
+      }
+    })();
 
     this.loading.set(locale, promise);
     return promise;
@@ -255,7 +284,7 @@ class I18n {
       return opts.fallback ?? this.missingKey(key, targetLocale);
     }
 
-    return this.formatMessage(message, vars ?? {}, targetLocale, shouldEscape);
+    return this.formatMessage(message, vars ?? {}, targetLocale, shouldEscape, key);
   }
 
   async tl(key: string, vars?: Record<string, unknown>, options?: TranslateParams): Promise<string> {
@@ -265,7 +294,8 @@ class I18n {
       try {
         await this.load(targetLocale);
       } catch {
-        // Continue with translation even if loading fails
+        // Loader errors are already logged in load(), continue with fallback
+        // This catch prevents the error from propagating to the caller
       }
     }
 
@@ -363,6 +393,7 @@ class I18n {
     vars: Record<string, unknown>,
     locale: Locale,
     shouldEscape: boolean,
+    key?: string,
   ): string {
     // Handle function messages
     if (typeof message === 'function') {
@@ -391,13 +422,13 @@ class I18n {
       }
 
       const template = pluralMsg[form] ?? pluralMsg.other;
-      const result = interpolate(template, vars, { locale, missingVar: this.missingVar });
+      const result = interpolate(template, vars, { key, locale, missingVar: this.missingVar });
       return shouldEscape ? escapeHtml(result) : result;
     }
 
     // Handle string messages
     if (typeof message === 'string') {
-      const result = interpolate(message, vars, { locale, missingVar: this.missingVar });
+      const result = interpolate(message, vars, { key, locale, missingVar: this.missingVar });
       return shouldEscape ? escapeHtml(result) : result;
     }
 

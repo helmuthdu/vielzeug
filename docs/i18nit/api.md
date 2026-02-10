@@ -5,6 +5,7 @@ Complete API documentation for i18nit.
 ## Table of Contents
 
 - [Types](#types)
+- [Errors](#errors)
 - [createI18n()](#createi18n)
 - [I18n Instance](#i18n-instance)
   - [Translation Methods](#translation-methods)
@@ -35,7 +36,13 @@ A string representing a locale identifier (e.g., `'en'`, `'es'`, `'fr-FR'`).
 type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 ```
 
-Plural category used for pluralization rules.
+Plural category used for pluralization rules. These categories are determined automatically using the `Intl.PluralRules` API, which supports 100+ languages with proper plural rules from the [Unicode CLDR](https://cldr.unicode.org/).
+
+**Plural categories by language:**
+- **Simple (one/other)**: English, German, Spanish, etc.
+- **Complex (zero/one/two/few/many/other)**: Arabic
+- **Complex (one/few/many)**: Russian, Polish, Czech
+- **No plurals (other only)**: Chinese, Japanese, Korean
 
 ### PluralMessages
 
@@ -97,6 +104,51 @@ type Messages = Record<string, MessageValue>;
 ```
 
 Collection of translations for a locale.
+
+---
+
+## Errors
+
+### MissingVariableError
+
+```ts
+class MissingVariableError extends Error {
+  readonly key: string;
+  readonly variable: string;
+  readonly locale: Locale;
+}
+```
+
+Error thrown when `missingVar: 'error'` is configured and a required variable is missing during interpolation.
+
+**Properties:**
+- `key` - The translation key being processed
+- `variable` - The name of the missing variable
+- `locale` - The locale being used
+- `message` - Formatted error message with all context
+
+**Example:**
+
+```ts
+import { createI18n, MissingVariableError } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  messages: { en: { greeting: 'Hello, {name}!' } },
+  missingVar: 'error',
+});
+
+try {
+  i18n.t('greeting');
+} catch (error) {
+  if (error instanceof MissingVariableError) {
+    console.log(error.key);      // 'greeting'
+    console.log(error.variable); // 'name'
+    console.log(error.locale);   // 'en'
+    console.log(error.message);  
+    // "Missing variable 'name' for key 'greeting' in locale 'en'"
+  }
+}
+```
 
 ### TranslateParams
 
@@ -791,17 +843,51 @@ missingVar?: 'preserve' | 'empty' | 'error'
 
 **Default:** `'empty'`
 
-Behavior when variable is missing in interpolation.
+Strategy for handling missing variables in interpolation.
 
 - **`'preserve'`**: Keep the placeholder (e.g., `{name}`)
 - **`'empty'`**: Replace with empty string
-- **`'error'`**: Throw an error
+- **`'error'`**: Throw `MissingVariableError` with structured information
 
 **Example:**
 
 ```ts
-// Preserve
-createI18n({ missingVar: 'preserve' });
+// Preserve placeholders
+createI18n({ 
+  missingVar: 'preserve',
+  messages: { en: { greeting: 'Hello, {name}!' } }
+});
+i18n.t('greeting'); // "Hello, {name}!"
+
+// Empty string (default)
+createI18n({ 
+  missingVar: 'empty',
+  messages: { en: { greeting: 'Hello, {name}!' } }
+});
+i18n.t('greeting'); // "Hello, !"
+
+// Throw structured error
+import { MissingVariableError } from '@vielzeug/i18nit';
+
+createI18n({ 
+  missingVar: 'error',
+  messages: { en: { greeting: 'Hello, {name}!' } }
+});
+
+try {
+  i18n.t('greeting');
+} catch (error) {
+  if (error instanceof MissingVariableError) {
+    console.log(error.key);      // 'greeting'
+    console.log(error.variable); // 'name'
+    console.log(error.locale);   // 'en'
+  }
+}
+```
+
+::: tip Error Tracking
+When using `missingVar: 'error'`, you can catch `MissingVariableError` specifically and send structured error data to your error tracking service (Sentry, Bugsnag, etc.).
+:::
 i18n.t('Hello, {name}!'); // "Hello, {name}!"
 
 // Empty (default)

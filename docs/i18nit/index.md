@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1.8_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-3.0_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -9,11 +9,11 @@
 
 # i18nit
 
-**i18nit** is a lightweight, type-safe internationalization (i18n) library for TypeScript. It provides powerful features like pluralization, variable interpolation, async loading, and locale fallbacks with zero dependencies.
+**i18nit** is a lightweight, type-safe internationalization (i18n) library for TypeScript. It provides powerful features like pluralization, variable interpolation with nested paths, async loading, locale fallbacks, and structured error handling with zero dependencies.
 
 ## What Problem Does i18nit Solve?
 
-Internationalization in modern applications requires handling translations, pluralization rules, dynamic variables, and locale-specific formatting. i18nit provides all of this with a clean, framework-agnostic API.
+Internationalization in modern applications requires handling translations, pluralization rules, dynamic variables, and locale-specific formatting. i18nit provides all of this with a clean, framework-agnostic API and built-in safety features.
 
 **Traditional Approach**:
 
@@ -72,14 +72,17 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 | Feature             | i18nit       | i18next      | react-intl  |
 | ------------------- | ------------ | ------------ | ----------- |
-| Bundle Size         | **1.8 KB**   | ~30KB        | ~40KB       |
-| Dependencies        | 0            | 3            | Multiple    |
-| TypeScript          | Native       | Good         | Good        |
+| Bundle Size         | **~3.0 KB**  | ~12KB        | ~15KB       |
+| Dependencies        | **0**        | 2+           | 10+         |
+| TypeScript          | First-class  | Good         | Good        |
 | Framework           | Agnostic     | Agnostic     | React only  |
-| Pluralization       | ✅           | ✅           | ✅          |
-| Async Loading       | ✅           | ✅           | ✅          |
+| Pluralization       | ✅ Built-in  | ✅ Plugin    | ✅ Built-in |
+| Async Loading       | ✅ Built-in  | ✅ Built-in  | ⚠️ Manual   |
+| Path Interpolation  | ✅ `{user.name}` | ❌       | ❌          |
 | Nested Keys         | ✅           | ✅           | ✅          |
-| Message Functions   | ✅           | Plugins      | ✅          |
+| Message Functions   | ✅ Built-in  | ⚠️ Limited   | ✅ Components |
+| HTML Escaping       | ✅ Built-in  | ⚠️ Manual    | ✅ Built-in |
+| Structured Errors   | ✅ MissingVariableError | ❌ | ❌       |
 
 ## When to Use i18nit
 
@@ -87,30 +90,36 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 - Lightweight, type-safe i18n solution
 - Pluralization with complex language rules
-- Async translation loading
+- Async translation loading with automatic caching
 - Framework-agnostic solution
-- Variable interpolation with nested paths
-- Minimal bundle size
+- Variable interpolation with nested paths (`{user.name}`, `{items[0]}`)
+- Structured error handling with detailed context
+- Minimal bundle size (~3KB gzipped)
+- Built-in XSS protection with HTML escaping
 
 ❌ **Don't use i18nit when:**
 
-- You need a full i18n ecosystem with plugins (use i18next)
+- You need a full i18n ecosystem with extensive plugins (use i18next)
 - You need ICU message format (use FormatJS)
-- You need advanced formatting (use Intl directly)
+- You require database-backed translations
 
 ## 🚀 Key Features
 
-- **Type-Safe**: Full TypeScript support with type inference
-- **Pluralization**: Support for 50+ languages with complex plural rules
-- **Variable Interpolation**: Dot notation and bracket notation for nested data
-- **Async Loading**: Lazy-load translations with automatic caching
-- **Locale Fallbacks**: Automatic fallback chain (e.g., en-US → en → fallback)
-- **Message Functions**: Dynamic translations with helper functions
-- **Namespaced Keys**: Organize translations with namespaces
-- **Reactive Subscriptions**: Subscribe to locale changes
+- **Type-Safe**: Full TypeScript support with generic types and type inference
+- **Universal Pluralization**: Support for 100+ languages via Intl.PluralRules API (Arabic, Polish, Russian, Chinese, and more)
+- **Path Interpolation**: Dot notation and bracket notation for nested data (`{user.name}`, `{items[0]}`)
+- **Async Loading**: Lazy-load translations with automatic caching and deduplication
+- **Locale Fallbacks**: Automatic fallback chain (e.g., de-CH → de → en)
+- **Message Functions**: Dynamic translations with number/date helpers
+- **Namespaced Keys**: Organize translations by feature or module
+- **Reactive Subscriptions**: Subscribe to locale changes for UI updates
+- **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping
+- **Structured Errors**: `MissingVariableError` with key, variable, and locale context
+- **Missing Variable Strategies**: Choose between empty, preserve, or error for missing variables
 - **Zero Dependencies**: No external dependencies, fully self-contained
-- **Tiny Bundle**: ~1.8KB minified
+- **Tiny Bundle**: ~3.0KB gzipped
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
+- **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining graceful fallback
 
 ## 🏁 Quick Start
 

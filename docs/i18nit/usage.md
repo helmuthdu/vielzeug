@@ -24,8 +24,18 @@ yarn add @vielzeug/i18nit
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
-// Optional: Import types
-import type { I18n, I18nConfig, Messages, TranslateParams } from '@vielzeug/i18nit';
+
+// Optional: Import types and errors
+import type { 
+  I18n, 
+  I18nConfig, 
+  Messages, 
+  TranslateParams,
+  MessageValue,
+  PluralMessages 
+} from '@vielzeug/i18nit';
+
+import { MissingVariableError } from '@vielzeug/i18nit';
 ```
 
 ::: tip 💡 API Reference
@@ -35,9 +45,11 @@ This guide covers API usage and basic patterns. For complete application example
 ## Table of Contents
 
 - [Basic Usage](#basic-usage)
-- [Pluralization](#pluralization)
 - [Variable Interpolation](#variable-interpolation)
+- [Missing Variable Handling](#missing-variable-handling)
+- [Pluralization](#pluralization)
 - [Async Loading](#async-loading)
+- [HTML Escaping](#html-escaping)
 - [Framework Integration](#framework-integration)
 - [Advanced Patterns](#advanced-patterns)
 - [Best Practices](#best-practices)
@@ -200,7 +212,11 @@ i18n.t('notifications', { count: 10 }); // "10 notifications"
 
 ### Complex Plural Rules
 
-Different languages have different plural rules:
+i18nit automatically handles plural rules for **100+ languages** using the built-in `Intl.PluralRules` API. Different languages have different plural categories and rules:
+
+::: tip Automatic Language Support
+No configuration needed! i18nit uses the [Unicode CLDR](https://cldr.unicode.org/) plural rules via `Intl.PluralRules`, supporting all major languages including complex ones like Arabic, Russian, and Polish.
+:::
 
 #### French (0-1 is "one", rest is "other")
 
@@ -271,6 +287,31 @@ i18n.t('items', { count: 5 }); // "عدة عناصر"
 i18n.t('items', { count: 15 }); // "عناصر كثيرة"
 i18n.t('items', { count: 100 }); // "لا عناصر"
 ```
+
+### Supported Languages
+
+i18nit automatically handles plural rules for **100+ languages** using the `Intl.PluralRules` API, including:
+
+**Simple (one/other):**
+- English (en), German (de), Spanish (es), Italian (it), Portuguese (pt), Dutch (nl), Swedish (sv), Norwegian (no), Danish (da), Finnish (fi)
+
+**Complex (multiple forms):**
+- **French (fr)**: one (0-1), other
+- **Arabic (ar)**: zero, one, two, few, many, other
+- **Russian (ru)**: one, few, many, other
+- **Polish (pl)**: one, few, many
+- **Czech (cs)**: one, few, many
+- **Croatian (hr)**: one, few, other
+- **Ukrainian (uk)**: one, few, many
+
+**No plural forms:**
+- Chinese (zh), Japanese (ja), Korean (ko), Vietnamese (vi), Thai (th), Turkish (tr)
+
+**And many more!** All languages supported by JavaScript's `Intl.PluralRules` are automatically supported.
+
+::: tip Browser Compatibility
+`Intl.PluralRules` is supported in Chrome 63+, Firefox 58+, Safari 13+, and Node.js 10+. For older environments, i18nit gracefully falls back to English-like behavior (one/other).
+:::
 
 ---
 
@@ -345,6 +386,49 @@ i18n.t('shopping', { items: ['Milk', 'Bread', 'Eggs'] });
 // "Shopping list: Milk, Bread, Eggs"
 ```
 
+### Mixed Notation
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      complex: 'Name: {data.users[0].profile.name}',
+      nested: 'Value: {config.settings[2].value}',
+    },
+  },
+});
+
+i18n.t('complex', {
+  data: {
+    users: [
+      { profile: { name: 'Alice' } },
+      { profile: { name: 'Bob' } },
+    ],
+  },
+});
+// "Name: Alice"
+```
+
+### Supported Path Formats
+
+i18nit supports the following interpolation path formats:
+
+- `{name}` - Simple variable
+- `{user.name}` - Nested object property
+- `{user.profile.email}` - Deep nested property
+- `{items[0]}` - Array index
+- `{data.items[0].value}` - Mixed notation
+
+**Limitations:**
+- Only **numeric** bracket notation is supported: `[0]`, `[123]`
+- **Quoted keys** are not supported: `["key"]`, `['key']`
+- **Non-numeric brackets** are not supported: `[key]`, `[variableName]`
+- Bracket notation only works with arrays, not as alternative property access
+
+::: warning Path Syntax
+Use dot notation for object properties and numeric brackets for arrays only. Complex dynamic property access is not supported.
+:::
+
 ### Different Value Types
 
 ```ts
@@ -394,33 +478,155 @@ i18n.t('price', { amount: 1234.56 });
 
 ### Missing Variable Handling
 
+i18nit provides three strategies for handling missing variables:
+
+#### Empty String (Default)
+
 ```ts
-// Default: empty string
 const i18n = createI18n({
   messages: {
     en: { greeting: 'Hello, {name}!' },
   },
+  missingVar: 'empty', // Default
 });
+
 i18n.t('greeting'); // "Hello, !"
-
-// Preserve placeholders
-const i18n2 = createI18n({
-  missingVar: 'preserve',
-  messages: {
-    en: { greeting: 'Hello, {name}!' },
-  },
-});
-i18n2.t('greeting'); // "Hello, {name}!"
-
-// Throw error
-const i18n3 = createI18n({
-  missingVar: 'error',
-  messages: {
-    en: { greeting: 'Hello, {name}!' },
-  },
-});
-i18n3.t('greeting'); // throws Error: Missing variable: name
+i18n.t('greeting', { name: undefined }); // "Hello, !"
 ```
+
+#### Preserve Placeholders
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+  missingVar: 'preserve',
+});
+
+i18n.t('greeting'); // "Hello, {name}!"
+i18n.t('greeting', { name: undefined }); // "Hello, {name}!"
+```
+
+#### Throw Error with Structured Information
+
+```ts
+import { createI18n, MissingVariableError } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+  missingVar: 'error',
+});
+
+try {
+  i18n.t('greeting');
+} catch (error) {
+  if (error instanceof MissingVariableError) {
+    console.log(error.key);      // 'greeting'
+    console.log(error.variable); // 'name'
+    console.log(error.locale);   // 'en'
+    console.log(error.message);  // "Missing variable 'name' for key 'greeting' in locale 'en'"
+    
+    // Log to error tracking service
+    trackError({
+      type: 'missing_i18n_variable',
+      key: error.key,
+      variable: error.variable,
+      locale: error.locale,
+    });
+  }
+}
+```
+
+**Benefits of MissingVariableError:**
+- Structured data (key, variable, locale) for debugging
+- Can be caught specifically with `instanceof`
+- Useful for error tracking and monitoring
+- Better than generic Error for production debugging
+
+---
+
+## HTML Escaping
+
+Protect against XSS attacks by escaping HTML in translations.
+
+### Global Escaping
+
+```ts
+const i18n = createI18n({
+  escape: true, // Enable for all translations
+  messages: {
+    en: {
+      userContent: '<script>alert("xss")</script>',
+      safeHtml: '<b>Bold text</b>',
+    },
+  },
+});
+
+i18n.t('userContent');
+// "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+
+i18n.t('safeHtml');
+// "&lt;b&gt;Bold text&lt;/b&gt;"
+```
+
+### Per-Translation Escaping
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      userComment: 'Comment: {content}',
+    },
+  },
+});
+
+// Escape for this translation only
+i18n.t('userComment', 
+  { content: '<script>xss</script>' }, 
+  { escape: true }
+);
+// "Comment: &lt;script&gt;xss&lt;/script&gt;"
+
+// No escaping
+i18n.t('userComment', 
+  { content: '<b>Important</b>' }, 
+  { escape: false }
+);
+// "Comment: <b>Important</b>"
+```
+
+### With Interpolation
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      greeting: 'Hello, {name}!',
+    },
+  },
+});
+
+// Variables are escaped when escape is enabled
+i18n.t('greeting', 
+  { name: '<script>alert("xss")</script>' }, 
+  { escape: true }
+);
+// "Hello, &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;!"
+```
+
+**Escaped Characters:**
+- `<` → `&lt;`
+- `>` → `&gt;`
+- `&` → `&amp;`
+- `"` → `&quot;`
+- `'` → `&#39;`
+
+::: warning Security
+Always escape user-generated content in translations to prevent XSS attacks. Use global escaping or per-translation escaping based on your needs.
+:::
 
 ---
 
