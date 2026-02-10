@@ -162,14 +162,39 @@ jobs:
           mkdir -p "${CHANGE_DIR}"
           
           BUMP_TYPE="${{ steps.check-changes.outputs.bump-type }}"
+          CURRENT_VERSION="${{ steps.package-info.outputs.old-version }}"
+          
+          # Calculate the next version based on bump type
+          NEXT_VERSION=$(node -e "
+            const current = '$CURRENT_VERSION';
+            const bump = '$BUMP_TYPE';
+            const parts = current.split('.').map(Number);
+            
+            if (bump === 'major') {
+              parts[0]++;
+              parts[1] = 0;
+              parts[2] = 0;
+            } else if (bump === 'minor') {
+              parts[1]++;
+              parts[2] = 0;
+            } else {
+              parts[2]++;
+            }
+            
+            console.log(parts.join('.'));
+          ")
+          
+          echo "📋 Current version: ${CURRENT_VERSION}"
+          echo "📋 Bump type: ${BUMP_TYPE}"
+          echo "📋 Next version: ${NEXT_VERSION}"
           
           # Create a rush change file for this release
-          cat > "${CHANGE_DIR}/release_$(date +%Y-%m-%d-%H-%M).json" << EOF
+          cat > "${CHANGE_DIR}/release_$(date +%Y-%m-%d-%H-%M-%S).json" << EOF
           {
             "changes": [
               {
                 "packageName": "${{ inputs.package }}",
-                "comment": "Release version with ${BUMP_TYPE} bump",
+                "comment": "Release version ${NEXT_VERSION} (${BUMP_TYPE} bump from ${CURRENT_VERSION})",
                 "type": "${BUMP_TYPE}"
               }
             ],
@@ -178,7 +203,8 @@ jobs:
           }
           EOF
           
-          echo "✅ Created temporary change file for ${{ inputs.package }} with ${BUMP_TYPE} bump"
+          echo "✅ Created temporary change file for ${{ inputs.package }}"
+          echo "   This will bump version from ${CURRENT_VERSION} to ${NEXT_VERSION}"
 
       - name: Verify only selected package will be released
         run: |
@@ -269,6 +295,44 @@ jobs:
           NEW_VERSION=$(node -e "console.log(require('./${{ steps.package-info.outputs.folder }}/package.json').version)")
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Version bumped from ${{ steps.package-info.outputs.old-version }} to $NEW_VERSION"
+
+      - name: Validate version is new
+        run: |
+          OLD_VERSION="${{ steps.package-info.outputs.old-version }}"
+          NEW_VERSION="${{ steps.version.outputs.new-version }}"
+          
+          if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+            echo "❌ Error: Version was not bumped!"
+            echo "   Current: $OLD_VERSION"
+            echo "   Expected: Version should be bumped based on change files"
+            echo ""
+            echo "This usually means:"
+            echo "  1. No change files exist for this package"
+            echo "  2. The change file didn't trigger a version bump"
+            echo ""
+            echo "Please check the change files in common/changes/@vielzeug/$(echo '${{ inputs.package }}' | cut -d'/' -f2)/"
+            exit 1
+          fi
+          
+          # Check if this version already exists on npm
+          NPM_VERSION=$(npm view ${{ inputs.package }} version 2>/dev/null || echo "not-found")
+          
+          if [ "$NPM_VERSION" = "$NEW_VERSION" ]; then
+            echo "❌ Error: Version $NEW_VERSION already exists on npm!"
+            echo ""
+            echo "This version is already published. To release a new version:"
+            echo "  1. Make sure you select the correct bump type (patch/minor/major)"
+            echo "  2. The workflow will automatically calculate the next version"
+            echo ""
+            echo "Current npm version: $NPM_VERSION"
+            echo "Attempted new version: $NEW_VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Version validation passed"
+          echo "   Old version: $OLD_VERSION"
+          echo "   New version: $NEW_VERSION"
+          echo "   npm version: $NPM_VERSION"
 
       - name: Tag release
         run: |
