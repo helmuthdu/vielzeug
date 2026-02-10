@@ -2,6 +2,21 @@
   "name": "@vielzeug/deposit",
   "entries": [
     {
+      "version": "1.1.1",
+      "tag": "@vielzeug/deposit_v1.1.1",
+      "date": "Tue, 10 Feb 2026 21:43:22 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `1.1.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `1.1.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/deposit_v1.1.0",
       "date": "Tue, 10 Feb 2026 21:31:26 GMT",
