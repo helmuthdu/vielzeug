@@ -104,8 +104,28 @@ jobs:
         run: |
           PACKAGE_FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${{ inputs.package }}'); console.log(project.projectFolder);")
           OLD_VERSION=$(node -e "console.log(require('./${PACKAGE_FOLDER}/package.json').version)")
+          
+          # Check npm version
+          NPM_VERSION=$(npm view ${{ inputs.package }} version 2>/dev/null || echo "0.0.0")
+          
           echo "folder=$PACKAGE_FOLDER" >> $GITHUB_OUTPUT
           echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          echo "npm-version=$NPM_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "📦 Package: ${{ inputs.package }}"
+          echo "📂 Folder: ${PACKAGE_FOLDER}"
+          echo "📋 Local version: ${OLD_VERSION}"
+          echo "📋 npm version: ${NPM_VERSION}"
+          
+          # Compare versions
+          if [ "$OLD_VERSION" = "$NPM_VERSION" ]; then
+            echo "⚠️  Local version matches npm version"
+            echo "   A version bump will be required to release"
+          elif [ "$NPM_VERSION" = "0.0.0" ]; then
+            echo "✅ Package not yet published to npm"
+          else
+            echo "ℹ️  Local and npm versions differ"
+          fi
 
       - name: Check for existing change files
         id: check-changes
@@ -300,39 +320,74 @@ jobs:
         run: |
           OLD_VERSION="${{ steps.package-info.outputs.old-version }}"
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
+          NPM_VERSION="${{ steps.package-info.outputs.npm-version }}"
           
+          echo "📊 Version Check:"
+          echo "   Local (before): $OLD_VERSION"
+          echo "   Local (after):  $NEW_VERSION"
+          echo "   npm:            $NPM_VERSION"
+          
+          # Check 1: Verify version was bumped from local
           if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+            echo ""
             echo "❌ Error: Version was not bumped!"
-            echo "   Current: $OLD_VERSION"
-            echo "   Expected: Version should be bumped based on change files"
             echo ""
-            echo "This usually means:"
-            echo "  1. No change files exist for this package"
-            echo "  2. The change file didn't trigger a version bump"
+            echo "The version in package.json is still $OLD_VERSION"
+            echo "This means Rush did not process the change file correctly."
             echo ""
-            echo "Please check the change files in common/changes/@vielzeug/$(echo '${{ inputs.package }}' | cut -d'/' -f2)/"
+            echo "Possible causes:"
+            echo "  1. Change file format is incorrect"
+            echo "  2. Rush publish did not run successfully"
+            echo "  3. Git already had the version committed"
+            echo ""
             exit 1
           fi
           
-          # Check if this version already exists on npm
-          NPM_VERSION=$(npm view ${{ inputs.package }} version 2>/dev/null || echo "not-found")
-          
-          if [ "$NPM_VERSION" = "$NEW_VERSION" ]; then
-            echo "❌ Error: Version $NEW_VERSION already exists on npm!"
+          # Check 2: Verify new version is different from npm
+          if [ "$NPM_VERSION" != "0.0.0" ]; then
+            # Simple version comparison using Node
+            COMPARE_RESULT=$(node -e "
+              function compareVersions(v1, v2) {
+                const parts1 = v1.split('.').map(Number);
+                const parts2 = v2.split('.').map(Number);
+                
+                for (let i = 0; i < 3; i++) {
+                  if (parts1[i] > parts2[i]) return 1;
+                  if (parts1[i] < parts2[i]) return -1;
+                }
+                return 0;
+              }
+              
+              console.log(compareVersions('$NEW_VERSION', '$NPM_VERSION'));
+            ")
+            
+            if [ "$COMPARE_RESULT" = "-1" ]; then
+              echo ""
+              echo "❌ Error: New version is LOWER than npm version!"
+              echo ""
+              echo "   New version: $NEW_VERSION"
+              echo "   npm version: $NPM_VERSION"
+              echo ""
+              echo "Cannot publish an older version to npm."
+              exit 1
+            elif [ "$COMPARE_RESULT" = "0" ]; then
+              echo ""
+              echo "⚠️  Warning: Version $NEW_VERSION already exists on npm"
+              echo ""
+              echo "npm will reject publishing the same version."
+              echo "This workflow will continue but npm publish will likely fail."
+              echo ""
+            else
+              echo ""
+              echo "✅ Version validation passed!"
+              echo "   Bump: $OLD_VERSION → $NEW_VERSION"
+              echo "   npm will be updated: $NPM_VERSION → $NEW_VERSION"
+            fi
+          else
             echo ""
-            echo "This version is already published. To release a new version:"
-            echo "  1. Make sure you select the correct bump type (patch/minor/major)"
-            echo "  2. The workflow will automatically calculate the next version"
-            echo ""
-            echo "Current npm version: $NPM_VERSION"
-            echo "Attempted new version: $NEW_VERSION"
-            exit 1
+            echo "✅ First publication of this package"
+            echo "   Version: $NEW_VERSION"
           fi
-          
-          echo "✅ Version validation passed"
-          echo "   Old version: $OLD_VERSION"
-          echo "   New version: $NEW_VERSION"
-          echo "   npm version: $NPM_VERSION"
 
       - name: Tag release
         run: |
