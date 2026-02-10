@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/validit",
+  "entries": [
+    {
+      "version": "1.1.0",
+      "tag": "@vielzeug/validit_v1.1.0",
+      "date": "Tue, 10 Feb 2026 22:53:08 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Release version 1.1.0 (minor bump from 1.0.0)",
+            "author": "github-actions[bot] <github-actions[bot]@users.noreply.github.com>",
+            "commit": "b155becd01b53f425573df3b29f2605240449f1f"
+          }
+        ]
+      }
+    }
+  ]
+}
