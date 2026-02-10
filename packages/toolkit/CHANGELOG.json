@@ -2,6 +2,25 @@
   "name": "@vielzeug/toolkit",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/toolkit_v1.1.0",
+      "date": "Tue, 10 Feb 2026 21:31:26 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "general improvements and bugfixes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e32a3730934de115288156aa36e090214e6030ee"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `1.1.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "tag": "@vielzeug/toolkit_v1.0.0",
       "date": "Wed, 22 Oct 2025 08:00:42 GMT",
