@@ -12,11 +12,13 @@ Registers permissions for a specific role and resource combination.
 
 - `role: string` - The role identifier (e.g., 'admin', 'editor', 'user')
 - `resource: string` - The resource identifier (e.g., 'posts', 'comments')
-- `actions: Partial<Record<PermissionAction, PermissionCheck>>` - Permission definitions for each action
+- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` - Permission definitions for each action
 
 **Example:**
 
 ```ts
+import { Permit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
+
 // Static permissions
 Permit.register('admin', 'posts', {
   view: true,
@@ -32,20 +34,34 @@ Permit.register('author', 'posts', {
 });
 
 // Using wildcards
-import { WILDCARD } from '@vielzeug/permit';
-
 Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
   delete: true,
 });
+
+// Anonymous user permissions
+Permit.register(ANONYMOUS, 'posts', {
+  view: true,
+});
+
+// Case-insensitive (normalized)
+Permit.register('Admin', 'Posts', { view: true });
+// Same as: Permit.register('admin', 'posts', { view: true });
 ```
 
 **Throws:**
 
 - `Error` - If role is empty or missing
 - `Error` - If resource is empty or missing
+- `Error` - If invalid action is provided (must be 'view', 'create', 'update', or 'delete')
+
+**Behavior:**
+
+- Merges with existing permissions (doesn't replace)
+- Normalizes role and resource (trimmed, lowercased)
+- Validates action keys at runtime
 
 ---
 
@@ -73,14 +89,115 @@ const canView = Permit.check(user, 'posts', 'view');
 // With contextual data for dynamic rules
 const post = { id: 'p1', authorId: '123', status: 'draft' };
 const canDelete = Permit.check(user, 'posts', 'delete', post);
+
+// Normalized matching
+const userCaps = { id: '456', roles: ['ADMIN'] };
+Permit.check(userCaps, 'POSTS', 'view'); // Matches 'admin' role, 'posts' resource
 ```
 
 **Behavior:**
 
-- Checks all user roles (including wildcard role `*`)
-- Returns `true` if ANY role grants permission
-- Function-based permissions require `data` parameter
+- Uses "allow on any true" policy - first matching allow grants access
+- Checks specific roles before wildcard role
+- Normalizes role and resource (case-insensitive, trimmed)
+- Function-based permissions require `data` parameter (returns false if data is undefined)
+- Malformed users (missing `id` or `roles`) treated as ANONYMOUS + WILDCARD
 - Returns `false` if no permissions are found
+
+---
+
+### `Permit.set(role, resource, actions, replace?)`
+
+Sets permissions for a role and resource, optionally replacing existing ones.
+
+**Parameters:**
+
+- `role: string` - The role identifier
+- `resource: string` - The resource identifier
+- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` - Permission definitions
+- `replace?: boolean` - If true, replaces existing; if false, merges (default: false)
+
+**Returns:** `void`
+
+**Example:**
+
+```ts
+// Merge with existing (default)
+Permit.set('editor', 'posts', { view: true, create: true });
+
+// Replace completely
+Permit.set('editor', 'posts', { view: true }, true);
+// Now editor only has 'view', other actions removed
+```
+
+**Throws:**
+
+- `Error` - If role is empty or missing
+- `Error` - If resource is empty or missing
+- `Error` - If invalid action is provided
+
+---
+
+### `Permit.unregister(role, resource, action?)`
+
+Removes permissions for a role and resource.
+
+**Parameters:**
+
+- `role: string` - The role identifier
+- `resource: string` - The resource identifier
+- `action?: PermissionAction` - Optional specific action to remove
+
+**Returns:** `void`
+
+**Example:**
+
+```ts
+// Remove specific action
+Permit.unregister('editor', 'posts', 'delete');
+
+// Remove all actions for resource
+Permit.unregister('editor', 'posts');
+```
+
+**Behavior:**
+
+- Automatically cleans up empty resource entries
+- Automatically cleans up empty role entries
+- Safe to call on non-existent permissions (no error)
+
+---
+
+### `Permit.hasRole(user, role)`
+
+Checks if a user has a specific role.
+
+**Parameters:**
+
+- `user: BaseUser` - User object
+- `role: string` - Role to check for
+
+**Returns:** `boolean` - `true` if user has the role, `false` otherwise
+
+**Example:**
+
+```ts
+const user = { id: '1', roles: ['Admin', 'Editor'] };
+
+Permit.hasRole(user, 'admin'); // true (normalized)
+Permit.hasRole(user, 'EDITOR'); // true (normalized)
+Permit.hasRole(user, 'moderator'); // false
+
+// For malformed users
+const malformed = null;
+Permit.hasRole(malformed, ANONYMOUS); // true
+Permit.hasRole(malformed, 'admin'); // false
+```
+
+**Behavior:**
+
+- Case-insensitive comparison (normalized)
+- Returns `true` for ANONYMOUS if user is malformed
 
 ---
 
@@ -110,7 +227,7 @@ Permit.register('admin', 'posts', { view: true });
 
 ### `Permit.roles`
 
-Getter that returns a shallow copy of all registered roles and their permissions.
+Getter that returns a deep copy of all registered roles and their permissions.
 
 **Returns:** `RolesWithPermissions` - Map of roles to their resource permissions
 
@@ -126,9 +243,68 @@ for (const [role, resources] of allRoles) {
     console.log(`  Resource: ${resource}`, actions);
   }
 }
+
+// Safe to modify - doesn't affect internal state
+allRoles.clear(); // Only clears the copy
+const adminPerms = allRoles.get('admin');
+if (adminPerms) {
+  adminPerms.get('posts').view = false; // Only affects the copy
+}
 ```
 
-**Note:** Returns a shallow copy to prevent direct modification of internal state. Nested Maps are not deep-cloned.
+**Note:** Returns a deep copy to prevent external modification of internal state. All nested Maps and action objects are cloned.
+
+---
+
+## Constants
+
+### `WILDCARD`
+
+Constant representing wildcard role/resource that matches everything.
+
+```ts
+export const WILDCARD = '*';
+```
+
+**Usage:**
+
+```ts
+import { Permit, WILDCARD } from '@vielzeug/permit';
+
+// Admin can do everything on all resources
+Permit.register('admin', WILDCARD, {
+  view: true,
+  create: true,
+  update: true,
+  delete: true,
+});
+
+// All users can view posts
+Permit.register(WILDCARD, 'posts', { view: true });
+```
+
+---
+
+### `ANONYMOUS`
+
+Constant representing anonymous/unauthenticated users.
+
+```ts
+export const ANONYMOUS = 'anonymous';
+```
+
+**Usage:**
+
+```ts
+import { Permit, ANONYMOUS } from '@vielzeug/permit';
+
+// Public read access
+Permit.register(ANONYMOUS, 'posts', { view: true });
+
+// Malformed users are treated as ANONYMOUS
+const malformedUser = null;
+Permit.check(malformedUser, 'posts', 'view'); // true
+```
 
 ---
 
@@ -222,6 +398,76 @@ interface Post extends PermissionData {
   id: string;
   authorId: string;
   status: 'draft' | 'published';
+}
+```
+
+---
+
+### `PermissionMap<T, D>`
+
+Type for a resource's action permissions.
+
+```ts
+type PermissionMap<T extends BaseUser, D extends PermissionData> = Partial<
+  Record<PermissionAction, PermissionCheck<T, D>>
+>;
+```
+
+**Example:**
+
+```ts
+const postPermissions: PermissionMap<User, Post> = {
+  view: true,
+  create: true,
+  update: (user, post) => user.id === post.authorId,
+  delete: (user, post) => user.id === post.authorId && post.status === 'draft',
+};
+```
+
+---
+
+### `ResourcePermissions<T, D>`
+
+Type for all resource permissions under a role.
+
+```ts
+type ResourcePermissions<T extends BaseUser, D extends PermissionData> = Map<
+  string,
+  Partial<Record<PermissionAction, PermissionCheck<T, D>>>
+>;
+```
+
+**Example:**
+
+```ts
+const editorResources: ResourcePermissions<User, any> = new Map([
+  ['posts', { view: true, create: true, update: true }],
+  ['comments', { view: true, create: true }],
+]);
+```
+
+---
+
+### `RolesWithPermissions<T, D>`
+
+Type for the complete permissions registry.
+
+```ts
+type RolesWithPermissions<T extends BaseUser, D extends PermissionData> = Map<
+  string,
+  ResourcePermissions<T, D>
+>;
+```
+
+**Example:**
+
+```ts
+const allPermissions: RolesWithPermissions<User, any> = new Map([
+  ['admin', adminResources],
+  ['editor', editorResources],
+  ['viewer', viewerResources],
+]);
+```
 }
 ```
 

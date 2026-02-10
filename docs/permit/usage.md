@@ -24,9 +24,18 @@ yarn add @vielzeug/permit
 
 ```ts
 import { Permit } from '@vielzeug/permit';
+
 // Optional: Import types and constants
-import type { BaseUser, PermissionAction, PermissionCheck } from '@vielzeug/permit';
-import { WILDCARD } from '@vielzeug/permit';
+import type { 
+  BaseUser, 
+  PermissionAction, 
+  PermissionCheck,
+  PermissionMap,
+  ResourcePermissions,
+  RolesWithPermissions 
+} from '@vielzeug/permit';
+
+import { WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 ```
 
 ::: tip 💡 API Reference
@@ -52,6 +61,10 @@ Permit.register('viewer', 'posts', {
   update: false,
   delete: false,
 });
+
+// Permissions are normalized (case-insensitive, trimmed)
+Permit.register('Editor', 'Posts', { view: true });
+// Same as: Permit.register('editor', 'posts', { view: true });
 ```
 
 ### Checking Permissions
@@ -64,6 +77,10 @@ const canView = Permit.check(user, 'posts', 'view'); // true
 
 // Check if user can delete posts
 const canDelete = Permit.check(user, 'posts', 'delete'); // false
+
+// Role and resource names are normalized
+const userWithCaps = { id: '456', roles: ['EDITOR'] };
+Permit.check(userWithCaps, 'POSTS', 'view'); // true (normalized matching)
 ```
 
 ### Dynamic Permissions
@@ -81,6 +98,9 @@ const post = { id: 'p1', authorId: '123', status: 'draft' };
 // Must provide data for dynamic permissions
 const canUpdate = Permit.check(user, 'posts', 'update', post); // true
 const canDelete = Permit.check(user, 'posts', 'delete', post); // true
+
+// Without data, function permissions return false
+Permit.check(user, 'posts', 'update'); // false (no data provided)
 ```
 
 ## Advanced Features
@@ -104,11 +124,34 @@ Permit.register('admin', WILDCARD, {
 Permit.register(WILDCARD, 'posts', {
   view: true,
 });
+
+// Specific permissions override wildcards
+Permit.register('admin', WILDCARD, { view: true });
+Permit.register('admin', 'secrets', { view: false }); // Specific wins
 ```
+
+### Anonymous Users
+
+Use the `ANONYMOUS` constant for unauthenticated users:
+
+```ts
+import { Permit, ANONYMOUS } from '@vielzeug/permit';
+
+// Public read access for unauthenticated users
+Permit.register(ANONYMOUS, 'posts', { view: true });
+
+// Malformed users are treated as ANONYMOUS + WILDCARD
+const malformedUser = null;
+Permit.check(malformedUser, 'posts', 'view'); // true (has ANONYMOUS role)
+```
+
+::: warning Security Note
+Malformed users (missing `id` or `roles`) automatically receive both `ANONYMOUS` and `WILDCARD` roles. Ensure wildcard permissions are intended for public access.
+:::
 
 ### Multiple Roles
 
-Users can have multiple roles, and permissions are additive:
+Users can have multiple roles, and permissions are additive (first-match-wins):
 
 ```ts
 Permit.register('viewer', 'posts', { view: true });
@@ -119,6 +162,50 @@ const user = { id: '1', roles: ['viewer', 'creator'] };
 // User has permissions from both roles
 Permit.check(user, 'posts', 'view'); // true
 Permit.check(user, 'posts', 'create'); // true
+```
+
+### Setting Permissions
+
+Use `set()` to replace or merge permissions:
+
+```ts
+// Merge with existing (default)
+Permit.set('editor', 'posts', { view: true, create: true });
+
+// Replace completely
+Permit.set('editor', 'posts', { view: true }, true); // Only view remains
+```
+
+### Unregistering Permissions
+
+Remove permissions when no longer needed:
+
+```ts
+// Remove specific action
+Permit.unregister('editor', 'posts', 'delete');
+
+// Remove all actions for a resource
+Permit.unregister('editor', 'posts');
+
+// Automatically cleans up empty role/resource entries
+```
+
+### Checking User Roles
+
+Use `hasRole()` helper for role checks:
+
+```ts
+const user = { id: '1', roles: ['Admin', 'Editor'] };
+
+// Normalized comparison (case-insensitive)
+Permit.hasRole(user, 'admin'); // true
+Permit.hasRole(user, 'EDITOR'); // true
+Permit.hasRole(user, 'moderator'); // false
+
+// For malformed users, only ANONYMOUS role returns true
+const malformed = null;
+Permit.hasRole(malformed, ANONYMOUS); // true
+Permit.hasRole(malformed, 'admin'); // false
 ```
 
 ### Merging Permissions
@@ -168,7 +255,7 @@ Permit.clear();
 ### Inspecting Permissions
 
 ```ts
-// Get all registered permissions
+// Get deep copy of all registered permissions
 const allPermissions = Permit.roles;
 
 // Iterate over roles
