@@ -53,6 +53,12 @@
       "projectFolder": "packages/toolkit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/validit",
+      "projectFolder": "packages/validit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {
