@@ -146,7 +146,7 @@ describe('v.number()', () => {
     expect(schema.parse(0)).toBe(0);
     expect(schema.parse(123)).toBe(123);
     expect(schema.parse(-456)).toBe(-456);
-    expect(schema.parse(3.14159)).toBe(3.14159);
+    expect(schema.parse(Math.PI)).toBe(Math.PI);
   });
 
   it('should reject non-numbers', () => {
