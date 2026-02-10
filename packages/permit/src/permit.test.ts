@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { ANONYMOUS, Permit, WILDCARD } from './permit';
 
 vi.mock('@vielzeug/logit', () => ({
@@ -45,7 +45,7 @@ describe('Permit', () => {
 
   describe('Permission Checking', () => {
     it('allows static permissions and denies unregistered', () => {
-      Permit.register('admin', 'posts', { view: true, delete: true });
+      Permit.register('admin', 'posts', { delete: true, view: true });
 
       const user = { id: '1', roles: ['admin'] };
       expect(Permit.check(user, 'posts', 'view')).toBe(true);
@@ -142,7 +142,7 @@ describe('Permit', () => {
     });
 
     it('replaces permissions when replace is true', () => {
-      Permit.set('admin', 'posts', { view: true, create: true });
+      Permit.set('admin', 'posts', { create: true, view: true });
       Permit.set('admin', 'posts', { delete: true }, true);
 
       const user = { id: '1', roles: ['admin'] };
@@ -160,7 +160,7 @@ describe('Permit', () => {
 
   describe('unregister() Method', () => {
     it('removes specific action from resource', () => {
-      Permit.register('admin', 'posts', { view: true, create: true, delete: true });
+      Permit.register('admin', 'posts', { create: true, delete: true, view: true });
       Permit.unregister('admin', 'posts', 'delete');
 
       const user = { id: '1', roles: ['admin'] };
@@ -170,7 +170,7 @@ describe('Permit', () => {
     });
 
     it('removes all actions when action not specified', () => {
-      Permit.register('admin', 'posts', { view: true, create: true });
+      Permit.register('admin', 'posts', { create: true, view: true });
       Permit.unregister('admin', 'posts');
 
       const user = { id: '1', roles: ['admin'] };
@@ -255,4 +255,3 @@ describe('Permit', () => {
     });
   });
 });
-

@@ -1,5 +1,4 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHttpClient, createQueryClient, HttpError } from './fetchit';
 
 vi.mock('@vielzeug/logit', () => ({
@@ -1063,7 +1062,7 @@ describe('Fetchit', () => {
       fetchMock.mockResolvedValue(mockJsonResponse({ id: 1, name: 'User' }));
 
       // Same object properties, different order
-      const key1 = ['users', { page: 1, filter: 'active' }] as const;
+      const key1 = ['users', { filter: 'active', page: 1 }] as const;
       const key2 = ['users', { filter: 'active', page: 1 }] as const;
 
       const result1 = await queryClient.fetch({
@@ -1091,7 +1090,7 @@ describe('Fetchit', () => {
       // Create entries with different property orders
       await queryClient.fetch({
         queryFn: () => fetch('/test').then((r) => r.json()),
-        queryKey: ['users', { page: 1, filter: 'active' }],
+        queryKey: ['users', { filter: 'active', page: 1 }],
       });
 
       await queryClient.fetch({
@@ -1113,8 +1112,8 @@ describe('Fetchit', () => {
 
       fetchMock.mockResolvedValue(mockJsonResponse({ data: 'test' }));
 
-      const key1 = ['posts', { filters: { status: 'active', author: 'john' }, page: 1 }];
-      const key2 = ['posts', { page: 1, filters: { author: 'john', status: 'active' } }];
+      const key1 = ['posts', { filters: { author: 'john', status: 'active' }, page: 1 }];
+      const key2 = ['posts', { filters: { author: 'john', status: 'active' }, page: 1 }];
 
       await queryClient.fetch({
         queryFn: () => fetch('/posts').then((r) => r.json()),

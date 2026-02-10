@@ -33,10 +33,7 @@ describe('QueryBuilder', () => {
   let builder: QueryBuilder<(typeof sampleData)[0]>;
 
   beforeEach(() => {
-    builder = new QueryBuilder<(typeof sampleData)[0]>(
-      mockAdapter as unknown as DepositStorageAdapter<any>,
-      'users',
-    );
+    builder = new QueryBuilder<(typeof sampleData)[0]>(mockAdapter as unknown as DepositStorageAdapter<any>, 'users');
   });
 
   describe('Filtering', () => {

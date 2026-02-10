@@ -8,7 +8,6 @@
 type MaybePromise<T> = T | Promise<T>;
 export type Path = string | Array<string | number>;
 
-
 /**
  * Error thrown when form validation fails during submission
  */
@@ -765,9 +764,9 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
    */
   function bind(path: Path, config?: BindConfig) {
     const key = toKey(path);
-    const valueExtractor = config?.valueExtractor ?? ((event: any) =>
-      event && typeof event === 'object' && 'target' in event ? (event.target as any).value : event
-    );
+    const valueExtractor =
+      config?.valueExtractor ??
+      ((event: any) => (event && typeof event === 'object' && 'target' in event ? (event.target as any).value : event));
     const markTouchedOnBlur = config?.markTouchedOnBlur ?? true;
 
     const setter = (newValue: any | ((prev: any) => any)) => {

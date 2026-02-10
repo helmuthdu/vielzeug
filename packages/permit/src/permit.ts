@@ -194,6 +194,25 @@ export const Permit = {
   },
 
   /**
+   * Checks if a user has a specific role.
+   *
+   * @param user - The user object.
+   * @param role - The role to check for.
+   * @returns True if the user has the role, false otherwise.
+   *
+   * @remarks
+   * Performs normalized role comparison (case-insensitive, trimmed).
+   */
+  hasRole(user: BaseUser, role: string): boolean {
+    if (!user?.id || !Array.isArray(user.roles)) {
+      return normalize(role) === normalize(ANONYMOUS);
+    }
+
+    const normalizedRole = normalize(role);
+    return user.roles.some((r) => normalize(r) === normalizedRole);
+  },
+
+  /**
    * Registers a new permission for a specific role and resource.
    *
    * @example
@@ -257,6 +276,29 @@ export const Permit = {
   },
 
   /**
+   * Returns a deep copy of all registered roles and their permissions.
+   *
+   * @remarks
+   * Returns a deep copy of the permissions registry to prevent external modification.
+   * Useful for debugging or inspecting the current permission configuration.
+   */
+  get roles(): RolesWithPermissions {
+    const copy = new Map();
+
+    for (const [role, resourcePermissions] of Roles.entries()) {
+      const resourceCopy = new Map();
+
+      for (const [resource, actions] of resourcePermissions.entries()) {
+        resourceCopy.set(resource, { ...actions });
+      }
+
+      copy.set(role, resourceCopy);
+    }
+
+    return copy;
+  },
+
+  /**
    * Sets permissions for a role and resource, optionally replacing existing permissions.
    *
    * @param role - The role to set permissions for.
@@ -301,11 +343,16 @@ export const Permit = {
       } else {
         const existingPermissions = rolePermissions.get(normalizedResource) || {};
         const mergedPermissions = { ...existingPermissions, ...actions };
-        rolePermissions.set(normalizedResource, mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>);
+        rolePermissions.set(
+          normalizedResource,
+          mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>,
+        );
       }
     }
 
-    logDebug(`Permissions for role '${normalizedRole}' and resource '${normalizedResource}' ${replace ? 'replaced' : 'updated'}.`);
+    logDebug(
+      `Permissions for role '${normalizedRole}' and resource '${normalizedResource}' ${replace ? 'replaced' : 'updated'}.`,
+    );
   },
 
   /**
@@ -341,48 +388,8 @@ export const Permit = {
       Roles.delete(normalizedRole);
     }
 
-    logDebug(`Permissions for role '${normalizedRole}' and resource '${normalizedResource}'${action ? ` action '${action}'` : ''} unregistered.`);
-  },
-
-  /**
-   * Checks if a user has a specific role.
-   *
-   * @param user - The user object.
-   * @param role - The role to check for.
-   * @returns True if the user has the role, false otherwise.
-   *
-   * @remarks
-   * Performs normalized role comparison (case-insensitive, trimmed).
-   */
-  hasRole(user: BaseUser, role: string): boolean {
-    if (!user?.id || !Array.isArray(user.roles)) {
-      return normalize(role) === normalize(ANONYMOUS);
-    }
-
-    const normalizedRole = normalize(role);
-    return user.roles.some(r => normalize(r) === normalizedRole);
-  },
-
-  /**
-   * Returns a deep copy of all registered roles and their permissions.
-   *
-   * @remarks
-   * Returns a deep copy of the permissions registry to prevent external modification.
-   * Useful for debugging or inspecting the current permission configuration.
-   */
-  get roles(): RolesWithPermissions {
-    const copy = new Map();
-
-    for (const [role, resourcePermissions] of Roles.entries()) {
-      const resourceCopy = new Map();
-
-      for (const [resource, actions] of resourcePermissions.entries()) {
-        resourceCopy.set(resource, { ...actions });
-      }
-
-      copy.set(role, resourceCopy);
-    }
-
-    return copy;
+    logDebug(
+      `Permissions for role '${normalizedRole}' and resource '${normalizedResource}'${action ? ` action '${action}'` : ''} unregistered.`,
+    );
   },
 };

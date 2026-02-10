@@ -116,12 +116,12 @@ function stableStringify(value: unknown): string {
   if (typeof value !== 'object') return JSON.stringify(value);
 
   if (Array.isArray(value)) {
-    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
   }
 
   // Sort object keys for stable stringification
   const keys = Object.keys(value).sort();
-  const pairs = keys.map(key => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`);
+  const pairs = keys.map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`);
   return `{${pairs.join(',')}}`;
 }
 
