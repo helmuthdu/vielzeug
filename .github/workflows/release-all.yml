@@ -173,12 +173,23 @@ jobs:
             PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
             
             # Tag this release
-            git tag "${pkg}@${NEW_VERSION}"
+            TAG_NAME="${pkg}@${NEW_VERSION}"
+            
+            # Check if tag already exists
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "⚠️  Tag $TAG_NAME already exists, deleting old tag..."
+              git tag -d "$TAG_NAME" || true
+              git push origin ":refs/tags/$TAG_NAME" || true
+            fi
+            
+            echo "🏷️  Creating tag $TAG_NAME"
+            git tag "$TAG_NAME"
           done
           
           echo "packages=${PUBLISHED_PACKAGES}" >> $GITHUB_OUTPUT
           
-          # Push all tags
+          # Push all tags at once
+          echo "🚀 Pushing all tags..."
           git push origin --tags
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

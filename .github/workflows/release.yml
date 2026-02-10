@@ -272,8 +272,22 @@ jobs:
 
       - name: Tag release
         run: |
-          git tag "${{ inputs.package }}@${{ steps.version.outputs.new-version }}"
-          git push origin --tags
+          TAG_NAME="${{ inputs.package }}@${{ steps.version.outputs.new-version }}"
+          
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "⚠️  Tag $TAG_NAME already exists"
+            echo "🔄 Deleting existing tag locally and remotely..."
+            git tag -d "$TAG_NAME" || true
+            git push origin ":refs/tags/$TAG_NAME" || true
+            echo "✅ Old tag deleted"
+          fi
+          
+          # Create new tag
+          echo "🏷️  Creating tag $TAG_NAME"
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "✅ Tag created and pushed"
 
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}
