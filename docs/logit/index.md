@@ -1,6 +1,6 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1.9_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-3.0_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
@@ -9,7 +9,7 @@
 
 # Logit
 
-**Logit** is a flexible, zero-dependency logging utility designed for both browser and Node.js environments. It provides a powerful set of features including log levels, custom themes, remote logging, and scoped loggers, all while maintaining a tiny footprint.
+**Logit** is a powerful, type-safe console logging utility for TypeScript with styled output, log levels, scoped loggers, and remote logging support. Designed for both browser and Node.js environments with zero dependencies.
 
 ## Screenshot
 
@@ -51,13 +51,19 @@ Logit.warn('High memory usage:', usage);
 // Automatically respects log level
 Logit.setLogLevel('warn'); // Debug/info logs now silent
 
-// Automatic remote logging
+// Automatic remote logging with metadata
 Logit.setRemote({
-  handler: (type, ...args) => {
+  handler: (type, metadata) => {
     if (type === 'error') {
       fetch('/api/logs', {
         method: 'POST',
-        body: JSON.stringify({ type, args }),
+        body: JSON.stringify({
+          type,
+          message: metadata.args,
+          timestamp: metadata.timestamp,
+          namespace: metadata.namespace,
+          environment: metadata.environment,
+        }),
       });
     }
   },
@@ -71,12 +77,13 @@ Logit.setRemote({
 | ------------------ | -------------- | ------------- | ---------- | --------- |
 | TypeScript Support | ✅ First-class | ✅ Good       | ✅ Good    | ⚠️ Basic  |
 | Browser Support    | ✅ Native      | ❌            | ❌         | ✅        |
-| Namespacing        | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
+| Scoped Loggers     | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
 | Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Streams | ❌        |
-| Bundle Size (gzip) | **1.9 KB**     | ~50KB+        | ~12KB      | 0KB       |
+| Bundle Size (gzip) | **~3.0 KB**    | ~50KB+        | ~12KB      | 0KB       |
 | Node.js Support    | ✅             | ✅            | ✅         | ✅        |
 | Dependencies       | 0              | 15+           | 5+         | N/A       |
-| Colored Output     | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |
+| Styled Output      | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |
+| Metadata Support   | ✅ Rich        | ✅            | ✅         | ❌        |
 
 ## When to Use Logit
 
@@ -99,15 +106,18 @@ Logit.setRemote({
 
 ## 🚀 Key Features
 
-- **Log Levels**: Standard levels (debug, info, success, warn, error, trace, table) with filtering
-- **Isomorphic**: Seamlessly works in both Browser (with CSS styling) and Node.js
-- **Namespacing**: Add prefixes to logs to identify the source
-- **Remote Logging**: Built-in support for sending logs to remote endpoints
-- **Themes & Variants**: Customizable visual output (text, icon, symbol variants)
-- **Advanced Utilities**: Built-in support for timing, grouping, tables, and assertions
+- **Styled Console Output**: Beautiful colored logs with symbols, icons, or text
+- **Log Level Filtering**: Control verbosity (debug, trace, info, success, warn, error, off)
+- **Scoped Loggers**: Create isolated loggers with namespaced prefixes without global mutation
+- **Remote Logging**: Send logs to external services (Sentry, Datadog, etc.) with rich metadata
 - **Environment Detection**: Automatic production/development indicators
-- **Zero Dependencies**: Lightweight, fast, and secure
-- **Type-safe**: Full TypeScript support with proper type definitions
+- **Timestamps**: Optional timestamp display with millisecond precision
+- **Multiple Variants**: Symbol, icon, or text-based display modes
+- **Advanced Utilities**: Built-in timing, grouping, tables, and assertions
+- **Async Remote Logging**: Non-blocking Promise-based remote logging
+- **Type-Safe**: Full TypeScript support with proper type definitions
+- **Zero Dependencies**: Lightweight (~3KB gzipped), fast, and secure
+- **Framework Agnostic**: Works in browser and Node.js
 
 ## 🏁 Quick Start
 
@@ -141,13 +151,12 @@ Logit.success('Operation completed successfully');
 Logit.warn('Memory usage high', { usage: '85%' });
 Logit.error('Failed to fetch data', new Error('Network error'));
 
-// Add namespace for different modules
-Logit.setPrefix('API');
-Logit.info('Request started', { url: '/users' });
+// Create scoped loggers (recommended)
+const apiLogger = Logit.scope('api');
+const dbLogger = Logit.scope('database');
 
-// Change to database context
-Logit.setPrefix('Database');
-Logit.info('Connection established');
+apiLogger.info('Request started', { url: '/users' });  // [API] Request started
+dbLogger.info('Connection established');               // [DATABASE] Connection established
 
 // Control log level globally
 Logit.setLogLevel('warn'); // Only warn and error will show
@@ -171,18 +180,23 @@ import { Logit } from '@vielzeug/logit';
 if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   Logit.setLogLevel('warn');
 
-  // Send errors to remote logging service
+  // Send errors to remote logging service with metadata
   Logit.setRemote({
-    handler: async (type, ...args) => {
+    handler: async (type, metadata) => {
       if (type === 'error') {
         await fetch('/api/logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            timestamp: new Date().toISOString(),
             level: type,
-            prefix: Logit.getPrefix(),
-            args: args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
+            timestamp: metadata.timestamp,
+            namespace: metadata.namespace,
+            environment: metadata.environment,
+            args: metadata.args.map((arg) => 
+              arg instanceof Error 
+                ? { message: arg.message, stack: arg.stack } 
+                : arg
+            ),
           }),
         });
       }
@@ -192,7 +206,7 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
 }
 
 // Configure display options
-Logit.initialise({
+Logit.setup({
   variant: 'symbol',
   timestamp: true,
   environment: true,
@@ -216,28 +230,29 @@ Logit.error('Cache connection failed', new Error('Redis timeout'));
 import { Logit } from '@vielzeug/logit';
 import { useEffect } from 'react';
 
+// Create scoped logger for this component
+const logger = Logit.scope('UserProfile');
+
 function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {
-    Logit.setPrefix('UserProfile');
-    Logit.debug('Component mounted', { userId });
+    logger.debug('Component mounted', { userId });
 
     return () => {
-      Logit.debug('Component unmounted', { userId });
+      logger.debug('Component unmounted', { userId });
     };
   }, [userId]);
 
   const handleClick = () => {
     try {
       // ... do something
-      Logit.setPrefix('UserProfile');
-      Logit.info('Button clicked', { userId });
+      logger.info('Button clicked', { userId });
     } catch (error) {
-      Logit.setPrefix('UserProfile');
-      Logit.error('Action failed', error);
+      logger.error('Action failed', error);
     }
   };
 
   return <button onClick={handleClick}>Click me</button>;
+}
 }
 ```
 
@@ -430,7 +445,7 @@ const options: LogitOptions = {
   logLevel: 'info',
   variant: 'symbol',
 };
-Logit.initialise(options);
+Logit.setup(options);
 ```
 
 ### Namespace/prefix not showing
@@ -450,7 +465,7 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 

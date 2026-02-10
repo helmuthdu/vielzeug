@@ -17,14 +17,18 @@ export type PermissionCheck<T extends BaseUser = BaseUser, D extends PermissionD
   | boolean
   | ((user: T, data: D) => boolean);
 
-type ResourcePermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
+export type ResourcePermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
   string,
   Partial<Record<PermissionAction, PermissionCheck<T, D>>>
 >;
 
-type RolesWithPermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
+export type RolesWithPermissions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Map<
   string,
   ResourcePermissions<T, D>
+>;
+
+export type PermissionMap<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Partial<
+  Record<PermissionAction, PermissionCheck<T, D>>
 >;
 
 /**
@@ -39,18 +43,45 @@ const Roles: RolesWithPermissions = new Map();
 export const WILDCARD = '*';
 
 /**
+ * Anonymous role identifier for unauthenticated users.
+ * Safer than using wildcard for malformed user objects.
+ */
+export const ANONYMOUS = 'anonymous';
+
+/**
+ * Valid permission actions for runtime validation.
+ */
+const VALID_ACTIONS: Set<PermissionAction> = new Set(['view', 'create', 'update', 'delete']);
+
+/**
+ * Normalizes a role or resource string by trimming and converting to lowercase.
+ * Prevents subtle mismatches due to whitespace or casing differences.
+ */
+function normalize(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
  * Gets all roles for a user including the wildcard role.
  * Validates that the user has the required structure.
+ *
+ * @remarks
+ * - If user is malformed (missing id or roles), returns only the ANONYMOUS role.
+ * - ANONYMOUS role should be used for permissions that apply to unauthenticated users.
+ * - WILDCARD role is added last to ensure specific roles are checked first.
+ * - Roles are normalized (trimmed and lowercased) to prevent mismatches.
  */
-function getUserRoles(user: BaseUser): Set<string> {
+function getUserRoles(user: BaseUser): string[] {
   if (!user?.id || !Array.isArray(user.roles)) {
     Logit.warn('Invalid user object provided to permission check', { user });
-    return new Set([WILDCARD]);
+    return [normalize(ANONYMOUS), normalize(WILDCARD)];
   }
 
-  const roles = new Set(user.roles);
-  roles.add(WILDCARD);
-  return roles;
+  // Normalize all roles and add wildcard last for proper precedence
+  const normalizedRoles = user.roles.map(normalize);
+  normalizedRoles.push(normalize(WILDCARD));
+
+  return normalizedRoles;
 }
 
 /**
@@ -60,11 +91,11 @@ function getUserRoles(user: BaseUser): Set<string> {
 function getResourcePermissions<T extends BaseUser, D extends PermissionData>(
   role: string,
   resource: string,
-): Partial<Record<PermissionAction, PermissionCheck<T, D>>> | undefined {
-  const rolePermissions = Roles.get(role);
+): PermissionMap<T, D> | undefined {
+  const rolePermissions = Roles.get(normalize(role));
   if (!rolePermissions) return undefined;
 
-  return rolePermissions.get(resource) || rolePermissions.get(WILDCARD);
+  return rolePermissions.get(normalize(resource)) || rolePermissions.get(normalize(WILDCARD));
 }
 
 /**
@@ -88,8 +119,17 @@ function evaluatePermission<T extends BaseUser, D extends PermissionData>(
  * Logs the result of a permission check with a consistent prefix.
  */
 function logPermissionCheck(user: BaseUser, resource: string, action: PermissionAction, allowed: boolean): void {
+  const userId = user?.id || 'malformed-user';
   Logit.setPrefix('Permit');
-  Logit.debug(`Permission check: User ${user.id} - ${action} on ${resource} -> ${allowed}`);
+  Logit.debug(`Permission check: User ${userId} - ${action} on ${resource} -> ${allowed}`);
+}
+
+/**
+ * Logs a debug message with Permit prefix.
+ */
+function logDebug(message: string): void {
+  Logit.setPrefix('Permit');
+  Logit.debug(message);
 }
 
 export const Permit = {
@@ -109,6 +149,11 @@ export const Permit = {
    * @param [data] - Optional contextual data used for evaluating dynamic permissions.
    *
    * @return Returns true if the user is allowed to perform the action on the resource; otherwise, false.
+   *
+   * @remarks
+   * - Permission check uses "allow on any true" policy - first matching allow grants access.
+   * - Specific roles are checked before wildcard role for proper precedence.
+   * - Resource names and roles are normalized (trimmed and lowercased).
    */
   check<T extends BaseUser, D extends PermissionData>(
     user: T,
@@ -116,22 +161,23 @@ export const Permit = {
     action: PermissionAction,
     data?: D,
   ): boolean {
+    const normalizedResource = normalize(resource);
     const userRoles = getUserRoles(user);
 
     for (const role of userRoles) {
-      const resourcePermissions = getResourcePermissions<T, D>(role, resource);
+      const resourcePermissions = getResourcePermissions<T, D>(role, normalizedResource);
       if (!resourcePermissions) continue;
 
       const permission = resourcePermissions[action];
       if (permission === undefined) continue;
 
       if (evaluatePermission(permission, user, data)) {
-        logPermissionCheck(user, resource, action, true);
+        logPermissionCheck(user, normalizedResource, action, true);
         return true;
       }
     }
 
-    logPermissionCheck(user, resource, action, false);
+    logPermissionCheck(user, normalizedResource, action, false);
     return false;
   },
 
@@ -144,8 +190,26 @@ export const Permit = {
    */
   clear(): void {
     Roles.clear();
-    Logit.setPrefix('Permit');
-    Logit.debug('All permissions have been cleared.');
+    logDebug('All permissions have been cleared.');
+  },
+
+  /**
+   * Checks if a user has a specific role.
+   *
+   * @param user - The user object.
+   * @param role - The role to check for.
+   * @returns True if the user has the role, false otherwise.
+   *
+   * @remarks
+   * Performs normalized role comparison (case-insensitive, trimmed).
+   */
+  hasRole(user: BaseUser, role: string): boolean {
+    if (!user?.id || !Array.isArray(user.roles)) {
+      return normalize(role) === normalize(ANONYMOUS);
+    }
+
+    const normalizedRole = normalize(role);
+    return user.roles.some((r) => normalize(r) === normalizedRole);
   },
 
   /**
@@ -171,6 +235,7 @@ export const Permit = {
    * @param actions - An object containing the actions and their corresponding permission checks.
    *
    * @throws {Error} If the role or resource is not provided.
+   * @throws {Error} If an invalid action is provided.
    */
   register<T extends BaseUser, D extends PermissionData>(
     role: string,
@@ -184,32 +249,147 @@ export const Permit = {
       throw new Error('Resource is required to register permissions.');
     }
 
-    if (!Roles.has(role)) {
-      Roles.set(role, new Map());
+    // Validate action keys
+    for (const action of Object.keys(actions)) {
+      if (!VALID_ACTIONS.has(action as PermissionAction)) {
+        throw new Error(`Invalid action '${action}'. Valid actions are: ${Array.from(VALID_ACTIONS).join(', ')}`);
+      }
     }
 
-    const rolePermissions = Roles.get(role);
+    const normalizedRole = normalize(role);
+    const normalizedResource = normalize(resource);
+
+    if (!Roles.has(normalizedRole)) {
+      Roles.set(normalizedRole, new Map());
+    }
+
+    const rolePermissions = Roles.get(normalizedRole);
     if (rolePermissions) {
-      const existingPermissions = rolePermissions.get(resource) || {};
+      const existingPermissions = rolePermissions.get(normalizedResource) || {};
 
       // Merge new actions with existing ones
       const mergedPermissions = { ...existingPermissions, ...actions };
-      rolePermissions.set(resource, mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>);
+      rolePermissions.set(normalizedResource, mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>);
     }
 
-    Logit.setPrefix('Permit');
-    Logit.debug(`Permissions for role '${role}' and resource '${resource}' registered/updated.`);
+    logDebug(`Permissions for role '${normalizedRole}' and resource '${normalizedResource}' registered/updated.`);
   },
 
   /**
-   * Returns a copy of all registered roles and their permissions.
+   * Returns a deep copy of all registered roles and their permissions.
    *
    * @remarks
-   * This returns a shallow copy of the permissions registry to prevent direct external modification.
-   * Note: Nested Maps are not deep-cloned, so modifying nested structures may affect the internal state.
+   * Returns a deep copy of the permissions registry to prevent external modification.
    * Useful for debugging or inspecting the current permission configuration.
    */
   get roles(): RolesWithPermissions {
-    return new Map(Roles);
+    const copy = new Map();
+
+    for (const [role, resourcePermissions] of Roles.entries()) {
+      const resourceCopy = new Map();
+
+      for (const [resource, actions] of resourcePermissions.entries()) {
+        resourceCopy.set(resource, { ...actions });
+      }
+
+      copy.set(role, resourceCopy);
+    }
+
+    return copy;
+  },
+
+  /**
+   * Sets permissions for a role and resource, optionally replacing existing permissions.
+   *
+   * @param role - The role to set permissions for.
+   * @param resource - The resource identifier.
+   * @param actions - The permission actions to set.
+   * @param replace - If true, replaces existing permissions; if false, merges (default: false).
+   *
+   * @throws {Error} If the role or resource is not provided.
+   * @throws {Error} If an invalid action is provided.
+   */
+  set<T extends BaseUser, D extends PermissionData>(
+    role: string,
+    resource: string,
+    actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>,
+    replace = false,
+  ): void {
+    if (!role) {
+      throw new Error('Role is required to set permissions.');
+    }
+    if (!resource) {
+      throw new Error('Resource is required to set permissions.');
+    }
+
+    // Validate action keys
+    for (const action of Object.keys(actions)) {
+      if (!VALID_ACTIONS.has(action as PermissionAction)) {
+        throw new Error(`Invalid action '${action}'. Valid actions are: ${Array.from(VALID_ACTIONS).join(', ')}`);
+      }
+    }
+
+    const normalizedRole = normalize(role);
+    const normalizedResource = normalize(resource);
+
+    if (!Roles.has(normalizedRole)) {
+      Roles.set(normalizedRole, new Map());
+    }
+
+    const rolePermissions = Roles.get(normalizedRole);
+    if (rolePermissions) {
+      if (replace) {
+        rolePermissions.set(normalizedResource, actions as Partial<Record<PermissionAction, PermissionCheck>>);
+      } else {
+        const existingPermissions = rolePermissions.get(normalizedResource) || {};
+        const mergedPermissions = { ...existingPermissions, ...actions };
+        rolePermissions.set(
+          normalizedResource,
+          mergedPermissions as Partial<Record<PermissionAction, PermissionCheck>>,
+        );
+      }
+    }
+
+    logDebug(
+      `Permissions for role '${normalizedRole}' and resource '${normalizedResource}' ${replace ? 'replaced' : 'updated'}.`,
+    );
+  },
+
+  /**
+   * Unregisters permissions for a role and resource.
+   *
+   * @param role - The role to unregister permissions from.
+   * @param resource - The resource identifier.
+   * @param action - Optional specific action to remove. If not provided, removes all actions for the resource.
+   */
+  unregister(role: string, resource: string, action?: PermissionAction): void {
+    const normalizedRole = normalize(role);
+    const normalizedResource = normalize(resource);
+
+    const rolePermissions = Roles.get(normalizedRole);
+    if (!rolePermissions) return;
+
+    if (action) {
+      const resourcePermissions = rolePermissions.get(normalizedResource);
+      if (resourcePermissions) {
+        delete resourcePermissions[action];
+
+        // Remove resource entry if no actions remain
+        if (Object.keys(resourcePermissions).length === 0) {
+          rolePermissions.delete(normalizedResource);
+        }
+      }
+    } else {
+      rolePermissions.delete(normalizedResource);
+    }
+
+    // Remove role entry if no resources remain
+    if (rolePermissions.size === 0) {
+      Roles.delete(normalizedRole);
+    }
+
+    logDebug(
+      `Permissions for role '${normalizedRole}' and resource '${normalizedResource}'${action ? ` action '${action}'` : ''} unregistered.`,
+    );
   },
 };

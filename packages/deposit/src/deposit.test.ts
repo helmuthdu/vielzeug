@@ -26,7 +26,6 @@ describe('QueryBuilder', () => {
     { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
   ];
 
-  // Use a mock adapter for QueryBuilder tests
   const mockAdapter = {
     getAll: async (_table: string) => sampleData,
   };
@@ -34,164 +33,147 @@ describe('QueryBuilder', () => {
   let builder: QueryBuilder<(typeof sampleData)[0]>;
 
   beforeEach(() => {
-    builder = new QueryBuilder<(typeof sampleData)[0]>(
-      mockAdapter as unknown as {
-        getAll: (table: string) => Promise<readonly (typeof sampleData)[0][]>;
-      } as DepositStorageAdapter<any>,
-      'users',
-    );
+    builder = new QueryBuilder<(typeof sampleData)[0]>(mockAdapter as unknown as DepositStorageAdapter<any>, 'users');
   });
 
-  test('filters with equals', async () => {
-    const result = await builder.equals('city', 'Paris').toArray();
-    expect(result).toEqual([
-      { age: 25, city: 'Paris', id: 1, name: 'Alice' },
-      { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-    ]);
+  describe('Filtering', () => {
+    test('equals', async () => {
+      const result = await builder.equals('city', 'Paris').toArray();
+      expect(result).toHaveLength(2);
+      expect(result.every((r) => r.city === 'Paris')).toBe(true);
+    });
+
+    test('between', async () => {
+      const result = await builder.between('age', 25, 35).toArray();
+      expect(result).toHaveLength(3);
+    });
+
+    test('startsWith', async () => {
+      const result = await builder.startsWith('name', 'A').toArray();
+      expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
+    });
+
+    test('not', async () => {
+      const result = await builder.not((item) => item.city === 'Paris').toArray();
+      expect(result).toEqual([{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }]);
+    });
+
+    test('and combines multiple predicates', async () => {
+      const result = await builder
+        .and(
+          (item) => item.city === 'Paris',
+          (item) => item.age > 30,
+        )
+        .toArray();
+      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+    });
+
+    test('or combines predicates with OR logic', async () => {
+      const result = await builder
+        .or(
+          (item) => item.city === 'Berlin',
+          (item) => item.age === 35,
+        )
+        .toArray();
+      expect(result).toHaveLength(2);
+    });
   });
 
-  test('filters with between', async () => {
-    // Use correct values from sampleData for type safety
-    const result = await builder.between('age', 25, 35).toArray();
-    expect(result).toEqual([
-      { age: 25, city: 'Paris', id: 1, name: 'Alice' },
-      { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
-      { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-    ]);
+  describe('Ordering and Pagination', () => {
+    test('orderBy desc', async () => {
+      const result = await builder.orderBy('age', 'desc').toArray();
+      expect(result.map((r) => r.age)).toEqual([35, 30, 25]);
+    });
+
+    test('limit', async () => {
+      const result = await builder.limit(2).toArray();
+      expect(result).toHaveLength(2);
+    });
+
+    test('offset', async () => {
+      const result = await builder.offset(1).toArray();
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe(2);
+    });
+
+    test('page', async () => {
+      const result = await builder.page(2, 2).toArray();
+      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+    });
+
+    test('reverse', async () => {
+      const result = await builder.reverse().toArray();
+      expect(result[0].id).toBe(3);
+    });
   });
 
-  test('startsWith works', async () => {
-    const result = await builder.startsWith('name', 'A').toArray();
-    expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
+  describe('Aggregations', () => {
+    test('first and last', async () => {
+      expect(await builder.first()).toEqual(sampleData[0]);
+      expect(await builder.last()).toEqual(sampleData[2]);
+    });
+
+    test('min and max', async () => {
+      expect(await builder.min('age')).toEqual({ age: 25, city: 'Paris', id: 1, name: 'Alice' });
+      expect(await builder.max('age')).toEqual({ age: 35, city: 'Paris', id: 3, name: 'Charlie' });
+    });
+
+    test('sum and average', async () => {
+      expect(await builder.sum('age')).toBe(90);
+      expect(await builder.average('age')).toBeCloseTo(30);
+    });
   });
 
-  test('orderBy works', async () => {
-    const result = await builder.orderBy('age', 'desc').toArray();
-    expect(result.map((r) => r.age)).toEqual([35, 30, 25]);
+  describe('Transformations', () => {
+    test('modify', async () => {
+      const result = await builder.modify((item) => ({ ...item, age: item.age + 1 })).toArray();
+      expect(result.map((r) => r.age)).toEqual([26, 31, 36]);
+    });
+
+    test('groupBy', async () => {
+      const result = await builder.groupBy('city').toArray();
+      expect(result).toEqual(
+        expect.objectContaining({
+          Berlin: [{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }],
+          Paris: expect.arrayContaining([
+            { age: 25, city: 'Paris', id: 1, name: 'Alice' },
+            { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
+          ]),
+        }),
+      );
+    });
+
+    test('toGrouped - type-safe grouping', async () => {
+      const result = await builder.toGrouped('city');
+      expect(result).toHaveLength(2);
+      const parisGroup = result.find((g) => g.key === 'Paris');
+      expect(parisGroup?.values).toHaveLength(2);
+    });
+
+    test('search', async () => {
+      const result = await builder.search('Alice', 1).toArray();
+      expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
+    });
   });
 
-  // groupBy returns T[] in QueryBuilder, so we test grouping logic separately if needed
-  test('modify works', async () => {
-    // Use a copy to avoid mutating readonly sampleData
-    const result = await builder.modify((item) => ({ ...item, age: item.age + 1 })).toArray();
-    expect(result.map((r) => r.age)).toEqual([26, 31, 36]);
-  });
+  describe('Utilities', () => {
+    test('reset clears operations', async () => {
+      builder.equals('city', 'Paris');
+      builder.reset();
+      const result = await builder.toArray();
+      expect(result).toHaveLength(3);
+    });
 
-  test('first/last', async () => {
-    expect(await builder.first()).toEqual(sampleData[0]);
-    expect(await builder.last()).toEqual(sampleData[2]);
-  });
-
-  test('not works', async () => {
-    const result = await builder.not((item) => item.city === 'Paris').toArray();
-    expect(result).toEqual([{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }]);
-  });
-
-  test('and works', async () => {
-    const result = await builder
-      .and(
-        (item) => item.city === 'Paris',
-        (item) => item.age > 30,
-      )
-      .toArray();
-    expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
-  });
-
-  test('or works', async () => {
-    const result = await builder
-      .or(
-        (item) => item.city === 'Berlin',
-        (item) => item.age === 35,
-      )
-      .toArray();
-    expect(result).toEqual([
-      { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
-      { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-    ]);
-  });
-
-  test('limit works', async () => {
-    const result = await builder.limit(2).toArray();
-    expect(result.length).toBe(2);
-  });
-
-  test('offset works', async () => {
-    const result = await builder.offset(1).toArray();
-    expect(result).toEqual([
-      { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
-      { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-    ]);
-  });
-
-  test('page works', async () => {
-    const result = await builder.page(2, 2).toArray();
-    expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
-  });
-
-  test('reverse works', async () => {
-    const result = await builder.reverse().toArray();
-    expect(result[0]).toEqual({ age: 35, city: 'Paris', id: 3, name: 'Charlie' });
-  });
-
-  test('min/max/sum/average work', async () => {
-    expect(await builder.min('age')).toEqual({ age: 25, city: 'Paris', id: 1, name: 'Alice' });
-    expect(await builder.max('age')).toEqual({ age: 35, city: 'Paris', id: 3, name: 'Charlie' });
-    expect(await builder.sum('age')).toBe(90);
-    expect(await builder.average('age')).toBeCloseTo(30);
-  });
-
-  test('groupBy works', async () => {
-    const result = await builder.groupBy('city').toArray();
-    // groupBy returns a grouped object: { [key: string]: T[] }
-    expect(result).toEqual(
-      expect.objectContaining({
-        Berlin: [
-          {
-            age: 30,
-            city: 'Berlin',
-            id: 2,
-            name: 'Bob',
-          },
-        ],
-        Paris: [
-          {
-            age: 25,
-            city: 'Paris',
-            id: 1,
-            name: 'Alice',
-          },
-          {
-            age: 35,
-            city: 'Paris',
-            id: 3,
-            name: 'Charlie',
-          },
-        ],
-      }),
-    );
-  });
-
-  test('search works', async () => {
-    const result = await builder.search('Alice', 1).toArray();
-    expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
-  });
-
-  test('reset works', async () => {
-    builder.equals('city', 'Paris');
-    builder.reset();
-    const result = await builder.toArray();
-    expect(result.length).toBe(3);
-  });
-
-  test('build works', async () => {
-    const result = await builder
-      .build([
-        { field: 'city', type: 'equals', value: 'Paris' },
-        { field: 'age', type: 'orderBy', value: 'desc' },
-        { type: 'limit', value: 1 },
-      ])
-      .toArray();
-    expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+    test('build applies multiple conditions', async () => {
+      const result = await builder
+        .build([
+          { field: 'city', type: 'equals', value: 'Paris' },
+          { field: 'age', type: 'orderBy', value: 'desc' },
+          { type: 'limit', value: 1 },
+        ])
+        .toArray();
+      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+    });
   });
 });
 
@@ -203,77 +185,81 @@ describe('LocalStorageAdapter', () => {
     adapter = new LocalStorageAdapter('TestDB', 1, userSchema);
   });
 
-  test('put and get', async () => {
-    await adapter.put('users', { id: 1, name: 'Alice' });
-    expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  describe('CRUD Operations', () => {
+    test('put and get', async () => {
+      await adapter.put('users', { id: 1, name: 'Alice' });
+      expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    });
+
+    test('bulkPut and getAll', async () => {
+      await adapter.bulkPut('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+      expect(await adapter.getAll('users')).toHaveLength(2);
+    });
+
+    test('delete', async () => {
+      await adapter.put('users', { id: 1 });
+      await adapter.delete('users', 1);
+      expect(await adapter.get('users', 1)).toBeUndefined();
+    });
+
+    test('bulkDelete', async () => {
+      await adapter.bulkPut('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+      ]);
+      await adapter.bulkDelete('users', [1, 3]);
+      expect(await adapter.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    });
+
+    test('clear', async () => {
+      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
+      await adapter.clear('users');
+      expect(await adapter.getAll('users')).toEqual([]);
+    });
+
+    test('count', async () => {
+      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
+      expect(await adapter.count('users')).toBe(2);
+      await adapter.delete('users', 1);
+      expect(await adapter.count('users')).toBe(1);
+    });
   });
 
-  test('bulkPut and getAll', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    const all = await adapter.getAll('users');
-    expect(all.length).toBe(2);
+  describe('Edge Cases', () => {
+    test('get returns defaultValue if not found', async () => {
+      const def = { id: 99, name: 'Default' };
+      expect(await adapter.get('users', 99, def)).toBe(def);
+    });
+
+    test('delete non-existent key does not throw', async () => {
+      await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
+    });
+
+    test('corrupted JSON is skipped gracefully', async () => {
+      const key = 'TestDB:1:users:1';
+      localStorage.setItem(key, '{invalid json');
+      expect(await adapter.get('users', 1)).toBeUndefined();
+      expect(localStorage.getItem(key)).toBeNull();
+    });
   });
 
-  test('delete works', async () => {
-    await adapter.put('users', { id: 1 });
-    await adapter.delete('users', 1);
-    expect(await adapter.get('users', 1)).toBeUndefined();
+  describe('TTL', () => {
+    test('put with TTL expires record', async () => {
+      await adapter.put('users', { id: 1, name: 'Alice' }, 1);
+      await new Promise((r) => setTimeout(r, 5));
+      expect(await adapter.get('users', 1)).toBeUndefined();
+    });
   });
 
-  test('clear works', async () => {
-    await adapter.put('users', { id: 1 });
-    await adapter.clear('users');
-    expect(await adapter.getAll('users')).toEqual([]);
-  });
-
-  test('bulkDelete works', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    await adapter.bulkDelete('users', [1, 3]);
-    const all = await adapter.getAll('users');
-    expect(all).toEqual([{ id: 2, name: 'Bob' }]);
-  });
-
-  test('count works', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    expect(await adapter.count('users')).toBe(2);
-    await adapter.delete('users', 1);
-    expect(await adapter.count('users')).toBe(1);
-  });
-
-  test('get returns defaultValue if not found', async () => {
-    const def = { id: 99, name: 'Default' };
-    expect(await adapter.get('users', 99, def)).toBe(def);
-  });
-
-  test('getAll returns empty array if table is empty', async () => {
-    expect(await adapter.getAll('users')).toEqual([]);
-  });
-
-  test('delete non-existent key does not throw', async () => {
-    await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
-  });
-
-  test('put with TTL expires record', async () => {
-    await adapter.put('users', { id: 1, name: 'Alice' }, 1); // 1 ms TTL
-    await new Promise((r) => setTimeout(r, 5));
-    expect(await adapter.get('users', 1)).toBeUndefined();
-  });
-
-  test('get handles corrupted JSON gracefully', async () => {
-    const key = 'TestDB:1:users:1';
-    localStorage.setItem(key, '{invalid json');
-    expect(await adapter.get('users', 1)).toBeUndefined();
-    expect(localStorage.getItem(key)).toBeNull(); // Should be cleaned up
+  describe('Schema Validation', () => {
+    test('throws on missing key field in schema', () => {
+      const badSchema = { users: { record: {} as User } } as any;
+      expect(() => new LocalStorageAdapter('TestDB', 1, badSchema)).toThrow('missing required "key" field');
+    });
   });
 });
 
@@ -285,76 +271,74 @@ describe('IndexedDBAdapter', () => {
     await adapter.clear('users');
   });
 
-  test('put and get', async () => {
-    await adapter.put('users', { id: 1, name: 'Alice' });
-    expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  describe('CRUD Operations', () => {
+    test('put and get', async () => {
+      await adapter.put('users', { id: 1, name: 'Alice' });
+      expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    });
+
+    test('bulkPut and getAll', async () => {
+      await adapter.bulkPut('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+      expect(await adapter.getAll('users')).toHaveLength(2);
+    });
+
+    test('delete', async () => {
+      await adapter.put('users', { id: 1 });
+      await adapter.delete('users', 1);
+      expect(await adapter.get('users', 1)).toBeUndefined();
+    });
+
+    test('bulkDelete', async () => {
+      await adapter.bulkPut('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+      ]);
+      await adapter.bulkDelete('users', [1, 3]);
+      expect(await adapter.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    });
+
+    test('clear', async () => {
+      await adapter.put('users', { id: 1 });
+      await adapter.clear('users');
+      expect(await adapter.getAll('users')).toEqual([]);
+    });
+
+    test('count', async () => {
+      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
+      expect(await adapter.count('users')).toBe(2);
+      await adapter.delete('users', 1);
+      expect(await adapter.count('users')).toBe(1);
+    });
   });
 
-  test('bulkPut and getAll', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    const all = await adapter.getAll('users');
-    expect(all.length).toBe(2);
+  describe('Edge Cases', () => {
+    test('get returns defaultValue if not found', async () => {
+      const def = { id: 99, name: 'Default' };
+      expect(await adapter.get('users', 99, def)).toBe(def);
+    });
+
+    test('delete non-existent key does not throw', async () => {
+      await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
+    });
   });
 
-  test('delete works', async () => {
-    await adapter.put('users', { id: 1 });
-    await adapter.delete('users', 1);
-    expect(await adapter.get('users', 1)).toBeUndefined();
+  describe('TTL', () => {
+    test('put with TTL expires record', async () => {
+      await adapter.put('users', { id: 1, name: 'Alice' }, 1);
+      await new Promise((r) => setTimeout(r, 5));
+      expect(await adapter.get('users', 1)).toBeUndefined();
+    });
   });
 
-  test('clear works', async () => {
-    await adapter.put('users', { id: 1 });
-    await adapter.clear('users');
-    expect(await adapter.getAll('users')).toEqual([]);
-  });
-
-  test('bulkDelete works', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    await adapter.bulkDelete('users', [1, 3]);
-    const all = await adapter.getAll('users');
-    expect(all).toEqual([{ id: 2, name: 'Bob' }]);
-  });
-
-  test('count works', async () => {
-    await adapter.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    expect(await adapter.count('users')).toBe(2);
-    await adapter.delete('users', 1);
-    expect(await adapter.count('users')).toBe(1);
-  });
-
-  test('get returns defaultValue if not found', async () => {
-    const def = { id: 99, name: 'Default' };
-    expect(await adapter.get('users', 99, def)).toBe(def);
-  });
-
-  test('getAll returns empty array if table is empty', async () => {
-    expect(await adapter.getAll('users')).toEqual([]);
-  });
-
-  test('delete non-existent key does not throw', async () => {
-    await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
-  });
-
-  test('put with TTL expires record', async () => {
-    await adapter.put('users', { id: 1, name: 'Alice' }, 1); // 1 ms TTL
-    await new Promise((r) => setTimeout(r, 5));
-    expect(await adapter.get('users', 1)).toBeUndefined();
-  });
-
-  test('get handles corrupted JSON gracefully', async () => {
-    // IndexedDB does not store raw JSON, so this test is not applicable.
-    // But we can test that get on a non-existent key returns undefined.
-    expect(await adapter.get('users', 12345)).toBeUndefined();
+  describe('Schema Validation', () => {
+    test('throws on missing key field in schema', () => {
+      const badSchema = { users: { record: {} as User } } as any;
+      expect(() => new IndexedDBAdapter('TestDB', 1, badSchema)).toThrow('missing required "key" field');
+    });
   });
 });
 

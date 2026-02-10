@@ -9,7 +9,7 @@ These are complete application examples. For API reference and basic usage, see 
 ## Table of Contents
 
 - [Basic Logging Operations](#basic-logging-operations)
-- [Namespacing and Prefixes](#namespacing-and-prefixes)
+- [Scoped Loggers](#scoped-loggers)
 - [Display Variants](#display-variants)
 - [Log Level Management](#log-level-management)
 - [Remote Logging](#remote-logging)
@@ -129,58 +129,110 @@ Logit.info('Response sent');
 Logit.groupEnd();
 ```
 
-## Namespacing and Prefixes
+## Scoped Loggers
+
+::: tip 💡 Best Practice
+Use scoped loggers instead of `setPrefix()` to avoid global state mutation. Scoped loggers are safer for concurrent operations and easier to pass to modules.
+:::
 
 ### Module-Specific Logging
 
 ```ts
-// Authentication module
-Logit.setPrefix('Auth');
-Logit.info('Login attempt', { username: 'alice' });
-Logit.success('Authentication successful', { userId: '123' });
+import { Logit } from '@vielzeug/logit';
 
-// Database module
-Logit.setPrefix('Database');
-Logit.info('Connection pool created', { size: 10 });
-Logit.debug('Query executed', { sql: 'SELECT * FROM users' });
+// Create scoped loggers for different modules
+const authLogger = Logit.scope('auth');
+const dbLogger = Logit.scope('database');
+const apiLogger = Logit.scope('api');
+const cacheLogger = Logit.scope('cache');
 
-// API module
-Logit.setPrefix('API');
-Logit.info('Request received', { method: 'GET', path: '/users' });
-Logit.warn('Rate limit approaching', { remaining: 10, limit: 100 });
+// Use them independently (no global state mutation)
+authLogger.info('Login attempt', { username: 'alice' });
+authLogger.success('Authentication successful', { userId: '123' });
+
+dbLogger.info('Connection pool created', { size: 10 });
+dbLogger.debug('Query executed', { sql: 'SELECT * FROM users' });
+
+apiLogger.info('Request received', { method: 'GET', path: '/users' });
+apiLogger.warn('Rate limit approaching', { remaining: 10, limit: 100 });
+
+cacheLogger.debug('Cache hit', { key: 'user:123' });
+cacheLogger.info('Cache miss', { key: 'user:456' });
 ```
 
-### Creating Prefixed Loggers
+### Nested Scopes
 
 ```ts
-// Create logger wrapper for specific modules
-class ModuleLogger {
-  constructor(private moduleName: string) {
-    Logit.setPrefix(moduleName);
+// Global namespace
+Logit.setPrefix('App');
+
+// Create nested scopes
+const apiLogger = Logit.scope('api');
+apiLogger.info('Request received');  // [APP.API] Request received
+
+// Further nesting
+Logit.setPrefix('App.api');
+const v1Logger = Logit.scope('v1');
+const v2Logger = Logit.scope('v2');
+
+v1Logger.info('GET /users');  // [APP.API.V1] GET /users
+v2Logger.info('GET /users');  // [APP.API.V2] GET /users
+```
+
+### Creating Reusable Logger Wrappers
+
+```ts
+// Type-safe logger wrapper
+import type { ScopedLogger } from '@vielzeug/logit';
+
+class ServiceLogger {
+  private logger: ScopedLogger;
+
+  constructor(serviceName: string) {
+    this.logger = Logit.scope(serviceName);
   }
 
-  debug(message: string, data?: any) {
-    Logit.setPrefix(this.moduleName);
-    Logit.debug(message, data);
+  logRequest(method: string, path: string, duration: number) {
+    this.logger.info(`${method} ${path}`, { duration: `${duration}ms` });
   }
 
-  info(message: string, data?: any) {
-    Logit.setPrefix(this.moduleName);
-    Logit.info(message, data);
+  logError(operation: string, error: Error) {
+    this.logger.error(`${operation} failed`, {
+      message: error.message,
+      stack: error.stack,
+    });
   }
 
-  error(message: string, error?: Error) {
-    Logit.setPrefix(this.moduleName);
-    Logit.error(message, error);
+  logSuccess(operation: string, data?: any) {
+    this.logger.success(`${operation} completed`, data);
   }
 }
 
 // Usage
-const authLogger = new ModuleLogger('Auth');
-const dbLogger = new ModuleLogger('Database');
+const authService = new ServiceLogger('auth');
+const paymentService = new ServiceLogger('payment');
 
-authLogger.info('User logged in', { userId: '123' });
-dbLogger.error('Connection failed', new Error('Timeout'));
+authService.logRequest('POST', '/login', 45);
+paymentService.logSuccess('charge', { amount: 99.99, currency: 'USD' });
+```
+
+### Comparison: Scoped vs Global Prefix
+
+```ts
+// ❌ Avoid - Global prefix mutation
+Logit.setPrefix('auth');
+Logit.info('Login');
+Logit.setPrefix('api');
+Logit.info('Request');
+Logit.setPrefix(''); // Need to clean up
+
+// ✅ Recommended - Scoped loggers
+const authLogger = Logit.scope('auth');
+const apiLogger = Logit.scope('api');
+
+authLogger.info('Login');  // [AUTH] Login
+apiLogger.info('Request'); // [API] Request
+// No cleanup needed, no global mutation
 ```
 
 ## Display Variants
@@ -228,7 +280,7 @@ Be careful with log levels in production:
 ```ts
 // Development configuration
 if (process.env.NODE_ENV === 'development') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'debug', // Show all logs
     variant: 'symbol', // Use symbols
     timestamp: true,
@@ -240,7 +292,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Production configuration
 if (process.env.NODE_ENV === 'production') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'warn', // Only warnings and errors
     variant: 'text', // Plain text for log aggregators
     timestamp: true,
@@ -276,21 +328,32 @@ if (currentLevel === 'debug') {
 
 ## Remote Logging
 
-### Basic Remote Handler
+::: tip Non-Blocking Async
+Remote logging uses `Promise.resolve().then()` for async execution, ensuring logs are sent without blocking the main thread. This is more performant than `setTimeout`.
+:::
+
+### Basic Remote Handler with Metadata
 
 ```ts
 Logit.setRemote({
-  handler: async (type, ...args) => {
+  handler: async (type, metadata) => {
+    // metadata contains:
+    // - args: any[]
+    // - timestamp?: string
+    // - namespace?: string
+    // - environment: 'production' | 'development'
+
     // Only send errors and warnings
     if (type === 'error' || type === 'warn') {
       await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timestamp: new Date().toISOString(),
           level: type,
-          prefix: Logit.getPrefix(),
-          args: args,
+          timestamp: metadata.timestamp,
+          namespace: metadata.namespace,
+          environment: metadata.environment,
+          args: metadata.args,
         }),
       });
     }
@@ -311,9 +374,9 @@ Logit.debug('Debug info'); // Not sent
 
 ```ts
 Logit.setRemote({
-  handler: async (type, ...args) => {
+  handler: async (type, metadata) => {
     // Serialize errors properly
-    const serialized = args.map((arg) => {
+    const serialized = metadata.args.map((arg) => {
       if (arg instanceof Error) {
         return {
           name: arg.name,
@@ -326,6 +389,12 @@ Logit.setRemote({
     });
 
     const logEntry = {
+      level: type,
+      timestamp: metadata.timestamp || new Date().toISOString(),
+      namespace: metadata.namespace,
+      environment: metadata.environment,
+      args: serialized,
+    };
       timestamp: new Date().toISOString(),
       level: type,
       prefix: Logit.getPrefix(),

@@ -24,13 +24,30 @@ yarn add @vielzeug/logit
 
 ```ts
 import { Logit } from '@vielzeug/logit';
+
 // Optional: Import types
-import type { LogitOptions, LogitLevel, LogitType } from '@vielzeug/logit';
+import type { 
+  LogitOptions, 
+  LogitLevel, 
+  LogitType,
+  ScopedLogger,
+  LogitRemoteOptions 
+} from '@vielzeug/logit';
 ```
 
 ::: tip 💡 API Reference
 This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
 :::
+
+## Table of Contents
+
+- [Basic Usage](#basic-usage)
+- [Scoped Loggers](#scoped-loggers)
+- [Log Levels](#log-levels)
+- [Display Variants](#display-variants)
+- [Remote Logging](#remote-logging)
+- [Configuration](#configuration)
+- [Utility Methods](#utility-methods)
 
 ## Basic Usage
 
@@ -77,28 +94,71 @@ Logit.info('Role:', user.role);
 Logit.groupEnd();
 ```
 
-## Advanced Features
+## Scoped Loggers
 
-### Namespacing/Prefixes
-
-Add context to your logs with prefixes:
+Create isolated loggers with namespaced prefixes without mutating global state:
 
 ```ts
-// Set namespace for API logs
-Logit.setPrefix('API');
-Logit.info('Request received', { endpoint: '/users' });
-// Output: [🅸] [API] [🅿] [12:34:56.789] Request received
+// Create scoped loggers for different modules
+const apiLogger = Logit.scope('api');
+const dbLogger = Logit.scope('database');
+const cacheLogger = Logit.scope('cache');
 
-// Change to database context
-Logit.setPrefix('Database');
-Logit.info('Connection established');
-// Output: [🅸] [Database] [🅿] [12:34:56.790] Connection established
+// Use them independently
+apiLogger.info('GET /users');          // [API] GET /users
+dbLogger.error('Connection timeout');  // [DATABASE] Connection timeout
+cacheLogger.debug('Cache hit');        // [CACHE] Cache hit
 
-// Get current prefix
-const currentPrefix = Logit.getPrefix(); // 'Database'
+// Global namespace is unchanged
+Logit.getPrefix(); // '' (empty)
+
+// Scoped loggers support all log methods
+apiLogger.debug('Debug message');
+apiLogger.trace('Trace message');
+apiLogger.info('Info message');
+apiLogger.success('Success message');
+apiLogger.warn('Warning message');
+apiLogger.error('Error message');
 ```
 
-### Log Levels
+### Nested Scopes
+
+```ts
+// Set global namespace
+Logit.setPrefix('App');
+
+// Create nested scopes
+const apiLogger = Logit.scope('api');
+apiLogger.info('Request');  // [APP.API] Request
+
+Logit.setPrefix('App.api');
+const v1Logger = Logit.scope('v1');
+v1Logger.info('GET /users');  // [APP.API.V1] GET /users
+```
+
+### Benefits of Scoped Loggers
+
+```ts
+// ✅ Good - No global state mutation
+const logger = Logit.scope('module');
+logger.info('Message');
+
+// ❌ Avoid - Mutates global state
+Logit.setPrefix('module');
+Logit.info('Message');
+Logit.setPrefix(''); // Need to clean up
+```
+
+**Advantages:**
+- No global state mutation
+- Safe for concurrent operations
+- Easy to pass to modules/functions
+- Clean separation of concerns
+- Type-safe
+
+---
+
+## Log Levels
 
 Control verbosity with log levels:
 
@@ -141,43 +201,55 @@ Logit.info('Message'); // [INFO] Message
 ### Timestamps and Environment
 
 ```ts
-// Hide timestamps
-Logit.showTimestamp(false);
-Logit.info('No timestamp shown');
+// Toggle timestamps (without arguments)
+Logit.toggleTimestamp(); // Toggles current state
 
-// Show timestamps (default)
-Logit.showTimestamp(true);
-Logit.info('Timestamp shown');
+// Explicitly set timestamps
+Logit.toggleTimestamp(false); // Hide timestamps
+Logit.toggleTimestamp(true);  // Show timestamps
 
-// Hide environment indicator (🅿 for production, 🅳 for development)
-Logit.showEnvironment(false);
-Logit.info('No environment indicator');
+// Toggle environment indicator (without arguments)
+Logit.toggleEnvironment(); // Toggles current state
 
-// Show environment (default)
-Logit.showEnvironment(true);
-Logit.info('Environment shown');
+// Explicitly set environment
+Logit.toggleEnvironment(false); // Hide environment indicator (🅿/🅳)
+Logit.toggleEnvironment(true);  // Show environment indicator
+
+// Check current state
+const hasTimestamps = Logit.getTimestamp();    // boolean
+const hasEnvironment = Logit.getEnvironment(); // boolean
 ```
 
-### Remote Logging
+## Remote Logging
 
-Send logs to remote servers or services:
+Send logs to remote servers or services with rich metadata:
 
 ```ts
-// Configure remote logging
+// Configure remote logging with metadata
 Logit.setRemote({
-  handler: async (type, ...args) => {
-    // type is the log level: 'debug' | 'info' | 'warn' | 'error' | etc.
-    // args are the original arguments passed to the log method
+  handler: async (type, metadata) => {
+    // type: 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error'
+    // metadata: {
+    //   args: any[],           // Log arguments
+    //   timestamp?: string,    // ISO timestamp (if enabled)
+    //   namespace?: string,    // Current namespace
+    //   environment: 'production' | 'development'
+    // }
 
     if (type === 'error' || type === 'warn') {
       await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timestamp: new Date().toISOString(),
           level: type,
-          prefix: Logit.getPrefix(),
-          args: args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
+          timestamp: metadata.timestamp,
+          namespace: metadata.namespace,
+          environment: metadata.environment,
+          args: metadata.args.map((arg) => 
+            arg instanceof Error 
+              ? { message: arg.message, stack: arg.stack } 
+              : arg
+          ),
         }),
       });
     }
@@ -185,16 +257,60 @@ Logit.setRemote({
   logLevel: 'warn', // Only send warn and error to remote
 });
 
-// Change remote log level
+// Change remote log level independently
 Logit.setRemoteLogLevel('error'); // Only send errors remotely
+
+// Local logging works independently
+Logit.setLogLevel('debug'); // Console shows all logs
+// Remote only receives error level and above
 ```
+
+### Remote Logging with External Services
+
+```ts
+// Sentry integration
+Logit.setRemote({
+  handler: (type, metadata) => {
+    if (type === 'error') {
+      Sentry.captureMessage(metadata.args.join(' '), {
+        level: 'error',
+        tags: { 
+          namespace: metadata.namespace,
+          environment: metadata.environment,
+        },
+        extra: { timestamp: metadata.timestamp },
+      });
+    }
+  },
+  logLevel: 'error',
+});
+
+// Datadog integration
+Logit.setRemote({
+  handler: (type, metadata) => {
+    window.DD_LOGS?.logger.log(
+      type,
+      metadata.args.join(' '),
+      { 
+        namespace: metadata.namespace,
+        environment: metadata.environment,
+      }
+    );
+  },
+  logLevel: 'info',
+});
+```
+
+::: tip Non-Blocking
+Remote logging uses `Promise.resolve().then()` for async execution, ensuring logs are sent without blocking the main thread.
+:::
 
 ### Bulk Configuration
 
 Initialize multiple settings at once:
 
 ```ts
-Logit.initialise({
+Logit.setup({
   logLevel: 'info',
   namespace: 'MyApp',
   variant: 'symbol',
@@ -282,7 +398,7 @@ type LogitType = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'wa
 
 ```ts
 if (process.env.NODE_ENV === 'development') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'debug', // Show all logs
     variant: 'symbol', // Use symbols
     timestamp: true, // Show timestamps
@@ -295,7 +411,7 @@ if (process.env.NODE_ENV === 'development') {
 
 ```ts
 if (process.env.NODE_ENV === 'production') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'warn', // Only warnings and errors
     variant: 'text', // Plain text (better for log aggregators)
     timestamp: true, // Keep timestamps

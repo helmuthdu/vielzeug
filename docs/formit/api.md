@@ -263,6 +263,31 @@ form.setError('email', 'This email is already taken');
 form.setError('email');
 ```
 
+#### `setErrors(errors)`
+
+Set multiple errors at once.
+
+**Signature:**
+
+```ts
+setErrors(errors: Errors): void
+```
+
+**Parameters:**
+
+- `errors: Errors` - Object with field paths as keys and error messages as values
+
+**Example:**
+
+```ts
+// Set multiple errors
+form.setErrors({
+  email: 'Invalid email',
+  password: 'Password too weak',
+  name: 'Name is required',
+});
+```
+
 #### `resetErrors()`
 
 Clear all form errors.
@@ -305,6 +330,89 @@ const state = form.getStateSnapshot();
 console.log(state.touched.email); // true
 ```
 
+#### `isTouched(path)`
+
+Check if a field is touched.
+
+**Signature:**
+
+```ts
+isTouched(path: Path): boolean
+```
+
+**Parameters:**
+
+- `path: Path` - Field path
+
+**Returns:** `true` if field has been touched, `false` otherwise
+
+**Example:**
+
+```ts
+if (form.isTouched('email')) {
+  console.log('User has interacted with email field');
+}
+
+// Conditional rendering
+{form.isTouched('email') && form.getError('email') && (
+  <ErrorMessage>{form.getError('email')}</ErrorMessage>
+)}
+```
+
+#### `isDirty(path)`
+
+Check if a field is dirty (modified).
+
+**Signature:**
+
+```ts
+isDirty(path: Path): boolean
+```
+
+**Parameters:**
+
+- `path: Path` - Field path
+
+**Returns:** `true` if field has been modified, `false` otherwise
+
+**Example:**
+
+```ts
+if (form.isDirty('email')) {
+  console.log('Email has been changed');
+}
+
+// Check if form has any changes
+const state = form.getStateSnapshot();
+const hasChanges = Object.keys(state.values).some(key => form.isDirty(key));
+```
+
+### Form Reset
+
+#### `reset(initialValues?)`
+
+Reset the form to initial values or new values.
+
+**Signature:**
+
+```ts
+reset(initialValues?: TForm): void
+```
+
+**Parameters:**
+
+- `initialValues?: TForm` - Optional new initial values (defaults to original initialValues)
+
+**Example:**
+
+```ts
+// Reset to original initial values
+form.reset();
+
+// Reset to new values
+form.reset({ email: '', password: '', name: 'Guest' });
+```
+
 ### Validation
 
 #### `validateField(path, signal?)`
@@ -338,29 +446,50 @@ form.validateField('email', controller.signal);
 controller.abort(); // Cancel validation
 ```
 
-#### `validateAll(signal?)`
+#### `validateAll(options?)`
 
 Validate all fields and run form-level validators.
 
 **Signature:**
 
 ```ts
-validateAll(signal?: AbortSignal): Promise<Errors>
+validateAll(options?: {
+  signal?: AbortSignal;
+  onlyTouched?: boolean;
+  fields?: string[];
+}): Promise<Errors>
 ```
 
 **Parameters:**
 
-- `signal?: AbortSignal` - Optional abort signal for cancellation
+- `options?: object` - Optional validation configuration
+  - `signal?: AbortSignal` - Abort signal for cancellation
+  - `onlyTouched?: boolean` - Only validate touched fields (default: `false`)
+  - `fields?: string[]` - Only validate specific fields (default: all fields)
 
 **Returns:** Promise resolving to all validation errors
 
 **Example:**
 
 ```ts
+// Validate all fields
 const errors = await form.validateAll();
 if (Object.keys(errors).length > 0) {
   console.log('Form has errors:', errors);
 }
+
+// Validate only touched fields (better UX)
+const errors = await form.validateAll({ onlyTouched: true });
+
+// Validate specific fields (multi-step forms)
+const errors = await form.validateAll({ fields: ['email', 'password'] });
+
+// Combine options
+const controller = new AbortController();
+const errors = await form.validateAll({
+  onlyTouched: true,
+  signal: controller.signal,
+});
 ```
 
 ### Form Submission
@@ -392,13 +521,36 @@ submit(
 
 **Rejects:**
 
-- With `{ errors, type: 'validation' }` if validation fails
+- With `ValidationError` if validation fails
 - With the error thrown by `onSubmit` if submission fails
 
 **Example:**
 
 ```ts
 // Basic submit
+form.submit(async (values) => {
+  const response = await fetch('/api/submit', {
+    method: 'POST',
+    body: JSON.stringify(values),
+  });
+  return response.json();
+});
+
+// Handle validation errors
+import { ValidationError } from '@vielzeug/formit';
+
+try {
+  await form.submit(async (values) => {
+    await api.post('/users', values);
+  });
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log('Validation failed:', error.errors);
+    console.log('Error type:', error.type); // 'validation'
+  } else {
+    console.error('Submit failed:', error);
+  }
+}
 form.submit(async (values) => {
   const response = await fetch('/api/users', {
     method: 'POST',
@@ -511,17 +663,18 @@ unsubscribe();
 
 ### Field Binding
 
-#### `bind(path)`
+#### `bind(path, config?)`
 
 Create a binding object for a field that can be used with inputs.
 
 **Signature:**
 
 ```ts
-bind(path: Path): {
+bind(path: Path, config?: BindConfig): {
   name: string;
   value: any;
   onChange: (event: any) => void;
+  onBlur: () => void;
   set: (value: any | ((prev: any) => any)) => void;
 }
 ```
@@ -529,6 +682,9 @@ bind(path: Path): {
 **Parameters:**
 
 - `path: Path` - Field path
+- `config?: BindConfig` - Optional binding configuration
+  - `valueExtractor?: (event: any) => any` - Custom value extraction from event (default: extracts `event.target.value`)
+  - `markTouchedOnBlur?: boolean` - Mark field as touched on blur (default: `true`)
 
 **Returns:** Binding object with:
 
@@ -536,12 +692,13 @@ bind(path: Path): {
 - `value: any` - Current field value (getter)
 - `value: any` - Value setter (setter)
 - `onChange: (event) => void` - Change handler for inputs
+- `onBlur: () => void` - Blur handler (marks field as touched)
 - `set: (value) => void` - Value setter function (supports updater functions)
 
 **Example:**
 
 ```ts
-// Spread into input
+// Basic usage - spread into input
 <input {...form.bind('email')} />
 
 // Equivalent to:
@@ -552,7 +709,25 @@ bind(path: Path): {
     markDirty: true,
     markTouched: true
   })}
+  onBlur={() => form.markTouched('email')}
 />
+
+// Custom value extractor for select
+const selectBinding = form.bind('category', {
+  valueExtractor: (e) => e.target.selectedOptions[0].value
+});
+<select {...selectBinding}>...</select>
+
+// Custom value extractor for checkbox
+const checkboxBinding = form.bind('agreed', {
+  valueExtractor: (e) => e.target.checked
+});
+<input type="checkbox" {...checkboxBinding} />
+
+// Disable auto-touch on blur
+const binding = form.bind('field', {
+  markTouchedOnBlur: false
+});
 
 // Use set function directly
 const emailBinding = form.bind('email');
@@ -622,6 +797,54 @@ Error object mapping field paths to error messages.
 
 ```ts
 type Errors = Partial<Record<string, string>>;
+```
+
+**Example:**
+
+```ts
+const errors: Errors = {
+  email: 'Invalid email',
+  password: 'Too short',
+  'user.name': 'Required',
+};
+```
+
+### `ValidationError`
+
+Error class thrown when form validation fails during submission.
+
+```ts
+class ValidationError extends Error {
+  readonly errors: Errors;
+  readonly type: 'validation';
+}
+```
+
+**Properties:**
+
+- `errors: Errors` - Object containing all validation errors
+- `type: 'validation'` - Constant type discriminator
+- `message: string` - Error message (always "Form validation failed")
+- `name: string` - Error name (always "ValidationError")
+
+**Example:**
+
+```ts
+import { ValidationError } from '@vielzeug/formit';
+
+try {
+  await form.submit(async (values) => {
+    await api.post('/users', values);
+  });
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log('Validation errors:', error.errors);
+    // { email: 'Required', password: 'Too short' }
+    
+    console.log('Error type:', error.type); // 'validation'
+    console.log('Error message:', error.message); // 'Form validation failed'
+  }
+}
 ```
 
 **Example:**
@@ -727,6 +950,44 @@ const emailConfig: FieldConfig<string, FormData> = {
       if (!value.includes('@')) return 'Invalid email';
     },
   ],
+};
+```
+
+### `BindConfig`
+
+Configuration for field binding.
+
+```ts
+type BindConfig = {
+  /**
+   * Custom value extractor from event
+   * @default (event) => event?.target?.value ?? event
+   */
+  valueExtractor?: (event: any) => any;
+  /**
+   * Whether to mark field as touched on blur
+   * @default true
+   */
+  markTouchedOnBlur?: boolean;
+};
+```
+
+**Example:**
+
+```ts
+// Custom value extractor for select
+const selectConfig: BindConfig = {
+  valueExtractor: (e) => e.target.selectedOptions[0].value,
+};
+
+// Custom value extractor for checkbox
+const checkboxConfig: BindConfig = {
+  valueExtractor: (e) => e.target.checked,
+};
+
+// Disable auto-touch on blur
+const noTouchConfig: BindConfig = {
+  markTouchedOnBlur: false,
 };
 ```
 

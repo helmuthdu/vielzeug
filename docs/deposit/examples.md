@@ -297,12 +297,32 @@ const uppercased = await db
   }))
   .toArray();
 
-// Group by field
+// Group by field (returns object)
 const byRole = await db.query('users').groupBy('role').toArray();
+// Result: { admin: User[], user: User[] }
+
+// Type-safe grouping (recommended)
+const byRoleTyped = await db.query('users').toGrouped('role');
+// Result: Array<{ key: 'admin' | 'user', values: User[] }>
+
+// Example: Count users by role
+for (const group of byRoleTyped) {
+  console.log(`${group.key}: ${group.values.length} users`);
+}
+
+// Example: Filter groups
+const adminGroup = byRoleTyped.find(g => g.key === 'admin');
+if (adminGroup) {
+  console.log('Admin users:', adminGroup.values);
+}
 
 // Search
 const searchResults = await db.query('users').search('alice').toArray();
 ```
+
+::: tip Type-Safe Grouping
+Use `toGrouped()` instead of `groupBy().toArray()` for better type safety and clearer results structure. It returns an array that's easier to iterate and filter.
+:::
 
 ### Chaining Multiple Operations
 

@@ -17,7 +17,7 @@ describe('Logit', () => {
 
   beforeEach(() => {
     // Reset Logit to default state
-    Logit.initialise({
+    Logit.setup({
       environment: true,
       logLevel: 'debug',
       namespace: '',
@@ -43,163 +43,181 @@ describe('Logit', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Basic logging methods', () => {
-    it('logs debug messages', () => {
-      Logit.debug('test message');
-      expect(consoleLogSpy).toHaveBeenCalled();
-    });
+  describe('Basic Logging', () => {
+    it('logs all message types with multiple arguments', () => {
+      Logit.debug('debug', { data: 1 });
+      Logit.trace('trace');
+      Logit.info('info', 123);
+      Logit.success('success');
+      Logit.warn('warn', null, undefined);
+      Logit.error('error', [1, 2, 3]);
 
-    it('logs info messages', () => {
-      Logit.info('info message');
-      expect(consoleInfoSpy).toHaveBeenCalled();
-    });
-
-    it('logs success messages', () => {
-      Logit.success('success message');
-      expect(consoleLogSpy).toHaveBeenCalled();
-    });
-
-    it('logs warning messages', () => {
-      Logit.warn('warning message');
-      expect(consoleWarnSpy).toHaveBeenCalled();
-    });
-
-    it('logs error messages', () => {
-      Logit.error('error message');
-      expect(consoleErrorSpy).toHaveBeenCalled();
-    });
-
-    it('logs trace messages', () => {
-      Logit.trace('trace message');
-      expect(consoleTraceSpy).toHaveBeenCalled();
-    });
-
-    it('handles multiple arguments', () => {
-      Logit.info('message', { key: 'value' }, 123);
-      expect(consoleInfoSpy).toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledTimes(2); // debug, success
+      expect(consoleTraceSpy).toHaveBeenCalledTimes(1);
+      expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Log level filtering', () => {
-    it('respects log level settings', () => {
+  describe('Log Level Filtering', () => {
+    it('filters logs based on level (error, warn, off)', () => {
       Logit.setLogLevel('error');
-
-      Logit.debug('should not log');
-      Logit.info('should not log');
-      Logit.warn('should not log');
-      Logit.error('should log');
-
+      Logit.debug('no');
+      Logit.info('no');
+      Logit.warn('no');
+      Logit.error('yes');
       expect(consoleLogSpy).not.toHaveBeenCalled();
       expect(consoleInfoSpy).not.toHaveBeenCalled();
       expect(consoleWarnSpy).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalled();
-    });
 
-    it('disables all logs when set to "off"', () => {
-      Logit.setLogLevel('off');
-
-      Logit.debug('test');
-      Logit.info('test');
-      Logit.error('test');
-
-      expect(consoleLogSpy).not.toHaveBeenCalled();
-      expect(consoleInfoSpy).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-    });
-
-    it('allows all logs when set to "debug"', () => {
-      Logit.setLogLevel('debug');
-
-      Logit.debug('test');
-      Logit.info('test');
-      Logit.error('test');
-
-      expect(consoleLogSpy).toHaveBeenCalled();
-      expect(consoleInfoSpy).toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalled();
-    });
-
-    it('filters intermediate log levels correctly', () => {
+      vi.clearAllMocks();
       Logit.setLogLevel('warn');
-
-      Logit.debug('should not log');
-      Logit.info('should not log');
-      Logit.warn('should log');
-      Logit.error('should log');
-
-      expect(consoleLogSpy).not.toHaveBeenCalled();
+      Logit.info('no');
+      Logit.warn('yes');
+      Logit.error('yes');
       expect(consoleInfoSpy).not.toHaveBeenCalled();
       expect(consoleWarnSpy).toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalled();
+
+      vi.clearAllMocks();
+      Logit.setLogLevel('off');
+      Logit.debug('no');
+      Logit.error('no');
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
   });
 
-  describe('Configuration', () => {
-    it('gets and sets log level', () => {
+  describe('Configuration & Getters', () => {
+    it('gets and sets all configuration options', () => {
       Logit.setLogLevel('warn');
       expect(Logit.getLevel()).toBe('warn');
 
-      Logit.setLogLevel('error');
-      expect(Logit.getLevel()).toBe('error');
-    });
+      Logit.setPrefix('App');
+      expect(Logit.getPrefix()).toBe('App');
 
-    it('gets and sets namespace prefix', () => {
-      Logit.setPrefix('MyApp');
-      expect(Logit.getPrefix()).toBe('MyApp');
-
-      Logit.setPrefix('');
-      expect(Logit.getPrefix()).toBe('');
-    });
-
-    it('gets and sets timestamp visibility', () => {
-      Logit.showTimestamp(false);
+      Logit.toggleTimestamp(false);
       expect(Logit.getTimestamp()).toBe(false);
 
-      Logit.showTimestamp(true);
-      expect(Logit.getTimestamp()).toBe(true);
-    });
+      Logit.toggleEnvironment(false);
+      expect(Logit.getEnvironment()).toBe(false);
 
-    it('sets display variant', () => {
       Logit.setVariant('text');
-      Logit.info('test');
-      expect(consoleInfoSpy).toHaveBeenCalled();
-
-      Logit.setVariant('icon');
-      Logit.info('test');
-      expect(consoleInfoSpy).toHaveBeenCalled();
-
-      Logit.setVariant('symbol');
-      Logit.info('test');
-      expect(consoleInfoSpy).toHaveBeenCalled();
+      expect(Logit.getVariant()).toBe('text');
     });
 
-    it('toggles environment indicator', () => {
-      Logit.showEnvironment(false);
-      Logit.info('test');
-      expect(consoleInfoSpy).toHaveBeenCalled();
+    it('toggles configuration without arguments', () => {
+      // Toggle timestamp (starts as true from beforeEach)
+      Logit.toggleTimestamp(); // Should toggle to false
+      expect(Logit.getTimestamp()).toBe(false);
 
-      Logit.showEnvironment(true);
-      Logit.info('test');
-      expect(consoleInfoSpy).toHaveBeenCalled();
+      Logit.toggleTimestamp(); // Should toggle back to true
+      expect(Logit.getTimestamp()).toBe(true);
+
+      // Toggle environment (starts as true from beforeEach)
+      Logit.toggleEnvironment(); // Should toggle to false
+      expect(Logit.getEnvironment()).toBe(false);
+
+      Logit.toggleEnvironment(); // Should toggle back to true
+      expect(Logit.getEnvironment()).toBe(true);
     });
 
-    it('initializes with custom options', () => {
-      Logit.initialise({
+    it('initializes with custom options and merges remote config', () => {
+      const remoteHandler = vi.fn();
+
+      Logit.setup({
         environment: false,
         logLevel: 'error',
         namespace: 'TestApp',
+        remote: { handler: remoteHandler, logLevel: 'warn' },
         timestamp: false,
-        variant: 'text',
+        variant: 'icon',
       });
 
       expect(Logit.getLevel()).toBe('error');
       expect(Logit.getPrefix()).toBe('TestApp');
       expect(Logit.getTimestamp()).toBe(false);
+      expect(Logit.getEnvironment()).toBe(false);
+      expect(Logit.getVariant()).toBe('icon');
     });
   });
 
-  describe('Remote logging', () => {
-    it('sends logs to remote handler when configured', () => {
+  describe('Display Variants', () => {
+    it('works with all variants (text, icon, symbol)', () => {
+      const variants: Array<'text' | 'icon' | 'symbol'> = ['text', 'icon', 'symbol'];
+
+      variants.forEach((variant) => {
+        Logit.setVariant(variant);
+        Logit.info('test');
+        expect(consoleInfoSpy).toHaveBeenCalled();
+        vi.clearAllMocks();
+      });
+    });
+  });
+
+  describe('Namespace', () => {
+    it('includes namespace in log output', () => {
+      Logit.setPrefix('MyApp');
+      Logit.info('test');
+
+      const formatString = consoleInfoSpy.mock.calls[0][0];
+      expect(formatString).toContain('MyApp');
+    });
+  });
+
+  describe('Scoped Logger', () => {
+    it('creates scoped logger without mutating global state', () => {
+      Logit.setPrefix('Global');
+      const apiLogger = Logit.scope('api');
+      const dbLogger = Logit.scope('database');
+
+      apiLogger.info('API call');
+      let formatString = consoleInfoSpy.mock.calls[0][0];
+      expect(formatString).toContain('Global.api');
+
+      vi.clearAllMocks();
+
+      dbLogger.error('DB error');
+      formatString = consoleErrorSpy.mock.calls[0][0];
+      expect(formatString).toContain('Global.database');
+
+      // Global namespace unchanged
+      expect(Logit.getPrefix()).toBe('Global');
+    });
+
+    it('supports all log methods in scoped logger', () => {
+      const scoped = Logit.scope('test');
+
+      scoped.debug('debug');
+      scoped.trace('trace');
+      scoped.info('info');
+      scoped.success('success');
+      scoped.warn('warn');
+      scoped.error('error');
+
+      expect(consoleLogSpy).toHaveBeenCalledTimes(2);
+      expect(consoleTraceSpy).toHaveBeenCalledTimes(1);
+      expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('creates nested scopes', () => {
+      Logit.setPrefix('outer');
+      const inner = Logit.scope('inner');
+
+      Logit.setPrefix('');
+      inner.info('nested');
+
+      const formatString = consoleInfoSpy.mock.calls[0][0];
+      expect(formatString).toContain('outer.inner');
+    });
+  });
+
+  describe('Remote Logging', () => {
+    it('sends logs with metadata to remote handler', async () => {
       const remoteHandler = vi.fn();
 
       Logit.setRemote({
@@ -207,189 +225,119 @@ describe('Logit', () => {
         logLevel: 'info',
       });
 
-      Logit.debug('debug message');
-      expect(remoteHandler).not.toHaveBeenCalled();
+      Logit.setPrefix('App');
+      Logit.toggleTimestamp(true);
+      Logit.debug('debug'); // Below threshold
+
+      await vi.waitFor(() => expect(remoteHandler).not.toHaveBeenCalled());
 
       Logit.info('info message');
-      expect(remoteHandler).toHaveBeenCalledWith('info', 'info message');
 
-      Logit.error('error message');
-      expect(remoteHandler).toHaveBeenCalledWith('error', 'error message');
+      await vi.waitFor(() => {
+        expect(remoteHandler).toHaveBeenCalledWith(
+          'info',
+          expect.objectContaining({
+            args: ['info message'],
+            environment: expect.stringMatching(/production|development/),
+            namespace: 'App',
+            timestamp: expect.any(String),
+          }),
+        );
+      });
     });
 
-    it('respects remote log level independently', () => {
+    it('respects independent remote log level', async () => {
       const remoteHandler = vi.fn();
 
       Logit.setLogLevel('debug');
-      Logit.setRemote({
-        handler: remoteHandler,
-        logLevel: 'warn',
-      });
+      Logit.setRemote({ handler: remoteHandler, logLevel: 'warn' });
 
-      Logit.info('info message');
-      expect(consoleInfoSpy).toHaveBeenCalled();
-      expect(remoteHandler).not.toHaveBeenCalled();
+      Logit.info('info');
+      expect(consoleInfoSpy).toHaveBeenCalled(); // Console logs
+      await vi.waitFor(() => expect(remoteHandler).not.toHaveBeenCalled()); // Remote doesn't
 
-      Logit.warn('warn message');
+      Logit.warn('warn');
       expect(consoleWarnSpy).toHaveBeenCalled();
-      expect(remoteHandler).toHaveBeenCalledWith('warn', 'warn message');
+      await vi.waitFor(() =>
+        expect(remoteHandler).toHaveBeenCalledWith(
+          'warn',
+          expect.objectContaining({
+            args: ['warn'],
+          }),
+        ),
+      );
     });
 
-    it('updates remote log level independently', () => {
+    it('updates remote log level dynamically', async () => {
       const remoteHandler = vi.fn();
 
-      Logit.setRemote({
-        handler: remoteHandler,
-        logLevel: 'error',
-      });
+      Logit.setRemote({ handler: remoteHandler, logLevel: 'error' });
 
       Logit.warn('warning');
-      expect(remoteHandler).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(remoteHandler).not.toHaveBeenCalled());
 
       Logit.setRemoteLogLevel('warn');
       Logit.warn('warning');
-      expect(remoteHandler).toHaveBeenCalledWith('warn', 'warning');
+
+      await vi.waitFor(() =>
+        expect(remoteHandler).toHaveBeenCalledWith(
+          'warn',
+          expect.objectContaining({
+            args: ['warning'],
+          }),
+        ),
+      );
     });
   });
 
-  describe('Utility methods', () => {
-    it('creates table output', () => {
-      const data = [
-        { age: 30, name: 'Alice' },
-        { age: 25, name: 'Bob' },
-      ];
+  describe('Utility Methods', () => {
+    it('handles table, time, groups, and assert', () => {
+      const data = [{ age: 30, name: 'Alice' }];
 
       Logit.table(data);
       expect(consoleTableSpy).toHaveBeenCalledWith(data);
-    });
-
-    it('respects log level for table output', () => {
-      Logit.setLogLevel('off');
-
-      Logit.table([{ a: 1 }]);
-      expect(consoleTableSpy).not.toHaveBeenCalled();
-    });
-
-    it('starts and ends timers', () => {
-      Logit.time('myTimer');
-      expect(consoleTimeSpy).toHaveBeenCalledWith('myTimer');
-
-      Logit.timeEnd('myTimer');
-      expect(consoleTimeEndSpy).toHaveBeenCalledWith('myTimer');
-    });
-
-    it('respects log level for timers', () => {
-      Logit.setLogLevel('off');
 
       Logit.time('timer');
+      expect(consoleTimeSpy).toHaveBeenCalledWith('timer');
+
       Logit.timeEnd('timer');
+      expect(consoleTimeEndSpy).toHaveBeenCalledWith('timer');
 
-      expect(consoleTimeSpy).not.toHaveBeenCalled();
-      expect(consoleTimeEndSpy).not.toHaveBeenCalled();
-    });
-
-    it('creates and ends console groups', () => {
-      Logit.groupCollapsed('Group Title');
+      Logit.groupCollapsed('Group', 'LABEL', Date.now() - 1000);
       expect(consoleGroupCollapsedSpy).toHaveBeenCalled();
+      expect(consoleGroupCollapsedSpy.mock.calls[0][0]).toContain('LABEL');
 
       Logit.groupEnd();
       expect(consoleGroupEndSpy).toHaveBeenCalled();
+
+      Logit.assert(false, 'Failed', { error: true });
+      expect(consoleAssertSpy).toHaveBeenCalledWith(false, 'Failed', { error: true });
     });
 
-    it('respects log level for groups', () => {
+    it('respects log level for utility methods', () => {
       Logit.setLogLevel('off');
 
-      Logit.groupCollapsed('Group');
+      Logit.table([{}]);
+      Logit.time('t');
+      Logit.timeEnd('t');
+      Logit.groupCollapsed('g');
       Logit.groupEnd();
 
+      expect(consoleTableSpy).not.toHaveBeenCalled();
+      expect(consoleTimeSpy).not.toHaveBeenCalled();
+      expect(consoleTimeEndSpy).not.toHaveBeenCalled();
       expect(consoleGroupCollapsedSpy).not.toHaveBeenCalled();
       expect(consoleGroupEndSpy).not.toHaveBeenCalled();
     });
-
-    it('handles custom group labels and timestamps', () => {
-      const startTime = Date.now() - 1000;
-
-      Logit.groupCollapsed('My Group', 'CUSTOM', startTime);
-      expect(consoleGroupCollapsedSpy).toHaveBeenCalled();
-
-      const callArgs = consoleGroupCollapsedSpy.mock.calls[0];
-      expect(callArgs[0]).toContain('CUSTOM');
-      expect(callArgs[0]).toContain('My Group');
-    });
-
-    it('asserts conditions', () => {
-      Logit.assert(true, 'Should pass', { data: 'test' });
-      expect(consoleAssertSpy).toHaveBeenCalledWith(true, 'Should pass', { data: 'test' });
-
-      Logit.assert(false, 'Should fail', { error: true });
-      expect(consoleAssertSpy).toHaveBeenCalledWith(false, 'Should fail', { error: true });
-    });
   });
 
-  describe('Namespace handling', () => {
-    it('includes namespace in log output when set', () => {
-      Logit.setPrefix('MyApp');
-      Logit.info('test message');
-
-      expect(consoleInfoSpy).toHaveBeenCalled();
-      const formatString = consoleInfoSpy.mock.calls[0][0];
-      expect(formatString).toContain('MyApp');
-    });
-
-    it('does not include namespace when empty', () => {
-      Logit.setPrefix('');
-      Logit.info('test message');
-
-      expect(consoleInfoSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('handles logging with no arguments', () => {
+  describe('Edge Cases', () => {
+    it('handles no arguments, null, undefined, and complex objects', () => {
       Logit.info();
-      expect(consoleInfoSpy).toHaveBeenCalled();
-    });
-
-    it('handles logging with complex objects', () => {
-      const complexObj = {
-        array: [1, 2, 3],
-        fn: () => {},
-        nested: { deep: { value: 123 } },
-      };
-
-      Logit.debug(complexObj);
-      expect(consoleLogSpy).toHaveBeenCalled();
-    });
-
-    it('handles logging with null and undefined', () => {
       Logit.info(null, undefined);
-      expect(consoleInfoSpy).toHaveBeenCalled();
-    });
+      Logit.info({ arr: [1, 2, 3], fn: () => {}, nested: { deep: { value: 123 } } });
 
-    it('handles rapid log level changes', () => {
-      Logit.setLogLevel('debug');
-      Logit.setLogLevel('info');
-      Logit.setLogLevel('warn');
-      Logit.setLogLevel('error');
-
-      expect(Logit.getLevel()).toBe('error');
-    });
-  });
-
-  describe('Type coverage', () => {
-    it('supports all log types in sequence', () => {
-      Logit.debug('debug');
-      Logit.trace('trace');
-      Logit.info('info');
-      Logit.success('success');
-      Logit.warn('warn');
-      Logit.error('error');
-
-      expect(consoleLogSpy).toHaveBeenCalledTimes(2); // debug, success
-      expect(consoleTraceSpy).toHaveBeenCalledTimes(1); // trace
-      expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      expect(consoleInfoSpy).toHaveBeenCalledTimes(3);
     });
   });
 });

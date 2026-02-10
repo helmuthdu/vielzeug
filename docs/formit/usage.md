@@ -239,6 +239,12 @@ if (Object.keys(errors).length > 0) {
   console.log('Form has errors:', errors);
 }
 
+// Validate only touched fields (better UX)
+const errors = await form.validateAll({ onlyTouched: true });
+
+// Validate specific fields (e.g., for multi-step forms)
+const errors = await form.validateAll({ fields: ['email', 'password'] });
+
 // Validation is automatic on submit
 form.submit(async (values) => {
   // This only runs if validation passes
@@ -258,11 +264,66 @@ const emailError = form.getError('email');
 // Set custom error
 form.setError('email', 'This email is banned');
 
+// Set multiple errors
+form.setErrors({ email: 'Invalid', password: 'Too weak' });
+
 // Clear error
 form.setError('email');
 
 // Clear all errors
 form.resetErrors();
+```
+
+### State Helpers
+
+```ts
+// Check if field is dirty (modified)
+if (form.isDirty('email')) {
+  console.log('Email has been changed');
+}
+
+// Check if field is touched (user interacted)
+if (form.isTouched('password')) {
+  console.log('User has focused password field');
+}
+
+// Conditional rendering based on state
+{form.isTouched('email') && form.getError('email') && (
+  <ErrorMessage>{form.getError('email')}</ErrorMessage>
+)}
+
+// Check if entire form is dirty
+const state = form.getStateSnapshot();
+const hasChanges = Object.values(state.dirty).some(Boolean);
+```
+
+### Field Binding
+
+```ts
+// Basic binding (includes value, onChange, onBlur, name)
+<input {...form.bind('email')} />
+
+// Custom value extractor for select, checkbox, etc.
+const selectBinding = form.bind('category', {
+  valueExtractor: (e) => e.target.selectedOptions[0].value
+});
+
+const checkboxBinding = form.bind('agreed', {
+  valueExtractor: (e) => e.target.checked
+});
+
+// Disable auto-touch on blur
+const binding = form.bind('field', {
+  markTouchedOnBlur: false
+});
+
+// The binding includes:
+const binding = form.bind('name');
+binding.value;      // Current value
+binding.onChange;   // Change handler  
+binding.onBlur;     // Blur handler (marks as touched)
+binding.name;       // Field key
+binding.set;        // Setter function
 ```
 
 ---
@@ -484,6 +545,13 @@ const form = createForm({
     // Step 3
     payment: '',
   },
+  fields: {
+    name: { validators: (v) => !v && 'Required' },
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+    address: { validators: (v) => !v && 'Required' },
+    city: { validators: (v) => !v && 'Required' },
+    payment: { validators: (v) => !v && 'Required' },
+  },
 });
 
 let currentStep = 1;
@@ -496,8 +564,9 @@ async function validateCurrentStep() {
       3: ['payment'],
     }[currentStep] || [];
 
-  for (const field of fieldsToValidate) {
-    const error = await form.validateField(field);
+  // Use the new validateAll({ fields }) option
+  const errors = await form.validateAll({ fields: fieldsToValidate });
+  return Object.keys(errors).length === 0;
     if (error) return false;
   }
   return true;

@@ -1,15 +1,15 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1.5_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.0.3-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-2.0_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
 </div>
 
 <img src="/logo-permit.svg" alt="Permit Logo" width="156" class="logo-highlight"/>
 
 # Permit
 
-**Permit** is a flexible, type-safe permission and role management utility for modern web apps. It provides a simple API for registering, checking, and managing permissions and roles, with support for dynamic rules and full TypeScript support.
+**Permit** is a flexible, type-safe role-based access control (RBAC) system for modern web applications. It provides a simple yet powerful API for managing permissions with support for dynamic rules, wildcards, normalization, and full TypeScript support.
 
 ## What Problem Does Permit Solve?
 
@@ -38,6 +38,8 @@ function canDeletePost(user: User, post: Post): boolean {
 **With Permit**:
 
 ```ts
+import { Permit, WILDCARD } from '@vielzeug/permit';
+
 // Centralized, declarative permission system
 Permit.register('admin', 'posts', {
   view: true,
@@ -67,12 +69,15 @@ if (Permit.check(user, 'posts', 'update', post)) {
 | ------------------ | -------------- | ----------- | ---------- | -------------- |
 | TypeScript Support | ✅ First-class | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
 | Dynamic Rules      | ✅ Simple      | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | **1.5 KB**     | ~10KB       | ~45KB      | 0KB            |
+| Bundle Size (gzip) | **~2.0 KB**    | ~15KB       | ~45KB      | 0KB            |
 | Learning Curve     | Low            | Medium      | High       | None           |
 | Role-Based         | ✅             | ✅          | ✅         | ⚠️ Manual      |
 | Resource-Based     | ✅             | ✅          | ✅         | ⚠️ Manual      |
-| Wildcards          | ✅             | ✅          | ✅         | ❌             |
-| Dependencies       | 0              | 5+          | 10+        | N/A            |
+| Wildcards          | ✅ Role + Resource | ⚠️ Limited | ✅     | ❌             |
+| Normalization      | ✅ Built-in    | ❌          | ❌         | ❌             |
+| Security Defaults  | ✅ Safe        | ⚠️          | ⚠️         | ❌             |
+| Type Exports       | ✅ All         | ⚠️ Some     | ❌         | N/A            |
+| Dependencies       | 1 (logging)    | 5+          | 10+        | N/A            |
 | Isomorphic         | ✅             | ✅          | ✅         | ✅             |
 
 ## When to Use Permit
@@ -83,8 +88,10 @@ if (Permit.check(user, 'posts', 'update', post)) {
 - Want type-safe permission checking
 - Require dynamic rules based on resource context
 - Need centralized permission management
-- Want zero dependencies for security
+- Want minimal dependencies for security
 - Build applications with complex authorization logic
+- Need case-insensitive permission matching
+- Want safe handling of unauthenticated users
 
 **❌ Consider alternatives when you:**
 
@@ -98,11 +105,12 @@ if (Permit.check(user, 'posts', 'update', post)) {
 - **Role & Resource Based**: Powerful permission model using roles, resources, and actions
 - **Dynamic Rules**: Support for functional rules for complex, context-aware permission checks
 - **Type-safe**: Built with TypeScript for full autocompletion and type safety
-- **Wildcards**: Easily handle broad permissions with wildcard support for roles and resources
-- **Zero Dependencies**: Lightweight and fast, perfect for both client and server
-- **Isomorphic**: Works everywhere JavaScript runs
-- **Simple API**: Easy to learn and integrate into existing applications
-
+- **Normalized Matching**: Case-insensitive, trimmed role/resource comparison prevents mismatches
+- **Wildcard Support**: Define permissions for all roles or all resources
+- **Security-First**: Safe handling of malformed users with ANONYMOUS role
+- **Runtime Validation**: Validates permission actions at registration
+- **Deep Copy Protection**: Immutable permission registry inspection
+- **Flexible API**: Register, set, unregister, and check permissions with ease
 ## 🏁 Quick Start
 
 ### Installation
@@ -126,7 +134,7 @@ yarn add @vielzeug/permit
 ### Basic Setup
 
 ```ts
-import { Permit } from '@vielzeug/permit';
+import { Permit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 
 // 1. Register role-based permissions
 Permit.register('admin', 'posts', {
@@ -146,7 +154,12 @@ Permit.register('viewer', 'posts', {
   view: true,
 });
 
-// 2. Check permissions
+// 2. Public permissions for unauthenticated users
+Permit.register(ANONYMOUS, 'posts', {
+  view: true,
+});
+
+// 3. Check permissions
 const user = { id: 'u1', roles: ['editor'] };
 
 if (Permit.check(user, 'posts', 'create')) {
@@ -156,12 +169,17 @@ if (Permit.check(user, 'posts', 'create')) {
 if (Permit.check(user, 'posts', 'delete')) {
   // This won't run for editor
 }
+
+// 4. Normalization - case-insensitive matching
+Permit.register('Admin', 'Posts', { view: true });
+const adminUser = { id: 'u2', roles: ['ADMIN'] };
+Permit.check(adminUser, 'posts', 'view'); // true
 ```
 
 ### Real-World Example: Blog Platform
 
 ```ts
-import { Permit } from '@vielzeug/permit';
+import { Permit, WILDCARD } from '@vielzeug/permit';
 
 interface User {
   id: string;
@@ -175,7 +193,7 @@ interface Post {
 }
 
 // Define permission rules
-Permit.register('admin', '*', {
+Permit.register('admin', WILDCARD, {
   view: true,
   create: true,
   update: true,
@@ -496,7 +514,7 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 

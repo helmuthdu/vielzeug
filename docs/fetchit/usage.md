@@ -115,6 +115,49 @@ const users = await http.get<User[]>('/users', {
 // Calls: /users?role=admin&age=18&page=1
 ```
 
+### Request Deduplication
+
+The HTTP client automatically deduplicates concurrent identical requests to prevent unnecessary network calls:
+
+```ts
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
+  dedupe: true, // Default is true
+});
+
+// These 3 requests happen concurrently but only ONE network call is made
+const [user1, user2, user3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
+
+// All three get the same response
+console.log(user1 === user2); // true
+```
+
+Deduplication works with different body types:
+
+```ts
+// JSON bodies with same content dedupe (property order doesn't matter)
+const [r1, r2] = await Promise.all([
+  http.post('/data', { body: { name: 'Alice', age: 25 } }),
+  http.post('/data', { body: { age: 25, name: 'Alice' } }), // Same content!
+]);
+// Only one request made ✅
+
+// FormData, Blob, ArrayBuffer are treated specially
+const formData = new FormData();
+formData.append('file', file);
+
+// All FormData uploads get the same dedupe key, so they dedupe together
+const [upload1, upload2] = await Promise.all([
+  http.post('/upload', { body: formData }),
+  http.post('/upload', { body: formData }),
+]);
+// Only one upload ✅
+```
+
+::: tip 💡 Smart Deduplication
+Fetchit uses stable serialization for request bodies, meaning property order doesn't affect deduplication. Binary data types (FormData, Blob, ArrayBuffer) are handled safely without crashing.
+:::
+
 ### Managing Headers
 
 ```ts
@@ -303,6 +346,36 @@ const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
 unsubscribe();
 ```
 
+### Stable Query Keys
+
+Fetchit uses stable key serialization, meaning **property order doesn't matter** for cache matching. This prevents cache misses caused by object property ordering.
+
+```ts
+// These two queries use the SAME cache entry
+const key1 = ['users', { page: 1, filter: 'active' }];
+const key2 = ['users', { filter: 'active', page: 1 }]; // Different order!
+
+await queryClient.fetch({
+  queryKey: key1,
+  queryFn: () => http.get('/users'),
+});
+
+// This will use the cached data from above
+await queryClient.fetch({
+  queryKey: key2, // Same logical key, different property order
+  queryFn: () => http.get('/users'),
+});
+
+// Also works with nested objects
+const nestedKey1 = ['posts', { filters: { status: 'published', author: 'john' }, page: 1 }];
+const nestedKey2 = ['posts', { page: 1, filters: { author: 'john', status: 'published' } }];
+// ✅ These match!
+```
+
+::: tip 💡 Stable Serialization
+Fetchit automatically sorts object keys before serialization, ensuring consistent cache keys regardless of property order. This is especially useful when keys are built dynamically or come from different sources.
+:::
+
 ## Common Patterns
 
 ### Query with Retry
@@ -316,10 +389,31 @@ const queryClient = createQueryClient();
 const user = await queryClient.fetch({
   queryKey: ['users', userId],
   queryFn: () => http.get<User>(`/users/${userId}`),
-  retry: 3, // Retry 3 times on failure
+  retry: 3, // 3 retries = 4 total attempts (1 initial + 3 retries)
   retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 });
+
+// Disable retries
+const data = await queryClient.fetch({
+  queryKey: ['data'],
+  queryFn: fetchData,
+  retry: false, // No retries (1 attempt only)
+});
+
+// Or retry: 0 also means no retries
+const data2 = await queryClient.fetch({
+  queryKey: ['data2'],
+  queryFn: fetchData,
+  retry: 0, // No retries (1 attempt only)
+});
 ```
+
+::: tip 💡 Retry Semantics
+
+- `retry: 3` means **3 retry attempts** (4 total attempts: 1 initial + 3 retries)
+- `retry: 0` or `retry: false` means **no retries** (1 attempt only)
+- Default is `retry: 3` for queries, `retry: false` for mutations
+  :::
 
 ### Dependent Queries
 
@@ -356,6 +450,56 @@ await queryClient.mutate(
 ```
 
 ## Advanced Features
+
+### Canceling Requests with AbortController
+
+You can cancel in-flight requests using AbortController:
+
+```ts
+const controller = new AbortController();
+
+// Pass signal to HTTP client
+const promise = http.get('/slow-endpoint', {
+  signal: controller.signal,
+});
+
+// Cancel after 1 second
+setTimeout(() => controller.abort(), 1000);
+
+try {
+  const data = await promise;
+} catch (err) {
+  if (err.name === 'AbortError') {
+    console.log('Request was cancelled');
+  }
+}
+```
+
+When a query is aborted:
+
+- The query state is set to `'idle'` (not `'error'`)
+- The `error` field is cleared (set to `null`)
+- The `onError` callback is **not called** (aborts are not errors)
+
+```ts
+const controller = new AbortController();
+
+queryClient.fetch({
+  queryKey: ['data'],
+  queryFn: () => http.get('/data', { signal: controller.signal }),
+  onError: (err) => {
+    // This won't be called if request is aborted
+    console.error('Actual error:', err);
+  },
+});
+
+// Cancel the request
+controller.abort(); // Query state becomes 'idle', not 'error'
+```
+
+::: tip 💡 Abort vs Error
+Fetchit distinguishes between user-initiated aborts and actual errors. Aborted requests set the query status to `'idle'` with no error, while actual errors set the status to `'error'` with an error message.
+:::
 
 ### Dynamic Headers
 

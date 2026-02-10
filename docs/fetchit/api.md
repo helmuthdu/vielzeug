@@ -1,6 +1,6 @@
 # Fetchit API Reference
 
-Complete API documentation for `@vielzeug/fetchit` v2.
+Complete API documentation for `@vielzeug/fetchit`.
 
 ## Overview
 
@@ -121,20 +121,11 @@ const data = await queryClient.fetch({
 - `getData<T>(queryKey): T | undefined` - Get cached data
 - `setData<T>(queryKey, data | updater): void` - Set/update cached data
 - `getState<T>(queryKey): QueryState<T> | null` - Get full query state
-- `invalidate(queryKey): void` - Invalidate query (supports pattern matching)
+- `invalidate(queryKey): void` - Invalidate query (supports prefix matching)
 - `subscribe<T>(queryKey, listener): () => void` - Subscribe to query changes
 - `unsubscribe<T>(queryKey, listener): void` - Unsubscribe from changes
 - `clearCache(): void` - Clear all cached data
 - `getCacheSize(): number` - Get number of cached queries
-
-**Method Aliases (TanStack Query compatibility):**
-
-- `fetchQuery<T>(options): Promise<T>` - Alias for `fetch()`
-- `getQueryData<T>(queryKey): T | undefined` - Alias for `getData()`
-- `setQueryData<T>(queryKey, data): void` - Alias for `setData()`
-- `getQueryState<T>(queryKey): QueryState<T> | null` - Alias for `getState()`
-- `invalidateQueries(queryKey): void` - Alias for `invalidate()`
-- `prefetchQuery<T>(options): Promise<void>` - Alias for `prefetch()`
 
 ---
 
@@ -166,9 +157,6 @@ queryClient.fetch({
 
 // Invalidate with type safety
 queryClient.invalidate(queryKeys.users.all());
-
-// Typo caught at compile time
-queryClient.invalidateQueries(queryKeys.user.detail('123')); // ❌ Error!
 ```
 
 ---
@@ -386,13 +374,11 @@ console.log(headers.Authorization);
 
 ## Query Client Cache Management
 
-### `invalidate(queryKey)` / `invalidateQueries(queryKey)`
+### `invalidate(queryKey)`
 
-Invalidates and removes queries from cache. Supports pattern matching!
+Invalidates and removes queries from cache. Supports prefix matching!
 
-> **Note:** `invalidateQueries` is an alias for `invalidate` (TanStack Query compatibility).
-
-**Pattern Matching:**
+**Prefix Matching:**
 
 - Exact match: `['users', '1']` matches only `['users', '1']`
 - Prefix match: `['users']` matches `['users']`, `['users', '1']`, `['users', 'list', {...}]`, etc.
@@ -403,7 +389,7 @@ Invalidates and removes queries from cache. Supports pattern matching!
 // Invalidate specific user
 queryClient.invalidate(['users', '1']);
 
-// Invalidate ALL user queries (pattern matching!)
+// Invalidate ALL user queries (prefix matching!)
 queryClient.invalidate(['users']);
 // Matches: ['users'], ['users', '1'], ['users', 'list', {...}], etc.
 ```
@@ -741,9 +727,7 @@ type HttpClientOptions = {
 
 **Note:** Fetchit uses [@vielzeug/toolkit](../toolkit/index.md)'s utilities:
 
-- **Cache Management**: Powered by [cache()](../toolkit/examples/function/cache.md)
 - **Retry Logic**: Powered by [retry()](../toolkit/examples/function/retry.md)
-- **Logging**: Powered by [@vielzeug/logit](../logit/index.md)
 
 ### `HttpRequestConfig`
 
