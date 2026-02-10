@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/fetchit
 
-This log was last generated on Tue, 10 Feb 2026 21:47:50 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Feb 2026 22:58:02 GMT and should not be manually modified.
+
+## 1.1.4
+Tue, 10 Feb 2026 22:58:02 GMT
+
+_Version update only_
 
 ## 1.1.3
 Tue, 10 Feb 2026 21:47:50 GMT
