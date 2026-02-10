@@ -11,10 +11,6 @@ Function utilities provide a powerful set of tools to control execution, compose
 | [`debounce`](./function/debounce.md) | Delay function execution until a specified time has passed since the last call. |
 | [`throttle`](./function/throttle.md) | Ensure a function is called at most once in a specified time interval.          |
 | [`once`](./function/once.md)         | Ensure a function is only executed once.                                        |
-| [`retry`](./function/retry.md)       | Automatically retry an asynchronous function on failure.                        |
-| [`parallel`](./function/parallel.md) | Process array with async callback with controlled parallelism.                  |
-| [`delay`](./function/delay.md)       | Returns a promise that resolves after a specified time.                         |
-| [`sleep`](./function/sleep.md)       | Pause execution for a specified duration (alias for `delay`).                   |
 
 ### Composition & Logic
 
@@ -24,7 +20,6 @@ Function utilities provide a powerful set of tools to control execution, compose
 | [`compose`](./function/compose.md) | Compose functions from right to left.                                            |
 | [`curry`](./function/curry.md)     | Transform a function that takes multiple arguments into a sequence of functions. |
 | [`memo`](./function/memo.md)       | Cache the results of a function based on its arguments.                          |
-| [`attempt`](./function/attempt.md) | Safely execute a function and return `undefined` instead of throwing an error.   |
 
 ### Validation & Concurrency
 
@@ -36,10 +31,14 @@ Function utilities provide a powerful set of tools to control execution, compose
 
 ## 💡 Practical Examples
 
+::: tip Async Utilities
+For async operations like `retry`, `parallel`, `attempt`, `delay`, `sleep`, and `predict`, see the [Async Utilities](./async.md).
+:::
+
 ### Controlling Execution
 
 ```ts
-import { debounce, throttle, retry } from '@vielzeug/toolkit';
+import { debounce, throttle, once } from '@vielzeug/toolkit';
 
 // Handle window resize (debounce)
 const handleResize = debounce(() => {
@@ -51,13 +50,10 @@ const handleScroll = throttle(() => {
   console.log('Scroll handled');
 }, 100);
 
-// Robust API calls
-const data = await retry(
-  async () => {
-    return fetch('/api/data').then((res) => res.json());
-  },
-  { retries: 3, delay: 1000 },
-);
+// Ensure init runs only once
+const init = once(() => {
+  console.log('Initialized');
+});
 ```
 
 ### Functional Composition
@@ -85,23 +81,17 @@ const heavyCalc = memo((n: number) => {
 
 - [assert](./function/assert.md)
 - [assertParams](./function/assertParams.md)
-- [attempt](./function/attempt.md)
 - [compare](./function/compare.md)
 - [compareBy](./function/compareBy.md)
 - [compose](./function/compose.md)
 - [curry](./function/curry.md)
 - [debounce](./function/debounce.md)
-- [delay](./function/delay.md)
 - [fp](./function/fp.md)
 - [memo](./function/memo.md)
 - [once](./function/once.md)
-- [parallel](./function/parallel.md)
 - [pipe](./function/pipe.md)
-- [predict](./function/predict.md)
 - [proxy](./function/proxy.md)
 - [prune](./function/prune.md)
-- [retry](./function/retry.md)
-- [sleep](./function/sleep.md)
 - [throttle](./function/throttle.md)
 - [worker](./function/worker.md)
 

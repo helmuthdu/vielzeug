@@ -17,7 +17,7 @@ on:
           - '@vielzeug/toolkit'
           - '@vielzeug/validit'
       bump:
-        description: Version bump (patch|minor|major)
+        description: 'Version bump (only used if no change files exist)'
         required: true
         type: choice
         default: patch
@@ -71,11 +71,61 @@ jobs:
           echo "folder=$PACKAGE_FOLDER" >> $GITHUB_OUTPUT
           echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create temp change file for Rush
+      - name: Check for existing change files
+        id: check-changes
+        run: |
+          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
+          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          
+          # Check if there are any existing change files
+          if [ -d "${CHANGE_DIR}" ] && [ -n "$(ls -A ${CHANGE_DIR}/*.json 2>/dev/null)" ]; then
+            CHANGE_COUNT=$(ls -1 ${CHANGE_DIR}/*.json 2>/dev/null | wc -l)
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            
+            # Detect the highest bump type from existing change files
+            # Priority: major > minor > patch
+            DETECTED_BUMP="patch"
+            
+            for file in ${CHANGE_DIR}/*.json; do
+              # Extract type from each change file
+              TYPE=$(node -e "
+                try {
+                  const data = require('${file}');
+                  const changes = data.changes || [];
+                  const types = changes.map(c => c.type).filter(Boolean);
+                  console.log(types[0] || 'patch');
+                } catch (e) {
+                  console.log('patch');
+                }
+              ")
+              
+              # Update to highest priority bump type
+              if [ "$TYPE" = "major" ]; then
+                DETECTED_BUMP="major"
+              elif [ "$TYPE" = "minor" ] && [ "$DETECTED_BUMP" != "major" ]; then
+                DETECTED_BUMP="minor"
+              fi
+            done
+            
+            echo "bump-type=$DETECTED_BUMP" >> $GITHUB_OUTPUT
+            echo "✅ Found ${CHANGE_COUNT} existing change file(s) for ${{ inputs.package }}"
+            echo "📋 Detected bump type: $DETECTED_BUMP (from change files)"
+            echo "ℹ️  Manual bump input '${{ inputs.bump }}' will be ignored"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "bump-type=${{ inputs.bump }}" >> $GITHUB_OUTPUT
+            echo "⚠️  No existing change files found for ${{ inputs.package }}"
+            echo "📋 Using manual bump type: ${{ inputs.bump }}"
+          fi
+
+      - name: Create change file if none exists
+        if: steps.check-changes.outputs.has-changes == 'false'
         run: |
           PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
           CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
           mkdir -p "${CHANGE_DIR}"
+          
+          BUMP_TYPE="${{ steps.check-changes.outputs.bump-type }}"
           
           # Create a rush change file for this release
           cat > "${CHANGE_DIR}/release_$(date +%Y-%m-%d-%H-%M).json" << EOF
@@ -83,8 +133,8 @@ jobs:
             "changes": [
               {
                 "packageName": "${{ inputs.package }}",
-                "comment": "Release version with ${{ inputs.bump }} bump",
-                "type": "${{ inputs.bump }}"
+                "comment": "Release version with ${BUMP_TYPE} bump",
+                "type": "${BUMP_TYPE}"
               }
             ],
             "packageName": "${{ inputs.package }}",
@@ -92,7 +142,7 @@ jobs:
           }
           EOF
           
-          echo "✅ Created Rush change file for ${{ inputs.package }}"
+          echo "✅ Created temporary change file for ${{ inputs.package }} with ${BUMP_TYPE} bump"
 
       - name: Apply version bump and process changelogs with Rush
         run: |

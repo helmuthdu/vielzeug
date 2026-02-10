@@ -149,7 +149,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...
 **With Toolkit** (clean, type-safe, one-liner):
 
 ```ts
-import { chunk, group, debounce } from '@vielzeug/toolkit';
+import { chunk, group, debounce, retry, pool } from '@vielzeug/toolkit';
 
 // Pagination - elegant and clear
 const page1 = chunk(products, 20)[0]; // First page of 20 items
@@ -162,6 +162,18 @@ const byCategory = group(products, (p) => p.category);
 const searchProducts = debounce((query: string) => {
   console.log(`Searching for: ${query}`);
 }, 300);
+
+// Async utilities - retry API calls with exponential backoff
+const data = await retry(
+  () => fetch('/api/data').then(r => r.json()),
+  { times: 3, delay: 1000, backoff: 2 }
+);
+
+// Rate limiting with promise pool
+const apiPool = pool(5); // Max 5 concurrent requests
+const results = await Promise.all(
+  urls.map(url => apiPool(() => fetch(url)))
+);
 ```
 
 ### TypeScript Integration
@@ -207,10 +219,11 @@ const users = await map(ids, async (id) => {
 ### 🧩 Utilities by Category
 
 - [**Array**](./examples/array.md): Transform, filter, group, and sort arrays with type safety.
+- [**Async**](./examples/async.md): Promise utilities, concurrency control, retries, and timeouts.
 - [**Object**](./examples/object.md): Deep merge, clone, diff, and nested access.
 - [**String**](./examples/string.md): Casing, similarity, truncation, and formatting.
 - [**Math**](./examples/math.md): Average, median, clamp, ranges, and statistics.
-- [**Function**](./examples/function.md): Debounce, throttle, compose, memoize, and retry.
+- [**Function**](./examples/function.md): Debounce, throttle, compose, and memoize.
 - [**Typed**](./examples/typed.md): Comprehensive type guards and runtime checks.
 - [**Date**](./examples/date.md): Interval calculation and time differences.
 - [**Random**](./examples/random.md): Random values, shuffle, sampling, and UUIDs.
@@ -234,8 +247,9 @@ import * as toolkit from '@vielzeug/toolkit';
 | Category | Utilities | Approx. Size (gzipped) |
 | -------- | --------- | ---------------------- |
 | Array    | 25        | ~8KB                   |
+| Async    | 10        | ~3KB                   |
 | Date     | 3         | ~1KB                   |
-| Function | 21        | ~6KB                   |
+| Function | 14        | ~5KB                   |
 | Math     | 17        | ~4KB                   |
 | Money    | 2         | ~1KB                   |
 | Object   | 10        | ~3KB                   |

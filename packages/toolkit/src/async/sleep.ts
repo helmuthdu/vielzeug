@@ -1,4 +1,4 @@
-import { assert } from './assert';
+import { assert } from '../function/assert';
 
 /**
  * Creates a Promise that resolves after a specified amount of time.
