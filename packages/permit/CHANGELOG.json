@@ -2,6 +2,18 @@
   "name": "@vielzeug/permit",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/permit_v1.1.2",
+      "date": "Tue, 10 Feb 2026 21:45:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Release version with patch bump"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/permit_v1.1.1",
       "date": "Tue, 10 Feb 2026 21:43:22 GMT",
