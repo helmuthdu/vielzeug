@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/formit",
+      "comment": "improvements to the formit lib",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/formit"
+}

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "improvements to the deposit lib",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}

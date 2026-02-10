@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.0_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.1_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -71,13 +71,13 @@ form.submit(async (values) => {
 
 | Feature             | Formit       | Formik       | React Hook Form |
 | ------------------- | ------------ | ------------ | --------------- |
-| Bundle Size         | **2.0 KB**   | ~13KB        | ~8KB            |
+| Bundle Size         | **~2.1 KB**  | ~13KB        | ~8KB            |
 | Dependencies        | 0            | React        | React           |
 | TypeScript          | Native       | Good         | Excellent       |
 | Framework           | Agnostic     | React only   | React only      |
-| Array Helpers       | Manual       | Built-in     | Built-in        |
-| Validation          | Async + Sync | Async + Sync | Async + Sync    |
+| Granular Validation | ✅           | ❌           | ⚠️              |
 | Field Subscriptions | ✅           | ✅           | ✅              |
+| Custom Bind Config  | ✅           | ❌           | ❌              |
 
 ## When to Use Formit
 
@@ -101,10 +101,12 @@ form.submit(async (values) => {
 - **Type-Safe**: Full TypeScript support with inferred types from initial values
 - **Path-Based Access**: Dot notation, bracket notation, and array paths for nested data
 - **Powerful Validation**: Field-level and form-level validators with async support
+- **Granular Validation**: Validate only touched fields or specific subsets
 - **Reactive Subscriptions**: Subscribe to form state or individual field changes
-- **Easy Binding**: Simple `{...form.bind('field')}` for inputs
+- **Smart Field Binding**: Configurable `bind()` with custom value extractors and onBlur
+- **State Helpers**: Convenient `isDirty()` and `isTouched()` functions
 - **Zero Dependencies**: No external dependencies, fully self-contained
-- **Tiny Bundle**: ~3KB minified
+- **Tiny Bundle**: ~2.1KB gzipped
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
 
 ## 🏁 Quick Start

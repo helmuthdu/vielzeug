@@ -3,20 +3,45 @@
 
 // formit - minimal, typed, no array helpers
 
-// ============================================================================
-// Types
-// ============================================================================
+/** -------------------- Types -------------------- **/
 
 type MaybePromise<T> = T | Promise<T>;
 export type Path = string | Array<string | number>;
 
-// ============================================================================
-// Path Utilities
-// ============================================================================
+
+/**
+ * Error thrown when form validation fails during submission
+ */
+export class ValidationError extends Error {
+  public readonly errors: Errors;
+  public readonly type = 'validation' as const;
+
+  constructor(errors: Errors) {
+    super('Form validation failed');
+    this.name = 'ValidationError';
+    this.errors = errors;
+
+    // Maintain a proper stack trace for where the error was thrown (V8 only)
+    if (typeof (Error as any).captureStackTrace === 'function') {
+      (Error as any).captureStackTrace(this, ValidationError);
+    }
+  }
+}
+
+/** -------------------- Path Utilities -------------------- **/
 
 /**
  * Converts a path to an array of keys and indices.
- * Supports dot notation (a.b.c) and bracket notation (a[0].b)
+ *
+ * @param path - The path to convert (string or array)
+ * @returns Array of path segments (strings and numbers)
+ *
+ * @example
+ * ```ts
+ * toPathArray('user.name') // ['user', 'name']
+ * toPathArray('items[0]') // ['items', 0]
+ * toPathArray(['users', 0, 'name']) // ['users', 0, 'name']
+ * ```
  */
 function toPathArray(path: Path): Array<string | number> {
   if (Array.isArray(path)) return path;
@@ -24,35 +49,49 @@ function toPathArray(path: Path): Array<string | number> {
   const pathString = String(path).trim();
   if (!pathString) return [];
 
-  const pathSegmentRegex = /([^.[\]]+)|\[(\d+)]/g;
   const segments: Array<string | number> = [];
-  let match: RegExpExecArray | null = pathSegmentRegex.exec(pathString);
+  const regex = /([^.[\]]+)|\[(\d+)]/g;
 
-  while (match) {
-    // Property name (e.g., "name" from "name" or "user.name")
-    if (match[1] !== undefined) {
-      segments.push(match[1]);
-    }
-    // Array index (e.g., 0 from "[0]")
-    else if (match[2] !== undefined) {
-      segments.push(Number(match[2]));
-    }
-
-    match = pathSegmentRegex.exec(pathString);
+  // biome-ignore lint/suspicious/noAssignInExpressions: Standard regex iteration pattern
+  for (let match: RegExpExecArray | null; (match = regex.exec(pathString)); ) {
+    if (match[1] !== undefined) segments.push(match[1]);
+    else if (match[2] !== undefined) segments.push(Number(match[2]));
   }
 
   return segments;
 }
 
 /**
- * Converts a path to a dot-notation string key
+ * Converts a path to a dot-notation string key.
+ *
+ * @param path - The path to convert
+ * @returns Dot-notation string representation
+ *
+ * @example
+ * ```ts
+ * toKey('user.name') // 'user.name'
+ * toKey(['user', 'name']) // 'user.name'
+ * toKey(['items', 0, 'title']) // 'items.0.title'
+ * ```
  */
 function toKey(path: Path): string {
   return toPathArray(path).map(String).join('.');
 }
 
 /**
- * Gets a value from an object using a path
+ * Gets a value from an object using a path.
+ *
+ * @param obj - The object to read from
+ * @param path - The path to the value
+ * @param fallback - Optional fallback value if path is not found
+ * @returns The value at the path, or fallback if not found
+ *
+ * @example
+ * ```ts
+ * getAt({ user: { name: 'Alice' } }, 'user.name') // 'Alice'
+ * getAt({ items: [{ id: 1 }] }, 'items[0].id') // 1
+ * getAt({}, 'missing', 'default') // 'default'
+ * ```
  */
 function getAt(obj: any, path: Path, fallback?: any): any {
   const pathSegments = toPathArray(path);
@@ -67,16 +106,35 @@ function getAt(obj: any, path: Path, fallback?: any): any {
 }
 
 /**
- * Sets a value in an object using a path (immutably)
- * Returns a new object with the value set
+ * Sets a value in an object using a path (immutably).
+ *
+ * @param obj - The object to update
+ * @param path - The path where to set the value
+ * @param value - The value to set
+ * @returns A new object with the value set at the path
+ *
+ * @example
+ * ```ts
+ * setAt({}, 'user.name', 'Alice')
+ * // { user: { name: 'Alice' } }
+ *
+ * setAt({}, 'items[0].title', 'First')
+ * // { items: [{ title: 'First' }] }
+ *
+ * setAt({ count: 1 }, 'count', 2)
+ * // { count: 2 }
+ * ```
  */
 function setAt(obj: any, path: Path, value: any): any {
   const pathSegments = toPathArray(path);
 
   if (pathSegments.length === 0) return value;
 
-  // Create shallow copy of root
-  const root = Array.isArray(obj) ? [...obj] : { ...(obj ?? {}) };
+  // Create a shallow copy of root - detect if you should be arrayed
+  const firstSegment = pathSegments[0];
+  const rootShouldBeArray = typeof firstSegment === 'number';
+  const root = Array.isArray(obj) ? [...obj] : rootShouldBeArray ? [] : { ...(obj ?? {}) };
+
   let current: any = root;
 
   for (let i = 0; i < pathSegments.length; i++) {
@@ -86,12 +144,21 @@ function setAt(obj: any, path: Path, value: any): any {
     if (isLastSegment) {
       current[segment as any] = value;
     } else {
+      const nextSegment = pathSegments[i + 1];
       const nextValue = current[segment as any];
-      const copy = Array.isArray(nextValue)
-        ? [...nextValue]
-        : nextValue && typeof nextValue === 'object'
-          ? { ...nextValue }
-          : {};
+
+      // Determine if the next level should be an array (numeric key) or object
+      const shouldBeArray = typeof nextSegment === 'number';
+
+      let copy: any;
+      if (Array.isArray(nextValue)) {
+        copy = [...nextValue];
+      } else if (nextValue && typeof nextValue === 'object') {
+        copy = { ...nextValue };
+      } else {
+        // Create a new container-array if the next segment is numeric, object otherwise
+        copy = shouldBeArray ? [] : {};
+      }
 
       current[segment as any] = copy;
       current = copy;
@@ -101,9 +168,7 @@ function setAt(obj: any, path: Path, value: any): any {
   return root;
 }
 
-// ============================================================================
-// Form Types
-// ============================================================================
+/** -------------------- Form Types -------------------- **/
 
 export type Errors = Partial<Record<string, string>>;
 
@@ -137,15 +202,22 @@ export type FormState<TForm> = {
 type Listener<TForm> = (state: FormState<TForm>) => void;
 type FieldListener<TValue> = (payload: { value: TValue; error?: string; touched: boolean; dirty: boolean }) => void;
 
-// ============================================================================
-// Form Creation
-// ============================================================================
+export type BindConfig = {
+  /**
+   * Custom value extractor from event
+   * @default (event) => event?.target?.value ?? event
+   */
+  valueExtractor?: (event: any) => any;
+  /**
+   * Whether to mark field as touched on blur
+   * @default true
+   */
+  markTouchedOnBlur?: boolean;
+};
+
+/** -------------------- Form Creation -------------------- **/
 
 export function createForm<TForm extends Record<string, any> = Record<string, any>>(init: FormInit<TForm> = {}) {
-  // ============================================================================
-  // Initialization
-  // ============================================================================
-
   const fieldConfigs = (init.fields ?? {}) as Partial<Record<string, FieldConfig<any, TForm>>>;
   const formValidator = init.validate;
 
@@ -161,12 +233,14 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   const listeners = new Set<Listener<TForm>>();
   const fieldListeners = new Map<string, Set<FieldListener<any>>>();
 
-  // ============================================================================
-  // Internal Helpers
-  // ============================================================================
+  /** -------------------- Internal Helpers -------------------- **/
 
   /**
-   * Initialize form values from initial values and field configs
+   * Initialize form values from initial values and field configs.
+   *
+   * @param initialValues - The initial form values
+   * @param configs - Field configurations with initialValue properties
+   * @returns Merged form values with field config initial values applied
    */
   function initializeValues(initialValues: TForm, configs: Partial<Record<string, FieldConfig<any, TForm>>>): TForm {
     let result = { ...initialValues };
@@ -182,7 +256,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Schedule notification to all listeners (debounced to next tick)
+   * Schedule notification to all listeners (debounced to next tick).
    */
   let scheduled = false;
   function scheduleNotify() {
@@ -196,7 +270,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Notify all form and field listeners of state changes
+   * Notify all form and field listeners of state changes.
    */
   function notifyListeners() {
     const snapshot: FormState<TForm> = {
@@ -236,7 +310,29 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Run all validators for a specific field
+   * Convert validator result to error message string.
+   */
+  function resultToErrorMessage(result: any): string | undefined {
+    if (!result) return undefined;
+    if (typeof result === 'string') return result;
+
+    // Object with error messages - join all non-empty values
+    if (typeof result === 'object') {
+      const errorMessages = Object.values(result).filter(Boolean) as string[];
+      return errorMessages.length > 0 ? errorMessages.join('; ') : undefined;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Run all validators for a specific field.
+   *
+   * @param pathKey - The field path key to validate
+   * @param signal - Optional AbortSignal for cancellation
+   * @returns Error message if validation failed, undefined otherwise
+   *
+   * @throws {DOMException} When validation is aborted via signal
    */
   async function runFieldValidators(pathKey: string, signal?: AbortSignal): Promise<string | undefined> {
     const config = fieldConfigs[pathKey];
@@ -247,63 +343,64 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
 
     for (const validator of validators) {
       if (signal?.aborted) {
-        throw new DOMException('Validation aborted', 'AbortError');
+        throw new Error('Validation aborted');
       }
 
       const result = await validator(fieldValue, values);
-      if (!result) continue;
-
-      // String error message
-      if (typeof result === 'string') {
-        return result;
-      }
-
-      // Object with error messages
-      if (typeof result === 'object') {
-        const errorMessages = Object.values(result).filter(Boolean) as string[];
-        if (errorMessages.length > 0) {
-          return errorMessages.join('; ');
-        }
-      }
+      const errorMessage = resultToErrorMessage(result);
+      if (errorMessage) return errorMessage;
     }
 
     return undefined;
   }
 
   /**
-   * Run the form-level validator
+   * Run the form-level validator.
+   *
+   * @param signal - Optional AbortSignal for cancellation
+   * @returns Object with field errors, or empty object if no errors
+   *
+   * @throws {DOMException} When validation is aborted via signal
    */
   async function runFormValidator(signal?: AbortSignal): Promise<Errors> {
     if (!formValidator) return {};
 
     if (signal?.aborted) {
-      throw new DOMException('Validation aborted', 'AbortError');
+      throw new Error('Validation aborted');
     }
 
     const result = await formValidator(values);
     return (result ?? {}) as Errors;
   }
 
-  // ============================================================================
-  // Public API - Value Management
-  // ============================================================================
+  /** -------------------- Public API - Value Management -------------------- **/
 
   /**
-   * Get all form values
+   * Get all form values.
    */
   function getValues(): TForm {
     return values;
   }
 
   /**
-   * Get a specific field value by path
+   * Get a specific field value by path.
+   *
+   * @param path - The field path (e.g., 'user.name' or ['items', 0, 'title'])
+   * @returns The value at the specified path
    */
   function getValue(path: Path) {
     return getAt(values, path);
   }
 
   /**
-   * Set a specific field value by path
+   * Set a specific field value by a path.
+   *
+   * @param path - The field path (e.g., 'user.name' or ['items', 0, 'title'])
+   * @param value - The value to set
+   * @param options - Optional configuration
+   * @param options.markDirty - Whether to mark the field as dirty (default: true)
+   * @param options.markTouched - Whether to mark the field as touched (default: false)
+   * @returns The value that was set
    */
   function setValue(path: Path, value: any, options: { markDirty?: boolean; markTouched?: boolean } = {}) {
     const key = toKey(path);
@@ -312,6 +409,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     values = setAt(values, path, value) as TForm;
 
     if (options.markDirty ?? true) {
+      // Reference equality check - objects/arrays with same content but different refs will be marked dirty
       if (previousValue !== value) {
         dirty[key] = true;
       }
@@ -326,7 +424,12 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Set multiple form values at once
+   * Set multiple form values at once.
+   *
+   * @param nextValues - Partial form values to merge or replace
+   * @param options - Optional configuration
+   * @param options.replace - If true, replaces all values; if false, merges with existing (default: false)
+   * @param options.markAllDirty - If true, marks all changed fields as dirty (default: false)
    */
   function setValues(nextValues: Partial<TForm>, options: { replace?: boolean; markAllDirty?: boolean } = {}) {
     if (options.replace) {
@@ -344,68 +447,87 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     scheduleNotify();
   }
 
-  // ============================================================================
-  // Public API - Error Management
-  // ============================================================================
+  /** -------------------- Public API - Error Management -------------------- **/
 
   /**
-   * Get all form errors
+   * Get all form errors.
+   *
+   * @returns Object containing all field errors keyed by field path
    */
   function getErrors() {
     return errors;
   }
 
   /**
-   * Get a specific field error by path
+   * Get a specific field error by path.
+   *
+   * @param path - The field path
+   * @returns Error message for the field, or undefined if no error
    */
   function getError(path: Path) {
     return errors[toKey(path)];
   }
 
   /**
-   * Set a specific field error by path
+   * Set a specific field error by path.
+   *
+   * @param path - The field path
+   * @param message - Error message to set, or undefined to clear the error
    */
   function setError(path: Path, message?: string) {
     const key = toKey(path);
 
     if (message) {
       errors = { ...errors, [key]: message };
-    } else {
-      if (!(key in errors)) return;
-      const copy = { ...errors };
-      delete copy[key];
-      errors = copy;
+      scheduleNotify();
+      return;
     }
 
+    // Clear error
+    if (!(key in errors)) return;
+
+    const copy = { ...errors };
+    delete copy[key];
+    errors = copy;
     scheduleNotify();
   }
 
   /**
-   * Reset all form errors
+   * Reset all form errors.
+   *
+   * @remarks
+   * Clears all error messages and triggers a state notification.
    */
   function resetErrors() {
     errors = {};
     scheduleNotify();
   }
 
-  // ============================================================================
-  // Public API - Touch Management
-  // ============================================================================
+  /** -------------------- Public API - Touch Management -------------------- **/
 
   /**
-   * Mark a field as touched
+   * Mark a field as touched.
+   *
+   * @param path - The field path to mark as touched
+   *
+   * @remarks
+   * Touched fields are typically used to show validation errors only after user interaction.
    */
   function markTouched(path: Path) {
     touched[toKey(path)] = true;
     scheduleNotify();
   }
 
-  // ============================================================================
-  // Public API - Validation
-  // ============================================================================
+  /** -------------------- Public API - Validation -------------------- **/
 
   /**
-   * Validate a single field
+   * Validate a single field.
+   *
+   * @param path - The field path to validate
+   * @param signal - Optional AbortSignal for cancellation
+   * @returns Error message if validation failed, undefined otherwise
+   *
+   * @throws {DOMException} When validation is aborted via signal
    */
   async function validateField(path: Path, signal?: AbortSignal) {
     const key = toKey(path);
@@ -415,12 +537,12 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     try {
       const error = await runFieldValidators(key, signal);
 
+      // Update errors object immutably
       if (error) {
         errors = { ...errors, [key]: error };
       } else {
-        const copy = { ...errors };
-        delete copy[key];
-        errors = copy;
+        const { [key]: _, ...rest } = errors;
+        errors = rest;
       }
 
       return error;
@@ -431,43 +553,52 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Validate all fields and form-level validators
+   * Validate all fields and form-level validators.
+   *
+   * @param options - Optional validation configuration
+   * @param options.signal - Optional AbortSignal for cancellation
+   * @param options.onlyTouched - If true, only validate touched fields
+   * @param options.fields - If provided, only validate these specific fields
+   * @returns Object containing all field errors
+   *
+   * @throws {Error} When validation is aborted via signal
    */
-  async function validateAll(signal?: AbortSignal) {
+  async function validateAll(options?: { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] }) {
     isValidating = true;
     scheduleNotify();
 
+    const signal = options?.signal;
+
     try {
-      const nextErrors: Errors = { ...errors };
+      const nextErrors: Errors = {};
 
       // Collect all field paths to validate
-      const fieldsToValidate = new Set<string>([...Object.keys(fieldConfigs), ...Object.keys(values)]);
+      let fieldsToValidate = new Set<string>([...Object.keys(fieldConfigs), ...Object.keys(values)]);
+
+      // Filter by touched fields if requested
+      if (options?.onlyTouched) {
+        fieldsToValidate = new Set(Array.from(fieldsToValidate).filter((key) => touched[key]));
+      }
+
+      // Filter by specific fields if requested
+      if (options?.fields && options.fields.length > 0) {
+        fieldsToValidate = new Set(options.fields);
+      }
 
       // Run field validators
       for (const path of fieldsToValidate) {
         if (signal?.aborted) {
-          throw new DOMException('Validation aborted', 'AbortError');
+          throw new Error('Validation aborted');
         }
 
         const error = await runFieldValidators(path, signal);
-        if (error) {
-          nextErrors[path] = error;
-        } else {
-          delete nextErrors[path];
-        }
+        if (error) nextErrors[path] = error;
       }
 
       // Run form-level validator
       try {
         const formErrors = await runFormValidator(signal);
-        for (const key of Object.keys(formErrors)) {
-          const errorMessage = formErrors[key];
-          if (errorMessage) {
-            nextErrors[key] = errorMessage;
-          } else {
-            delete nextErrors[key];
-          }
-        }
+        Object.assign(nextErrors, formErrors);
       } catch (error) {
         nextErrors[''] = error instanceof Error ? error.message : String(error);
       }
@@ -480,12 +611,20 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     }
   }
 
-  // ============================================================================
-  // Public API - Form Submission
-  // ============================================================================
+  /** -------------------- Public API - Form Submission -------------------- **/
 
   /**
-   * Submit the form with optional validation
+   * Submit the form with optional validation.
+   *
+   * @param onSubmit - Callback function to handle form submission with validated values
+   * @param options - Optional configuration
+   * @param options.signal - Optional AbortSignal for cancellation
+   * @param options.validate - Whether to run validation before submission (default: true)
+   * @returns Promise resolving to the result of onSubmit callback
+   *
+   * @throws {ValidationError} When validation fails and form has errors
+   * @throws {Error} When form is already submitting
+   * @throws {Error} When submission is aborted via signal
    */
   async function submit(
     onSubmit: (values: TForm) => MaybePromise<any>,
@@ -504,7 +643,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     try {
       // Run validation if requested
       if (options?.validate ?? true) {
-        await validateAll(signal);
+        await validateAll({ signal });
       }
 
       // Check for validation errors
@@ -512,7 +651,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
       if (hasErrors) {
         isSubmitting = false;
         scheduleNotify();
-        return Promise.reject({ errors, type: 'validation' });
+        return Promise.reject(new ValidationError(errors));
       }
 
       // Execute submit handler
@@ -529,13 +668,17 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     }
   }
 
-  // ============================================================================
-  // Public API - Subscriptions
-  // ============================================================================
+  /** -------------------- Public API - Subscriptions -------------------- **/
 
   /**
-   * Subscribe to form state changes
-   * @returns Unsubscribe function
+   * Subscribe to form state changes.
+   *
+   * @param listener - Callback function that receives form state snapshots
+   * @returns Unsubscribe function to stop listening to state changes
+   *
+   * @remarks
+   * The listener is immediately called with the current state upon subscription.
+   * Listener errors are swallowed to prevent breaking other listeners.
    */
   function subscribe(listener: Listener<TForm>) {
     listeners.add(listener);
@@ -559,8 +702,11 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
   }
 
   /**
-   * Subscribe to a specific field's changes
-   * @returns Unsubscribe function
+   * Subscribe to a specific field's changes.
+   *
+   * @param path - The field path to subscribe to
+   * @param listener - Callback function that receives field state updates
+   * @returns Unsubscribe function to stop listening to field changes
    */
   function subscribeField(path: Path, listener: FieldListener<any>) {
     const key = toKey(path);
@@ -573,7 +719,7 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
 
     listenerSet.add(listener);
 
-    // Immediately notify the new listener with current state
+    // Immediately notify the new listener with the current state
     try {
       listener({
         dirty: dirty[key] || false,
@@ -585,18 +731,44 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
       // Swallow listener errors
     }
 
-    return () => listenerSet!.delete(listener);
+    return () => {
+      listenerSet!.delete(listener);
+      // Clean up empty listener sets to prevent memory leaks
+      if (listenerSet!.size === 0) {
+        fieldListeners.delete(key);
+      }
+    };
   }
 
-  // ============================================================================
-  // Public API - Field Binding
-  // ============================================================================
+  /** -------------------- Public API - Field Binding -------------------- **/
 
   /**
-   * Create a binding object for a field that can be used with inputs
+   * Create a binding object for a field that can be used with inputs.
+   *
+   * @param path - The field path to bind
+   * @param config - Optional configuration for value extraction and blur behavior
+   * @returns Object with value, onChange, onBlur, and setter methods for input binding
+   *
+   * @example
+   * ```tsx
+   * const nameBinding = bind('user.name');
+   * <input {...nameBinding} />
+   *
+   * // With custom value extractor
+   * const selectBinding = bind('category', {
+   *   valueExtractor: (e) => e.target.selectedOptions[0].value
+   * });
+   *
+   * // Disable mark touched on blur
+   * const fieldBinding = bind('field', { markTouchedOnBlur: false });
+   * ```
    */
-  function bind(path: Path) {
+  function bind(path: Path, config?: BindConfig) {
     const key = toKey(path);
+    const valueExtractor = config?.valueExtractor ?? ((event: any) =>
+      event && typeof event === 'object' && 'target' in event ? (event.target as any).value : event
+    );
+    const markTouchedOnBlur = config?.markTouchedOnBlur ?? true;
 
     const setter = (newValue: any | ((prev: any) => any)) => {
       const previousValue = getAt(values, path);
@@ -606,12 +778,19 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     };
 
     const onChange = (event: any) => {
-      const value = event && typeof event === 'object' && 'target' in event ? (event.target as any).value : event;
+      const value = valueExtractor(event);
       setter(value);
+    };
+
+    const onBlur = () => {
+      if (markTouchedOnBlur) {
+        markTouched(path);
+      }
     };
 
     return {
       name: key,
+      onBlur,
       onChange,
       set: setter,
       get value() {
@@ -623,9 +802,25 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     };
   }
 
-  // ============================================================================
-  // Return Public API
-  // ============================================================================
+  function isDirty(path: Path): boolean {
+    return dirty[toKey(path)] || false;
+  }
+
+  function isTouched(path: Path): boolean {
+    return touched[toKey(path)] || false;
+  }
+
+  function reset(initialValues?: TForm) {
+    values = initializeValues(initialValues ?? init.initialValues ?? ({} as TForm), fieldConfigs);
+    errors = {};
+  }
+
+  function setErrors(next: Errors) {
+    errors = { ...next };
+    scheduleNotify();
+  }
+
+  /** -------------------- Return Public API -------------------- **/
 
   return {
     bind,
@@ -642,9 +837,13 @@ export function createForm<TForm extends Record<string, any> = Record<string, an
     }),
     getValue,
     getValues,
+    isDirty,
+    isTouched,
     markTouched,
+    reset,
     resetErrors,
     setError,
+    setErrors,
     setValue,
     setValues,
     submit,
