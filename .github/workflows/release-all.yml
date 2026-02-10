@@ -1,0 +1,234 @@
+name: Release All Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "release-all" to confirm releasing all packages with pending changes'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "release-all" ]; then
+            echo "❌ Release cancelled. You must type 'release-all' to confirm."
+            exit 1
+          fi
+          echo "✅ Confirmation verified. Proceeding with release of all packages."
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@vielzeug'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.2
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Setup Rush cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            common/temp/pnpm-store
+            ~/.rush
+          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-rush-
+
+      - name: Setup build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/dist
+            **/node_modules/.cache
+          key: ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-
+            ${{ runner.os }}-build-
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Rush Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Build all packages
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      - name: Check for pending changes
+        id: check-changes
+        run: |
+          # Find all packages with change files
+          PACKAGES_WITH_CHANGES=""
+          CHANGE_COUNT=0
+          
+          for dir in common/changes/@vielzeug/*/; do
+            if [ -d "$dir" ] && [ -n "$(ls -A ${dir}*.json 2>/dev/null)" ]; then
+              PACKAGE_NAME=$(basename "$dir")
+              PACKAGES_WITH_CHANGES="${PACKAGES_WITH_CHANGES}@vielzeug/${PACKAGE_NAME} "
+              COUNT=$(ls -1 ${dir}*.json 2>/dev/null | wc -l | tr -d ' ')
+              CHANGE_COUNT=$((CHANGE_COUNT + COUNT))
+            fi
+          done
+          
+          if [ -z "$PACKAGES_WITH_CHANGES" ]; then
+            echo "❌ No packages have pending changes to release"
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES_WITH_CHANGES" >> $GITHUB_OUTPUT
+          echo "✅ Found ${CHANGE_COUNT} change file(s) across packages:"
+          echo "📦 Packages to release: $PACKAGES_WITH_CHANGES"
+
+      - name: Get versions before release
+        id: versions-before
+        run: |
+          VERSIONS_JSON="{"
+          for pkg in ${{ steps.check-changes.outputs.packages }}; do
+            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
+            VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
+            VERSIONS_JSON="${VERSIONS_JSON}\"${pkg}\":\"${VERSION}\","
+          done
+          VERSIONS_JSON="${VERSIONS_JSON%,}}"
+          echo "versions=${VERSIONS_JSON}" >> $GITHUB_OUTPUT
+
+      - name: Apply version bumps and process changelogs with Rush
+        run: |
+          # Rush publish --apply will:
+          # - Read ALL change files across all packages
+          # - Update package.json versions based on change types
+          # - Generate/update CHANGELOG.md and CHANGELOG.json for each package
+          # - Delete all processed change files
+          # - Commit changes
+          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details
+
+      - name: Get versions after release and publish to npm
+        id: versions-after
+        run: |
+          PUBLISHED_PACKAGES=""
+          
+          for pkg in ${{ steps.check-changes.outputs.packages }}; do
+            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
+            NEW_VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
+            
+            echo "📦 Publishing ${pkg}@${NEW_VERSION}"
+            
+            cd "$FOLDER"
+            npm publish --access public
+            cd - > /dev/null
+            
+            PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
+            
+            # Tag this release
+            git tag "${pkg}@${NEW_VERSION}"
+          done
+          
+          echo "packages=${PUBLISHED_PACKAGES}" >> $GITHUB_OUTPUT
+          
+          # Push all tags
+          git push origin --tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify npm publications
+        run: |
+          echo "Waiting 10 seconds for npm to update..."
+          sleep 10
+          
+          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
+            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
+            EXPECTED_VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
+            
+            NPM_VERSION=$(npm view "$PKG" version 2>/dev/null || echo "not-found")
+            
+            if [ "$NPM_VERSION" = "$EXPECTED_VERSION" ]; then
+              echo "✅ Successfully published ${PKG}@${EXPECTED_VERSION} to npm"
+            else
+              echo "⚠️  Warning: npm shows version $NPM_VERSION for $PKG, expected $EXPECTED_VERSION"
+              echo "This might be a propagation delay. Check https://www.npmjs.com/package/$PKG"
+            fi
+          done
+
+      - name: Create GitHub Releases
+        run: |
+          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
+            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
+            VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
+            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${PKG}'); console.log(project.projectFolder);")
+            
+            # Create release for each package
+            gh release create "${PKG}@${VERSION}" \
+              --title "${PKG} v${VERSION}" \
+              --notes "## ${PKG} v${VERSION}
+
+### Installation
+
+\`\`\`bash
+npm install ${PKG}@${VERSION}
+\`\`\`
+
+### Links
+
+- 📦 [npm package](https://www.npmjs.com/package/${PKG}/v/${VERSION})
+- 📋 [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${PKG}@${VERSION}/${FOLDER}/CHANGELOG.md)
+
+### Changes
+
+See full changelog in the package directory." \
+              --generate-notes
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following packages have been released:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
+            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
+            VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
+            echo "- ✅ **${PKG}** → \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All packages have been published to npm and GitHub releases have been created." >> $GITHUB_STEP_SUMMARY
+

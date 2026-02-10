@@ -1,4 +1,4 @@
-name: Release Package
+name: Release Single Package
 
 on:
   workflow_dispatch:
@@ -51,6 +51,42 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10.29.2
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Setup Rush cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            common/temp/pnpm-store
+            ~/.rush
+          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-rush-
+
+      - name: Setup build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/dist
+            **/node_modules/.cache
+          key: ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-
+            ${{ runner.os }}-build-
 
       - name: Configure Git
         run: |
@@ -144,15 +180,49 @@ jobs:
           
           echo "✅ Created temporary change file for ${{ inputs.package }} with ${BUMP_TYPE} bump"
 
+      - name: Verify only selected package will be released
+        run: |
+          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
+          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          
+          echo "📋 Release Plan:"
+          echo "  Package: ${{ inputs.package }}"
+          echo "  Change files directory: ${CHANGE_DIR}"
+          
+          if [ -d "${CHANGE_DIR}" ] && [ -n "$(ls -A ${CHANGE_DIR}/*.json 2>/dev/null)" ]; then
+            echo "  Change files found: $(ls -1 ${CHANGE_DIR}/*.json 2>/dev/null | wc -l)"
+          else
+            echo "  Change files found: 0 (will create temporary change file)"
+          fi
+          
+          # Check for other packages with changes
+          OTHER_CHANGES=""
+          for dir in common/changes/@vielzeug/*/; do
+            PKG_NAME=$(basename "$dir")
+            if [ "$PKG_NAME" != "$PACKAGE_SLUG" ] && [ -d "$dir" ] && [ -n "$(ls -A ${dir}*.json 2>/dev/null)" ]; then
+              COUNT=$(ls -1 ${dir}*.json 2>/dev/null | wc -l | tr -d ' ')
+              OTHER_CHANGES="${OTHER_CHANGES}@vielzeug/${PKG_NAME} (${COUNT} changes) "
+            fi
+          done
+          
+          if [ -n "$OTHER_CHANGES" ]; then
+            echo "⚠️  Note: Other packages have pending changes but will NOT be released:"
+            echo "  ${OTHER_CHANGES}"
+            echo "  Use 'Release All Packages' workflow to release multiple packages at once."
+          else
+            echo "✅ No other packages have pending changes."
+          fi
+
       - name: Apply version bump and process changelogs with Rush
         run: |
-          # Rush publish --apply will:
-          # - Read all change files
-          # - Update package.json versions based on change types
+          # Rush publish --apply with --only flag will:
+          # - Process ONLY the change files for the selected package
+          # - Update package.json version based on change type
           # - Generate/update CHANGELOG.md and CHANGELOG.json
-          # - Delete processed change files
+          # - Delete processed change files for this package only (leaves others untouched)
           # - Commit changes if --target-branch is specified
-          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details
+          # The --include-all flag ensures we process the package even if it has no dependencies to publish
+          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details --include-all --only ${{ inputs.package }}
 
       - name: Get new version
         id: version
