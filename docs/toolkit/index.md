@@ -422,7 +422,7 @@ Found a bug or want to add a utility? We welcome contributions!
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 

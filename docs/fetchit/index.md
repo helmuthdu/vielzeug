@@ -584,7 +584,7 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 

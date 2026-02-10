@@ -334,7 +334,7 @@ Please ensure:
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 Each package is individually licensed under the MIT License. See the LICENSE file in each package directory for details.
 
