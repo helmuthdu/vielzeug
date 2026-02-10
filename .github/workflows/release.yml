@@ -278,7 +278,23 @@ jobs:
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}
         run: |
-          npm publish --access public
+          # Pack the package to create a tarball
+          # This ensures only files specified in "files" field are included
+          echo "📦 Packing package..."
+          TARBALL=$(npm pack --json | node -e "const data = JSON.parse(require('fs').readFileSync(0)); console.log(data[0].filename);")
+          
+          echo "📦 Tarball created: ${TARBALL}"
+          
+          # Verify tarball contents
+          echo "📋 Tarball contents:"
+          tar -tzf "${TARBALL}" | head -20
+          
+          # Publish the tarball
+          echo "🚀 Publishing to npm..."
+          npm publish "${TARBALL}" --access public
+          
+          # Clean up tarball
+          rm -f "${TARBALL}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

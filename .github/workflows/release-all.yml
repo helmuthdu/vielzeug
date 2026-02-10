@@ -150,7 +150,24 @@ jobs:
             echo "📦 Publishing ${pkg}@${NEW_VERSION}"
             
             cd "$FOLDER"
-            npm publish --access public
+            
+            # Pack the package to create a tarball
+            echo "📦 Packing ${pkg}..."
+            TARBALL=$(npm pack --json | node -e "const data = JSON.parse(require('fs').readFileSync(0)); console.log(data[0].filename);")
+            
+            echo "📦 Tarball created: ${TARBALL}"
+            
+            # Verify tarball contents
+            echo "📋 Tarball contents:"
+            tar -tzf "${TARBALL}" | head -10
+            
+            # Publish the tarball
+            echo "🚀 Publishing to npm..."
+            npm publish "${TARBALL}" --access public
+            
+            # Clean up tarball
+            rm -f "${TARBALL}"
+            
             cd - > /dev/null
             
             PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
