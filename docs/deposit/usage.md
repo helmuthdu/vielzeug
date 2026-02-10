@@ -258,7 +258,22 @@ const avgAge = await db.query('users').average('age');
 const oldest = await db.query('users').max('age');
 const youngest = await db.query('users').min('age');
 const totalUsers = await db.query('users').count();
+
+// Grouping (type-unsafe - returns object)
+const byRole = await db.query('users').groupBy('role').toArray();
+// Result: { admin: User[], user: User[] }
+
+// Type-safe grouping (recommended)
+const byRoleTyped = await db.query('users').toGrouped('role');
+// Result: Array<{ key: 'admin' | 'user', values: User[] }>
+for (const group of byRoleTyped) {
+  console.log(`${group.key}: ${group.values.length} users`);
+}
 ```
+
+::: tip 💡 Type-Safe Grouping
+Use `toGrouped()` instead of `groupBy().toArray()` for better type safety. The `toGrouped()` method returns `Array<{ key: T[K], values: T[] }>` with correct typing, while `groupBy()` returns an object that requires manual type casting.
+:::
 
 ### Transactions
 
@@ -308,6 +323,80 @@ await db.patch('users', [
   { type: 'delete', key: 'u2' },
   { type: 'clear' }, // Clears all, then applies puts
 ]);
+```
+
+## Schema Validation
+
+Deposit automatically validates your schema on initialization to catch configuration errors early:
+
+```ts
+// ✅ Valid schema
+const validSchema = {
+  users: {
+    key: 'id', // Required: primary key field
+    indexes: ['email'], // Optional: indexed fields
+    record: {} as User, // Required: type definition
+  },
+};
+
+// ❌ Invalid schema - missing key field
+const invalidSchema = {
+  users: {
+    record: {} as User, // Missing 'key' field
+  },
+};
+
+// This will throw immediately with a clear error message:
+// "Invalid schema: table "users" missing required "key" field.
+//  Schema entries must have shape: { key: K, record: T, indexes?: K[] }"
+const db = new Deposit({
+  type: 'localStorage',
+  dbName: 'my-app',
+  version: 1,
+  schema: invalidSchema, // ❌ Throws error
+});
+```
+
+::: tip 💡 Early Error Detection
+Schema validation happens in the constructor, so you'll catch configuration errors immediately rather than at runtime when accessing data. This makes debugging much easier.
+:::
+
+### Safe Storage Keys
+
+Deposit uses `encodeURIComponent` for storage keys, safely handling special characters including colons in database and table names:
+
+```ts
+// These all work correctly, even with special characters
+const db1 = new Deposit({
+  type: 'localStorage',
+  dbName: 'my:app:db', // ✅ Colons are safely encoded
+  version: 1,
+  schema,
+});
+
+const schema2 = {
+  'user:data': { // ✅ Colons in table names work too
+    key: 'id',
+    record: {} as User,
+  },
+};
+```
+
+### Corrupted Entry Handling
+
+Deposit gracefully handles corrupted localStorage entries without breaking batch operations:
+
+```ts
+// If a single entry is corrupted in localStorage
+// getAll() will:
+// 1. Skip the corrupted entry
+// 2. Delete it automatically
+// 3. Log a warning
+// 4. Continue processing other entries
+// 5. Return all valid entries
+
+const users = await db.getAll('users');
+// ✅ Returns all valid users, skips corrupted ones
 ```
 
 ## Schema Migrations

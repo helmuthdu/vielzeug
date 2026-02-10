@@ -1,8 +1,8 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.9_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-4.2_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
 
 <img src="/logo-depot.svg" alt="Deposit Logo" width="156" class="logo-highlight"/>
@@ -47,10 +47,11 @@ await db.put('users', { id: '1', name: 'Alice' });
 | Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
 | Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
 | LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | **3.9 KB**     | ~20KB       | ~8KB        | 0KB              |
+| Bundle Size (gzip)   | **~4.2 KB**    | ~20KB       | ~8KB        | 0KB              |
 | TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
 | Transactions         | ✅ Yes         | ✅ Yes      | ❌          | ✅ Complex       |
-| Dependencies         | 0              | 0           | 0           | N/A              |
+| Schema Validation    | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
+| Dependencies         | 2              | 0           | 0           | N/A              |
 
 ## When to Use Deposit
 
@@ -74,12 +75,14 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 - **Unified API**: Switch between LocalStorage and IndexedDB without changing your code
 - **Type-safe**: Define your schemas once and enjoy full autocompletion and type checking
-- **Advanced Querying**: A rich QueryBuilder supporting filters, sorting, grouping, and pagination
+- **Schema Validation**: Early validation of schema structure with clear error messages
+- **Advanced Querying**: Rich QueryBuilder with filters, sorting, grouping, pagination, and type-safe `toGrouped()`
 - **Migrations**: Robust support for schema versioning and data migrations in IndexedDB
 - **Transactions**: Ensure data integrity with atomic operations across multiple tables
-- **TTL (Time-To-Live)**: Native support for record expiration
+- **TTL (Time-To-Live)**: Native support for automatic record expiration
+- **Resilient**: Gracefully handles corrupted entries without breaking batch operations
 - **Isomorphic**: Works in all modern browsers with minimal footprint
-- **Zero Dependencies**: No external dependencies, fully self-contained
+- **Minimal Dependencies**: Only @vielzeug/logit and @vielzeug/toolkit
 
 ## 🏁 Quick Start
 
@@ -286,7 +289,7 @@ Found a bug or want to contribute? Check our [GitHub repository](https://github.
 
 ## 📄 License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## 🔗 Useful Links
 

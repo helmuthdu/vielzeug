@@ -488,15 +488,68 @@ const uppercased = await db
 
 ---
 
-### `groupBy(field)`, `search(query, tone?)`
+### `groupBy(field)`
 
-Advanced operations.
+Groups records by a field value. Returns an object where keys are the field values.
+
+**Parameters:**
+
+- `field: K` - Field to group by
+
+**Returns:** `this` (for chaining)
 
 **Example:**
 
 ```ts
 const byRole = await db.query('users').groupBy('role').toArray();
+// Result: { admin: User[], user: User[] }
+```
 
+::: warning Type Safety
+`groupBy()` changes the result structure but returns `T[]` for chaining. You'll need to cast the result manually. For better type safety, use `toGrouped()` instead.
+:::
+
+---
+
+### `toGrouped(field)`
+
+Type-safe alternative to `groupBy().toArray()`. Returns an array of grouped results with proper typing.
+
+**Parameters:**
+
+- `field: K` - Field to group by
+
+**Returns:** `Promise<Array<{ key: T[K], values: T[] }>>`
+
+**Example:**
+
+```ts
+const grouped = await db.query('users').toGrouped('role');
+// Type: Array<{ key: 'admin' | 'user', values: User[] }>
+
+for (const group of grouped) {
+  console.log(`${group.key}: ${group.values.length} users`);
+}
+```
+
+::: tip Recommended
+Use `toGrouped()` for better type safety and clearer intent. It returns properly typed results without requiring manual type casting.
+:::
+
+---
+
+### `search(query, tone?)`
+
+Performs fuzzy search across all string fields.
+
+**Parameters:**
+
+- `query: string` - Search query
+- `tone?: number` - Optional search sensitivity
+
+**Example:**
+
+```ts
 const searchResults = await db.query('users').search('alice').toArray();
 ```
 
@@ -554,7 +607,7 @@ const results = await db.query('users').build(conditions).toArray();
 
 ### `LocalStorageAdapter<S>`
 
-Storage adapter using browser LocalStorage.
+Storage adapter using browser LocalStorage with schema validation and safe key encoding.
 
 **Constructor:**
 
@@ -576,12 +629,37 @@ const db = new Deposit(adapter);
 - String-based storage (JSON serialization)
 - Survives page reloads
 - Shared across all tabs/windows
+- **Schema validation** on initialization (throws clear errors for invalid schemas)
+- **Safe key encoding** using `encodeURIComponent` (handles special characters including colons)
+- **Graceful error handling** (corrupted entries are skipped and deleted, not thrown)
+
+**Schema Validation:**
+
+```ts
+// ✅ Valid - will work
+const validSchema = {
+  users: { key: 'id', record: {} as User }
+};
+
+// ❌ Invalid - will throw immediately
+const invalidSchema = {
+  users: { record: {} as User } // Missing 'key' field
+};
+// Error: "Invalid schema: table "users" missing required "key" field..."
+```
+
+**Safe Key Handling:**
+
+```ts
+// Special characters in dbName and table names are safely encoded
+const adapter = new LocalStorageAdapter('my:app:db', 1, schema); // ✅ Works
+```
 
 ---
 
 ### `IndexedDBAdapter<S>`
 
-Storage adapter using browser IndexedDB.
+Storage adapter using browser IndexedDB with schema validation and robust index creation.
 
 **Constructor:**
 
@@ -595,6 +673,46 @@ new IndexedDBAdapter(
 ```
 
 **Example:**
+
+```ts
+const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
+  // Optional migration logic
+});
+const db = new Deposit(adapter);
+```
+
+**Characteristics:**
+
+- Asynchronous, transaction-based operations
+- Much larger storage limits (typically hundreds of MB to GB)
+- Native object storage with indexes
+- Supports complex queries via indexes
+- Isolated per origin
+- **Schema validation** on initialization
+- **Smart index creation** (detects duplicates, skips redundant key path indexes)
+- **Robust error handling** for index creation failures
+
+**Index Creation:**
+
+```ts
+const schema = {
+  users: {
+    key: 'id',
+    indexes: ['email', 'role', 'email'], // Duplicate 'email' detected and skipped
+    record: {} as User,
+  },
+};
+// Logs warning: "Duplicate index "email" in table "users" - skipping"
+
+const schema2 = {
+  users: {
+    key: 'id',
+    indexes: ['id'], // Redundant - key path is already indexed
+    record: {} as User,
+  },
+};
+// Logs warning: "Skipping index on key path "id" - redundant"
+```
 
 ```ts
 const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
