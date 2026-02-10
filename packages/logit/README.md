@@ -576,7 +576,7 @@ Logit.error('Payment failed:', error);       // Errors
 
 ## License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## Links
 

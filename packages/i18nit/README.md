@@ -768,7 +768,7 @@ const i18n = createI18n(config);
 
 ## License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## Links
 

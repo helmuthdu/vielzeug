@@ -654,7 +654,7 @@ Permit.register(ROLES.ADMIN, 'posts', { delete: true });
 
 ## License
 
-MIT © [Helmuth Duarte](https://github.com/helmuthdu)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ## Links
 
