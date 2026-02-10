@@ -41,6 +41,9 @@ features:
   - title: '@vielzeug/permit'
     details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Type-safe, extensible permission & role management for any app. Centralized, testable, and dynamic."
     link: /permit/
+  - title: '@vielzeug/validit'
+    details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Lightweight, type-safe schema validation with async support, parallel arrays, and minimal bundle size."
+    link: /validit/
 ---
 
 ## 🚀 Why Vielzeug?

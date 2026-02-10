@@ -30,6 +30,7 @@ export default defineConfig({
       { link: '/i18nit/', text: 'i18nit' },
       { link: '/logit/', text: 'Logit' },
       { link: '/permit/', text: 'Permit' },
+      { link: '/validit/', text: 'Validit' },
       { link: '/repl', text: 'REPL' },
     ],
     search: {
@@ -71,6 +72,12 @@ export default defineConfig({
         { link: '/permit/api', text: 'API Reference' },
         { link: '/permit/usage', text: 'Usage' },
         { link: '/permit/examples', text: 'Examples' },
+      ],
+      '/validit/': [
+        { link: '/validit/', text: 'Overview' },
+        { link: '/validit/api', text: 'API Reference' },
+        { link: '/validit/usage', text: 'Usage' },
+        { link: '/validit/examples', text: 'Examples' },
       ],
       '/toolkit/': [
         { link: '/toolkit/', text: 'Overview' },
