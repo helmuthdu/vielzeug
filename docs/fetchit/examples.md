@@ -84,11 +84,12 @@ await http.delete('/users/1');
 ## Authentication
 
 ::: warning 🔐 Security Best Practices
+
 - Never store tokens in localStorage (use httpOnly cookies when possible)
 - Implement token refresh logic
 - Clear cache on logout to prevent data leaks
 - Always validate tokens on the server-side
-:::
+  :::
 
 ### Setting Auth Headers
 

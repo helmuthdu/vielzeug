@@ -1,8 +1,8 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.9_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-3.0_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
+  <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
 </div>
 
 <img src="/logo-http.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
@@ -74,12 +74,12 @@ const user = await queryClient.fetch({
 | TypeScript Support    | ✅ First-class | ✅ First-class | ✅ Good        | ⚠️ Basic           |
 | Request Deduplication | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
 | Smart Caching         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
-| Pattern Invalidation  | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
+| Stable Query Keys     | ✅ Built-in    | ❌             | N/A            | N/A                |
 | Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
 | Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | **2.9 KB**     | ~13 KB         | ~13 KB         | 0 KB               |
+| Bundle Size (gzip)    | **~3 KB**      | ~15 KB         | ~13 KB         | 0 KB               |
 | Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
-| Dependencies          | 2              | 0              | 7+             | 0                  |
+| Dependencies          | 1              | 0              | 7+             | 0                  |
 | Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
 | React Hooks           | ❌             | ✅ Yes         | ❌             | ❌                 |
 | Framework Agnostic    | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ Yes             |
@@ -110,13 +110,13 @@ const user = await queryClient.fetch({
 - **Type-Safe**: Full TypeScript support with generic types and inference
 - **Smart Caching**: Built-in caching with configurable staleness and GC
 - **Deduplication**: Automatically prevent concurrent identical requests
-- **Pattern Invalidation**: `invalidate(['users'])` matches all user-related queries
+- **Stable Query Keys**: Property order doesn't matter for cache matching
 - **Auto Parsing**: Intelligent handling of JSON, text, and binary data
-- **Request Retry**: Automatic retry powered by [@vielzeug/toolkit](../toolkit/index.md)'s retry utility
+- **Request Retry**: Automatic retry with exponential backoff
 - **Observable State**: Subscribe to query changes for real-time updates
-- **Method Aliases**: TanStack Query-compatible naming for familiarity
+- **Prefix Invalidation**: `invalidate(['users'])` matches all user-related queries
 - **Rich Error Context**: Custom HttpError class with URL, method, and status
-- **Minimal Dependencies**: Only @vielzeug/toolkit and @vielzeug/logit
+- **Minimal Dependencies**: Only @vielzeug/toolkit for retry logic
 
 ## 🏁 Quick Start
 
