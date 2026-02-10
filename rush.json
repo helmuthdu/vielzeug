@@ -10,7 +10,7 @@
   },
   "gitPolicy": {},
   "nodeSupportedVersionRange": ">=20.14.0 <=22.22.0",
-  "pnpmVersion": "10.28.2",
+  "pnpmVersion": "10.29.2",
   "projects": [
     {
       "packageName": "@vielzeug/deposit",
