@@ -263,6 +263,29 @@ jobs:
         run: |
           PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
           CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          PACKAGE_JSON="${{ steps.package-info.outputs.folder }}/package.json"
+          
+          # Check if version was already bumped in a previous run
+          # This can happen if the workflow was run before but failed later
+          OLD_VERSION="${{ steps.package-info.outputs.old-version }}"
+          NPM_VERSION="${{ steps.package-info.outputs.npm-version }}"
+          
+          # If local version is ahead of npm, it means a previous run already bumped it
+          # We need to reset to npm version so Rush can apply changes properly
+          if [ "$OLD_VERSION" != "$NPM_VERSION" ] && [ "$NPM_VERSION" != "0.0.0" ]; then
+            echo "⚠️  Local version ($OLD_VERSION) differs from npm version ($NPM_VERSION)"
+            echo "   This might be from a previous workflow run. Resetting to npm version..."
+            
+            # Reset package.json version to match npm
+            node -e "
+              const fs = require('fs');
+              const pkg = require('./${PACKAGE_JSON}');
+              pkg.version = '$NPM_VERSION';
+              fs.writeFileSync('${PACKAGE_JSON}', JSON.stringify(pkg, null, 2) + '\n');
+            "
+            
+            echo "✅ Reset ${PACKAGE_JSON} version to $NPM_VERSION"
+          fi
           
           # Temporarily move other packages' change files out of the way
           # so Rush only processes the selected package
@@ -278,11 +301,18 @@ jobs:
             fi
           done
           
+          # Show what Rush will process
+          echo ""
+          echo "📋 Change files for Rush to process:"
+          ls -la ${CHANGE_DIR}/*.json 2>/dev/null || echo "  No change files found!"
+          echo ""
+          
           # Rush publish --apply will now only process the selected package's changes
           # - Update package.json version based on change type
           # - Generate/update CHANGELOG.md and CHANGELOG.json
           # - Delete processed change files for this package only
           # - Commit changes if --target-branch is specified
+          echo "🚀 Running Rush publish --apply..."
           node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details --include-all
           
           # Restore other packages' change files
@@ -312,38 +342,53 @@ jobs:
       - name: Get new version
         id: version
         run: |
+          # Re-read the version from package.json after Rush publish
           NEW_VERSION=$(node -e "console.log(require('./${{ steps.package-info.outputs.folder }}/package.json').version)")
           echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Version bumped from ${{ steps.package-info.outputs.old-version }} to $NEW_VERSION"
+          
+          # Note: OLD_VERSION might have been reset earlier, so we use npm version as the true baseline
+          NPM_VERSION="${{ steps.package-info.outputs.npm-version }}"
+          BASELINE_VERSION="${NPM_VERSION}"
+          if [ "$NPM_VERSION" = "0.0.0" ]; then
+            BASELINE_VERSION="${{ steps.package-info.outputs.old-version }}"
+          fi
+          
+          echo "✅ Version after Rush publish: $NEW_VERSION"
+          echo "   Baseline version: $BASELINE_VERSION"
 
       - name: Validate version is new
         run: |
-          OLD_VERSION="${{ steps.package-info.outputs.old-version }}"
           NEW_VERSION="${{ steps.version.outputs.new-version }}"
           NPM_VERSION="${{ steps.package-info.outputs.npm-version }}"
           
-          echo "📊 Version Check:"
-          echo "   Local (before): $OLD_VERSION"
-          echo "   Local (after):  $NEW_VERSION"
-          echo "   npm:            $NPM_VERSION"
+          # Use npm version as baseline (or old version if not published yet)
+          if [ "$NPM_VERSION" = "0.0.0" ]; then
+            BASELINE_VERSION="${{ steps.package-info.outputs.old-version }}"
+          else
+            BASELINE_VERSION="$NPM_VERSION"
+          fi
           
-          # Check 1: Verify version was bumped from local
-          if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+          echo "📊 Version Check:"
+          echo "   Baseline (npm or initial): $BASELINE_VERSION"
+          echo "   After Rush publish:        $NEW_VERSION"
+          
+          # Check 1: Verify version was bumped
+          if [ "$BASELINE_VERSION" = "$NEW_VERSION" ]; then
             echo ""
             echo "❌ Error: Version was not bumped!"
             echo ""
-            echo "The version in package.json is still $OLD_VERSION"
+            echo "The version in package.json is still $NEW_VERSION"
             echo "This means Rush did not process the change file correctly."
             echo ""
-            echo "Possible causes:"
-            echo "  1. Change file format is incorrect"
-            echo "  2. Rush publish did not run successfully"
-            echo "  3. Git already had the version committed"
+            echo "Debugging info:"
+            echo "  - Check if change file exists in common/changes/@vielzeug/$(echo '${{ inputs.package }}' | cut -d'/' -f2)/"
+            echo "  - Verify change file format is correct"
+            echo "  - Check Rush publish output above for errors"
             echo ""
             exit 1
           fi
           
-          # Check 2: Verify new version is different from npm
+          # Check 2: Verify new version is different from npm (if published)
           if [ "$NPM_VERSION" != "0.0.0" ]; then
             # Simple version comparison using Node
             COMPARE_RESULT=$(node -e "
@@ -380,7 +425,7 @@ jobs:
             else
               echo ""
               echo "✅ Version validation passed!"
-              echo "   Bump: $OLD_VERSION → $NEW_VERSION"
+              echo "   Bump: $BASELINE_VERSION → $NEW_VERSION"
               echo "   npm will be updated: $NPM_VERSION → $NEW_VERSION"
             fi
           else
