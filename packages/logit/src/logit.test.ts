@@ -17,7 +17,7 @@ describe('Logit', () => {
 
   beforeEach(() => {
     // Reset Logit to default state
-    Logit.initialise({
+    Logit.setup({
       environment: true,
       logLevel: 'debug',
       namespace: '',
@@ -127,7 +127,7 @@ describe('Logit', () => {
     it('initializes with custom options and merges remote config', () => {
       const remoteHandler = vi.fn();
 
-      Logit.initialise({
+      Logit.setup({
         environment: false,
         logLevel: 'error',
         namespace: 'TestApp',

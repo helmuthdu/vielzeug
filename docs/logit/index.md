@@ -206,7 +206,7 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
 }
 
 // Configure display options
-Logit.initialise({
+Logit.setup({
   variant: 'symbol',
   timestamp: true,
   environment: true,
@@ -445,7 +445,7 @@ const options: LogitOptions = {
   logLevel: 'info',
   variant: 'symbol',
 };
-Logit.initialise(options);
+Logit.setup(options);
 ```
 
 ### Namespace/prefix not showing

@@ -273,7 +273,7 @@ Logit.getPrefix(); // '' (empty)
 
 ## Configuration Methods
 
-### `Logit.initialise(options)`
+### `Logit.setup(options)`
 
 Initializes or updates Logit configuration with multiple options at once.
 
@@ -284,7 +284,7 @@ Initializes or updates Logit configuration with multiple options at once.
 **Example:**
 
 ```ts
-Logit.initialise({
+Logit.setup({
   logLevel: 'info',
   namespace: 'MyApp',
   variant: 'symbol',
@@ -737,7 +737,7 @@ Logit.setRemote({
 ```ts
 // Development
 if (process.env.NODE_ENV === 'development') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'debug',
     variant: 'symbol',
     timestamp: true,
@@ -747,7 +747,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Production
 if (process.env.NODE_ENV === 'production') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'error',
     variant: 'text',
     timestamp: true,

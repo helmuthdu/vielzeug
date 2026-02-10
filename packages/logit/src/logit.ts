@@ -320,20 +320,6 @@ export const Logit = {
   info: (...args: any[]): void => log('info', ...args),
 
   /**
-   * Initializes Logit with custom options.
-   *
-   * Note: The remote option will be merged with existing remote config,
-   * not replaced entirely. To clear a remote handler, set remote.handler to undefined.
-   */
-  initialise: (options: LogitOptions): void => {
-    if (options.remote) {
-      state.remote = { ...state.remote, ...options.remote };
-      delete (options as any).remote; // Remove to avoid Object.assign overwrite
-    }
-    Object.assign(state, options);
-  },
-
-  /**
    * Creates a scoped logger with a namespaced prefix.
    * Does not mutate global state - returns an isolated logger instance.
    *
@@ -419,6 +405,20 @@ export const Logit = {
    */
   setRemoteLogLevel: (level: LogitLevel): void => {
     state.remote.logLevel = level;
+  },
+
+  /**
+   * Configures Logit with custom options.
+   *
+   * Note: The remote option will be merged with existing remote config,
+   * not replaced entirely. To clear a remote handler, set remote.handler to undefined.
+   */
+  setup: (options: LogitOptions): void => {
+    if (options.remote) {
+      state.remote = { ...state.remote, ...options.remote };
+      delete (options as any).remote; // Remove to avoid Object.assign overwrite
+    }
+    Object.assign(state, options);
   },
 
   /**

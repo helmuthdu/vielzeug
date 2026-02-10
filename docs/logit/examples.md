@@ -280,7 +280,7 @@ Be careful with log levels in production:
 ```ts
 // Development configuration
 if (process.env.NODE_ENV === 'development') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'debug', // Show all logs
     variant: 'symbol', // Use symbols
     timestamp: true,
@@ -292,7 +292,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Production configuration
 if (process.env.NODE_ENV === 'production') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'warn', // Only warnings and errors
     variant: 'text', // Plain text for log aggregators
     timestamp: true,

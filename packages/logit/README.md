@@ -290,7 +290,7 @@ Logit.assert(user !== null, 'User should exist', { userId: 123 });
 ### Initialize with Options
 
 ```typescript
-Logit.initialise({
+Logit.setup({
   logLevel: 'info',        // Minimum log level
   namespace: 'MyApp',      // Global namespace
   variant: 'symbol',       // Display variant
@@ -504,7 +504,7 @@ const options: LogitOptions = {
   variant: 'symbol',
 };
 
-Logit.initialise(options);
+Logit.setup(options);
 
 const logger: ScopedLogger = Logit.scope('module');
 ```

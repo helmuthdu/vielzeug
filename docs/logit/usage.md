@@ -310,7 +310,7 @@ Remote logging uses `Promise.resolve().then()` for async execution, ensuring log
 Initialize multiple settings at once:
 
 ```ts
-Logit.initialise({
+Logit.setup({
   logLevel: 'info',
   namespace: 'MyApp',
   variant: 'symbol',
@@ -398,7 +398,7 @@ type LogitType = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'wa
 
 ```ts
 if (process.env.NODE_ENV === 'development') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'debug', // Show all logs
     variant: 'symbol', // Use symbols
     timestamp: true, // Show timestamps
@@ -411,7 +411,7 @@ if (process.env.NODE_ENV === 'development') {
 
 ```ts
 if (process.env.NODE_ENV === 'production') {
-  Logit.initialise({
+  Logit.setup({
     logLevel: 'warn', // Only warnings and errors
     variant: 'text', // Plain text (better for log aggregators)
     timestamp: true, // Keep timestamps
