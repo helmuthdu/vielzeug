@@ -192,25 +192,30 @@ jobs:
             VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
             FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${PKG}'); console.log(project.projectFolder);")
             
+            # Create release notes
+            cat > /tmp/release-notes.md << EOF
+          ## ${PKG} v${VERSION}
+          
+          ### Installation
+          
+          \`\`\`bash
+          npm install ${PKG}@${VERSION}
+          \`\`\`
+          
+          ### Links
+          
+          - 📦 [npm package](https://www.npmjs.com/package/${PKG}/v/${VERSION})
+          - 📋 [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${PKG}@${VERSION}/${FOLDER}/CHANGELOG.md)
+          
+          ### Changes
+          
+          See full changelog in the package directory.
+          EOF
+            
             # Create release for each package
             gh release create "${PKG}@${VERSION}" \
               --title "${PKG} v${VERSION}" \
-              --notes "## ${PKG} v${VERSION}
-
-### Installation
-
-\`\`\`bash
-npm install ${PKG}@${VERSION}
-\`\`\`
-
-### Links
-
-- 📦 [npm package](https://www.npmjs.com/package/${PKG}/v/${VERSION})
-- 📋 [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${PKG}@${VERSION}/${FOLDER}/CHANGELOG.md)
-
-### Changes
-
-See full changelog in the package directory." \
+              --notes-file /tmp/release-notes.md \
               --generate-notes
           done
         env:
