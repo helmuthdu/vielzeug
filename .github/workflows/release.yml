@@ -215,14 +215,53 @@ jobs:
 
       - name: Apply version bump and process changelogs with Rush
         run: |
-          # Rush publish --apply with --only flag will:
-          # - Process ONLY the change files for the selected package
+          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
+          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          
+          # Temporarily move other packages' change files out of the way
+          # so Rush only processes the selected package
+          mkdir -p /tmp/other-changes
+          
+          for dir in common/changes/@vielzeug/*/; do
+            PKG_NAME=$(basename "$dir")
+            if [ "$PKG_NAME" != "$PACKAGE_SLUG" ] && [ -d "$dir" ]; then
+              if [ -n "$(ls -A ${dir}*.json 2>/dev/null)" ]; then
+                echo "📦 Temporarily moving change files for @vielzeug/${PKG_NAME}"
+                mv "${dir}"*.json /tmp/other-changes/ 2>/dev/null || true
+              fi
+            fi
+          done
+          
+          # Rush publish --apply will now only process the selected package's changes
           # - Update package.json version based on change type
           # - Generate/update CHANGELOG.md and CHANGELOG.json
-          # - Delete processed change files for this package only (leaves others untouched)
+          # - Delete processed change files for this package only
           # - Commit changes if --target-branch is specified
-          # The --include-all flag ensures we process the package even if it has no dependencies to publish
-          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details --include-all --only ${{ inputs.package }}
+          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details --include-all
+          
+          # Restore other packages' change files
+          if [ -n "$(ls -A /tmp/other-changes/*.json 2>/dev/null)" ]; then
+            echo "📦 Restoring change files for other packages"
+            for file in /tmp/other-changes/*.json; do
+              FILENAME=$(basename "$file")
+              # Extract package name from change file to restore to correct directory
+              PKG=$(node -e "try { const data = require('${file}'); console.log(data.packageName || ''); } catch(e) { console.log(''); }")
+              if [ -n "$PKG" ]; then
+                PKG_SLUG=$(echo "$PKG" | cut -d'/' -f2)
+                TARGET_DIR="common/changes/@vielzeug/${PKG_SLUG}"
+                mkdir -p "${TARGET_DIR}"
+                mv "${file}" "${TARGET_DIR}/"
+                echo "  Restored ${FILENAME} to ${TARGET_DIR}"
+              fi
+            done
+            
+            # Commit the restored change files back
+            git add common/changes/
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: restore change files for other packages after releasing ${{ inputs.package }}"
+              git push origin main
+            fi
+          fi
 
       - name: Get new version
         id: version
