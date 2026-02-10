@@ -2,6 +2,18 @@
   "name": "@vielzeug/fetchit",
   "entries": [
     {
+      "version": "1.1.1",
+      "tag": "@vielzeug/fetchit_v1.1.1",
+      "date": "Tue, 10 Feb 2026 21:33:56 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Release version with patch bump"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/fetchit_v1.1.0",
       "date": "Tue, 10 Feb 2026 21:31:26 GMT",
