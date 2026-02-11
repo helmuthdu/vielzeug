@@ -6,7 +6,7 @@
    fill="none"
    version="1.1"
    id="svg2"
-   sodipodi:docname="logo-depot.svg"
+   sodipodi:docname="logo-logit.svg"
    inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,33 +23,92 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="6.5792524"
-     inkscape:cx="35.566351"
-     inkscape:cy="33.970425"
+     inkscape:zoom="9.2748123"
+     inkscape:cx="27.493818"
+     inkscape:cy="28.410278"
      inkscape:window-width="1920"
      inkscape:window-height="1022"
      inkscape:window-x="0"
      inkscape:window-y="359"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg2"
-     showgrid="false" />
+     showgrid="false"
+     showguides="false" />
   <ellipse
      style="fill:none;fill-opacity:0.0980392;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.698039"
-     id="ellipse3"
-     cx="32"
-     cy="31.999998"
-     rx="28.762239"
-     ry="11.166991" />
+     id="ellipse25"
+     cx="-32"
+     cy="-53.331062"
+     rx="23.615959"
+     ry="9.1689386"
+     transform="scale(-1)" />
+  <ellipse
+     style="fill:none;fill-opacity:0.0980392;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.698039"
+     id="ellipse1"
+     cx="-32.054867"
+     cy="-10.668939"
+     rx="23.615959"
+     ry="9.1689386"
+     transform="scale(-1)" />
   <ellipse
      style="fill:none;fill-opacity:0.0980392;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.698039"
      id="ellipse2"
-     cx="32"
-     cy="43.10973"
-     rx="28.762239"
-     ry="11.166991" />
+     cx="-32"
+     cy="10.668939"
+     rx="23.615959"
+     ry="9.1689386"
+     transform="rotate(-90)" />
+  <ellipse
+     style="fill:none;fill-opacity:0.0980392;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.698039"
+     id="ellipse3"
+     cx="-32"
+     cy="53.331062"
+     rx="23.615959"
+     ry="9.1689386"
+     transform="rotate(-90)" />
+  <g
+     id="g27"
+     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-71.290472,213.90898)">
+    <ellipse
+       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:1.72217;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse26"
+       cx="-124.14648"
+       cy="-15.203258"
+       rx="1.0435266"
+       ry="1.0287908"
+       transform="scale(1,-1)" />
+    <ellipse
+       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:1.40322;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse27"
+       cx="-124.14648"
+       cy="-15.203257"
+       rx="0.85026163"
+       ry="0.83825499"
+       transform="scale(1,-1)" />
+  </g>
+  <g
+     id="g29"
+     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-70.039926,249.39461)">
+    <ellipse
+       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:1.72217;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse28"
+       cx="-124.14648"
+       cy="-15.203258"
+       rx="1.0435266"
+       ry="1.0287908"
+       transform="scale(1,-1)" />
+    <ellipse
+       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:1.40322;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse29"
+       cx="-124.14648"
+       cy="-15.203257"
+       rx="0.85026163"
+       ry="0.83825499"
+       transform="scale(1,-1)" />
+  </g>
   <g
      id="g33"
-     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-66.869716,232.46465)">
+     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-34.317497,219.45562)">
     <ellipse
        style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:1.72217;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
        id="ellipse32"
@@ -68,11 +127,11 @@
        transform="scale(1,-1)" />
   </g>
   <g
-     id="g7"
-     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-32.823294,248.42391)">
+     id="g31"
+     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-43.58416,271.43644)">
     <ellipse
        style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:1.72217;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse6"
+       id="ellipse30"
        cx="-124.14648"
        cy="-15.203258"
        rx="1.0435266"
@@ -80,7 +139,7 @@
        transform="scale(1,-1)" />
     <ellipse
        style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:1.40322;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse7"
+       id="ellipse31"
        cx="-124.14648"
        cy="-15.203257"
        rx="0.85026163"
@@ -93,31 +152,4 @@
      cx="32"
      cy="32"
      r="5.1937551" />
-  <ellipse
-     style="fill:none;fill-opacity:0.0980392;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.698039"
-     id="ellipse1"
-     cx="32"
-     cy="20.89027"
-     rx="28.762239"
-     ry="11.166991" />
-  <g
-     id="g5"
-     transform="matrix(-0.9152921,1.5853324,-1.5853324,-0.9152921,-46.350667,221.06518)">
-    <ellipse
-       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:1.72217;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse4"
-       cx="-124.14648"
-       cy="-15.203258"
-       rx="1.0435266"
-       ry="1.0287908"
-       transform="scale(1,-1)" />
-    <ellipse
-       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:1.40322;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse5"
-       cx="-124.14648"
-       cy="-15.203257"
-       rx="0.85026163"
-       ry="0.83825499"
-       transform="scale(1,-1)" />
-  </g>
 </svg>

@@ -1,12 +1,72 @@
+<!-- eslint-disable no-undef -->
 <template>
   <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
+    <!-- Library Selector Card Grid -->
+    <div class="library-grid">
+      <div
+        v-for="(desc, lib) in libraryDescriptions"
+        :key="lib"
+        class="library-card"
+        :class="{ active: selectedLibrary === lib }"
+        @click="
+          selectedLibrary = lib;
+          switchLibrary();
+        ">
+        <div class="card-icon">
+          <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="lib-logo" />
+        </div>
+        <div class="card-info">
+          <span class="card-title">@vielzeug/{{ lib }}</span>
+          <p class="card-desc">{{ desc }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="repl-layout">
       <!-- Code Editor -->
       <div class="editor-section">
         <div class="editor-header">
           <div class="header-title">
             <h3>Editor</h3>
-            <button @click="toggleExpand" class="btn-icon" :title="isExpanded ? 'Collapse' : 'Expand'">
+          </div>
+          <div class="header-actions">
+            <select v-model="selectedExample" @change="loadExample" id="example-selector">
+              <option value="">Choose an example...</option>
+              <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
+                <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
+              </optgroup>
+            </select>
+            <button @click="runCode" class="btn-primary btn-with-icon btn-run">
+              <svg
+                v-if="!isExecuting"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              <svg
+                v-else
+                class="spinner"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              <span>{{ isExecuting ? 'Running...' : 'Run' }}</span>
+            </button>
+            <button @click="toggleExpand" class="btn-icon expand-btn" :title="isExpanded ? 'Collapse' : 'Expand'">
               <svg
                 v-if="!isExpanded"
                 xmlns="http://www.w3.org/2000/svg"
@@ -41,29 +101,37 @@
               </svg>
             </button>
           </div>
-          <div class="controls">
-            <button @click="formatCode" class="btn-icon" title="Format Code">
+        </div>
+        <div class="editor-content-wrapper">
+          <div ref="editorContainer" class="code-editor"></div>
+          <div class="editor-floating-toolbar">
+            <button @click="formatCode" class="btn-icon-alt" title="Format Code">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2" />
-                <path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2" />
-                <path d="M12 7v10" />
-                <path d="M8 11l4 4 4-4" />
+                stroke-linejoin="round"
+                version="1.1"
+                id="svg8"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:svg="http://www.w3.org/2000/svg">
+                <defs id="defs8" />
+                <path
+                  d="m 17.122614,2 5,5.0000001 L 7.1226139,22 2.1226137,17 Z"
+                  id="path2"
+                  style="stroke-width: 2.00057; stroke-dasharray: none" />
+                <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
               </svg>
             </button>
-            <button @click="copyCode" class="btn-icon" title="Copy to Clipboard">
+            <button @click="copyCode" class="btn-icon-alt" title="Copy to Clipboard">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -74,29 +142,12 @@
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
             </button>
-            <button @click="shareCode" class="btn-icon" title="Share Code">
+            <div class="toolbar-divider"></div>
+            <button @click="resetEditor" class="btn-icon-alt" title="Reset to Default">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
-                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-              </svg>
-            </button>
-            <button @click="resetEditor" class="btn-icon" title="Reset to Default">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -107,17 +158,18 @@
                 <path d="M3 3v5h5" />
               </svg>
             </button>
-            <button @click="clearEditor" class="btn-icon" title="Clear Editor">
+            <button @click="clearEditor" class="btn-icon-alt" title="Clear Editor">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round">
+                stroke-linejoin="round"
+                style="color: var(--vp-c-danger)">
                 <path d="M3 6h18" />
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -125,71 +177,8 @@
                 <line x1="14" x2="14" y1="11" y2="17" />
               </svg>
             </button>
-            <button @click="runCode" class="btn-primary btn-with-icon">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-              <span>Run</span>
-            </button>
-            <select v-model="selectedExample" @change="loadExample" id="example-selector">
-              <option value="">Choose an example...</option>
-              <optgroup label="Array">
-                <option value="array-chunk">chunk - Split array into chunks</option>
-                <option value="array-filter">filter - Filter array elements</option>
-                <option value="array-map">map - Transform array elements</option>
-                <option value="array-group">group - Group array by key</option>
-                <option value="array-sort">sort - Sort array</option>
-                <option value="array-alternate">alternate - Alternate arrays</option>
-              </optgroup>
-              <optgroup label="Object">
-                <option value="object-merge">merge - Deep merge objects</option>
-                <option value="object-clone">clone - Deep clone object</option>
-                <option value="object-path">path - Get nested value</option>
-                <option value="object-diff">diff - Compare objects</option>
-              </optgroup>
-              <optgroup label="String">
-                <option value="string-camelcase">camelCase - Convert to camelCase</option>
-                <option value="string-kebabcase">kebabCase - Convert to kebab-case</option>
-                <option value="string-truncate">truncate - Truncate string</option>
-              </optgroup>
-              <optgroup label="Math">
-                <option value="math-average">average - Calculate average</option>
-                <option value="math-clamp">clamp - Clamp number</option>
-                <option value="math-range">range - Generate number range</option>
-              </optgroup>
-              <optgroup label="Date">
-                <option value="date-expires">expires - Check if date expired</option>
-                <option value="date-timediff">timeDiff - Calculate time difference</option>
-              </optgroup>
-              <optgroup label="Function">
-                <option value="function-debounce">debounce - Debounce function</option>
-                <option value="function-throttle">throttle - Throttle function</option>
-                <option value="function-pipe">pipe - Compose functions</option>
-              </optgroup>
-              <optgroup label="Typed">
-                <option value="typed-is">is - General type check</option>
-                <option value="typed-ismatch">isMatch - Pattern match</option>
-                <option value="typed-isarray">isArray - Check if array</option>
-                <option value="typed-isempty">isEmpty - Check if empty</option>
-                <option value="typed-isequal">isEqual - Deep equality check</option>
-              </optgroup>
-              <optgroup label="Random">
-                <option value="random-utils">random - Random utilities</option>
-                <option value="random-draw">draw - Draw random element</option>
-              </optgroup>
-            </select>
           </div>
         </div>
-        <div ref="editorContainer" class="code-editor"></div>
       </div>
 
       <!-- Output -->
@@ -215,14 +204,32 @@
             </svg>
           </button>
         </div>
-        <div ref="outputContainer" class="output-area"></div>
+        <div ref="outputContainer" class="output-area">
+          <div class="output-placeholder">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            <p>Ready to execute code...</p>
+            <span>Press Run or Cmd+Enter to see results here</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Function Reference -->
     <div class="reference-section">
       <div class="reference-header">
-        <h3>Available Functions</h3>
+        <h3>{{ selectedLibrary === 'toolkit' ? 'Available Functions' : 'Available Exports' }}</h3>
         <div class="search-container">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -238,11 +245,15 @@
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          <input v-model="searchQuery" type="text" placeholder="Search functions..." class="search-input" />
+          <input v-model="searchQuery" type="text" placeholder="Search exports..." class="search-input" />
         </div>
       </div>
       <div class="function-categories">
-        <div v-for="category in filteredCategories" :key="category.name" class="category">
+        <div
+          v-if="selectedLibrary === 'toolkit'"
+          v-for="category in filteredCategories"
+          :key="category.name"
+          class="category">
           <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
           <div class="function-list">
             <code
@@ -256,52 +267,103 @@
             >
           </div>
         </div>
-        <div v-if="filteredCategories.length === 0" class="no-results">
-          No functions found matching "{{ searchQuery }}"
+        <div v-else class="category">
+          <h4>Exports ({{ filteredExports.length }} available)</h4>
+          <div class="function-list">
+            <code
+              v-for="ex in filteredExports"
+              :key="ex"
+              @click="insertFunction(ex)"
+              class="clickable-fn"
+              :class="{ 'is-match': isMatch(ex) }"
+              title="Click to insert"
+              >{{ ex }}</code
+            >
+          </div>
+        </div>
+        <div
+          v-if="(selectedLibrary === 'toolkit' ? filteredCategories.length : filteredExports.length) === 0"
+          class="no-results">
+          No exports found matching "{{ searchQuery }}"
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import * as toolkit from '../../../../packages/toolkit/src/index';
+<script setup lang="ts">
+import { withBase } from 'vitepress';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { examples } from './repl/examples';
-import { toolkitTypes } from './repl/types';
+import { libraryTypes, toolkitTypes } from './repl/types';
 
 const editorContainer = ref(null);
 const outputContainer = ref(null);
+const selectedLibrary = ref('toolkit');
 const selectedExample = ref('');
 const isExpanded = ref(false);
 const searchQuery = ref('');
+const isDark = ref(true); // Default to dark, will sync on mount
+let editor = null;
+let currentLibraryModule = null;
 
-const DEFAULT_CODE = `// Welcome to the Vielzeug REPL!
-// All toolkit functions are available globally.
-// Try some examples:
+// Library descriptions
+const libraryDescriptions = {
+  toolkit: 'A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more.',
+  deposit: 'Type-safe local storage with schemas, expiration, and query building capabilities.',
+  fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
+  formit: 'Type-safe form state and validation for React and beyond.',
+  i18nit: 'Internationalization library with TypeScript support.',
+  logit: 'Beautiful console logging with styling and remote logging support.',
+  permit: 'Role-based access control (RBAC) system for permissions.',
+  validit: 'Type-safe schema validation with advanced error handling.',
+};
 
-import { chunk, map, filter } from '@vielzeug/toolkit'
+// Library loaders
+const libraryLoaders = {
+  toolkit: () => import('@vielzeug/toolkit'),
+  deposit: () => import('@vielzeug/deposit'),
+  fetchit: () => import('@vielzeug/fetchit'),
+  formit: () => import('@vielzeug/formit'),
+  i18nit: () => import('@vielzeug/i18nit'),
+  logit: () => import('@vielzeug/logit'),
+  permit: () => import('@vielzeug/permit'),
+  validit: () => import('@vielzeug/validit'),
+};
 
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+// Default code for each library
+// Helper to get default code for a library from its examples
+const getDefaultCode = (libName) => {
+  const libExamples = examples[libName];
+  if (libExamples) {
+    const firstKey = Object.keys(libExamples)[0];
+    if (firstKey) {
+      return libExamples[firstKey].code;
+    }
+  }
+  return '';
+};
 
-// Split into chunks of 3
-const chunks = chunk(numbers, 3)
-console.log('Chunks:', chunks)
+// Library exports reference
+const libraryExports = ref({
+  toolkit: [],
+  deposit: ['Deposit'],
+  fetchit: ['createHttpClient', 'createQueryClient'],
+  formit: ['createForm'],
+  i18nit: ['createI18n'],
+  logit: ['Logit'],
+  permit: ['Permit'],
+  validit: ['v'],
+});
 
-// Filter even numbers and double them
-const evenDoubled = map(filter(numbers, n => n % 2 === 0), n => n * 2)
-console.log('Even numbers doubled:', evenDoubled)
-
-// Try more functions!
-`;
-
-// Group toolkit functions by category for the reference section
-const categories = [
+// Toolkit categories
+const toolkitCategories = [
   {
     name: 'Array',
     functions: [
       'aggregate',
       'alternate',
+      'arrange',
       'chunk',
       'compact',
       'contains',
@@ -316,32 +378,45 @@ const categories = [
       'map',
       'pick',
       'reduce',
+      'remoteList',
       'search',
       'select',
       'shift',
       'some',
       'sort',
-      'sortBy',
       'substitute',
       'uniq',
     ],
   },
   {
     name: 'Object',
-    functions: ['clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values'],
+    functions: ['cache', 'clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values'],
   },
-  {
-    name: 'String',
-    functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate'],
-  },
+  { name: 'String', functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate'] },
   {
     name: 'Math',
-    functions: ['average', 'boil', 'clamp', 'max', 'median', 'min', 'range', 'rate', 'round', 'sum'],
+    functions: [
+      'abs',
+      'add',
+      'allocate',
+      'average',
+      'boil',
+      'clamp',
+      'distribute',
+      'divide',
+      'max',
+      'median',
+      'min',
+      'multiply',
+      'range',
+      'rate',
+      'round',
+      'subtract',
+      'sum',
+    ],
   },
-  {
-    name: 'Date',
-    functions: ['expires', 'interval', 'timeDiff'],
-  },
+  { name: 'Date', functions: ['expires', 'interval', 'timeDiff'] },
+  { name: 'Money', functions: ['currency', 'exchange'] },
   {
     name: 'Function',
     functions: [
@@ -358,13 +433,15 @@ const categories = [
       'memo',
       'once',
       'pipe',
-      'predict',
       'proxy',
-      'retry',
-      'sleep',
+      'prune',
       'throttle',
       'worker',
     ],
+  },
+  {
+    name: 'Async',
+    functions: ['defer', 'delay', 'parallel', 'pool', 'predict', 'queue', 'race', 'retry', 'sleep', 'waitFor'],
   },
   {
     name: 'Typed',
@@ -398,28 +475,16 @@ const categories = [
       'typeOf',
     ],
   },
-  {
-    name: 'Random',
-    functions: ['draw', 'random', 'shuffle', 'uuid'],
-  },
+  { name: 'Random', functions: ['draw', 'random', 'shuffle', 'uuid'] },
 ];
 
-const allExportedFunctions = Object.keys(toolkit);
-const categorizedFunctions = categories.flatMap((c) => c.functions);
-const missingFunctions = allExportedFunctions.filter((f) => !categorizedFunctions.includes(f) && f !== 'default');
-
-if (missingFunctions.length > 0) {
-  console.warn(
-    'The following functions are exported from the toolkit but not categorized in the REPL:',
-    missingFunctions,
-  );
-}
-
 const filteredCategories = computed(() => {
-  if (!searchQuery.value) return categories;
+  if (selectedLibrary.value !== 'toolkit') return [];
+
+  if (!searchQuery.value) return toolkitCategories;
 
   const query = searchQuery.value.toLowerCase();
-  return categories
+  return toolkitCategories
     .map((cat) => ({
       ...cat,
       functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),
@@ -427,16 +492,64 @@ const filteredCategories = computed(() => {
     .filter((cat) => cat.functions.length > 0);
 });
 
-const isMatch = (fn) => {
+const filteredExports = computed(() => {
+  const exports = libraryExports.value[selectedLibrary.value] || [];
+  if (!searchQuery.value) return exports;
+
+  const query = searchQuery.value.toLowerCase();
+  return exports.filter((ex) => ex.toLowerCase().includes(query));
+});
+
+const examplesByCategory = computed(() => {
+  const libExamples = examples[selectedLibrary.value] || {};
+
+  const grouped = {};
+  Object.entries(libExamples).forEach(([key, value]) => {
+    const category = key.split('-')[0] || 'Other';
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
+    grouped[category].push({
+      label: value.name || key,
+      value: key,
+    });
+  });
+
+  return Object.entries(grouped).map(([name, exampleList]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    examples: exampleList,
+  }));
+});
+
+const isMatch = (fn: string) => {
   if (!searchQuery.value) return false;
   return fn.toLowerCase().includes(searchQuery.value.toLowerCase());
 };
 
-let editor = null;
+// Watch library changes
+watch(selectedLibrary, () => {
+  switchLibrary();
+});
 
 onMounted(() => {
   initializeREPL();
+  syncTheme();
+
+  // Watch for VitePress theme changes
+  const observer = new MutationObserver(() => syncTheme());
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+  onBeforeUnmount(() => {
+    observer.disconnect();
+  });
 });
+
+const syncTheme = () => {
+  isDark.value = document.documentElement.classList.contains('dark');
+  if (window.monaco) {
+    monaco.editor.setTheme(isDark.value ? 'vs-dark' : 'vs');
+  }
+};
 
 onBeforeUnmount(() => {
   if (editor) {
@@ -445,73 +558,110 @@ onBeforeUnmount(() => {
 });
 
 const initializeREPL = () => {
-  // Load Monaco Editor
-  window.toolkit = toolkit;
   const script = document.createElement('script');
   script.src = 'https://unpkg.com/monaco-editor@0.55.1/min/vs/loader.js';
   script.onload = () => {
     require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.55.1/min/vs' } });
 
     require(['vs/editor/editor.main'], function () {
-      monaco.languages.typescript.typescriptDefaults.addExtraLib(
-        toolkitTypes,
-        'file:///node_modules/@vielzeug/toolkit/index.d.ts',
-      );
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        target: monaco.languages.typescript.ScriptTarget.ESNext,
+        allowNonTsExtensions: true,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        noEmit: true,
+        esModuleInterop: true,
+      });
 
-      // Check for code in URL first, then localStorage, then default
+      updateMonacoTypes(selectedLibrary.value);
+
       const urlParams = new URLSearchParams(window.location.search);
       const sharedCode = urlParams.get('code');
-      let initialCode = DEFAULT_CODE;
+      let initialCode = getDefaultCode(selectedLibrary.value);
 
       if (sharedCode) {
         try {
           initialCode = atob(sharedCode);
-          // Clear URL to avoid carrying it around
           window.history.replaceState({}, document.title, window.location.pathname);
         } catch (e) {
           console.error('Failed to decode shared code', e);
         }
       } else {
-        const savedCode = localStorage.getItem('vielzeug-repl-code');
+        const savedCode = localStorage.getItem(`vielzeug-repl-code-${selectedLibrary.value}`);
         if (savedCode) {
           initialCode = savedCode;
         }
       }
 
-      // Create editor
       editor = monaco.editor.create(editorContainer.value, {
         value: initialCode,
         language: 'typescript',
-        theme: 'vs-dark',
+        theme: isDark.value ? 'vs-dark' : 'vs',
         fontSize: 14,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         automaticLayout: true,
       });
 
-      // Save to localStorage on change
-      editor.onDidChangeModelContent(() => {
-        localStorage.setItem('vielzeug-repl-code', editor.getValue());
-      });
-
-      // Auto-run on Ctrl+Enter
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
         runCode();
       });
+
+      loadLibrary(selectedLibrary.value);
     });
   };
   document.head.appendChild(script);
+};
 
-  // Load toolkit library dynamically
-  const toolkitScript = document.createElement('script');
-  toolkitScript.type = 'module';
-  toolkitScript.textContent = `
-    import * as toolkit from 'https://unpkg.com/@vielzeug/toolkit@latest/dist/index.js'
-    window.toolkit = toolkit
-    // Make all functions globally available
-    Object.assign(window, toolkit)
-  `;
-  document.head.appendChild(toolkitScript);
+const switchLibrary = () => {
+  selectedExample.value = '';
+  if (editor) {
+    const savedCode = localStorage.getItem(`vielzeug-repl-code-${selectedLibrary.value}`);
+    editor.setValue(savedCode || getDefaultCode(selectedLibrary.value));
+  }
+  clearOutput();
+  loadLibrary(selectedLibrary.value);
+};
+
+const updateMonacoTypes = (libName) => {
+  if (!window.monaco) return;
+
+  // Clear existing libs
+  monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
+
+  // Add toolkit types (always available as dependency)
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    toolkitTypes,
+    'file:///node_modules/@vielzeug/toolkit/index.d.ts',
+  );
+
+  // Add selected library types if different from toolkit
+  if (libName !== 'toolkit' && libraryTypes[libName]) {
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+      libraryTypes[libName],
+      `file:///node_modules/@vielzeug/${libName}/index.d.ts`,
+    );
+  }
+};
+
+const loadLibrary = async (libName: string) => {
+  try {
+    const loader = (libraryLoaders as any)[libName];
+    if (!loader) return;
+    const module = await loader();
+    currentLibraryModule = module;
+    window[libName] = module;
+    // Also expose variables globally for easier usage in REPL
+    Object.entries(module).forEach(([key, val]) => {
+      window[key] = val;
+    });
+    updateMonacoTypes(libName);
+  } catch (err) {
+    console.error(`Failed to load ${libName}:`, err);
+    if (outputContainer.value) {
+      outputContainer.value.innerHTML = `<div style='color:#ef4444;font-weight:bold;padding:1em;'>Failed to load library: ${libName}<br>${err?.message || err}</div>`;
+    }
+  }
 };
 
 const runCode = () => {
@@ -520,10 +670,8 @@ const runCode = () => {
   const code = editor.getValue();
   const output = outputContainer.value;
 
-  // Clear previous output
   output.innerHTML = '';
 
-  // Capture console output
   const originalLog = console.log;
   const originalError = console.error;
   const originalWarn = console.warn;
@@ -533,13 +681,9 @@ const runCode = () => {
     if (item === null) return 'null';
     if (typeof item === 'object') {
       try {
-        // Handle Date objects
         if (item instanceof Date) return `Date(${item.toISOString()})`;
-        // Handle Error objects
         if (item instanceof Error) return `Error: ${item.message}`;
-        // Handle RegEx
         if (item instanceof RegExp) return String(item);
-
         return JSON.stringify(item, null, 2);
       } catch (e) {
         return String(item);
@@ -549,10 +693,26 @@ const runCode = () => {
     return String(item);
   };
 
-  const addOutput = (content, type = 'log') => {
+  const addOutput = (content: string[], type = 'log') => {
     const line = document.createElement('div');
     line.className = `output-line output-${type}`;
-    line.textContent = content.map(stringify).join(' ');
+
+    if (type !== 'result') {
+      const time = document.createElement('span');
+      time.className = 'log-timestamp';
+      time.textContent = new Date().toLocaleTimeString([], {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      line.appendChild(time);
+    }
+
+    const text = document.createElement('span');
+    text.className = 'log-text';
+    text.textContent = type === 'result' ? `→ ${content.map(stringify).join(' ')}` : content.map(stringify).join(' ');
+    line.appendChild(text);
 
     output.appendChild(line);
     output.scrollTop = output.scrollHeight;
@@ -571,23 +731,27 @@ const runCode = () => {
   };
 
   try {
-    // Transform import statements to use global toolkit
-    let transformedCode = code
-      .replace(/import\s*{([^}]+)}\s*from\s*['"]@vielzeug\/toolkit['"]/g, (match, imports) => {
-        const importList = imports.split(',').map((i) => i.trim());
-        return `const { ${importList.join(', ')} } = window.toolkit || {}`;
-      })
-      .replace(/import\s*\*\s*as\s+(\w+)\s*from\s*['"]@vielzeug\/toolkit['"]/g, 'const $1 = window.toolkit || {}');
+    let transformedCode = code;
 
-    // Use a self-invoking async function to support top-level await if needed
+    // Transform import statements for all libraries
+    Object.keys(libraryLoaders).forEach((lib) => {
+      transformedCode = transformedCode
+        .replace(new RegExp(`import\\s*{([^}]+)}\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'), (match, imports) => {
+          const importList = imports.split(',').map((i) => i.trim());
+          return `const { ${importList.join(', ')} } = window.${lib} || {}`;
+        })
+        .replace(
+          new RegExp(`import\\s*\\*\\s*as\\s+(\\w+)\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'),
+          `const $1 = window.${lib} || {}`,
+        );
+    });
+
     if (transformedCode.includes('await')) {
       transformedCode = `(async () => { ${transformedCode} })()`;
     }
 
-    // Execute the code
     const result = eval(transformedCode);
 
-    // If it's a promise (from the async wrapper), handle it
     if (result instanceof Promise) {
       result
         .then((res) => {
@@ -604,7 +768,6 @@ const runCode = () => {
   } catch (error) {
     addOutput(['Error:', error.message], 'error');
   } finally {
-    // Restore console
     console.log = originalLog;
     console.error = originalError;
     console.warn = originalWarn;
@@ -624,8 +787,14 @@ const clearOutput = () => {
 };
 
 const loadExample = () => {
-  if (selectedExample.value && examples[selectedExample.value] && editor) {
-    editor.setValue(examples[selectedExample.value]);
+  if (
+    selectedExample.value &&
+    examples[selectedLibrary.value] &&
+    examples[selectedLibrary.value][selectedExample.value] &&
+    editor
+  ) {
+    const exampleCode = examples[selectedLibrary.value][selectedExample.value].code;
+    editor.setValue(exampleCode);
     runCode();
   }
 };
@@ -645,29 +814,16 @@ const copyCode = () => {
   }
 };
 
-const shareCode = () => {
-  if (editor) {
-    const code = editor.getValue();
-    const encoded = btoa(code);
-    const url = new URL(window.location.href);
-    url.searchParams.set('code', encoded);
-    navigator.clipboard.writeText(url.toString()).then(() => {
-      alert('Shareable URL copied to clipboard!');
-    });
-  }
-};
-
 const resetEditor = () => {
   if (editor && confirm('Are you sure you want to reset the editor to default?')) {
-    editor.setValue(DEFAULT_CODE);
-    localStorage.removeItem('vielzeug-repl-code');
+    editor.setValue(getDefaultCode(selectedLibrary.value));
+    localStorage.removeItem(`vielzeug-repl-code-${selectedLibrary.value}`);
     runCode();
   }
 };
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value;
-  // Trigger layout recalculation for Monaco
   if (editor) {
     setTimeout(() => {
       editor.layout();
@@ -675,7 +831,7 @@ const toggleExpand = () => {
   }
 };
 
-const insertFunction = (fnName) => {
+const insertFunction = (item: string) => {
   if (editor) {
     const selection = editor.getSelection();
     const range = new monaco.Range(
@@ -684,7 +840,7 @@ const insertFunction = (fnName) => {
       selection.endLineNumber,
       selection.endColumn,
     );
-    const text = `${fnName}()`;
+    const text = item;
     editor.executeEdits('insert-function', [{ range: range, text: text, forceMoveMarkers: true }]);
     editor.focus();
   }
@@ -692,6 +848,103 @@ const insertFunction = (fnName) => {
 </script>
 
 <style scoped>
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.library-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: var(--vp-c-bg-alt);
+  border: 1px solid var(--vp-c-divider);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.library-card:hover {
+  transform: translateY(-4px);
+  background: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.library-card.active {
+  background: var(--vp-c-bg-soft);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 8px 16px var(--vp-c-default-soft);
+}
+
+.library-card.active::after {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vp-c-brand-1);
+  box-shadow: 0 0 8px var(--vp-c-brand-1);
+}
+
+.card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+  padding: 8px;
+  border: 1px solid var(--vp-c-divider);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.lib-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.library-card:hover .card-icon {
+  border: 1px solid var(--vp-c-brand-1);
+  color: white;
+  transform: scale(1.1) rotate(5deg);
+}
+
+.library-card.active .card-icon {
+  border: 1px solid var(--vp-c-brand-1);
+  color: white;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--vp-c-text-1);
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.4;
+  margin: 0;
+}
+
 .repl-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -703,19 +956,19 @@ const insertFunction = (fnName) => {
 .editor-section,
 .output-section {
   border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   background: var(--vp-c-bg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
 }
 
 .editor-section:hover,
 .output-section:hover {
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .editor-header,
@@ -733,6 +986,7 @@ const insertFunction = (fnName) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-right: 1rem;
 }
 
 .editor-header h3,
@@ -749,6 +1003,157 @@ const insertFunction = (fnName) => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--vp-c-text-3);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--vp-c-bg-alt);
+  border: 1px solid var(--vp-c-divider);
+  transition: all 0.3s ease;
+  opacity: 0.7;
+}
+
+.save-indicator.is-saving {
+  color: var(--vp-c-brand-1);
+  background: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+  opacity: 1;
+}
+
+.save-indicator span {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#example-selector {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-1);
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+#example-selector:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+.btn-run {
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  height: 32px;
+}
+
+.expand-btn {
+  margin-left: 0.25rem;
+  opacity: 0.6;
+}
+
+.expand-btn:hover {
+  opacity: 1;
+}
+
+.editor-content-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-floating-toolbar {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--vp-c-bg-soft);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  opacity: 0.9;
+  transition: all 0.2s ease;
+}
+
+.editor-floating-toolbar:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: var(--vp-c-brand-1);
+}
+
+.btn-icon-alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--vp-c-text-2);
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.btn-icon-alt:hover {
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-brand-1);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--vp-c-divider);
+  margin: 0 0.25rem;
+}
+
+.spinner {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.shortcut-hint {
+  font-size: 0.7rem;
+  color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-alt);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-weight: 500;
+  border: 1px solid var(--vp-c-divider);
+  opacity: 0.8;
 }
 
 .btn-primary,
@@ -784,30 +1189,27 @@ const insertFunction = (fnName) => {
 }
 
 .btn-primary {
-  background: var(--vp-c-brand-1);
+  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-2));
   color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--vp-c-brand-soft);
+  border: none;
 }
 
 .btn-primary:hover {
-  background: var(--vp-c-brand-2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--vp-c-brand-soft);
+}
+
+.btn-run {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1.125rem 1rem;
 }
 
 .btn-primary:active {
   transform: translateY(0);
-}
-
-.btn-secondary {
-  background: var(--vp-c-bg-alt);
-  color: var(--vp-c-text-1);
-  border: 1px solid var(--vp-c-divider);
-}
-
-.btn-secondary:hover {
-  background: var(--vp-c-bg-soft);
-  border-color: var(--vp-c-brand-1);
 }
 
 .repl-container.is-expanded {
@@ -829,7 +1231,7 @@ const insertFunction = (fnName) => {
 
 .is-expanded .editor-section,
 .is-expanded .output-section {
-  height: 100%;
+  height: 70%;
 }
 
 .is-expanded .code-editor,
@@ -842,7 +1244,7 @@ const insertFunction = (fnName) => {
 }
 
 #example-selector {
-  padding: 0.4rem 0.8rem;
+  padding: 0.325rem 0.8rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg);
@@ -851,6 +1253,7 @@ const insertFunction = (fnName) => {
   cursor: pointer;
   outline: none;
   transition: border-color 0.2s;
+  min-width: 200px;
 }
 
 #example-selector:focus {
@@ -876,10 +1279,15 @@ const insertFunction = (fnName) => {
 .reference-section {
   margin-top: 3rem;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
+  border-radius: 20px;
   background: var(--vp-c-bg);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.3s ease;
+}
+
+.reference-section:focus-within {
+  border-color: var(--vp-c-brand-1);
 }
 
 .reference-header {
@@ -1001,9 +1409,31 @@ const insertFunction = (fnName) => {
 }
 
 :deep(.output-line) {
-  margin: 0.75rem 0;
-  padding: 0.25rem 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  margin: 0.4rem 0;
+  padding: 0.2rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  border-bottom: 1px solid var(--vp-c-divider);
+  opacity: 0.9;
+}
+
+:deep(.log-timestamp) {
+  font-size: 0.75rem;
+  color: var(--vp-c-text-3);
+  min-width: 70px;
+  font-variant-numeric: tabular-nums;
+}
+
+:deep(.log-text) {
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+:deep(.output-result .log-text) {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 :deep(.output-error) {
@@ -1033,6 +1463,29 @@ const insertFunction = (fnName) => {
   color: var(--vp-c-text-1);
 }
 
+.output-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--vp-c-text-3);
+  text-align: center;
+  gap: 0.75rem;
+  opacity: 0.6;
+  user-select: none;
+}
+
+.output-placeholder p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.output-placeholder span {
+  font-size: 0.8rem;
+}
+
 @media (max-width: 960px) {
   .repl-layout {
     grid-template-columns: 1fr;
@@ -1040,14 +1493,47 @@ const insertFunction = (fnName) => {
 }
 
 @media (max-width: 768px) {
-  .controls {
+  .editor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    height: auto;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  #example-selector {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .btn-run {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
     flex-wrap: wrap;
-    justify-content: flex-end;
   }
 
   #example-selector {
     width: 100%;
-    order: 10;
+    order: 2;
+  }
+
+  .btn-run {
+    order: 1;
+    width: auto;
+  }
+
+  .expand-btn {
+    order: 1;
   }
 }
 </style>

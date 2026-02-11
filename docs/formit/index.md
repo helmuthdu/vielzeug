@@ -19,18 +19,22 @@ Managing form state in modern web applications is complex - you need validation,
 
 ```ts
 // Manual state management
-const [values, setValues] = useState({ name: '', email: '' });
-const [errors, setErrors] = useState({});
-const [touched, setTouched] = useState({});
+const values = { name: '', email: '' };
+const errors = {};
+const touched = {};
 
 const handleChange = (field, value) => {
-  setValues({ ...values, [field]: value });
-  setTouched({ ...touched, [field]: true });
+  values[field] = value;
+  touched[field] = true;
 
   // Manual validation
   if (field === 'email' && !value.includes('@')) {
-    setErrors({ ...errors, email: 'Invalid email' });
+    errors.email = 'Invalid email';
+  } else {
+    delete errors.email;
   }
+
+  updateUI();
 };
 
 const handleSubmit = async (e) => {
@@ -58,8 +62,8 @@ const form = createForm({
   },
 });
 
-// Bind to inputs
-<input {...form.bind('email')} />
+// Update values
+form.setValue('email', 'user@example.com');
 
 // Submit with automatic validation
 form.submit(async (values) => {

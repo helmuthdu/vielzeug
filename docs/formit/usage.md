@@ -320,7 +320,7 @@ const binding = form.bind('field', {
 // The binding includes:
 const binding = form.bind('name');
 binding.value;      // Current value
-binding.onChange;   // Change handler  
+binding.onChange;   // Change handler
 binding.onBlur;     // Blur handler (marks as touched)
 binding.name;       // Field key
 binding.set;        // Setter function
@@ -329,83 +329,118 @@ binding.set;        // Setter function
 ---
 
 ## Framework Integration
+
 Formit is framework-agnostic. Below are generic integration patterns for popular frameworks.
-### React
-Create a custom hook to manage form state with React:
-```tsx
+
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
+
 function LoginForm() {
-  const [form] = useState(() =>
-    createForm({
-      initialValues: { email: '', password: '' },
-      fields: {
-        email: {
-          validators: (value) => !value?.includes('@') && 'Invalid email',
-        },
-      },
-    }),
-  );
+  const [form] = useState(() => createForm({
+    initialValues: { email: '', password: '' },
+    fields: {
+      email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
+    }
+  }));
+
   const [state, setState] = useState(form.getStateSnapshot());
   useEffect(() => form.subscribe(setState), [form]);
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.submit(/* ... */); }}>
-      <input {...form.bind('email')} />
+    <form onSubmit={(e) => { e.preventDefault(); form.submit(console.log); }}>
+      <input {...form.bind('email')} placeholder="Email" />
       {state.errors.email && <span>{state.errors.email}</span>}
       <button type="submit" disabled={state.isSubmitting}>Submit</button>
     </form>
   );
 }
 ```
-### Vue 3
-Use Vue's composition API to integrate:
-```vue
+
+```vue [Vue 3]
 <script setup>
 import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
+
 const form = createForm({
   initialValues: { email: '', password: '' },
   fields: {
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
-  },
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
+  }
 });
+
 const state = ref(form.getStateSnapshot());
 let unsubscribe;
-onMounted(() => { unsubscribe = form.subscribe((s) => state.value = s); });
-onUnmounted(() => { unsubscribe?.(); });
+
+onMounted(() => unsubscribe = form.subscribe(s => state.value = s));
+onUnmounted(() => unsubscribe?.());
 </script>
+
 <template>
-  <form @submit.prevent="form.submit(/* ... */)">
+  <form @submit.prevent="form.submit(console.log)">
     <input v-bind="form.bind('email')" />
     <span v-if="state.errors.email">{{ state.errors.email }}</span>
     <button type="submit" :disabled="state.isSubmitting">Submit</button>
   </form>
 </template>
 ```
-### Svelte
-Use Svelte stores for reactive state:
-```svelte
+
+```svelte [Svelte]
 <script>
 import { createForm } from '@vielzeug/formit';
 import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
+
 const form = createForm({
   initialValues: { email: '', password: '' },
   fields: {
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
-  },
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
+  }
 });
+
 const state = writable(form.getStateSnapshot());
 let unsubscribe;
-onMount(() => { unsubscribe = form.subscribe((s) => state.set(s)); });
-onDestroy(() => { unsubscribe?.(); });
+
+onMount(() => unsubscribe = form.subscribe(s => state.set(s)));
+onDestroy(() => unsubscribe?.());
 </script>
-<form on:submit|preventDefault={() => form.submit(/* ... */)}>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
   <input {...form.bind('email')} />
   {#if $state.errors.email}<span>{$state.errors.email}</span>{/if}
   <button type="submit" disabled={$state.isSubmitting}>Submit</button>
 </form>
 ```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class SimpleForm extends HTMLElement {
+  #form = createForm({
+    initialValues: { email: '' },
+    fields: { email: { validators: (v) => !v?.includes('@') && 'Invalid email' } }
+  });
+  #sub;
+
+  connectedCallback() {
+    this.innerHTML = `<form><input name="email"><button>Submit</button></form>`;
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+    this.#sub = this.#form.subscribe(s => {
+      this.querySelector('button').disabled = s.isSubmitting;
+    });
+  }
+
+  disconnectedCallback() { this.#sub?.(); }
+}
+customElements.define('simple-form', SimpleForm);
+```
+
+:::
 > **💡 See Complete Examples**: For full implementation with hooks, composables, error handling, and success states, check [Examples](./examples.md#framework-integration-examples).
 
 ---

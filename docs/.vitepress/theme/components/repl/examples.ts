@@ -1,427 +1,248 @@
-export const examples: Record<string, string> = {
-  'array-alternate': `// alternate - Pick elements from multiple arrays in turn
-import { alternate } from '@vielzeug/toolkit'
+export const examples = {
+  toolkit: {
+    'array-chunk': {
+      name: 'chunk - Split array into chunks',
+      code: `import { chunk } from '@vielzeug/toolkit'
 
-const arr1 = [1, 2, 3]
-const arr2 = ['a', 'b', 'c']
-const arr3 = [true, false]
-
-console.log('Alternated (2 arrays):', alternate(arr1, arr2))
-console.log('Alternated (3 arrays):', alternate(arr1, arr2, arr3))`,
-  'array-chunk': `import { chunk } from '@vielzeug/toolkit'
-
-// Split an array into smaller arrays of a specified size
 const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 console.log('Original:', numbers)
 console.log('Chunks of 3:', chunk(numbers, 3))
-console.log('Chunks of 4:', chunk(numbers, 4))
-console.log('Chunks of 7:', chunk(numbers, 7))`,
-
-  'array-filter': `import { filter } from '@vielzeug/toolkit'
+console.log('Chunks of 4:', chunk(numbers, 4))`,
+    },
+    'array-filter': {
+      name: 'filter - Filter array elements',
+      code: `import { filter } from '@vielzeug/toolkit'
 
 const users = [
   { name: 'Alice', age: 25, active: true },
   { name: 'Bob', age: 30, active: false },
-  { name: 'Charlie', age: 35, active: true },
-  { name: 'David', age: 19, active: true }
+  { name: 'Charlie', age: 35, active: true }
 ]
 
-// Filter by boolean property
-const activeUsers = filter(users, user => user.active)
-console.log('Active users:', activeUsers)
+const activeUsers = filter(users, u => u.active)
+console.log('Active users:', activeUsers)`,
+    },
+    'array-map': {
+      name: 'map - Transform array elements',
+      code: `import { map } from '@vielzeug/toolkit'
 
-// Filter by multiple conditions
-const youngActive = filter(users, user => user.active && user.age < 25)
-console.log('Young & Active:', youngActive)`,
+const numbers = [1, 2, 3, 4, 5]
 
-  'array-group': `import { group } from '@vielzeug/toolkit'
+const doubled = map(numbers, n => n * 2)
+console.log('Doubled:', doubled)
 
-const inventory = [
-  { category: 'fruit', name: 'apple', stock: 10 },
-  { category: 'vegetable', name: 'carrot', stock: 20 },
-  { category: 'fruit', name: 'banana', stock: 15 },
-  { category: 'vegetable', name: 'broccoli', stock: 5 },
-  { category: 'meat', name: 'chicken', stock: 8 }
+const strings = map(numbers, n => \`Number: \${n}\`)
+console.log('Formatted:', strings)`,
+    },
+    'array-group': {
+      name: 'group - Group array by key',
+      code: `import { group } from '@vielzeug/toolkit'
+
+const items = [
+  { type: 'fruit', name: 'apple' },
+  { type: 'vegetable', name: 'carrot' },
+  { type: 'fruit', name: 'banana' }
 ]
 
-// Group by a simple key
-const byCategory = group(inventory, item => item.category)
-console.log('Grouped by category:', byCategory)
+const byType = group(items, item => item.type)
+console.log('Grouped:', byType)`,
+    },
+    'object-merge': {
+      name: 'merge - Deep merge objects',
+      code: `import { merge } from '@vielzeug/toolkit'
 
-// Group by stock level
-const byAvailability = group(inventory, item => item.stock > 10 ? 'high' : 'low')
-console.log('Grouped by availability:', byAvailability)`,
+const obj1 = { a: 1, b: { c: 2 } }
+const obj2 = { b: { d: 3 }, e: 4 }
 
-  'array-map': `import { map } from '@vielzeug/toolkit'
+const merged = merge(obj1, obj2)
+console.log('Merged:', merged)`,
+    },
+    'object-clone': {
+      name: 'clone - Deep clone object',
+      code: `import { clone } from '@vielzeug/toolkit'
 
-const products = [
-  { id: 1, name: 'Laptop', price: 1000 },
-  { id: 2, name: 'Phone', price: 500 },
-  { id: 3, name: 'Tablet', price: 300 }
-]
-
-// Extract property
-const names = map(products, p => p.name)
-console.log('Product names:', names)
-
-// Transform objects
-const discounted = map(products, p => ({
-  ...p,
-  salePrice: p.price * 0.9
-}))
-console.log('Discounted products:', discounted)
-
-// Using index
-const indexed = map(names, (name, i) => \`\${i + 1}. \${name}\`)
-console.log('Indexed:', indexed)`,
-
-  'array-sort': `import { sort } from '@vielzeug/toolkit'
-
-// Simple sorting
-const letters = ['d', 'a', 'c', 'b']
-console.log('Sorted letters:', sort(letters))
-
-const numbers = [10, 2, 33, 4, 1]
-console.log('Sorted numbers (numeric):', sort(numbers))
-
-// Custom sort (descending)
-const descending = sort(numbers, (a, b) => b - a)
-console.log('Descending:', descending)
-
-// Sorting objects
-const users = [
-  { name: 'Alice', age: 25 },
-  { name: 'Bob', age: 20 },
-  { name: 'Charlie', age: 30 }
-]
-const byAge = sort(users, (a, b) => a.age - b.age)
-console.log('Users by age:', byAge)`,
-
-  'date-expires': `import { expires, interval } from '@vielzeug/toolkit'
-
-const tomorrow = new Date()
-tomorrow.setDate(tomorrow.getDate() + 1)
-
-const yesterday = new Date()
-yesterday.setDate(yesterday.getDate() - 1)
-
-console.log('Tomorrow expired?', expires(tomorrow))
-console.log('Yesterday expired?', expires(yesterday))
-
-console.log('---')
-const start = new Date('2024-01-01T00:00:00')
-const end = new Date('2024-01-02T12:30:45')
-console.log('Interval:', interval(start, end))`,
-
-  'date-timediff': `import { timeDiff } from '@vielzeug/toolkit'
-
-const now = new Date()
-const wayBack = new Date('2020-01-01')
-
-console.log('Since 2020:', timeDiff(wayBack, now))
-console.log('Default relative:', timeDiff(new Date(Date.now() - 3600000))) // 1 hour ago
-
-// Custom units
-const future = new Date(Date.now() + 100000000)
-console.log('Custom units (Days/Hours):', timeDiff(now, future, ['DAY', 'HOUR']))`,
-
-  'function-debounce': `import { debounce, delay } from '@vielzeug/toolkit'
-
-let count = 0
-const increment = debounce(() => {
-  count++
-  console.log('Function executed! Count:', count)
-}, 100)
-
-console.log('Calling increment 5 times quickly...')
-increment(); increment(); increment(); increment(); increment()
-
-console.log('Waiting 200ms...')
-await delay(200)
-console.log('Final count:', count) // Should be 1`,
-
-  'function-pipe': `import { pipe, compose } from '@vielzeug/toolkit'
-
-const trim = (s) => s.trim()
-const capitalize = (s) => s.toUpperCase()
-const exclaim = (s) => \`\${s}!\`
-
-// pipe: left-to-right (trim -> capitalize -> exclaim)
-const processPipe = pipe(trim, capitalize, exclaim)
-console.log('Pipe result:', processPipe('  hello  '))
-
-// compose: right-to-left (exclaim -> capitalize -> trim)
-const processCompose = compose(exclaim, capitalize, trim)
-console.log('Compose result:', processCompose('  world  '))`,
-
-  'function-throttle': `import { throttle, delay } from '@vielzeug/toolkit'
-
-let count = 0
-const increment = throttle(() => {
-  count++
-  console.log('Function executed! Count:', count)
-}, 100)
-
-console.log('Triggering throttle...')
-increment() // Executes immediately
-increment() // Throttled
-increment() // Throttled
-
-await delay(150)
-increment() // Executes again after 100ms passed
-
-console.log('Done.')`,
-
-  'math-average': `import { 
-  average, 
-  median, 
-  sum, 
-  max, 
-  min, 
-  round,
-  clamp 
-} from '@vielzeug/toolkit'
-
-const data = [10, 2, 33, 4, 1, 10, 8]
-
-console.log('Data:', data)
-console.log('Sum:', sum(data))
-console.log('Average:', round(average(data), 2))
-console.log('Median:', median(data))
-console.log('Max/Min:', max(data), '/', min(data))
-
-console.log('---')
-console.log('Clamp 15 between 0-10:', clamp(15, 0, 10))
-console.log('Clamp 5 between 0-10:', clamp(5, 0, 10))
-console.log('Clamp -5 between 0-10:', clamp(-5, 0, 10))`,
-
-  'math-range': `import { range } from '@vielzeug/toolkit'
-
-// Simple range
-console.log('0 to 5:', range(0, 5))
-
-// With step
-console.log('1 to 10 step 2:', range(1, 10, 2))
-
-// Negative/Descending
-console.log('5 down to 0:', range(5, 0))
-console.log('-5 to 5:', range(-5, 5))`,
-
-  'object-clone': `import { clone } from '@vielzeug/toolkit'
-
-const original = {
-  user: 'admin',
-  meta: {
-    lastLogin: new Date(),
-    permissions: ['read', 'write']
-  }
-}
-
-// Create a deep copy
+const original = { a: 1, b: { c: 2 } }
 const copy = clone(original)
 
-// Modify copy
-copy.meta.permissions.push('delete')
-copy.user = 'guest'
-
-console.log('Original remains unchanged:', original.meta.permissions)
-console.log('Copy modified:', copy.meta.permissions)
-console.log('Original user:', original.user)
-console.log('Copy user:', copy.user)`,
-
-  'object-diff': `import { diff } from '@vielzeug/toolkit'
-
-const v1 = {
-  id: 1,
-  status: 'pending',
-  tags: ['new'],
-  meta: { author: 'John' }
-}
-
-const v2 = {
-  id: 1,
-  status: 'completed',
-  tags: ['new', 'processed'],
-  meta: { author: 'John', date: '2024-01-01' }
-}
-
-const changes = diff(v1, v2)
-console.log('Differences:', changes)
-// Output shows only what changed or was added in v2`,
-
-  'object-merge': `import { merge } from '@vielzeug/toolkit'
-
-const defaultSettings = {
-  theme: 'light',
-  notifications: { email: true, push: false },
-  languages: ['en']
-}
-
-const userSettings = {
-  theme: 'dark',
-  notifications: { push: true },
-  languages: ['de']
-}
-
-// Deep merge: nested objects are merged
-const deep = merge('deep', defaultSettings, userSettings)
-console.log('Deep merged:', deep)
-
-// Array replacement strategy
-const replace = merge('arrayReplace', defaultSettings, userSettings)
-console.log('Array replace merged:', replace)
-
-// Last wins strategy (shallow)
-const last = merge('lastWins', defaultSettings, userSettings)
-console.log('Last wins (shallow):', last)`,
-
-  'object-path': `import { path, seek } from '@vielzeug/toolkit'
-
-const config = {
-  api: {
-    endpoints: {
-      users: '/v1/users',
-      posts: '/v1/posts'
+copy.b.c = 99
+console.log('Original:', original)
+console.log('Copy:', copy)`,
     },
-    timeout: 5000
+    'string-camelcase': {
+      name: 'camelCase - Convert to camelCase',
+      code: `import { camelCase } from '@vielzeug/toolkit'
+
+console.log(camelCase('hello world'))
+console.log(camelCase('hello-world'))
+console.log(camelCase('hello_world'))
+console.log(camelCase('HelloWorld'))`,
+    },
+    'math-average': {
+      name: 'average - Calculate average',
+      code: `import { average } from '@vielzeug/toolkit'
+
+const numbers = [10, 20, 30, 40, 50]
+console.log('Average:', average(numbers))
+
+const grades = [85, 90, 78, 92]
+console.log('Grade average:', average(grades))`,
+    },
+    'function-debounce': {
+      name: 'debounce - Debounce function',
+      code: `import { debounce } from '@vielzeug/toolkit'
+
+const handleSearch = (query) => {
+  console.log('Searching for:', query)
+}
+
+const debouncedSearch = debounce(handleSearch, 300)
+
+debouncedSearch('cat')
+debouncedSearch('cats')
+debouncedSearch('cats and dogs')`,
+    },
+    'function-pipe': {
+      name: 'pipe - Compose functions',
+      code: `import { pipe } from '@vielzeug/toolkit'
+
+const add = (a, b) => a + b
+const multiply = (n) => n * 2
+const square = (n) => n * n
+
+const calculate = pipe(
+  () => add(2, 3),
+  (x) => multiply(x),
+  (x) => square(x)
+)
+
+console.log('Result:', calculate(3))`,
+    },
+    'async-parallel': {
+      name: 'parallel - Process with controlled parallelism',
+      code: `import { parallel } from '@vielzeug/toolkit'
+
+const items = [1, 2, 3, 4, 5]
+
+const results = await parallel(2, items, async (item) => {
+  return item * 2
+})
+
+console.log('Results:', results)`,
+    },
+  },
+  deposit: {
+    'basic-setup': {
+      name: 'Basic Setup - Initialize Deposit',
+      code: `import { Deposit } from '@vielzeug/deposit'
+
+const schema = {
+  users: {
+    key: 'id',
+    record: { id: 0, name: '', email: '' }
   }
 }
 
-// Get nested value safely
-console.log('Users endpoint:', path(config, 'api.endpoints.users'))
+const db = new Deposit({
+  type: 'localStorage',
+  dbName: 'myapp',
+  version: 1,
+  schema
+})
 
-// Missing path returns undefined (no crash)
-console.log('Missing path:', path(config, 'api.version'))
+console.log('Deposit initialized!')`,
+    },
+  },
+  fetchit: {
+    'basic-client': {
+      name: 'Create HTTP Client and Fetch Data',
+      code: `import { createHttpClient } from '@vielzeug/fetchit'
 
-// seek can find keys anywhere in the object
-const posts = seek(config, 'posts')
-console.log('Seek posts:', posts)`,
+const http = createHttpClient({
+  baseUrl: 'https://jsonplaceholder.typicode.com'
+})
 
-  'random-draw': `// draw - Pick a random item from an array
-import { draw } from '@vielzeug/toolkit'
+console.log('Fetchit HTTP client created!')
 
-const colors = ['red', 'green', 'blue', 'yellow', 'purple']
-console.log('Lucky color:', draw(colors))
+// Perform a GET request to a public API
+const result = await http.get('/todos/1')
+console.log('Fetched data:', result)
+`,
+    },
+  },
+  formit: {
+    'create-form': {
+      name: 'Create Form',
+      code: `import { createForm } from '@vielzeug/formit'
 
-const participants = ['Alice', 'Bob', 'Charlie', 'Dave']
-console.log('Winner:', draw(participants))`,
+const form = createForm({
+  initialValues: {
+    name: '',
+    email: '',
+    age: 0
+  }
+})
 
-  'random-utils': `import { random, shuffle, uuid } from '@vielzeug/toolkit'
+console.log('Form created!')`,
+    },
+  },
+  i18nit: {
+    'basic-setup': {
+      name: 'Basic Setup - Initialize i18n',
+      code: `import { createI18n } from '@vielzeug/i18nit'
 
-console.log('Random number (1-100):', random(1, 100))
-console.log('Random float (0-1):', random())
+const i18n = createI18n({
+  locale: 'en',
+  fallbackLocale: 'en',
+  messages: {
+    en: { hello: 'Hello', goodbye: 'Goodbye' },
+    es: { hello: 'Hola', goodbye: 'Adiós' }
+  }
+})
 
-const items = ['apple', 'banana', 'cherry', 'date']
-console.log('Original items:', items)
-console.log('Shuffled items:', shuffle([...items]))
+console.log('i18n initialized!')`,
+    },
+  },
+  logit: {
+    'basic-logging': {
+      name: 'Basic Logging',
+      code: '// use your brownser console :D',
+    },
+  },
+  permit: {
+    'basic-setup': {
+      name: 'Basic Setup',
+      code: `import { Permit } from '@vielzeug/permit'
 
-console.log('Generated UUID:', uuid())`,
+Permit.register('admin', 'users', {
+  create: true, view: true, update: true, delete: true
+})
 
-  'string-camelcase': `import { 
-  camelCase, 
-  kebabCase, 
-  pascalCase, 
-  snakeCase,
-  similarity 
-} from '@vielzeug/toolkit'
+Permit.register('user', 'profile', {
+  view: true, update: true
+})
 
-const phrase = 'User Profile_Settings-API'
+console.log('Permit initialized!')`,
+    },
+  },
+  validit: {
+    'basic-schema': {
+      name: 'Basic Schema',
+      code: `import { v } from '@vielzeug/validit'
 
-console.log('Original:', phrase)
-console.log('camelCase:', camelCase(phrase))
-console.log('kebab-case:', kebabCase(phrase))
-console.log('PascalCase:', pascalCase(phrase))
-console.log('snake_case:', snakeCase(phrase))
+const userSchema = v.object({
+  name: v.string().min(1).max(100),
+  email: v.string().email(),
+  age: v.number().min(0).max(150)
+})
 
-console.log('---')
-console.log('Similarity ("apple", "apply"):', similarity('apple', 'apply'))
-console.log('Similarity ("hello", "world"):', similarity('hello', 'world'))`,
+const result = userSchema.safeParse({
+  name: 'John Doe',
+  email: 'john@example.com',
+  age: 30
+})
 
-  'string-truncate': `import { truncate } from '@vielzeug/toolkit'
-
-const longText = 'Vielzeug is a Swiss-army knife for TypeScript developers, providing essential utilities.'
-
-console.log('Default truncate:', truncate(longText, 25))
-console.log('Custom suffix:', truncate(longText, 25, '...'))
-console.log('Very short:', truncate('Hello', 10))`,
-
-  'typed-is': `// is - General type check against various types
-import { is } from '@vielzeug/toolkit'
-
-console.log('Is string:', is('hello', String))
-console.log('Is number:', is(123, Number))
-console.log('Is array:', is([], Array))
-console.log('Is date:', is(new Date(), Date))
-
-class MyClass {}
-const instance = new MyClass()
-console.log('Is instance of MyClass:', is(instance, MyClass))`,
-
-  'typed-isarray': `import { 
-  isArray, 
-  isEmpty, 
-  isObject, 
-  isPrimitive,
-  typeOf 
-} from '@vielzeug/toolkit'
-
-const test = (val) => {
-  console.log(\`Value: \${JSON.stringify(val)} | Type: \${typeOf(val)}\`)
-  console.log(\`  isArray: \${isArray(val)} | isEmpty: \${isEmpty(val)}\`)
-  console.log(\`  isObject: \${isObject(val)} | isPrimitive: \${isPrimitive(val)}\`)
-  console.log('---')
-}
-
-test([1, 2])
-test([])
-test({ a: 1 })
-test({})
-test("hello")
-test(42)`,
-
-  'typed-isempty': `import { isEmpty } from '@vielzeug/toolkit'
-
-console.log('Collections:')
-console.log('  [] is empty:', isEmpty([]))
-console.log('  [1] is empty:', isEmpty([1]))
-console.log('  {} is empty:', isEmpty({}))
-console.log('  {a:1} is empty:', isEmpty({a:1}))
-
-console.log('Strings:')
-console.log('  "" is empty:', isEmpty(""))
-console.log('  " " is empty:', isEmpty(" ")) // Not empty!
-
-console.log('Nil values:')
-console.log('  null is empty:', isEmpty(null))
-console.log('  undefined is empty:', isEmpty(undefined))`,
-
-  'typed-isequal': `import { isEqual } from '@vielzeug/toolkit'
-
-// Deep equality for objects
-const obj1 = { a: 1, b: { c: 2 } }
-const obj2 = { a: 1, b: { c: 2 } }
-const obj3 = { a: 1, b: { c: 3 } }
-
-console.log('obj1 === obj2:', isEqual(obj1, obj2))
-console.log('obj1 === obj3:', isEqual(obj1, obj3))
-
-// Deep equality for arrays
-console.log('Arrays equal:', isEqual([1, [2, 3]], [1, [2, 3]]))
-
-// Mixed types
-console.log('String vs Number:', isEqual("1", 1))`,
-
-  'typed-ismatch': `// isMatch - Check if value matches a pattern (object or regex)
-import { isMatch } from '@vielzeug/toolkit'
-
-const user = { name: 'Alice', age: 25, role: 'admin' }
-
-// Partial object match
-console.log('Is admin:', isMatch(user, { role: 'admin' }))
-console.log('Is Alice:', isMatch(user, { name: 'Alice' }))
-console.log('Is 30:', isMatch(user, { age: 30 }))
-
-// Regex match
-console.log('Name starts with A:', isMatch(user.name, /^A/))`,
+console.log('Validation result:', result)`,
+    },
+  },
 };

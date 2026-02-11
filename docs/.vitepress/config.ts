@@ -1,6 +1,24 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 export default defineConfig({
+  vite: {
+    resolve: {
+      alias: {
+        '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
+        '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
+        '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
+        '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
+        '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),
+        '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
+        '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
+        '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
+      },
+    },
+  },
   base: '/vielzeug',
   description: 'Documentation for the Vielzeug monorepo',
   head: [

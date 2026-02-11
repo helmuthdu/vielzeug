@@ -10,7 +10,500 @@ This page assumes you've read the [Usage Guide](./usage.md). Examples focus on p
 
 [[toc]]
 
----
+## Framework Integration
+
+::: details 🎯 Why Two Patterns?
+We provide both **inline** and **hook/composable** patterns because:
+
+- **Inline**: Quick prototyping, one-off forms
+- **Hook/Composable**: Reusable across components, better separation of concerns
+
+Choose based on your project structure and team preferences.
+:::
+
+Complete examples showing how to integrate Validit with React, Vue, Svelte, and Web Components.
+
+### Basic Integration (Inline)
+
+Directly create and use a schema within components.
+
+::: code-group
+
+```tsx [React]
+import { v } from '@vielzeug/validit';
+import { useState } from 'react';
+
+const userSchema = v.object({
+  name: v.string().min(1, 'Name is required'),
+  email: v.email('Invalid email'),
+});
+
+function UserForm() {
+  const [state, setState] = useState({
+    data: { name: '', email: '' },
+    errors: {} as Record<string, string>,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = userSchema.safeParse(state.data);
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        errors[issue.path.join('.')] = issue.message;
+      });
+      setState((prev) => ({ ...prev, errors }));
+      return;
+    }
+
+    console.log('Valid data:', result.data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={state.data.name}
+        onChange={(e) => setState((prev) => ({
+          ...prev,
+          data: { ...prev.data, name: e.target.value },
+        }))}
+        placeholder="Name"
+      />
+      {state.errors.name && <span>{state.errors.name}</span>}
+
+      <input
+        value={state.data.email}
+        onChange={(e) => setState((prev) => ({
+          ...prev,
+          data: { ...prev.data, email: e.target.value },
+        }))}
+        placeholder="Email"
+      />
+      {state.errors.email && <span>{state.errors.email}</span>}
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { v } from '@vielzeug/validit';
+import { reactive } from 'vue';
+
+const userSchema = v.object({
+  name: v.string().min(1, 'Name is required'),
+  email: v.email('Invalid email'),
+});
+
+const state = reactive({
+  data: { name: '', email: '' },
+  errors: {} as Record<string, string>,
+});
+
+const handleSubmit = (e: Event) => {
+  e.preventDefault();
+  const result = userSchema.safeParse(state.data);
+
+  if (!result.success) {
+    state.errors = {};
+    result.error.issues.forEach((issue) => {
+      state.errors[issue.path.join('.')] = issue.message;
+    });
+    return;
+  }
+
+  console.log('Valid data:', result.data);
+};
+</script>
+
+<template>
+  <form @submit="handleSubmit">
+    <input
+      v-model="state.data.name"
+      placeholder="Name"
+    />
+    <span v-if="state.errors.name">{{ state.errors.name }}</span>
+
+    <input
+      v-model="state.data.email"
+      placeholder="Email"
+    />
+    <span v-if="state.errors.email">{{ state.errors.email }}</span>
+
+    <button type="submit">Submit</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { v } from '@vielzeug/validit';
+
+  const userSchema = v.object({
+    name: v.string().min(1, 'Name is required'),
+    email: v.email('Invalid email'),
+  });
+
+  let state = {
+    data: { name: '', email: '' },
+    errors: {} as Record<string, string>,
+  };
+
+  const handleSubmit = (e: Event) => {
+    e.preventDefault();
+    const result = userSchema.safeParse(state.data);
+
+    if (!result.success) {
+      state.errors = {};
+      result.error.issues.forEach((issue) => {
+        state.errors[issue.path.join('.')] = issue.message;
+      });
+      return;
+    }
+
+    console.log('Valid data:', result.data);
+  };
+</script>
+
+<form on:submit={handleSubmit}>
+  <input
+    bind:value={state.data.name}
+    placeholder="Name"
+  />
+  {#if state.errors.name}
+    <span>{state.errors.name}</span>
+  {/if}
+
+  <input
+    bind:value={state.data.email}
+    placeholder="Email"
+  />
+  {#if state.errors.email}
+    <span>{state.errors.email}</span>
+  {/if}
+
+  <button type="submit">Submit</button>
+</form>
+```
+
+```ts [Web Component]
+import { v } from '@vielzeug/validit';
+
+class UserForm extends HTMLElement {
+  #schema = v.object({
+    name: v.string().min(1, 'Name is required'),
+    email: v.email('Invalid email'),
+  });
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <input name="name" placeholder="Name">
+        <span id="error-name" style="color: red;"></span>
+        
+        <input name="email" placeholder="Email">
+        <span id="error-email" style="color: red;"></span>
+        
+        <button type="submit">Submit</button>
+      </form>
+    `;
+
+    this.querySelector('form')!.onsubmit = (e) => {
+      e.preventDefault();
+      const data = {
+        name: (this.querySelector('input[name="name"]') as HTMLInputElement).value,
+        email: (this.querySelector('input[name="email"]') as HTMLInputElement).value,
+      };
+
+      const result = this.#schema.safeParse(data);
+
+      if (!result.success) {
+        this.querySelector('#error-name')!.textContent = '';
+        this.querySelector('#error-email')!.textContent = '';
+        result.error.issues.forEach((issue) => {
+          const field = issue.path.join('.');
+          const el = this.querySelector(`#error-${field}`);
+          if (el) el.textContent = issue.message;
+        });
+        return;
+      }
+
+      console.log('Valid data:', result.data);
+    };
+  }
+}
+
+customElements.define('user-form', UserForm);
+```
+
+:::
+
+### Advanced Integration (Hook/Composable)
+
+Recommended pattern for reusability and separation of concerns.
+
+::: code-group
+
+```tsx [React]
+// useFormValidation.ts
+import { v, type Schema } from '@vielzeug/validit';
+import { useState } from 'react';
+
+export function useFormValidation<T extends Record<string, any>>(schema: Schema<T>) {
+  const [state, setState] = useState({
+    data: {} as T,
+    errors: {} as Record<string, string>,
+  });
+
+  const handleChange = (field: keyof T, value: any) => {
+    setState((prev) => ({
+      ...prev,
+      data: { ...prev.data, [field]: value },
+    }));
+  };
+
+  const handleSubmit = (onSubmit: (data: T) => void) => {
+    return (e: React.FormEvent) => {
+      e.preventDefault();
+      const result = schema.safeParse(state.data);
+
+      if (!result.success) {
+        const errors: Record<string, string> = {};
+        result.error.issues.forEach((issue) => {
+          errors[issue.path.join('.')] = issue.message;
+        });
+        setState((prev) => ({ ...prev, errors }));
+        return;
+      }
+
+      onSubmit(result.data);
+    };
+  };
+
+  return { state, handleChange, handleSubmit };
+}
+
+// UserForm.tsx
+const userSchema = v.object({
+  name: v.string().min(1, 'Name is required'),
+  email: v.email('Invalid email'),
+});
+
+function UserForm() {
+  const { state, handleChange, handleSubmit } = useFormValidation(userSchema);
+
+  return (
+    <form onSubmit={handleSubmit((data) => console.log('Submitted:', data))}>
+      <input
+        value={state.data.name || ''}
+        onChange={(e) => handleChange('name', e.target.value)}
+        placeholder="Name"
+      />
+      {state.errors.name && <span>{state.errors.name}</span>}
+
+      <input
+        value={state.data.email || ''}
+        onChange={(e) => handleChange('email', e.target.value)}
+        placeholder="Email"
+      />
+      {state.errors.email && <span>{state.errors.email}</span>}
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+```vue [Vue 3]
+// useFormValidation.ts
+import { v, type Schema } from '@vielzeug/validit';
+import { reactive } from 'vue';
+
+export function useFormValidation<T extends Record<string, any>>(schema: Schema<T>) {
+  const state = reactive({
+    data: {} as T,
+    errors: {} as Record<string, string>,
+  });
+
+  const handleChange = (field: keyof T, value: any) => {
+    state.data[field] = value;
+  };
+
+  const handleSubmit = (onSubmit: (data: T) => void) => {
+    return (e: Event) => {
+      e.preventDefault();
+      const result = schema.safeParse(state.data);
+
+      if (!result.success) {
+        state.errors = {};
+        result.error.issues.forEach((issue) => {
+          state.errors[issue.path.join('.')] = issue.message;
+        });
+        return;
+      }
+
+      onSubmit(result.data);
+    };
+  };
+
+  return { state, handleChange, handleSubmit };
+}
+
+// UserForm.vue
+<script setup lang="ts">
+const userSchema = v.object({
+  name: v.string().min(1, 'Name is required'),
+  email: v.email('Invalid email'),
+});
+
+const { state, handleChange, handleSubmit } = useFormValidation(userSchema);
+</script>
+
+<template>
+  <form @submit="handleSubmit((data) => console.log('Submitted:', data))">
+    <input
+      :value="state.data.name || ''"
+      @input="(e) => handleChange('name', (e.target as HTMLInputElement).value)"
+      placeholder="Name"
+    />
+    <span v-if="state.errors.name">{{ state.errors.name }}</span>
+
+    <input
+      :value="state.data.email || ''"
+      @input="(e) => handleChange('email', (e.target as HTMLInputElement).value)"
+      placeholder="Email"
+    />
+    <span v-if="state.errors.email">{{ state.errors.email }}</span>
+
+    <button type="submit">Submit</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+// formStore.ts
+import { v, type Schema } from '@vielzeug/validit';
+import { writable } from 'svelte/store';
+
+export function createFormValidation<T extends Record<string, any>>(schema: Schema<T>) {
+  const state = writable({
+    data: {} as T,
+    errors: {} as Record<string, string>,
+  });
+
+  const handleChange = (field: keyof T, value: any) => {
+    state.update((s) => ({
+      ...s,
+      data: { ...s.data, [field]: value },
+    }));
+  };
+
+  const handleSubmit = (onSubmit: (data: T) => void) => {
+    return (e: Event) => {
+      e.preventDefault();
+      let currentState: any;
+      state.subscribe((s) => (currentState = s))();
+
+      const result = schema.safeParse(currentState.data);
+
+      if (!result.success) {
+        const errors: Record<string, string> = {};
+        result.error.issues.forEach((issue) => {
+          errors[issue.path.join('.')] = issue.message;
+        });
+        state.update((s) => ({ ...s, errors }));
+        return;
+      }
+
+      onSubmit(result.data);
+    };
+  };
+
+  return { state, handleChange, handleSubmit };
+}
+
+// +page.svelte
+<script lang="ts">
+  import { createFormValidation } from './formStore';
+  import { v } from '@vielzeug/validit';
+
+  const userSchema = v.object({
+    name: v.string().min(1, 'Name is required'),
+    email: v.email('Invalid email'),
+  });
+
+  const { state, handleChange, handleSubmit } = createFormValidation(userSchema);
+</script>
+
+<form on:submit={handleSubmit((data) => console.log('Submitted:', data))}>
+  <input
+    value={$state.data.name || ''}
+    on:input={(e) => handleChange('name', e.currentTarget.value)}
+    placeholder="Name"
+  />
+  {#if $state.errors.name}
+    <span>{$state.errors.name}</span>
+  {/if}
+
+  <input
+    value={$state.data.email || ''}
+    on:input={(e) => handleChange('email', e.currentTarget.value)}
+    placeholder="Email"
+  />
+  {#if $state.errors.email}
+    <span>{$state.errors.email}</span>
+  {/if}
+
+  <button type="submit">Submit</button>
+</form>
+```
+
+```ts [Web Component]
+// BaseValidatedForm.ts
+import { v, type Schema } from '@vielzeug/validit';
+
+export class BaseValidatedForm<T extends Record<string, any>> extends HTMLElement {
+  schema: Schema<T>;
+
+  constructor(schema: Schema<T>) {
+    super();
+    this.schema = schema;
+  }
+
+  validate(data: unknown): T | null {
+    const result = this.schema.safeParse(data);
+
+    if (!result.success) {
+      this.displayErrors(
+        Object.fromEntries(
+          result.error.issues.map((issue) => [issue.path.join('.'), issue.message]),
+        ),
+      );
+      return null;
+    }
+
+    return result.data;
+  }
+
+  displayErrors(errors: Record<string, string>) {
+    Object.entries(errors).forEach(([field, message]) => {
+      const el = this.querySelector(`[data-error="${field}"]`);
+      if (el) el.textContent = message;
+    });
+  }
+
+  clearErrors() {
+    this.querySelectorAll('[data-error]').forEach((el) => {
+      el.textContent = '';
+    });
+  }
+}
+```
+
+:::
 
 ## Form Validation
 
@@ -694,8 +1187,6 @@ const userInputSchema = v.object({
 // Input: { email: '  USER@EXAMPLE.COM  ', tags: 'tech, javascript, nodejs' }
 // Output: { email: 'user@example.com', tags: ['tech', 'javascript', 'nodejs'] }
 ```
-
----
 
 ## Testing Examples
 

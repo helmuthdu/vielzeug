@@ -8,1138 +8,258 @@ These are complete, production-ready application examples. For API reference and
 
 ## Table of Contents
 
-- [Framework Integration Examples](#framework-integration-examples)
-  - [React](#react)
-  - [Vue 3](#vue-3)
-  - [Svelte](#svelte)
-- [Registration Form](#registration-form)
-- [Login Form](#login-form)
-- [Profile Settings](#profile-settings)
-- [Multi-Step Form](#multi-step-form)
-- [Dynamic Fields](#dynamic-fields)
-- [Search Form](#search-form)
-- [File Upload Form](#file-upload-form)
-- [Nested Objects](#nested-objects)
+[[toc]]
 
-## Framework Integration Examples
+## Framework Integration
 
 ::: details 🎯 Why Two Patterns?
 We provide both **inline** and **hook/composable** patterns because:
+
 - **Inline**: Quick prototyping, one-off forms
 - **Hook/Composable**: Reusable across components, better separation of concerns
 
 Choose based on your project structure and team preferences.
 :::
 
-Complete examples showing how to integrate Formit with React, Vue, and Svelte. Each framework has two patterns: inline usage and reusable hook/composable.
+Complete examples showing how to integrate Formit with React, Vue, Svelte, and Web Components.
 
-### React
+### Basic Integration (Inline)
 
-::: warning ⚠️ React-Specific Considerations
-- Always use `useState(() => createForm(...))` to avoid recreating the form on every render
-- Use `useEffect` to subscribe/unsubscribe properly
-- Mark fields as touched `onBlur` for better UX
-:::
+Directly create and use a form instance within components.
 
-#### Inline Component Usage
+::: code-group
 
-```tsx {14-18,21-28,31-34,37-42}
-import { createForm } from \'@vielzeug/formit\';
-import { useEffect, useState } from \'react\';
+```tsx [React]
+import { createForm } from '@vielzeug/formit';
+import { useEffect, useState } from 'react';
 
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
-
-function ContactForm() {
+function App() {
   const [form] = useState(() =>
-    createForm<ContactFormData>({
-      initialValues: {
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      },
-      fields: {
-        name: {
-          validators: (value) => {
-            if (!value) return 'Name is required';
-            if (value.length < 2) return 'Name must be at least 2 characters';
-          },
-        },
-        email: {
-          validators: [
-            (value) => {
-              if (!value) return 'Email is required';
-            },
-            (value) => {
-              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                return 'Invalid email format';
-              }
-            },
-          ],
-        },
-        subject: {
-          validators: (value) => {
-            if (!value) return 'Subject is required';
-          },
-        },
-        message: {
-          validators: (value) => {
-            if (!value) return 'Message is required';
-            if (value.length < 10) return 'Message must be at least 10 characters';
-          },
-        },
-      },
+    createForm({
+      initialValues: { email: '' },
+      fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitStatus('idle');
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Submission failed');
-        return response.json();
-      });
-
-      setSubmitStatus('success');
-
-      // Reset form after successful submission
-      form.setValues(
-        {
-          name: '',
-          email: '',
-          subject: '',
-          message: '',
-        },
-        { replace: true },
-      );
-      form.resetErrors();
-    } catch (error) {
-      setSubmitStatus('error');
-      console.error('Contact form error:', error);
-    }
-  };
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <div className="contact-form-container">
-      <h2>Contact Us</h2>
-
-      {submitStatus === 'success' && (
-        <div className="alert alert-success">Thank you! Your message has been sent successfully.</div>
-      )}
-
-      {submitStatus === 'error' && <div className="alert alert-error">Failed to send message. Please try again.</div>}
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name *</label>
-          <input id="name" {...form.bind('name')} onBlur={() => form.markTouched('name')} />
-          {state.touched.name && state.errors.name && <span className="error">{state.errors.name}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="email">Email *</label>
-          <input id="email" type="email" {...form.bind('email')} onBlur={() => form.markTouched('email')} />
-          {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="subject">Subject *</label>
-          <input id="subject" {...form.bind('subject')} onBlur={() => form.markTouched('subject')} />
-          {state.touched.subject && state.errors.subject && <span className="error">{state.errors.subject}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="message">Message *</label>
-          <textarea id="message" rows={5} {...form.bind('message')} onBlur={() => form.markTouched('message')} />
-          {state.touched.message && state.errors.message && <span className="error">{state.errors.message}</span>}
-        </div>
-
-        <button type="submit" disabled={state.isSubmitting || state.isValidating} className="btn btn-primary">
-          {state.isSubmitting ? 'Sending...' : 'Send Message'}
-        </button>
-      </form>
-    </div>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      <input {...form.bind('email')} placeholder="Email" />
+      {state.errors.email && <span>{state.errors.email}</span>}
+      <button type="submit" disabled={state.isSubmitting}>
+        Submit
+      </button>
+    </form>
   );
 }
-
-export default ContactForm;
 ```
 
-#### Using Custom useForm Hook
-
-```tsx
-// hooks/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
-import { useEffect, useState, useMemo } from 'react';
-
-export function useForm<TForm extends Record<string, any>>(init: FormInit<TForm>) {
-  const form = useMemo(() => createForm(init), []);
-  const [state, setState] = useState<FormState<TForm>>(form.getStateSnapshot());
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  return { form, state };
-}
-
-// ContactForm.tsx
-import { useForm } from './hooks/useForm';
-import { useState } from 'react';
-
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
-
-function ContactForm() {
-  const { form, state } = useForm<ContactFormData>({
-    initialValues: {
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-    },
-    fields: {
-      name: {
-        validators: (value) => {
-          if (!value) return 'Name is required';
-          if (value.length < 2) return 'Name must be at least 2 characters';
-        },
-      },
-      email: {
-        validators: [
-          (value) => {
-            if (!value) return 'Email is required';
-          },
-          (value) => {
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-              return 'Invalid email format';
-            }
-          },
-        ],
-      },
-      subject: {
-        validators: (value) => {
-          if (!value) return 'Subject is required';
-        },
-      },
-      message: {
-        validators: (value) => {
-          if (!value) return 'Message is required';
-          if (value.length < 10) return 'Message must be at least 10 characters';
-        },
-      },
-    },
-  });
-
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitStatus('idle');
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Submission failed');
-        return response.json();
-      });
-
-      setSubmitStatus('success');
-      form.setValues(
-        {
-          name: '',
-          email: '',
-          subject: '',
-          message: '',
-        },
-        { replace: true },
-      );
-      form.resetErrors();
-    } catch (error) {
-      setSubmitStatus('error');
-    }
-  };
-
-  return (
-    <div className="contact-form-container">
-      <h2>Contact Us</h2>
-
-      {submitStatus === 'success' && (
-        <div className="alert alert-success">Thank you! Your message has been sent successfully.</div>
-      )}
-
-      {submitStatus === 'error' && <div className="alert alert-error">Failed to send message. Please try again.</div>}
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name *</label>
-          <input id="name" {...form.bind('name')} onBlur={() => form.markTouched('name')} />
-          {state.touched.name && state.errors.name && <span className="error">{state.errors.name}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="email">Email *</label>
-          <input id="email" type="email" {...form.bind('email')} onBlur={() => form.markTouched('email')} />
-          {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="subject">Subject *</label>
-          <input id="subject" {...form.bind('subject')} onBlur={() => form.markTouched('subject')} />
-          {state.touched.subject && state.errors.subject && <span className="error">{state.errors.subject}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="message">Message *</label>
-          <textarea id="message" rows={5} {...form.bind('message')} onBlur={() => form.markTouched('message')} />
-          {state.touched.message && state.errors.message && <span className="error">{state.errors.message}</span>}
-        </div>
-
-        <button type="submit" disabled={state.isSubmitting || state.isValidating} className="btn btn-primary">
-          {state.isSubmitting ? 'Sending...' : 'Send Message'}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-export default ContactForm;
-```
-
-### Vue 3
-
-#### Inline Component Usage
-
-```vue
+```vue [Vue 3]
 <script setup lang="ts">
 import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
-
-const form = createForm<ContactFormData>({
-  initialValues: {
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  },
-  fields: {
-    name: {
-      validators: (value) => {
-        if (!value) return 'Name is required';
-        if (value.length < 2) return 'Name must be at least 2 characters';
-      },
-    },
-    email: {
-      validators: [
-        (value) => {
-          if (!value) return 'Email is required';
-        },
-        (value) => {
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-            return 'Invalid email format';
-          }
-        },
-      ],
-    },
-    subject: {
-      validators: (value) => {
-        if (!value) return 'Subject is required';
-      },
-    },
-    message: {
-      validators: (value) => {
-        if (!value) return 'Message is required';
-        if (value.length < 10) return 'Message must be at least 10 characters';
-      },
-    },
-  },
+const form = createForm({
+  initialValues: { email: '' },
+  fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } },
 });
 
 const state = ref(form.getStateSnapshot());
-const submitStatus = ref<'idle' | 'success' | 'error'>('idle');
-let unsubscribe: (() => void) | undefined;
-
-onMounted(() => {
-  unsubscribe = form.subscribe((newState) => {
-    state.value = newState;
-  });
-});
-
-onUnmounted(() => {
-  unsubscribe?.();
-});
-
-async function handleSubmit() {
-  submitStatus.value = 'idle';
-
-  try {
-    await form.submit(async (values) => {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) throw new Error('Submission failed');
-      return response.json();
-    });
-
-    submitStatus.value = 'success';
-
-    form.setValues(
-      {
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      },
-      { replace: true },
-    );
-    form.resetErrors();
-  } catch (error) {
-    submitStatus.value = 'error';
-    console.error('Contact form error:', error);
-  }
-}
-
-function handleBlur(field: keyof ContactFormData) {
-  form.markTouched(field);
-}
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
 </script>
 
 <template>
-  <div class="contact-form-container">
-    <h2>Contact Us</h2>
-
-    <div v-if="submitStatus === 'success'" class="alert alert-success">
-      Thank you! Your message has been sent successfully.
-    </div>
-
-    <div v-if="submitStatus === 'error'" class="alert alert-error">Failed to send message. Please try again.</div>
-
-    <form @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="name">Name *</label>
-        <input id="name" v-bind="form.bind('name')" @blur="handleBlur('name')" />
-        <span v-if="state.touched.name && state.errors.name" class="error">
-          {{ state.errors.name }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email *</label>
-        <input id="email" type="email" v-bind="form.bind('email')" @blur="handleBlur('email')" />
-        <span v-if="state.touched.email && state.errors.email" class="error">
-          {{ state.errors.email }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="subject">Subject *</label>
-        <input id="subject" v-bind="form.bind('subject')" @blur="handleBlur('subject')" />
-        <span v-if="state.touched.subject && state.errors.subject" class="error">
-          {{ state.errors.subject }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="message">Message *</label>
-        <textarea id="message" rows="5" v-bind="form.bind('message')" @blur="handleBlur('message')" />
-        <span v-if="state.touched.message && state.errors.message" class="error">
-          {{ state.errors.message }}
-        </span>
-      </div>
-
-      <button type="submit" :disabled="state.isSubmitting || state.isValidating" class="btn btn-primary">
-        {{ state.isSubmitting ? 'Sending...' : 'Send Message' }}
-      </button>
-    </form>
-  </div>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('email')" placeholder="Email" />
+    <span v-if="state.errors.email">{{ state.errors.email }}</span>
+    <button type="submit" :disabled="state.isSubmitting">Submit</button>
+  </form>
 </template>
-
-<style scoped>
-.error {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.alert {
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 0.25rem;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.alert-error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-</style>
 ```
 
-#### Using Custom useForm Composable
-
-```ts
-// composables/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
-import { ref, onMounted, onUnmounted, Ref } from 'vue';
-
-export function useForm<TForm extends Record<string, any>>(init: FormInit<TForm>) {
-  const form = createForm(init);
-  const state: Ref<FormState<TForm>> = ref(form.getStateSnapshot());
-
-  let unsubscribe: (() => void) | undefined;
-
-  onMounted(() => {
-    unsubscribe = form.subscribe((newState) => {
-      state.value = newState;
-    });
-  });
-
-  onUnmounted(() => {
-    unsubscribe?.();
-  });
-
-  return { form, state };
-}
-```
-
-```vue
-<!-- ContactForm.vue -->
-<script setup lang="ts">
-import { useForm } from './composables/useForm';
-import { ref } from 'vue';
-
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
-
-const { form, state } = useForm<ContactFormData>({
-  initialValues: {
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  },
-  fields: {
-    name: {
-      validators: (value) => {
-        if (!value) return 'Name is required';
-        if (value.length < 2) return 'Name must be at least 2 characters';
-      },
-    },
-    email: {
-      validators: [
-        (value) => {
-          if (!value) return 'Email is required';
-        },
-        (value) => {
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-            return 'Invalid email format';
-          }
-        },
-      ],
-    },
-    subject: {
-      validators: (value) => {
-        if (!value) return 'Subject is required';
-      },
-    },
-    message: {
-      validators: (value) => {
-        if (!value) return 'Message is required';
-        if (value.length < 10) return 'Message must be at least 10 characters';
-      },
-    },
-  },
-});
-
-const submitStatus = ref<'idle' | 'success' | 'error'>('idle');
-
-async function handleSubmit() {
-  submitStatus.value = 'idle';
-
-  try {
-    await form.submit(async (values) => {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) throw new Error('Submission failed');
-      return response.json();
-    });
-
-    submitStatus.value = 'success';
-
-    form.setValues(
-      {
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      },
-      { replace: true },
-    );
-    form.resetErrors();
-  } catch (error) {
-    submitStatus.value = 'error';
-  }
-}
-
-function handleBlur(field: keyof ContactFormData) {
-  form.markTouched(field);
-}
-</script>
-
-<template>
-  <div class="contact-form-container">
-    <h2>Contact Us</h2>
-
-    <div v-if="submitStatus === 'success'" class="alert alert-success">
-      Thank you! Your message has been sent successfully.
-    </div>
-
-    <div v-if="submitStatus === 'error'" class="alert alert-error">Failed to send message. Please try again.</div>
-
-    <form @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="name">Name *</label>
-        <input id="name" v-bind="form.bind('name')" @blur="handleBlur('name')" />
-        <span v-if="state.touched.name && state.errors.name" class="error">
-          {{ state.errors.name }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email *</label>
-        <input id="email" type="email" v-bind="form.bind('email')" @blur="handleBlur('email')" />
-        <span v-if="state.touched.email && state.errors.email" class="error">
-          {{ state.errors.email }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="subject">Subject *</label>
-        <input id="subject" v-bind="form.bind('subject')" @blur="handleBlur('subject')" />
-        <span v-if="state.touched.subject && state.errors.subject" class="error">
-          {{ state.errors.subject }}
-        </span>
-      </div>
-
-      <div class="form-group">
-        <label for="message">Message *</label>
-        <textarea id="message" rows="5" v-bind="form.bind('message')" @blur="handleBlur('message')" />
-        <span v-if="state.touched.message && state.errors.message" class="error">
-          {{ state.errors.message }}
-        </span>
-      </div>
-
-      <button type="submit" :disabled="state.isSubmitting || state.isValidating" class="btn btn-primary">
-        {{ state.isSubmitting ? 'Sending...' : 'Send Message' }}
-      </button>
-    </form>
-  </div>
-</template>
-
-<style scoped>
-.error {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.alert {
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 0.25rem;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.alert-error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-</style>
-```
-
-### Svelte
-
-#### Inline Component Usage
-
-```svelte
+```svelte [Svelte]
 <script lang="ts">
   import { createForm } from '@vielzeug/formit';
   import { onDestroy } from 'svelte';
 
-  interface ContactFormData {
-    name: string;
-    email: string;
-    subject: string;
-    message: string;
-  }
-
-  const form = createForm<ContactFormData>({
-    initialValues: {
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-    },
-    fields: {
-      name: {
-        validators: (value) => {
-          if (!value) return 'Name is required';
-          if (value.length < 2) return 'Name must be at least 2 characters';
-        },
-      },
-      email: {
-        validators: [
-          (value) => {
-            if (!value) return 'Email is required';
-          },
-          (value) => {
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-              return 'Invalid email format';
-            }
-          },
-        ],
-      },
-      subject: {
-        validators: (value) => {
-          if (!value) return 'Subject is required';
-        },
-      },
-      message: {
-        validators: (value) => {
-          if (!value) return 'Message is required';
-          if (value.length < 10) return 'Message must be at least 10 characters';
-        },
-      },
-    },
+  const form = createForm({
+    initialValues: { email: '' },
+    fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } }
   });
 
   let state = form.getStateSnapshot();
-  let submitStatus: 'idle' | 'success' | 'error' = 'idle';
-
-  const unsubscribe = form.subscribe((newState) => {
-    state = newState;
-  });
-
-  onDestroy(() => {
-    unsubscribe();
-  });
-
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-    submitStatus = 'idle';
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Submission failed');
-        return response.json();
-      });
-
-      submitStatus = 'success';
-
-      form.setValues({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      }, { replace: true });
-      form.resetErrors();
-    } catch (error) {
-      submitStatus = 'error';
-      console.error('Contact form error:', error);
-    }
-  }
-
-  function handleBlur(field: keyof ContactFormData) {
-    form.markTouched(field);
-  }
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
 </script>
 
-<div class="contact-form-container">
-  <h2>Contact Us</h2>
-
-  {#if submitStatus === 'success'}
-    <div class="alert alert-success">
-      Thank you! Your message has been sent successfully.
-    </div>
-  {/if}
-
-  {#if submitStatus === 'error'}
-    <div class="alert alert-error">
-      Failed to send message. Please try again.
-    </div>
-  {/if}
-
-  <form on:submit={handleSubmit}>
-    <div class="form-group">
-      <label for="name">Name *</label>
-      <input
-        id="name"
-        {...form.bind('name')}
-        on:blur={() => handleBlur('name')}
-      />
-      {#if state.touched.name && state.errors.name}
-        <span class="error">{state.errors.name}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="email">Email *</label>
-      <input
-        id="email"
-        type="email"
-        {...form.bind('email')}
-        on:blur={() => handleBlur('email')}
-      />
-      {#if state.touched.email && state.errors.email}
-        <span class="error">{state.errors.email}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="subject">Subject *</label>
-      <input
-        id="subject"
-        {...form.bind('subject')}
-        on:blur={() => handleBlur('subject')}
-      />
-      {#if state.touched.subject && state.errors.subject}
-        <span class="error">{state.errors.subject}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="message">Message *</label>
-      <textarea
-        id="message"
-        rows="5"
-        {...form.bind('message')}
-        on:blur={() => handleBlur('message')}
-      />
-      {#if state.touched.message && state.errors.message}
-        <span class="error">{state.errors.message}</span>
-      {/if}
-    </div>
-
-    <button
-      type="submit"
-      disabled={state.isSubmitting || state.isValidating}
-      class="btn btn-primary"
-    >
-      {state.isSubmitting ? 'Sending...' : 'Send Message'}
-    </button>
-  </form>
-</div>
-
-<style>
-  .error {
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-    display: block;
-  }
-
-  .alert {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: 0.25rem;
-  }
-
-  .alert-success {
-    background-color: #d4edda;
-    color: #155724;
-  }
-
-  .alert-error {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-
-  .form-group {
-    margin-bottom: 1rem;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-  }
-
-  input,
-  textarea {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-  }
-
-  .btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 0.25rem;
-    cursor: pointer;
-  }
-
-  .btn-primary {
-    background-color: #007bff;
-    color: white;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-</style>
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('email')} placeholder="Email" />
+  {#if state.errors.email}<span>{state.errors.email}</span>{/if}
+  <button type="submit" disabled={state.isSubmitting}>Submit</button>
+</form>
 ```
 
-#### Using Custom useForm Store
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
 
-```ts
-// stores/useForm.ts
-import { createForm, FormInit, FormState } from '@vielzeug/formit';
-import { writable } from 'svelte/store';
-import { onDestroy } from 'svelte';
-
-export function useForm<TForm extends Record<string, any>>(init: FormInit<TForm>) {
-  const form = createForm(init);
-  const state = writable<FormState<TForm>>(form.getStateSnapshot());
-
-  const unsubscribe = form.subscribe((newState) => {
-    state.set(newState);
+class SimpleForm extends HTMLElement {
+  #form = createForm({
+    initialValues: { email: '' },
+    fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } },
   });
+  #unsubscribe;
 
-  onDestroy(() => {
-    unsubscribe();
-  });
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <input name="email" placeholder="Email">
+        <span id="error" style="color: red;"></span>
+        <button type="submit">Submit</button>
+      </form>
+    `;
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+    this.querySelector('input').oninput = (e) => this.#form.setValue('email', e.target.value);
 
+    this.#unsubscribe = this.#form.subscribe((state) => {
+      this.querySelector('#error').textContent = state.errors.email || '';
+      this.querySelector('button').disabled = state.isSubmitting;
+    });
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+}
+customElements.define('simple-form', SimpleForm);
+```
+
+:::
+
+### Advanced Integration (Hook/Composable)
+
+Recommended pattern for reusability and separation of concerns.
+
+::: code-group
+
+```tsx [React]
+// useForm.ts
+import { createForm } from '@vielzeug/formit';
+import { useEffect, useState, useMemo } from 'react';
+
+export function useForm(init) {
+  const form = useMemo(() => createForm(init), []);
+  const [state, setState] = useState(form.getStateSnapshot());
+  useEffect(() => form.subscribe(setState), [form]);
   return { form, state };
+}
+
+// Component.tsx
+function LoginForm() {
+  const { form, state } = useForm({
+    initialValues: { email: '' },
+    fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      <input {...form.bind('email')} placeholder="Email" />
+      <button type="submit" disabled={state.isSubmitting}>
+        Login
+      </button>
+    </form>
+  );
 }
 ```
 
-```svelte
-<!-- ContactForm.svelte -->
-<script lang="ts">
-  import { useForm } from './stores/useForm';
-
-  interface ContactFormData {
-    name: string;
-    email: string;
-    subject: string;
-    message: string;
-  }
-
-  const { form, state } = useForm<ContactFormData>({
-    initialValues: {
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-    },
-    fields: {
-      name: {
-        validators: (value) => {
-          if (!value) return 'Name is required';
-          if (value.length < 2) return 'Name must be at least 2 characters';
-        },
-      },
-      email: {
-        validators: [
-          (value) => {
-            if (!value) return 'Email is required';
-          },
-          (value) => {
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-              return 'Invalid email format';
-            }
-          },
-        ],
-      },
-      subject: {
-        validators: (value) => {
-          if (!value) return 'Subject is required';
-        },
-      },
-      message: {
-        validators: (value) => {
-          if (!value) return 'Message is required';
-          if (value.length < 10) return 'Message must be at least 10 characters';
-        },
-      },
-    },
-  });
-
-  let submitStatus: 'idle' | 'success' | 'error' = 'idle';
-
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-    submitStatus = 'idle';
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Submission failed');
-        return response.json();
-      });
-
-      submitStatus = 'success';
-
-      form.setValues({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      }, { replace: true });
-      form.resetErrors();
-    } catch (error) {
-      submitStatus = 'error';
-    }
-  }
-
-  function handleBlur(field: keyof ContactFormData) {
-    form.markTouched(field);
-  }
+```vue [Vue 3]
+// useForm.ts import { createForm } from '@vielzeug/formit'; import { ref, onMounted, onUnmounted } from 'vue'; export
+function useForm(init) { const form = createForm(init); const state = ref(form.getStateSnapshot()); let unsubscribe;
+onMounted(() => unsubscribe = form.subscribe(s => state.value = s)); onUnmounted(() => unsubscribe?.()); return { form,
+state }; } // Component.vue
+<script setup>
+const { form, state } = useForm({
+  initialValues: { email: '' },
+  fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } },
+});
 </script>
 
-<div class="contact-form-container">
-  <h2>Contact Us</h2>
-
-  {#if submitStatus === 'success'}
-    <div class="alert alert-success">
-      Thank you! Your message has been sent successfully.
-    </div>
-  {/if}
-
-  {#if submitStatus === 'error'}
-    <div class="alert alert-error">
-      Failed to send message. Please try again.
-    </div>
-  {/if}
-
-  <form on:submit={handleSubmit}>
-    <div class="form-group">
-      <label for="name">Name *</label>
-      <input
-        id="name"
-        {...form.bind('name')}
-        on:blur={() => handleBlur('name')}
-      />
-      {#if $state.touched.name && $state.errors.name}
-        <span class="error">{$state.errors.name}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="email">Email *</label>
-      <input
-        id="email"
-        type="email"
-        {...form.bind('email')}
-        on:blur={() => handleBlur('email')}
-      />
-      {#if $state.touched.email && $state.errors.email}
-        <span class="error">{$state.errors.email}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="subject">Subject *</label>
-      <input
-        id="subject"
-        {...form.bind('subject')}
-        on:blur={() => handleBlur('subject')}
-      />
-      {#if $state.touched.subject && $state.errors.subject}
-        <span class="error">{$state.errors.subject}</span>
-      {/if}
-    </div>
-
-    <div class="form-group">
-      <label for="message">Message *</label>
-      <textarea
-        id="message"
-        rows="5"
-        {...form.bind('message')}
-        on:blur={() => handleBlur('message')}
-      />
-      {#if $state.touched.message && $state.errors.message}
-        <span class="error">{$state.errors.message}</span>
-      {/if}
-    </div>
-
-    <button
-      type="submit"
-      disabled={$state.isSubmitting || $state.isValidating}
-      class="btn btn-primary"
-    >
-      {$state.isSubmitting ? 'Sending...' : 'Send Message'}
-    </button>
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('email')" />
+    <button type="submit" :disabled="state.isSubmitting">Submit</button>
   </form>
-</div>
+</template>
+```
+
+```svelte [Svelte]
+// formStore.ts
+import { createForm } from '@vielzeug/formit';
+import { writable } from 'svelte/store';
+
+export function useForm(init) {
+  const form = createForm(init);
+  const state = writable(form.getStateSnapshot());
+  const unsubscribe = form.subscribe(s => state.set(s));
+  return { form, state, unsubscribe };
+}
+
+// Component.svelte
+<script>
+  import { useForm } from './formStore';
+  import { onDestroy } from 'svelte';
+
+  const { form, state, unsubscribe } = useForm({
+    initialValues: { email: '' },
+    fields: { email: { validators: (v) => !v.includes('@') && 'Invalid email' } }
+  });
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('email')} />
+  <button type="submit" disabled={$state.isSubmitting}>Submit</button>
+</form>
+```
+
+```ts [Web Component]
+// BaseForm.ts
+import { createForm } from '@vielzeug/formit';
+
+export class BaseForm extends HTMLElement {
+  form;
+  #unsubscribe;
+
+  init(config) {
+    this.form = createForm(config);
+    this.#unsubscribe = this.form.subscribe((state) => this.render(state));
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+
+  render(state) {
+    /* override */
+  }
+}
+```
+
+:::
 
 <style>
   .error {
@@ -1176,102 +296,71 @@ export function useForm<TForm extends Record<string, any>>(init: FormInit<TForm>
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     width: 100%;
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 0.25rem;
+    background-color: var(--vp-c-bg);
+    color: var(--vp-c-text-1);
   }
 
-  .btn {
+  .btn, .submit-button {
     padding: 0.5rem 1rem;
     border: none;
     border-radius: 0.25rem;
     cursor: pointer;
-  }
-
-  .btn-primary {
-    background-color: #007bff;
+    background-color: var(--vp-c-brand);
     color: white;
+    font-weight: 600;
   }
 
-  .btn:disabled {
+  .btn:disabled, .submit-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
-</style>
-```
 
----
+  .form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+  }
+</style>
 
 ## Registration Form
 
 Complete registration form with validation, error handling, and submission.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface RegistrationData {
-  username: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  acceptTerms: boolean;
-}
-
 function RegistrationForm() {
   const [form] = useState(() =>
-    createForm<RegistrationData>({
-      initialValues: {
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        acceptTerms: false,
-      },
+    createForm({
+      initialValues: { username: '', email: '', password: '', confirmPassword: '', acceptTerms: false },
       fields: {
         username: {
           validators: [
-            (value) => {
-              if (!value) return 'Username is required';
-              if (value.length < 3) return 'Username must be at least 3 characters';
-              if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
-            },
-            async (value) => {
-              const response = await fetch(`/api/check-username?username=${value}`);
-              const { exists } = await response.json();
-              if (exists) return 'Username is already taken';
+            (v) => !v && 'Username is required',
+            async (v) => {
+              const res = await fetch(`/api/check-username?username=${v}`);
+              const { exists } = await res.json();
+              if (exists) return 'Taken';
             },
           ],
         },
-        email: {
-          validators: [
-            (value) => {
-              if (!value) return 'Email is required';
-              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email format';
-            },
-            async (value) => {
-              const response = await fetch(`/api/check-email?email=${value}`);
-              const { exists } = await response.json();
-              if (exists) return 'Email is already registered';
-            },
-          ],
-        },
-        password: {
-          validators: (value) => {
-            if (!value) return 'Password is required';
-            if (value.length < 8) return 'Password must be at least 8 characters';
-            if (!/[A-Z]/.test(value)) return 'Password must contain an uppercase letter';
-            if (!/[a-z]/.test(value)) return 'Password must contain a lowercase letter';
-            if (!/[0-9]/.test(value)) return 'Password must contain a number';
-          },
-        },
-        acceptTerms: {
-          validators: (value) => {
-            if (!value) return 'You must accept the terms and conditions';
-          },
-        },
+        email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+        password: { validators: (v) => v.length < 8 && 'Too short' },
+        acceptTerms: { validators: (v) => !v && 'Required' },
       },
       validate: (values) => {
         if (values.password !== values.confirmPassword) {
@@ -1282,100 +371,34 @@ function RegistrationForm() {
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-  const [successMessage, setSuccessMessage] = useState('');
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Registration failed');
-
-        return response.json();
-      });
-
-      setSuccessMessage('Registration successful! Redirecting...');
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 2000);
-    } catch (error) {
-      console.error('Registration error:', error);
-    }
-  };
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form onSubmit={handleSubmit} className="registration-form">
-      <h2>Create Account</h2>
-
-      {successMessage && <div className="success-message">{successMessage}</div>}
-
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
       <div className="form-group">
-        <label htmlFor="username">Username</label>
-        <input
-          id="username"
-          {...form.bind('username')}
-          onBlur={() => {
-            form.markTouched('username');
-            form.validateField('username');
-          }}
-        />
-        {state.touched.username && state.errors.username && <span className="error">{state.errors.username}</span>}
+        <label>Username</label>
+        <input {...form.bind('username')} onBlur={() => form.validateField('username')} />
+        {state.errors.username && <span className="error">{state.errors.username}</span>}
       </div>
-
       <div className="form-group">
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          {...form.bind('email')}
-          onBlur={() => {
-            form.markTouched('email');
-            form.validateField('email');
-          }}
-        />
-        {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
+        <label>Email</label>
+        <input {...form.bind('email')} />
+        {state.errors.email && <span className="error">{state.errors.email}</span>}
       </div>
-
       <div className="form-group">
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          {...form.bind('password')}
-          onBlur={() => {
-            form.markTouched('password');
-            form.validateField('password');
-          }}
-        />
-        {state.touched.password && state.errors.password && <span className="error">{state.errors.password}</span>}
+        <label>Password</label>
+        <input type="password" {...form.bind('password')} />
+        {state.errors.password && <span className="error">{state.errors.password}</span>}
       </div>
-
       <div className="form-group">
-        <label htmlFor="confirmPassword">Confirm Password</label>
-        <input
-          id="confirmPassword"
-          type="password"
-          {...form.bind('confirmPassword')}
-          onBlur={() => {
-            form.markTouched('confirmPassword');
-            form.validateField('confirmPassword');
-          }}
-        />
-        {state.touched.confirmPassword && state.errors.confirmPassword && (
-          <span className="error">{state.errors.confirmPassword}</span>
-        )}
+        <label>Confirm Password</label>
+        <input type="password" {...form.bind('confirmPassword')} />
+        {state.errors.confirmPassword && <span className="error">{state.errors.confirmPassword}</span>}
       </div>
-
       <div className="form-group">
         <label>
           <input
@@ -1383,114 +406,262 @@ function RegistrationForm() {
             checked={state.values.acceptTerms}
             onChange={(e) => form.setValue('acceptTerms', e.target.checked)}
           />
-          I accept the <a href="/terms">terms and conditions</a>
+          Accept Terms
         </label>
         {state.errors.acceptTerms && <span className="error">{state.errors.acceptTerms}</span>}
       </div>
-
-      <button type="submit" disabled={state.isSubmitting || state.isValidating} className="submit-button">
-        {state.isSubmitting ? 'Creating Account...' : 'Create Account'}
+      <button type="submit" disabled={state.isSubmitting}>
+        Register
       </button>
     </form>
   );
 }
 ```
 
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: { username: '', email: '', password: '', confirmPassword: '', acceptTerms: false },
+  fields: {
+    username: {
+      validators: [
+        (v) => !v && 'Username is required',
+        async (v) => {
+          /* async check */
+        },
+      ],
+    },
+    email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+    password: { validators: (v) => v.length < 8 && 'Too short' },
+    acceptTerms: { validators: (v) => !v && 'Required' },
+  },
+  validate: (values) => {
+    if (values.password !== values.confirmPassword) {
+      return { confirmPassword: 'Passwords do not match' };
+    }
+  },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <div class="form-group">
+      <label>Username</label>
+      <input v-bind="form.bind('username')" @blur="form.validateField('username')" />
+      <span v-if="state.errors.username" class="error">{{ state.errors.username }}</span>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input v-bind="form.bind('email')" />
+      <span v-if="state.errors.email" class="error">{{ state.errors.email }}</span>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" v-bind="form.bind('password')" />
+      <span v-if="state.errors.password" class="error">{{ state.errors.password }}</span>
+    </div>
+    <div class="form-group">
+      <label>Confirm Password</label>
+      <input type="password" v-bind="form.bind('confirmPassword')" />
+      <span v-if="state.errors.confirmPassword" class="error">{{ state.errors.confirmPassword }}</span>
+    </div>
+    <div class="form-group">
+      <label>
+        <input
+          type="checkbox"
+          :checked="state.values.acceptTerms"
+          @change="(e) => form.setValue('acceptTerms', e.target.checked)" />
+        Accept Terms
+      </label>
+      <span v-if="state.errors.acceptTerms" class="error">{{ state.errors.acceptTerms }}</span>
+    </div>
+    <button type="submit" :disabled="state.isSubmitting">Register</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: { username: '', email: '', password: '', confirmPassword: '', acceptTerms: false },
+    fields: {
+      username: {
+        validators: [
+          (v) => !v && 'Username is required',
+          async (v) => { /* async check */ }
+        ]
+      },
+      email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+      password: { validators: (v) => v.length < 8 && 'Too short' },
+      acceptTerms: { validators: (v) => !v && 'Required' }
+    },
+    validate: (values) => {
+      if (values.password !== values.confirmPassword) {
+        return { confirmPassword: 'Passwords do not match' };
+      }
+    }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <div class="form-group">
+    <label>Username</label>
+    <input {...form.bind('username')} on:blur={() => form.validateField('username')} />
+    {#if state.errors.username}<span class="error">{state.errors.username}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>Email</label>
+    <input {...form.bind('email')} />
+    {#if state.errors.email}<span class="error">{state.errors.email}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" {...form.bind('password')} />
+    {#if state.errors.password}<span class="error">{state.errors.password}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>Confirm Password</label>
+    <input type="password" {...form.bind('confirmPassword')} />
+    {#if state.errors.confirmPassword}<span class="error">{state.errors.confirmPassword}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" checked={state.values.acceptTerms} on:change={(e) => form.setValue('acceptTerms', e.target.checked)} />
+      Accept Terms
+    </label>
+    {#if state.errors.acceptTerms}<span class="error">{state.errors.acceptTerms}</span>{/if}
+  </div>
+  <button type="submit" disabled={state.isSubmitting}>Register</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class RegistrationForm extends HTMLElement {
+  #form = createForm({
+    initialValues: { username: '', email: '', password: '', confirmPassword: '', acceptTerms: false },
+    fields: {
+      username: { validators: [(v) => !v && 'Required'] },
+      email: { validators: (v) => !v.includes('@') && 'Invalid' },
+      password: { validators: (v) => v.length < 8 && 'Too short' },
+      acceptTerms: { validators: (v) => !v && 'Required' },
+    },
+  });
+  #unsubscribe;
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <div class="form-group">
+          <label>Username</label>
+          <input name="username">
+          <span id="username-error" class="error"></span>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input name="email">
+          <span id="email-error" class="error"></span>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password">
+          <span id="password-error" class="error"></span>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" name="acceptTerms"> Accept Terms</label>
+          <span id="terms-error" class="error"></span>
+        </div>
+        <button type="submit">Register</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    const inputs = this.querySelectorAll('input');
+    inputs.forEach((input) => {
+      input.oninput = (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        this.#form.setValue(input.name, value);
+      };
+    });
+
+    this.#unsubscribe = this.#form.subscribe((state) => {
+      this.querySelector('#username-error').textContent = state.errors.username || '';
+      this.querySelector('#email-error').textContent = state.errors.email || '';
+      this.querySelector('#password-error').textContent = state.errors.password || '';
+      this.querySelector('#terms-error').textContent = state.errors.acceptTerms || '';
+      this.querySelector('button').disabled = state.isSubmitting;
+    });
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+}
+customElements.define('registration-form', RegistrationForm);
+```
+
+:::
+
 ## Login Form
 
 Simple login form with email and password.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface LoginData {
-  email: string;
-  password: string;
-  rememberMe: boolean;
-}
-
 function LoginForm() {
   const [form] = useState(() =>
-    createForm<LoginData>({
-      initialValues: {
-        email: '',
-        password: '',
-        rememberMe: false,
-      },
+    createForm({
+      initialValues: { email: '', password: '', rememberMe: false },
       fields: {
-        email: {
-          validators: (value) => {
-            if (!value) return 'Email is required';
-            if (!value.includes('@')) return 'Invalid email';
-          },
-        },
-        password: {
-          validators: (value) => {
-            if (!value) return 'Password is required';
-          },
-        },
+        email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+        password: { validators: (v) => !v && 'Required' },
       },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-  const [loginError, setLoginError] = useState('');
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Login failed');
-        }
-
-        const data = await response.json();
-
-        if (values.rememberMe) {
-          localStorage.setItem('authToken', data.token);
-        } else {
-          sessionStorage.setItem('authToken', data.token);
-        }
-
-        window.location.href = '/dashboard';
-      });
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
-    }
-  };
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form onSubmit={handleSubmit} className="login-form">
-      <h2>Login</h2>
-
-      {loginError && <div className="error-banner">{loginError}</div>}
-
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
       <div className="form-group">
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...form.bind('email')} autoComplete="email" />
+        <label>Email</label>
+        <input {...form.bind('email')} />
         {state.errors.email && <span className="error">{state.errors.email}</span>}
       </div>
-
       <div className="form-group">
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" {...form.bind('password')} autoComplete="current-password" />
+        <label>Password</label>
+        <input type="password" {...form.bind('password')} />
         {state.errors.password && <span className="error">{state.errors.password}</span>}
       </div>
-
       <div className="form-group">
         <label>
           <input
@@ -1501,76 +672,176 @@ function LoginForm() {
           Remember me
         </label>
       </div>
-
-      <button type="submit" disabled={state.isSubmitting} className="submit-button">
-        {state.isSubmitting ? 'Logging in...' : 'Login'}
+      <button type="submit" disabled={state.isSubmitting}>
+        Login
       </button>
-
-      <div className="links">
-        <a href="/forgot-password">Forgot password?</a>
-        <a href="/register">Create account</a>
-      </div>
     </form>
   );
 }
 ```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: { email: '', password: '', rememberMe: false },
+  fields: {
+    email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+    password: { validators: (v) => !v && 'Required' },
+  },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <div class="form-group">
+      <label>Email</label>
+      <input v-bind="form.bind('email')" />
+      <span v-if="state.errors.email" class="error">{{ state.errors.email }}</span>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" v-bind="form.bind('password')" />
+      <span v-if="state.errors.password" class="error">{{ state.errors.password }}</span>
+    </div>
+    <div class="form-group">
+      <label>
+        <input
+          type="checkbox"
+          :checked="state.values.rememberMe"
+          @change="(e) => form.setValue('rememberMe', e.target.checked)" />
+        Remember me
+      </label>
+    </div>
+    <button type="submit" :disabled="state.isSubmitting">Login</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: { email: '', password: '', rememberMe: false },
+    fields: {
+      email: { validators: (v) => !v.includes('@') && 'Invalid email' },
+      password: { validators: (v) => !v && 'Required' }
+    }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <div class="form-group">
+    <label>Email</label>
+    <input {...form.bind('email')} />
+    {#if state.errors.email}<span class="error">{state.errors.email}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" {...form.bind('password')} />
+    {#if state.errors.password}<span class="error">{state.errors.password}</span>{/if}
+  </div>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" checked={state.values.rememberMe} on:change={(e) => form.setValue('rememberMe', e.target.checked)} />
+      Remember me
+    </label>
+  </div>
+  <button type="submit" disabled={state.isSubmitting}>Login</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class LoginForm extends HTMLElement {
+  #form = createForm({
+    initialValues: { email: '', password: '', rememberMe: false },
+    fields: {
+      email: { validators: (v) => !v.includes('@') && 'Invalid' },
+      password: { validators: (v) => !v && 'Required' },
+    },
+  });
+  #unsubscribe;
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <div class="form-group">
+          <label>Email</label>
+          <input name="email">
+          <span id="email-error" class="error"></span>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password">
+          <span id="password-error" class="error"></span>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" name="rememberMe"> Remember me</label>
+        </div>
+        <button type="submit">Login</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    this.querySelectorAll('input').forEach((input) => {
+      input.oninput = (e) =>
+        this.#form.setValue(input.name, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+    });
+
+    this.#unsubscribe = this.#form.subscribe((state) => {
+      this.querySelector('#email-error').textContent = state.errors.email || '';
+      this.querySelector('#password-error').textContent = state.errors.password || '';
+      this.querySelector('button').disabled = state.isSubmitting;
+    });
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+}
+customElements.define('login-form', LoginForm);
+```
+
+:::
 
 ## Profile Settings
 
 Profile update form with nested objects.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface ProfileData {
-  personal: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  };
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  preferences: {
-    newsletter: boolean;
-    notifications: boolean;
-  };
-}
-
-function ProfileSettings({ initialData }: { initialData: ProfileData }) {
+function ProfileSettings({ initialData }) {
   const [form] = useState(() =>
-    createForm<ProfileData>({
+    createForm({
       initialValues: initialData,
       fields: {
-        'personal.email': {
-          validators: (value) => {
-            if (!value) return 'Email is required';
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email';
-          },
-        },
-        'personal.phone': {
-          validators: (value) => {
-            if (value && !/^\+?[\d\s-()]+$/.test(value)) {
-              return 'Invalid phone number';
-            }
-          },
-        },
+        'personal.email': { validators: (v) => !v.includes('@') && 'Invalid email' },
         'address.zipCode': {
-          validators: (value, values) => {
-            if (!value) return;
-
-            if (values.address.country === 'US' && !/^\d{5}(-\d{4})?$/.test(value)) {
-              return 'Invalid US ZIP code';
-            }
-            if (values.address.country === 'UK' && !/^[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}$/i.test(value)) {
-              return 'Invalid UK postcode';
-            }
+          validators: (v, values) => {
+            if (values.address.country === 'US' && !/^\d{5}$/.test(v)) return 'Invalid ZIP';
           },
         },
       },
@@ -1578,813 +849,808 @@ function ProfileSettings({ initialData }: { initialData: ProfileData }) {
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-  const [saveStatus, setSaveStatus] = useState('');
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaveStatus('');
-
-    try {
-      await form.submit(async (values) => {
-        const response = await fetch('/api/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) throw new Error('Failed to save profile');
-
-        return response.json();
-      });
-
-      setSaveStatus('Profile saved successfully!');
-    } catch (error) {
-      setSaveStatus('Failed to save profile');
-    }
-  };
-
-  const isDirty = Object.values(state.dirty).some(Boolean);
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form onSubmit={handleSubmit} className="profile-settings">
-      <h2>Profile Settings</h2>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      <h3>Personal</h3>
+      <input {...form.bind('personal.firstName')} placeholder="First Name" />
+      <input {...form.bind('personal.lastName')} placeholder="Last Name" />
+      <input {...form.bind('personal.email')} placeholder="Email" />
 
-      {saveStatus && (
-        <div className={`status-message ${saveStatus.includes('success') ? 'success' : 'error'}`}>{saveStatus}</div>
-      )}
+      <h3>Address</h3>
+      <input {...form.bind('address.street')} placeholder="Street" />
+      <input {...form.bind('address.city')} placeholder="City" />
+      <select {...form.bind('address.country')}>
+        <option value="US">US</option>
+        <option value="CA">Canada</option>
+      </select>
+      <input {...form.bind('address.zipCode')} placeholder="ZIP" />
 
-      <section>
-        <h3>Personal Information</h3>
+      <h3>Preferences</h3>
+      <label>
+        <input
+          type="checkbox"
+          checked={state.values.preferences.newsletter}
+          onChange={(e) => form.setValue('preferences.newsletter', e.target.checked)}
+        />
+        Newsletter
+      </label>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label>First Name</label>
-            <input {...form.bind('personal.firstName')} />
-          </div>
-
-          <div className="form-group">
-            <label>Last Name</label>
-            <input {...form.bind('personal.lastName')} />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Email</label>
-          <input type="email" {...form.bind('personal.email')} />
-          {state.errors['personal.email'] && <span className="error">{state.errors['personal.email']}</span>}
-        </div>
-
-        <div className="form-group">
-          <label>Phone</label>
-          <input type="tel" {...form.bind('personal.phone')} />
-          {state.errors['personal.phone'] && <span className="error">{state.errors['personal.phone']}</span>}
-        </div>
-      </section>
-
-      <section>
-        <h3>Address</h3>
-
-        <div className="form-group">
-          <label>Street Address</label>
-          <input {...form.bind('address.street')} />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>City</label>
-            <input {...form.bind('address.city')} />
-          </div>
-
-          <div className="form-group">
-            <label>State</label>
-            <input {...form.bind('address.state')} />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>ZIP Code</label>
-            <input {...form.bind('address.zipCode')} />
-            {state.errors['address.zipCode'] && <span className="error">{state.errors['address.zipCode']}</span>}
-          </div>
-
-          <div className="form-group">
-            <label>Country</label>
-            <select {...form.bind('address.country')}>
-              <option value="US">United States</option>
-              <option value="UK">United Kingdom</option>
-              <option value="CA">Canada</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3>Preferences</h3>
-
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={state.values.preferences.newsletter}
-              onChange={(e) => form.setValue('preferences.newsletter', e.target.checked)}
-            />
-            Subscribe to newsletter
-          </label>
-        </div>
-
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={state.values.preferences.notifications}
-              onChange={(e) => form.setValue('preferences.notifications', e.target.checked)}
-            />
-            Enable notifications
-          </label>
-        </div>
-      </section>
-
-      <div className="form-actions">
-        <button
-          type="button"
-          onClick={() => {
-            form.setValues(initialData, { replace: true });
-            form.resetErrors();
-          }}
-          disabled={!isDirty || state.isSubmitting}>
-          Reset
-        </button>
-
-        <button type="submit" disabled={!isDirty || state.isSubmitting} className="primary">
-          {state.isSubmitting ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+      <button type="submit" disabled={state.isSubmitting}>
+        Save
+      </button>
     </form>
   );
 }
 ```
 
-## Multi-Step Form
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
 
-<Badge type="tip" text="Advanced" />
+const props = defineProps<{ initialData: any }>();
+
+const form = createForm({
+  initialValues: props.initialData,
+  fields: {
+    'personal.email': { validators: (v) => !v.includes('@') && 'Invalid email' },
+  },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('personal.firstName')" placeholder="First Name" />
+    <input v-bind="form.bind('personal.email')" placeholder="Email" />
+
+    <input v-bind="form.bind('address.street')" placeholder="Street" />
+    <select v-bind="form.bind('address.country')">
+      <option value="US">US</option>
+    </select>
+
+    <label>
+      <input
+        type="checkbox"
+        :checked="state.values.preferences.newsletter"
+        @change="(e) => form.setValue('preferences.newsletter', e.target.checked)" />
+      Newsletter
+    </label>
+
+    <button type="submit" :disabled="state.isSubmitting">Save</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  export let initialData;
+
+  const form = createForm({
+    initialValues: initialData,
+    fields: {
+      'personal.email': { validators: (v) => !v.includes('@') && 'Invalid email' }
+    }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('personal.firstName')} placeholder="First Name" />
+  <input {...form.bind('personal.email')} placeholder="Email" />
+
+  <input {...form.bind('address.street')} placeholder="Street" />
+  <select {...form.bind('address.country')}>
+    <option value="US">US</option>
+  </select>
+
+  <label>
+    <input type="checkbox" checked={state.values.preferences.newsletter} on:change={(e) => form.setValue('preferences.newsletter', e.target.checked)} />
+    Newsletter
+  </label>
+
+  <button type="submit" disabled={state.isSubmitting}>Save</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class ProfileSettings extends HTMLElement {
+  #form;
+  #unsubscribe;
+
+  set initialData(data) {
+    this.#form = createForm({
+      initialValues: data,
+      fields: {
+        'personal.email': { validators: (v) => !v.includes('@') && 'Invalid' },
+      },
+    });
+    this.#render();
+  }
+
+  #render() {
+    this.innerHTML = `
+      <form>
+        <input name="personal.firstName" placeholder="First Name">
+        <input name="personal.email" placeholder="Email">
+        <label><input type="checkbox" name="preferences.newsletter"> Newsletter</label>
+        <button type="submit">Save</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    this.querySelectorAll('input').forEach((input) => {
+      input.oninput = (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        this.#form.setValue(input.name, value);
+      };
+    });
+
+    this.#unsubscribe = this.#form.subscribe((state) => {
+      this.querySelector('button').disabled = state.isSubmitting;
+    });
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+}
+customElements.define('profile-settings', ProfileSettings);
+```
+
+:::
+
+## Multi-Step Form
 
 Wizard-style multi-step form with progress tracking.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface WizardData {
-  // Step 1: Account
-  username: string;
-  email: string;
-  password: string;
-
-  // Step 2: Profile
-  firstName: string;
-  lastName: string;
-  bio: string;
-
-  // Step 3: Preferences
-  theme: 'light' | 'dark';
-  language: string;
-  notifications: boolean;
-}
-
-const steps = [
-  { id: 1, title: 'Account', fields: ['username', 'email', 'password'] },
-  { id: 2, title: 'Profile', fields: ['firstName', 'lastName', 'bio'] },
-  { id: 3, title: 'Preferences', fields: ['theme', 'language', 'notifications'] },
-];
-
 function MultiStepForm() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [step, setStep] = useState(1);
   const [form] = useState(() =>
-    createForm<WizardData>({
-      initialValues: {
-        username: '',
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        bio: '',
-        theme: 'light',
-        language: 'en',
-        notifications: true,
-      },
+    createForm({
+      initialValues: { email: '', password: '', address: '' },
       fields: {
-        username: {
-          validators: (value) => {
-            if (!value) return 'Username is required';
-            if (value.length < 3) return 'Username too short';
-          },
-        },
-        email: {
-          validators: (value) => {
-            if (!value) return 'Email is required';
-            if (!value.includes('@')) return 'Invalid email';
-          },
-        },
-        password: {
-          validators: (value) => {
-            if (!value) return 'Password is required';
-            if (value.length < 8) return 'Password too short';
-          },
-        },
-        firstName: {
-          validators: (value) => {
-            if (!value) return 'First name is required';
-          },
-        },
-        lastName: {
-          validators: (value) => {
-            if (!value) return 'Last name is required';
-          },
-        },
+        email: { validators: (v) => !v.includes('@') && 'Invalid' },
+        password: { validators: (v) => v.length < 8 && 'Too short' },
       },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
+  useEffect(() => form.subscribe(setState), [form]);
 
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const validateCurrentStep = async () => {
-    const stepFields = steps.find((s) => s.id === currentStep)?.fields || [];
-
-    for (const field of stepFields) {
-      const error = await form.validateField(field);
-      if (error) {
-        form.markTouched(field);
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const handleNext = async () => {
-    const isValid = await validateCurrentStep();
-    if (isValid && currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const isValid = await validateCurrentStep();
-    if (!isValid) return;
-
-    await form.submit(async (values) => {
-      const response = await fetch('/api/complete-registration', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      return response.json();
-    });
+  const next = async () => {
+    const fields = step === 1 ? ['email', 'password'] : ['address'];
+    const results = await Promise.all(fields.map((f) => form.validateField(f)));
+    if (results.every((r) => !r)) setStep((s) => s + 1);
   };
 
   return (
-    <div className="multi-step-form">
-      <div className="progress-bar">
-        {steps.map((step) => (
-          <div
-            key={step.id}
-            className={`step ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}>
-            <span className="step-number">{step.id}</span>
-            <span className="step-title">{step.title}</span>
-          </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {currentStep === 1 && (
-          <div className="step-content">
-            <h2>Create Account</h2>
-
-            <div className="form-group">
-              <label>Username</label>
-              <input {...form.bind('username')} />
-              {state.touched.username && state.errors.username && (
-                <span className="error">{state.errors.username}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" {...form.bind('email')} />
-              {state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>}
-            </div>
-
-            <div className="form-group">
-              <label>Password</label>
-              <input type="password" {...form.bind('password')} />
-              {state.touched.password && state.errors.password && (
-                <span className="error">{state.errors.password}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && (
-          <div className="step-content">
-            <h2>Your Profile</h2>
-
-            <div className="form-group">
-              <label>First Name</label>
-              <input {...form.bind('firstName')} />
-              {state.touched.firstName && state.errors.firstName && (
-                <span className="error">{state.errors.firstName}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Last Name</label>
-              <input {...form.bind('lastName')} />
-              {state.touched.lastName && state.errors.lastName && (
-                <span className="error">{state.errors.lastName}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Bio</label>
-              <textarea {...form.bind('bio')} rows={4} />
-            </div>
-          </div>
-        )}
-
-        {currentStep === 3 && (
-          <div className="step-content">
-            <h2>Preferences</h2>
-
-            <div className="form-group">
-              <label>Theme</label>
-              <select {...form.bind('theme')}>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Language</label>
-              <select {...form.bind('language')}>
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={state.values.notifications}
-                  onChange={(e) => form.setValue('notifications', e.target.checked)}
-                />
-                Enable notifications
-              </label>
-            </div>
-          </div>
-        )}
-
-        <div className="form-actions">
-          <button type="button" onClick={handlePrevious} disabled={currentStep === 1}>
-            Previous
-          </button>
-
-          {currentStep < steps.length ? (
-            <button type="button" onClick={handleNext} className="primary">
-              Next
-            </button>
-          ) : (
-            <button type="submit" disabled={state.isSubmitting} className="primary">
-              {state.isSubmitting ? 'Completing...' : 'Complete'}
-            </button>
-          )}
-        </div>
-      </form>
+    <div>
+      {step === 1 ? (
+        <>
+          <input {...form.bind('email')} placeholder="Email" />
+          <input type="password" {...form.bind('password')} placeholder="Password" />
+        </>
+      ) : (
+        <input {...form.bind('address')} placeholder="Address" />
+      )}
+      <button onClick={() => setStep((s) => s - 1)} disabled={step === 1}>
+        Back
+      </button>
+      <button onClick={next}>{step === 2 ? 'Finish' : 'Next'}</button>
     </div>
   );
 }
 ```
 
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const step = ref(1);
+const form = createForm({
+  initialValues: { email: '', password: '', address: '' },
+  fields: {
+    email: { validators: (v) => !v.includes('@') && 'Invalid' },
+  },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+
+async function next() {
+  const fields = step.value === 1 ? ['email', 'password'] : ['address'];
+  const results = await Promise.all(fields.map((f) => form.validateField(f)));
+  if (results.every((r) => !r)) step.value++;
+}
+</script>
+
+<template>
+  <div>
+    <div v-if="step === 1">
+      <input v-bind="form.bind('email')" placeholder="Email" />
+      <input type="password" v-bind="form.bind('password')" placeholder="Password" />
+    </div>
+    <div v-else>
+      <input v-bind="form.bind('address')" placeholder="Address" />
+    </div>
+    <button @click="step--" :disabled="step === 1">Back</button>
+    <button @click="next">{{ step === 2 ? 'Finish' : 'Next' }}</button>
+  </div>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  let step = 1;
+  const form = createForm({
+    initialValues: { email: '', password: '', address: '' },
+    fields: {
+      email: { validators: (v) => !v.includes('@') && 'Invalid' }
+    }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+
+  async function next() {
+    const fields = step === 1 ? ['email', 'password'] : ['address'];
+    const results = await Promise.all(fields.map(f => form.validateField(f)));
+    if (results.every(r => !r)) step++;
+  }
+</script>
+
+<div>
+  {#if step === 1}
+    <input {...form.bind('email')} placeholder="Email" />
+    <input type="password" {...form.bind('password')} placeholder="Password" />
+  {:else}
+    <input {...form.bind('address')} placeholder="Address" />
+  {/if}
+  <button on:click={() => step--} disabled={step === 1}>Back</button>
+  <button on:click={next}>{step === 2 ? 'Finish' : 'Next'}</button>
+</div>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class MultiStepForm extends HTMLElement {
+  #step = 1;
+  #form = createForm({
+    initialValues: { email: '', password: '', address: '' },
+  });
+
+  connectedCallback() {
+    this.#render();
+  }
+
+  #render() {
+    this.innerHTML = `
+      <div>
+        ${
+          this.#step === 1
+            ? `
+          <input name="email" placeholder="Email">
+          <input name="password" type="password" placeholder="Password">
+        `
+            : `
+          <input name="address" placeholder="Address">
+        `
+        }
+        <button id="back" ${this.#step === 1 ? 'disabled' : ''}>Back</button>
+        <button id="next">${this.#step === 2 ? 'Finish' : 'Next'}</button>
+      </div>
+    `;
+
+    this.querySelector('#back').onclick = () => {
+      this.#step--;
+      this.#render();
+    };
+    this.querySelector('#next').onclick = async () => {
+      const fields = this.#step === 1 ? ['email', 'password'] : ['address'];
+      const results = await Promise.all(fields.map((f) => this.#form.validateField(f)));
+      if (results.every((r) => !r)) {
+        if (this.#step === 2) this.#form.submit(console.log);
+        else {
+          this.#step++;
+          this.#render();
+        }
+      }
+    };
+  }
+}
+customElements.define('multi-step-form', MultiStepForm);
+```
+
+:::
+
 ## Dynamic Fields
 
 Form with ability to add/remove fields dynamically.
 
-```tsx
+## Dynamic Fields
+
+Form with ability to add/remove fields dynamically.
+
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface Contact {
-  name: string;
-  email: string;
-  phone: string;
-}
-
-interface DynamicFormData {
-  contacts: Contact[];
-}
-
 function DynamicFieldsForm() {
   const [form] = useState(() =>
-    createForm<DynamicFormData>({
-      initialValues: {
-        contacts: [{ name: '', email: '', phone: '' }],
-      },
+    createForm({
+      initialValues: { contacts: [{ name: '', email: '' }] },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
+  useEffect(() => form.subscribe(setState), [form]);
 
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const addContact = () => {
+  const add = () => {
     const contacts = form.getValue('contacts');
-    form.setValue('contacts', [...contacts, { name: '', email: '', phone: '' }]);
+    form.setValue('contacts', [...contacts, { name: '', email: '' }]);
   };
 
-  const removeContact = (index: number) => {
+  const remove = (i) => {
     const contacts = form.getValue('contacts');
-    if (contacts.length > 1) {
-      form.setValue(
-        'contacts',
-        contacts.filter((_, i) => i !== index),
-      );
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate all contact fields
-    let hasErrors = false;
-    const contacts = form.getValue('contacts');
-
-    for (let i = 0; i < contacts.length; i++) {
-      if (!contacts[i].name) {
-        form.setError(`contacts[${i}].name`, 'Name is required');
-        hasErrors = true;
-      }
-      if (!contacts[i].email || !contacts[i].email.includes('@')) {
-        form.setError(`contacts[${i}].email`, 'Valid email is required');
-        hasErrors = true;
-      }
-    }
-
-    if (hasErrors) return;
-
-    await form.submit(
-      async (values) => {
-        const response = await fetch('/api/contacts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        });
-        return response.json();
-      },
-      { validate: false },
+    form.setValue(
+      'contacts',
+      contacts.filter((_, idx) => idx !== i),
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="dynamic-form">
-      <h2>Manage Contacts</h2>
-
-      {state.values.contacts.map((contact, index) => (
-        <div key={index} className="contact-group">
-          <h3>Contact {index + 1}</h3>
-
-          <div className="form-group">
-            <label>Name</label>
-            <input {...form.bind(`contacts[${index}].name`)} />
-            {state.errors[`contacts[${index}].name`] && (
-              <span className="error">{state.errors[`contacts[${index}].name`]}</span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" {...form.bind(`contacts[${index}].email`)} />
-            {state.errors[`contacts[${index}].email`] && (
-              <span className="error">{state.errors[`contacts[${index}].email`]}</span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label>Phone</label>
-            <input type="tel" {...form.bind(`contacts[${index}].phone`)} />
-          </div>
-
-          {state.values.contacts.length > 1 && (
-            <button type="button" onClick={() => removeContact(index)} className="remove-button">
-              Remove Contact
-            </button>
-          )}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      {state.values.contacts.map((_, i) => (
+        <div key={i}>
+          <input {...form.bind(`contacts[${i}].name`)} placeholder="Name" />
+          <input {...form.bind(`contacts[${i}].email`)} placeholder="Email" />
+          <button type="button" onClick={() => remove(i)}>
+            Remove
+          </button>
         </div>
       ))}
-
-      <div className="form-actions">
-        <button type="button" onClick={addContact} className="add-button">
-          + Add Contact
-        </button>
-
-        <button type="submit" disabled={state.isSubmitting} className="primary">
-          {state.isSubmitting ? 'Saving...' : 'Save Contacts'}
-        </button>
-      </div>
+      <button type="button" onClick={add}>
+        Add Contact
+      </button>
+      <button type="submit">Save</button>
     </form>
   );
 }
 ```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: { contacts: [{ name: '', email: '' }] },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+
+function add() {
+  const contacts = form.getValue('contacts');
+  form.setValue('contacts', [...contacts, { name: '', email: '' }]);
+}
+
+function remove(i) {
+  const contacts = form.getValue('contacts');
+  form.setValue(
+    'contacts',
+    contacts.filter((_, idx) => idx !== i),
+  );
+}
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <div v-for="(_, i) in state.values.contacts" :key="i">
+      <input v-bind="form.bind(`contacts[${i}].name`)" placeholder="Name" />
+      <input v-bind="form.bind(`contacts[${i}].email`)" placeholder="Email" />
+      <button type="button" @click="remove(i)">Remove</button>
+    </div>
+    <button type="button" @click="add">Add Contact</button>
+    <button type="submit">Save</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: { contacts: [{ name: '', email: '' }] }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+
+  function add() {
+    const contacts = form.getValue('contacts');
+    form.setValue('contacts', [...contacts, { name: '', email: '' }]);
+  }
+
+  function remove(i) {
+    const contacts = form.getValue('contacts');
+    form.setValue('contacts', contacts.filter((_, idx) => idx !== i));
+  }
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  {#each state.values.contacts as _, i}
+    <div>
+      <input {...form.bind(`contacts[${i}].name`)} placeholder="Name" />
+      <input {...form.bind(`contacts[${i}].email`)} placeholder="Email" />
+      <button type="button" on:click={() => remove(i)}>Remove</button>
+    </div>
+  {/each}
+  <button type="button" on:click={add}>Add Contact</button>
+  <button type="submit">Save</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class DynamicFields extends HTMLElement {
+  #form = createForm({ initialValues: { contacts: [{ name: '', email: '' }] } });
+  #unsubscribe;
+
+  connectedCallback() {
+    this.#render();
+    this.#unsubscribe = this.#form.subscribe(() => this.#render());
+  }
+
+  #render() {
+    const values = this.#form.getValue('contacts');
+    this.innerHTML = `
+      <form>
+        ${values
+          .map(
+            (_, i) => `
+          <div>
+            <input name="contacts[${i}].name" placeholder="Name">
+            <input name="contacts[${i}].email" placeholder="Email">
+            <button type="button" class="remove" data-index="${i}">Remove</button>
+          </div>
+        `,
+          )
+          .join('')}
+        <button type="button" id="add">Add Contact</button>
+        <button type="submit">Save</button>
+      </form>
+    `;
+
+    this.querySelector('#add').onclick = () => {
+      this.#form.setValue('contacts', [...values, { name: '', email: '' }]);
+    };
+
+    this.querySelectorAll('.remove').forEach((btn) => {
+      btn.onclick = () => {
+        const i = parseInt(btn.dataset.index);
+        this.#form.setValue(
+          'contacts',
+          values.filter((_, idx) => idx !== i),
+        );
+      };
+    });
+
+    this.querySelectorAll('input').forEach((input) => {
+      input.oninput = (e) => this.#form.setValue(input.name, e.target.value);
+    });
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+}
+customElements.define('dynamic-fields', DynamicFields);
+```
+
+:::
 
 ## Search Form
 
 Search form with filters and debounced submission.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
-import { debounce } from '@vielzeug/toolkit';
 import { useState, useEffect } from 'react';
 
-interface SearchFilters {
-  query: string;
-  category: string;
-  minPrice: number;
-  maxPrice: number;
-  inStock: boolean;
-  sortBy: 'relevance' | 'price-asc' | 'price-desc' | 'newest';
-}
-
-function SearchForm({ onSearch }: { onSearch: (filters: SearchFilters) => void }) {
+function SearchForm() {
   const [form] = useState(() =>
-    createForm<SearchFilters>({
-      initialValues: {
-        query: '',
-        category: 'all',
-        minPrice: 0,
-        maxPrice: 10000,
-        inStock: false,
-        sortBy: 'relevance',
-      },
+    createForm({
+      initialValues: { query: '', category: 'all' },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  // Debounced search
-  const debouncedSearch = debounce((filters: SearchFilters) => {
-    onSearch(filters);
-  }, 300);
-
-  useEffect(() => {
-    debouncedSearch(state.values);
-  }, [state.values]);
-
-  const handleReset = () => {
-    form.setValues(
-      {
-        query: '',
-        category: 'all',
-        minPrice: 0,
-        maxPrice: 10000,
-        inStock: false,
-        sortBy: 'relevance',
-      },
-      { replace: true },
-    );
-  };
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form className="search-form" onSubmit={(e) => e.preventDefault()}>
-      <div className="search-bar">
-        <input {...form.bind('query')} type="search" placeholder="Search products..." className="search-input" />
-      </div>
-
-      <div className="filters">
-        <div className="form-group">
-          <label>Category</label>
-          <select {...form.bind('category')}>
-            <option value="all">All Categories</option>
-            <option value="electronics">Electronics</option>
-            <option value="clothing">Clothing</option>
-            <option value="books">Books</option>
-            <option value="home">Home & Garden</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Price Range</label>
-          <div className="price-range">
-            <input type="number" {...form.bind('minPrice')} placeholder="Min" min="0" />
-            <span>to</span>
-            <input type="number" {...form.bind('maxPrice')} placeholder="Max" min="0" />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Sort By</label>
-          <select {...form.bind('sortBy')}>
-            <option value="relevance">Relevance</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="newest">Newest First</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={state.values.inStock}
-              onChange={(e) => form.setValue('inStock', e.target.checked)}
-            />
-            In Stock Only
-          </label>
-        </div>
-      </div>
-
-      <button type="button" onClick={handleReset} className="reset-button">
-        Reset Filters
-      </button>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      <input {...form.bind('query')} placeholder="Search..." />
+      <select {...form.bind('category')}>
+        <option value="all">All</option>
+        <option value="electronics">Electronics</option>
+      </select>
+      <button type="submit">Search</button>
     </form>
   );
 }
 ```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: { query: '', category: 'all' },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('query')" placeholder="Search..." />
+    <select v-bind="form.bind('category')">
+      <option value="all">All</option>
+      <option value="electronics">Electronics</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: { query: '', category: 'all' }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('query')} placeholder="Search..." />
+  <select {...form.bind('category')}>
+    <option value="all">All</option>
+    <option value="electronics">Electronics</option>
+  </select>
+  <button type="submit">Search</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class SearchForm extends HTMLElement {
+  #form = createForm({ initialValues: { query: '', category: 'all' } });
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <input name="query" placeholder="Search...">
+        <select name="category">
+          <option value="all">All</option>
+          <option value="electronics">Electronics</option>
+        </select>
+        <button type="submit">Search</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    this.querySelectorAll('input, select').forEach((el) => {
+      el.oninput = (e) => this.#form.setValue(el.name, e.target.value);
+    });
+  }
+}
+customElements.define('search-form', SearchForm);
+```
+
+:::
 
 ## File Upload Form
 
-<Badge type="tip" text="Advanced" />
-
 Form with file upload and preview.
 
-```tsx
+::: code-group
+
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
-interface FileUploadData {
-  title: string;
-  description: string;
-  category: string;
-  file: File | null;
-}
-
 function FileUploadForm() {
   const [form] = useState(() =>
-    createForm<FileUploadData>({
-      initialValues: {
-        title: '',
-        description: '',
-        category: '',
-        file: null,
-      },
-      fields: {
-        title: {
-          validators: (value) => {
-            if (!value) return 'Title is required';
-            if (value.length < 3) return 'Title must be at least 3 characters';
-          },
-        },
-        category: {
-          validators: (value) => {
-            if (!value) return 'Category is required';
-          },
-        },
-        file: {
-          validators: (value) => {
-            if (!value) return 'File is required';
-            if (value.size > 5 * 1024 * 1024) return 'File must be smaller than 5MB';
-          },
-        },
-      },
+    createForm({
+      initialValues: { title: '', file: null },
     }),
   );
 
   const [state, setState] = useState(form.getStateSnapshot());
-  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => form.subscribe(setState), [form]);
 
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    form.setValue('file', file);
-
-    // Create preview for images
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPreview(null);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    await form.submit(async (values) => {
-      const formData = new FormData();
-      formData.append('title', values.title);
-      formData.append('description', values.description);
-      formData.append('category', values.category);
-      if (values.file) {
-        formData.append('file', values.file);
-      }
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      return response.json();
-    });
+  const handleFileChange = (e) => {
+    form.setValue('file', e.target.files?.[0] || null);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="file-upload-form">
-      <h2>Upload File</h2>
-
-      <div className="form-group">
-        <label>Title</label>
-        <input {...form.bind('title')} />
-        {state.errors.title && <span className="error">{state.errors.title}</span>}
-      </div>
-
-      <div className="form-group">
-        <label>Description</label>
-        <textarea {...form.bind('description')} rows={4} />
-      </div>
-
-      <div className="form-group">
-        <label>Category</label>
-        <select {...form.bind('category')}>
-          <option value="">Select category...</option>
-          <option value="documents">Documents</option>
-          <option value="images">Images</option>
-          <option value="videos">Videos</option>
-        </select>
-        {state.errors.category && <span className="error">{state.errors.category}</span>}
-      </div>
-
-      <div className="form-group">
-        <label>File</label>
-        <input type="file" onChange={handleFileChange} accept="image/*,application/pdf" />
-        {state.errors.file && <span className="error">{state.errors.file}</span>}
-
-        {preview && (
-          <div className="preview">
-            <img src={preview} alt="Preview" />
-          </div>
-        )}
-
-        {state.values.file && (
-          <div className="file-info">
-            <p>Name: {state.values.file.name}</p>
-            <p>Size: {(state.values.file.size / 1024).toFixed(2)} KB</p>
-            <p>Type: {state.values.file.type}</p>
-          </div>
-        )}
-      </div>
-
-      <button type="submit" disabled={state.isSubmitting} className="submit-button">
-        {state.isSubmitting ? 'Uploading...' : 'Upload'}
-      </button>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
+      <input {...form.bind('title')} placeholder="Title" />
+      <input type="file" onChange={handleFileChange} />
+      <button type="submit">Upload</button>
     </form>
   );
 }
 ```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: { title: '', file: null },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+
+function handleFileChange(e) {
+  form.setValue('file', e.target.files?.[0] || null);
+}
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('title')" placeholder="Title" />
+    <input type="file" @change="handleFileChange" />
+    <button type="submit">Upload</button>
+  </form>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: { title: '', file: null }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+
+  function handleFileChange(e) {
+    form.setValue('file', e.target.files?.[0] || null);
+  }
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('title')} placeholder="Title" />
+  <input type="file" on:change={handleFileChange} />
+  <button type="submit">Upload</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class FileUploadForm extends HTMLElement {
+  #form = createForm({ initialValues: { title: '', file: null } });
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <input name="title" placeholder="Title">
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    this.querySelector('input[name="title"]').oninput = (e) => {
+      this.#form.setValue('title', e.target.value);
+    };
+
+    this.querySelector('input[name="file"]').onchange = (e) => {
+      this.#form.setValue('file', e.target.files?.[0] || null);
+    };
+  }
+}
+customElements.define('file-upload-form', FileUploadForm);
+```
+
+:::
 
 ## Nested Objects
 
 Complex form with deeply nested objects.
 
-```tsx
+````tsx
 import { createForm } from '@vielzeug/formit';
 import { useState, useEffect } from 'react';
 
@@ -2413,174 +1679,118 @@ interface CompanyData {
   };
 }
 
+## Nested Objects
+
+Complex form with deeply nested objects.
+
+::: code-group
+
+```tsx [React]
+import { createForm } from '@vielzeug/formit';
+import { useState, useEffect } from 'react';
+
 function CompanyForm() {
-  const [form] = useState(() =>
-    createForm<CompanyData>({
-      initialValues: {
-        company: {
-          name: '',
-          registration: '',
-          address: {
-            street: '',
-            city: '',
-            country: '',
-          },
-          contact: {
-            email: '',
-            phone: '',
-            website: '',
-          },
-        },
-        billing: {
-          sameAsCompany: true,
-          address: {
-            street: '',
-            city: '',
-            country: '',
-          },
-        },
-      },
-      fields: {
-        'company.name': {
-          validators: (value) => {
-            if (!value) return 'Company name is required';
-          },
-        },
-        'company.contact.email': {
-          validators: (value) => {
-            if (!value) return 'Email is required';
-            if (!value.includes('@')) return 'Invalid email';
-          },
-        },
-      },
-    }),
-  );
+  const [form] = useState(() => createForm({
+    initialValues: {
+      company: { name: '', address: { city: '' } }
+    }
+  }));
 
   const [state, setState] = useState(form.getStateSnapshot());
-
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
-
-  // Sync billing address with company address
-  useEffect(() => {
-    if (state.values.billing.sameAsCompany) {
-      form.setValue('billing.address', state.values.company.address);
-    }
-  }, [state.values.billing.sameAsCompany, state.values.company.address]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    await form.submit(async (values) => {
-      const response = await fetch('/api/company', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-      return response.json();
-    });
-  };
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form onSubmit={handleSubmit} className="company-form">
-      <section>
-        <h2>Company Information</h2>
-
-        <div className="form-group">
-          <label>Company Name</label>
-          <input {...form.bind('company.name')} />
-          {state.errors['company.name'] && <span className="error">{state.errors['company.name']}</span>}
-        </div>
-
-        <div className="form-group">
-          <label>Registration Number</label>
-          <input {...form.bind('company.registration')} />
-        </div>
-
-        <h3>Company Address</h3>
-        <div className="form-group">
-          <label>Street</label>
-          <input {...form.bind('company.address.street')} />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>City</label>
-            <input {...form.bind('company.address.city')} />
-          </div>
-
-          <div className="form-group">
-            <label>Country</label>
-            <input {...form.bind('company.address.country')} />
-          </div>
-        </div>
-
-        <h3>Contact Information</h3>
-        <div className="form-group">
-          <label>Email</label>
-          <input type="email" {...form.bind('company.contact.email')} />
-          {state.errors['company.contact.email'] && (
-            <span className="error">{state.errors['company.contact.email']}</span>
-          )}
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>Phone</label>
-            <input type="tel" {...form.bind('company.contact.phone')} />
-          </div>
-
-          <div className="form-group">
-            <label>Website</label>
-            <input type="url" {...form.bind('company.contact.website')} />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2>Billing Address</h2>
-
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={state.values.billing.sameAsCompany}
-              onChange={(e) => form.setValue('billing.sameAsCompany', e.target.checked)}
-            />
-            Same as company address
-          </label>
-        </div>
-
-        {!state.values.billing.sameAsCompany && (
-          <>
-            <div className="form-group">
-              <label>Street</label>
-              <input {...form.bind('billing.address.street')} />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>City</label>
-                <input {...form.bind('billing.address.city')} />
-              </div>
-
-              <div className="form-group">
-                <label>Country</label>
-                <input {...form.bind('billing.address.country')} />
-              </div>
-            </div>
-          </>
-        )}
-      </section>
-
-      <button type="submit" disabled={state.isSubmitting} className="submit-button">
-        {state.isSubmitting ? 'Saving...' : 'Save Company'}
-      </button>
+    <form onSubmit={(e) => { e.preventDefault(); form.submit(console.log); }}>
+      <input {...form.bind('company.name')} placeholder="Company Name" />
+      <input {...form.bind('company.address.city')} placeholder="City" />
+      <button type="submit">Save</button>
     </form>
   );
 }
+````
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createForm } from '@vielzeug/formit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const form = createForm({
+  initialValues: {
+    company: { name: '', address: { city: '' } },
+  },
+});
+
+const state = ref(form.getStateSnapshot());
+let unsubscribe;
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <form @submit.prevent="form.submit(console.log)">
+    <input v-bind="form.bind('company.name')" placeholder="Company Name" />
+    <input v-bind="form.bind('company.address.city')" placeholder="City" />
+    <button type="submit">Save</button>
+  </form>
+</template>
 ```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createForm } from '@vielzeug/formit';
+  import { onDestroy } from 'svelte';
+
+  const form = createForm({
+    initialValues: {
+      company: { name: '', address: { city: '' } }
+    }
+  });
+
+  let state = form.getStateSnapshot();
+  const unsubscribe = form.subscribe(s => state = s);
+  onDestroy(unsubscribe);
+</script>
+
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('company.name')} placeholder="Company Name" />
+  <input {...form.bind('company.address.city')} placeholder="City" />
+  <button type="submit">Save</button>
+</form>
+```
+
+```ts [Web Component]
+import { createForm } from '@vielzeug/formit';
+
+class CompanyForm extends HTMLElement {
+  #form = createForm({
+    initialValues: {
+      company: { name: '', address: { city: '' } },
+    },
+  });
+
+  connectedCallback() {
+    this.innerHTML = `
+      <form>
+        <input name="company.name" placeholder="Company Name">
+        <input name="company.address.city" placeholder="City">
+        <button type="submit">Save</button>
+      </form>
+    `;
+
+    this.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      this.#form.submit(console.log);
+    };
+
+    this.querySelectorAll('input').forEach((input) => {
+      input.oninput = (e) => this.#form.setValue(input.name, e.target.value);
+    });
+  }
+}
+customElements.define('company-form', CompanyForm);
+```
+
+:::
 
 ---
 

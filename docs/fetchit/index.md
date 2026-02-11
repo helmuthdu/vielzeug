@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
 </div>
 
-<img src="/logo-http.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-fetchit.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
 
 # Fetchit
 
@@ -333,13 +333,10 @@ export const updateProfile = (data: Partial<User>) =>
 import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const http = createHttpClient({
-  baseUrl: 'https://api.example.com',
-});
-
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
-function UserProfile({ userId }: { userId: string }) {
+function useUser(userId: string) {
   const [state, setState] = useState({
     data: null as User | null,
     isLoading: true,
@@ -347,39 +344,39 @@ function UserProfile({ userId }: { userId: string }) {
   });
 
   useEffect(() => {
-    // Subscribe to query state changes
     const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
       setState({
-        data: newState.data,
+        data: newState.data ?? null,
         isLoading: newState.isLoading,
         error: newState.error,
       });
     });
 
-    // Fetch data
     queryClient
       .fetch({
         queryKey: ['users', userId],
         queryFn: () => http.get<User>(`/users/${userId}`),
         staleTime: 5000,
       })
-      .catch(() => {
-        // Error handled by subscription
-      });
+      .catch(() => {});
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [userId]);
 
-  if (state.isLoading) return <div>Loading...</div>;
-  if (state.error) return <div>Error: {state.error.message}</div>;
-  if (!state.data) return <div>User not found</div>;
+  return state;
+}
+
+function UserProfile({ userId }: { userId: string }) {
+  const { data, isLoading, error } = useUser(userId);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!data) return <div>User not found</div>;
 
   return (
     <div>
-      <h1>{state.data.name}</h1>
-      <p>{state.data.email}</p>
+      <h1>{data.name}</h1>
+      <p>{data.email}</p>
     </div>
   );
 }
