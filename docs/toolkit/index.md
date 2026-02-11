@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-utils.svg" alt="Toolkit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-toolkit.svg" alt="Toolkit Logo" width="156" class="logo-highlight"/>
 
 # Toolkit
 

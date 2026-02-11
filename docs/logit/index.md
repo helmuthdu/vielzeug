@@ -5,15 +5,11 @@
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
 
-<img src="/logo-logger.svg" alt="Logit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-logit.svg" alt="Logit Logo" width="156" class="logo-highlight"/>
 
 # Logit
 
 **Logit** is a powerful, type-safe console logging utility for TypeScript with styled output, log levels, scoped loggers, and remote logging support. Designed for both browser and Node.js environments with zero dependencies.
-
-## Screenshot
-
-![Logit Screenshot](/logit_ss.png)
 
 ## What Problem Does Logit Solve?
 

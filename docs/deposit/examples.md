@@ -8,12 +8,7 @@ These are complete application examples. For API reference and basic usage, see 
 
 ## Table of Contents
 
-- [Basic Setup](#basic-setup)
-- [CRUD Operations](#crud-operations)
-- [Advanced Queries](#advanced-queries)
-- [Transactions](#transactions)
-- [Migrations](#migrations)
-- [Real-World Patterns](#real-world-patterns)
+[[toc]]
 
 ## Basic Setup
 

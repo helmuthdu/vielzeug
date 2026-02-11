@@ -21,28 +21,28 @@ hero:
 
 features:
   - title: '@vielzeug/toolkit'
-    details: "<img src='/vielzeug/logo-utils.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>100+ type-safe, dependency-free utilities for arrays, objects, strings, dates, math, random, and more."
+    details: "<img src='/vielzeug/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
     link: /toolkit/
   - title: '@vielzeug/deposit'
-    details: "<img src='/vielzeug/logo-depot.svg' class='logo-highlight-smaller' alt='Depot Logo' width='72'/>Unified, type-safe IndexedDB & LocalStorage with advanced querying, transactions, and migrations."
+    details: "<img src='/vielzeug/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
   - title: '@vielzeug/fetchit'
-    details: "<img src='/vielzeug/logo-http.svg' class='logo-highlight-smaller' alt='Http Logo' width='72'/>Modern, type-safe HTTP client for browser & Node.js. Unified API, caching, cancellation, and more."
+    details: "<img src='/vielzeug/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
     link: /fetchit/
   - title: '@vielzeug/formit'
-    details: "<img src='/vielzeug/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Agnostic, type-safe form state and validation with minimal code and maximum flexibility."
+    details: "<img src='/vielzeug/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
     link: /formit/
   - title: '@vielzeug/i18nit'
-    details: "<img src='/vielzeug/logo-i18nit.svg' class='logo-highlight-smaller' alt='i18nit Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and framework-agnostic design."
+    details: "<img src='/vielzeug/logo-i18nit.svg' class='logo-highlight-smaller' alt='i18nit Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and more."
     link: /i18nit/
   - title: '@vielzeug/logit'
-    details: "<img src='/vielzeug/logo-logger.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Flexible, zero-dependency logger for browser & Node.js. Log levels, color themes, remote logging, and more."
+    details: "<img src='/vielzeug/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
     link: /logit/
   - title: '@vielzeug/permit'
-    details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Type-safe, extensible permission & role management for any app. Centralized, testable, and dynamic."
+    details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/
   - title: '@vielzeug/validit'
-    details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Lightweight, type-safe schema validation with async support, parallel arrays, and minimal bundle size."
+    details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
 ---
 

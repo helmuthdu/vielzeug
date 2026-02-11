@@ -8,11 +8,7 @@ These are complete application examples. For API reference and basic usage, see 
 
 ## Table of Contents
 
-- [Basic Operations](#basic-operations)
-- [Wildcard Patterns](#wildcard-patterns)
-- [Real-World Scenarios](#real-world-scenarios)
-- [Integration Patterns](#integration-patterns)
-- [Advanced Patterns](#advanced-patterns)
+[[toc]]
 
 ## Basic Operations
 

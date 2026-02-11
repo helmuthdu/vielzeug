@@ -8,14 +8,7 @@ These are complete application examples. For API reference and basic usage, see 
 
 ## Table of Contents
 
-- [Basic Logging Operations](#basic-logging-operations)
-- [Scoped Loggers](#scoped-loggers)
-- [Display Variants](#display-variants)
-- [Log Level Management](#log-level-management)
-- [Remote Logging](#remote-logging)
-- [Error Handling](#error-handling)
-- [Framework Integration](#framework-integration)
-- [Advanced Patterns](#advanced-patterns)
+[[toc]]
 
 ## Basic Logging Operations
 

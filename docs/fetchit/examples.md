@@ -8,12 +8,396 @@ These are complete application examples. For API reference and basic usage, see 
 
 ## Table of Contents
 
-- [Basic CRUD Operations with HTTP Client](#basic-crud-operations-with-http-client)
-- [Authentication](#authentication)
-- [Query Client](#query-client)
-- [Caching Strategies](#caching-strategies)
-- [Error Handling](#error-handling)
-- [Advanced Patterns](#advanced-patterns)
+[[toc]]
+
+## Framework Integration
+
+::: details 🎯 Why Two Patterns?
+We provide both **inline** and **hook/composable** patterns because:
+
+- **Inline**: Quick prototyping, one-off integrations
+- **Hook/Composable**: Reusable across components, better separation of concerns
+
+Choose based on your project structure and team preferences.
+:::
+
+Complete examples showing how to integrate Fetchit with React, Vue, Svelte, and Web Components.
+
+### Basic Integration (Inline)
+
+Directly create and use a client within components.
+
+::: code-group
+
+```tsx [React]
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { useEffect, useState } from 'react';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+function UserProfile({ userId }: { userId: string }) {
+  const [state, setState] = useState({
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  });
+
+  useEffect(() => {
+    const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
+      setState({
+        data: newState.data ?? null,
+        isLoading: newState.isLoading,
+        error: newState.error,
+      });
+    });
+
+    queryClient
+      .fetch({
+        queryKey: ['users', userId],
+        queryFn: () => http.get<User>(`/users/${userId}`),
+        staleTime: 5000,
+      })
+      .catch(() => {});
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  if (state.isLoading) return <div>Loading...</div>;
+  if (state.error) return <div>Error: {state.error.message}</div>;
+  if (!state.data) return <div>User not found</div>;
+
+  return <div>{state.data.name}</div>;
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const props = defineProps<{ userId: string }>();
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+const state = ref({
+  data: null as User | null,
+  isLoading: true,
+  error: null as Error | null,
+});
+
+let unsubscribe: (() => void) | null = null;
+
+onMounted(() => {
+  unsubscribe = queryClient.subscribe(['users', props.userId], (newState) => {
+    state.value = {
+      data: newState.data ?? null,
+      isLoading: newState.isLoading,
+      error: newState.error,
+    };
+  });
+
+  queryClient
+    .fetch({
+      queryKey: ['users', props.userId],
+      queryFn: () => http.get<User>(`/users/${props.userId}`),
+      staleTime: 5000,
+    })
+    .catch(() => {});
+});
+
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <div v-if="state.isLoading">Loading...</div>
+  <div v-else-if="state.error">Error: {{ state.error.message }}</div>
+  <div v-else-if="!state.data">User not found</div>
+  <div v-else>{{ state.data.name }}</div>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+  import { onDestroy } from 'svelte';
+
+  export let userId: string;
+
+  const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+  const queryClient = createQueryClient();
+
+  let state = {
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  };
+
+  const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
+    state = {
+      data: newState.data ?? null,
+      isLoading: newState.isLoading,
+      error: newState.error,
+    };
+  });
+
+  queryClient
+    .fetch({
+      queryKey: ['users', userId],
+      queryFn: () => http.get<User>(`/users/${userId}`),
+      staleTime: 5000,
+    })
+    .catch(() => {});
+
+  onDestroy(unsubscribe);
+</script>
+
+{#if state.isLoading}
+  <div>Loading...</div>
+{:else if state.error}
+  <div>Error: {state.error.message}</div>
+{:else if !state.data}
+  <div>User not found</div>
+{:else}
+  <div>{state.data.name}</div>
+{/if}
+```
+
+```ts [Web Component]
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+
+class UserCard extends HTMLElement {
+  #http = createHttpClient({ baseUrl: 'https://api.example.com' });
+  #queryClient = createQueryClient();
+  #unsubscribe: (() => void) | null = null;
+
+  connectedCallback() {
+    const userId = this.getAttribute('user-id') ?? '';
+    if (!userId) return;
+
+    this.#unsubscribe = this.#queryClient.subscribe(['users', userId], (state) => {
+      this.render(state);
+    });
+
+    this.#queryClient
+      .fetch({
+        queryKey: ['users', userId],
+        queryFn: () => this.#http.get<User>(`/users/${userId}`),
+        staleTime: 5000,
+      })
+      .catch(() => {});
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+
+  render(state: any) {
+    this.innerHTML = state.isLoading
+      ? '<div>Loading...</div>'
+      : state.error
+        ? `<div>Error: ${state.error.message}</div>`
+        : state.data
+          ? `<div>${state.data.name}</div>`
+          : '<div>User not found</div>';
+  }
+}
+
+customElements.define('user-card', UserCard);
+```
+
+:::
+
+### Advanced Integration (Hook/Composable)
+
+Recommended pattern for reusability and separation of concerns.
+
+::: code-group
+
+```tsx [React]
+// useUser.ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { useEffect, useMemo, useState } from 'react';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+export function useUser(userId: string) {
+  const [state, setState] = useState({
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  });
+
+  useEffect(() => {
+    const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
+      setState({
+        data: newState.data ?? null,
+        isLoading: newState.isLoading,
+        error: newState.error,
+      });
+    });
+
+    queryClient
+      .fetch({
+        queryKey: ['users', userId],
+        queryFn: () => http.get<User>(`/users/${userId}`),
+        staleTime: 5000,
+      })
+      .catch(() => {});
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return state;
+}
+
+// UserProfile.tsx
+function UserProfile({ userId }: { userId: string }) {
+  const state = useUser(userId);
+
+  if (state.isLoading) return <div>Loading...</div>;
+  if (state.error) return <div>Error: {state.error.message}</div>;
+  if (!state.data) return <div>User not found</div>;
+
+  return <div>{state.data.name}</div>;
+}
+```
+
+```vue [Vue 3]
+// useUser.ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+export function useUser(userId: () => string) {
+  const state = ref({
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  });
+
+  let unsubscribe: (() => void) | null = null;
+
+  onMounted(() => {
+    const id = userId();
+    if (!id) return;
+
+    unsubscribe = queryClient.subscribe(['users', id], (newState) => {
+      state.value = {
+        data: newState.data ?? null,
+        isLoading: newState.isLoading,
+        error: newState.error,
+      };
+    });
+
+    queryClient
+      .fetch({
+        queryKey: ['users', id],
+        queryFn: () => http.get<User>(`/users/${id}`),
+        staleTime: 5000,
+      })
+      .catch(() => {});
+  });
+
+  onUnmounted(() => unsubscribe?.());
+
+  return state;
+}
+
+// UserProfile.vue
+<script setup lang="ts">
+const props = defineProps<{ userId: string }>();
+const state = useUser(() => props.userId);
+</script>
+
+<template>
+  <div v-if="state.isLoading">Loading...</div>
+  <div v-else-if="state.error">Error: {{ state.error.message }}</div>
+  <div v-else-if="!state.data">User not found</div>
+  <div v-else>{{ state.data.name }}</div>
+</template>
+```
+
+```svelte [Svelte]
+// userStore.ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { writable } from 'svelte/store';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const queryClient = createQueryClient();
+
+export function useUser(userId: string) {
+  const state = writable({
+    data: null as User | null,
+    isLoading: true,
+    error: null as Error | null,
+  });
+
+  const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
+    state.set({
+      data: newState.data ?? null,
+      isLoading: newState.isLoading,
+      error: newState.error,
+    });
+  });
+
+  queryClient
+    .fetch({
+      queryKey: ['users', userId],
+      queryFn: () => http.get<User>(`/users/${userId}`),
+      staleTime: 5000,
+    })
+    .catch(() => {});
+
+  return { subscribe: state.subscribe, unsubscribe };
+}
+
+// +page.svelte
+<script lang="ts">
+  import { useUser } from './userStore';
+
+  export let data: { id: string };
+
+  const userStore = useUser(data.id);
+</script>
+
+{#if $userStore.isLoading}
+  <div>Loading...</div>
+{:else if $userStore.error}
+  <div>Error: {$userStore.error.message}</div>
+{:else if !$userStore.data}
+  <div>User not found</div>
+{:else}
+  <div>{$userStore.data.name}</div>
+{/if}
+```
+
+```ts [Web Component]
+// BaseUserElement.ts
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+
+export class BaseUserElement extends HTMLElement {
+  http = createHttpClient({ baseUrl: 'https://api.example.com' });
+  queryClient = createQueryClient();
+
+  async fetchUser(userId: string) {
+    return this.queryClient.fetch({
+      queryKey: ['users', userId],
+      queryFn: () => this.http.get<User>(`/users/${userId}`),
+      staleTime: 5000,
+    });
+  }
+
+  subscribeToUser(userId: string, listener: (state: any) => void) {
+    return this.queryClient.subscribe(['users', userId], listener);
+  }
+}
+```
+
+:::
 
 ## Basic CRUD Operations with HTTP Client
 
@@ -364,123 +748,6 @@ async function safeRequest<T>(requestFn: () => Promise<T>): Promise<T | null> {
 
 // Usage
 const user = await safeRequest(() => http.get<User>('/users/1'));
-```
-
-## Framework Integration
-
-### React Hook
-
-```tsx
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
-import { useEffect, useState } from 'react';
-
-const http = createHttpClient({
-  baseUrl: 'https://api.example.com',
-});
-
-const queryClient = createQueryClient();
-
-function useUser(userId: string) {
-  const [data, setData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const user = await queryClient.fetch({
-          queryKey: ['users', userId],
-          queryFn: () => http.get<User>(`/users/${userId}`),
-        });
-
-        if (!cancelled) {
-          setData(user);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err : new Error('Failed'));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  return { data, loading, error };
-}
-
-// Usage
-function UserProfile({ userId }: { userId: string }) {
-  const { data: user, loading, error } = useUser(userId);
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!user) return <div>User not found</div>;
-
-  return <div>{user.name}</div>;
-}
-```
-
-### Vue Composable
-
-```ts
-import { createHttpClient } from '@vielzeug/fetchit';
-import { ref, watchEffect } from 'vue';
-
-const http = createHttpClient({
-  baseUrl: 'https://api.example.com',
-});
-
-export function useUser(userId: Ref<string>) {
-  const data = ref<User | null>(null);
-  const loading = ref(true);
-  const error = ref<Error | null>(null);
-
-  watchEffect(async () => {
-    try {
-      loading.value = true;
-      const user = await http.get<User>(`/users/${userId.value}`);
-      data.value = user;
-      error.value = null;
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error('Failed');
-    } finally {
-      loading.value = false;
-    }
-  });
-
-  return { data, loading, error };
-}
-```
-
-### SvelteKit
-
-```ts
-import { createHttpClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({
-  baseUrl: 'https://api.example.com',
-});
-
-// +page.server.ts
-export async function load({ params }) {
-  const user = await http.get<User>(`/users/${params.id}`);
-  return {
-    user,
-  };
-}
 ```
 
 ## Advanced Patterns

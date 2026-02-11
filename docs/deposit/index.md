@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
 
-<img src="/logo-depot.svg" alt="Deposit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-deposit.svg" alt="Deposit Logo" width="156" class="logo-highlight"/>
 
 # Deposit
 
