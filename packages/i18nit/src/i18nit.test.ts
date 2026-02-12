@@ -134,16 +134,14 @@ describe('I18nit', () => {
       const i18n = createI18n({
         messages: {
           en: {
-            shopping: 'Shopping list: {items}',
             firstItem: 'First: {items[0]}',
             outOfBounds: 'Item: {items[10]}',
+            shopping: 'Shopping list: {items}',
           },
         },
       });
 
-      expect(i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] })).toBe(
-        'Shopping list: Apple, Banana, Orange',
-      );
+      expect(i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] })).toBe('Shopping list: Apple, Banana, Orange');
       expect(i18n.t('firstItem', { items: ['Apple', 'Banana'] })).toBe('First: Apple');
       expect(i18n.t('outOfBounds', { items: ['Apple'] })).toBe('Item: ');
     });
@@ -152,10 +150,10 @@ describe('I18nit', () => {
       const i18n = createI18n({
         messages: {
           en: {
-            zero: 'Guests: {guests|and}',
             one: 'Guest: {guests|and}',
-            two: 'Guests: {guests|and}',
             three: 'Guests: {guests|and}',
+            two: 'Guests: {guests|and}',
+            zero: 'Guests: {guests|and}',
           },
         },
       });
@@ -186,8 +184,8 @@ describe('I18nit', () => {
         messages: {
           en: {
             dash: 'Items: {items| - }',
-            semicolon: 'Items: {items|; }',
             pipe: 'Items: {items| | }',
+            semicolon: 'Items: {items|; }',
           },
         },
       });
@@ -209,9 +207,7 @@ describe('I18nit', () => {
 
       expect(i18n.t('count', { items: ['A', 'B', 'C'] })).toBe('You have 3 items');
       expect(i18n.t('count', { items: [] })).toBe('You have 0 items');
-      expect(i18n.t('multiple', { items: ['A', 'B'], categories: ['X', 'Y', 'Z'] })).toBe(
-        '2 items in 3 categories',
-      );
+      expect(i18n.t('multiple', { categories: ['X', 'Y', 'Z'], items: ['A', 'B'] })).toBe('2 items in 3 categories');
     });
 
     test('handles complex array scenarios', () => {
@@ -230,7 +226,7 @@ describe('I18nit', () => {
 
       expect(
         i18n.t('nested', {
-          users: [{ name: 'Alice', items: ['Book', 'Pen', 'Notebook'] }],
+          users: [{ items: ['Book', 'Pen', 'Notebook'], name: 'Alice' }],
         }),
       ).toBe('Alice has 3 items: Book, Pen, Notebook');
     });
@@ -239,10 +235,10 @@ describe('I18nit', () => {
       const i18n = createI18n({
         locale: 'en',
         messages: {
+          de: { guests: 'Gäste: {names|and}' },
           en: { guests: 'Guests: {names|and}' },
           es: { guests: 'Invitados: {names|and}' },
           fr: { guests: 'Invités: {names|and}' },
-          de: { guests: 'Gäste: {names|and}' },
           ja: { guests: 'ゲスト: {names|and}' },
         },
       });
@@ -276,10 +272,10 @@ describe('I18nit', () => {
       const i18n = createI18n({
         locale: 'en',
         messages: {
+          de: { options: 'Wählen: {choices|or}' },
           en: { options: 'Choose: {choices|or}' },
           es: { options: 'Elige: {choices|or}' },
           fr: { options: 'Choisir: {choices|or}' },
-          de: { options: 'Wählen: {choices|or}' },
           pt: { options: 'Escolha: {choices|or}' },
         },
       });

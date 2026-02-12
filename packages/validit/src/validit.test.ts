@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { type Infer, ValidationError, v } from './validit';
 
 /* ============================================
@@ -1084,50 +1084,6 @@ describe('Async validation', () => {
     });
   });
 
-  describe('Array parallel validation', () => {
-    it('should validate arrays sequentially by default', async () => {
-      const schema = v.array(v.string().min(3));
-      const result = await schema.parseAsync(['hello', 'world']);
-      expect(result).toEqual(['hello', 'world']);
-    });
-
-    it('should validate arrays in parallel when enabled', async () => {
-      const schema = v.array(v.string().min(3), { parallel: true });
-      const result = await schema.parseAsync(['hello', 'world', 'test']);
-      expect(result).toEqual(['hello', 'world', 'test']);
-    });
-
-    it('should collect all errors in parallel validation', async () => {
-      const schema = v.array(v.string().min(5), { parallel: true });
-      const result = await schema.safeParseAsync(['hello', 'hi', 'test', 'ok']);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues.length).toBeGreaterThan(1);
-      }
-    });
-
-    it('should work with complex nested objects in parallel', async () => {
-      const schema = v.array(
-        v.object({
-          id: v.number(),
-          name: v.string().min(2),
-        }),
-        { parallel: true },
-      );
-      const result = await schema.parseAsync([
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-      expect(result).toHaveLength(2);
-    });
-
-    it('should handle empty arrays in parallel mode', async () => {
-      const schema = v.array(v.string(), { parallel: true });
-      const result = await schema.parseAsync([]);
-      expect(result).toEqual([]);
-    });
-  });
-
   describe('refineAsync()', () => {
     it('should add async custom validation', async () => {
       const schema = v.string().refineAsync(async (val) => {
@@ -1141,7 +1097,7 @@ describe('Async validation', () => {
     });
 
     it('should work with sync functions', async () => {
-      const schema = v.string().refineAsync((val) => val.length >= 3, 'Too short');
+      const schema = v.string().refineAsync((val) => (val.length >= 3) as any, 'Too short');
       await expect(schema.parseAsync('hello')).resolves.toBe('hello');
       await expect(schema.parseAsync('hi')).rejects.toThrow('Too short');
     });

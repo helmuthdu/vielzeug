@@ -169,9 +169,6 @@ v.array(v.string())
 
 // Nested arrays
 v.array(v.array(v.number())); // number[][]
-
-// Parallel validation (async)
-v.array(v.string(), { parallel: true });
 ```
 
 ### Objects
@@ -301,8 +298,7 @@ const schema = v.array(
     })
     .refineAsync(async (item) => {
       return await validateItem(item);
-    }),
-  { parallel: true }, // Validate all items in parallel
+    })
 );
 
 const items = await schema.parseAsync(largeArray);
@@ -566,7 +562,6 @@ type Data = Infer<typeof schema>;
 - Use `safeParse()` for user input
 - Leverage type inference with `Infer<typeof schema>`
 - Use `describe()` for complex nested schemas
-- Enable parallel validation for large arrays
 
 ### ❌ Don't
 

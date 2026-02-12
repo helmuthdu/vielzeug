@@ -129,23 +129,6 @@ const schema = v
 await schema.parseAsync('user@example.com');
 ```
 
-### ⚡ Parallel Array Processing
-
-Validate large arrays efficiently with parallel processing.
-
-```ts
-const schema = v.array(
-  v
-    .object({
-      id: v.number(),
-      name: v.string(),
-    })
-    .refineAsync(async (item) => await validate(item)),
-  { parallel: true }, // Process all items concurrently
-);
-
-await schema.parseAsync(largeArray);
-```
 
 ### 🎨 Convenience Schemas
 
