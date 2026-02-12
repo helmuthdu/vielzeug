@@ -328,6 +328,7 @@ declare module '@vielzeug/stateit' {
 
   export class Store<T extends object> {
     get(): T;
+    select<U>(selector: Selector<T, U>): U;
     getName(): string | undefined;
     replace(nextState: T): void;
     set(patch: Partial<T>): void;

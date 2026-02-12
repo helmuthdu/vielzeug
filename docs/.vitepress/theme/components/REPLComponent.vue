@@ -297,32 +297,27 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { examples } from './repl/examples';
 import { libraryTypes, toolkitTypes } from './repl/types';
 
-const editorContainer = ref(null);
-const outputContainer = ref(null);
-const selectedLibrary = ref('toolkit');
-const selectedExample = ref('');
-const isExpanded = ref(false);
-const searchQuery = ref('');
-const isDark = ref(true); // Default to dark, will sync on mount
-let editor = null;
-let currentLibraryModule = null;
+// ============================================================================
+// Constants
+// ============================================================================
 
-// Library descriptions
-const libraryDescriptions = {
+const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
+const STORAGE_PREFIX = 'vielzeug-repl-code-';
+
+const LIBRARY_DESCRIPTIONS = {
   deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
   formit: 'Type-safe form state and validation for React and beyond.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
-  stateit: 'Tiny, framework-agnostic state management with reactive subscriptions.',
-  toolkit: 'A comprehensive utility library with functions for arrays, objects, and more.',
+  stateit: 'State management with reactive subscriptions.',
+  toolkit: 'Utility library with functions for arrays, objects, and more.',
   validit: 'Type-safe schema validation with advanced error handling.',
   wireit: 'Lightweight dependency injection container with IoC principles.',
-};
+} as const;
 
-// Library loaders
-const libraryLoaders = {
+const LIBRARY_LOADERS = {
   deposit: () => import('@vielzeug/deposit'),
   fetchit: () => import('@vielzeug/fetchit'),
   formit: () => import('@vielzeug/formit'),
@@ -333,23 +328,9 @@ const libraryLoaders = {
   toolkit: () => import('@vielzeug/toolkit'),
   validit: () => import('@vielzeug/validit'),
   wireit: () => import('@vielzeug/wireit'),
-};
+} as const;
 
-// Default code for each library
-// Helper to get default code for a library from its examples
-const getDefaultCode = (libName) => {
-  const libExamples = examples[libName];
-  if (libExamples) {
-    const firstKey = Object.keys(libExamples)[0];
-    if (firstKey) {
-      return libExamples[firstKey].code;
-    }
-  }
-  return '';
-};
-
-// Library exports reference
-const libraryExports = ref({
+const LIBRARY_EXPORTS = {
   toolkit: [],
   deposit: ['Deposit'],
   fetchit: ['createHttpClient', 'createQueryClient'],
@@ -369,10 +350,9 @@ const libraryExports = ref({
     'ProviderNotFoundError',
     'AsyncProviderError',
   ],
-});
+} as const;
 
-// Toolkit categories
-const toolkitCategories = [
+const TOOLKIT_CATEGORIES = [
   {
     name: 'Array',
     functions: [
@@ -407,7 +387,10 @@ const toolkitCategories = [
     name: 'Object',
     functions: ['cache', 'clone', 'diff', 'entries', 'keys', 'merge', 'parseJSON', 'path', 'seek', 'values'],
   },
-  { name: 'String', functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate'] },
+  {
+    name: 'String',
+    functions: ['camelCase', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'truncate'],
+  },
   {
     name: 'Math',
     functions: [
@@ -491,24 +474,50 @@ const toolkitCategories = [
     ],
   },
   { name: 'Random', functions: ['draw', 'random', 'shuffle', 'uuid'] },
-];
+] as const;
+
+// ============================================================================
+// State
+// ============================================================================
+
+const editorContainer = ref(null);
+const outputContainer = ref(null);
+const selectedLibrary = ref('toolkit');
+const selectedExample = ref('');
+const isExpanded = ref(false);
+const isExecuting = ref(false);
+const searchQuery = ref('');
+const isDark = ref(true);
+
+let editor = null;
+let consoleIntercepted = false;
+const originalConsole = {
+  log: console.log,
+  error: console.error,
+  warn: console.warn,
+};
+
+// Constants exposed for template
+const libraryDescriptions = LIBRARY_DESCRIPTIONS;
+
+// ============================================================================
+// Computed Properties
+// ============================================================================
 
 const filteredCategories = computed(() => {
-  if (selectedLibrary.value !== 'toolkit') return [];
-
-  if (!searchQuery.value) return toolkitCategories;
+  if (selectedLibrary.value !== 'toolkit' || !searchQuery.value) {
+    return selectedLibrary.value === 'toolkit' ? TOOLKIT_CATEGORIES : [];
+  }
 
   const query = searchQuery.value.toLowerCase();
-  return toolkitCategories
-    .map((cat) => ({
-      ...cat,
-      functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),
-    }))
-    .filter((cat) => cat.functions.length > 0);
+  return TOOLKIT_CATEGORIES.map((cat) => ({
+    ...cat,
+    functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),
+  })).filter((cat) => cat.functions.length > 0);
 });
 
 const filteredExports = computed(() => {
-  const exports = libraryExports.value[selectedLibrary.value] || [];
+  const exports = LIBRARY_EXPORTS[selectedLibrary.value] || [];
   if (!searchQuery.value) return exports;
 
   const query = searchQuery.value.toLowerCase();
@@ -517,18 +526,13 @@ const filteredExports = computed(() => {
 
 const examplesByCategory = computed(() => {
   const libExamples = examples[selectedLibrary.value] || {};
-
   const grouped = {};
-  Object.entries(libExamples).forEach(([key, value]) => {
+
+  for (const [key, value] of Object.entries(libExamples)) {
     const category = key.split('-')[0] || 'Other';
-    if (!grouped[category]) {
-      grouped[category] = [];
-    }
-    grouped[category].push({
-      label: value.name || key,
-      value: key,
-    });
-  });
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push({ label: value.name || key, value: key });
+  }
 
   return Object.entries(grouped).map(([name, exampleList]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
@@ -536,28 +540,19 @@ const examplesByCategory = computed(() => {
   }));
 });
 
-const isMatch = (fn: string) => {
-  if (!searchQuery.value) return false;
-  return fn.toLowerCase().includes(searchQuery.value.toLowerCase());
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+const getDefaultCode = (libName: string) => {
+  const libExamples = examples[libName];
+  const firstKey = libExamples ? Object.keys(libExamples)[0] : null;
+  return firstKey ? libExamples[firstKey].code : '';
 };
 
-// Watch library changes
-watch(selectedLibrary, () => {
-  switchLibrary();
-});
-
-onMounted(() => {
-  initializeREPL();
-  syncTheme();
-
-  // Watch for VitePress theme changes
-  const observer = new MutationObserver(() => syncTheme());
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-  onBeforeUnmount(() => {
-    observer.disconnect();
-  });
-});
+const isMatch = (fn: string) => {
+  return searchQuery.value && fn.toLowerCase().includes(searchQuery.value.toLowerCase());
+};
 
 const syncTheme = () => {
   isDark.value = document.documentElement.classList.contains('dark');
@@ -566,91 +561,15 @@ const syncTheme = () => {
   }
 };
 
-onBeforeUnmount(() => {
-  if (editor) {
-    editor.dispose();
-  }
-});
-
-const initializeREPL = () => {
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/monaco-editor@0.55.1/min/vs/loader.js';
-  script.onload = () => {
-    require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.55.1/min/vs' } });
-
-    require(['vs/editor/editor.main'], function () {
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ESNext,
-        allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        module: monaco.languages.typescript.ModuleKind.CommonJS,
-        noEmit: true,
-        esModuleInterop: true,
-      });
-
-      updateMonacoTypes(selectedLibrary.value);
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const sharedCode = urlParams.get('code');
-      let initialCode = getDefaultCode(selectedLibrary.value);
-
-      if (sharedCode) {
-        try {
-          initialCode = atob(sharedCode);
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (e) {
-          console.error('Failed to decode shared code', e);
-        }
-      } else {
-        const savedCode = localStorage.getItem(`vielzeug-repl-code-${selectedLibrary.value}`);
-        if (savedCode) {
-          initialCode = savedCode;
-        }
-      }
-
-      editor = monaco.editor.create(editorContainer.value, {
-        value: initialCode,
-        language: 'typescript',
-        theme: isDark.value ? 'vs-dark' : 'vs',
-        fontSize: 14,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-      });
-
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        runCode();
-      });
-
-      loadLibrary(selectedLibrary.value);
-    });
-  };
-  document.head.appendChild(script);
-};
-
-const switchLibrary = () => {
-  selectedExample.value = '';
-  if (editor) {
-    const savedCode = localStorage.getItem(`vielzeug-repl-code-${selectedLibrary.value}`);
-    editor.setValue(savedCode || getDefaultCode(selectedLibrary.value));
-  }
-  clearOutput();
-  loadLibrary(selectedLibrary.value);
-};
-
-const updateMonacoTypes = (libName) => {
+const updateMonacoTypes = (libName: string) => {
   if (!window.monaco) return;
 
-  // Clear existing libs
   monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
-
-  // Add toolkit types (always available as dependency)
   monaco.languages.typescript.typescriptDefaults.addExtraLib(
     toolkitTypes,
     'file:///node_modules/@vielzeug/toolkit/index.d.ts',
   );
 
-  // Add selected library types if different from toolkit
   if (libName !== 'toolkit' && libraryTypes[libName]) {
     monaco.languages.typescript.typescriptDefaults.addExtraLib(
       libraryTypes[libName],
@@ -661,12 +580,11 @@ const updateMonacoTypes = (libName) => {
 
 const loadLibrary = async (libName: string) => {
   try {
-    const loader = (libraryLoaders as any)[libName];
+    const loader = LIBRARY_LOADERS[libName];
     if (!loader) return;
+
     const module = await loader();
-    currentLibraryModule = module;
     window[libName] = module;
-    // Also expose variables globally for easier usage in REPL
     Object.entries(module).forEach(([key, val]) => {
       window[key] = val;
     });
@@ -679,121 +597,208 @@ const loadLibrary = async (libName: string) => {
   }
 };
 
-const runCode = () => {
-  if (!editor) return;
+// ============================================================================
+// Monaco & Editor Setup
+// ============================================================================
 
-  const code = editor.getValue();
-  const output = outputContainer.value;
+const initializeREPL = () => {
+  const script = document.createElement('script');
+  script.src = `${MONACO_CDN}/loader.js`;
+  script.onload = () => {
+    require.config({ paths: { vs: MONACO_CDN } });
 
-  output.innerHTML = '';
-
-  const originalLog = console.log;
-  const originalError = console.error;
-  const originalWarn = console.warn;
-
-  const stringify = (item) => {
-    if (item === undefined) return 'undefined';
-    if (item === null) return 'null';
-    if (typeof item === 'object') {
-      try {
-        if (item instanceof Date) return `Date(${item.toISOString()})`;
-        if (item instanceof Error) return `Error: ${item.message}`;
-        if (item instanceof RegExp) return String(item);
-        return JSON.stringify(item, null, 2);
-      } catch (e) {
-        return String(item);
-      }
-    }
-    if (typeof item === 'string') return `'${item}'`;
-    return String(item);
-  };
-
-  const addOutput = (content: string[], type = 'log') => {
-    const line = document.createElement('div');
-    line.className = `output-line output-${type}`;
-
-    if (type !== 'result') {
-      const time = document.createElement('span');
-      time.className = 'log-timestamp';
-      time.textContent = new Date().toLocaleTimeString([], {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+    (require as any)(['vs/editor/editor.main'], () => {
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        target: monaco.languages.typescript.ScriptTarget.ESNext,
+        allowNonTsExtensions: true,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        noEmit: true,
+        esModuleInterop: true,
       });
-      line.appendChild(time);
-    }
 
-    const text = document.createElement('span');
-    text.className = 'log-text';
-    text.textContent = type === 'result' ? `→ ${content.map(stringify).join(' ')}` : content.map(stringify).join(' ');
-    line.appendChild(text);
+      updateMonacoTypes(selectedLibrary.value);
 
-    output.appendChild(line);
-    output.scrollTop = output.scrollHeight;
+      const initialCode = getInitialCode();
+      editor = monaco.editor.create(editorContainer.value, {
+        value: initialCode,
+        language: 'typescript',
+        theme: isDark.value ? 'vs-dark' : 'vs',
+        fontSize: 14,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+      });
+
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
+      loadLibrary(selectedLibrary.value);
+    });
   };
+  document.head.appendChild(script);
+};
+
+const getInitialCode = () => {
+  // Check for shared code in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedCode = urlParams.get('code');
+
+  if (sharedCode) {
+    try {
+      const decoded = atob(sharedCode);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return decoded;
+    } catch (e) {
+      console.error('Failed to decode shared code', e);
+    }
+  }
+
+  // Check for saved code in localStorage
+  const savedCode = localStorage.getItem(`${STORAGE_PREFIX}${selectedLibrary.value}`);
+  return savedCode || getDefaultCode(selectedLibrary.value);
+};
+
+const switchLibrary = () => {
+  selectedExample.value = '';
+  if (editor) {
+    const savedCode = localStorage.getItem(`${STORAGE_PREFIX}${selectedLibrary.value}`);
+    editor.setValue(savedCode || getDefaultCode(selectedLibrary.value));
+  }
+  clearOutput();
+  loadLibrary(selectedLibrary.value);
+};
+
+// ============================================================================
+// Console Interception
+// ============================================================================
+
+const stringify = (item: unknown) => {
+  if (item === undefined) return 'undefined';
+  if (item === null) return 'null';
+  if (typeof item === 'string') return `'${item}'`;
+  if (typeof item === 'object') {
+    try {
+      if (item instanceof Date) return `Date(${item.toISOString()})`;
+      if (item instanceof Error) return `Error: ${item.message}`;
+      if (item instanceof RegExp) return String(item);
+      return JSON.stringify(item, null, 2);
+    } catch {
+      return String(item);
+    }
+  }
+  return String(item);
+};
+
+const createOutputLine = (content: string[], type: 'log' | 'error' | 'warn' | 'result') => {
+  const output = outputContainer.value;
+  if (!output?.parentNode) return;
+
+  const line = document.createElement('div');
+  line.className = `output-line output-${type}`;
+
+  if (type !== 'result') {
+    const time = document.createElement('span');
+    time.className = 'log-timestamp';
+    time.textContent = new Date().toLocaleTimeString([], {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    line.appendChild(time);
+  }
+
+  const text = document.createElement('span');
+  text.className = 'log-text';
+  text.textContent = type === 'result' ? `→ ${content.map(stringify).join(' ')}` : content.map(stringify).join(' ');
+  line.appendChild(text);
+
+  output.appendChild(line);
+  output.scrollTop = output.scrollHeight;
+};
+
+const setupConsoleInterception = () => {
+  if (consoleIntercepted) {
+    Object.assign(console, originalConsole);
+    consoleIntercepted = false;
+  }
 
   console.log = (...args) => {
-    addOutput(args, 'log');
+    createOutputLine(args, 'log');
+    originalConsole.log(...args);
   };
 
   console.error = (...args) => {
-    addOutput(args, 'error');
+    createOutputLine(args, 'error');
+    originalConsole.error(...args);
   };
 
   console.warn = (...args) => {
-    addOutput(args, 'warn');
+    createOutputLine(args, 'warn');
+    originalConsole.warn(...args);
   };
 
+  consoleIntercepted = true;
+};
+
+const transformImports = (code: string) => {
+  let transformed = code;
+
+  for (const lib of Object.keys(LIBRARY_LOADERS)) {
+    transformed = transformed
+      .replace(new RegExp(`import\\s*{([^}]+)}\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'), (_, imports) => {
+        const importList = imports.split(',').map((i: string) => i.trim());
+        return `const { ${importList.join(', ')} } = window.${lib} || {}`;
+      })
+      .replace(
+        new RegExp(`import\\s*\\*\\s*as\\s+(\\w+)\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'),
+        `const $1 = window.${lib} || {}`,
+      );
+  }
+
+  return transformed.includes('await') ? `(async () => { ${transformed} })()` : transformed;
+};
+
+// ============================================================================
+// Code Execution
+// ============================================================================
+
+const runCode = () => {
+  if (!editor) return;
+
+  isExecuting.value = true;
+  outputContainer.value.innerHTML = '';
+  setupConsoleInterception();
+
   try {
-    let transformedCode = code;
-
-    // Transform import statements for all libraries
-    Object.keys(libraryLoaders).forEach((lib) => {
-      transformedCode = transformedCode
-        .replace(new RegExp(`import\\s*{([^}]+)}\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'), (match, imports) => {
-          const importList = imports.split(',').map((i) => i.trim());
-          return `const { ${importList.join(', ')} } = window.${lib} || {}`;
-        })
-        .replace(
-          new RegExp(`import\\s*\\*\\s*as\\s+(\\w+)\\s*from\\s*['"]@vielzeug/${lib}['"]`, 'g'),
-          `const $1 = window.${lib} || {}`,
-        );
-    });
-
-    if (transformedCode.includes('await')) {
-      transformedCode = `(async () => { ${transformedCode} })()`;
-    }
-
+    const transformedCode = transformImports(editor.getValue());
     const result = eval(transformedCode);
 
+    const handleResult = (res: unknown) => {
+      if (res !== undefined) {
+        createOutputLine(['→', res], 'result');
+      }
+      isExecuting.value = false;
+    };
+
     if (result instanceof Promise) {
-      result
-        .then((res) => {
-          if (res !== undefined) {
-            addOutput(['→', res], 'result');
-          }
-        })
-        .catch((err) => {
-          addOutput(['Error:', err.message], 'error');
-        });
-    } else if (result !== undefined) {
-      addOutput(['→', result], 'result');
+      result.then(handleResult).catch((err) => {
+        createOutputLine(['Error:', err.message], 'error');
+        isExecuting.value = false;
+      });
+    } else {
+      handleResult(result);
     }
   } catch (error) {
-    addOutput(['Error:', error.message], 'error');
-  } finally {
-    console.log = originalLog;
-    console.error = originalError;
-    console.warn = originalWarn;
+    createOutputLine(['Error:', error.message], 'error');
+    isExecuting.value = false;
   }
 };
 
-const clearEditor = () => {
-  if (editor) {
-    editor.setValue('');
-  }
-};
+// ============================================================================
+// Editor Actions
+// ============================================================================
+
+const clearEditor = () => editor?.setValue('');
 
 const clearOutput = () => {
   if (outputContainer.value) {
@@ -802,67 +807,88 @@ const clearOutput = () => {
 };
 
 const loadExample = () => {
-  if (
-    selectedExample.value &&
-    examples[selectedLibrary.value] &&
-    examples[selectedLibrary.value][selectedExample.value] &&
-    editor
-  ) {
-    const exampleCode = examples[selectedLibrary.value][selectedExample.value].code;
-    editor.setValue(exampleCode);
+  const lib = selectedLibrary.value;
+  const exampleKey = selectedExample.value;
+
+  if (exampleKey && examples[lib]?.[exampleKey] && editor) {
+    editor.setValue(examples[lib][exampleKey].code);
     runCode();
   }
 };
 
-const formatCode = () => {
-  if (editor) {
-    editor.getAction('editor.action.formatDocument').run();
-  }
-};
+const formatCode = () => editor?.getAction('editor.action.formatDocument').run();
 
-const copyCode = () => {
-  if (editor) {
-    const code = editor.getValue();
-    navigator.clipboard.writeText(code).then(() => {
-      alert('Code copied to clipboard!');
-    });
+const copyCode = async () => {
+  if (!editor) return;
+
+  try {
+    await navigator.clipboard.writeText(editor.getValue());
+    alert('Code copied to clipboard!');
+  } catch (err) {
+    console.error('Failed to copy code:', err);
   }
 };
 
 const resetEditor = () => {
-  if (editor && confirm('Are you sure you want to reset the editor to default?')) {
-    editor.setValue(getDefaultCode(selectedLibrary.value));
-    localStorage.removeItem(`vielzeug-repl-code-${selectedLibrary.value}`);
-    runCode();
-  }
+  if (!editor || !confirm('Are you sure you want to reset the editor to default?')) return;
+
+  editor.setValue(getDefaultCode(selectedLibrary.value));
+  localStorage.removeItem(`${STORAGE_PREFIX}${selectedLibrary.value}`);
+  runCode();
 };
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value;
   if (editor) {
-    setTimeout(() => {
-      editor.layout();
-    }, 100);
+    setTimeout(() => editor.layout(), 100);
   }
 };
 
 const insertFunction = (item: string) => {
-  if (editor) {
-    const selection = editor.getSelection();
-    const range = new monaco.Range(
-      selection.startLineNumber,
-      selection.startColumn,
-      selection.endLineNumber,
-      selection.endColumn,
-    );
-    const text = item;
-    editor.executeEdits('insert-function', [{ range: range, text: text, forceMoveMarkers: true }]);
-    editor.focus();
-  }
+  if (!editor) return;
+
+  const selection = editor.getSelection();
+  const range = new monaco.Range(
+    selection.startLineNumber,
+    selection.startColumn,
+    selection.endLineNumber,
+    selection.endColumn,
+  );
+  editor.executeEdits('insert-function', [{ range, text: item, forceMoveMarkers: true }]);
+  editor.focus();
 };
+
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
+watch(selectedLibrary, switchLibrary);
+
+onMounted(() => {
+  initializeREPL();
+  syncTheme();
+
+  const observer = new MutationObserver(syncTheme);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
+  onBeforeUnmount(() => observer.disconnect());
+});
+
+onBeforeUnmount(() => {
+  editor?.dispose();
+
+  if (consoleIntercepted) {
+    Object.assign(console, originalConsole);
+    consoleIntercepted = false;
+  }
+});
 </script>
 
 <style scoped>
+/* Library Grid */
 .library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -879,22 +905,20 @@ const insertFunction = (item: string) => {
   background: var(--vp-c-bg-alt);
   border: 1px solid var(--vp-c-divider);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
 
-.library-card:hover {
-  transform: translateY(-4px);
-  background: var(--vp-c-bg-soft);
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-}
-
+.library-card:hover,
 .library-card.active {
   background: var(--vp-c-bg-soft);
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 8px 16px var(--vp-c-default-soft);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.library-card:hover {
+  transform: translateY(-4px);
 }
 
 .library-card.active::after {
@@ -921,7 +945,7 @@ const insertFunction = (item: string) => {
   padding: 8px;
   border: 1px solid var(--vp-c-divider);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lib-logo {
@@ -931,14 +955,12 @@ const insertFunction = (item: string) => {
 }
 
 .library-card:hover .card-icon {
-  border: 1px solid var(--vp-c-brand-1);
-  color: white;
+  border-color: var(--vp-c-brand-1);
   transform: scale(1.1) rotate(5deg);
 }
 
 .library-card.active .card-icon {
-  border: 1px solid var(--vp-c-brand-1);
-  color: white;
+  border-color: var(--vp-c-brand-1);
 }
 
 .card-info {
@@ -960,6 +982,7 @@ const insertFunction = (item: string) => {
   margin: 0;
 }
 
+/* REPL Layout */
 .repl-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -975,7 +998,7 @@ const insertFunction = (item: string) => {
   overflow: hidden;
   background: var(--vp-c-bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(8px);
 }
 
@@ -986,6 +1009,7 @@ const insertFunction = (item: string) => {
   transform: translateY(-2px);
 }
 
+/* Headers */
 .editor-header,
 .output-header {
   background: var(--vp-c-bg-soft);
@@ -1014,69 +1038,75 @@ const insertFunction = (item: string) => {
   color: var(--vp-c-text-2);
 }
 
-.controls {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.save-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.7rem;
-  color: var(--vp-c-text-3);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  background: var(--vp-c-bg-alt);
-  border: 1px solid var(--vp-c-divider);
-  transition: all 0.3s ease;
-  opacity: 0.7;
-}
-
-.save-indicator.is-saving {
-  color: var(--vp-c-brand-1);
-  background: var(--vp-c-brand-soft);
-  border-color: var(--vp-c-brand-1);
-  opacity: 1;
-}
-
-.save-indicator span {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-#example-selector {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
+/* Buttons */
+.btn-primary,
+.btn-icon,
+.btn-icon-alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
   border-radius: 8px;
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  color: var(--vp-c-text-1);
-  outline: none;
-  transition: all 0.2s ease;
-  min-width: 180px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#example-selector:hover {
-  border-color: var(--vp-c-brand-1);
+.btn-primary {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-2));
+  color: white;
+  box-shadow: 0 4px 12px var(--vp-c-brand-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--vp-c-brand-soft);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-run {
   padding: 0.35rem 1rem;
   font-size: 0.85rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 8px;
   height: 32px;
+}
+
+.btn-icon {
+  padding: 0.5rem;
+  background: transparent;
+  color: var(--vp-c-text-2);
+  border: 1px solid transparent;
+}
+
+.btn-icon:hover {
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-divider);
+}
+
+.btn-icon-alt {
+  width: 28px;
+  height: 28px;
+  color: var(--vp-c-text-2);
+  background: transparent;
+}
+
+.btn-icon-alt:hover {
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-brand-1);
 }
 
 .expand-btn {
@@ -1088,6 +1118,26 @@ const insertFunction = (item: string) => {
   opacity: 1;
 }
 
+/* Selectors */
+#example-selector {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-1);
+  outline: none;
+  transition: all 0.2s;
+  min-width: 180px;
+  cursor: pointer;
+}
+
+#example-selector:hover,
+#example-selector:focus {
+  border-color: var(--vp-c-brand-1);
+}
+
+/* Editor & Output Areas */
 .editor-content-wrapper {
   position: relative;
   flex: 1;
@@ -1100,7 +1150,6 @@ const insertFunction = (item: string) => {
   bottom: 0.75rem;
   right: 0.75rem;
   display: flex;
-  align-items: center;
   gap: 0.25rem;
   padding: 0.25rem;
   background: var(--vp-c-bg-soft);
@@ -1110,7 +1159,7 @@ const insertFunction = (item: string) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
   opacity: 0.9;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .editor-floating-toolbar:hover {
@@ -1120,25 +1169,6 @@ const insertFunction = (item: string) => {
   border-color: var(--vp-c-brand-1);
 }
 
-.btn-icon-alt {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: var(--vp-c-text-2);
-  transition: all 0.2s ease;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.btn-icon-alt:hover {
-  background: var(--vp-c-bg-alt);
-  color: var(--vp-c-brand-1);
-}
-
 .toolbar-divider {
   width: 1px;
   height: 14px;
@@ -1146,93 +1176,28 @@ const insertFunction = (item: string) => {
   margin: 0 0.25rem;
 }
 
-.spinner {
-  animation: rotate 1s linear infinite;
+.code-editor,
+.output-area {
+  height: 450px;
+  font-family: var(--vp-font-family-mono);
 }
 
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+.code-editor {
+  background: var(--vp-code-bg);
 }
 
-.shortcut-hint {
-  font-size: 0.7rem;
-  color: var(--vp-c-text-3);
+.output-area {
+  padding: 1.25rem;
   background: var(--vp-c-bg-alt);
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  font-weight: 500;
-  border: 1px solid var(--vp-c-divider);
-  opacity: 0.8;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-icon {
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon {
-  background: transparent;
-  color: var(--vp-c-text-2);
-  border: 1px solid transparent;
-}
-
-.btn-icon:hover {
-  background: var(--vp-c-bg-alt);
-  color: var(--vp-c-brand-1);
-  border-color: var(--vp-c-divider);
-}
-
-.btn-with-icon {
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-2));
-  color: white;
-  box-shadow: 0 4px 12px var(--vp-c-brand-soft);
-  border: none;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px var(--vp-c-brand-soft);
-}
-
-.btn-run {
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1.125rem 1rem;
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
+/* Expanded Mode */
 .repl-container.is-expanded {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 1000;
   background: var(--vp-c-bg);
   padding: 2rem;
@@ -1258,39 +1223,7 @@ const insertFunction = (item: string) => {
   display: none;
 }
 
-#example-selector {
-  padding: 0.325rem 0.8rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background: var(--vp-c-bg);
-  color: var(--vp-c-text-1);
-  font-size: 0.85rem;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
-  min-width: 200px;
-}
-
-#example-selector:focus {
-  border-color: var(--vp-c-brand-1);
-}
-
-.code-editor {
-  height: 450px;
-  font-family: var(--vp-font-family-mono);
-  background: var(--vp-code-bg);
-}
-
-.output-area {
-  height: 450px;
-  padding: 1.25rem;
-  background: var(--vp-c-bg-alt);
-  overflow-y: auto;
-  font-family: var(--vp-font-family-mono);
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
+/* Reference Section */
 .reference-section {
   margin-top: 3rem;
   border: 1px solid var(--vp-c-divider);
@@ -1298,7 +1231,7 @@ const insertFunction = (item: string) => {
   background: var(--vp-c-bg);
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s;
 }
 
 .reference-section:focus-within {
@@ -1346,7 +1279,7 @@ const insertFunction = (item: string) => {
   color: var(--vp-c-text-1);
   font-size: 0.9rem;
   width: 240px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .search-input:focus {
@@ -1374,7 +1307,7 @@ const insertFunction = (item: string) => {
 }
 
 .category h4 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1rem;
   color: var(--vp-c-brand-1);
   font-size: 0.8rem;
   font-weight: 700;
@@ -1401,28 +1334,30 @@ const insertFunction = (item: string) => {
   border-radius: 6px;
   font-size: 0.8rem;
   border: 1px solid var(--vp-c-divider);
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .clickable-fn {
   cursor: pointer;
 }
 
-.clickable-fn:hover {
+.clickable-fn:hover,
+.clickable-fn.is-match {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
   border-color: var(--vp-c-brand-1);
+}
+
+.clickable-fn:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .clickable-fn.is-match {
-  background: var(--vp-c-brand-soft);
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
   font-weight: 600;
 }
 
+/* Output Styles (deep selectors) */
 :deep(.output-line) {
   margin: 0.4rem 0;
   padding: 0.2rem 0;
@@ -1451,22 +1386,23 @@ const insertFunction = (item: string) => {
   font-size: 1rem;
 }
 
+:deep(.output-error),
+:deep(.output-warn) {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
 :deep(.output-error) {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
   border-left: 4px solid #ef4444;
-  margin: 1rem 0;
 }
 
 :deep(.output-warn) {
   color: #f59e0b;
   background: rgba(245, 158, 11, 0.08);
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
   border-left: 4px solid #f59e0b;
-  margin: 1rem 0;
 }
 
 :deep(.output-result) {
@@ -1501,6 +1437,18 @@ const insertFunction = (item: string) => {
   font-size: 0.8rem;
 }
 
+/* Animations */
+.spinner {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
 @media (max-width: 960px) {
   .repl-layout {
     grid-template-columns: 1fr;
@@ -1542,13 +1490,13 @@ const insertFunction = (item: string) => {
     order: 2;
   }
 
-  .btn-run {
-    order: 1;
-    width: auto;
-  }
-
+  .btn-run,
   .expand-btn {
     order: 1;
+  }
+
+  .btn-run {
+    width: auto;
   }
 }
 </style>

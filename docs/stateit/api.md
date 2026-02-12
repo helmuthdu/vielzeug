@@ -15,10 +15,7 @@ Creates a new store with the given initial state.
 #### Signature
 
 ```ts
-function createStore<T extends object>(
-  initialState: T, 
-  options?: StoreOptions<T>
-): Store<T>;
+function createStore<T extends object>(initialState: T, options?: StoreOptions<T>): Store<T>;
 ```
 
 #### Parameters
@@ -28,8 +25,8 @@ function createStore<T extends object>(
 
 ```ts
 type StoreOptions<T> = {
-  name?: string;              // Optional name for debugging
-  equals?: EqualityFn<T>;     // Custom equality function
+  name?: string; // Optional name for debugging
+  equals?: EqualityFn<T>; // Custom equality function
 };
 
 type EqualityFn<T> = (a: T, b: T) => boolean;
@@ -46,10 +43,7 @@ A new `Store<T>` instance
 const counterStore = createStore({ count: 0 });
 
 // Named store
-const userStore = createStore(
-  { name: 'Alice', age: 30 },
-  { name: 'userStore' }
-);
+const userStore = createStore({ name: 'Alice', age: 30 }, { name: 'userStore' });
 
 // Custom equality
 const todoStore = createStore(
@@ -57,8 +51,8 @@ const todoStore = createStore(
   {
     equals: (a, b) => {
       return a.todos === b.todos && a.filter === b.filter;
-    }
-  }
+    },
+  },
 );
 ```
 
@@ -72,8 +66,8 @@ Creates a test store for isolated testing.
 
 ```ts
 function createTestStore<T extends object>(
-  baseStore?: Store<T>, 
-  patch?: Partial<T>
+  baseStore?: Store<T>,
+  patch?: Partial<T>,
 ): {
   store: Store<T>;
   dispose: () => void;
@@ -92,10 +86,7 @@ Object with store instance and dispose function
 #### Example
 
 ```ts
-const { store: testStore, dispose } = createTestStore(
-  baseStore,
-  { count: 42 }
-);
+const { store: testStore, dispose } = createTestStore(baseStore, { count: 42 });
 
 // Run tests
 expect(testStore.get().count).toBe(42);
@@ -113,11 +104,7 @@ Temporarily overrides store state for the duration of a function.
 #### Signature
 
 ```ts
-function withMock<T extends object, R>(
-  baseStore: Store<T>,
-  patch: Partial<T>,
-  fn: () => R | Promise<R>
-): Promise<R>;
+function withMock<T extends object, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>;
 ```
 
 #### Parameters
@@ -167,6 +154,46 @@ Current state object
 ```ts
 const state = store.get();
 console.log(state.count);
+```
+
+---
+
+#### select()
+
+Gets a selected slice of the current state without subscribing.
+Convenience method for type-safe property access.
+
+##### Signature
+
+```ts
+select<U>(selector: (state: T) => U): U;
+```
+
+##### Parameters
+
+- `selector: (state: T) => U` - Function to select a slice of state
+
+##### Returns
+
+The selected value
+
+##### Example
+
+```ts
+// Select a single field
+const count = store.select((state) => state.count);
+
+// Select nested property
+const userName = store.select((state) => state.user.name);
+
+// Select computed value
+const isAdult = store.select((state) => state.age >= 18);
+
+// Select multiple fields as object
+const userInfo = store.select((state) => ({
+  name: state.name,
+  email: state.email,
+}));
 ```
 
 ---
@@ -259,13 +286,13 @@ Promise that resolves when update is complete
 
 ```ts
 // Synchronous update
-await store.update(state => ({
+await store.update((state) => ({
   ...state,
   count: state.count + 1,
 }));
 
 // Asynchronous update
-await store.update(async state => {
+await store.update(async (state) => {
   const data = await fetchData();
   return { ...state, data };
 });
@@ -360,21 +387,21 @@ Unsubscribe function
 ```ts
 // Subscribe to specific field
 const unsubscribe = store.subscribe(
-  state => state.count,
+  (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // With custom equality
 store.subscribe(
-  state => state.items,
+  (state) => state.items,
   (items) => {
     console.log('Items changed:', items);
   },
   {
-    equality: (a, b) => a.length === b.length
-  }
+    equality: (a, b) => a.length === b.length,
+  },
 );
 ```
 
@@ -407,10 +434,11 @@ const unsubscribe = store.observe((state, prev) => {
 ```
 
 ::: warning ⚠️ Observer vs Subscribe
+
 - `observe()` is NOT called immediately upon subscription
 - `subscribe()` IS called immediately with current state
 - Use `subscribe()` for most use cases
-:::
+  :::
 
 ---
 
@@ -468,11 +496,14 @@ Promise resolving to function result
 ##### Example
 
 ```ts
-await store.runInScope(async (scopedStore) => {
-  scopedStore.set({ count: 999 });
-  console.log(scopedStore.get()); // Scoped changes
-  await doSomething();
-}, { isDraft: true });
+await store.runInScope(
+  async (scopedStore) => {
+    scopedStore.set({ count: 999 });
+    console.log(scopedStore.get()); // Scoped changes
+    await doSomething();
+  },
+  { isDraft: true },
+);
 
 console.log(store.get()); // Parent unchanged
 ```
@@ -519,10 +550,7 @@ Performs shallow merge of a patch into state.
 #### Signature
 
 ```ts
-function shallowMerge<T extends object>(
-  state: T,
-  patch: Partial<T>
-): T;
+function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
 ```
 
 #### Parameters
@@ -561,17 +589,10 @@ class Store<T extends object> {
   update(updater: (state: T) => T | Promise<T>): Promise<void>;
   reset(): void;
   subscribe(listener: Subscriber<T>): Unsubscribe;
-  subscribe<U>(
-    selector: Selector<T, U>,
-    listener: Subscriber<U>,
-    options?: { equality?: EqualityFn<U> }
-  ): Unsubscribe;
+  subscribe<U>(selector: Selector<T, U>, listener: Subscriber<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe;
   observe(observer: Subscriber<T>): Unsubscribe;
   createChild(patch?: Partial<T>): Store<T>;
-  runInScope<R>(
-    fn: (scopedStore: Store<T>) => R | Promise<R>,
-    patch?: Partial<T>
-  ): Promise<R>;
+  runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>;
 }
 ```
 
@@ -670,4 +691,3 @@ store.set({ count: 3 });
 - Child stores don't affect parent stores
 - Scoped stores are garbage collected after execution
 - Use `dispose()` from test helpers for cleanup
-

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/stateit",
+      "comment": "new stateit lib",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/stateit"
+}

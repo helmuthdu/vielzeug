@@ -11,7 +11,7 @@ Tiny, framework-agnostic state management. Simple, powerful, and type-safe - bui
 - ✅ **Async Support** - First-class support for async state updates
 - ✅ **Batched Updates** - Automatic notification batching for optimal performance
 - ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Lightweight** - ~1.5 KB gzipped, zero dependencies
+- ✅ **Lightweight** - ~2.4 KB gzipped, zero dependencies
 - ✅ **Developer Experience** - Intuitive API with comprehensive testing helpers
 
 ## Installation
@@ -73,7 +73,7 @@ const appStore = createStore(
     theme: 'dark',
     language: 'en',
   },
-  { name: 'appSettings' }
+  { name: 'appSettings' },
 );
 
 // Custom equality function
@@ -84,7 +84,7 @@ const todoStore = createStore(
       // Only trigger updates if todos array actually changed
       return a.todos === b.todos && a.filter === b.filter;
     },
-  }
+  },
 );
 ```
 
@@ -97,6 +97,25 @@ const state = store.get();
 // Access properties
 console.log(state.name);
 console.log(state.age);
+
+// Select specific value without subscribing
+const name = store.select((state) => state.name);
+console.log(name); // 'Alice'
+
+// Select nested property
+const userStore = createStore({
+  user: { profile: { email: 'alice@example.com' } },
+});
+const email = userStore.select((state) => state.user.profile.email);
+
+// Select computed value
+const isAdult = store.select((state) => state.age >= 18);
+
+// Select multiple fields
+const userInfo = store.select((state) => ({
+  name: state.name,
+  email: state.email,
+}));
 ```
 
 ### Updating State
@@ -141,7 +160,7 @@ store.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // Subscribe with custom equality
@@ -152,7 +171,7 @@ store.subscribe(
   },
   {
     equality: (a, b) => a.length === b.length, // Only notify if length changes
-  }
+  },
 );
 ```
 
@@ -178,11 +197,14 @@ console.log(childStore.get().name); // "Modified"
 console.log(store.get().name); // Original value (unchanged)
 
 // Run code in isolated scope
-await store.runInScope(async (scopedStore) => {
-  scopedStore.set({ count: 999 });
-  console.log(scopedStore.get().count); // 999
-  await doSomething();
-}, { isTemporary: true });
+await store.runInScope(
+  async (scopedStore) => {
+    scopedStore.set({ count: 999 });
+    console.log(scopedStore.get().count); // 999
+    await doSomething();
+  },
+  { isTemporary: true },
+);
 
 console.log(store.get().count); // Original value (unchanged)
 ```
@@ -265,10 +287,7 @@ function useStore<T extends object>(store: Store<T>) {
   return state;
 }
 
-function useStoreSelector<T extends object, U>(
-  store: Store<T>,
-  selector: (state: T) => U
-) {
+function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U) {
   const selected = computed(() => selector(store.get()));
 
   const unsubscribe = store.subscribe(selector, (value) => {
@@ -374,8 +393,48 @@ cartStore.subscribe(
   (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
-  }
+  },
 );
+```
+
+### Derived State with select()
+
+Use `select()` for one-time reads of computed values without subscribing:
+
+```typescript
+const userStore = createStore({
+  firstName: 'Alice',
+  lastName: 'Johnson',
+  age: 30,
+  address: {
+    city: 'New York',
+    country: 'USA',
+  },
+});
+
+// Get computed full name
+function getFullName() {
+  return userStore.select((state) => `${state.firstName} ${state.lastName}`);
+}
+
+// Get nested property
+function getCity() {
+  return userStore.select((state) => state.address.city);
+}
+
+// Get multiple derived values
+function getUserSummary() {
+  return userStore.select((state) => ({
+    name: `${state.firstName} ${state.lastName}`,
+    location: `${state.address.city}, ${state.address.country}`,
+    isAdult: state.age >= 18,
+  }));
+}
+
+console.log(getFullName()); // "Alice Johnson"
+console.log(getCity()); // "New York"
+console.log(getUserSummary());
+// { name: "Alice Johnson", location: "New York, USA", isAdult: true }
 ```
 
 ### Middleware Pattern
@@ -409,12 +468,7 @@ function withPersistence<T extends object>(store: Store<T>, key: string) {
 }
 
 // Usage
-const store = withLogging(
-  withPersistence(
-    createStore({ count: 0 }),
-    'counter-state'
-  )
-);
+const store = withLogging(withPersistence(createStore({ count: 0 }), 'counter-state'));
 ```
 
 ### Multiple Stores Composition
@@ -437,7 +491,7 @@ function syncStores() {
     (state) => state.theme,
     (theme) => {
       document.body.className = theme;
-    }
+    },
   );
 }
 ```
@@ -452,10 +506,7 @@ import { createTestStore, withMock } from '@vielzeug/stateit';
 describe('Counter', () => {
   it('increments count', () => {
     // Create isolated test store
-    const { store, dispose } = createTestStore(
-      baseStore,
-      { count: 0 }
-    );
+    const { store, dispose } = createTestStore(baseStore, { count: 0 });
 
     store.set({ count: 1 });
     expect(store.get().count).toBe(1);
@@ -494,10 +545,7 @@ it('notifies subscribers on change', async () => {
   store.set({ count: 1 });
   await Promise.resolve(); // Wait for batched notification
 
-  expect(listener).toHaveBeenCalledWith(
-    { count: 1 },
-    { count: 0 }
-  );
+  expect(listener).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
 });
 ```
 
@@ -508,6 +556,7 @@ it('notifies subscribers on change', async () => {
 Creates a new store instance.
 
 **Options:**
+
 - `name?: string` - Optional name for debugging
 - `equals?: EqualityFn<T>` - Custom equality function
 
@@ -516,6 +565,7 @@ Creates a new store instance.
 #### Read Methods
 
 - `get(): T` - Get current state snapshot
+- `select<U>(selector: (state: T) => U): U` - Get selected value without subscribing
 - `getName(): string | undefined` - Get store name
 
 #### Write Methods
@@ -548,8 +598,8 @@ Creates a new store instance.
 
 ## Bundle Size
 
-- **Minified**: ~4.2 KB
-- **Gzipped**: ~1.5 KB
+- **Minified**: ~7.4 KB
+- **Gzipped**: ~2.4 KB
 
 ## TypeScript Support
 
@@ -566,7 +616,7 @@ store.subscribe(
   (state) => state.count, // Type: number
   (count) => {
     // count is typed as number
-  }
+  },
 );
 
 // Compile-time error for invalid keys
@@ -575,23 +625,24 @@ store.set({ invalid: true }); // ❌ Type error
 
 ## Comparison with Alternatives
 
-| Feature | stateit | Zustand | Jotai | Valtio |
-|---------|---------|---------|-------|--------|
-| Bundle Size (gzipped) | **1.5 KB** | 1.1 KB | 3.0 KB | 5.4 KB |
-| Framework Agnostic | ✅ | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
-| TypeScript | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
-| Selective Subscriptions | ✅ | ✅ | ✅ | ✅ |
-| Async Updates | ✅ | ✅ | ✅ | ✅ |
-| Scoped Stores | ✅ | ❌ | ✅ (atoms) | ❌ |
-| Custom Equality | ✅ | ✅ | ✅ | ❌ |
-| Testing Helpers | ✅ | ❌ | ❌ | ❌ |
-| Dependencies | **0** | 1 | 0 | 1 |
+| Feature                 | stateit    | Zustand            | Jotai              | Valtio             |
+| ----------------------- | ---------- | ------------------ | ------------------ | ------------------ |
+| Bundle Size (gzipped)   | **2.4 KB** | 1.1 KB             | 3.0 KB             | 5.4 KB             |
+| Framework Agnostic      | ✅         | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
+| TypeScript              | ✅ Full    | ✅ Full            | ✅ Full            | ✅ Full            |
+| Selective Subscriptions | ✅         | ✅                 | ✅                 | ✅                 |
+| Async Updates           | ✅         | ✅                 | ✅                 | ✅                 |
+| Scoped Stores           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
+| Custom Equality         | ✅         | ✅                 | ✅                 | ❌                 |
+| Testing Helpers         | ✅         | ❌                 | ❌                 | ❌                 |
+| Dependencies            | **0**      | 1                  | 0                  | 1                  |
 
 ## FAQ
 
 ### When should I use stateit?
 
 Use stateit when you need:
+
 - Simple, predictable state management
 - Framework-agnostic solution
 - Type-safe state updates
@@ -635,6 +686,7 @@ store.observe((state, prev) => {
 ### Is it production-ready?
 
 Yes! stateit is:
+
 - ✅ Fully tested (49 tests, 100% coverage)
 - ✅ Type-safe
 - ✅ Zero dependencies
@@ -654,4 +706,3 @@ MIT © [vielzeug](https://github.com/saatkhel/vielzeug)
 - [GitHub](https://github.com/saatkhel/vielzeug)
 - [Issues](https://github.com/saatkhel/vielzeug/issues)
 - [Changelog](./CHANGELOG.md)
-

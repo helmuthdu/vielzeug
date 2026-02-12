@@ -1,6 +1,6 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1.5_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.1.1-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -24,7 +24,7 @@ const listeners = [];
 
 function setState(updates) {
   state = { ...state, ...updates };
-  listeners.forEach(fn => fn(state));
+  listeners.forEach((fn) => fn(state));
 }
 
 function subscribe(listener) {
@@ -60,27 +60,27 @@ store.set({ count: 1 });
 
 // Selective subscriptions
 store.subscribe(
-  state => state.count,
+  (state) => state.count,
   (count) => {
     console.log('Count:', count);
-  }
+  },
 );
 ```
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit      | Zustand   | Jotai     | Valtio    | Pinia     |
-| -------------------- | ------------ | --------- | --------- | --------- | --------- |
-| Bundle Size          | **~1.5 KB**  | ~1.1 KB   | ~3.0 KB   | ~5.4 KB   | ~6.5 KB   |
-| Dependencies         | 0            | 1         | 0         | 1         | 1         |
-| Framework            | **Agnostic** | React     | React     | React     | Vue       |
-| TypeScript           | Native       | Excellent | Excellent | Good      | Excellent |
-| Selective Subs       | ✅           | ✅        | ✅        | ✅        | ✅        |
-| Async Updates        | ✅           | ✅        | ✅        | ✅        | ✅        |
-| Scoped Stores        | ✅           | ❌        | ✅        | ❌        | ❌        |
-| Custom Equality      | ✅           | ✅        | ✅        | ❌        | ❌        |
-| Testing Helpers      | ✅           | ❌        | ❌        | ❌        | ❌        |
-| DevTools Integration | ❌           | ✅        | ✅        | ✅        | ✅        |
+| Feature              | Stateit      | Zustand   | Jotai     | Valtio  | Pinia     |
+| -------------------- | ------------ | --------- | --------- | ------- | --------- |
+| Bundle Size          | **~2.4 KB**  | ~1.1 KB   | ~3.0 KB   | ~5.4 KB | ~6.5 KB   |
+| Dependencies         | 0            | 1         | 0         | 1       | 1         |
+| Framework            | **Agnostic** | React     | React     | React   | Vue       |
+| TypeScript           | Native       | Excellent | Excellent | Good    | Excellent |
+| Selective Subs       | ✅           | ✅        | ✅        | ✅      | ✅        |
+| Async Updates        | ✅           | ✅        | ✅        | ✅      | ✅        |
+| Scoped Stores        | ✅           | ❌        | ✅        | ❌      | ❌        |
+| Custom Equality      | ✅           | ✅        | ✅        | ❌      | ❌        |
+| Testing Helpers      | ✅           | ❌        | ❌        | ❌      | ❌        |
+| DevTools Integration | ❌           | ✅        | ✅        | ✅      | ✅        |
 
 ## When to Use Stateit
 
@@ -110,7 +110,7 @@ store.subscribe(
 - **Async Support**: First-class support for async state updates
 - **Batched Updates**: Automatic notification batching for optimal performance
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
-- **Lightweight**: ~1.5 KB gzipped, zero dependencies
+- **Lightweight**: ~2.4 KB gzipped, zero dependencies
 - **Testing Friendly**: Built-in testing helpers and utilities
 
 ## 🏁 Quick Start
@@ -174,10 +174,7 @@ const userStore = createStore({
 });
 
 // Named store (useful for debugging)
-const appStore = createStore(
-  { theme: 'dark', language: 'en' },
-  { name: 'appSettings' }
-);
+const appStore = createStore({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
 
 // Custom equality function
 const todoStore = createStore(
@@ -187,7 +184,7 @@ const todoStore = createStore(
       // Only trigger updates if todos array actually changed
       return a.todos === b.todos && a.filter === b.filter;
     },
-  }
+  },
 );
 ```
 
@@ -253,7 +250,7 @@ store.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // Subscribe with custom equality
@@ -264,7 +261,7 @@ store.subscribe(
   },
   {
     equality: (a, b) => a.length === b.length, // Only notify if length changes
-  }
+  },
 );
 ```
 
@@ -281,11 +278,14 @@ console.log(childStore.get().name); // "Modified"
 console.log(store.get().name); // Original value (unchanged)
 
 // Run code in isolated scope
-await store.runInScope(async (scopedStore) => {
-  scopedStore.set({ count: 999 });
-  console.log(scopedStore.get().count); // 999
-  await doSomething();
-}, { isTemporary: true });
+await store.runInScope(
+  async (scopedStore) => {
+    scopedStore.set({ count: 999 });
+    console.log(scopedStore.get().count); // 999
+    await doSomething();
+  },
+  { isTemporary: true },
+);
 
 console.log(store.get().count); // Original value (unchanged)
 ```
@@ -335,7 +335,9 @@ Use framework-specific solutions or subscriptions:
 let doubleCount = 0;
 store.subscribe(
   (state) => state.count * 2,
-  (value) => { doubleCount = value; }
+  (value) => {
+    doubleCount = value;
+  },
 );
 
 // Or derive on-demand
@@ -353,6 +355,7 @@ const doubleCount = computed(() => state.value.count * 2);
 ### Is it production-ready?
 
 Yes! Stateit is:
+
 - ✅ Fully tested (49 tests, 100% coverage)
 - ✅ Type-safe with comprehensive type inference
 - ✅ Zero dependencies
@@ -370,7 +373,7 @@ store.set({ count: 1 });
 await Promise.resolve(); // Wait for batched notification
 
 // Or in tests
-await new Promise(resolve => setTimeout(resolve, 0));
+await new Promise((resolve) => setTimeout(resolve, 0));
 ```
 
 ### State not updating in React
@@ -384,7 +387,7 @@ const state = store.get();
 // ✅ Correct - using subscription
 const state = useSyncExternalStore(
   (callback) => store.subscribe(callback),
-  () => store.get()
+  () => store.get(),
 );
 ```
 
@@ -414,4 +417,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 - [NPM Package](https://www.npmjs.com/package/@vielzeug/stateit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 - [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/stateit/CHANGELOG.md)
-

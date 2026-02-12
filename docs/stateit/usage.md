@@ -54,10 +54,10 @@ const counterStore = createStore({ count: 0 });
 // With options
 const userStore = createStore(
   { name: 'Alice', age: 30 },
-  { 
+  {
     name: 'userStore',
-    equals: customEqualityFn
-  }
+    equals: customEqualityFn,
+  },
 );
 ```
 
@@ -68,9 +68,35 @@ const userStore = createStore(
 const state = counterStore.get();
 console.log(state.count); // 0
 
+// Select a specific value without subscribing
+const count = counterStore.select((state) => state.count);
+console.log(count); // 0
+
+// Select nested property
+const userStore = createStore({
+  user: { name: 'Alice', profile: { age: 30 } },
+});
+const userName = userStore.select((state) => state.user.name);
+console.log(userName); // 'Alice'
+
+// Select computed value
+const doubleCount = counterStore.select((state) => state.count * 2);
+console.log(doubleCount); // 0
+
+// Select multiple fields
+const userInfo = userStore.select((state) => ({
+  name: state.user.name,
+  age: state.user.profile.age,
+}));
+console.log(userInfo); // { name: 'Alice', age: 30 }
+
 // Get store name (if configured)
 const name = counterStore.getName(); // 'userStore' or undefined
 ```
+
+::: tip 💡 select() vs get()
+Use `select()` for type-safe property access with selectors. Use `get()` to retrieve the entire state object.
+:::
 
 ### Updating State
 
@@ -127,7 +153,7 @@ const unsubscribe = counterStore.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // Subscribe to computed value
@@ -135,19 +161,19 @@ counterStore.subscribe(
   (state) => state.count * 2,
   (doubleCount) => {
     console.log('Double count:', doubleCount);
-  }
+  },
 );
 
 // Subscribe to nested value
 const userStore = createStore({
-  user: { name: 'Alice', profile: { age: 30 } }
+  user: { name: 'Alice', profile: { age: 30 } },
 });
 
 userStore.subscribe(
   (state) => state.user.profile.age,
   (age) => {
     console.log('Age changed:', age);
-  }
+  },
 );
 ```
 
@@ -165,8 +191,8 @@ itemsStore.subscribe(
     console.log('Items count changed:', items.length);
   },
   {
-    equality: (a, b) => a.length === b.length
-  }
+    equality: (a, b) => a.length === b.length,
+  },
 );
 
 // Custom deep equality
@@ -178,8 +204,8 @@ itemsStore.subscribe(
     console.log('Items deeply changed:', items);
   },
   {
-    equality: isEqual
-  }
+    equality: isEqual,
+  },
 );
 ```
 
@@ -198,10 +224,11 @@ unobserve();
 ```
 
 ::: warning ⚠️ Observer vs Subscribe
+
 - `observe()` is NOT called immediately upon subscription
 - `subscribe()` IS called immediately with current state
 - Use `subscribe()` for most use cases
-:::
+  :::
 
 ## Store Options
 
@@ -210,10 +237,7 @@ unobserve();
 Useful for debugging and logging:
 
 ```ts
-const store = createStore(
-  { count: 0 },
-  { name: 'counterStore' }
-);
+const store = createStore({ count: 0 }, { name: 'counterStore' });
 
 console.log(store.getName()); // 'counterStore'
 ```
@@ -231,8 +255,8 @@ const store = createStore<State>(
     equals: (a, b) => {
       // Only trigger updates if count changed
       return a.count === b.count;
-    }
-  }
+    },
+  },
 );
 
 // This won't trigger subscribers (count didn't change)
@@ -271,13 +295,16 @@ Run code in isolated scope:
 ```ts
 const store = createStore({ count: 0 });
 
-await store.runInScope(async (scopedStore) => {
-  // Work with isolated state
-  scopedStore.set({ count: 999 });
-  console.log(scopedStore.get().count); // 999
-  
-  await doSomethingAsync();
-}, { isTemporary: true });
+await store.runInScope(
+  async (scopedStore) => {
+    // Work with isolated state
+    scopedStore.set({ count: 999 });
+    console.log(scopedStore.get().count); // 999
+
+    await doSomethingAsync();
+  },
+  { isTemporary: true },
+);
 
 // Parent unchanged
 console.log(store.get().count); // 0
@@ -304,15 +331,15 @@ const dataStore = createStore<DataState>({
 
 async function fetchData() {
   dataStore.set({ loading: true, error: null });
-  
+
   try {
     const response = await fetch('/api/data');
     const data = await response.json();
     dataStore.set({ data, loading: false });
   } catch (error) {
-    dataStore.set({ 
-      error: error as Error, 
-      loading: false 
+    dataStore.set({
+      error: error as Error,
+      loading: false,
     });
   }
 }
@@ -332,13 +359,10 @@ const cartStore = createStore({
 
 // Subscribe to computed total
 cartStore.subscribe(
-  (state) => state.items.reduce(
-    (sum, item) => sum + item.price * item.quantity, 
-    0
-  ),
+  (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
-  }
+  },
 );
 ```
 
@@ -358,31 +382,23 @@ function withLogging<T extends object>(store: Store<T>) {
   return store;
 }
 
-function withPersistence<T extends object>(
-  store: Store<T>, 
-  key: string
-) {
+function withPersistence<T extends object>(store: Store<T>, key: string) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
   if (saved) {
     store.replace(JSON.parse(saved));
   }
-  
+
   // Save on changes
   store.observe((state) => {
     localStorage.setItem(key, JSON.stringify(state));
   });
-  
+
   return store;
 }
 
 // Usage
-const store = withLogging(
-  withPersistence(
-    createStore({ count: 0 }),
-    'counter-state'
-  )
-);
+const store = withLogging(withPersistence(createStore({ count: 0 }), 'counter-state'));
 ```
 
 ### Multiple Store Composition
@@ -406,7 +422,7 @@ uiStore.subscribe(
   (state) => state.theme,
   (theme) => {
     document.body.className = theme;
-  }
+  },
 );
 ```
 
@@ -457,7 +473,7 @@ store.subscribe(
   (state) => state.count, // Type: number
   (count) => {
     // count is typed as number
-  }
+  },
 );
 ```
 
@@ -524,7 +540,7 @@ store.subscribe(
   (state) => state.count,
   (count) => {
     updateUI(count);
-  }
+  },
 );
 ```
 
@@ -553,7 +569,7 @@ await store.update((state) => ({
 ```ts
 // Only re-render if item IDs changed
 store.subscribe(
-  (state) => state.items.map(item => item.id),
+  (state) => state.items.map((item) => item.id),
   (ids) => {
     updateItemList(ids);
   },
@@ -561,8 +577,8 @@ store.subscribe(
     equality: (a, b) => {
       if (a.length !== b.length) return false;
       return a.every((id, i) => id === b[i]);
-    }
-  }
+    },
+  },
 );
 ```
 
@@ -604,14 +620,12 @@ async function loadUser(id: string) {
 ```ts
 async function updateItem(id: string, updates: Partial<Item>) {
   const prevState = itemsStore.get();
-  
+
   // Optimistic update
   itemsStore.set({
-    items: prevState.items.map(item =>
-      item.id === id ? { ...item, ...updates } : item
-    )
+    items: prevState.items.map((item) => (item.id === id ? { ...item, ...updates } : item)),
   });
-  
+
   try {
     await api.updateItem(id, updates);
   } catch (error) {
@@ -628,14 +642,14 @@ async function updateItem(id: string, updates: Partial<Item>) {
 class History<T> {
   private past: T[] = [];
   private future: T[] = [];
-  
+
   constructor(private store: Store<T>) {
     store.observe((state, prev) => {
       this.past.push(prev);
       this.future = [];
     });
   }
-  
+
   undo() {
     const previous = this.past.pop();
     if (previous) {
@@ -643,7 +657,7 @@ class History<T> {
       this.store.replace(previous);
     }
   }
-  
+
   redo() {
     const next = this.future.pop();
     if (next) {
@@ -662,4 +676,3 @@ store.set({ count: 2 });
 history.undo(); // Back to count: 1
 history.redo(); // Forward to count: 2
 ```
-

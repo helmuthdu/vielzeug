@@ -38,18 +38,14 @@ const counterStore = createStore({ count: 0 });
 function Counter() {
   const state = useSyncExternalStore(
     (callback) => counterStore.subscribe(callback),
-    () => counterStore.get()
+    () => counterStore.get(),
   );
 
   return (
     <div>
       <p>Count: {state.count}</p>
-      <button onClick={() => counterStore.set({ count: state.count + 1 })}>
-        Increment
-      </button>
-      <button onClick={() => counterStore.reset()}>
-        Reset
-      </button>
+      <button onClick={() => counterStore.set({ count: state.count + 1 })}>Increment</button>
+      <button onClick={() => counterStore.reset()}>Reset</button>
     </div>
   );
 }
@@ -169,14 +165,8 @@ import { useSyncExternalStore } from 'react';
 
 // Create hook for store integration
 function useStore<T extends object>(store: Store<T>): T;
-function useStore<T extends object, U>(
-  store: Store<T>,
-  selector: (state: T) => U
-): U;
-function useStore<T extends object, U>(
-  store: Store<T>,
-  selector?: (state: T) => U
-) {
+function useStore<T extends object, U>(store: Store<T>, selector: (state: T) => U): U;
+function useStore<T extends object, U>(store: Store<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
@@ -184,7 +174,7 @@ function useStore<T extends object, U>(
       }
       return store.subscribe(callback);
     },
-    () => (selector ? selector(store.get()) : store.get())
+    () => (selector ? selector(store.get()) : store.get()),
   );
 }
 
@@ -199,9 +189,7 @@ function Counter() {
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => counterStore.set({ count: count + 1 })}>
-        Increment
-      </button>
+      <button onClick={() => counterStore.set({ count: count + 1 })}>Increment</button>
     </div>
   );
 }
@@ -234,10 +222,7 @@ function useStore<T extends object>(store: Store<T>) {
   return state;
 }
 
-function useStoreSelector<T extends object, U>(
-  store: Store<T>,
-  selector: (state: T) => U
-) {
+function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U) {
   const selected = computed(() => selector(store.get()));
 
   const unsubscribe = store.subscribe(selector, (value) => {
@@ -309,10 +294,7 @@ class StoreManager<T extends object> {
 
   constructor(private store: Store<T>) {}
 
-  subscribe(
-    element: HTMLElement,
-    updater: (state: T) => void
-  ) {
+  subscribe(element: HTMLElement, updater: (state: T) => void) {
     const unsubscribe = this.store.subscribe((state) => {
       updater(state);
     });
@@ -321,7 +303,7 @@ class StoreManager<T extends object> {
   }
 
   dispose() {
-    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers.forEach((unsub) => unsub());
     this.unsubscribers.clear();
   }
 
@@ -410,27 +392,28 @@ const todoStore = createStore<TodoState>({
 export function addTodo(text: string) {
   const { todos } = todoStore.get();
   todoStore.set({
-    todos: [...todos, {
-      id: crypto.randomUUID(),
-      text,
-      completed: false,
-    }],
+    todos: [
+      ...todos,
+      {
+        id: crypto.randomUUID(),
+        text,
+        completed: false,
+      },
+    ],
   });
 }
 
 export function toggleTodo(id: string) {
   const { todos } = todoStore.get();
   todoStore.set({
-    todos: todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ),
+    todos: todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
   });
 }
 
 export function deleteTodo(id: string) {
   const { todos } = todoStore.get();
   todoStore.set({
-    todos: todos.filter(todo => todo.id !== id),
+    todos: todos.filter((todo) => todo.id !== id),
   });
 }
 
@@ -438,22 +421,41 @@ export function setFilter(filter: TodoState['filter']) {
   todoStore.set({ filter });
 }
 
-// Computed values via subscriptions
+// Computed values using select() - type-safe property access
 export function getFilteredTodos() {
-  const { todos, filter } = todoStore.get();
-  
+  // Use select() for clean, type-safe access
+  const todos = todoStore.select((state) => state.todos);
+  const filter = todoStore.select((state) => state.filter);
+
   switch (filter) {
     case 'active':
-      return todos.filter(t => !t.completed);
+      return todos.filter((t) => !t.completed);
     case 'completed':
-      return todos.filter(t => t.completed);
+      return todos.filter((t) => t.completed);
     default:
       return todos;
   }
 }
 
+// Get specific computed values
+export function getTodoCount() {
+  return todoStore.select((state) => state.todos.length);
+}
+
+export function getCompletedCount() {
+  return todoStore.select((state) => state.todos.filter((t) => t.completed).length);
+}
+
+export function getActiveCount() {
+  return todoStore.select((state) => state.todos.filter((t) => !t.completed).length);
+}
+
 export { todoStore };
 ```
+
+::: tip 💡 select() for Computed Values
+Use `select()` to derive values from state without subscribing. Perfect for one-time reads or computed getters.
+:::
 
 ### Authentication State
 
@@ -489,20 +491,20 @@ authStore.subscribe(
     } else {
       localStorage.removeItem('auth_token');
     }
-  }
+  },
 );
 
 // Actions
 export async function login(email: string, password: string) {
   authStore.set({ isLoading: true });
-  
+
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    
+
     const { user, token } = await response.json();
     authStore.set({ user, token, isLoading: false });
   } catch (error) {
@@ -547,13 +549,11 @@ const cartStore = createStore<CartState>({
 // Actions
 export function addToCart(item: Omit<CartItem, 'quantity'>) {
   const { items } = cartStore.get();
-  const existing = items.find(i => i.id === item.id);
-  
+  const existing = items.find((i) => i.id === item.id);
+
   if (existing) {
     cartStore.set({
-      items: items.map(i =>
-        i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-      ),
+      items: items.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)),
     });
   } else {
     cartStore.set({
@@ -565,22 +565,20 @@ export function addToCart(item: Omit<CartItem, 'quantity'>) {
 export function removeFromCart(id: string) {
   const { items } = cartStore.get();
   cartStore.set({
-    items: items.filter(item => item.id !== id),
+    items: items.filter((item) => item.id !== id),
   });
 }
 
 export function updateQuantity(id: string, quantity: number) {
   const { items } = cartStore.get();
-  
+
   if (quantity <= 0) {
     removeFromCart(id);
     return;
   }
-  
+
   cartStore.set({
-    items: items.map(item =>
-      item.id === id ? { ...item, quantity } : item
-    ),
+    items: items.map((item) => (item.id === id ? { ...item, quantity } : item)),
   });
 }
 
@@ -588,23 +586,29 @@ export function clearCart() {
   cartStore.set({ items: [] });
 }
 
-// Computed values
+// Computed values using select()
 export function getCartTotal() {
-  const { items } = cartStore.get();
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return cartStore.select((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 }
 
 export function getCartItemCount() {
-  const { items } = cartStore.get();
-  return items.reduce((sum, item) => sum + item.quantity, 0);
+  return cartStore.select((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
 }
 
-// Subscribe to cart total
+export function getCartItems() {
+  return cartStore.select((state) => state.items);
+}
+
+export function hasItems() {
+  return cartStore.select((state) => state.items.length > 0);
+}
+
+// Subscribe to cart total for real-time updates
 cartStore.subscribe(
   (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
-  }
+  },
 );
 
 export { cartStore };
@@ -642,14 +646,14 @@ const userStore = createAsyncStore<User>();
 
 export async function fetchUser(id: string) {
   userStore.set({ loading: true, error: null });
-  
+
   try {
     const response = await fetch(`/api/users/${id}`);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch user');
     }
-    
+
     const user = await response.json();
     userStore.set({ data: user, loading: false });
   } catch (error) {
@@ -662,21 +666,21 @@ export async function fetchUser(id: string) {
 
 export async function updateUser(id: string, updates: Partial<User>) {
   const currentData = userStore.get().data;
-  
+
   // Optimistic update
   if (currentData) {
     userStore.set({
       data: { ...currentData, ...updates },
     });
   }
-  
+
   try {
     const response = await fetch(`/api/users/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
-    
+
     const user = await response.json();
     userStore.set({ data: user });
   } catch (error) {
@@ -731,7 +735,7 @@ themeStore.subscribe(
   (state) => state.isDark,
   (isDark) => {
     document.documentElement.classList.toggle('dark', isDark);
-  }
+  },
 );
 
 // Persist theme
@@ -739,7 +743,7 @@ themeStore.subscribe(
   (state) => state.theme,
   (theme) => {
     localStorage.setItem('theme', theme);
-  }
+  },
 );
 
 // Actions
@@ -758,6 +762,103 @@ export function toggleTheme() {
 
 export { themeStore };
 ```
+
+### Derived State with select()
+
+Use `select()` for type-safe derived state and computed values.
+
+```ts
+import { createStore } from '@vielzeug/stateit';
+
+type User = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  age: number;
+  address: {
+    street: string;
+    city: string;
+    country: string;
+  };
+  preferences: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+  };
+};
+
+const userStore = createStore<User>({
+  firstName: 'Alice',
+  lastName: 'Johnson',
+  email: 'alice@example.com',
+  age: 30,
+  address: {
+    street: '123 Main St',
+    city: 'New York',
+    country: 'USA',
+  },
+  preferences: {
+    theme: 'light',
+    notifications: true,
+  },
+});
+
+// Simple property access
+export function getFirstName() {
+  return userStore.select((state) => state.firstName);
+}
+
+// Nested property access
+export function getUserCity() {
+  return userStore.select((state) => state.address.city);
+}
+
+export function getUserTheme() {
+  return userStore.select((state) => state.preferences.theme);
+}
+
+// Computed values
+export function getFullName() {
+  return userStore.select((state) => `${state.firstName} ${state.lastName}`);
+}
+
+export function getFullAddress() {
+  return userStore.select((state) => {
+    const { street, city, country } = state.address;
+    return `${street}, ${city}, ${country}`;
+  });
+}
+
+export function isAdult() {
+  return userStore.select((state) => state.age >= 18);
+}
+
+// Complex transformations
+export function getUserProfile() {
+  return userStore.select((state) => ({
+    name: `${state.firstName} ${state.lastName}`,
+    contact: state.email,
+    location: `${state.address.city}, ${state.address.country}`,
+    isDarkMode: state.preferences.theme === 'dark',
+  }));
+}
+
+// Type-safe field selection
+export function getUserSettings() {
+  return userStore.select((state) => ({
+    theme: state.preferences.theme,
+    notifications: state.preferences.notifications,
+  }));
+}
+```
+
+::: tip 💡 When to Use select()
+
+- ✅ One-time reads of specific values
+- ✅ Computed/derived values
+- ✅ Type-safe property access
+- ✅ Building APIs that return state slices
+- ❌ Not needed for subscriptions (use selector parameter instead)
+  :::
 
 ## Advanced Patterns
 
@@ -787,13 +888,10 @@ cartStore.subscribe(
     if (count > prevCount) {
       const { messages } = notificationStore.get();
       notificationStore.set({
-        messages: [
-          ...messages,
-          { id: Date.now(), text: 'Item added to cart', type: 'success' },
-        ],
+        messages: [...messages, { id: Date.now(), text: 'Item added to cart', type: 'success' }],
       });
     }
-  }
+  },
 );
 ```
 
@@ -810,11 +908,7 @@ const appStore = createStore({
 });
 
 // Express middleware
-export async function requestContext(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function requestContext(req: Request, res: Response, next: NextFunction) {
   await appStore.runInScope(
     async (requestStore) => {
       // Request-specific state
@@ -822,16 +916,16 @@ export async function requestContext(
         requestId: req.id,
         userId: req.user?.id,
       });
-      
+
       // Make store available to route handlers
       req.context = requestStore;
-      
+
       next();
     },
     {
       requestId: req.id,
       userId: req.user?.id,
-    }
+    },
   );
 }
 ```
@@ -848,15 +942,18 @@ class UndoManager<T extends object> {
   private future: T[] = [];
   private unsubscribe: () => void;
 
-  constructor(private store: Store<T>, private maxHistory = 50) {
+  constructor(
+    private store: Store<T>,
+    private maxHistory = 50,
+  ) {
     this.unsubscribe = store.observe((state, prev) => {
       this.past.push(prev);
-      
+
       // Limit history
       if (this.past.length > maxHistory) {
         this.past.shift();
       }
-      
+
       this.future = [];
     });
   }
@@ -922,12 +1019,9 @@ Integrate with Redux DevTools for debugging.
 ```ts
 import { createStore } from '@vielzeug/stateit';
 
-function withDevTools<T extends object>(
-  store: Store<T>,
-  name: string = 'Store'
-) {
+function withDevTools<T extends object>(store: Store<T>, name: string = 'Store') {
   const devTools = (window as any).__REDUX_DEVTOOLS_EXTENSION__?.connect({ name });
-  
+
   if (!devTools) return store;
 
   store.observe((state, prev) => {
@@ -936,7 +1030,7 @@ function withDevTools<T extends object>(
         type: 'STATE_UPDATE',
         payload: state,
       },
-      state
+      state,
     );
   });
 
@@ -950,9 +1044,5 @@ function withDevTools<T extends object>(
 }
 
 // Usage
-const store = withDevTools(
-  createStore({ count: 0 }),
-  'Counter Store'
-);
+const store = withDevTools(createStore({ count: 0 }), 'Counter Store');
 ```
-

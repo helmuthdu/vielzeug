@@ -1,547 +1,568 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import {
-	type Store,
-	createStore,
-	createTestStore,
-	shallowEqual,
-	shallowMerge,
-	withMock,
-} from './stateit';
+import { createStore, createTestStore, type Store, shallowEqual, shallowMerge, withMock } from './stateit';
 
 describe('stateit', () => {
-	/** -------------------- Utility Tests -------------------- **/
-
-	describe('shallowEqual', () => {
-		it('returns true for identical primitive values', () => {
-			expect(shallowEqual(1, 1)).toBe(true);
-			expect(shallowEqual('test', 'test')).toBe(true);
-			expect(shallowEqual(true, true)).toBe(true);
-		});
-
-		it('returns false for different primitive values', () => {
-			expect(shallowEqual(1, 2)).toBe(false);
-			expect(shallowEqual('a', 'b')).toBe(false);
-		});
-
-		it('returns true for objects with same properties', () => {
-			expect(shallowEqual({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
-		});
-
-		it('returns false for objects with different property values', () => {
-			expect(shallowEqual({ a: 1 }, { a: 2 })).toBe(false);
-		});
-
-		it('returns false for objects with different number of properties', () => {
-			expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
-		});
-
-		it('returns false when comparing null or undefined', () => {
-			expect(shallowEqual(null, { a: 1 })).toBe(false);
-			expect(shallowEqual({ a: 1 }, null)).toBe(false);
-		});
-
-		it('returns true for same reference', () => {
-			const obj = { a: 1 };
-			expect(shallowEqual(obj, obj)).toBe(true);
-		});
-	});
-
-	describe('shallowMerge', () => {
-		it('merges properties into object', () => {
-			const state = { a: 1, b: 2 };
-			const result = shallowMerge(state, { b: 3 });
-			expect(result).toEqual({ a: 1, b: 3 });
-			expect(result).not.toBe(state); // New reference
-		});
-
-		it('merges properties into array', () => {
-			const state = [1, 2, 3];
-			const result = shallowMerge(state as unknown as object, { 1: 99 }) as number[];
-			expect(result).toEqual([1, 99, 3]);
-			expect(Array.isArray(result)).toBe(true);
-		});
-
-		it('creates new reference for objects', () => {
-			const state = { a: 1 };
-			const result = shallowMerge(state, {});
-			expect(result).not.toBe(state);
-		});
-	});
-
-	/** -------------------- Store Core Tests -------------------- **/
-
-	describe('Store - Basic State Management', () => {
-		type CounterState = { count: number };
-		let store: Store<CounterState>;
-
-		beforeEach(() => {
-			store = createStore({ count: 0 });
-		});
-
-		it('initializes with initial state', () => {
-			expect(store.get()).toEqual({ count: 0 });
-		});
-
-		it('gets state with get()', () => {
-			const state = store.get();
-			expect(state).toEqual({ count: 0 });
-		});
-
-		it('sets state with replace()', () => {
-			store.replace({ count: 5 });
-			expect(store.get()).toEqual({ count: 5 });
-		});
-
-		it('does not notify if state is equal', () => {
-			const listener = vi.fn();
-			store.subscribe(listener);
-
-			listener.mockClear();
-			store.replace({ count: 0 });
-			expect(listener).not.toHaveBeenCalled();
-		});
-
-		it('merges state with set()', () => {
-			type ExtendedState = CounterState & { name: string };
-			const extendedStore = createStore<ExtendedState>({ count: 0, name: 'test' });
-			extendedStore.set({ count: 1 });
-			expect(extendedStore.get()).toEqual({ count: 1, name: 'test' });
-		});
-
-		it('updates state with updater function', async () => {
-			await store.update((state) => ({ ...state, count: state.count + 1 }));
-			expect(store.get()).toEqual({ count: 1 });
-		});
+  /** -------------------- Utility Tests -------------------- **/
+
+  describe('shallowEqual', () => {
+    it('returns true for identical primitive values', () => {
+      expect(shallowEqual(1, 1)).toBe(true);
+      expect(shallowEqual('test', 'test')).toBe(true);
+      expect(shallowEqual(true, true)).toBe(true);
+    });
+
+    it('returns false for different primitive values', () => {
+      expect(shallowEqual(1, 2)).toBe(false);
+      expect(shallowEqual('a', 'b')).toBe(false);
+    });
+
+    it('returns true for objects with same properties', () => {
+      expect(shallowEqual({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
+    });
+
+    it('returns false for objects with different property values', () => {
+      expect(shallowEqual({ a: 1 }, { a: 2 })).toBe(false);
+    });
+
+    it('returns false for objects with different number of properties', () => {
+      expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
+    });
+
+    it('returns true for null === null', () => {
+      expect(shallowEqual(null, null)).toBe(true);
+    });
+
+    it('returns true for undefined === undefined', () => {
+      expect(shallowEqual(undefined, undefined)).toBe(true);
+    });
+
+    it('returns false for null vs undefined', () => {
+      expect(shallowEqual(null, undefined)).toBe(false);
+    });
+
+    it('returns false when comparing null or undefined with objects', () => {
+      expect(shallowEqual(null, { a: 1 })).toBe(false);
+      expect(shallowEqual({ a: 1 }, null)).toBe(false);
+      expect(shallowEqual(undefined, { a: 1 })).toBe(false);
+      expect(shallowEqual({ a: 1 }, undefined)).toBe(false);
+    });
+
+    it('returns true for same reference', () => {
+      const obj = { a: 1 };
+      expect(shallowEqual(obj, obj)).toBe(true);
+    });
+  });
+
+  describe('shallowMerge', () => {
+    it('merges properties into object', () => {
+      const state = { a: 1, b: 2 };
+      const result = shallowMerge(state, { b: 3 });
+      expect(result).toEqual({ a: 1, b: 3 });
+      expect(result).not.toBe(state); // New reference
+    });
+
+    it('merges properties into array', () => {
+      const state = [1, 2, 3];
+      const result = shallowMerge(state as unknown as object, { 1: 99 }) as number[];
+      expect(result).toEqual([1, 99, 3]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('creates new reference for objects', () => {
+      const state = { a: 1 };
+      const result = shallowMerge(state, {});
+      expect(result).not.toBe(state);
+    });
+  });
+
+  /** -------------------- Store Core Tests -------------------- **/
+
+  describe('Store - Basic State Management', () => {
+    type CounterState = { count: number };
+    let store: Store<CounterState>;
+
+    beforeEach(() => {
+      store = createStore({ count: 0 });
+    });
+
+    it('initializes with initial state', () => {
+      expect(store.get()).toEqual({ count: 0 });
+    });
+
+    it('gets state with get()', () => {
+      const state = store.get();
+      expect(state).toEqual({ count: 0 });
+    });
+
+    it('sets state with replace()', () => {
+      store.replace({ count: 5 });
+      expect(store.get()).toEqual({ count: 5 });
+    });
+
+    it('does not notify if state is equal', () => {
+      const listener = vi.fn();
+      store.subscribe(listener);
+
+      listener.mockClear();
+      store.replace({ count: 0 });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('merges state with set()', () => {
+      type ExtendedState = CounterState & { name: string };
+      const extendedStore = createStore<ExtendedState>({ count: 0, name: 'test' });
+      extendedStore.set({ count: 1 });
+      expect(extendedStore.get()).toEqual({ count: 1, name: 'test' });
+    });
+
+    it('updates state with updater function', async () => {
+      await store.update((state) => ({ ...state, count: state.count + 1 }));
+      expect(store.get()).toEqual({ count: 1 });
+    });
+
+    it('handles async updater', async () => {
+      await store.update(async (state) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return { ...state, count: state.count + 1 };
+      });
+      expect(store.get()).toEqual({ count: 1 });
+    });
+
+    it('resets to initial state', () => {
+      store.set({ count: 10 });
+      store.reset();
+      expect(store.get()).toEqual({ count: 0 });
+    });
 
-		it('handles async updater', async () => {
-			await store.update(async (state) => {
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				return { ...state, count: state.count + 1 };
-			});
-			expect(store.get()).toEqual({ count: 1 });
-		});
+    it('gets store name when configured', () => {
+      const namedStore = createStore({ count: 0 }, { name: 'counter' });
+      expect(namedStore.getName()).toBe('counter');
+    });
 
-		it('resets to initial state', () => {
-			store.set({ count: 10 });
-			store.reset();
-			expect(store.get()).toEqual({ count: 0 });
-		});
+    it('returns undefined for store name when not configured', () => {
+      expect(store.getName()).toBeUndefined();
+    });
 
-		it('gets store name when configured', () => {
-			const namedStore = createStore({ count: 0 }, { name: 'counter' });
-			expect(namedStore.getName()).toBe('counter');
-		});
+    it('selects a slice of state with select()', () => {
+      type UserState = { name: string; age: number; email: string };
+      const userStore = createStore<UserState>({ age: 30, email: 'alice@example.com', name: 'Alice' });
 
-		it('returns undefined for store name when not configured', () => {
-			expect(store.getName()).toBeUndefined();
-		});
-	});
+      // Select primitive
+      const name = userStore.select((state) => state.name);
+      expect(name).toBe('Alice');
 
-	/** -------------------- Subscription Tests -------------------- **/
+      // Select computed value
+      const isAdult = userStore.select((state) => state.age >= 18);
+      expect(isAdult).toBe(true);
 
-	describe('Store - Subscriptions', () => {
-		type TestState = { count: number; name: string };
-		let store: Store<TestState>;
+      // Select nested property
+      type NestedState = { user: { profile: { name: string } } };
+      const nestedStore = createStore<NestedState>({ user: { profile: { name: 'Bob' } } });
+      const profileName = nestedStore.select((state) => state.user.profile.name);
+      expect(profileName).toBe('Bob');
+    });
+  });
 
-		beforeEach(() => {
-			store = createStore({ count: 0, name: 'test' });
-		});
+  /** -------------------- Subscription Tests -------------------- **/
 
-		it('subscribes to full state changes', async () => {
-			const listener = vi.fn();
-			const unsubscribe = store.subscribe(listener);
+  describe('Store - Subscriptions', () => {
+    type TestState = { count: number; name: string };
+    let store: Store<TestState>;
 
-			// Called immediately with current state
-			expect(listener).toHaveBeenCalledTimes(1);
-			expect(listener).toHaveBeenCalledWith({ count: 0, name: 'test' }, { count: 0, name: 'test' });
+    beforeEach(() => {
+      store = createStore({ count: 0, name: 'test' });
+    });
 
-			listener.mockClear();
+    it('subscribes to full state changes', async () => {
+      const listener = vi.fn();
+      const unsubscribe = store.subscribe(listener);
 
-			// Called when state changes
-			store.set({ count: 1 });
-			await Promise.resolve(); // Wait for microtask
+      // Called immediately with current state
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ count: 0, name: 'test' }, { count: 0, name: 'test' });
 
-			expect(listener).toHaveBeenCalledTimes(1);
-			expect(listener).toHaveBeenCalledWith({ count: 1, name: 'test' }, { count: 0, name: 'test' });
+      listener.mockClear();
 
-			unsubscribe();
-		});
+      // Called when state changes
+      store.set({ count: 1 });
+      await Promise.resolve(); // Wait for microtask
 
-		it('subscribes to selected state slice', async () => {
-			const listener = vi.fn();
-			const unsubscribe = store.subscribe((state) => state.count, listener);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ count: 1, name: 'test' }, { count: 0, name: 'test' });
 
-			// Called immediately
-			expect(listener).toHaveBeenCalledTimes(1);
-			expect(listener).toHaveBeenCalledWith(0, 0);
+      unsubscribe();
+    });
 
-			listener.mockClear();
+    it('subscribes to selected state slice', async () => {
+      const listener = vi.fn();
+      const unsubscribe = store.subscribe((state) => state.count, listener);
 
-			// Called when selected value changes
-			store.set({ count: 1 });
-			await Promise.resolve();
+      // Called immediately
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(0, 0);
 
-			expect(listener).toHaveBeenCalledTimes(1);
-			expect(listener).toHaveBeenCalledWith(1, 0);
+      listener.mockClear();
 
-			unsubscribe();
-		});
+      // Called when selected value changes
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-		it('does not call listener when selected value unchanged', async () => {
-			const listener = vi.fn();
-			store.subscribe((state) => state.count, listener);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(1, 0);
 
-			listener.mockClear();
+      unsubscribe();
+    });
 
-			// Change name but not count
-			store.set({ name: 'changed' });
-			await Promise.resolve();
+    it('does not call listener when selected value unchanged', async () => {
+      const listener = vi.fn();
+      store.subscribe((state) => state.count, listener);
 
-			expect(listener).not.toHaveBeenCalled();
-		});
+      listener.mockClear();
 
-		it('uses custom equality function for selector', async () => {
-			const listener = vi.fn();
-			const customEquality = (a: number, b: number) => Math.abs(a - b) < 2;
+      // Change name but not count
+      store.set({ name: 'changed' });
+      await Promise.resolve();
 
-			store.subscribe((state) => state.count, listener, { equality: customEquality });
+      expect(listener).not.toHaveBeenCalled();
+    });
 
-			listener.mockClear();
+    it('uses custom equality function for selector', async () => {
+      const listener = vi.fn();
+      const customEquality = (a: number, b: number) => Math.abs(a - b) < 2;
 
-			// Change count by 1 - should not notify (within threshold)
-			store.set({ count: 1 });
-			await Promise.resolve();
+      store.subscribe((state) => state.count, listener, { equality: customEquality });
 
-			expect(listener).not.toHaveBeenCalled();
+      listener.mockClear();
 
-			// Change count by 2 - should notify
-			store.set({ count: 3 });
-			await Promise.resolve();
+      // Change count by 1 - should not notify (within threshold)
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-			expect(listener).toHaveBeenCalled();
-		});
+      expect(listener).not.toHaveBeenCalled();
 
-		it('unsubscribes correctly', async () => {
-			const listener = vi.fn();
-			const unsubscribe = store.subscribe(listener);
+      // Change count by 2 - should notify
+      store.set({ count: 3 });
+      await Promise.resolve();
 
-			listener.mockClear();
+      expect(listener).toHaveBeenCalled();
+    });
 
-			unsubscribe();
+    it('unsubscribes correctly', async () => {
+      const listener = vi.fn();
+      const unsubscribe = store.subscribe(listener);
 
-			store.set({ count: 1 });
-			await Promise.resolve();
+      listener.mockClear();
 
-			expect(listener).not.toHaveBeenCalled();
-		});
+      unsubscribe();
 
-		it('handles multiple subscribers', async () => {
-			const listener1 = vi.fn();
-			const listener2 = vi.fn();
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-			store.subscribe(listener1);
-			store.subscribe(listener2);
+      expect(listener).not.toHaveBeenCalled();
+    });
 
-			listener1.mockClear();
-			listener2.mockClear();
+    it('handles multiple subscribers', async () => {
+      const listener1 = vi.fn();
+      const listener2 = vi.fn();
 
-			store.set({ count: 1 });
-			await Promise.resolve();
+      store.subscribe(listener1);
+      store.subscribe(listener2);
 
-			expect(listener1).toHaveBeenCalled();
-			expect(listener2).toHaveBeenCalled();
-		});
+      listener1.mockClear();
+      listener2.mockClear();
 
-		it('swallows listener errors', async () => {
-			const errorListener = vi.fn(() => {
-				throw new Error('Listener error');
-			});
-			const goodListener = vi.fn();
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-			store.subscribe(errorListener);
-			store.subscribe(goodListener);
+      expect(listener1).toHaveBeenCalled();
+      expect(listener2).toHaveBeenCalled();
+    });
 
-			errorListener.mockClear();
-			goodListener.mockClear();
+    it('swallows listener errors', async () => {
+      const errorListener = vi.fn(() => {
+        throw new Error('Listener error');
+      });
+      const goodListener = vi.fn();
 
-			store.set({ count: 1 });
-			await Promise.resolve();
+      store.subscribe(errorListener);
+      store.subscribe(goodListener);
 
-			// Good listener should still be called
-			expect(goodListener).toHaveBeenCalled();
-		});
-	});
+      errorListener.mockClear();
+      goodListener.mockClear();
 
-	describe('Store - Observers', () => {
-		type TestState = { count: number };
-		let store: Store<TestState>;
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-		beforeEach(() => {
-			store = createStore({ count: 0 });
-		});
+      // Good listener should still be called
+      expect(goodListener).toHaveBeenCalled();
+    });
+  });
 
-		it('observes all state changes', async () => {
-			const observer = vi.fn();
-			const unsubscribe = store.observe(observer);
+  describe('Store - Observers', () => {
+    type TestState = { count: number };
+    let store: Store<TestState>;
 
-			// Not called immediately (unlike subscribe)
-			expect(observer).not.toHaveBeenCalled();
+    beforeEach(() => {
+      store = createStore({ count: 0 });
+    });
 
-			store.set({ count: 1 });
-			await Promise.resolve();
+    it('observes all state changes', async () => {
+      const observer = vi.fn();
+      const unsubscribe = store.observe(observer);
 
-			expect(observer).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
+      // Not called immediately (unlike subscribe)
+      expect(observer).not.toHaveBeenCalled();
 
-			unsubscribe();
-		});
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-		it('unsubscribes observer correctly', async () => {
-			const observer = vi.fn();
-			const unsubscribe = store.observe(observer);
+      expect(observer).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
 
-			unsubscribe();
+      unsubscribe();
+    });
 
-			store.set({ count: 1 });
-			await Promise.resolve();
+    it('unsubscribes observer correctly', async () => {
+      const observer = vi.fn();
+      const unsubscribe = store.observe(observer);
 
-			expect(observer).not.toHaveBeenCalled();
-		});
-	});
+      unsubscribe();
 
-	/** -------------------- Scoped Store Tests -------------------- **/
+      store.set({ count: 1 });
+      await Promise.resolve();
 
-	describe('Store - Child Stores', () => {
-		type TestState = { count: number; name: string };
-		let parentStore: Store<TestState>;
+      expect(observer).not.toHaveBeenCalled();
+    });
+  });
 
-		beforeEach(() => {
-			parentStore = createStore({ count: 0, name: 'parent' });
-		});
+  /** -------------------- Scoped Store Tests -------------------- **/
 
-		it('creates child store with parent state', () => {
-			const child = parentStore.createChild();
-			expect(child.get()).toEqual({ count: 0, name: 'parent' });
-		});
+  describe('Store - Child Stores', () => {
+    type TestState = { count: number; name: string };
+    let parentStore: Store<TestState>;
 
-		it('creates child store with patch', () => {
-			const child = parentStore.createChild({ count: 10 });
-			expect(child.get()).toEqual({ count: 10, name: 'parent' });
-		});
+    beforeEach(() => {
+      parentStore = createStore({ count: 0, name: 'parent' });
+    });
 
-		it('child changes do not affect parent', () => {
-			const child = parentStore.createChild();
-			child.set({ count: 5 });
+    it('creates child store with parent state', () => {
+      const child = parentStore.createChild();
+      expect(child.get()).toEqual({ count: 0, name: 'parent' });
+    });
 
-			expect(child.get()).toEqual({ count: 5, name: 'parent' });
-			expect(parentStore.get()).toEqual({ count: 0, name: 'parent' });
-		});
+    it('creates child store with patch', () => {
+      const child = parentStore.createChild({ count: 10 });
+      expect(child.get()).toEqual({ count: 10, name: 'parent' });
+    });
 
-		it('parent changes do not affect child', () => {
-			const child = parentStore.createChild();
-			parentStore.set({ count: 5 });
+    it('child changes do not affect parent', () => {
+      const child = parentStore.createChild();
+      child.set({ count: 5 });
 
-			expect(parentStore.get()).toEqual({ count: 5, name: 'parent' });
-			expect(child.get()).toEqual({ count: 0, name: 'parent' });
-		});
+      expect(child.get()).toEqual({ count: 5, name: 'parent' });
+      expect(parentStore.get()).toEqual({ count: 0, name: 'parent' });
+    });
 
-		it('creates child with namespaced name', () => {
-			const namedStore = createStore({ count: 0, name: 'test' }, { name: 'parent' });
-			const child = namedStore.createChild();
+    it('parent changes do not affect child', () => {
+      const child = parentStore.createChild();
+      parentStore.set({ count: 5 });
 
-			expect(child.getName()).toBe('parent.child');
-		});
-	});
+      expect(parentStore.get()).toEqual({ count: 5, name: 'parent' });
+      expect(child.get()).toEqual({ count: 0, name: 'parent' });
+    });
 
-	describe('Store - runInScope', () => {
-		type TestState = { count: number };
-		let store: Store<TestState>;
+    it('creates child with namespaced name', () => {
+      const namedStore = createStore({ count: 0, name: 'test' }, { name: 'parent' });
+      const child = namedStore.createChild();
 
-		beforeEach(() => {
-			store = createStore({ count: 0 });
-		});
+      expect(child.getName()).toBe('parent.child');
+    });
+  });
 
-		it('executes function with scoped store', async () => {
-			const result = await store.runInScope((scopedStore) => {
-				scopedStore.set({ count: 10 });
-				return scopedStore.get().count;
-			});
+  describe('Store - runInScope', () => {
+    type TestState = { count: number };
+    let store: Store<TestState>;
 
-			expect(result).toBe(10);
-			expect(store.get()).toEqual({ count: 0 }); // Parent unchanged
-		});
+    beforeEach(() => {
+      store = createStore({ count: 0 });
+    });
 
-		it('supports async functions', async () => {
-			const result = await store.runInScope(async (scopedStore) => {
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				scopedStore.set({ count: 5 });
-				return scopedStore.get().count;
-			});
+    it('executes function with scoped store', async () => {
+      const result = await store.runInScope((scopedStore) => {
+        scopedStore.set({ count: 10 });
+        return scopedStore.get().count;
+      });
 
-			expect(result).toBe(5);
-			expect(store.get()).toEqual({ count: 0 });
-		});
+      expect(result).toBe(10);
+      expect(store.get()).toEqual({ count: 0 }); // Parent unchanged
+    });
 
-		it('accepts patch for scoped store', async () => {
-			await store.runInScope(
-				(scopedStore) => {
-					expect(scopedStore.get()).toEqual({ count: 99 });
-				},
-				{ count: 99 },
-			);
-		});
-	});
+    it('supports async functions', async () => {
+      const result = await store.runInScope(async (scopedStore) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        scopedStore.set({ count: 5 });
+        return scopedStore.get().count;
+      });
 
-	/** -------------------- Testing Helpers -------------------- **/
+      expect(result).toBe(5);
+      expect(store.get()).toEqual({ count: 0 });
+    });
 
-	describe('createTestStore', () => {
-		it('creates test store with default state', () => {
-			const { store, dispose } = createTestStore<{ count: number }>();
+    it('accepts patch for scoped store', async () => {
+      await store.runInScope(
+        (scopedStore) => {
+          expect(scopedStore.get()).toEqual({ count: 99 });
+        },
+        { count: 99 },
+      );
+    });
+  });
 
-			expect(store.get()).toEqual({});
+  /** -------------------- Testing Helpers -------------------- **/
 
-			dispose();
-		});
+  describe('createTestStore', () => {
+    it('creates test store with default state', () => {
+      const { store, dispose } = createTestStore<{ count: number }>();
 
-		it('creates test store from base store', () => {
-			const baseStore = createStore({ count: 0 });
-			const { store, dispose } = createTestStore(baseStore);
+      expect(store.get()).toEqual({});
 
-			expect(store.get()).toEqual({ count: 0 });
+      dispose();
+    });
 
-			dispose();
-		});
+    it('creates test store from base store', () => {
+      const baseStore = createStore({ count: 0 });
+      const { store, dispose } = createTestStore(baseStore);
 
-		it('creates test store with patch', () => {
-			const baseStore = createStore({ count: 0, name: 'test' });
-			const { store, dispose } = createTestStore(baseStore, { count: 42 });
+      expect(store.get()).toEqual({ count: 0 });
 
-			expect(store.get()).toEqual({ count: 42, name: 'test' });
+      dispose();
+    });
 
-			dispose();
-		});
+    it('creates test store with patch', () => {
+      const baseStore = createStore({ count: 0, name: 'test' });
+      const { store, dispose } = createTestStore(baseStore, { count: 42 });
 
-		it('disposes test store', () => {
-			const baseStore = createStore({ count: 0 });
-			const { store, dispose } = createTestStore(baseStore, { count: 10 });
+      expect(store.get()).toEqual({ count: 42, name: 'test' });
 
-			store.set({ count: 20 });
-			dispose();
+      dispose();
+    });
 
-			// Resets to initial state
-			expect(store.get()).toEqual({ count: 10 });
-		});
-	});
+    it('disposes test store', () => {
+      const baseStore = createStore({ count: 0 });
+      const { store, dispose } = createTestStore(baseStore, { count: 10 });
 
-	describe('withMock', () => {
-		it('temporarily overrides state', async () => {
-			const store = createStore({ count: 0 });
+      store.set({ count: 20 });
+      dispose();
 
-			const result = await withMock(store, { count: 77 }, () => {
-				// Note: withMock uses runInScope which creates a child store
-				// The function doesn't receive the modified store directly
-				return 'success';
-			});
+      // Resets to initial state
+      expect(store.get()).toEqual({ count: 10 });
+    });
+  });
 
-			expect(result).toBe('success');
-			expect(store.get()).toEqual({ count: 0 }); // Original state unchanged
-		});
+  describe('withMock', () => {
+    it('temporarily overrides state', async () => {
+      const store = createStore({ count: 0 });
 
-		it('handles async functions', async () => {
-			const store = createStore({ count: 0 });
+      const result = await withMock(store, { count: 77 }, () => {
+        // Note: withMock uses runInScope which creates a child store
+        // The function doesn't receive the modified store directly
+        return 'success';
+      });
 
-			await withMock(store, { count: 99 }, async () => {
-				await new Promise((resolve) => setTimeout(resolve, 10));
-			});
+      expect(result).toBe('success');
+      expect(store.get()).toEqual({ count: 0 }); // Original state unchanged
+    });
 
-			expect(store.get()).toEqual({ count: 0 });
-		});
-	});
+    it('handles async functions', async () => {
+      const store = createStore({ count: 0 });
 
-	/** -------------------- Custom Equality Tests -------------------- **/
+      await withMock(store, { count: 99 }, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
 
-	describe('Store - Custom Equality', () => {
-		it('uses custom equality function', async () => {
-			type TestState = { count: number; name: string };
-			const customEquals = vi.fn((a: TestState, b: TestState) => a.count === b.count);
-			const store = createStore<TestState>({ count: 0, name: 'test' }, { equals: customEquals });
+      expect(store.get()).toEqual({ count: 0 });
+    });
+  });
 
-			const listener = vi.fn();
-			store.subscribe(listener);
+  /** -------------------- Custom Equality Tests -------------------- **/
 
-			listener.mockClear();
+  describe('Store - Custom Equality', () => {
+    it('uses custom equality function', async () => {
+      type TestState = { count: number; name: string };
+      const customEquals = vi.fn((a: TestState, b: TestState) => a.count === b.count);
+      const store = createStore<TestState>({ count: 0, name: 'test' }, { equals: customEquals });
 
-			// Change only name - should not notify because count is same
-			store.replace({ count: 0, name: 'changed' });
-			await Promise.resolve();
+      const listener = vi.fn();
+      store.subscribe(listener);
 
-			expect(listener).not.toHaveBeenCalled();
-		});
-	});
+      listener.mockClear();
 
-	/** -------------------- Batched Notifications -------------------- **/
+      // Change only name - should not notify because count is same
+      store.replace({ count: 0, name: 'changed' });
+      await Promise.resolve();
 
-	describe('Store - Batched Notifications', () => {
-		it('batches multiple synchronous updates', async () => {
-			const store = createStore({ count: 0 });
-			const listener = vi.fn();
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 
-			store.subscribe(listener);
-			listener.mockClear();
+  /** -------------------- Batched Notifications -------------------- **/
 
-			// Multiple synchronous updates
-			store.set({ count: 1 });
-			store.set({ count: 2 });
-			store.set({ count: 3 });
+  describe('Store - Batched Notifications', () => {
+    it('batches multiple synchronous updates', async () => {
+      const store = createStore({ count: 0 });
+      const listener = vi.fn();
 
-			// Listener isn't called yet (scheduled)
-			expect(listener).not.toHaveBeenCalled();
+      store.subscribe(listener);
+      listener.mockClear();
 
-			// Wait for a microtask
-			await Promise.resolve();
+      // Multiple synchronous updates
+      store.set({ count: 1 });
+      store.set({ count: 2 });
+      store.set({ count: 3 });
 
-			// Listener called only once with the final state
-			expect(listener).toHaveBeenCalledTimes(1);
-			expect(listener).toHaveBeenCalledWith({ count: 3 }, { count: 0 });
-		});
-	});
+      // Listener isn't called yet (scheduled)
+      expect(listener).not.toHaveBeenCalled();
 
-	/** -------------------- Edge Cases -------------------- **/
+      // Wait for a microtask
+      await Promise.resolve();
 
-	describe('Store - Edge Cases', () => {
-		it('handles empty state object', () => {
-			const store = createStore({});
-			expect(store.get()).toEqual({});
-		});
+      // Listener called only once with the final state
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ count: 3 }, { count: 0 });
+    });
+  });
 
-		it('handles state with nested objects', async () => {
-			type NestedState = { user: { name: string; age: number } };
-			const store = createStore<NestedState>({ user: { name: 'Alice', age: 30 } });
+  /** -------------------- Edge Cases -------------------- **/
 
-			store.set({ user: { name: 'Bob', age: 25 } });
-			expect(store.get()).toEqual({ user: { name: 'Bob', age: 25 } });
-		});
+  describe('Store - Edge Cases', () => {
+    it('handles empty state object', () => {
+      const store = createStore({});
+      expect(store.get()).toEqual({});
+    });
 
-		it('handles state with arrays', async () => {
-			type ArrayState = { items: string[] };
-			const store = createStore<ArrayState>({ items: ['a', 'b'] });
+    it('handles state with nested objects', async () => {
+      type NestedState = { user: { name: string; age: number } };
+      const store = createStore<NestedState>({ user: { age: 30, name: 'Alice' } });
 
-			store.set({ items: ['c', 'd'] });
-			expect(store.get()).toEqual({ items: ['c', 'd'] });
-		});
+      store.set({ user: { age: 25, name: 'Bob' } });
+      expect(store.get()).toEqual({ user: { age: 25, name: 'Bob' } });
+    });
 
-		it('prevents mutation of original state', () => {
-			const initialState = { count: 0 };
-			const store = createStore(initialState);
+    it('handles state with arrays', async () => {
+      type ArrayState = { items: string[] };
+      const store = createStore<ArrayState>({ items: ['a', 'b'] });
 
-			store.set({ count: 1 });
+      store.set({ items: ['c', 'd'] });
+      expect(store.get()).toEqual({ items: ['c', 'd'] });
+    });
 
-			// The original state should not be mutated
-			expect(initialState).toEqual({ count: 0 });
-		});
-	});
+    it('prevents mutation of original state', () => {
+      const initialState = { count: 0 };
+      const store = createStore(initialState);
+
+      store.set({ count: 1 });
+
+      // The original state should not be mutated
+      expect(initialState).toEqual({ count: 0 });
+    });
+  });
 });
-
-
-
-
-
