@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/i18nit
 
-This log was last generated on Tue, 10 Feb 2026 21:38:31 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Feb 2026 13:30:14 GMT and should not be manually modified.
+
+## 1.1.2
+Thu, 12 Feb 2026 13:30:14 GMT
+
+### Patches
+
+- improve array support
 
 ## 1.1.1
 Tue, 10 Feb 2026 21:38:31 GMT
