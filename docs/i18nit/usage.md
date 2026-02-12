@@ -451,6 +451,7 @@ i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
 
 ::: tip Intl.ListFormat - Zero Configuration
 The `and` separator uses the browser/runtime's built-in **Intl.ListFormat API** which automatically:
+
 - **Supports 100+ languages** - All languages available in your environment
 - **Handles proper grammar** - Oxford comma, locale-specific punctuation, RTL languages
 - **Follows Unicode CLDR standards** - International standard for list formatting
@@ -496,6 +497,7 @@ i18n.t('options', { choices: ['Thé', 'Café', 'Jus'] });
 
 ::: tip Automatic Language Support
 The `or` separator automatically works with **100+ languages** including:
+
 - European: English, Spanish, French, German, Italian, Portuguese, Russian, Polish, Dutch, Swedish, Danish, Norwegian, Finnish, Czech, and more
 - Asian: Japanese, Chinese, Korean, Thai, Vietnamese, Indonesian, and more
 - Middle Eastern: Arabic, Hebrew, Persian, Turkish, and more
@@ -626,14 +628,14 @@ i18nit supports the following interpolation path formats:
 
 **Array Features Summary:**
 
-| Syntax | Description | Example Output |
-|--------|-------------|----------------|
-| `{items}` | Default join | `"A, B, C"` |
-| `{items\|and}` | Natural "and" list | `"A, B and C"` |
-| `{items\|or}` | Natural "or" list | `"A, B or C"` |
-| `{items\| - }` | Custom separator | `"A - B - C"` |
-| `{items.length}` | Array length | `"3"` |
-| `{items[0]}` | Safe index | `"A"` or `""` |
+| Syntax           | Description        | Example Output |
+| ---------------- | ------------------ | -------------- |
+| `{items}`        | Default join       | `"A, B, C"`    |
+| `{items\|and}`   | Natural "and" list | `"A, B and C"` |
+| `{items\|or}`    | Natural "or" list  | `"A, B or C"`  |
+| `{items\| - }`   | Custom separator   | `"A - B - C"`  |
+| `{items.length}` | Array length       | `"3"`          |
+| `{items[0]}`     | Safe index         | `"A"` or `""`  |
 
 **Limitations:**
 

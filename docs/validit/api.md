@@ -574,7 +574,6 @@ Built-in error codes for internationalization:
 
 ## Performance Tips
 
-
 ### Reuse Schemas
 
 Create schemas once and reuse them:

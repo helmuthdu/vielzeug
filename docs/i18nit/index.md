@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.3_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -72,7 +72,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 | Feature            | i18nit                  | i18next     | react-intl    |
 | ------------------ | ----------------------- | ----------- | ------------- |
-| Bundle Size        | **~3.0 KB**             | ~12KB       | ~15KB         |
+| Bundle Size        | **~2 KB**               | ~12KB       | ~15KB         |
 | Dependencies       | **0**                   | 2+          | 10+           |
 | TypeScript         | First-class             | Good        | Good          |
 | Framework          | Agnostic                | Agnostic    | React only    |

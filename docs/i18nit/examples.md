@@ -306,7 +306,7 @@ console.log(
   i18n.t('attending', {
     invited: guests,
     attending: ['Alice', 'Charlie'],
-  })
+  }),
 );
 // "2 out of 4 guests attending"
 ```

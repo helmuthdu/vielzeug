@@ -985,17 +985,17 @@ i18n.t('summary', { items: ['Apple', 'Banana', 'Orange'] });
 
 **Array handling summary:**
 
-| Syntax              | Description                                            | Example Output                |
-| ------------------- | ------------------------------------------------------ | ----------------------------- |
-| `{items}`           | Default join (`, `)                                    | `"A, B, C"`                   |
-| `{items\|and}`      | Locale-aware "and" via Intl.ListFormat (100+ languages) | `"A, B, and C"` (English)     |
-| `{items\|or}`       | Locale-aware "or" via Intl.ListFormat (100+ languages)  | `"A, B, or C"` (English)      |
-| `{items\| - }`      | Custom separator                                       | `"A - B - C"`                 |
-| `{items.length}`    | Array length                                           | `"3"`                         |
-| `{items[0]}`        | Safe index (empty if bounds)                           | `"A"` or `""`                 |
-| `{items[0].name}`   | Nested array access                                    | Accesses nested object        |
-| `{user.items}`      | Nested array join                                      | `"A, B, C"`                   |
-| `{user.items\|and}` | Nested array with separator                            | `"A, B, and C"` (English)     |
+| Syntax              | Description                                             | Example Output            |
+| ------------------- | ------------------------------------------------------- | ------------------------- |
+| `{items}`           | Default join (`, `)                                     | `"A, B, C"`               |
+| `{items\|and}`      | Locale-aware "and" via Intl.ListFormat (100+ languages) | `"A, B, and C"` (English) |
+| `{items\|or}`       | Locale-aware "or" via Intl.ListFormat (100+ languages)  | `"A, B, or C"` (English)  |
+| `{items\| - }`      | Custom separator                                        | `"A - B - C"`             |
+| `{items.length}`    | Array length                                            | `"3"`                     |
+| `{items[0]}`        | Safe index (empty if bounds)                            | `"A"` or `""`             |
+| `{items[0].name}`   | Nested array access                                     | Accesses nested object    |
+| `{user.items}`      | Nested array join                                       | `"A, B, C"`               |
+| `{user.items\|and}` | Nested array with separator                             | `"A, B, and C"` (English) |
 
 **Intl.ListFormat - Automatic Language Support:**
 
@@ -1009,22 +1009,23 @@ The `and` and `or` separators use the browser/runtime's built-in **Intl.ListForm
 
 **Examples across languages:**
 
-| Language   | Locale | "and" Example                    | "or" Example                     |
-| ---------- | ------ | -------------------------------- | -------------------------------- |
-| English    | en     | "A, B, and C" (Oxford comma)     | "A, B, or C" (Oxford comma)      |
-| Spanish    | es     | "A, B y C"                       | "A, B o C"                       |
-| French     | fr     | "A, B et C"                      | "A, B ou C"                      |
-| German     | de     | "A, B und C"                     | "A, B oder C"                    |
-| Italian    | it     | "A, B e C"                       | "A, B o C"                       |
-| Portuguese | pt     | "A, B e C"                       | "A, B ou C"                      |
-| Russian    | ru     | "A, B и C"                       | "A, B или C"                     |
-| Japanese   | ja     | "A、B、C" (Japanese comma)       | "A、B、または C"                 |
-| Chinese    | zh     | "A、B和C"                        | "A、B或C"                        |
-| Arabic     | ar     | Proper RTL with "و"              | Proper RTL with "أو"             |
+| Language   | Locale | "and" Example                | "or" Example                |
+| ---------- | ------ | ---------------------------- | --------------------------- |
+| English    | en     | "A, B, and C" (Oxford comma) | "A, B, or C" (Oxford comma) |
+| Spanish    | es     | "A, B y C"                   | "A, B o C"                  |
+| French     | fr     | "A, B et C"                  | "A, B ou C"                 |
+| German     | de     | "A, B und C"                 | "A, B oder C"               |
+| Italian    | it     | "A, B e C"                   | "A, B o C"                  |
+| Portuguese | pt     | "A, B e C"                   | "A, B ou C"                 |
+| Russian    | ru     | "A, B и C"                   | "A, B или C"                |
+| Japanese   | ja     | "A、B、C" (Japanese comma)   | "A、B、または C"            |
+| Chinese    | zh     | "A、B和C"                    | "A、B或C"                   |
+| Arabic     | ar     | Proper RTL with "و"          | Proper RTL with "أو"        |
 
 And **90+ more languages** automatically supported!
 
 **Browser Support:**
+
 - Chrome 72+ (2019)
 - Firefox 78+ (2020)
 - Safari 14.1+ (2021)

@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.7_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
 </div>
@@ -75,7 +75,7 @@ Logit.setRemote({
 | Browser Support    | ✅ Native      | ❌            | ❌         | ✅        |
 | Scoped Loggers     | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
 | Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Streams | ❌        |
-| Bundle Size (gzip) | **~3.0 KB**    | ~50KB+        | ~12KB      | 0KB       |
+| Bundle Size (gzip) | **~2 KB**      | ~50KB+        | ~12KB      | 0KB       |
 | Node.js Support    | ✅             | ✅            | ✅         | ✅        |
 | Dependencies       | 0              | 15+           | 5+         | N/A       |
 | Styled Output      | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |

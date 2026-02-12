@@ -6,7 +6,7 @@ Lightweight, type-safe schema validation for TypeScript. Build robust validation
 
 - ✅ **Type-Safe** - Full TypeScript support with automatic type inference
 - ✅ **Zero Dependencies** - No external dependencies
-- ✅ **Lightweight** - ~3.5 KB gzipped
+- ✅ **Lightweight** - 2.8 KB gzipped
 - ✅ **Intuitive API** - Inspired by Zod but simpler
 - ✅ **Composable** - Build complex schemas from simple primitives
 - ✅ **Async Validation** - Full support for async validators
@@ -67,11 +67,11 @@ if (result.success) {
 Pre-configured schemas for common patterns:
 
 ```typescript
-v.email()        // Email validation (string().email())
-v.url()          // URL validation (string().url())
-v.uuid()         // UUID validation
-v.positiveInt()  // Positive integer (number().int().positive())
-v.negativeInt()  // Negative integer (number().int().negative())
+v.email(); // Email validation (string().email())
+v.url(); // URL validation (string().url())
+v.uuid(); // UUID validation
+v.positiveInt(); // Positive integer (number().int().positive())
+v.negativeInt(); // Negative integer (number().int().negative())
 ```
 
 ### Primitives
@@ -154,12 +154,12 @@ v.union(v.string(), v.number()); // string | number
 ### Modifiers
 
 ```typescript
-schema.optional();        // T | undefined
-schema.required();        // Explicitly mark as required (opposite of optional)
-schema.nullable();        // T | null
-schema.default(value);    // T with default value
+schema.optional(); // T | undefined
+schema.required(); // Explicitly mark as required (opposite of optional)
+schema.nullable(); // T | null
+schema.default(value); // T with default value
 schema.refine(check, msg); // Custom sync validation
-schema.describe('name');  // Add description for better error messages
+schema.describe('name'); // Add description for better error messages
 ```
 
 ### Async Validation
@@ -168,11 +168,10 @@ Full async support for all validation needs:
 
 ```typescript
 // Async refinements
-const schema = v.string()
-  .refineAsync(async (val) => {
-    const exists = await checkDatabase(val);
-    return !exists;
-  }, 'Already exists');
+const schema = v.string().refineAsync(async (val) => {
+  const exists = await checkDatabase(val);
+  return !exists;
+}, 'Already exists');
 
 // Must use parseAsync for async validators
 const result = await schema.parseAsync(value);
@@ -190,19 +189,22 @@ if (result.success) {
 
 ```typescript
 const registrationSchema = v.object({
-  username: v.string()
+  username: v
+    .string()
     .min(3)
     .max(20)
     .pattern(/^[a-zA-Z0-9_]+$/)
     .required('Username is required'),
   email: v.email().required('Email is required'),
-  password: v.string()
+  password: v
+    .string()
     .min(8)
     .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
     .refine((val) => /[0-9]/.test(val), 'Must contain number')
     .required(),
   age: v.positiveInt().min(13).required(),
-  terms: v.boolean()
+  terms: v
+    .boolean()
     .refine((val) => val === true, 'Must accept terms')
     .required(),
 });
@@ -302,7 +304,8 @@ const signupSchema = v
 
 ```typescript
 // Username availability check
-const usernameSchema = v.string()
+const usernameSchema = v
+  .string()
   .min(3)
   .refineAsync(async (username) => {
     const available = await checkUsernameAvailability(username);
@@ -313,31 +316,36 @@ const usernameSchema = v.string()
 const result = await usernameSchema.safeParseAsync('john_doe');
 
 // Combining sync and async validations
-const emailSchema = v.email() // Sync validation
+const emailSchema = v
+  .email() // Sync validation
   .refineAsync(async (email) => {
     const exists = await checkEmailInDatabase(email);
     return !exists;
   }, 'Email already registered'); // Async validation
 
 // Object with async validation
-const userSchema = v.object({
-  email: v.email(),
-  username: v.string().min(3),
-}).refineAsync(async (data) => {
-  const valid = await validateUserData(data);
-  return valid;
-}, 'Invalid user data');
+const userSchema = v
+  .object({
+    email: v.email(),
+    username: v.string().min(3),
+  })
+  .refineAsync(async (data) => {
+    const valid = await validateUserData(data);
+    return valid;
+  }, 'Invalid user data');
 
 await userSchema.parseAsync({ email: 'test@example.com', username: 'john' });
 
 // Parallel array validation for performance
 const itemsSchema = v.array(
-  v.object({
-    id: v.positiveInt(),
-    name: v.string(),
-  }).refineAsync(async (item) => {
-    return await validateItem(item);
-  }, 'Invalid item')
+  v
+    .object({
+      id: v.positiveInt(),
+      name: v.string(),
+    })
+    .refineAsync(async (item) => {
+      return await validateItem(item);
+    }, 'Invalid item'),
 );
 
 await itemsSchema.parseAsync(items);
@@ -408,20 +416,20 @@ type Data = Infer<typeof schema>;
 
 validit is inspired by Zod but focuses on simplicity and smaller bundle size:
 
-| Feature                  | validit | Zod    |
-| ------------------------ | ------- | ------ |
-| Bundle Size (gzipped)    | ~2 KB   | ~12 KB |
-| Type Inference           | ✅      | ✅     |
-| Basic Validation         | ✅      | ✅     |
-| Custom Refinements       | ✅      | ✅     |
-| Async Validation         | ✅      | ✅     |
-| Parallel Array Validation| ✅      | ❌     |
-| Convenience Schemas      | ✅      | ❌     |
-| Transformers             | ✅ (basic) | ✅  |
-| Preprocess               | ❌      | ✅     |
-| Coercion                 | ✅ (basic) | ✅  |
-| Brand Types              | ❌      | ✅     |
-| Discriminated Unions     | ✅      | ✅     |
+| Feature                   | validit    | Zod    |
+| ------------------------- | ---------- | ------ |
+| Bundle Size (gzipped)     | ~2 KB      | ~12 KB |
+| Type Inference            | ✅         | ✅     |
+| Basic Validation          | ✅         | ✅     |
+| Custom Refinements        | ✅         | ✅     |
+| Async Validation          | ✅         | ✅     |
+| Parallel Array Validation | ✅         | ❌     |
+| Convenience Schemas       | ✅         | ❌     |
+| Transformers              | ✅ (basic) | ✅     |
+| Preprocess                | ❌         | ✅     |
+| Coercion                  | ✅ (basic) | ✅     |
+| Brand Types               | ❌         | ✅     |
+| Discriminated Unions      | ✅         | ✅     |
 
 If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation, use validit.
 
@@ -430,11 +438,11 @@ If you need advanced features like brand types, use Zod. If you want a lightweig
 validit is designed with performance and maintainability in mind:
 
 ### **Efficient Validation**
+
 ```typescript
 // Validate arrays with async validators
 const schema = v.array(
-  v.object({ id: v.number(), data: v.string() })
-    .refineAsync(async (item) => await validateItem(item))
+  v.object({ id: v.number(), data: v.string() }).refineAsync(async (item) => await validateItem(item)),
 );
 
 // Much faster for large datasets

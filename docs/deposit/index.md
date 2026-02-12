@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-5.3_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-4.4_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
@@ -47,7 +47,7 @@ await db.put('users', { id: '1', name: 'Alice' });
 | Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
 | Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
 | LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | **~4.2 KB**    | ~20KB       | ~8KB        | 0KB              |
+| Bundle Size (gzip)   | **~4 KB**      | ~20KB       | ~8KB        | 0KB              |
 | TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
 | Transactions         | ✅ Yes         | ✅ Yes      | ❌          | ✅ Complex       |
 | Schema Validation    | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |

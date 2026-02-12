@@ -73,15 +73,15 @@ form.submit(async (values) => {
 
 ### Comparison with Alternatives
 
-| Feature             | Formit      | Formik     | React Hook Form |
-| ------------------- | ----------- | ---------- | --------------- |
-| Bundle Size         | **~2.1 KB** | ~13KB      | ~8KB            |
-| Dependencies        | 0           | React      | React           |
-| TypeScript          | Native      | Good       | Excellent       |
-| Framework           | Agnostic    | React only | React only      |
-| Granular Validation | ✅          | ❌         | ⚠️              |
-| Field Subscriptions | ✅          | ✅         | ✅              |
-| Custom Bind Config  | ✅          | ❌         | ❌              |
+| Feature             | Formit    | Formik     | React Hook Form |
+| ------------------- | --------- | ---------- | --------------- |
+| Bundle Size         | **~2 KB** | ~13KB      | ~8KB            |
+| Dependencies        | 0         | React      | React           |
+| TypeScript          | Native    | Good       | Excellent       |
+| Framework           | Agnostic  | React only | React only      |
+| Granular Validation | ✅        | ❌         | ⚠️              |
+| Field Subscriptions | ✅        | ✅         | ✅              |
+| Custom Bind Config  | ✅        | ❌         | ❌              |
 
 ## When to Use Formit
 

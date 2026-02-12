@@ -298,7 +298,7 @@ const schema = v.array(
     })
     .refineAsync(async (item) => {
       return await validateItem(item);
-    })
+    }),
 );
 
 const items = await schema.parseAsync(largeArray);

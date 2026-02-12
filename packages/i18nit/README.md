@@ -5,7 +5,7 @@ Type-safe, lightweight internationalization (i18n) library for TypeScript applic
 ## Features
 
 - ✅ **Type-Safe** - Full TypeScript support with generic types
-- ✅ **Lightweight** - ~2.3KB gzipped with zero dependencies
+- ✅ **Lightweight** - 2.4 KB gzipped with zero dependencies
 - ✅ **Universal Pluralization** - 100+ languages via Intl.PluralRules API
 - ✅ **Smart Array Handling** - Auto-join with separators, length access, and safe indexing
 - ✅ **Path Interpolation** - Support for nested objects and array indices
@@ -160,6 +160,7 @@ i18n.t('count', { items: ['A', 'B', 'C'] });
 ```
 
 **Array Features:**
+
 - `{items}` - Join with comma (`, `)
 - `{items|and}` - Natural "and" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
 - `{items|or}` - Natural "or" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
@@ -169,6 +170,7 @@ i18n.t('count', { items: ['A', 'B', 'C'] });
 
 **Locale-Aware List Formatting:**  
 The `and` and `or` separators use the built-in **Intl.ListFormat API** which automatically handles:
+
 - **100+ languages** - Supports all languages available in the browser/runtime
 - **Proper grammar** - Oxford comma, locale-specific punctuation
 - **Right-to-left languages** - Arabic, Hebrew, etc.
@@ -176,6 +178,7 @@ The `and` and `or` separators use the built-in **Intl.ListFormat API** which aut
 - **No manual configuration** - Zero maintenance required
 
 Examples across languages:
+
 - **English**: "A, B, and C" (with Oxford comma)
 - **Spanish**: "A, B y C" (uses "y")
 - **French**: "A, B et C" (uses "et")
@@ -195,6 +198,7 @@ Examples across languages:
 - `{data.items[0].value}` - Mixed notation
 
 **Limitations:**
+
 - Only numeric bracket notation `[0]`, `[123]`
 - Quoted keys not supported `["key"]`
 - Non-numeric brackets not supported `[key]`
@@ -230,9 +234,9 @@ try {
   i18n3.t('msg');
 } catch (error) {
   if (error instanceof MissingVariableError) {
-    console.log(error.key);      // 'msg'
+    console.log(error.key); // 'msg'
     console.log(error.variable); // 'name'
-    console.log(error.locale);   // 'en'
+    console.log(error.locale); // 'en'
   }
 }
 ```
@@ -287,16 +291,16 @@ const i18n = createI18n({
       dynamic: (vars) => `Hello, ${vars.name}!`,
 
       // With number formatting
-      price: (vars, helpers) => 
-        `Price: ${helpers.number(vars.amount as number, { 
-          style: 'currency', 
-          currency: 'USD' 
+      price: (vars, helpers) =>
+        `Price: ${helpers.number(vars.amount as number, {
+          style: 'currency',
+          currency: 'USD',
         })}`,
 
       // With date formatting
-      event: (vars, helpers) => 
-        `Event on ${helpers.date(vars.date as Date, { 
-          dateStyle: 'long' 
+      event: (vars, helpers) =>
+        `Event on ${helpers.date(vars.date as Date, {
+          dateStyle: 'long',
         })}`,
     },
   },
@@ -330,6 +334,7 @@ i18n.t('welcome'); // "Welcome!" (en fallback)
 ```
 
 **Fallback Chain:**
+
 1. Primary locale (e.g., `de-CH`)
 2. Base language (e.g., `de` from `de-CH`)
 3. First fallback locale
@@ -367,6 +372,7 @@ i18n.register('es', async () => {
 ```
 
 **Features:**
+
 - Concurrent requests are deduplicated
 - Failed loads can be retried
 - Errors are logged but don't break fallback
@@ -404,7 +410,7 @@ Protect against XSS attacks with automatic HTML escaping:
 ```typescript
 const i18n = createI18n({
   messages: {
-    en: { 
+    en: {
       userContent: 'Comment: {content}',
     },
   },
@@ -416,14 +422,11 @@ const safeI18n = createI18n({
   messages: { en: { html: '<script>alert("xss")</script>' } },
 });
 
-safeI18n.t('html'); 
+safeI18n.t('html');
 // "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
 
 // Or per translation
-i18n.t('userContent', 
-  { content: '<b>Bold</b>' }, 
-  { escape: true }
-);
+i18n.t('userContent', { content: '<b>Bold</b>' }, { escape: true });
 // "Comment: &lt;b&gt;Bold&lt;/b&gt;"
 ```
 
@@ -473,6 +476,7 @@ unsubscribe();
 ```
 
 **Use Cases:**
+
 - Update UI when locale changes
 - Reload locale-specific data
 - Analytics/tracking
@@ -501,11 +505,11 @@ Creates a new i18n instance.
 
 ```typescript
 type I18nConfig = {
-  locale?: string;                    // Default: 'en'
-  fallback?: string | string[];       // Fallback locale(s)
+  locale?: string; // Default: 'en'
+  fallback?: string | string[]; // Fallback locale(s)
   messages?: Record<string, Messages>; // Initial translations
   loaders?: Record<string, () => Promise<Messages>>; // Async loaders
-  escape?: boolean;                   // Global HTML escaping (default: false)
+  escape?: boolean; // Global HTML escaping (default: false)
   missingKey?: (key: string, locale: string) => string; // Missing key handler
   missingVar?: 'preserve' | 'empty' | 'error'; // Missing variable strategy
 };
@@ -524,6 +528,7 @@ i18n.t('greeting', { name: 'Bob' }, { locale: 'fr', escape: true }); // With opt
 ```
 
 **Options:**
+
 - `locale?: string` - Override locale for this translation
 - `fallback?: string` - Custom fallback text
 - `escape?: boolean` - Override HTML escaping
@@ -539,11 +544,11 @@ await i18n.tl('greeting', { name: 'Alice' }, { locale: 'fr' });
 ### Locale Management
 
 ```typescript
-i18n.setLocale('fr');           // Change locale
-i18n.getLocale();               // Get current locale
-i18n.hasLocale('es');           // Check if locale exists
-i18n.has('key');                // Check if key exists
-i18n.has('key', 'fr');          // Check if key exists in locale
+i18n.setLocale('fr'); // Change locale
+i18n.getLocale(); // Get current locale
+i18n.hasLocale('es'); // Check if locale exists
+i18n.has('key'); // Check if key exists
+i18n.has('key', 'fr'); // Check if key exists in locale
 await i18n.hasAsync('key', 'es'); // Check with async loading
 ```
 
@@ -611,11 +616,7 @@ export function I18nProvider({ children, config }) {
     return i18n.subscribe(setLocale);
   }, [i18n]);
 
-  return (
-    <I18nContext.Provider value={{ i18n, locale }}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={{ i18n, locale }}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {
@@ -627,7 +628,7 @@ export function useI18n() {
 export function useTranslation(namespace?: string) {
   const { i18n } = useI18n();
   const ns = namespace ? i18n.namespace(namespace) : i18n;
-  
+
   return {
     t: ns.t.bind(ns),
     tl: ns.tl.bind(ns),
@@ -639,7 +640,7 @@ export function useTranslation(namespace?: string) {
 // Usage
 function MyComponent() {
   const { t, locale, setLocale } = useTranslation('dashboard');
-  
+
   return (
     <div>
       <h1>{t('welcome')}</h1>
@@ -666,7 +667,7 @@ export const i18nPlugin: Plugin = {
   install(app) {
     app.config.globalProperties.$t = i18n.t.bind(i18n);
     app.config.globalProperties.$i18n = i18n;
-    
+
     app.provide('i18n', i18n);
     app.provide('locale', locale);
   },
@@ -758,10 +759,7 @@ const i18n = createI18n({
 ### 4. Type-Safe Translation Keys
 
 ```typescript
-type TranslationKeys = 
-  | 'auth.login.title'
-  | 'auth.register.title'
-  | 'dashboard.welcome';
+type TranslationKeys = 'auth.login.title' | 'auth.register.title' | 'dashboard.welcome';
 
 function t(key: TranslationKeys, vars?: Record<string, unknown>) {
   return i18n.t(key, vars);
@@ -824,18 +822,18 @@ const i18n = createI18n(config);
 
 ## Comparison
 
-| Feature | i18nit | i18next | react-intl |
-|---------|--------|---------|------------|
-| Bundle Size | **~3KB** | ~12KB | ~15KB |
-| Dependencies | **0** | 2+ | 10+ |
-| TypeScript | ✅ First-class | ✅ Good | ✅ Good |
-| Pluralization | ✅ Built-in | ✅ Plugin | ✅ Built-in |
-| Async Loading | ✅ Built-in | ✅ Built-in | ⚠️ Manual |
-| Path Interpolation | ✅ `{user.name}` | ❌ | ❌ |
-| Message Functions | ✅ Built-in | ⚠️ Limited | ✅ Components |
-| HTML Escaping | ✅ Built-in | ⚠️ Manual | ✅ Built-in |
-| Structured Errors | ✅ MissingVariableError | ❌ | ❌ |
-| Framework Agnostic | ✅ | ✅ | ❌ React only |
+| Feature            | i18nit                  | i18next     | react-intl    |
+| ------------------ | ----------------------- | ----------- | ------------- |
+| Bundle Size        | **~3KB**                | ~12KB       | ~15KB         |
+| Dependencies       | **0**                   | 2+          | 10+           |
+| TypeScript         | ✅ First-class          | ✅ Good     | ✅ Good       |
+| Pluralization      | ✅ Built-in             | ✅ Plugin   | ✅ Built-in   |
+| Async Loading      | ✅ Built-in             | ✅ Built-in | ⚠️ Manual     |
+| Path Interpolation | ✅ `{user.name}`        | ❌          | ❌            |
+| Message Functions  | ✅ Built-in             | ⚠️ Limited  | ✅ Components |
+| HTML Escaping      | ✅ Built-in             | ⚠️ Manual   | ✅ Built-in   |
+| Structured Errors  | ✅ MissingVariableError | ❌          | ❌            |
+| Framework Agnostic | ✅                      | ✅          | ❌ React only |
 
 ## License
 
@@ -851,4 +849,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ---
 
 Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
-

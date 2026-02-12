@@ -4,7 +4,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/package/@vielzeug/wireit)
-[![Bundle Size](https://img.shields.io/badge/size-~3KB-success)](https://bundlephobia.com/package/@vielzeug/wireit)
+[![Bundle Size](https://img.shields.io/badge/size-2.1_KB-success)](https://bundlephobia.com/package/@vielzeug/wireit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Simple, powerful dependency injection container with full TypeScript support, zero dependencies, and IoC principles.
@@ -12,7 +12,7 @@ Simple, powerful dependency injection container with full TypeScript support, ze
 ## ✨ Features
 
 - 🎯 **Type-Safe** - Full TypeScript inference for tokens and dependencies
-- 🪶 **Lightweight** - ~2.2KB gzipped, zero dependencies
+- 🪶 **Lightweight** - 2.1 KB gzipped, zero dependencies
 - 🔄 **Lifetimes** - Singleton, Transient, and Scoped support
 - ⚡ **Async Support** - Handle async factories and dependencies
 - 🌳 **Hierarchical** - Parent/child containers with inheritance
@@ -105,12 +105,7 @@ container.register(Logger, {
 Register a factory function:
 
 ```typescript
-container.registerFactory(
-  Cache,
-  (config) => new RedisCache(config.redisUrl),
-  [Config],
-  { lifetime: 'singleton' }
-);
+container.registerFactory(Cache, (config) => new RedisCache(config.redisUrl), [Config], { lifetime: 'singleton' });
 ```
 
 ### Lifetimes
@@ -151,7 +146,7 @@ container.registerFactory(
     return db;
   },
   [Config],
-  { async: true, lifetime: 'singleton' }
+  { async: true, lifetime: 'singleton' },
 );
 
 // Use getAsync for async resolution
@@ -190,7 +185,7 @@ app.use(async (req, res) => {
     [
       [RequestId, { useValue: req.id }],
       [User, { useValue: req.user }],
-    ]
+    ],
   );
   // Scope is automatically cleaned up
 });
@@ -295,12 +290,7 @@ container.registerValue(Config, {
 });
 
 // Infrastructure
-container.registerFactory(
-  Logger,
-  (config) => new ConsoleLogger(config.logLevel),
-  [Config],
-  { lifetime: 'singleton' }
-);
+container.registerFactory(Logger, (config) => new ConsoleLogger(config.logLevel), [Config], { lifetime: 'singleton' });
 
 container.registerFactory(
   Database,
@@ -310,7 +300,7 @@ container.registerFactory(
     return db;
   },
   [Config],
-  { async: true, lifetime: 'singleton' }
+  { async: true, lifetime: 'singleton' },
 );
 
 // Repositories
@@ -339,7 +329,7 @@ app.post('/users', async (req, res) => {
       const user = await service.createUser(req.body);
       res.json(user);
     },
-    [[RequestId, { useValue: req.id }]]
+    [[RequestId, { useValue: req.id }]],
   );
 });
 ```
@@ -348,40 +338,40 @@ app.post('/users', async (req, res) => {
 
 ### Container Methods
 
-| Method | Description |
-|--------|-------------|
-| `register(token, provider)` | Register a provider for a token |
-| `registerValue(token, value, lifetime?)` | Register a plain value |
-| `registerFactory(token, factory, deps?, options?)` | Register a factory function |
-| `registerMany(providers)` | Register multiple providers at once |
-| `get(token)` | Resolve a dependency synchronously |
-| `getAsync(token)` | Resolve a dependency asynchronously |
-| `getOptional(token)` | Resolve or return undefined |
-| `getOptionalAsync(token)` | Async resolve or return undefined |
-| `alias(source, alias)` | Create an alias for a token |
-| `has(token)` | Check if token is registered |
-| `unregister(token)` | Remove a registration |
-| `clear()` | Clear all registrations |
-| `createChild(overrides?)` | Create a child container |
-| `runInScope(fn, overrides?)` | Run function in isolated scope |
-| `debug()` | Get debug information |
+| Method                                             | Description                         |
+| -------------------------------------------------- | ----------------------------------- |
+| `register(token, provider)`                        | Register a provider for a token     |
+| `registerValue(token, value, lifetime?)`           | Register a plain value              |
+| `registerFactory(token, factory, deps?, options?)` | Register a factory function         |
+| `registerMany(providers)`                          | Register multiple providers at once |
+| `get(token)`                                       | Resolve a dependency synchronously  |
+| `getAsync(token)`                                  | Resolve a dependency asynchronously |
+| `getOptional(token)`                               | Resolve or return undefined         |
+| `getOptionalAsync(token)`                          | Async resolve or return undefined   |
+| `alias(source, alias)`                             | Create an alias for a token         |
+| `has(token)`                                       | Check if token is registered        |
+| `unregister(token)`                                | Remove a registration               |
+| `clear()`                                          | Clear all registrations             |
+| `createChild(overrides?)`                          | Create a child container            |
+| `runInScope(fn, overrides?)`                       | Run function in isolated scope      |
+| `debug()`                                          | Get debug information               |
 
 ### Factory Functions
 
-| Function | Description |
-|----------|-------------|
-| `createToken(description?)` | Create a typed token |
-| `createContainer(options?)` | Create a new container |
-| `createTestContainer(base?)` | Create a test container |
+| Function                               | Description                   |
+| -------------------------------------- | ----------------------------- |
+| `createToken(description?)`            | Create a typed token          |
+| `createContainer(options?)`            | Create a new container        |
+| `createTestContainer(base?)`           | Create a test container       |
 | `withMock(container, token, mock, fn)` | Temporarily mock a dependency |
 
 ### Error Classes
 
-| Error | When Thrown |
-|-------|-------------|
-| `ProviderNotFoundError` | Token not registered |
-| `AsyncProviderError` | Async provider used with sync get() |
-| `CircularDependencyError` | Circular dependency detected |
+| Error                     | When Thrown                         |
+| ------------------------- | ----------------------------------- |
+| `ProviderNotFoundError`   | Token not registered                |
+| `AsyncProviderError`      | Async provider used with sync get() |
+| `CircularDependencyError` | Circular dependency detected        |
 
 ## 🔍 How It Works
 
@@ -395,15 +385,15 @@ Wireit uses TypeScript symbols as tokens to uniquely identify dependencies. The 
 
 ## 🆚 Comparison
 
-| Feature | Wireit | InversifyJS | TSyringe |
-|---------|--------|-------------|----------|
-| Bundle Size | ~3KB | ~14KB | ~7KB |
-| Dependencies | 0 | 1 | 2 |
-| Decorators | ❌ | ✅ | ✅ |
-| Async Support | ✅ | ✅ | ❌ |
-| Scoped Lifetimes | ✅ | ✅ | ✅ |
-| Testing Helpers | ✅ | ❌ | ❌ |
-| TypeScript First | ✅ | ✅ | ✅ |
+| Feature          | Wireit | InversifyJS | TSyringe |
+| ---------------- | ------ | ----------- | -------- |
+| Bundle Size      | 2.1 KB | ~14KB       | ~7KB     |
+| Dependencies     | 0      | 1           | 2        |
+| Decorators       | ❌     | ✅          | ✅       |
+| Async Support    | ✅     | ✅          | ❌       |
+| Scoped Lifetimes | ✅     | ✅          | ✅       |
+| Testing Helpers  | ✅     | ❌          | ❌       |
+| TypeScript First | ✅     | ✅          | ✅       |
 
 ## 💡 Best Practices
 
@@ -442,4 +432,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 <div align="center">
   <sub>Built with ❤️ by <a href="https://github.com/helmuthdu">Helmuth Saatkamp</a></sub>
 </div>
-

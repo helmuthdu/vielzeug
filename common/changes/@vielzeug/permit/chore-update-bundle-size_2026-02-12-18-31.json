@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/permit",
+      "comment": "update bundle sizes",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/permit"
+}

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "update bundle sizes",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}
