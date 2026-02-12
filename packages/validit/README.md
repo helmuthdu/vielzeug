@@ -6,7 +6,7 @@ Lightweight, type-safe schema validation for TypeScript. Build robust validation
 
 - ✅ **Type-Safe** - Full TypeScript support with automatic type inference
 - ✅ **Zero Dependencies** - No external dependencies
-- ✅ **Lightweight** - ~2 KB gzipped
+- ✅ **Lightweight** - ~3.5 KB gzipped
 - ✅ **Intuitive API** - Inspired by Zod but simpler
 - ✅ **Composable** - Build complex schemas from simple primitives
 - ✅ **Async Validation** - Full support for async validators with parallel array validation

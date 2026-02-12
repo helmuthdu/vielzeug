@@ -12,7 +12,7 @@ Simple, powerful dependency injection container with full TypeScript support, ze
 ## ✨ Features
 
 - 🎯 **Type-Safe** - Full TypeScript inference for tokens and dependencies
-- 🪶 **Lightweight** - ~3KB gzipped, zero dependencies
+- 🪶 **Lightweight** - ~2.2KB gzipped, zero dependencies
 - 🔄 **Lifetimes** - Singleton, Transient, and Scoped support
 - ⚡ **Async Support** - Handle async factories and dependencies
 - 🌳 **Hierarchical** - Parent/child containers with inheritance

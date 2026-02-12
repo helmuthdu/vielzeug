@@ -12,7 +12,7 @@ Type-safe browser storage utility with a unified API for IndexedDB and LocalStor
 - ✅ **Transactions** - Atomic operations across multiple tables
 - ✅ **Migrations** - Built-in schema versioning for IndexedDB
 - ✅ **Resilient** - Graceful handling of corrupted entries
-- ✅ **Lightweight** - ~4.2 KB gzipped
+- ✅ **Lightweight** - ~5.3 KB gzipped
 - ✅ **Zero Runtime Dependencies** - Only development dependencies for utilities
 
 ## Installation

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/fetchit",
+      "comment": "docs update",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/fetchit"
+}

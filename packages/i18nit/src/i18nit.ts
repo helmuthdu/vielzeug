@@ -62,7 +62,46 @@ const HTML_ENTITIES: Record<string, string> = {
 const escapeHtml = (str: string): string => str.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
 
 /**
+ * Join array elements with natural language formatting using Intl.ListFormat.
+ * Automatically supports 100+ languages with proper grammar and conjunctions.
+ *
+ * Uses the browser/Node.js built-in Intl.ListFormat API which handles:
+ * - Locale-specific conjunctions (and/or/etc)
+ * - Proper grammar for each language
+ * - Oxford comma rules
+ * - Right-to-left languages
+ *
+ * @param items - Array items to join
+ * @param locale - Target locale
+ * @param type - List type ('conjunction' for "and", 'disjunction' for "or")
+ * @returns Formatted list string
+ */
+const formatList = (items: unknown[], locale: string, type: 'conjunction' | 'disjunction'): string => {
+  if (items.length === 0) return '';
+
+  const stringItems = items.map(String);
+
+  try {
+    // Use Intl.ListFormat for automatic locale-aware formatting
+    const formatter = new Intl.ListFormat(locale, { style: 'long', type });
+    return formatter.format(stringItems);
+  } catch {
+    // Fallback for environments without Intl.ListFormat support (very rare)
+    if (stringItems.length === 1) return stringItems[0];
+    if (stringItems.length === 2) {
+      const conjunction = type === 'conjunction' ? 'and' : 'or';
+      return `${stringItems[0]} ${conjunction} ${stringItems[1]}`;
+    }
+    const conjunction = type === 'conjunction' ? 'and' : 'or';
+    const last = stringItems[stringItems.length - 1];
+    const rest = stringItems.slice(0, -1);
+    return `${rest.join(', ')} ${conjunction} ${last}`;
+  }
+};
+
+/**
  * Resolve nested properties using dot notation and numeric bracket notation.
+ * Safely handles array access - returns undefined for out-of-bounds indices.
  *
  * @param obj - Object to traverse
  * @param path - Path string to resolve
@@ -79,7 +118,18 @@ const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
 
   for (const part of parts) {
     if (value == null || typeof value !== 'object') return undefined;
-    value = (value as Record<string, unknown>)[part];
+
+    // Safe array access - check bounds
+    if (Array.isArray(value)) {
+      const index = Number(part);
+      if (!Number.isNaN(index) && index >= 0 && index < value.length) {
+        value = value[index];
+      } else {
+        return undefined;
+      }
+    } else {
+      value = (value as Record<string, unknown>)[part];
+    }
   }
 
   return value;
@@ -88,7 +138,22 @@ const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
 /**
  * Interpolate variables into a template string.
  *
- * Template format: {variableName} or {nested.path} or {array[0]}
+ * Template format:
+ * - {variableName} - Simple variable
+ * - {nested.path} - Nested object access
+ * - {array[0]} - Array index (safe - returns empty if out of bounds)
+ * - {array} - Array join with default separator (', ')
+ * - {array|and} - Array join with locale-aware 'and' (automatically supports 100+ languages via Intl.ListFormat)
+ * - {array|or} - Array join with locale-aware 'or' (automatically supports 100+ languages via Intl.ListFormat)
+ * - {array| - } - Array join with custom separator
+ * - {array.length} - Array length
+ *
+ * Uses Intl.ListFormat for locale-aware list formatting, which automatically handles:
+ * - All languages supported by the browser/runtime (100+ languages)
+ * - Proper conjunctions for each language
+ * - Oxford comma rules
+ * - Right-to-left languages
+ * - No manual language configuration needed
  *
  * @param template - Template string with {variable} placeholders
  * @param vars - Variables object
@@ -108,8 +173,16 @@ const interpolate = (
   const missingVar = options.missingVar ?? 'empty';
 
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Variable interpolation requires conditional logic
-  return template.replace(/\{([\w.[\]]+)}/g, (match, key) => {
-    const value = resolvePath(vars, key);
+  return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (match, key, separator) => {
+    // Handle array.length special case
+    let isLengthAccess = false;
+    let actualKey = key;
+    if (key.endsWith('.length')) {
+      isLengthAccess = true;
+      actualKey = key.slice(0, -7); // Remove '.length'
+    }
+
+    const value = resolvePath(vars, actualKey);
 
     if (value == null) {
       if (missingVar === 'preserve') return match;
@@ -117,6 +190,32 @@ const interpolate = (
         throw new MissingVariableError(options.key ?? 'unknown', key, options.locale ?? 'unknown');
       }
       return '';
+    }
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      // Array length
+      if (isLengthAccess) {
+        return String(value.length);
+      }
+
+      // Array joining with separator
+      if (separator !== undefined) {
+        // Locale-aware special separators using Intl.ListFormat
+        if (separator === 'and') {
+          const locale = options.locale || 'en';
+          return formatList(value, locale, 'conjunction');
+        }
+        if (separator === 'or') {
+          const locale = options.locale || 'en';
+          return formatList(value, locale, 'disjunction');
+        }
+        // Custom separator
+        return value.map(String).join(separator);
+      }
+
+      // Default array join with comma and space
+      return value.map(String).join(', ');
     }
 
     // Format numbers with locale

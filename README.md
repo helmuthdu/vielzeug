@@ -276,17 +276,19 @@ pnpm docs:build     # Build documentation
 
 All sizes are measured as **minified + gzipped** production builds:
 
-| Package           | Gzipped Size               | Minified Size | Dependencies |
+| Package           | Minified Size              | Gzipped Size  | Dependencies |
 | ----------------- | -------------------------- | ------------- | ------------ |
-| @vielzeug/i18nit  | **1.2 KB**                 | 3.2 KB        | 0            |
-| @vielzeug/permit  | **1.5 KB**                 | 3.8 KB        | 0            |
-| @vielzeug/logit   | **1.9 KB**                 | 5.4 KB        | 0            |
-| @vielzeug/formit  | **2.0 KB**                 | 6.2 KB        | 0            |
-| @vielzeug/toolkit | **0.1-0.2 KB** per utility | 0.2-0.5 KB    | 1\*          |
-| @vielzeug/fetchit | **2.9 KB**                 | 9.0 KB        | 2\*          |
-| @vielzeug/deposit | **3.9 KB**                 | 14.7 KB       | 0            |
+| @vielzeug/deposit | **18.8 KB**                | 5.3 KB        | 1\*          |
+| @vielzeug/fetchit | **10.7 KB**                | 3.5 KB        | 2\*          |
+| @vielzeug/formit  | **7.3 KB**                 | 2.4 KB        | 0            |
+| @vielzeug/i18nit  | **7.1 KB**                 | 2.3 KB        | 0            |
+| @vielzeug/logit   | **8.3 KB**                 | 2.7 KB        | 0            |
+| @vielzeug/permit  | **7.0 KB**                 | 2.3 KB        | 1\*          |
+| @vielzeug/toolkit | **0.1-0.2 KB** per utility | 0.2-0.5 KB    | 0-1\*        |
+| @vielzeug/validit | **14.8 KB**                | 3.5 KB        | 0            |
+| @vielzeug/wireit  | **8.2 KB**                 | 2.2 KB        | 0            |
 
-\* Only depends on other @vielzeug packages (@vielzeug/logit for toolkit; @vielzeug/toolkit and @vielzeug/logit for fetchit)
+\* Only depends on other @vielzeug packages (permit depends on @vielzeug/logit; fetchit depends on @vielzeug/toolkit and @vielzeug/logit; deposit depends on @vielzeug/logit; toolkit utilities may depend on other toolkit utilities)
 
 ## 🌐 Browser & Node.js Support
 

@@ -226,6 +226,211 @@ customElements.define('i18n-label', i18nLabel);
 
 :::
 
+## Array Handling
+
+i18nit provides powerful array handling features for dynamic lists and collections using **Intl.ListFormat API** for automatic support of 100+ languages.
+
+::: tip Intl.ListFormat
+Array separators `{items|and}` and `{items|or}` use the browser's built-in Intl.ListFormat API which automatically handles proper grammar, conjunctions, and punctuation for 100+ languages. No manual configuration needed!
+:::
+
+### Shopping List Example
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      shopping: 'Shopping list: {items}',
+      summary: 'You have {items.length} items in your cart',
+      checkout: 'Ready to buy: {items|and}?',
+    },
+    es: {
+      shopping: 'Lista de compras: {items}',
+      summary: 'Tienes {items.length} artículos en tu carrito',
+      checkout: '¿Listo para comprar: {items|and}?',
+    },
+  },
+});
+
+// Default comma separator
+const cart = ['Apple', 'Banana', 'Orange'];
+console.log(i18n.t('shopping', { items: cart }));
+// "Shopping list: Apple, Banana, Orange"
+
+// Array length
+console.log(i18n.t('summary', { items: cart }));
+// "You have 3 items in your cart"
+
+// Natural "and" list (English uses Oxford comma)
+console.log(i18n.t('checkout', { items: cart }));
+// "Ready to buy: Apple, Banana, and Orange?"
+
+// Spanish automatically uses "y"
+i18n.setLocale('es');
+console.log(i18n.t('checkout', { items: cart }));
+// "¿Listo para comprar: Apple, Banana y Orange?"
+```
+
+### Guest List Example
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      invited: 'Invited guests: {guests|and}',
+      attending: '{attending.length} out of {invited.length} guests attending',
+      empty: 'No guests invited yet',
+    },
+  },
+});
+
+// Multiple guests (with Oxford comma)
+const guests = ['Alice', 'Bob', 'Charlie', 'Diana'];
+console.log(i18n.t('invited', { guests }));
+// "Invited guests: Alice, Bob, Charlie, and Diana"
+
+// Two guests
+console.log(i18n.t('invited', { guests: ['Alice', 'Bob'] }));
+// "Invited guests: Alice and Bob"
+
+// One guest
+console.log(i18n.t('invited', { guests: ['Alice'] }));
+// "Invited guests: Alice"
+
+// Count comparison
+console.log(
+  i18n.t('attending', {
+    invited: guests,
+    attending: ['Alice', 'Charlie'],
+  })
+);
+// "2 out of 4 guests attending"
+```
+
+### File Path Example
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      breadcrumb: '{path| > }',
+      folder: 'Location: {folders| / }',
+    },
+  },
+});
+
+const folders = ['home', 'user', 'documents', 'work'];
+console.log(i18n.t('breadcrumb', { path: folders }));
+// "home > user > documents > work"
+
+console.log(i18n.t('folder', { folders }));
+// "Location: home / user / documents / work"
+```
+
+### Tags and Categories Example
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      tags: 'Tags: {tags| • }',
+      filter: 'Filtering by: {filters|or}',
+      categories: '{categories.length} categories available',
+    },
+  },
+});
+
+// Custom separator
+const tags = ['typescript', 'javascript', 'react', 'node'];
+console.log(i18n.t('tags', { tags }));
+// "Tags: typescript • javascript • react • node"
+
+// "or" separator for choices (with Oxford comma)
+const filters = ['Color: Red', 'Size: Large', 'Brand: Nike'];
+console.log(i18n.t('filter', { filters }));
+// "Filtering by: Color: Red, Size: Large, or Brand: Nike"
+
+// Array length
+const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
+console.log(i18n.t('categories', { categories }));
+// "4 categories available"
+```
+
+### Safe Index Access
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      firstItem: 'First: {items[0]}',
+      lastItem: 'Last: {items[2]}',
+      missing: 'Tenth: {items[10]}',
+      mixed: 'Winner: {winners[0]}, Total: {winners.length}, All: {winners}',
+    },
+  },
+});
+
+const items = ['Gold', 'Silver', 'Bronze'];
+
+// Safe access
+console.log(i18n.t('firstItem', { items }));
+// "First: Gold"
+
+console.log(i18n.t('lastItem', { items }));
+// "Last: Bronze"
+
+// Out of bounds returns empty string (safe)
+console.log(i18n.t('missing', { items }));
+// "Tenth: "
+
+// Combined features
+console.log(i18n.t('mixed', { winners: items }));
+// "Winner: Gold, Total: 3, All: Gold, Silver, Bronze"
+```
+
+### Complex Nested Arrays
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      userItems: '{user.name} has {user.items.length} items: {user.items}',
+      orderSummary: 'Order #{order.id}: {order.items|and} (Total: {order.items.length} items)',
+    },
+  },
+});
+
+// Nested object with array
+const data = {
+  user: {
+    name: 'Alice',
+    items: ['Book', 'Pen', 'Notebook', 'Laptop'],
+  },
+};
+
+console.log(i18n.t('userItems', data));
+// "Alice has 4 items: Book, Pen, Notebook, Laptop"
+
+// Order summary
+const order = {
+  order: {
+    id: '12345',
+    items: ['Laptop', 'Mouse', 'Keyboard'],
+  },
+};
+
+console.log(i18n.t('orderSummary', order));
+// "Order #12345: Laptop, Mouse, and Keyboard (Total: 3 items)"
+```
+
 ## E-commerce Application
 
 Complete e-commerce example with product listings, cart, and checkout.

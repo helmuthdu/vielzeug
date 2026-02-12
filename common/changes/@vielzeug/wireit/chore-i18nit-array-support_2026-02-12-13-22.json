@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/wireit",
+      "comment": "docs update",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/wireit"
+}

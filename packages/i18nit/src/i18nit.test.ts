@@ -129,6 +129,215 @@ describe('I18nit', () => {
         'Content: &lt;script&gt;xss&lt;/script&gt;',
       );
     });
+
+    test('handles arrays with default comma separator', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            shopping: 'Shopping list: {items}',
+            firstItem: 'First: {items[0]}',
+            outOfBounds: 'Item: {items[10]}',
+          },
+        },
+      });
+
+      expect(i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] })).toBe(
+        'Shopping list: Apple, Banana, Orange',
+      );
+      expect(i18n.t('firstItem', { items: ['Apple', 'Banana'] })).toBe('First: Apple');
+      expect(i18n.t('outOfBounds', { items: ['Apple'] })).toBe('Item: ');
+    });
+
+    test('handles arrays with "and" separator', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            zero: 'Guests: {guests|and}',
+            one: 'Guest: {guests|and}',
+            two: 'Guests: {guests|and}',
+            three: 'Guests: {guests|and}',
+          },
+        },
+      });
+
+      expect(i18n.t('zero', { guests: [] })).toBe('Guests: ');
+      expect(i18n.t('one', { guests: ['Alice'] })).toBe('Guest: Alice');
+      expect(i18n.t('two', { guests: ['Alice', 'Bob'] })).toBe('Guests: Alice and Bob');
+      expect(i18n.t('three', { guests: ['Alice', 'Bob', 'Charlie'] })).toBe('Guests: Alice, Bob, and Charlie');
+    });
+
+    test('handles arrays with "or" separator', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            options: 'Choose: {choices|or}',
+          },
+        },
+      });
+
+      expect(i18n.t('options', { choices: [] })).toBe('Choose: ');
+      expect(i18n.t('options', { choices: ['Tea'] })).toBe('Choose: Tea');
+      expect(i18n.t('options', { choices: ['Tea', 'Coffee'] })).toBe('Choose: Tea or Coffee');
+      expect(i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] })).toBe('Choose: Tea, Coffee, or Juice');
+    });
+
+    test('handles arrays with custom separators', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            dash: 'Items: {items| - }',
+            semicolon: 'Items: {items|; }',
+            pipe: 'Items: {items| | }',
+          },
+        },
+      });
+
+      expect(i18n.t('dash', { items: ['A', 'B', 'C'] })).toBe('Items: A - B - C');
+      expect(i18n.t('semicolon', { items: ['A', 'B'] })).toBe('Items: A; B');
+      expect(i18n.t('pipe', { items: ['X', 'Y', 'Z'] })).toBe('Items: X | Y | Z');
+    });
+
+    test('handles array length access', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            count: 'You have {items.length} items',
+            multiple: '{items.length} items in {categories.length} categories',
+          },
+        },
+      });
+
+      expect(i18n.t('count', { items: ['A', 'B', 'C'] })).toBe('You have 3 items');
+      expect(i18n.t('count', { items: [] })).toBe('You have 0 items');
+      expect(i18n.t('multiple', { items: ['A', 'B'], categories: ['X', 'Y', 'Z'] })).toBe(
+        '2 items in 3 categories',
+      );
+    });
+
+    test('handles complex array scenarios', () => {
+      const i18n = createI18n({
+        messages: {
+          en: {
+            mixed: 'First: {items[0]}, Total: {items.length}, All: {items|and}',
+            nested: '{users[0].name} has {users[0].items.length} items: {users[0].items}',
+          },
+        },
+      });
+
+      expect(i18n.t('mixed', { items: ['Apple', 'Banana', 'Orange'] })).toBe(
+        'First: Apple, Total: 3, All: Apple, Banana, and Orange',
+      );
+
+      expect(
+        i18n.t('nested', {
+          users: [{ name: 'Alice', items: ['Book', 'Pen', 'Notebook'] }],
+        }),
+      ).toBe('Alice has 3 items: Book, Pen, Notebook');
+    });
+
+    test('uses locale-aware conjunctions for "and" separator', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: { guests: 'Guests: {names|and}' },
+          es: { guests: 'Invitados: {names|and}' },
+          fr: { guests: 'Invités: {names|and}' },
+          de: { guests: 'Gäste: {names|and}' },
+          ja: { guests: 'ゲスト: {names|and}' },
+        },
+      });
+
+      // English (uses Oxford comma)
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Guests: Alice and Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('Guests: Alice, Bob, and Charlie');
+
+      // Spanish
+      i18n.setLocale('es');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Invitados: Alice y Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('Invitados: Alice, Bob y Charlie');
+
+      // French
+      i18n.setLocale('fr');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Invités: Alice et Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('Invités: Alice, Bob et Charlie');
+
+      // German
+      i18n.setLocale('de');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Gäste: Alice und Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('Gäste: Alice, Bob und Charlie');
+
+      // Japanese
+      i18n.setLocale('ja');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('ゲスト: Alice、Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('ゲスト: Alice、Bob、Charlie');
+    });
+
+    test('uses locale-aware conjunctions for "or" separator', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: { options: 'Choose: {choices|or}' },
+          es: { options: 'Elige: {choices|or}' },
+          fr: { options: 'Choisir: {choices|or}' },
+          de: { options: 'Wählen: {choices|or}' },
+          pt: { options: 'Escolha: {choices|or}' },
+        },
+      });
+
+      // English (uses Oxford comma)
+      expect(i18n.t('options', { choices: ['Tea', 'Coffee'] })).toBe('Choose: Tea or Coffee');
+      expect(i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] })).toBe('Choose: Tea, Coffee, or Juice');
+
+      // Spanish
+      i18n.setLocale('es');
+      expect(i18n.t('options', { choices: ['Té', 'Café'] })).toBe('Elige: Té o Café');
+      expect(i18n.t('options', { choices: ['Té', 'Café', 'Jugo'] })).toBe('Elige: Té, Café o Jugo');
+
+      // French
+      i18n.setLocale('fr');
+      expect(i18n.t('options', { choices: ['Thé', 'Café'] })).toBe('Choisir: Thé ou Café');
+      expect(i18n.t('options', { choices: ['Thé', 'Café', 'Jus'] })).toBe('Choisir: Thé, Café ou Jus');
+
+      // German
+      i18n.setLocale('de');
+      expect(i18n.t('options', { choices: ['Tee', 'Kaffee'] })).toBe('Wählen: Tee oder Kaffee');
+      expect(i18n.t('options', { choices: ['Tee', 'Kaffee', 'Saft'] })).toBe('Wählen: Tee, Kaffee oder Saft');
+
+      // Portuguese
+      i18n.setLocale('pt');
+      expect(i18n.t('options', { choices: ['Chá', 'Café'] })).toBe('Escolha: Chá ou Café');
+      expect(i18n.t('options', { choices: ['Chá', 'Café', 'Suco'] })).toBe('Escolha: Chá, Café ou Suco');
+    });
+
+    test('falls back to English for unsupported locales', () => {
+      const i18n = createI18n({
+        locale: 'xx-YY', // Unsupported locale
+        messages: {
+          'xx-YY': { guests: 'Guests: {names|and}' },
+        },
+      });
+
+      // Should use English conjunction as fallback (with Oxford comma)
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Guests: Alice and Bob');
+      expect(i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] })).toBe('Guests: Alice, Bob, and Charlie');
+    });
+
+    test('handles locale variants correctly', () => {
+      const i18n = createI18n({
+        locale: 'en-US',
+        messages: {
+          'en-US': { guests: 'Guests: {names|and}' },
+        },
+      });
+
+      // en-US should use 'en' base conjunctions
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Guests: Alice and Bob');
+
+      i18n.setLocale('es-MX');
+      i18n.add('es-MX', { guests: 'Invitados: {names|and}' });
+      // es-MX should use 'es' base conjunctions
+      expect(i18n.t('guests', { names: ['Alice', 'Bob'] })).toBe('Invitados: Alice y Bob');
+    });
   });
 
   describe('Pluralization', () => {

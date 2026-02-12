@@ -5,8 +5,9 @@ Type-safe, lightweight internationalization (i18n) library for TypeScript applic
 ## Features
 
 - ✅ **Type-Safe** - Full TypeScript support with generic types
-- ✅ **Lightweight** - ~3KB gzipped with zero dependencies
+- ✅ **Lightweight** - ~2.3KB gzipped with zero dependencies
 - ✅ **Universal Pluralization** - 100+ languages via Intl.PluralRules API
+- ✅ **Smart Array Handling** - Auto-join with separators, length access, and safe indexing
 - ✅ **Path Interpolation** - Support for nested objects and array indices
 - ✅ **Lazy Loading** - Async locale loading with automatic caching
 - ✅ **Namespaces** - Organize translations by feature or module
@@ -116,11 +117,81 @@ i18n.t('friends', { friends: [{ name: 'Charlie' }, { name: 'Dave' }] });
 // Result: "First friend: Charlie"
 ```
 
+#### Array Handling
+
+Arrays can be intelligently formatted with various separators:
+
+```typescript
+const i18n = createI18n({
+  messages: {
+    en: {
+      shopping: 'Shopping list: {items}',
+      guests: 'Invited: {names|and}',
+      options: 'Choose: {choices|or}',
+      path: 'Path: {folders| / }',
+      count: 'You have {items.length} items',
+    },
+  },
+});
+
+// Default comma separator
+i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
+// "Shopping list: Apple, Banana, Orange"
+
+// Natural "and" lists (locale-aware via Intl.ListFormat - supports 100+ languages automatically)
+i18n.t('guests', { names: ['Alice'] });
+// "Invited: Alice"
+i18n.t('guests', { names: ['Alice', 'Bob'] });
+// "Invited: Alice and Bob"
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invited: Alice, Bob, and Charlie" (Oxford comma in English)
+
+// Natural "or" lists (locale-aware via Intl.ListFormat - supports 100+ languages automatically)
+i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
+// "Choose: Tea, Coffee, or Juice"
+
+// Custom separators
+i18n.t('path', { folders: ['home', 'user', 'documents'] });
+// "Path: home / user / documents"
+
+// Array length
+i18n.t('count', { items: ['A', 'B', 'C'] });
+// "You have 3 items"
+```
+
+**Array Features:**
+- `{items}` - Join with comma (`, `)
+- `{items|and}` - Natural "and" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
+- `{items|or}` - Natural "or" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
+- `{items| - }` - Custom separator (e.g., "A - B - C")
+- `{items.length}` - Array length
+- `{items[0]}` - Safe index access (returns empty if out of bounds)
+
+**Locale-Aware List Formatting:**  
+The `and` and `or` separators use the built-in **Intl.ListFormat API** which automatically handles:
+- **100+ languages** - Supports all languages available in the browser/runtime
+- **Proper grammar** - Oxford comma, locale-specific punctuation
+- **Right-to-left languages** - Arabic, Hebrew, etc.
+- **Unicode CLDR standards** - International standard for list formatting
+- **No manual configuration** - Zero maintenance required
+
+Examples across languages:
+- **English**: "A, B, and C" (with Oxford comma)
+- **Spanish**: "A, B y C" (uses "y")
+- **French**: "A, B et C" (uses "et")
+- **German**: "A, B und C" (uses "und")
+- **Japanese**: "A、B、C" (uses Japanese comma)
+- **Arabic**: Proper RTL formatting with "و"
+- And 90+ more languages automatically!
+
 #### Supported Path Formats
 
 - `{name}` - Simple variable
 - `{user.name}` - Nested object property
-- `{items[0]}` - Array index
+- `{items[0]}` - Array index (safe - returns empty if out of bounds)
+- `{items}` - Array join with default separator
+- `{items|and}` - Array join with "and"
+- `{items.length}` - Array length
 - `{data.items[0].value}` - Mixed notation
 
 **Limitations:**

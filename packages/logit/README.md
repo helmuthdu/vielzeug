@@ -565,7 +565,7 @@ Logit.error('Payment failed:', error);       // Errors
 - Lazy evaluation of timestamp and environment
 - Async remote logging (Promise-based, non-blocking)
 - Zero dependencies
-- ~3KB gzipped
+- ~2.7KB gzipped
 
 ## Browser Support
 

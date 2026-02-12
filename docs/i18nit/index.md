@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.0_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.3_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -94,7 +94,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 - Framework-agnostic solution
 - Variable interpolation with nested paths (`{user.name}`, `{items[0]}`)
 - Structured error handling with detailed context
-- Minimal bundle size (~3KB gzipped)
+- Minimal bundle size (~2.3KB gzipped)
 - Built-in XSS protection with HTML escaping
 
 ❌ **Don't use i18nit when:**
@@ -107,6 +107,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 - **Type-Safe**: Full TypeScript support with generic types and type inference
 - **Universal Pluralization**: Support for 100+ languages via Intl.PluralRules API (Arabic, Polish, Russian, Chinese, and more)
+- **Smart Array Handling**: Auto-join with locale-aware separators via Intl.ListFormat (`{items|and}` automatically works in 100+ languages), length access (`{items.length}`), and safe indexing
 - **Path Interpolation**: Dot notation and bracket notation for nested data (`{user.name}`, `{items[0]}`)
 - **Async Loading**: Lazy-load translations with automatic caching and deduplication
 - **Locale Fallbacks**: Automatic fallback chain (e.g., de-CH → de → en)
@@ -117,7 +118,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 - **Structured Errors**: `MissingVariableError` with key, variable, and locale context
 - **Missing Variable Strategies**: Choose between empty, preserve, or error for missing variables
 - **Zero Dependencies**: No external dependencies, fully self-contained
-- **Tiny Bundle**: ~3.0KB gzipped
+- **Tiny Bundle**: ~2.3KB gzipped
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
 - **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining graceful fallback
 
@@ -197,6 +198,56 @@ i18n.t('items', { count: 5 }); // "5 items"
 i18n.t('notifications', { count: 3 }); // "You have 3 notifications"
 ```
 
+### With Array Handling
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      shopping: 'Shopping list: {items}',
+      guests: 'Invited: {names|and}',
+      options: 'Choose: {choices|or}',
+      count: 'You have {items.length} items',
+    },
+    es: {
+      shopping: 'Lista de compras: {items}',
+      guests: 'Invitados: {names|and}', // Automatically uses "y" via Intl.ListFormat
+      options: 'Elige: {choices|or}', // Automatically uses "o" via Intl.ListFormat
+      count: 'Tienes {items.length} artículos',
+    },
+  },
+});
+
+// Default comma separator
+i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
+// "Shopping list: Apple, Banana, Orange"
+
+// Locale-aware "and" lists (English uses "and" with Oxford comma)
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invited: Alice, Bob, and Charlie"
+
+// Locale-aware "or" lists (English uses "or" with Oxford comma)
+i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
+// "Choose: Tea, Coffee, or Juice"
+
+// Spanish automatically uses "y" and "o" (powered by Intl.ListFormat)
+i18n.setLocale('es');
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invitados: Alice, Bob y Charlie"
+
+i18n.t('options', { choices: ['Té', 'Café', 'Jugo'] });
+// "Elige: Té, Café o Jugo"
+
+// Array length
+i18n.t('count', { items: ['A', 'B', 'C'] });
+// "Tienes 3 artículos"
+```
+
+::: tip 100+ Languages Supported
+Array formatting uses **Intl.ListFormat API** for automatic support of 100+ languages with proper grammar, conjunctions, and punctuation. No manual configuration needed!
+:::
+
 ### Async Translation Loading
 
 ```ts
@@ -220,43 +271,6 @@ await i18n.tl('welcome', undefined, { locale: 'es' });
 // Or load explicitly
 await i18n.load('fr');
 i18n.t('welcome', undefined, { locale: 'fr' });
-```
-
-### React Integration
-
-```tsx
-import { createI18n } from '@vielzeug/i18nit';
-import { useEffect, useState } from 'react';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { greeting: 'Hello, {name}!' },
-    es: { greeting: '¡Hola, {name}!' },
-  },
-});
-
-function App() {
-  const [locale, setLocale] = useState(i18n.getLocale());
-  const [, forceUpdate] = useState({});
-
-  useEffect(() => {
-    return i18n.subscribe((newLocale) => {
-      setLocale(newLocale);
-      forceUpdate({});
-    });
-  }, []);
-
-  return (
-    <div>
-      <select value={locale} onChange={(e) => i18n.setLocale(e.target.value)}>
-        <option value="en">English</option>
-        <option value="es">Español</option>
-      </select>
-      <h1>{i18n.t('greeting', { name: 'World' })}</h1>
-    </div>
-  );
-}
 ```
 
 ## 🎓 Core Concepts
