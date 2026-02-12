@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/logit",
+      "comment": "code cleanup",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/logit"
+}
