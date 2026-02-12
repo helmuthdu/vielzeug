@@ -42,7 +42,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Centralized, declarative permission system
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -139,25 +139,25 @@ import { Permit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 
 // 1. Register role-based permissions
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('editor', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
 });
 
 Permit.register('viewer', 'posts', {
-  view: true,
+  read: true,
 });
 
 // 2. Public permissions for unauthenticated users
 Permit.register(ANONYMOUS, 'posts', {
-  view: true,
+  read: true,
 });
 
 // 3. Check permissions
@@ -172,9 +172,9 @@ if (Permit.check(user, 'posts', 'delete')) {
 }
 
 // 4. Normalization - case-insensitive matching
-Permit.register('Admin', 'Posts', { view: true });
+Permit.register('Admin', 'Posts', { read: true });
 const adminUser = { id: 'u2', roles: ['ADMIN'] };
-Permit.check(adminUser, 'posts', 'view'); // true
+Permit.check(adminUser, 'posts', 'read'); // true
 ```
 
 ### Real-World Example: Blog Platform
@@ -195,14 +195,14 @@ interface Post {
 
 // Define permission rules
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true
 }); // Admin has all permissions on all resources
 
 Permit.register('editor', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user: User, post: Post) => {
     // Editors can update published posts or drafts
@@ -212,7 +212,7 @@ Permit.register('editor', 'posts', {
 });
 
 Permit.register('author', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user: User, post: Post) => {
     // Authors can only update their own posts
@@ -250,14 +250,14 @@ import { Permit } from '@vielzeug/permit';
 
 // Setup permissions
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('user', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user, post) => user.id === post.authorId,
   delete: (user, post) => user.id === post.authorId,
@@ -345,7 +345,7 @@ const user = { roles: ['admin', 'moderator'] };
 The entities or features being protected:
 
 ```ts
-Permit.register('user', 'posts', { create: true, view: true });
+Permit.register('user', 'posts', { create: true, read: true });
 //                       ^^^^^^ resource
 ```
 
@@ -354,10 +354,9 @@ Permit.register('user', 'posts', { create: true, view: true });
 The operations that can be performed on resources:
 
 - **create**: Create new items
-- **view**: Read/view items
+- **read**: Read/view items
 - **update**: Modify existing items
 - **delete**: Remove items
-- **custom**: Any custom action you define
 
 ### Permission Types
 
@@ -375,7 +374,7 @@ Special roles and resources:
 - **WILDCARD resource (`*`)**: Applies to all resources
 
 ```ts
-Permit.register('*', 'posts', { view: true }); // Anyone can view posts
+Permit.register('*', 'posts', { read: true }); // Anyone can view posts
 ```
 
 ## 📚 Documentation
@@ -416,7 +415,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Admin has all permissions on all resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -424,7 +423,7 @@ Permit.register('admin', WILDCARD, {
 
 // Moderator has all permissions on comments
 Permit.register('moderator', 'comments', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -485,10 +484,10 @@ Ensure permissions are registered before checking:
 
 ```ts
 // ✅ Register first
-Permit.register('user', 'posts', { view: true });
+Permit.register('user', 'posts', { read: true });
 
 // Then check
-const canView = Permit.check(user, 'posts', 'view');
+const canView = Permit.check(user, 'posts', 'read');
 ```
 
 :::
@@ -532,7 +531,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // ✅ Correct
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -554,7 +553,7 @@ Permit.register('admin', '*', { all: true });
 const user = { roles: ['editor', 'viewer'] };
 
 // User should have permissions from BOTH roles
-console.log(Permit.check(user, 'posts', 'view')); // true if either role allows
+console.log(Permit.check(user, 'posts', 'read')); // true if either role allows
 ```
 
 ## 🤝 Contributing
