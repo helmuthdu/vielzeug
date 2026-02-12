@@ -164,16 +164,11 @@ const searchProducts = debounce((query: string) => {
 }, 300);
 
 // Async utilities - retry API calls with exponential backoff
-const data = await retry(
-  () => fetch('/api/data').then(r => r.json()),
-  { times: 3, delay: 1000, backoff: 2 }
-);
+const data = await retry(() => fetch('/api/data').then((r) => r.json()), { times: 3, delay: 1000, backoff: 2 });
 
 // Rate limiting with promise pool
 const apiPool = pool(5); // Max 5 concurrent requests
-const results = await Promise.all(
-  urls.map(url => apiPool(() => fetch(url)))
-);
+const results = await Promise.all(urls.map((url) => apiPool(() => fetch(url))));
 ```
 
 ### TypeScript Integration
@@ -208,6 +203,53 @@ const users = await map(ids, async (id) => {
   const response = await fetch(`/api/users/${id}`);
   return response.json(); // Type inferred from context
 });
+```
+
+## 🎓 Core Concepts
+
+### Tree-Shakable
+
+Import only what you need for minimal bundle size:
+
+```ts
+import { map, filter } from '@vielzeug/toolkit';
+// Only ~500 bytes added to your bundle
+```
+
+### Type-Safe
+
+Full TypeScript support with automatic type inference:
+
+```ts
+const numbers = [1, 2, 3];
+const doubled = map(numbers, (n) => n * 2);
+// Type: number[]
+```
+
+### Async-First
+
+Functions work with both sync and async operations:
+
+```ts
+// Sync
+const result = map([1, 2, 3], (n) => n * 2);
+
+// Async
+const users = await map(ids, async (id) => fetchUser(id));
+```
+
+### Composable
+
+Chain and combine utilities for powerful data transformations:
+
+```ts
+import { pipe, filter, map, sort } from '@vielzeug/toolkit';
+
+const processUsers = pipe(
+  (users) => filter(users, (u) => u.active),
+  (users) => map(users, (u) => ({ ...u, name: u.name.toUpperCase() })),
+  (users) => sort(users, (a, b) => a.name.localeCompare(b.name)),
+);
 ```
 
 ## 📚 Documentation

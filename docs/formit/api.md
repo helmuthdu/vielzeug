@@ -4,9 +4,7 @@ Complete API documentation for @vielzeug/formit.
 
 ## Table of Contents
 
-- [createForm()](#createform)
-- [Form Methods](#form-methods)
-- [Types](#types)
+[[toc]]
 
 ## createForm()
 
@@ -61,8 +59,6 @@ const form = createForm({
   },
 });
 ```
-
----
 
 ## Form Methods
 
@@ -384,7 +380,7 @@ if (form.isDirty('email')) {
 
 // Check if form has any changes
 const state = form.getStateSnapshot();
-const hasChanges = Object.keys(state.values).some(key => form.isDirty(key));
+const hasChanges = Object.keys(state.values).some((key) => form.isDirty(key));
 ```
 
 ### Form Reset
@@ -769,8 +765,6 @@ console.log(state);
 */
 ```
 
----
-
 ## Types
 
 ### `Path`
@@ -840,7 +834,7 @@ try {
   if (error instanceof ValidationError) {
     console.log('Validation errors:', error.errors);
     // { email: 'Required', password: 'Too short' }
-    
+
     console.log('Error type:', error.type); // 'validation'
     console.log('Error message:', error.message); // 'Form validation failed'
   }
@@ -1035,8 +1029,6 @@ const state: FormState<FormData> = {
 };
 ```
 
----
-
 ## Advanced Patterns
 
 ### Conditional Validation
@@ -1145,8 +1137,6 @@ async function validateStep(step: number) {
   return true;
 }
 ```
-
----
 
 ## See Also
 

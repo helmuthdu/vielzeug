@@ -4,21 +4,7 @@ Complete API documentation for i18nit.
 
 ## Table of Contents
 
-- [Types](#types)
-- [Errors](#errors)
-- [createI18n()](#createi18n)
-- [I18n Instance](#i18n-instance)
-  - [Translation Methods](#translation-methods)
-  - [Locale Management](#locale-management)
-  - [Message Management](#message-management)
-  - [Async Loading](#async-loading)
-  - [Formatting Helpers](#formatting-helpers)
-  - [Namespaces](#namespaces)
-  - [Subscriptions](#subscriptions)
-- [Configuration](#configuration)
-- [Message Types](#message-types)
-
----
+[[toc]]
 
 ## Types
 
@@ -39,6 +25,7 @@ type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 Plural category used for pluralization rules. These categories are determined automatically using the `Intl.PluralRules` API, which supports 100+ languages with proper plural rules from the [Unicode CLDR](https://cldr.unicode.org/).
 
 **Plural categories by language:**
+
 - **Simple (one/other)**: English, German, Spanish, etc.
 - **Complex (zero/one/two/few/many/other)**: Arabic
 - **Complex (one/few/many)**: Russian, Polish, Czech
@@ -72,7 +59,7 @@ type MessageFunction = (
   helpers: {
     number: (value: number, options?: Intl.NumberFormatOptions) => string;
     date: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
-  }
+  },
 ) => string;
 ```
 
@@ -105,8 +92,6 @@ type Messages = Record<string, MessageValue>;
 
 Collection of translations for a locale.
 
----
-
 ## Errors
 
 ### MissingVariableError
@@ -122,6 +107,7 @@ class MissingVariableError extends Error {
 Error thrown when `missingVar: 'error'` is configured and a required variable is missing during interpolation.
 
 **Properties:**
+
 - `key` - The translation key being processed
 - `variable` - The name of the missing variable
 - `locale` - The locale being used
@@ -141,10 +127,10 @@ try {
   i18n.t('greeting');
 } catch (error) {
   if (error instanceof MissingVariableError) {
-    console.log(error.key);      // 'greeting'
+    console.log(error.key); // 'greeting'
     console.log(error.variable); // 'name'
-    console.log(error.locale);   // 'en'
-    console.log(error.message);  
+    console.log(error.locale); // 'en'
+    console.log(error.message);
     // "Missing variable 'name' for key 'greeting' in locale 'en'"
   }
 }
@@ -182,8 +168,6 @@ type I18nConfig = {
 
 Configuration object for creating an i18n instance.
 
----
-
 ## createI18n()
 
 Create a new i18n instance.
@@ -191,7 +175,7 @@ Create a new i18n instance.
 ### Signature
 
 ```ts
-function createI18n(config?: I18nConfig): I18n
+function createI18n(config?: I18nConfig): I18n;
 ```
 
 ### Parameters
@@ -223,8 +207,6 @@ const i18n = createI18n({
   missingVar: 'empty',
 });
 ```
-
----
 
 ## I18n Instance
 
@@ -681,8 +663,6 @@ unsubscribe();
 - Handler errors are caught and ignored
 - Multiple subscribers are supported
 
----
-
 ## Configuration
 
 ### locale
@@ -853,34 +833,34 @@ Strategy for handling missing variables in interpolation.
 
 ```ts
 // Preserve placeholders
-createI18n({ 
+createI18n({
   missingVar: 'preserve',
-  messages: { en: { greeting: 'Hello, {name}!' } }
+  messages: { en: { greeting: 'Hello, {name}!' } },
 });
 i18n.t('greeting'); // "Hello, {name}!"
 
 // Empty string (default)
-createI18n({ 
+createI18n({
   missingVar: 'empty',
-  messages: { en: { greeting: 'Hello, {name}!' } }
+  messages: { en: { greeting: 'Hello, {name}!' } },
 });
 i18n.t('greeting'); // "Hello, !"
 
 // Throw structured error
 import { MissingVariableError } from '@vielzeug/i18nit';
 
-createI18n({ 
+createI18n({
   missingVar: 'error',
-  messages: { en: { greeting: 'Hello, {name}!' } }
+  messages: { en: { greeting: 'Hello, {name}!' } },
 });
 
 try {
   i18n.t('greeting');
 } catch (error) {
   if (error instanceof MissingVariableError) {
-    console.log(error.key);      // 'greeting'
+    console.log(error.key); // 'greeting'
     console.log(error.variable); // 'name'
-    console.log(error.locale);   // 'en'
+    console.log(error.locale); // 'en'
   }
 }
 ```
@@ -897,9 +877,8 @@ i18n.t('Hello, {name}!'); // "Hello, !"
 // Error
 createI18n({ missingVar: 'error' });
 i18n.t('Hello, {name}!'); // throws Error: Missing variable: name
-```
 
----
+````
 
 ## Message Types
 
@@ -912,7 +891,7 @@ const messages = {
   greeting: 'Hello!',
   welcome: 'Welcome to our app',
 };
-```
+````
 
 ---
 
@@ -1012,8 +991,6 @@ i18n.t('price', { amount: 99.99 }); // "$99.99"
 i18n.t('timestamp', { date: new Date() }); // "Posted Feb 9, 2026"
 ```
 
----
-
 ## Best Practices
 
 ### 1. Type Safety
@@ -1080,4 +1057,3 @@ createI18n({
 ---
 
 For complete usage examples, see [Usage Guide](./usage.md) and [Examples](./examples.md).
-

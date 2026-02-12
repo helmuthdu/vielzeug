@@ -2,6 +2,14 @@
 
 Complete guide to installing and using Deposit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -27,10 +35,6 @@ import { Deposit, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposi
 // Optional: Import types
 import type { DepositDataSchema, DepositMigrationFn } from '@vielzeug/deposit';
 ```
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
 
 ## Define a Schema
 
@@ -375,7 +379,8 @@ const db1 = new Deposit({
 });
 
 const schema2 = {
-  'user:data': { // ✅ Colons in table names work too
+  'user:data': {
+    // ✅ Colons in table names work too
     key: 'id',
     record: {} as User,
   },

@@ -245,4 +245,215 @@ const result = userSchema.safeParse({
 console.log('Validation result:', result)`,
     },
   },
+  wireit: {
+    'basic-container': {
+      name: 'Basic Container - Value Provider',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+// Create tokens
+const Config = createToken('Config')
+const Logger = createToken('Logger')
+
+// Create container
+const container = createContainer()
+
+// Register providers
+container
+  .registerValue(Config, { apiUrl: 'https://api.example.com' })
+  .registerValue(Logger, { log: (msg) => console.log('[LOG]', msg) })
+
+// Resolve dependencies
+const config = container.get(Config)
+const logger = container.get(Logger)
+
+logger.log(\`Config loaded: \${config.apiUrl}\`)
+console.log('Container initialized!')`,
+    },
+    'class-provider': {
+      name: 'Class Provider - Dependency Injection',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+// Define tokens
+const Database = createToken('Database')
+const UserService = createToken('UserService')
+
+// Define classes
+class DatabaseImpl {
+  constructor() {
+    this.users = [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' }
+    ]
+  }
+  getUsers() { return this.users }
+}
+
+class UserServiceImpl {
+  constructor(db) {
+    this.db = db
+  }
+  getAllUsers() {
+    return this.db.getUsers()
+  }
+}
+
+// Setup container
+const container = createContainer()
+container
+  .register(Database, { useClass: DatabaseImpl })
+  .register(UserService, { 
+    useClass: UserServiceImpl, 
+    deps: [Database] 
+  })
+
+// Use the service
+const service = container.get(UserService)
+console.log('Users:', service.getAllUsers())`,
+    },
+    'factory-provider': {
+      name: 'Factory Provider - Custom Creation',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+const Config = createToken('Config')
+const Logger = createToken('Logger')
+
+const container = createContainer()
+
+// Register config
+container.registerValue(Config, { 
+  environment: 'production',
+  logLevel: 'info'
+})
+
+// Register factory that uses config
+container.registerFactory(
+  Logger,
+  (config) => ({
+    info: (msg) => {
+      if (config.logLevel === 'info') {
+        console.log(\`[\${config.environment.toUpperCase()}] \${msg}\`)
+      }
+    }
+  }),
+  [Config],
+  { lifetime: 'singleton' }
+)
+
+const logger = container.get(Logger)
+logger.info('Application started!')
+logger.info('Factory provider working!')`,
+    },
+    lifetimes: {
+      name: 'Lifetimes - Singleton vs Transient',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+const SingletonService = createToken('SingletonService')
+const TransientService = createToken('TransientService')
+
+let singletonCount = 0
+let transientCount = 0
+
+const container = createContainer()
+
+// Singleton - created once
+container.registerFactory(
+  SingletonService,
+  () => ({ id: ++singletonCount }),
+  [],
+  { lifetime: 'singleton' }
+)
+
+// Transient - created every time
+container.registerFactory(
+  TransientService,
+  () => ({ id: ++transientCount }),
+  [],
+  { lifetime: 'transient' }
+)
+
+// Get singleton multiple times
+const s1 = container.get(SingletonService)
+const s2 = container.get(SingletonService)
+console.log('Singleton instances:', s1.id, s2.id) // Same ID
+
+// Get transient multiple times
+const t1 = container.get(TransientService)
+const t2 = container.get(TransientService)
+console.log('Transient instances:', t1.id, t2.id) // Different IDs`,
+    },
+    'child-containers': {
+      name: 'Child Containers - Hierarchical DI',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+const GlobalConfig = createToken('GlobalConfig')
+const RequestId = createToken('RequestId')
+
+// Parent container
+const parent = createContainer()
+parent.registerValue(GlobalConfig, { 
+  appName: 'MyApp',
+  version: '1.0.0'
+})
+
+// Child container inherits from parent
+const child1 = parent.createChild([
+  [RequestId, { useValue: 'req-001' }]
+])
+
+const child2 = parent.createChild([
+  [RequestId, { useValue: 'req-002' }]
+])
+
+// Both children have access to parent's providers
+const config1 = child1.get(GlobalConfig)
+const id1 = child1.get(RequestId)
+console.log(\`Child 1: \${config1.appName} - Request \${id1}\`)
+
+const config2 = child2.get(GlobalConfig)
+const id2 = child2.get(RequestId)
+console.log(\`Child 2: \${config2.appName} - Request \${id2}\`)`,
+    },
+    'scoped-execution': {
+      name: 'Scoped Execution - Request Scoping',
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+const RequestId = createToken('RequestId')
+const RequestHandler = createToken('RequestHandler')
+
+class Handler {
+  constructor(requestId) {
+    this.requestId = requestId
+  }
+  handle() {
+    return \`Handled request: \${this.requestId}\`
+  }
+}
+
+const container = createContainer()
+container.register(RequestHandler, {
+  useClass: Handler,
+  deps: [RequestId]
+})
+
+// Simulate multiple requests
+async function handleRequest(id) {
+  return container.runInScope(
+    (scope) => {
+      const handler = scope.get(RequestHandler)
+      return handler.handle()
+    },
+    [[RequestId, { useValue: id }]]
+  )
+}
+
+// Process multiple requests
+const results = await Promise.all([
+  handleRequest('request-1'),
+  handleRequest('request-2'),
+  handleRequest('request-3')
+])
+
+console.log('Results:', results)`,
+    },
+  },
 };

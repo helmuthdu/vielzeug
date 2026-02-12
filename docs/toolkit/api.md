@@ -23,8 +23,6 @@ Toolkit provides **110+ utilities** organized into 9 categories. All utilities a
 - [Random Utilities](#random-utilities) - Random values, shuffling, and sampling
 - [Typed Utilities](#typed-utilities) - Type guards and runtime checks
 
----
-
 ## Array Utilities
 
 **Transform, filter, and manipulate arrays with type safety.**
@@ -86,8 +84,6 @@ See [Array Examples](./examples/array.md) for detailed usage.
 | [`list`](./examples/array/list.md)             | Client-side reactive pagination              | `list(data, {limit: 10})`                 |
 | [`remoteList`](./examples/array/remoteList.md) | Server-side reactive pagination with caching | `remoteList({fetch: fetchFn, limit: 20})` |
 
----
-
 ## Object Utilities
 
 **Deep operations, merging, and property manipulation.**
@@ -106,8 +102,6 @@ See [Object Examples](./examples/object.md) for detailed usage.
 | [`keys`](./examples/object/keys.md)           | Type-safe Object.keys()              | `keys(obj)`                      |
 | [`values`](./examples/object/values.md)       | Type-safe Object.values()            | `values(obj)`                    |
 | [`entries`](./examples/object/entries.md)     | Type-safe Object.entries()           | `entries(obj)`                   |
-
----
 
 ## String Utilities
 
@@ -136,8 +130,6 @@ See [String Examples](./examples/string.md) for detailed usage.
 | ----------------------------------------------- | --------------------------- | -------------------------------------- |
 | [`similarity`](./examples/string/similarity.md) | Calculate string similarity | `similarity('hello', 'hallo')` → `0.8` |
 
----
-
 ## Function Utilities
 
 **Control execution timing and behavior.**
@@ -156,8 +148,6 @@ See [Function Examples](./examples/function.md) for detailed usage.
 | [`once`](./examples/function/once.md)         | Execute function only once                | `once(fn)`                              |
 | [`delay`](./examples/function/delay.md)       | Delay execution                           | `await delay(1000)`                     |
 | [`prune`](./examples/function/prune.md)       | Remove nullable/empty values              | `prune({ a: 1, b: null })` → `{ a: 1 }` |
-
----
 
 ## Math Utilities
 
@@ -202,8 +192,6 @@ See [Math Examples](./examples/math.md) for detailed usage.
 | [`rate`](./examples/math/rate.md)   | Calculate percentage    | `rate(25, 100)` → `25`        |
 | [`boil`](./examples/math/boil.md)   | Reduce with comparator  | `boil([1,2,3], (a,b) => a+b)` |
 
----
-
 ## Money Utilities
 
 **Currency formatting and conversion with precision.**
@@ -214,8 +202,6 @@ See [Money Examples](./examples/money.md) for detailed usage.
 | ------------------------------------------ | -------------------------- | -------------------------------------------------------------- |
 | [`currency`](./examples/money/currency.md) | Format money for display   | `currency({amount: 123456n, currency: 'USD'})` → `'$1,234.56'` |
 | [`exchange`](./examples/money/exchange.md) | Convert between currencies | `exchange(usd, {from: 'USD', to: 'EUR', rate: 0.85})`          |
-
----
 
 ## Date Utilities
 
@@ -229,8 +215,6 @@ See [Date Examples](./examples/date.md) for detailed usage.
 | [`interval`](./examples/date/interval.md) | Generate date range       | `interval('2024-01-01', '2024-01-31', {interval: 'D'})` |
 | [`timeDiff`](./examples/date/timeDiff.md) | Calculate time difference | `timeDiff(date1, date2)` → `{value: 5, unit: 'DAY'}`    |
 
----
-
 ## Random Utilities
 
 **Random generation, shuffling, and sampling.**
@@ -243,8 +227,6 @@ See [Random Examples](./examples/random.md) for detailed usage.
 | [`draw`](./examples/random/draw.md)       | Random array element   | `draw([1,2,3])` → `2`          |
 | [`shuffle`](./examples/random/shuffle.md) | Shuffle array          | `shuffle([1,2,3])` → `[3,1,2]` |
 | [`uuid`](./examples/random/uuid.md)       | Generate UUID v4       | `uuid()` → `'550e8400-...'`    |
-
----
 
 ## Typed Utilities
 
@@ -299,8 +281,6 @@ See [Typed Examples](./examples/typed.md) for detailed usage.
 | [`is`](./examples/typed/is.md)         | Multi-purpose type checker | `is('string', val)` → `boolean` |
 | [`typeOf`](./examples/typed/typeOf.md) | Get type of value          | `typeOf([])` → `'array'`        |
 
----
-
 ## Import Reference
 
 ### Individual Imports (Recommended)
@@ -322,8 +302,6 @@ import { interval } from '@vielzeug/toolkit/date';
 import { random, uuid } from '@vielzeug/toolkit/random';
 import { isString, isArray } from '@vielzeug/toolkit/typed';
 ```
-
----
 
 ## See Also
 

@@ -2,6 +2,10 @@
 
 Complete API documentation for `@vielzeug/fetchit`.
 
+## Table of Contents
+
+[[toc]]
+
 ## Overview
 
 Fetchit provides **two separate clients** for maximum flexibility:
@@ -127,8 +131,6 @@ const data = await queryClient.fetch({
 - `clearCache(): void` - Clear all cached data
 - `getCacheSize(): number` - Get number of cached queries
 
----
-
 ## Type-Safe Query Keys
 
 While there's no built-in helper, you can create type-safe query keys using TypeScript's `as const`:
@@ -158,8 +160,6 @@ queryClient.fetch({
 // Invalidate with type safety
 queryClient.invalidate(queryKeys.users.all());
 ```
-
----
 
 ## Query Client Methods
 
@@ -237,8 +237,6 @@ const newUser = await queryClient.mutate(
   { name: 'Alice', email: 'alice@example.com' },
 );
 ```
-
----
 
 ## HTTP Client Methods
 
@@ -369,8 +367,6 @@ Get current global headers.
 const headers = http.getHeaders();
 console.log(headers.Authorization);
 ```
-
----
 
 ## Query Client Cache Management
 
@@ -658,8 +654,6 @@ await queryClient.prefetch({
   queryFn: () => http.get('/users/2'),
 });
 ```
-
----
 
 ## Types
 

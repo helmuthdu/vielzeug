@@ -2,6 +2,14 @@
 
 Complete guide to installing and using Formit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -27,18 +35,6 @@ import { createForm } from '@vielzeug/formit';
 // Optional: Import types
 import type { FormInstance, FormState, FormInit } from '@vielzeug/formit';
 ```
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
-
-## Table of Contents
-
-- [Basic Usage](#basic-usage)
-- [Validation](#validation)
-- [Framework Integration](#framework-integration)
-- [Advanced Patterns](#advanced-patterns)
-- [Best Practices](#best-practices)
 
 ## Basic Usage
 
@@ -110,8 +106,6 @@ form.getValue(['items', 1, 'name']);
 form.setValue('user.profile.name', 'John Doe');
 form.setValue('items[0].name', 'Updated Item');
 ```
-
----
 
 ## Validation
 
@@ -326,8 +320,6 @@ binding.name;       // Field key
 binding.set;        // Setter function
 ```
 
----
-
 ## Framework Integration
 
 Formit is framework-agnostic. Below are generic integration patterns for popular frameworks.
@@ -339,21 +331,29 @@ import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
 
 function LoginForm() {
-  const [form] = useState(() => createForm({
-    initialValues: { email: '', password: '' },
-    fields: {
-      email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
-    }
-  }));
+  const [form] = useState(() =>
+    createForm({
+      initialValues: { email: '', password: '' },
+      fields: {
+        email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+      },
+    }),
+  );
 
   const [state, setState] = useState(form.getStateSnapshot());
   useEffect(() => form.subscribe(setState), [form]);
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.submit(console.log); }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(console.log);
+      }}>
       <input {...form.bind('email')} placeholder="Email" />
       {state.errors.email && <span>{state.errors.email}</span>}
-      <button type="submit" disabled={state.isSubmitting}>Submit</button>
+      <button type="submit" disabled={state.isSubmitting}>
+        Submit
+      </button>
     </form>
   );
 }
@@ -367,14 +367,14 @@ import { ref, onMounted, onUnmounted } from 'vue';
 const form = createForm({
   initialValues: { email: '', password: '' },
   fields: {
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
-  }
+    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+  },
 });
 
 const state = ref(form.getStateSnapshot());
 let unsubscribe;
 
-onMounted(() => unsubscribe = form.subscribe(s => state.value = s));
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -420,7 +420,7 @@ import { createForm } from '@vielzeug/formit';
 class SimpleForm extends HTMLElement {
   #form = createForm({
     initialValues: { email: '' },
-    fields: { email: { validators: (v) => !v?.includes('@') && 'Invalid email' } }
+    fields: { email: { validators: (v) => !v?.includes('@') && 'Invalid email' } },
   });
   #sub;
 
@@ -430,20 +430,21 @@ class SimpleForm extends HTMLElement {
       e.preventDefault();
       this.#form.submit(console.log);
     };
-    this.#sub = this.#form.subscribe(s => {
+    this.#sub = this.#form.subscribe((s) => {
       this.querySelector('button').disabled = s.isSubmitting;
     });
   }
 
-  disconnectedCallback() { this.#sub?.(); }
+  disconnectedCallback() {
+    this.#sub?.();
+  }
 }
 customElements.define('simple-form', SimpleForm);
 ```
 
 :::
-> **💡 See Complete Examples**: For full implementation with hooks, composables, error handling, and success states, check [Examples](./examples.md#framework-integration-examples).
 
----
+> **💡 See Complete Examples**: For full implementation with hooks, composables, error handling, and success states, check [Examples](./examples.md#framework-integration-examples).
 
 ## Advanced Patterns
 
@@ -656,8 +657,6 @@ async function saveChanges() {
 }
 ```
 
----
-
 ## Best Practices
 
 ### 1. Create Form Outside Component
@@ -812,8 +811,6 @@ const form = createForm({
   },
 });
 ```
-
----
 
 ## See Also
 

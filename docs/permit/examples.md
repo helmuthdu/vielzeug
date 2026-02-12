@@ -160,12 +160,13 @@ Permit.check(mod, 'comments', 'create'); // true
 ## Real-World Scenarios
 
 ::: warning 🔒 Security Considerations
+
 - Always validate permissions on the server-side
 - Client-side checks are for UX only (hiding buttons, etc.)
 - Never trust permissions stored in client storage
 - Implement permission caching carefully to avoid stale data
 - Re-validate permissions after critical operations
-:::
+  :::
 
 ### Blog Platform
 

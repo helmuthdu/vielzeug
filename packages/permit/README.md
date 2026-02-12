@@ -370,8 +370,6 @@ for (const [role, resources] of permissions) {
 - Returns deep copy (modifications don't affect internal state)
 - Useful for debugging and introspection
 
----
-
 ## Advanced Usage
 
 ### Multi-Role Users

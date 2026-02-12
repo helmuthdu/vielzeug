@@ -2,20 +2,22 @@
 
 Complete API documentation for all Validit schemas and methods.
 
+## Table of Contents
+
+[[toc]]
+
 ## Core Exports
 
 ```ts
 import {
-  v,                    // Main factory object
-  type Infer,           // Type inference utility
-  type Schema,          // Base schema class
-  ValidationError,      // Error class
-  type ParseResult,     // Result type for safeParse
-  type Issue,           // Individual error type
+  v, // Main factory object
+  type Infer, // Type inference utility
+  type Schema, // Base schema class
+  ValidationError, // Error class
+  type ParseResult, // Result type for safeParse
+  type Issue, // Individual error type
 } from '@vielzeug/validit';
 ```
-
----
 
 ## Factory Object: `v`
 
@@ -28,10 +30,11 @@ The main entry point for creating schemas.
 Creates a string schema.
 
 ```ts
-v.string() // string
+v.string(); // string
 ```
 
 **Methods:**
+
 - `.min(length: number, message?: string)` - Minimum length
 - `.max(length: number, message?: string)` - Maximum length
 - `.length(exact: number, message?: string)` - Exact length
@@ -45,10 +48,11 @@ v.string() // string
 Creates a number schema.
 
 ```ts
-v.number() // number
+v.number(); // number
 ```
 
 **Methods:**
+
 - `.min(minimum: number, message?: string)` - Minimum value
 - `.max(maximum: number, message?: string)` - Maximum value
 - `.int(message?: string)` - Must be integer
@@ -60,7 +64,7 @@ v.number() // number
 Creates a boolean schema.
 
 ```ts
-v.boolean() // boolean
+v.boolean(); // boolean
 ```
 
 #### `v.date()`
@@ -68,10 +72,11 @@ v.boolean() // boolean
 Creates a Date schema.
 
 ```ts
-v.date() // Date
+v.date(); // Date
 ```
 
 **Methods:**
+
 - `.min(date: Date, message?: string)` - After date
 - `.max(date: Date, message?: string)` - Before date
 
@@ -84,12 +89,13 @@ v.date() // Date
 Creates a schema that matches an exact value.
 
 ```ts
-v.literal('active')     // type: 'active'
-v.literal(42)           // type: 42
-v.literal(true)         // type: true
+v.literal('active'); // type: 'active'
+v.literal(42); // type: 42
+v.literal(true); // type: true
 ```
 
 **Parameters:**
+
 - `value: string | number | boolean` - The exact value to match
 
 #### `v.oneOf(...values)`
@@ -97,12 +103,13 @@ v.literal(true)         // type: true
 Creates an enum schema from a list of values.
 
 ```ts
-v.oneOf('red', 'green', 'blue')           // 'red' | 'green' | 'blue'
-v.oneOf(1, 2, 3)                          // 1 | 2 | 3
-v.oneOf('admin', 'user', 'guest')         // 'admin' | 'user' | 'guest'
+v.oneOf('red', 'green', 'blue'); // 'red' | 'green' | 'blue'
+v.oneOf(1, 2, 3); // 1 | 2 | 3
+v.oneOf('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
 ```
 
 **Parameters:**
+
 - `...values: [T, ...T[]]` - At least one value required
 
 ---
@@ -114,15 +121,17 @@ v.oneOf('admin', 'user', 'guest')         // 'admin' | 'user' | 'guest'
 Creates an array schema.
 
 ```ts
-v.array(v.string())                       // string[]
-v.array(v.number(), { parallel: true })   // number[] with parallel validation
+v.array(v.string()); // string[]
+v.array(v.number(), { parallel: true }); // number[] with parallel validation
 ```
 
 **Parameters:**
+
 - `schema: Schema<T>` - Schema for array items
 - `options?: { parallel?: boolean }` - Validation options
 
 **Methods:**
+
 - `.min(length: number, message?: string)` - Minimum items
 - `.max(length: number, message?: string)` - Maximum items
 - `.length(exact: number, message?: string)` - Exact number of items
@@ -136,13 +145,15 @@ Creates an object schema.
 v.object({
   name: v.string(),
   age: v.number(),
-})
+});
 ```
 
 **Parameters:**
+
 - `shape: Record<string, Schema<any>>` - Object shape definition
 
 **Methods:**
+
 - `.partial()` - Make all fields optional
 - `.pick(...keys)` - Select specific fields
 - `.omit(...keys)` - Exclude specific fields
@@ -152,14 +163,12 @@ v.object({
 Creates a union schema.
 
 ```ts
-v.union(v.string(), v.number())           // string | number
-v.union(
-  v.object({ type: v.literal('a'), value: v.string() }),
-  v.object({ type: v.literal('b'), value: v.number() }),
-)
+v.union(v.string(), v.number()); // string | number
+v.union(v.object({ type: v.literal('a'), value: v.string() }), v.object({ type: v.literal('b'), value: v.number() }));
 ```
 
 **Parameters:**
+
 - `...schemas: [Schema<T>, Schema<U>, ...Schema<any>[]]` - At least 2 schemas
 
 ---
@@ -171,7 +180,7 @@ v.union(
 Shorthand for `v.string().email()`.
 
 ```ts
-v.email() // string (email format)
+v.email(); // string (email format)
 ```
 
 #### `v.url()`
@@ -179,7 +188,7 @@ v.email() // string (email format)
 Shorthand for `v.string().url()`.
 
 ```ts
-v.url() // string (URL format)
+v.url(); // string (URL format)
 ```
 
 #### `v.uuid()`
@@ -187,7 +196,7 @@ v.url() // string (URL format)
 UUID validation.
 
 ```ts
-v.uuid() // string (UUID format)
+v.uuid(); // string (UUID format)
 ```
 
 #### `v.positiveInt()`
@@ -195,7 +204,7 @@ v.uuid() // string (UUID format)
 Shorthand for `v.number().int().positive()`.
 
 ```ts
-v.positiveInt() // number (positive integer)
+v.positiveInt(); // number (positive integer)
 ```
 
 #### `v.negativeInt()`
@@ -203,7 +212,7 @@ v.positiveInt() // number (positive integer)
 Shorthand for `v.number().int().negative()`.
 
 ```ts
-v.negativeInt() // number (negative integer)
+v.negativeInt(); // number (negative integer)
 ```
 
 ---
@@ -215,7 +224,7 @@ v.negativeInt() // number (negative integer)
 Accepts any value (no validation).
 
 ```ts
-v.any() // any
+v.any(); // any
 ```
 
 #### `v.unknown()`
@@ -223,7 +232,7 @@ v.any() // any
 Accepts any value (typed as `unknown`).
 
 ```ts
-v.unknown() // unknown
+v.unknown(); // unknown
 ```
 
 #### `v.null()`
@@ -231,7 +240,7 @@ v.unknown() // unknown
 Matches `null` exactly.
 
 ```ts
-v.null() // null
+v.null(); // null
 ```
 
 #### `v.undefined()`
@@ -239,7 +248,7 @@ v.null() // null
 Matches `undefined` exactly.
 
 ```ts
-v.undefined() // undefined
+v.undefined(); // undefined
 ```
 
 #### `v.void()`
@@ -247,7 +256,7 @@ v.undefined() // undefined
 Alias for `v.undefined()`.
 
 ```ts
-v.void() // undefined
+v.void(); // undefined
 ```
 
 ---
@@ -259,7 +268,7 @@ v.void() // undefined
 Converts values to string.
 
 ```ts
-v.coerce.string()
+v.coerce.string();
 // Accepts: string, number, boolean
 // Returns: string
 ```
@@ -269,7 +278,7 @@ v.coerce.string()
 Converts strings to numbers.
 
 ```ts
-v.coerce.number()
+v.coerce.number();
 // Accepts: number, numeric string
 // Returns: number
 ```
@@ -279,7 +288,7 @@ v.coerce.number()
 Converts values to boolean.
 
 ```ts
-v.coerce.boolean()
+v.coerce.boolean();
 // Accepts: boolean, 'true', 'false', 1, 0
 // Returns: boolean
 ```
@@ -289,7 +298,7 @@ v.coerce.boolean()
 Converts values to Date.
 
 ```ts
-v.coerce.date()
+v.coerce.date();
 // Accepts: Date, date string, timestamp
 // Returns: Date
 ```
@@ -297,8 +306,6 @@ v.coerce.date()
 ::: warning
 Coercion features are experimental and have limitations. Use with caution in production.
 :::
-
----
 
 ## Schema Methods
 
@@ -330,10 +337,9 @@ if (result.success) {
 ```
 
 **Returns:**
+
 ```ts
-type ParseResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: ValidationError };
+type ParseResult<T> = { success: true; data: T } | { success: false; error: ValidationError };
 ```
 
 #### `parseAsync(value: unknown): Promise<Output>`
@@ -361,8 +367,8 @@ const result = await schema.safeParseAsync(data);
 Makes the schema accept `undefined`.
 
 ```ts
-v.string().optional()           // string | undefined
-v.email().optional()            // string | undefined
+v.string().optional(); // string | undefined
+v.email().optional(); // string | undefined
 ```
 
 #### `required(message?: string): this`
@@ -370,8 +376,8 @@ v.email().optional()            // string | undefined
 Explicitly requires a value (rejects `null` and `undefined`).
 
 ```ts
-v.string().required()                    // string (required)
-v.email().required('Email is required')  // Custom message
+v.string().required(); // string (required)
+v.email().required('Email is required'); // Custom message
 ```
 
 #### `nullable(): this & Schema<Output | null>`
@@ -379,8 +385,8 @@ v.email().required('Email is required')  // Custom message
 Makes the schema accept `null`.
 
 ```ts
-v.string().nullable()           // string | null
-v.number().nullable()           // number | null
+v.string().nullable(); // string | null
+v.number().nullable(); // number | null
 ```
 
 #### `default(value: Output): this`
@@ -388,9 +394,9 @@ v.number().nullable()           // number | null
 Provides a default value when `undefined`.
 
 ```ts
-v.string().default('hello')              // 'hello' if undefined
-v.number().default(0)                    // 0 if undefined
-v.boolean().default(false)               // false if undefined
+v.string().default('hello'); // 'hello' if undefined
+v.number().default(0); // 0 if undefined
+v.boolean().default(false); // false if undefined
 ```
 
 ---
@@ -402,18 +408,13 @@ v.boolean().default(false)               // false if undefined
 Adds sync custom validation.
 
 ```ts
-v.string().refine(
-  val => val.length >= 3,
-  'Must be at least 3 characters'
-)
+v.string().refine((val) => val.length >= 3, 'Must be at least 3 characters');
 
-v.number().refine(
-  val => val % 2 === 0,
-  'Must be even'
-)
+v.number().refine((val) => val % 2 === 0, 'Must be even');
 ```
 
 **Parameters:**
+
 - `check: (value: Output) => boolean` - Validation function
 - `message?: string` - Error message (default: 'Invalid value')
 
@@ -422,16 +423,14 @@ v.number().refine(
 Adds async custom validation.
 
 ```ts
-v.string().refineAsync(
-  async (val) => {
-    const exists = await checkDatabase(val);
-    return !exists;
-  },
-  'Already exists'
-)
+v.string().refineAsync(async (val) => {
+  const exists = await checkDatabase(val);
+  return !exists;
+}, 'Already exists');
 ```
 
 **Parameters:**
+
 - `check: (value: Output) => Promise<boolean> | boolean` - Async validation function
 - `message?: string` - Error message
 
@@ -448,15 +447,13 @@ Schemas with async validators must use `parseAsync()` or `safeParseAsync()`. Cal
 Adds a description for better error messages.
 
 ```ts
-v.number()
-  .int()
-  .min(0)
-  .describe('age');
+v.number().int().min(0).describe('age');
 
 // Errors will show: "age: Must be at least 0"
 ```
 
 **Parameters:**
+
 - `description: string` - Field description
 
 #### `transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>`
@@ -466,20 +463,18 @@ Applies a transformation after validation.
 ```ts
 v.string()
   .email()
-  .transform(email => email.toLowerCase())
+  .transform((email) => email.toLowerCase());
 
-v.string()
-  .transform(str => str.split(','))
+v.string().transform((str) => str.split(','));
 ```
 
 **Parameters:**
+
 - `fn: (value: Output) => NewOutput` - Transformation function
 
 ::: warning
 Transform returns a generic `Schema<NewOutput>`, so you lose type-specific methods. Apply validators before transforming.
 :::
-
----
 
 ## Types
 
@@ -531,6 +526,7 @@ class ValidationError extends Error {
 ```
 
 **Properties:**
+
 - `issues: Issue[]` - Array of validation errors
 - `message: string` - Formatted error message
 
@@ -548,6 +544,7 @@ type Issue = {
 ```
 
 **Properties:**
+
 - `path` - Field path (e.g., `['user', 'email']`)
 - `message` - Error message
 - `code` - Error code (for i18n)
@@ -558,30 +555,24 @@ type Issue = {
 Result type for `safeParse()` and `safeParseAsync()`.
 
 ```ts
-type ParseResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: ValidationError };
+type ParseResult<T> = { success: true; data: T } | { success: false; error: ValidationError };
 ```
-
----
 
 ## Error Codes
 
 Built-in error codes for internationalization:
 
-| Code                  | Description              |
-| --------------------- | ------------------------ |
-| `invalid_type`        | Wrong type               |
-| `invalid_email`       | Invalid email format     |
-| `invalid_url`         | Invalid URL format       |
-| `invalid_string`      | Pattern mismatch         |
-| `invalid_length`      | Wrong length             |
-| `too_small`           | Below minimum            |
-| `too_big`             | Above maximum            |
-| `required`            | Missing required value   |
-| `custom`              | Custom refinement failed |
-
----
+| Code             | Description              |
+| ---------------- | ------------------------ |
+| `invalid_type`   | Wrong type               |
+| `invalid_email`  | Invalid email format     |
+| `invalid_url`    | Invalid URL format       |
+| `invalid_string` | Pattern mismatch         |
+| `invalid_length` | Wrong length             |
+| `too_small`      | Below minimum            |
+| `too_big`        | Above maximum            |
+| `required`       | Missing required value   |
+| `custom`         | Custom refinement failed |
 
 ## Performance Tips
 
@@ -591,11 +582,13 @@ For large arrays with async validation, use parallel mode:
 
 ```ts
 const schema = v.array(
-  v.object({
-    id: v.number(),
-    data: v.string(),
-  }).refineAsync(async (item) => await validate(item)),
-  { parallel: true } // Validate all items concurrently
+  v
+    .object({
+      id: v.number(),
+      data: v.string(),
+    })
+    .refineAsync(async (item) => await validate(item)),
+  { parallel: true }, // Validate all items concurrently
 );
 
 // Much faster for large datasets
@@ -623,15 +616,13 @@ Convenience schemas are optimized shortcuts:
 
 ```ts
 // ✅ Preferred
-v.email()
-v.positiveInt()
+v.email();
+v.positiveInt();
 
 // ⚠️ Works but longer
-v.string().email()
-v.number().int().positive()
+v.string().email();
+v.number().int().positive();
 ```
-
----
 
 ## Next Steps
 
@@ -644,4 +635,3 @@ v.number().int().positive()
     </ul>
   </div>
 </div>
-

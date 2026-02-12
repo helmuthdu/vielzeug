@@ -16,6 +16,7 @@ export default defineConfig({
         '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
         '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
         '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
+        '@vielzeug/wireit': resolve(__dirname, '../../packages/wireit/src'),
       },
     },
   },
@@ -39,7 +40,7 @@ export default defineConfig({
     },
   },
   themeConfig: {
-    logo: '/logo_main.svg',
+    logo: '/logo-main.svg',
     nav: [
       { link: '/toolkit/', text: 'Toolkit' },
       { link: '/deposit/', text: 'Deposit' },
@@ -49,6 +50,7 @@ export default defineConfig({
       { link: '/logit/', text: 'Logit' },
       { link: '/permit/', text: 'Permit' },
       { link: '/validit/', text: 'Validit' },
+      { link: '/wireit/', text: 'Wireit' },
       { link: '/repl', text: 'REPL' },
     ],
     search: {
@@ -295,6 +297,12 @@ export default defineConfig({
         { link: '/validit/api', text: 'API Reference' },
         { link: '/validit/usage', text: 'Usage' },
         { link: '/validit/examples', text: 'Examples' },
+      ],
+      '/wireit/': [
+        { link: '/wireit/', text: 'Overview' },
+        { link: '/wireit/api', text: 'API Reference' },
+        { link: '/wireit/usage', text: 'Usage' },
+        { link: '/wireit/examples', text: 'Examples' },
       ],
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/helmuthdu/vielzeug' }],

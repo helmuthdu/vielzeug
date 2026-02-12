@@ -151,8 +151,8 @@ Logit.error('Failed to fetch data', new Error('Network error'));
 const apiLogger = Logit.scope('api');
 const dbLogger = Logit.scope('database');
 
-apiLogger.info('Request started', { url: '/users' });  // [API] Request started
-dbLogger.info('Connection established');               // [DATABASE] Connection established
+apiLogger.info('Request started', { url: '/users' }); // [API] Request started
+dbLogger.info('Connection established'); // [DATABASE] Connection established
 
 // Control log level globally
 Logit.setLogLevel('warn'); // Only warn and error will show
@@ -188,11 +188,7 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
             timestamp: metadata.timestamp,
             namespace: metadata.namespace,
             environment: metadata.environment,
-            args: metadata.args.map((arg) => 
-              arg instanceof Error 
-                ? { message: arg.message, stack: arg.stack } 
-                : arg
-            ),
+            args: metadata.args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
           }),
         });
       }
@@ -296,6 +292,55 @@ app.use((req, res, next) => {
 app.listen(3000, () => {
   Logit.setPrefix('Server');
   Logit.info('Server started', { port: 3000 });
+});
+```
+
+## 🎓 Core Concepts
+
+### Log Levels
+
+Hierarchical logging levels for filtering output:
+
+- **debug**: Detailed debugging information
+- **info**: General informational messages
+- **warn**: Warning messages for potential issues
+- **error**: Error messages for failures
+- **success**: Success confirmations
+- **trace**: Most detailed level for tracing
+
+### Variants
+
+Visual styling for different log types:
+
+- **default**: Standard console output
+- **text**: Plain text without styles
+- **ns** (namespace): Prefixed with namespace
+- **symbol**: Icon-based indicators
+- **icon**: Full icon display
+
+### Scoped Loggers
+
+Create isolated loggers with their own namespace:
+
+```ts
+const logger = Logit.scope('Database');
+logger.info('Connected'); // [Database] Connected
+```
+
+### Remote Logging
+
+Send logs to external services for monitoring:
+
+```ts
+Logit.setup({
+  remote: {
+    handler: (level, ...args) => {
+      fetch('/api/logs', {
+        method: 'POST',
+        body: JSON.stringify({ level, args }),
+      });
+    },
+  },
 });
 ```
 

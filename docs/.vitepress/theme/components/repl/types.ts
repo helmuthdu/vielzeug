@@ -341,6 +341,81 @@ declare module '@vielzeug/validit' {
 }
 `;
 
+export const wireitTypes = `
+declare module '@vielzeug/wireit' {
+  export type Token<T = unknown> = symbol & { __type?: T };
+  export type Lifetime = 'singleton' | 'transient' | 'scoped';
+
+  export type ValueProvider<T> = {
+    useValue: T;
+    lifetime?: Lifetime;
+  };
+
+  export type ClassProvider<T> = {
+    useClass: new (...args: any[]) => T;
+    deps?: Token<any>[];
+    lifetime?: Lifetime;
+  };
+
+  export type FactoryProvider<T> = {
+    useFactory: (...deps: any[]) => T | Promise<T>;
+    deps?: Token<any>[];
+    lifetime?: Lifetime;
+    async?: boolean;
+  };
+
+  export type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
+
+  export type ContainerOptions = {
+    parent?: Container;
+    allowOptional?: boolean;
+  };
+
+  export class Container {
+    register<T>(token: Token<T>, provider: Provider<T>): this;
+    registerValue<T>(token: Token<T>, value: T, lifetime?: Lifetime): this;
+    registerFactory<T>(
+      token: Token<T>,
+      factory: (...deps: any[]) => T | Promise<T>,
+      deps?: Token<any>[],
+      options?: { lifetime?: Lifetime; async?: boolean }
+    ): this;
+    registerMany(providers: Array<[Token<any>, Provider<any>]>): this;
+    get<T>(token: Token<T>): T;
+    getAsync<T>(token: Token<T>): Promise<T>;
+    getOptional<T>(token: Token<T>): T | undefined;
+    getOptionalAsync<T>(token: Token<T>): Promise<T | undefined>;
+    has(token: Token<any>): boolean;
+    alias<T>(source: Token<T>, alias: Token<T>): this;
+    unregister<T>(token: Token<T>): this;
+    clear(): void;
+    createChild(overrides?: Array<[Token<any>, Provider<any>]>): Container;
+    runInScope<T>(
+      fn: (scope: Container) => Promise<T> | T,
+      overrides?: Array<[Token<any>, Provider<any>]>
+    ): Promise<T>;
+    debug(): { tokens: string[]; aliases: Array<[string, string]> };
+  }
+
+  export function createToken<T = unknown>(description?: string): Token<T>;
+  export function createContainer(options?: ContainerOptions): Container;
+  export function createTestContainer(base?: Container): {
+    container: Container;
+    dispose: () => void;
+  };
+  export function withMock<T, R>(
+    container: Container,
+    token: Token<T>,
+    mock: T,
+    fn: () => Promise<R> | R
+  ): Promise<R>;
+
+  export class CircularDependencyError extends Error {}
+  export class ProviderNotFoundError extends Error {}
+  export class AsyncProviderError extends Error {}
+}
+`;
+
 export const libraryTypes = {
   toolkit: toolkitTypes,
   deposit: depositTypes,
@@ -350,4 +425,5 @@ export const libraryTypes = {
   logit: logitTypes,
   permit: permitTypes,
   validit: validitTypes,
+  wireit: wireitTypes,
 };

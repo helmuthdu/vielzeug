@@ -2,6 +2,14 @@
 
 Complete guide to installing and using Permit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -26,21 +34,17 @@ yarn add @vielzeug/permit
 import { Permit } from '@vielzeug/permit';
 
 // Optional: Import types and constants
-import type { 
-  BaseUser, 
-  PermissionAction, 
+import type {
+  BaseUser,
+  PermissionAction,
   PermissionCheck,
   PermissionMap,
   ResourcePermissions,
-  RolesWithPermissions 
+  RolesWithPermissions,
 } from '@vielzeug/permit';
 
 import { WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 ```
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
 
 ## Basic Usage
 

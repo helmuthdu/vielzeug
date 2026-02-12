@@ -59,6 +59,12 @@
       "projectFolder": "packages/validit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/wireit",
+      "projectFolder": "packages/wireit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

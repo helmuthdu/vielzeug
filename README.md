@@ -14,8 +14,6 @@
 
 </div>
 
----
-
 ## What is Vielzeug?
 
 **Vielzeug** (German for "many tools") is a comprehensive ecosystem of modern, type-safe utilities designed to simplify common development tasks. Each package is:
@@ -26,8 +24,6 @@
 - ✅ **Tree-Shakeable**: Import only what you need
 - ✅ **Well-Tested**: Comprehensive test coverage
 - ✅ **Production Ready**: Battle-tested in real-world applications
-
----
 
 ## 📦 Packages
 
@@ -163,9 +159,7 @@ npm install @vielzeug/toolkit
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/toolkit/) • [Examples](https://helmuthdu.github.io/vielzeug/toolkit/examples)
 
----
-
-## 🚀 Quick Start
+## 🏁 Quick Start
 
 ### Installation
 
@@ -224,8 +218,6 @@ form.submit(async (values) => {
 });
 ```
 
----
-
 ## 🏗️ Development
 
 ### Prerequisites
@@ -280,8 +272,6 @@ pnpm docs:dev       # Start docs dev server
 pnpm docs:build     # Build documentation
 ```
 
----
-
 ## 📊 Bundle Sizes
 
 All sizes are measured as **minified + gzipped** production builds:
@@ -298,15 +288,11 @@ All sizes are measured as **minified + gzipped** production builds:
 
 \* Only depends on other @vielzeug packages (@vielzeug/logit for toolkit; @vielzeug/toolkit and @vielzeug/logit for fetchit)
 
----
-
 ## 🌐 Browser & Node.js Support
 
 - **Browsers**: All modern browsers (Chrome, Firefox, Safari, Edge)
 - **Node.js**: v18.0.0 or higher
 - **TypeScript**: v5.0.0 or higher
-
----
 
 ## 🤝 Contributing
 
@@ -330,15 +316,11 @@ Please ensure:
 - Code follows the style guide (`pnpm lint`)
 - Documentation is updated if needed
 
----
-
 ## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 Each package is individually licensed under the MIT License. See the LICENSE file in each package directory for details.
-
----
 
 ## 🔗 Links
 
@@ -349,8 +331,6 @@ Each package is individually licensed under the MIT License. See the LICENSE fil
 - [NPM Organization](https://www.npmjs.com/org/vielzeug)
 - [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/CHANGELOG.md)
 
----
-
 ## ⭐ Show Your Support
 
 If you find Vielzeug useful, please consider:
@@ -359,8 +339,6 @@ If you find Vielzeug useful, please consider:
 - Sharing it with your colleagues and friends
 - Contributing to the project
 - Reporting bugs or suggesting features
-
----
 
 ## 📝 Frequently Asked Questions
 

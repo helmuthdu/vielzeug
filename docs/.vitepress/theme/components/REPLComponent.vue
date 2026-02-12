@@ -309,14 +309,15 @@ let currentLibraryModule = null;
 
 // Library descriptions
 const libraryDescriptions = {
-  toolkit: 'A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more.',
-  deposit: 'Type-safe local storage with schemas, expiration, and query building capabilities.',
+  toolkit: 'A comprehensive utility library with functions for arrays, objects, and more.',
+  deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
   formit: 'Type-safe form state and validation for React and beyond.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
   validit: 'Type-safe schema validation with advanced error handling.',
+  wireit: 'Lightweight dependency injection container with IoC principles.',
 };
 
 // Library loaders
@@ -329,6 +330,7 @@ const libraryLoaders = {
   logit: () => import('@vielzeug/logit'),
   permit: () => import('@vielzeug/permit'),
   validit: () => import('@vielzeug/validit'),
+  wireit: () => import('@vielzeug/wireit'),
 };
 
 // Default code for each library
@@ -354,6 +356,16 @@ const libraryExports = ref({
   logit: ['Logit'],
   permit: ['Permit'],
   validit: ['v'],
+  wireit: [
+    'createContainer',
+    'createToken',
+    'createTestContainer',
+    'withMock',
+    'Container',
+    'CircularDependencyError',
+    'ProviderNotFoundError',
+    'AsyncProviderError',
+  ],
 });
 
 // Toolkit categories

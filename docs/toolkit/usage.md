@@ -2,6 +2,14 @@
 
 Complete guide to installing and using Toolkit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -168,7 +176,7 @@ const users = await map([1, 2, 3], async (id) => {
 
 // Async filter
 const active = await filter(users, async (user) => {
-  return await checkStatus(user.id) === 'active';
+  return (await checkStatus(user.id)) === 'active';
 });
 ```
 
@@ -184,9 +192,9 @@ const result = group(
   arrange(
     filter(products, (p) => p.inStock),
     (p) => p.price,
-    'desc'
+    'desc',
   ),
-  (p) => p.category
+  (p) => p.category,
 );
 ```
 
@@ -245,9 +253,7 @@ import { computed } from 'vue';
 import { group, filter } from '@vielzeug/toolkit';
 
 const products = ref([]);
-const grouped = computed(() => 
-  group(products.value, (p) => p.category)
-);
+const grouped = computed(() => group(products.value, (p) => p.category));
 </script>
 ```
 
