@@ -2,6 +2,20 @@
   "name": "@vielzeug/i18nit",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/i18nit_v1.1.2",
+      "date": "Thu, 12 Feb 2026 13:30:14 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "improve array support",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0b1af4f1a1c0a71dc9246c9c35d91b4af864a7b2"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/i18nit_v1.1.1",
       "date": "Tue, 10 Feb 2026 21:38:31 GMT",
