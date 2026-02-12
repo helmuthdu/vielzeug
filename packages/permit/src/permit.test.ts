@@ -4,6 +4,13 @@ import { ANONYMOUS, Permit, WILDCARD } from './permit';
 vi.mock('@vielzeug/logit', () => ({
   Logit: {
     debug: vi.fn(),
+    scope: vi.fn(() => ({
+      debug: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      log: vi.fn(),
+      warn: vi.fn(),
+    })),
     setPrefix: vi.fn(),
     warn: vi.fn(),
   },
@@ -20,38 +27,38 @@ describe('Permit', () => {
 
   describe('Permission Registration', () => {
     it('registers and merges permissions for role/resource', () => {
-      Permit.register('admin', 'posts', { view: true });
+      Permit.register('admin', 'posts', { read: true });
       Permit.register('admin', 'posts', { create: true });
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
       expect(Permit.check(user, 'posts', 'create')).toBe(true);
     });
 
     it('validates required parameters and actions', () => {
-      expect(() => Permit.register('', 'posts', { view: true })).toThrow('Role is required');
-      expect(() => Permit.register('admin', '', { view: true })).toThrow('Resource is required');
+      expect(() => Permit.register('', 'posts', { read: true })).toThrow('Role is required');
+      expect(() => Permit.register('admin', '', { read: true })).toThrow('Resource is required');
       expect(() => Permit.register('admin', 'posts', { invalid: true } as any)).toThrow('Invalid action');
     });
 
     it('normalizes roles and resources (case-insensitive)', () => {
-      Permit.register('Admin', 'Posts', { view: true });
+      Permit.register('Admin', 'Posts', { read: true });
 
       const user = { id: '1', roles: ['ADMIN'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
-      expect(Permit.check(user, 'POSTS', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
+      expect(Permit.check(user, 'POSTS', 'read')).toBe(true);
     });
   });
 
   describe('Permission Checking', () => {
     it('allows static permissions and denies unregistered', () => {
-      Permit.register('admin', 'posts', { delete: true, view: true });
+      Permit.register('admin', 'posts', { delete: true, read: true });
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
       expect(Permit.check(user, 'posts', 'delete')).toBe(true);
       expect(Permit.check(user, 'posts', 'create')).toBe(false);
-      expect(Permit.check(user, 'comments', 'view')).toBe(false);
+      expect(Permit.check(user, 'comments', 'read')).toBe(false);
     });
 
     it('evaluates dynamic function-based permissions with data', () => {
@@ -74,52 +81,52 @@ describe('Permit', () => {
     });
 
     it('handles multiple roles with first-match-wins policy', () => {
-      Permit.register('admin', 'posts', { view: true });
+      Permit.register('admin', 'posts', { read: true });
       Permit.register('moderator', 'posts', { delete: true });
 
       const user = { id: '1', roles: ['admin', 'moderator'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
       expect(Permit.check(user, 'posts', 'delete')).toBe(true);
     });
   });
 
   describe('Wildcard Permissions', () => {
     it('applies wildcard role to all users', () => {
-      Permit.register(WILDCARD, 'posts', { view: true });
+      Permit.register(WILDCARD, 'posts', { read: true });
 
       const user = { id: '1', roles: ['guest'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
     });
 
     it('applies wildcard resource to all resources', () => {
-      Permit.register('admin', WILDCARD, { view: true });
+      Permit.register('admin', WILDCARD, { read: true });
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
-      expect(Permit.check(user, 'comments', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
+      expect(Permit.check(user, 'comments', 'read')).toBe(true);
     });
 
     it('prioritizes specific resource over wildcard', () => {
-      Permit.register('admin', WILDCARD, { view: true });
-      Permit.register('admin', 'posts', { view: false });
+      Permit.register('admin', WILDCARD, { read: true });
+      Permit.register('admin', 'posts', { read: false });
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(false);
-      expect(Permit.check(user, 'comments', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(false);
+      expect(Permit.check(user, 'comments', 'read')).toBe(true);
     });
   });
 
   describe('Malformed User Handling', () => {
     it('treats malformed users as anonymous with wildcard', () => {
-      Permit.register(ANONYMOUS, 'posts', { view: true });
+      Permit.register(ANONYMOUS, 'posts', { read: true });
 
       const malformedUser1 = null as any;
       const malformedUser2 = { id: '1' } as any; // Missing roles
       const malformedUser3 = { roles: ['admin'] } as any; // Missing id
 
-      expect(Permit.check(malformedUser1, 'posts', 'view')).toBe(true);
-      expect(Permit.check(malformedUser2, 'posts', 'view')).toBe(true);
-      expect(Permit.check(malformedUser3, 'posts', 'view')).toBe(true);
+      expect(Permit.check(malformedUser1, 'posts', 'read')).toBe(true);
+      expect(Permit.check(malformedUser2, 'posts', 'read')).toBe(true);
+      expect(Permit.check(malformedUser3, 'posts', 'read')).toBe(true);
     });
 
     it('does not grant wildcard permissions to malformed users unless configured', () => {
@@ -133,61 +140,61 @@ describe('Permit', () => {
 
   describe('set() Method', () => {
     it('merges permissions by default', () => {
-      Permit.set('admin', 'posts', { view: true });
+      Permit.set('admin', 'posts', { read: true });
       Permit.set('admin', 'posts', { create: true });
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
       expect(Permit.check(user, 'posts', 'create')).toBe(true);
     });
 
     it('replaces permissions when replace is true', () => {
-      Permit.set('admin', 'posts', { create: true, view: true });
+      Permit.set('admin', 'posts', { create: true, read: true });
       Permit.set('admin', 'posts', { delete: true }, true);
 
       const user = { id: '1', roles: ['admin'] };
       expect(Permit.check(user, 'posts', 'delete')).toBe(true);
-      expect(Permit.check(user, 'posts', 'view')).toBe(false);
+      expect(Permit.check(user, 'posts', 'read')).toBe(false);
       expect(Permit.check(user, 'posts', 'create')).toBe(false);
     });
 
     it('validates parameters like register', () => {
-      expect(() => Permit.set('', 'posts', { view: true })).toThrow('Role is required');
-      expect(() => Permit.set('admin', '', { view: true })).toThrow('Resource is required');
+      expect(() => Permit.set('', 'posts', { read: true })).toThrow('Role is required');
+      expect(() => Permit.set('admin', '', { read: true })).toThrow('Resource is required');
       expect(() => Permit.set('admin', 'posts', { bad: true } as any)).toThrow('Invalid action');
     });
   });
 
   describe('unregister() Method', () => {
     it('removes specific action from resource', () => {
-      Permit.register('admin', 'posts', { create: true, delete: true, view: true });
+      Permit.register('admin', 'posts', { create: true, delete: true, read: true });
       Permit.unregister('admin', 'posts', 'delete');
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
       expect(Permit.check(user, 'posts', 'create')).toBe(true);
       expect(Permit.check(user, 'posts', 'delete')).toBe(false);
     });
 
     it('removes all actions when action not specified', () => {
-      Permit.register('admin', 'posts', { create: true, view: true });
+      Permit.register('admin', 'posts', { create: true, read: true });
       Permit.unregister('admin', 'posts');
 
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(false);
+      expect(Permit.check(user, 'posts', 'read')).toBe(false);
       expect(Permit.check(user, 'posts', 'create')).toBe(false);
     });
 
     it('cleans up empty resource and role entries', () => {
-      Permit.register('admin', 'posts', { view: true });
-      Permit.unregister('admin', 'posts', 'view');
+      Permit.register('admin', 'posts', { read: true });
+      Permit.unregister('admin', 'posts', 'read');
 
       const roles = Permit.roles;
       expect(roles.has('admin')).toBe(false);
     });
 
     it('handles unregistering non-existent permissions gracefully', () => {
-      expect(() => Permit.unregister('admin', 'posts', 'view')).not.toThrow();
+      expect(() => Permit.unregister('admin', 'posts', 'read')).not.toThrow();
       expect(() => Permit.unregister('admin', 'posts')).not.toThrow();
     });
   });
@@ -211,7 +218,7 @@ describe('Permit', () => {
 
   describe('roles Getter', () => {
     it('returns deep copy of all permissions', () => {
-      Permit.register('admin', 'posts', { view: true });
+      Permit.register('admin', 'posts', { read: true });
       Permit.register('editor', 'comments', { create: true });
 
       const roles = Permit.roles;
@@ -221,7 +228,7 @@ describe('Permit', () => {
     });
 
     it('prevents external modification of internal state', () => {
-      Permit.register('admin', 'posts', { view: true });
+      Permit.register('admin', 'posts', { read: true });
 
       const roles = Permit.roles;
       roles.clear();
@@ -231,25 +238,25 @@ describe('Permit', () => {
       if (adminPerms) {
         const postsPerms = adminPerms.get('posts');
         if (postsPerms) {
-          postsPerms.view = false;
+          postsPerms.read = false;
         }
       }
 
       // Internal state should remain unchanged
       const user = { id: '1', roles: ['admin'] };
-      expect(Permit.check(user, 'posts', 'view')).toBe(true);
+      expect(Permit.check(user, 'posts', 'read')).toBe(true);
     });
   });
 
   describe('clear() Method', () => {
     it('removes all registered permissions', () => {
-      Permit.register('admin', 'posts', { view: true });
+      Permit.register('admin', 'posts', { read: true });
       Permit.register('editor', 'comments', { create: true });
       Permit.clear();
 
       const user1 = { id: '1', roles: ['admin'] };
       const user2 = { id: '2', roles: ['editor'] };
-      expect(Permit.check(user1, 'posts', 'view')).toBe(false);
+      expect(Permit.check(user1, 'posts', 'read')).toBe(false);
       expect(Permit.check(user2, 'comments', 'create')).toBe(false);
       expect(Permit.roles.size).toBe(0);
     });

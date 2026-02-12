@@ -25,7 +25,7 @@ import { Permit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 
 // Static permissions
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -39,7 +39,7 @@ Permit.register('author', 'posts', {
 
 // Using wildcards
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -47,19 +47,19 @@ Permit.register('admin', WILDCARD, {
 
 // Anonymous user permissions
 Permit.register(ANONYMOUS, 'posts', {
-  view: true,
+  read: true,
 });
 
 // Case-insensitive (normalized)
-Permit.register('Admin', 'Posts', { view: true });
-// Same as: Permit.register('admin', 'posts', { view: true });
+Permit.register('Admin', 'Posts', { read: true });
+// Same as: Permit.register('admin', 'posts', { read: true });
 ```
 
 **Throws:**
 
 - `Error` - If role is empty or missing
 - `Error` - If resource is empty or missing
-- `Error` - If invalid action is provided (must be 'view', 'create', 'update', or 'delete')
+- `Error` - If invalid action is provided (must be 'read', 'create', 'update', or 'delete')
 
 **Behavior:**
 
@@ -77,7 +77,7 @@ Checks if a user has permission to perform a specific action on a resource.
 
 - `user: T extends BaseUser` - User object with `id` and `roles` properties
 - `resource: string` - The resource to check permissions for
-- `action: PermissionAction` - The action to check ('view' | 'create' | 'update' | 'delete')
+- `action: PermissionAction` - The action to check ('read' | 'create' | 'update' | 'delete')
 - `data?: D` - Optional contextual data for dynamic permission functions
 
 **Returns:** `boolean` - `true` if permission is granted, `false` otherwise
@@ -88,7 +88,7 @@ Checks if a user has permission to perform a specific action on a resource.
 const user = { id: '123', roles: ['editor'] };
 
 // Basic check
-const canView = Permit.check(user, 'posts', 'view');
+const canView = Permit.check(user, 'posts', 'read');
 
 // With contextual data for dynamic rules
 const post = { id: 'p1', authorId: '123', status: 'draft' };
@@ -96,7 +96,7 @@ const canDelete = Permit.check(user, 'posts', 'delete', post);
 
 // Normalized matching
 const userCaps = { id: '456', roles: ['ADMIN'] };
-Permit.check(userCaps, 'POSTS', 'view'); // Matches 'admin' role, 'posts' resource
+Permit.check(userCaps, 'POSTS', 'read'); // Matches 'admin' role, 'posts' resource
 ```
 
 **Behavior:**
@@ -127,11 +127,11 @@ Sets permissions for a role and resource, optionally replacing existing ones.
 
 ```ts
 // Merge with existing (default)
-Permit.set('editor', 'posts', { view: true, create: true });
+Permit.set('editor', 'posts', { read: true, create: true });
 
 // Replace completely
-Permit.set('editor', 'posts', { view: true }, true);
-// Now editor only has 'view', other actions removed
+Permit.set('editor', 'posts', { read: true }, true);
+// Now editor only has 'read', other actions removed
 ```
 
 **Throws:**
@@ -218,7 +218,7 @@ Clears all registered permissions from the registry.
 Permit.clear();
 
 // Re-register fresh permissions
-Permit.register('admin', 'posts', { view: true });
+Permit.register('admin', 'posts', { read: true });
 ```
 
 **Use Cases:**
@@ -252,7 +252,7 @@ for (const [role, resources] of allRoles) {
 allRoles.clear(); // Only clears the copy
 const adminPerms = allRoles.get('admin');
 if (adminPerms) {
-  adminPerms.get('posts').view = false; // Only affects the copy
+  adminPerms.get('posts').read = false; // Only affects the copy
 }
 ```
 
@@ -275,14 +275,14 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Admin can do everything on all resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 // All users can view posts
-Permit.register(WILDCARD, 'posts', { view: true });
+Permit.register(WILDCARD, 'posts', { read: true });
 ```
 
 ---
@@ -301,11 +301,11 @@ export const ANONYMOUS = 'anonymous';
 import { Permit, ANONYMOUS } from '@vielzeug/permit';
 
 // Public read access
-Permit.register(ANONYMOUS, 'posts', { view: true });
+Permit.register(ANONYMOUS, 'posts', { read: true });
 
 // Malformed users are treated as ANONYMOUS
 const malformedUser = null;
-Permit.check(malformedUser, 'posts', 'view'); // true
+Permit.check(malformedUser, 'posts', 'read'); // true
 ```
 
 ## Types
@@ -342,12 +342,12 @@ const user: BaseUser = {
 Available permission actions.
 
 ```ts
-type PermissionAction = 'view' | 'create' | 'update' | 'delete';
+type PermissionAction = 'read' | 'create' | 'update' | 'delete';
 ```
 
 **Actions:**
 
-- `'view'` - Read/view permission
+- `'read'` - Read/view permission
 - `'create'` - Create/add permission
 - `'update'` - Modify/edit permission
 - `'delete'` - Remove/delete permission
@@ -417,7 +417,7 @@ type PermissionMap<T extends BaseUser, D extends PermissionData> = Partial<
 
 ```ts
 const postPermissions: PermissionMap<User, Post> = {
-  view: true,
+  read: true,
   create: true,
   update: (user, post) => user.id === post.authorId,
   delete: (user, post) => user.id === post.authorId && post.status === 'draft',
@@ -441,8 +441,8 @@ type ResourcePermissions<T extends BaseUser, D extends PermissionData> = Map<
 
 ```ts
 const editorResources: ResourcePermissions<User, any> = new Map([
-  ['posts', { view: true, create: true, update: true }],
-  ['comments', { view: true, create: true }],
+  ['posts', { read: true, create: true, update: true }],
+  ['comments', { read: true, create: true }],
 ]);
 ```
 
@@ -489,7 +489,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Admin has all permissions on all resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -528,12 +528,12 @@ Permit.register<CustomUser, Post>('manager', 'posts', {
 Users can have multiple roles, and permissions are additive:
 
 ```ts
-Permit.register('viewer', 'posts', { view: true });
+Permit.register('viewer', 'posts', { read: true });
 Permit.register('creator', 'posts', { create: true });
 
 const user = { id: '1', roles: ['viewer', 'creator'] };
 
-Permit.check(user, 'posts', 'view'); // true (from viewer role)
+Permit.check(user, 'posts', 'read'); // true (from viewer role)
 Permit.check(user, 'posts', 'create'); // true (from creator role)
 Permit.check(user, 'posts', 'delete'); // false (no role grants this)
 ```
@@ -545,7 +545,7 @@ Permit.check(user, 'posts', 'delete'); // false (no role grants this)
 ```ts
 // Role has all permissions on ALL resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -556,7 +556,7 @@ Permit.register('admin', WILDCARD, {
 
 ```ts
 // ALL roles have view permission on posts
-Permit.register(WILDCARD, 'posts', { view: true });
+Permit.register(WILDCARD, 'posts', { read: true });
 ```
 
 ### Function-Based Permissions
@@ -585,7 +585,7 @@ const canUpdate = Permit.check(user, 'posts', 'update', post);
 Registering permissions for the same role/resource combination merges them:
 
 ```ts
-Permit.register('editor', 'posts', { view: true, create: true });
+Permit.register('editor', 'posts', { read: true, create: true });
 Permit.register('editor', 'posts', { update: true }); // Merges
 
 // Editor now has: view, create, AND update

@@ -19,20 +19,20 @@ import { Permit } from '@vielzeug/permit';
 
 // Register static permissions
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('editor', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
 });
 
 Permit.register('viewer', 'posts', {
-  view: true,
+  read: true,
 });
 
 // Check permissions
@@ -63,7 +63,7 @@ interface Post {
 
 // Author can only update their own posts
 Permit.register<User, Post>('author', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user, post) => user.id === post.authorId,
   delete: (user, post) => {
@@ -84,7 +84,7 @@ Permit.check(author, 'posts', 'delete', ownPost); // true
 
 ```ts
 // User with multiple roles
-Permit.register('viewer', 'posts', { view: true });
+Permit.register('viewer', 'posts', { read: true });
 Permit.register('creator', 'posts', { create: true });
 Permit.register('moderator', 'comments', { delete: true });
 
@@ -94,7 +94,7 @@ const user = {
 };
 
 // Has permissions from all roles
-Permit.check(user, 'posts', 'view'); // true (from viewer)
+Permit.check(user, 'posts', 'read'); // true (from viewer)
 Permit.check(user, 'posts', 'create'); // true (from creator)
 Permit.check(user, 'comments', 'delete'); // true (from moderator)
 Permit.check(user, 'posts', 'delete'); // false (no role grants this)
@@ -109,7 +109,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Admin has all permissions on all resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -129,14 +129,14 @@ Permit.check(admin, 'settings', 'update'); // true
 import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // All roles can view posts
-Permit.register(WILDCARD, 'posts', { view: true });
+Permit.register(WILDCARD, 'posts', { read: true });
 
 const guest = { id: 'g1', roles: ['guest'] };
 const user = { id: 'u1', roles: ['user'] };
 
 // Everyone can view
-Permit.check(guest, 'posts', 'view'); // true
-Permit.check(user, 'posts', 'view'); // true
+Permit.check(guest, 'posts', 'read'); // true
+Permit.check(user, 'posts', 'read'); // true
 ```
 
 ### Moderator with Full Resource Access
@@ -144,7 +144,7 @@ Permit.check(user, 'posts', 'view'); // true
 ```ts
 // Moderator has all permissions on comments
 Permit.register('moderator', 'comments', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -186,14 +186,14 @@ interface Post {
 
 // Setup permissions
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('editor', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user, post) => {
     // Editors can update any non-archived post
@@ -203,7 +203,7 @@ Permit.register('editor', 'posts', {
 });
 
 Permit.register('author', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user, post) => {
     // Authors can only update their own posts
@@ -216,7 +216,7 @@ Permit.register('author', 'posts', {
 });
 
 Permit.register(WILDCARD, 'posts', {
-  view: (user, post) => {
+  read: (user, post) => {
     // Everyone can view public posts
     return post.visibility === 'public';
   },
@@ -262,7 +262,7 @@ interface Order {
 }
 
 Permit.register('customer', 'orders', {
-  view: (user, order) => user.id === order.customerId,
+  read: (user, order) => user.id === order.customerId,
   create: (user) => user.isVerified,
   update: (user, order) => {
     return user.id === order.customerId && order.status === 'pending';
@@ -273,7 +273,7 @@ Permit.register('customer', 'orders', {
 });
 
 Permit.register('support', 'orders', {
-  view: true,
+  read: true,
   update: (user, order) => {
     // Support can update orders up until shipped
     return order.status === 'pending' || order.status === 'processing';
@@ -281,7 +281,7 @@ Permit.register('support', 'orders', {
 });
 
 Permit.register('admin', 'orders', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -317,14 +317,14 @@ interface Document {
 }
 
 Permit.register('org-admin', 'documents', {
-  view: (user, doc) => user.organizationId === doc.organizationId,
+  read: (user, doc) => user.organizationId === doc.organizationId,
   create: (user, doc) => user.organizationId === doc.organizationId,
   update: (user, doc) => user.organizationId === doc.organizationId,
   delete: (user, doc) => user.organizationId === doc.organizationId,
 });
 
 Permit.register('org-member', 'documents', {
-  view: (user, doc) => {
+  read: (user, doc) => {
     return user.organizationId === doc.organizationId && (doc.shared || doc.ownerId === user.id);
   },
   create: (user, doc) => user.organizationId === doc.organizationId,
@@ -344,7 +344,7 @@ const sharedDoc = {
   shared: true,
 };
 
-Permit.check(member, 'documents', 'view', sharedDoc); // true (shared)
+Permit.check(member, 'documents', 'read', sharedDoc); // true (shared)
 Permit.check(member, 'documents', 'update', sharedDoc); // false (not owner)
 ```
 
@@ -443,7 +443,7 @@ function authorize(resource: string, action: string) {
 // Setup routes
 const app = express();
 
-app.get('/api/posts', authenticate, authorize('posts', 'view'), async (req, res) => {
+app.get('/api/posts', authenticate, authorize('posts', 'read'), async (req, res) => {
   const posts = await db.posts.findAll();
   res.json(posts);
 });
@@ -533,7 +533,7 @@ describe('Post Permissions', () => {
   });
 
   it('denies viewer from creating posts', () => {
-    Permit.register('viewer', 'posts', { view: true });
+    Permit.register('viewer', 'posts', { read: true });
 
     const viewer = { id: 'v1', roles: ['viewer'] };
 
@@ -541,12 +541,12 @@ describe('Post Permissions', () => {
   });
 
   it('combines permissions from multiple roles', () => {
-    Permit.register('viewer', 'posts', { view: true });
+    Permit.register('viewer', 'posts', { read: true });
     Permit.register('creator', 'posts', { create: true });
 
     const user = { id: 'u1', roles: ['viewer', 'creator'] };
 
-    expect(Permit.check(user, 'posts', 'view')).toBe(true);
+    expect(Permit.check(user, 'posts', 'read')).toBe(true);
     expect(Permit.check(user, 'posts', 'create')).toBe(true);
     expect(Permit.check(user, 'posts', 'delete')).toBe(false);
   });
@@ -570,7 +570,7 @@ describe('API Authorization', () => {
   beforeEach(() => {
     Permit.clear();
     Permit.register('admin', 'posts', {
-      view: true,
+      read: true,
       create: true,
       update: true,
       delete: true,
@@ -644,7 +644,7 @@ async function initializePermissions() {
 
   for (const perm of permissions) {
     Permit.register(perm.role, perm.resource, {
-      view: perm.view,
+      read: perm.view,
       create: perm.create,
       update: perm.update,
       delete: perm.delete,

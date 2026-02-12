@@ -34,14 +34,14 @@ import { Permit } from '@vielzeug/permit';
 
 // Define permissions
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('editor', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: (user, data) => user.id === data.authorId, // Dynamic check
   delete: false,
@@ -50,7 +50,7 @@ Permit.register('editor', 'posts', {
 // Check permissions
 const user = { id: '123', roles: ['editor'] };
 
-Permit.check(user, 'posts', 'view'); // true
+Permit.check(user, 'posts', 'read'); // true
 Permit.check(user, 'posts', 'create'); // true
 Permit.check(user, 'posts', 'update', { authorId: '123' }); // true
 Permit.check(user, 'posts', 'update', { authorId: '456' }); // false
@@ -62,7 +62,7 @@ Permit.check(user, 'posts', 'delete'); // false
 ### Permission Actions
 
 Four standard CRUD actions are supported:
-- `view` - Read/view access
+- `read` - Read/view access
 - `create` - Create new resources
 - `update` - Modify existing resources
 - `delete` - Remove resources
@@ -72,7 +72,7 @@ Four standard CRUD actions are supported:
 #### Static Permissions (Boolean)
 ```typescript
 Permit.register('admin', 'posts', {
-  view: true,  // Always allowed
+  read: true,  // Always allowed
   delete: false, // Always denied
 });
 ```
@@ -98,32 +98,32 @@ Permit.check(user, 'posts', 'update'); // false (no data provided)
 import { WILDCARD } from '@vielzeug/permit';
 
 // All users can view posts
-Permit.register(WILDCARD, 'posts', { view: true });
+Permit.register(WILDCARD, 'posts', { read: true });
 
 const anyUser = { id: '999', roles: ['guest'] };
-Permit.check(anyUser, 'posts', 'view'); // true
+Permit.check(anyUser, 'posts', 'read'); // true
 ```
 
 #### Wildcard Resource - Apply to All Resources
 ```typescript
 // Admins can view everything
-Permit.register('admin', WILDCARD, { view: true });
+Permit.register('admin', WILDCARD, { read: true });
 
 const admin = { id: '1', roles: ['admin'] };
-Permit.check(admin, 'posts', 'view'); // true
-Permit.check(admin, 'comments', 'view'); // true
-Permit.check(admin, 'anything', 'view'); // true
+Permit.check(admin, 'posts', 'read'); // true
+Permit.check(admin, 'comments', 'read'); // true
+Permit.check(admin, 'anything', 'read'); // true
 ```
 
 #### Precedence
 Specific permissions override wildcard permissions:
 ```typescript
-Permit.register('admin', WILDCARD, { view: true });
-Permit.register('admin', 'secrets', { view: false });
+Permit.register('admin', WILDCARD, { read: true });
+Permit.register('admin', 'secrets', { read: false });
 
 const admin = { id: '1', roles: ['admin'] };
-Permit.check(admin, 'posts', 'view'); // true (wildcard)
-Permit.check(admin, 'secrets', 'view'); // false (specific override)
+Permit.check(admin, 'posts', 'read'); // true (wildcard)
+Permit.check(admin, 'secrets', 'read'); // false (specific override)
 ```
 
 ### Anonymous Users
@@ -134,11 +134,11 @@ Use the `ANONYMOUS` role for unauthenticated users:
 import { ANONYMOUS } from '@vielzeug/permit';
 
 // Public read access
-Permit.register(ANONYMOUS, 'posts', { view: true });
+Permit.register(ANONYMOUS, 'posts', { read: true });
 
 // Malformed users are treated as anonymous
 const malformedUser = null;
-Permit.check(malformedUser, 'posts', 'view'); // true
+Permit.check(malformedUser, 'posts', 'read'); // true
 ```
 
 ### Normalization
@@ -146,12 +146,12 @@ Permit.check(malformedUser, 'posts', 'view'); // true
 All roles and resources are normalized (trimmed and lowercased) to prevent mismatches:
 
 ```typescript
-Permit.register('Admin', 'Posts', { view: true });
+Permit.register('Admin', 'Posts', { read: true });
 
 const user = { id: '1', roles: ['ADMIN'] };
-Permit.check(user, 'posts', 'view'); // true
-Permit.check(user, 'POSTS', 'view'); // true
-Permit.check(user, '  posts  ', 'view'); // true
+Permit.check(user, 'posts', 'read'); // true
+Permit.check(user, 'POSTS', 'read'); // true
+Permit.check(user, '  posts  ', 'read'); // true
 ```
 
 ## API Reference
@@ -180,7 +180,7 @@ Permit.register<TUser, TData>(
 **Example:**
 ```typescript
 Permit.register('moderator', 'comments', {
-  view: true,
+  read: true,
   delete: (user, data) => {
     // Moderators can delete spam or their own comments
     return data.isSpam || user.id === data.authorId;
@@ -217,10 +217,10 @@ Permit.set<TUser, TData>(
 **Example:**
 ```typescript
 // Merge with existing
-Permit.set('editor', 'posts', { view: true, create: true });
+Permit.set('editor', 'posts', { read: true, create: true });
 
 // Replace completely
-Permit.set('editor', 'posts', { view: true }, true);
+Permit.set('editor', 'posts', { read: true }, true);
 ```
 
 ---
@@ -251,7 +251,7 @@ Permit.check<TUser, TData>(
 const user = { id: '123', roles: ['editor'] };
 
 // Static check
-Permit.check(user, 'posts', 'view'); // boolean
+Permit.check(user, 'posts', 'read'); // boolean
 
 // Dynamic check with data
 Permit.check(user, 'posts', 'update', { authorId: '123' }); // boolean
@@ -491,10 +491,10 @@ Malformed users (missing `id` or `roles`) are treated as ANONYMOUS + WILDCARD:
 
 ```typescript
 // Configure permissions for anonymous users
-Permit.register(ANONYMOUS, 'posts', { view: true });
+Permit.register(ANONYMOUS, 'posts', { read: true });
 
 const malformed = null;
-Permit.check(malformed, 'posts', 'view'); // true (has ANONYMOUS role)
+Permit.check(malformed, 'posts', 'read'); // true (has ANONYMOUS role)
 Permit.check(malformed, 'posts', 'create'); // false
 ```
 
@@ -524,11 +524,11 @@ Permission checks use "allow on any true" policy:
 - Absence of permission = deny
 
 ```typescript
-Permit.register('role1', 'posts', { view: false });
-Permit.register('role2', 'posts', { view: true });
+Permit.register('role1', 'posts', { read: false });
+Permit.register('role2', 'posts', { read: true });
 
 const user = { id: '1', roles: ['role1', 'role2'] };
-Permit.check(user, 'posts', 'view'); // true (role2 allows)
+Permit.check(user, 'posts', 'read'); // true (role2 allows)
 ```
 
 ## Types
@@ -541,7 +541,7 @@ export type BaseUser = {
 };
 
 // Permission actions
-export type PermissionAction = 'view' | 'create' | 'update' | 'delete';
+export type PermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 // Permission check (static or dynamic)
 export type PermissionCheck<T, D> = boolean | ((user: T, data: D) => boolean);
@@ -568,11 +568,11 @@ Define specific role permissions before wildcards to ensure proper precedence:
 
 ```typescript
 // Specific first
-Permit.register('admin', 'secrets', { view: true });
-Permit.register('user', 'secrets', { view: false });
+Permit.register('admin', 'secrets', { read: true });
+Permit.register('user', 'secrets', { read: false });
 
 // Then wildcards
-Permit.register(WILDCARD, 'public', { view: true });
+Permit.register(WILDCARD, 'public', { read: true });
 ```
 
 ### 2. Validate Data in Functions
@@ -602,7 +602,7 @@ interface MyData {
 }
 
 Permit.register<MyUser, MyData>('manager', 'reports', {
-  view: (user, data) => user.department === data.department,
+  read: (user, data) => user.department === data.department,
 });
 ```
 

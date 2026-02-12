@@ -53,22 +53,22 @@ import { WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 ```ts
 // Static permissions (always true/false)
 Permit.register('admin', 'posts', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('viewer', 'posts', {
-  view: true,
+  read: true,
   create: false,
   update: false,
   delete: false,
 });
 
 // Permissions are normalized (case-insensitive, trimmed)
-Permit.register('Editor', 'Posts', { view: true });
-// Same as: Permit.register('editor', 'posts', { view: true });
+Permit.register('Editor', 'Posts', { read: true });
+// Same as: Permit.register('editor', 'posts', { read: true });
 ```
 
 ### Checking Permissions
@@ -77,14 +77,14 @@ Permit.register('Editor', 'Posts', { view: true });
 const user = { id: '123', roles: ['viewer'] };
 
 // Check if user can view posts
-const canView = Permit.check(user, 'posts', 'view'); // true
+const canView = Permit.check(user, 'posts', 'read'); // true
 
 // Check if user can delete posts
 const canDelete = Permit.check(user, 'posts', 'delete'); // false
 
 // Role and resource names are normalized
 const userWithCaps = { id: '456', roles: ['EDITOR'] };
-Permit.check(userWithCaps, 'POSTS', 'view'); // true (normalized matching)
+Permit.check(userWithCaps, 'POSTS', 'read'); // true (normalized matching)
 ```
 
 ### Dynamic Permissions
@@ -118,7 +118,7 @@ import { Permit, WILDCARD } from '@vielzeug/permit';
 
 // Admin has all permissions on all resources
 Permit.register('admin', WILDCARD, {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
@@ -126,12 +126,12 @@ Permit.register('admin', WILDCARD, {
 
 // All roles can view posts
 Permit.register(WILDCARD, 'posts', {
-  view: true,
+  read: true,
 });
 
 // Specific permissions override wildcards
-Permit.register('admin', WILDCARD, { view: true });
-Permit.register('admin', 'secrets', { view: false }); // Specific wins
+Permit.register('admin', WILDCARD, { read: true });
+Permit.register('admin', 'secrets', { read: false }); // Specific wins
 ```
 
 ### Anonymous Users
@@ -142,11 +142,11 @@ Use the `ANONYMOUS` constant for unauthenticated users:
 import { Permit, ANONYMOUS } from '@vielzeug/permit';
 
 // Public read access for unauthenticated users
-Permit.register(ANONYMOUS, 'posts', { view: true });
+Permit.register(ANONYMOUS, 'posts', { read: true });
 
 // Malformed users are treated as ANONYMOUS + WILDCARD
 const malformedUser = null;
-Permit.check(malformedUser, 'posts', 'view'); // true (has ANONYMOUS role)
+Permit.check(malformedUser, 'posts', 'read'); // true (has ANONYMOUS role)
 ```
 
 ::: warning Security Note
@@ -158,13 +158,13 @@ Malformed users (missing `id` or `roles`) automatically receive both `ANONYMOUS`
 Users can have multiple roles, and permissions are additive (first-match-wins):
 
 ```ts
-Permit.register('viewer', 'posts', { view: true });
+Permit.register('viewer', 'posts', { read: true });
 Permit.register('creator', 'posts', { create: true });
 
 const user = { id: '1', roles: ['viewer', 'creator'] };
 
 // User has permissions from both roles
-Permit.check(user, 'posts', 'view'); // true
+Permit.check(user, 'posts', 'read'); // true
 Permit.check(user, 'posts', 'create'); // true
 ```
 
@@ -174,10 +174,10 @@ Use `set()` to replace or merge permissions:
 
 ```ts
 // Merge with existing (default)
-Permit.set('editor', 'posts', { view: true, create: true });
+Permit.set('editor', 'posts', { read: true, create: true });
 
 // Replace completely
-Permit.set('editor', 'posts', { view: true }, true); // Only view remains
+Permit.set('editor', 'posts', { read: true }, true); // Only read remains
 ```
 
 ### Unregistering Permissions
@@ -217,10 +217,10 @@ Permit.hasRole(malformed, 'admin'); // false
 Registering permissions for the same role/resource merges them:
 
 ```ts
-Permit.register('editor', 'posts', { view: true, create: true });
+Permit.register('editor', 'posts', { read: true, create: true });
 Permit.register('editor', 'posts', { update: true }); // Adds to existing
 
-// Editor now has: view, create, and update
+// Editor now has: read, create, and update
 ```
 
 ### TypeScript Generics
@@ -279,19 +279,19 @@ for (const [role, resources] of allPermissions) {
 ```ts
 // Define roles with specific permissions
 Permit.register('admin', 'users', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('moderator', 'users', {
-  view: true,
+  read: true,
   update: true,
 });
 
 Permit.register('user', 'users', {
-  view: true,
+  read: true,
 });
 ```
 
@@ -300,7 +300,7 @@ Permit.register('user', 'users', {
 ```ts
 // Users can only modify their own resources
 Permit.register('user', 'profile', {
-  view: true,
+  read: true,
   update: (user, profile) => user.id === profile.userId,
   delete: (user, profile) => user.id === profile.userId,
 });
@@ -325,21 +325,21 @@ Permit.register('editor', 'articles', {
 ```ts
 // Combine role levels with resource ownership
 Permit.register('admin', 'documents', {
-  view: true,
+  read: true,
   create: true,
   update: true,
   delete: true,
 });
 
 Permit.register('manager', 'documents', {
-  view: true,
+  read: true,
   create: true,
   update: (user, doc) => doc.department === user.department,
   delete: (user, doc) => doc.department === user.department,
 });
 
 Permit.register('employee', 'documents', {
-  view: (user, doc) => doc.department === user.department,
+  read: (user, doc) => doc.department === user.department,
   create: true,
   update: (user, doc) => doc.authorId === user.id,
   delete: (user, doc) => doc.authorId === user.id,
@@ -441,7 +441,7 @@ async function initializePermissions() {
 
   for (const perm of permissions) {
     Permit.register(perm.role, perm.resource, {
-      view: perm.canView,
+      read: perm.canView,
       create: perm.canCreate,
       update: perm.canUpdate,
       delete: perm.canDelete,
@@ -456,7 +456,7 @@ async function initializePermissions() {
 if (process.env.NODE_ENV === 'development') {
   // Dev-only permissions
   Permit.register('developer', WILDCARD, {
-    view: true,
+    read: true,
     create: true,
     update: true,
     delete: true,
