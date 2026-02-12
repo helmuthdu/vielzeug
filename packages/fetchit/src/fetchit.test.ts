@@ -1,5 +1,11 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import { createHttpClient, createQueryClient, HttpError } from './fetchit';
+import {
+  createHttpClient,
+  createQueryClient,
+  type HttpClientOptions,
+  HttpError,
+  type QueryClientOptions,
+} from './fetchit';
 
 vi.mock('@vielzeug/logit', () => ({
   Logit: {
@@ -25,12 +31,12 @@ describe('Fetchit', () => {
       dedupe: options.dedupe,
       headers: options.headers,
       timeout: options.timeout,
-    });
+    } as HttpClientOptions);
 
     const queryClient = createQueryClient({
       cache: options.cache,
       refetch: options.refetch,
-    });
+    } as QueryClientOptions);
 
     return {
       clearCache: queryClient.clearCache,
