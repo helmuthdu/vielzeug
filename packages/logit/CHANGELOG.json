@@ -2,6 +2,27 @@
   "name": "@vielzeug/logit",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/logit_v1.1.2",
+      "date": "Thu, 12 Feb 2026 17:52:26 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "docs update",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0b1af4f1a1c0a71dc9246c9c35d91b4af864a7b2"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e64bd0122c2fb6fc7e042e1707ea7838382a02f2"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/logit_v1.1.1",
       "date": "Tue, 10 Feb 2026 21:43:22 GMT",

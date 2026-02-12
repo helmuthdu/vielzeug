@@ -2,6 +2,20 @@
   "name": "@vielzeug/formit",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/formit_v1.1.2",
+      "date": "Thu, 12 Feb 2026 17:52:26 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2e84d6f95a56337a4a5cce2b5e19ab8adb63cd7e"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/formit_v1.1.1",
       "date": "Tue, 10 Feb 2026 21:35:51 GMT",

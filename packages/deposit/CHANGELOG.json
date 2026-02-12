@@ -2,6 +2,35 @@
   "name": "@vielzeug/deposit",
   "entries": [
     {
+      "version": "1.1.4",
+      "tag": "@vielzeug/deposit_v1.1.4",
+      "date": "Thu, 12 Feb 2026 17:52:26 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "de98f501d03999e24955bbbd3040a54f63d17fdc"
+          }
+        ],
+        "none": [
+          {
+            "comment": "docs update",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0b1af4f1a1c0a71dc9246c9c35d91b4af864a7b2"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `1.1.4`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.3",
       "tag": "@vielzeug/deposit_v1.1.3",
       "date": "Tue, 10 Feb 2026 22:58:02 GMT",

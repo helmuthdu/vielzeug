@@ -2,6 +2,32 @@
   "name": "@vielzeug/i18nit",
   "entries": [
     {
+      "version": "1.1.3",
+      "tag": "@vielzeug/i18nit_v1.1.3",
+      "date": "Thu, 12 Feb 2026 17:52:26 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1b370355755776207117a366db713c67d8d69b83"
+          }
+        ],
+        "none": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "de98f501d03999e24955bbbd3040a54f63d17fdc"
+          },
+          {
+            "comment": "docs update",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "6eaa37499ce7546f0676580c56b24d1d041ef63b"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.2",
       "tag": "@vielzeug/i18nit_v1.1.2",
       "date": "Thu, 12 Feb 2026 13:30:14 GMT",

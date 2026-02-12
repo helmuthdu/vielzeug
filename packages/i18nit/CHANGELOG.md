@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/i18nit
 
-This log was last generated on Thu, 12 Feb 2026 13:30:14 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+
+## 1.1.3
+Thu, 12 Feb 2026 17:52:26 GMT
+
+### Patches
+
+- code cleanup
 
 ## 1.1.2
 Thu, 12 Feb 2026 13:30:14 GMT

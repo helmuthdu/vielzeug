@@ -2,6 +2,27 @@
   "name": "@vielzeug/validit",
   "entries": [
     {
+      "version": "1.1.1",
+      "tag": "@vielzeug/validit_v1.1.1",
+      "date": "Thu, 12 Feb 2026 17:52:26 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "docs update",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0b1af4f1a1c0a71dc9246c9c35d91b4af864a7b2"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "code cleanup",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "6eaa37499ce7546f0676580c56b24d1d041ef63b"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/validit_v1.1.0",
       "date": "Tue, 10 Feb 2026 22:53:08 GMT",
