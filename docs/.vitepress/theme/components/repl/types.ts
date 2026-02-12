@@ -314,6 +314,64 @@ declare module '@vielzeug/permit' {
 }
 `;
 
+export const stateitTypes = `
+declare module '@vielzeug/stateit' {
+  export type Subscriber<T> = (state: T, prev: T) => void;
+  export type Selector<T, U> = (state: T) => U;
+  export type Unsubscribe = () => void;
+  export type EqualityFn<U> = (a: U, b: U) => boolean;
+
+  export type StoreOptions<T> = {
+    name?: string;
+    equals?: EqualityFn<T>;
+  };
+
+  export class Store<T extends object> {
+    get(): T;
+    select<U>(selector: Selector<T, U>): U;
+    getName(): string | undefined;
+    replace(nextState: T): void;
+    set(patch: Partial<T>): void;
+    update(updater: (state: T) => T | Promise<T>): Promise<void>;
+    reset(): void;
+    subscribe(listener: Subscriber<T>): Unsubscribe;
+    subscribe<U>(
+      selector: Selector<T, U>,
+      listener: Subscriber<U>,
+      options?: { equality?: EqualityFn<U> }
+    ): Unsubscribe;
+    observe(observer: Subscriber<T>): Unsubscribe;
+    createChild(patch?: Partial<T>): Store<T>;
+    runInScope<R>(
+      fn: (scopedStore: Store<T>) => R | Promise<R>,
+      patch?: Partial<T>
+    ): Promise<R>;
+  }
+
+  export function createStore<T extends object>(
+    initialState: T,
+    options?: StoreOptions<T>
+  ): Store<T>;
+
+  export function createTestStore<T extends object>(
+    baseStore?: Store<T>,
+    patch?: Partial<T>
+  ): {
+    store: Store<T>;
+    dispose: () => void;
+  };
+
+  export function withMock<T extends object, R>(
+    baseStore: Store<T>,
+    patch: Partial<T>,
+    fn: () => R | Promise<R>
+  ): Promise<R>;
+
+  export function shallowEqual(a: unknown, b: unknown): boolean;
+  export function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
+}
+`;
+
 export const validitTypes = `
 declare module '@vielzeug/validit' {
   export const v: {
@@ -417,13 +475,14 @@ declare module '@vielzeug/wireit' {
 `;
 
 export const libraryTypes = {
-  toolkit: toolkitTypes,
   deposit: depositTypes,
   fetchit: fetchitTypes,
   formit: formitTypes,
   i18nit: i18nitTypes,
   logit: logitTypes,
   permit: permitTypes,
+  stateit: stateitTypes,
+  toolkit: toolkitTypes,
   validit: validitTypes,
   wireit: wireitTypes,
 };

@@ -5,21 +5,6 @@ import { defineConfig } from 'vitepress';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  vite: {
-    resolve: {
-      alias: {
-        '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
-        '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
-        '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
-        '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
-        '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),
-        '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
-        '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
-        '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
-        '@vielzeug/wireit': resolve(__dirname, '../../packages/wireit/src'),
-      },
-    },
-  },
   base: '/vielzeug',
   description: 'Documentation for the Vielzeug monorepo',
   head: [
@@ -42,13 +27,14 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo-main.svg',
     nav: [
-      { link: '/toolkit/', text: 'Toolkit' },
       { link: '/deposit/', text: 'Deposit' },
       { link: '/fetchit/', text: 'Fetchit' },
       { link: '/formit/', text: 'Formit' },
       { link: '/i18nit/', text: 'i18nit' },
       { link: '/logit/', text: 'Logit' },
       { link: '/permit/', text: 'Permit' },
+      { link: '/stateit/', text: 'Stateit' },
+      { link: '/toolkit/', text: 'Toolkit' },
       { link: '/validit/', text: 'Validit' },
       { link: '/wireit/', text: 'Wireit' },
       { link: '/repl', text: 'REPL' },
@@ -92,6 +78,12 @@ export default defineConfig({
         { link: '/permit/api', text: 'API Reference' },
         { link: '/permit/usage', text: 'Usage' },
         { link: '/permit/examples', text: 'Examples' },
+      ],
+      '/stateit/': [
+        { link: '/stateit/', text: 'Overview' },
+        { link: '/stateit/api', text: 'API Reference' },
+        { link: '/stateit/usage', text: 'Usage' },
+        { link: '/stateit/examples', text: 'Examples' },
       ],
       '/toolkit/': [
         { link: '/toolkit/', text: 'Overview' },
@@ -308,4 +300,20 @@ export default defineConfig({
     socialLinks: [{ icon: 'github', link: 'https://github.com/helmuthdu/vielzeug' }],
   },
   title: 'Vielzeug',
+  vite: {
+    resolve: {
+      alias: {
+        '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
+        '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
+        '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
+        '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),
+        '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
+        '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
+        '@vielzeug/stateit': resolve(__dirname, '../../packages/stateit/src'),
+        '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
+        '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
+        '@vielzeug/wireit': resolve(__dirname, '../../packages/wireit/src'),
+      },
+    },
+  },
 });

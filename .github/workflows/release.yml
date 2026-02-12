@@ -14,6 +14,7 @@ on:
           - '@vielzeug/i18nit'
           - '@vielzeug/logit'
           - '@vielzeug/permit'
+          - '@vielzeug/stateit'
           - '@vielzeug/toolkit'
           - '@vielzeug/validit'
           - '@vielzeug/wireit'

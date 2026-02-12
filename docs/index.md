@@ -20,9 +20,6 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
-  - title: '@vielzeug/toolkit'
-    details: "<img src='/vielzeug/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
-    link: /toolkit/
   - title: '@vielzeug/deposit'
     details: "<img src='/vielzeug/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
@@ -41,6 +38,12 @@ features:
   - title: '@vielzeug/permit'
     details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/
+  - title: '@vielzeug/stateit'
+    details: "<img src='/vielzeug/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    link: /stateit/
+  - title: '@vielzeug/toolkit'
+    details: "<img src='/vielzeug/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
+    link: /toolkit/
   - title: '@vielzeug/validit'
     details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
