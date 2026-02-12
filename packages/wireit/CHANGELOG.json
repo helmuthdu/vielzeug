@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/wireit",
+  "entries": [
+    {
+      "version": "1.1.1",
+      "tag": "@vielzeug/wireit_v1.1.1",
+      "date": "Thu, 12 Feb 2026 11:34:04 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "new wireit lib",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "ad7ed82b2740053b5acaef21cf35fea0d567eb71"
+          }
+        ]
+      }
+    }
+  ]
+}
