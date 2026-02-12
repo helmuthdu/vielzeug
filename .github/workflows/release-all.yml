@@ -119,14 +119,16 @@ jobs:
       - name: Get versions before release
         id: versions-before
         run: |
-          VERSIONS_JSON="{"
+          # Store current versions of all packages
+          echo "📋 Recording current versions..."
+          > /tmp/versions-before.json
+          
           for pkg in ${{ steps.check-changes.outputs.packages }}; do
             FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
             VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
-            VERSIONS_JSON="${VERSIONS_JSON}\"${pkg}\":\"${VERSION}\","
+            echo "${pkg}=${VERSION}" >> /tmp/versions-before.json
+            echo "  ${pkg}: ${VERSION}"
           done
-          VERSIONS_JSON="${VERSIONS_JSON%,}}"
-          echo "versions=${VERSIONS_JSON}" >> $GITHUB_OUTPUT
 
       - name: Apply version bumps and process changelogs with Rush
         run: |
@@ -138,63 +140,98 @@ jobs:
           # - Commit changes
           node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details
 
-      - name: Get versions after release and publish to npm
+      - name: Detect version changes and publish to npm
         id: versions-after
         run: |
           PUBLISHED_PACKAGES=""
+          TAGS_TO_PUSH=""
+          
+          echo "📋 Detecting version changes..."
           
           for pkg in ${{ steps.check-changes.outputs.packages }}; do
             FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
+            OLD_VERSION=$(grep "^${pkg}=" /tmp/versions-before.json | cut -d'=' -f2)
             NEW_VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
             
-            echo "📦 Publishing ${pkg}@${NEW_VERSION}"
+            echo ""
+            echo "📦 ${pkg}:"
+            echo "   Old version: ${OLD_VERSION}"
+            echo "   New version: ${NEW_VERSION}"
             
-            cd "$FOLDER"
-            
-            # Pack the package to create a tarball
-            echo "📦 Packing ${pkg}..."
-            TARBALL=$(npm pack --json | node -e "const data = JSON.parse(require('fs').readFileSync(0)); console.log(data[0].filename);")
-            
-            echo "📦 Tarball created: ${TARBALL}"
-            
-            # Verify tarball contents
-            echo "📋 Tarball contents:"
-            tar -tzf "${TARBALL}" | head -10
-            
-            # Publish the tarball
-            echo "🚀 Publishing to npm..."
-            npm publish "${TARBALL}" --access public
-            
-            # Clean up tarball
-            rm -f "${TARBALL}"
-            
-            cd - > /dev/null
-            
-            PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
-            
-            # Tag this release
-            TAG_NAME="${pkg}@${NEW_VERSION}"
-            
-            # Check if tag already exists
-            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-              echo "⚠️  Tag $TAG_NAME already exists, deleting old tag..."
-              git tag -d "$TAG_NAME" || true
-              git push origin ":refs/tags/$TAG_NAME" || true
+            # Only publish if version actually changed
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "   ✅ Version changed - publishing..."
+              
+              # Check if this version already exists on npm
+              NPM_VERSION=$(npm view "${pkg}@${NEW_VERSION}" version 2>/dev/null || echo "not-found")
+              
+              if [ "$NPM_VERSION" = "$NEW_VERSION" ]; then
+                echo "   ⚠️  Version ${NEW_VERSION} already exists on npm - skipping publish"
+                continue
+              fi
+              
+              cd "$FOLDER"
+              
+              # Pack the package to create a tarball
+              echo "   📦 Packing..."
+              TARBALL=$(npm pack --json | node -e "const data = JSON.parse(require('fs').readFileSync(0)); console.log(data[0].filename);")
+              
+              echo "   📦 Tarball created: ${TARBALL}"
+              
+              # Verify tarball contents
+              echo "   📋 Tarball contents:"
+              tar -tzf "${TARBALL}" | head -10
+              
+              # Publish the tarball
+              echo "   🚀 Publishing to npm..."
+              npm publish "${TARBALL}" --access public
+              
+              # Clean up tarball
+              rm -f "${TARBALL}"
+              
+              cd - > /dev/null
+              
+              PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
+              
+              # Tag this release
+              TAG_NAME="${pkg}@${NEW_VERSION}"
+              
+              # Check if tag already exists
+              if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+                echo "   ⚠️  Tag $TAG_NAME already exists, deleting old tag..."
+                git tag -d "$TAG_NAME" || true
+                git push origin ":refs/tags/$TAG_NAME" || true
+              fi
+              
+              echo "   🏷️  Creating tag $TAG_NAME"
+              git tag "$TAG_NAME"
+              TAGS_TO_PUSH="${TAGS_TO_PUSH}${TAG_NAME} "
+            else
+              echo "   ℹ️  Version unchanged - skipping publish"
             fi
-            
-            echo "🏷️  Creating tag $TAG_NAME"
-            git tag "$TAG_NAME"
           done
+          
+          if [ -z "$PUBLISHED_PACKAGES" ]; then
+            echo ""
+            echo "⚠️  No packages had version changes - nothing to publish"
+            echo "This might mean the change files were already processed or had no version impact."
+            echo "packages=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           echo "packages=${PUBLISHED_PACKAGES}" >> $GITHUB_OUTPUT
           
           # Push all tags at once
-          echo "🚀 Pushing all tags..."
-          git push origin --tags
+          if [ -n "$TAGS_TO_PUSH" ]; then
+            echo ""
+            echo "🚀 Pushing tags: $TAGS_TO_PUSH"
+            git push origin --tags
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify npm publications
+        if: steps.versions-after.outputs.packages != ''
         run: |
           echo "Waiting 10 seconds for npm to update..."
           sleep 10
@@ -214,6 +251,7 @@ jobs:
           done
 
       - name: Create GitHub Releases
+        if: steps.versions-after.outputs.packages != ''
         run: |
           for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
             PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
@@ -253,15 +291,25 @@ jobs:
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The following packages have been released:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           
-          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
-            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
-            VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
-            echo "- ✅ **${PKG}** → \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          done
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All packages have been published to npm and GitHub releases have been created." >> $GITHUB_STEP_SUMMARY
+          if [ -z "${{ steps.versions-after.outputs.packages }}" ]; then
+            echo "⚠️ **No packages were released**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This can happen if:" >> $GITHUB_STEP_SUMMARY
+            echo "- Change files were already processed" >> $GITHUB_STEP_SUMMARY
+            echo "- Change files had no version impact" >> $GITHUB_STEP_SUMMARY
+            echo "- Versions were already published to npm" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "The following packages have been released:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
+              PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
+              VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
+              echo "- ✅ **${PKG}** → \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            done
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All packages have been published to npm and GitHub releases have been created." >> $GITHUB_STEP_SUMMARY
+          fi
 
