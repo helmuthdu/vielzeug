@@ -6,8 +6,6 @@ Comprehensive async/promise utilities for modern JavaScript applications.
 
 The async category provides utilities for managing promises, concurrency control, retries, timeouts, and other asynchronous patterns.
 
----
-
 ## attempt
 
 Execute a function with advanced error handling and retry logic.
@@ -24,18 +22,16 @@ const unreliableFunction = async () => {
 const result = await attempt(unreliableFunction, {
   retries: 3,
   timeout: 5000,
-  silent: false
+  silent: false,
 });
 
 // With identifier for logging
 await attempt(fetchUserData, {
   identifier: 'fetchUserData',
   retries: 5,
-  timeout: 10000
+  timeout: 10000,
 });
 ```
-
----
 
 ## defer
 
@@ -56,14 +52,16 @@ const result = await deferred.promise; // 'Done!'
 // Event-based workflow
 const eventPromise = defer<Event>();
 
-element.addEventListener('click', (e) => {
-  eventPromise.resolve(e);
-}, { once: true });
+element.addEventListener(
+  'click',
+  (e) => {
+    eventPromise.resolve(e);
+  },
+  { once: true },
+);
 
 const clickEvent = await eventPromise.promise;
 ```
-
----
 
 ## delay
 
@@ -84,8 +82,6 @@ const result = await delay(fetchData, 500);
 await delay(() => processData(), 2000);
 ```
 
----
-
 ## parallel
 
 Process an array with controlled parallelism.
@@ -104,15 +100,8 @@ const results = await parallel(3, urls, async (url) => {
 // With AbortSignal
 const controller = new AbortController();
 
-const results = await parallel(
-  5,
-  items,
-  async (item) => processItem(item),
-  controller.signal
-);
+const results = await parallel(5, items, async (item) => processItem(item), controller.signal);
 ```
-
----
 
 ## pool
 
@@ -136,11 +125,9 @@ const results = await Promise.all([
 const apiPool = pool(5);
 
 async function fetchUser(id: number) {
-  return apiPool(() => fetch(`/api/users/${id}`).then(r => r.json()));
+  return apiPool(() => fetch(`/api/users/${id}`).then((r) => r.json()));
 }
 ```
-
----
 
 ## predict
 
@@ -155,30 +142,19 @@ const result = await predict(
     const response = await fetch('/api/data', { signal });
     return response.json();
   },
-  { timeout: 5000 }
+  { timeout: 5000 },
 );
 
 // With custom AbortSignal
 const controller = new AbortController();
 
-const result = await predict(
-  async (signal) => longRunningTask(signal),
-  { timeout: 10000, signal: controller.signal }
-);
+const result = await predict(async (signal) => longRunningTask(signal), { timeout: 10000, signal: controller.signal });
 
 // Combine with retry
 import { retry } from '@vielzeug/toolkit';
 
-const result = await retry(
-  () => predict(
-    (signal) => fetchData(signal),
-    { timeout: 5000 }
-  ),
-  { times: 3, delay: 1000 }
-);
+const result = await retry(() => predict((signal) => fetchData(signal), { timeout: 5000 }), { times: 3, delay: 1000 });
 ```
-
----
 
 ## queue
 
@@ -198,8 +174,8 @@ taskQueue.add(() => fetch('/api/3'));
 await taskQueue.onIdle();
 
 // Monitor queue
-console.log(taskQueue.size);     // Pending tasks
-console.log(taskQueue.pending);  // Currently running
+console.log(taskQueue.size); // Pending tasks
+console.log(taskQueue.pending); // Currently running
 
 // Clear remaining tasks
 taskQueue.clear();
@@ -210,12 +186,10 @@ const results: string[] = [];
 const q = queue({ concurrency: 3 });
 
 for (const url of urls) {
-  const result = await q.add(() => fetch(url).then(r => r.text()));
+  const result = await q.add(() => fetch(url).then((r) => r.text()));
   results.push(result);
 }
 ```
-
----
 
 ## race
 
@@ -230,22 +204,17 @@ const data = await race(fetchQuickData(), 500);
 // Prevents flickering for fast operations
 const result = await race(
   [fetch('/api/1'), fetch('/api/2')],
-  1000 // Ensure at least 1 second
+  1000, // Ensure at least 1 second
 );
 
 // Use case: Better UX
 async function loadUserProfile(userId: string) {
   // Even if data loads in 50ms, show spinner for at least 300ms
-  const user = await race(
-    fetchUser(userId),
-    300
-  );
-  
+  const user = await race(fetchUser(userId), 300);
+
   return user;
 }
 ```
-
----
 
 ## retry
 
@@ -255,45 +224,31 @@ Retry async operations with exponential backoff.
 import { retry } from '@vielzeug/toolkit';
 
 // Basic retry
-const result = await retry(
-  () => fetchData(),
-  { times: 3, delay: 1000 }
-);
+const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
 
 // Exponential backoff
-const result = await retry(
-  () => unreliableAPICall(),
-  {
-    times: 5,
-    delay: 500,
-    backoff: 2 // 500ms, 1000ms, 2000ms, 4000ms, 8000ms
-  }
-);
+const result = await retry(() => unreliableAPICall(), {
+  times: 5,
+  delay: 500,
+  backoff: 2, // 500ms, 1000ms, 2000ms, 4000ms, 8000ms
+});
 
 // With AbortSignal
 const controller = new AbortController();
 
-const result = await retry(
-  () => fetchData(),
-  {
-    times: 3,
-    delay: 1000,
-    signal: controller.signal
-  }
-);
+const result = await retry(() => fetchData(), {
+  times: 3,
+  delay: 1000,
+  signal: controller.signal,
+});
 
 // Custom backoff function
-const result = await retry(
-  () => fetchData(),
-  {
-    times: 4,
-    delay: 1000,
-    backoff: (attempt, delay) => delay * attempt // Linear backoff
-  }
-);
+const result = await retry(() => fetchData(), {
+  times: 4,
+  delay: 1000,
+  backoff: (attempt, delay) => delay * attempt, // Linear backoff
+});
 ```
-
----
 
 ## sleep
 
@@ -322,8 +277,6 @@ for (const item of items) {
 }
 ```
 
----
-
 ## waitFor
 
 Poll for a condition to become true.
@@ -332,10 +285,7 @@ Poll for a condition to become true.
 import { waitFor } from '@vielzeug/toolkit';
 
 // Wait for DOM element
-await waitFor(
-  () => document.querySelector('#myElement') !== null,
-  { timeout: 5000, interval: 100 }
-);
+await waitFor(() => document.querySelector('#myElement') !== null, { timeout: 5000, interval: 100 });
 
 // Wait for API to be ready
 await waitFor(
@@ -347,7 +297,7 @@ await waitFor(
       return false;
     }
   },
-  { timeout: 30000, interval: 1000 }
+  { timeout: 30000, interval: 1000 },
 );
 
 // Wait for condition with cleanup
@@ -355,17 +305,12 @@ const controller = new AbortController();
 
 setTimeout(() => controller.abort(), 10000);
 
-await waitFor(
-  () => window.myGlobal !== undefined,
-  {
-    timeout: 15000,
-    interval: 200,
-    signal: controller.signal
-  }
-);
+await waitFor(() => window.myGlobal !== undefined, {
+  timeout: 15000,
+  interval: 200,
+  signal: controller.signal,
+});
 ```
-
----
 
 ## Real-World Examples
 
@@ -376,15 +321,16 @@ import { retry, predict } from '@vielzeug/toolkit';
 
 async function fetchWithRetry(url: string) {
   return retry(
-    () => predict(
-      async (signal) => {
-        const response = await fetch(url, { signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      },
-      { timeout: 5000 }
-    ),
-    { times: 3, delay: 1000, backoff: 2 }
+    () =>
+      predict(
+        async (signal) => {
+          const response = await fetch(url, { signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        },
+        { timeout: 5000 },
+      ),
+    { times: 3, delay: 1000, backoff: 2 },
   );
 }
 ```
@@ -397,25 +343,23 @@ import { pool, sleep } from '@vielzeug/toolkit';
 async function processBatch<T, R>(
   items: T[],
   processor: (item: T) => Promise<R>,
-  { batchSize = 10, delayBetweenBatches = 1000, concurrency = 3 } = {}
+  { batchSize = 10, delayBetweenBatches = 1000, concurrency = 3 } = {},
 ) {
   const requestPool = pool(concurrency);
   const results: R[] = [];
-  
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    
-    const batchResults = await Promise.all(
-      batch.map(item => requestPool(() => processor(item)))
-    );
-    
+
+    const batchResults = await Promise.all(batch.map((item) => requestPool(() => processor(item))));
+
     results.push(...batchResults);
-    
+
     if (i + batchSize < items.length) {
       await sleep(delayBetweenBatches);
     }
   }
-  
+
   return results;
 }
 ```
@@ -427,12 +371,12 @@ import { queue } from '@vielzeug/toolkit';
 
 async function processTasksWithProgress<T>(
   tasks: Array<() => Promise<T>>,
-  onProgress?: (completed: number, total: number) => void
+  onProgress?: (completed: number, total: number) => void,
 ) {
   const taskQueue = queue({ concurrency: 5 });
   const results: T[] = [];
   let completed = 0;
-  
+
   for (const task of tasks) {
     taskQueue.add(async () => {
       const result = await task();
@@ -441,7 +385,7 @@ async function processTasksWithProgress<T>(
       onProgress?.(completed, tasks.length);
     });
   }
-  
+
   await taskQueue.onIdle();
   return results;
 }
@@ -455,13 +399,12 @@ import { waitFor } from '@vielzeug/toolkit';
 async function waitForJobCompletion(jobId: string) {
   await waitFor(
     async () => {
-      const status = await fetch(`/api/jobs/${jobId}`).then(r => r.json());
+      const status = await fetch(`/api/jobs/${jobId}`).then((r) => r.json());
       return status.completed === true;
     },
-    { timeout: 60000, interval: 2000 }
+    { timeout: 60000, interval: 2000 },
   );
-  
-  return fetch(`/api/jobs/${jobId}/result`).then(r => r.json());
+
+  return fetch(`/api/jobs/${jobId}/result`).then((r) => r.json());
 }
 ```
-

@@ -2,6 +2,10 @@
 
 Complete API documentation for `@vielzeug/deposit`.
 
+## Table of Contents
+
+[[toc]]
+
 ## Core Classes
 
 ### `Deposit<S>`
@@ -11,8 +15,6 @@ Main class for interacting with browser storage. Provides a unified, type-safe A
 **Type Parameters:**
 
 - `S extends DepositDataSchema` - Your schema type defining all tables and their records
-
----
 
 ## Deposit Methods
 
@@ -304,8 +306,6 @@ await db.patch('users', [
   { type: 'clear' }, // Clears all, then applies puts
 ]);
 ```
-
----
 
 ## QueryBuilder Methods
 
@@ -601,8 +601,6 @@ const conditions = [
 const results = await db.query('users').build(conditions).toArray();
 ```
 
----
-
 ## Adapters
 
 ### `LocalStorageAdapter<S>`
@@ -638,12 +636,12 @@ const db = new Deposit(adapter);
 ```ts
 // ✅ Valid - will work
 const validSchema = {
-  users: { key: 'id', record: {} as User }
+  users: { key: 'id', record: {} as User },
 };
 
 // ❌ Invalid - will throw immediately
 const invalidSchema = {
-  users: { record: {} as User } // Missing 'key' field
+  users: { record: {} as User }, // Missing 'key' field
 };
 // Error: "Invalid schema: table "users" missing required "key" field..."
 ```
@@ -732,8 +730,6 @@ const db = new Deposit(adapter);
 - Survives page reloads
 - Isolated per origin
 
----
-
 ## Types
 
 ### `DepositDataSchema`
@@ -812,8 +808,6 @@ Operation types for `patch()` method.
 type PatchOperation<T, K> = { type: 'put'; value: T; ttl?: number } | { type: 'delete'; key: K } | { type: 'clear' };
 ```
 
----
-
 ## Utility Functions
 
 ### `runSafe(fn, label?)`
@@ -832,8 +826,6 @@ const safeFetch = runSafe(async () => {
 
 const result = await safeFetch(); // Returns undefined on error
 ```
-
----
 
 ## Advanced Usage
 

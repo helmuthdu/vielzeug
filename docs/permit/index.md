@@ -65,20 +65,20 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 ### Comparison with Alternatives
 
-| Feature            | Permit         | CASL        | Casbin     | Manual If/Else |
-| ------------------ | -------------- | ----------- | ---------- | -------------- |
-| TypeScript Support | ✅ First-class | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
-| Dynamic Rules      | ✅ Simple      | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | **~2.0 KB**    | ~15KB       | ~45KB      | 0KB            |
-| Learning Curve     | Low            | Medium      | High       | None           |
-| Role-Based         | ✅             | ✅          | ✅         | ⚠️ Manual      |
-| Resource-Based     | ✅             | ✅          | ✅         | ⚠️ Manual      |
-| Wildcards          | ✅ Role + Resource | ⚠️ Limited | ✅     | ❌             |
-| Normalization      | ✅ Built-in    | ❌          | ❌         | ❌             |
-| Security Defaults  | ✅ Safe        | ⚠️          | ⚠️         | ❌             |
-| Type Exports       | ✅ All         | ⚠️ Some     | ❌         | N/A            |
-| Dependencies       | 1 (logging)    | 5+          | 10+        | N/A            |
-| Isomorphic         | ✅             | ✅          | ✅         | ✅             |
+| Feature            | Permit             | CASL        | Casbin     | Manual If/Else |
+| ------------------ | ------------------ | ----------- | ---------- | -------------- |
+| TypeScript Support | ✅ First-class     | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
+| Dynamic Rules      | ✅ Simple          | ✅ Advanced | ✅ Complex | ✅ Manual      |
+| Bundle Size (gzip) | **~2.0 KB**        | ~15KB       | ~45KB      | 0KB            |
+| Learning Curve     | Low                | Medium      | High       | None           |
+| Role-Based         | ✅                 | ✅          | ✅         | ⚠️ Manual      |
+| Resource-Based     | ✅                 | ✅          | ✅         | ⚠️ Manual      |
+| Wildcards          | ✅ Role + Resource | ⚠️ Limited  | ✅         | ❌             |
+| Normalization      | ✅ Built-in        | ❌          | ❌         | ❌             |
+| Security Defaults  | ✅ Safe            | ⚠️          | ⚠️         | ❌             |
+| Type Exports       | ✅ All             | ⚠️ Some     | ❌         | N/A            |
+| Dependencies       | 1 (logging)        | 5+          | 10+        | N/A            |
+| Isomorphic         | ✅                 | ✅          | ✅         | ✅             |
 
 ## When to Use Permit
 
@@ -111,6 +111,7 @@ if (Permit.check(user, 'posts', 'update', post)) {
 - **Runtime Validation**: Validates permission actions at registration
 - **Deep Copy Protection**: Immutable permission registry inspection
 - **Flexible API**: Register, set, unregister, and check permissions with ease
+
 ## 🏁 Quick Start
 
 ### Installation
@@ -327,6 +328,54 @@ function PostActions({ post }: { post: Post }) {
     </div>
   );
 }
+```
+
+## 🎓 Core Concepts
+
+### Roles
+
+Users can have one or more roles that grant permissions:
+
+```ts
+const user = { roles: ['admin', 'moderator'] };
+```
+
+### Resources
+
+The entities or features being protected:
+
+```ts
+Permit.register('user', 'posts', { create: true, view: true });
+//                       ^^^^^^ resource
+```
+
+### Actions
+
+The operations that can be performed on resources:
+
+- **create**: Create new items
+- **view**: Read/view items
+- **update**: Modify existing items
+- **delete**: Remove items
+- **custom**: Any custom action you define
+
+### Permission Types
+
+Three ways to define permissions:
+
+1. **Boolean**: Simple true/false
+2. **Function**: Dynamic checks with data
+3. **Wildcard**: `*` grants all permissions
+
+### Wildcards
+
+Special roles and resources:
+
+- **WILDCARD role (`*`)**: Matches any role (public permissions)
+- **WILDCARD resource (`*`)**: Applies to all resources
+
+```ts
+Permit.register('*', 'posts', { view: true }); // Anyone can view posts
 ```
 
 ## 📚 Documentation

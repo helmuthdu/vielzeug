@@ -24,27 +24,27 @@ const translations = {
     greeting: 'Hello, {name}!',
     itemCount: {
       one: '1 item',
-      other: '{count} items'
-    }
-  }
+      other: '{count} items',
+    },
+  },
 };
 
 function translate(key, locale, vars) {
   let text = translations[locale]?.[key];
   if (!text) return key;
-  
+
   // Manual variable replacement
-  Object.keys(vars).forEach(k => {
+  Object.keys(vars).forEach((k) => {
     text = text.replace(`{${k}}`, vars[k]);
   });
-  
+
   // Manual pluralization
   if (typeof text === 'object') {
     const count = vars.count;
     text = count === 1 ? text.one : text.other;
     text = text.replace('{count}', count);
   }
-  
+
   return text;
 }
 ```
@@ -59,9 +59,9 @@ const i18n = createI18n({
   messages: {
     en: {
       greeting: 'Hello, {name}!',
-      items: { one: '1 item', other: '{count} items' }
-    }
-  }
+      items: { one: '1 item', other: '{count} items' },
+    },
+  },
 });
 
 i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
@@ -70,19 +70,19 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ### Comparison with Alternatives
 
-| Feature             | i18nit       | i18next      | react-intl  |
-| ------------------- | ------------ | ------------ | ----------- |
-| Bundle Size         | **~3.0 KB**  | ~12KB        | ~15KB       |
-| Dependencies        | **0**        | 2+           | 10+         |
-| TypeScript          | First-class  | Good         | Good        |
-| Framework           | Agnostic     | Agnostic     | React only  |
-| Pluralization       | ✅ Built-in  | ✅ Plugin    | ✅ Built-in |
-| Async Loading       | ✅ Built-in  | ✅ Built-in  | ⚠️ Manual   |
-| Path Interpolation  | ✅ `{user.name}` | ❌       | ❌          |
-| Nested Keys         | ✅           | ✅           | ✅          |
-| Message Functions   | ✅ Built-in  | ⚠️ Limited   | ✅ Components |
-| HTML Escaping       | ✅ Built-in  | ⚠️ Manual    | ✅ Built-in |
-| Structured Errors   | ✅ MissingVariableError | ❌ | ❌       |
+| Feature            | i18nit                  | i18next     | react-intl    |
+| ------------------ | ----------------------- | ----------- | ------------- |
+| Bundle Size        | **~3.0 KB**             | ~12KB       | ~15KB         |
+| Dependencies       | **0**                   | 2+          | 10+           |
+| TypeScript         | First-class             | Good        | Good          |
+| Framework          | Agnostic                | Agnostic    | React only    |
+| Pluralization      | ✅ Built-in             | ✅ Plugin   | ✅ Built-in   |
+| Async Loading      | ✅ Built-in             | ✅ Built-in | ⚠️ Manual     |
+| Path Interpolation | ✅ `{user.name}`        | ❌          | ❌            |
+| Nested Keys        | ✅                      | ✅          | ✅            |
+| Message Functions  | ✅ Built-in             | ⚠️ Limited  | ✅ Components |
+| HTML Escaping      | ✅ Built-in             | ⚠️ Manual   | ✅ Built-in   |
+| Structured Errors  | ✅ MissingVariableError | ❌          | ❌            |
 
 ## When to Use i18nit
 
@@ -259,7 +259,7 @@ function App() {
 }
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Translation Keys
 
@@ -502,17 +502,85 @@ ns.t(key, vars?, options?);
 const unsubscribe = i18n.subscribe(handler);
 ```
 
-## 🛠️ Supported Languages
+## 📚 Documentation
 
-i18nit includes plural rules for:
+Explore comprehensive guides and references:
 
-- **English** (en) - one/other
-- **French** (fr) - one (0-1)/other
-- **Arabic** (ar) - zero/one/two/few/many/other
-- **Polish** (pl) - one/few/many
-- **Russian** (ru) - one/few/many/other
+- **[Usage Guide](./usage)** - Complete guide to all i18n features
+- **[API Reference](./api)** - Detailed API documentation with all methods
+- **[Examples](./examples)** - Real-world examples and framework integrations
 
-Additional languages can be added by extending the `PLURAL_RULES` object.
+## ❓ FAQ
+
+### **Q: How do I add a new language?**
+
+Add translations to the messages object and i18nit will handle the rest:
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: { hello: 'Hello' },
+    de: { hello: 'Hallo' },
+    ja: { hello: 'こんにちは' },
+  },
+});
+```
+
+### **Q: Can I use i18nit with React/Vue/Svelte?**
+
+Yes! i18nit is framework-agnostic. Subscribe to locale changes and trigger re-renders when the locale updates.
+
+### **Q: How do I handle missing translations?**
+
+Set a `fallbackLocale` to use when a translation is missing:
+
+```ts
+const i18n = createI18n({
+  locale: 'fr',
+  fallbackLocale: 'en',
+  messages: { en: { hello: 'Hello' }, fr: {} },
+});
+
+i18n.t('hello'); // Returns 'Hello' (fallback)
+```
+
+### **Q: Can I load translations dynamically?**
+
+Yes, use loaders for async loading:
+
+```ts
+const i18n = createI18n({
+  loaders: {
+    es: async () => {
+      const res = await fetch('/locales/es.json');
+      return res.json();
+    },
+  },
+});
+
+await i18n.load('es');
+```
+
+### **Q: How do I handle pluralization?**
+
+Use the count variable and define plural forms:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      items: {
+        one: '{count} item',
+        other: '{count} items',
+      },
+    },
+  },
+});
+
+i18n.t('items', { count: 1 }); // "1 item"
+i18n.t('items', { count: 5 }); // "5 items"
+```
 
 ## 🐛 Troubleshooting
 
@@ -621,4 +689,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ---
 
 > **Tip:** i18nit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for forms, storage, HTTP clients, logging, and more.
-

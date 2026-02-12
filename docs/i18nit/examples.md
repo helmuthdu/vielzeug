@@ -14,6 +14,7 @@ These are complete, production-ready application examples. For API reference and
 
 ::: details 🎯 Why Two Patterns?
 We provide both **inline** and **hook/composable** patterns because:
+
 - **Inline**: Quick prototyping, simple components
 - **Hook/Composable**: Reusable across components, better separation of concerns
 
@@ -36,8 +37,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { welcome: 'Welcome!' },
-    es: { welcome: '¡Bienvenido!' }
-  }
+    es: { welcome: '¡Bienvenido!' },
+  },
 });
 
 function App() {
@@ -62,13 +63,13 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { welcome: 'Welcome!' },
-    es: { welcome: '¡Bienvenido!' }
-  }
+    es: { welcome: '¡Bienvenido!' },
+  },
 });
 
 const locale = ref(i18n.getLocale());
 let unsubscribe;
-onMounted(() => unsubscribe = i18n.subscribe(l => locale.value = l));
+onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -109,8 +110,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { welcome: 'Welcome!' },
-    es: { welcome: '¡Bienvenido!' }
-  }
+    es: { welcome: '¡Bienvenido!' },
+  },
 });
 
 class i18nWelcome extends HTMLElement {
@@ -143,9 +144,12 @@ Recommended singleton pattern for global scope or complex apps.
 import { createI18n } from '@vielzeug/i18nit';
 import { useEffect, useState } from 'react';
 
-const i18n = createI18n({ locale: 'en', loaders: {
-  en: () => fetch('/en.json').then(r => r.json())
-}});
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    en: () => fetch('/en.json').then((r) => r.json()),
+  },
+});
 
 export function useI18n() {
   const [, forceUpdate] = useState({});
@@ -161,27 +165,17 @@ function Label() {
 ```
 
 ```vue [Vue 3]
-// useI18n.ts
-import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
-
-const i18n = createI18n({ locale: 'en', loaders: {
-  en: () => fetch('/en.json').then(r => r.json())
-}});
-
-export function useI18n() {
-  const locale = ref(i18n.getLocale());
-  let sub;
-  onMounted(() => sub = i18n.subscribe(l => locale.value = l));
-  onUnmounted(() => sub?.());
-  return { t: i18n.t, setLocale: (l) => i18n.load(l).then(() => i18n.setLocale(l)) };
-}
-
-// Component.vue
+// useI18n.ts import { createI18n } from '@vielzeug/i18nit'; import { ref, onMounted, onUnmounted } from 'vue'; const
+i18n = createI18n({ locale: 'en', loaders: { en: () => fetch('/en.json').then(r => r.json()) }}); export function
+useI18n() { const locale = ref(i18n.getLocale()); let sub; onMounted(() => sub = i18n.subscribe(l => locale.value = l));
+onUnmounted(() => sub?.()); return { t: i18n.t, setLocale: (l) => i18n.load(l).then(() => i18n.setLocale(l)) }; } //
+Component.vue
 <script setup>
 const { t } = useI18n();
 </script>
-<template><span>{{ t('key') }}</span></template>
+<template>
+  <span>{{ t('key') }}</span>
+</template>
 ```
 
 ```svelte [Svelte]
@@ -210,9 +204,12 @@ export const setLocale = (l) => i18n.load(l).then(() => i18n.setLocale(l));
 // i18n.ts
 import { createI18n } from '@vielzeug/i18nit';
 
-export const i18n = createI18n({ locale: 'en', loaders: {
-  en: () => fetch('/en.json').then(r => r.json())
-}});
+export const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    en: () => fetch('/en.json').then((r) => r.json()),
+  },
+});
 
 // Component.ts
 class i18nLabel extends HTMLElement {
@@ -229,8 +226,6 @@ customElements.define('i18n-label', i18nLabel);
 
 :::
 
----
-
 ## E-commerce Application
 
 Complete e-commerce example with product listings, cart, and checkout.
@@ -245,8 +240,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' }
-  }
+    es: { title: 'Tienda', cart: 'Carrito ({count})' },
+  },
 });
 
 function EcommerceApp() {
@@ -274,14 +269,14 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' }
-  }
+    es: { title: 'Tienda', cart: 'Carrito ({count})' },
+  },
 });
 
 const cart = ref([]);
 const locale = ref(i18n.getLocale());
 let unsubscribe;
-onMounted(() => unsubscribe = i18n.subscribe(l => locale.value = l));
+onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -327,8 +322,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' }
-  }
+    es: { title: 'Tienda', cart: 'Carrito ({count})' },
+  },
 });
 
 class EcommerceApp extends HTMLElement {
@@ -344,7 +339,10 @@ class EcommerceApp extends HTMLElement {
       <button id="add">Add to Cart</button>
       <button id="es">ES</button>
     `;
-    this.querySelector('#add').onclick = () => { this.#cart.push({}); this.render(); };
+    this.querySelector('#add').onclick = () => {
+      this.#cart.push({});
+      this.render();
+    };
     this.querySelector('#es').onclick = () => i18n.setLocale('es');
   }
 }
@@ -352,8 +350,6 @@ customElements.define('ecommerce-app', EcommerceApp);
 ```
 
 :::
-
----
 
 ## Dashboard with Multi-Language
 
@@ -369,8 +365,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' }
-  }
+    es: { title: 'Panel', stats: 'Usuarios: {count}' },
+  },
 });
 
 function Dashboard() {
@@ -396,13 +392,13 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' }
-  }
+    es: { title: 'Panel', stats: 'Usuarios: {count}' },
+  },
 });
 
 const locale = ref(i18n.getLocale());
 let unsubscribe;
-onMounted(() => unsubscribe = i18n.subscribe(l => locale.value = l));
+onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -445,8 +441,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' }
-  }
+    es: { title: 'Panel', stats: 'Usuarios: {count}' },
+  },
 });
 
 class Dashboard extends HTMLElement {
@@ -468,8 +464,6 @@ customElements.define('dashboard-view', Dashboard);
 
 :::
 
----
-
 ## Authentication System
 
 Complete authentication flow with validation messages.
@@ -484,8 +478,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' }
-  }
+    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
+  },
 });
 
 function AuthForm() {
@@ -494,11 +488,17 @@ function AuthForm() {
   useEffect(() => i18n.subscribe(() => forceUpdate({})), []);
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); setError(i18n.t('error')); }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError(i18n.t('error'));
+      }}>
       <h1>{i18n.t('login')}</h1>
       {error && <p>{error}</p>}
       <button type="submit">{i18n.t('login')}</button>
-      <button type="button" onClick={() => i18n.setLocale('es')}>ES</button>
+      <button type="button" onClick={() => i18n.setLocale('es')}>
+        ES
+      </button>
     </form>
   );
 }
@@ -513,14 +513,14 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' }
-  }
+    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
+  },
 });
 
 const error = ref('');
 const locale = ref(i18n.getLocale());
 let unsubscribe;
-onMounted(() => unsubscribe = i18n.subscribe(l => locale.value = l));
+onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -568,8 +568,8 @@ const i18n = createI18n({
   locale: 'en',
   messages: {
     en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' }
-  }
+    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
+  },
 });
 
 class AuthForm extends HTMLElement {

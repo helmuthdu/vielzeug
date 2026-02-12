@@ -2,6 +2,10 @@
 
 Complete API documentation for `@vielzeug/logit`.
 
+## Table of Contents
+
+[[toc]]
+
 ## Core Logging Methods
 
 All logging methods accept multiple arguments of any type and return `void`.
@@ -92,8 +96,6 @@ Logs trace-level messages with detailed execution information.
 ```ts
 Logit.trace('Function called', { args: arguments, caller: functionName });
 ```
-
----
 
 ## Utility Methods
 
@@ -234,8 +236,6 @@ Logit.assert(isAuthenticated, 'User must be authenticated', {
 // { userId: undefined, endpoint: '/protected-route' }
 ```
 
----
-
 ## Scoped Logger Methods
 
 ### `Logit.scope(namespace)`
@@ -254,7 +254,7 @@ Creates a scoped logger with a namespaced prefix without mutating global state.
 const apiLogger = Logit.scope('api');
 const dbLogger = Logit.scope('database');
 
-apiLogger.info('Request received');  // [API] Request received
+apiLogger.info('Request received'); // [API] Request received
 dbLogger.error('Connection failed'); // [DATABASE] Connection failed
 
 // Global namespace unchanged
@@ -262,14 +262,13 @@ Logit.getPrefix(); // '' (empty)
 ```
 
 **ScopedLogger Methods:**
+
 - `debug(...args): void`
 - `trace(...args): void`
 - `info(...args): void`
 - `success(...args): void`
 - `warn(...args): void`
 - `error(...args): void`
-
----
 
 ## Configuration Methods
 
@@ -348,6 +347,7 @@ Configures remote logging handler with rich metadata support.
 - `remote: LogitRemoteOptions` - Remote logging configuration
 
 **Handler Signature:**
+
 ```ts
 handler: (type: LogitType, metadata: {
   args: any[],
@@ -448,7 +448,7 @@ Toggles or sets the environment indicator visibility (🅿 for production, 🅳 
 Logit.toggleEnvironment(); // Switches between shown/hidden
 
 // Explicitly set state
-Logit.toggleEnvironment(true);  // Show indicator
+Logit.toggleEnvironment(true); // Show indicator
 Logit.toggleEnvironment(false); // Hide indicator
 ```
 
@@ -469,11 +469,9 @@ Toggles or sets timestamp visibility in log output.
 Logit.toggleTimestamp(); // Switches between shown/hidden
 
 // Explicitly set state
-Logit.toggleTimestamp(true);  // Show timestamps
+Logit.toggleTimestamp(true); // Show timestamps
 Logit.toggleTimestamp(false); // Hide timestamps
 ```
-
----
 
 ## Getter Methods
 
@@ -551,8 +549,6 @@ const variant = Logit.getVariant();
 console.log(variant); // 'symbol'
 ```
 
----
-
 ## Types
 
 ### `LogitOptions`
@@ -578,12 +574,15 @@ Remote logging handler configuration with metadata support.
 
 ```ts
 interface LogitRemoteOptions {
-  handler?: (type: LogitType, metadata: {
-    args: any[];
-    timestamp?: string;
-    namespace?: string;
-    environment: 'production' | 'development';
-  }) => void | Promise<void>;
+  handler?: (
+    type: LogitType,
+    metadata: {
+      args: any[];
+      timestamp?: string;
+      namespace?: string;
+      environment: 'production' | 'development';
+    },
+  ) => void | Promise<void>;
   logLevel: LogitLevel;
 }
 ```
@@ -618,8 +617,9 @@ import type { ScopedLogger } from '@vielzeug/logit';
 const logger: ScopedLogger = Logit.scope('module');
 logger.info('Message');
 ```
-  - `type: LogitType` - The log level/type
-  - `...args: any[]` - Original log arguments
+
+- `type: LogitType` - The log level/type
+- `...args: any[]` - Original log arguments
 - `logLevel` - Minimum level to trigger remote logging
 
 ---
@@ -686,8 +686,6 @@ Type representing the Logit object.
 ```ts
 type LogitInstance = typeof Logit;
 ```
-
----
 
 ## Advanced Usage
 

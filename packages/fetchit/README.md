@@ -217,8 +217,6 @@ queryClient.setData(['users', 1], (old) => ({
 queryClient.invalidate(['users']); // Invalidates all user queries
 ```
 
----
-
 ## Advanced Features
 
 ### Request Deduplication
@@ -350,8 +348,6 @@ const unsubscribe = queryClient.subscribe(['users', 1], (state) => {
 unsubscribe();
 ```
 
----
-
 ## TypeScript Support
 
 Full TypeScript support with automatic type inference.
@@ -382,8 +378,6 @@ await queryClient.mutate<User, { name: string; email: string }>({
 }, { name: 'Alice', email: 'alice@example.com' });
 ```
 
----
-
 ## Error Handling
 
 Custom error class with detailed information.
@@ -403,8 +397,6 @@ try {
 }
 ```
 
----
-
 ## Comparison with Alternatives
 
 | Feature | fetchit | TanStack Query | SWR | axios |
@@ -419,8 +411,6 @@ try {
 | Framework Agnostic | ✅ | ✅ | ❌ (React) | ✅ |
 | Separate HTTP Client | ✅ | ❌ | ❌ | ✅ |
 | Query Management | ✅ | ✅ | ✅ | ❌ |
-
----
 
 ## Best Practices
 
@@ -490,8 +480,6 @@ const queryClient = createQueryClient({
   }
 });
 ```
-
----
 
 ## License
 

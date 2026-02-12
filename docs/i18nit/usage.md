@@ -2,6 +2,10 @@
 
 Complete guide to installing and using i18nit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Installation
 
 ::: code-group
@@ -26,33 +30,14 @@ yarn add @vielzeug/i18nit
 import { createI18n } from '@vielzeug/i18nit';
 
 // Optional: Import types and errors
-import type { 
-  I18n, 
-  I18nConfig, 
-  Messages, 
-  TranslateParams,
-  MessageValue,
-  PluralMessages 
-} from '@vielzeug/i18nit';
+import type { I18n, I18nConfig, Messages, TranslateParams, MessageValue, PluralMessages } from '@vielzeug/i18nit';
 
 import { MissingVariableError } from '@vielzeug/i18nit';
 ```
 
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
-
 ## Table of Contents
 
-- [Basic Usage](#basic-usage)
-- [Variable Interpolation](#variable-interpolation)
-- [Missing Variable Handling](#missing-variable-handling)
-- [Pluralization](#pluralization)
-- [Async Loading](#async-loading)
-- [HTML Escaping](#html-escaping)
-- [Framework Integration](#framework-integration)
-- [Advanced Patterns](#advanced-patterns)
-- [Best Practices](#best-practices)
+[[toc]]
 
 ## Basic Usage
 
@@ -166,8 +151,6 @@ const i18n = createI18n({
 
 i18n.t('errors.404'); // "Page not found"
 ```
-
----
 
 ## Pluralization
 
@@ -293,9 +276,11 @@ i18n.t('items', { count: 100 }); // "لا عناصر"
 i18nit automatically handles plural rules for **100+ languages** using the `Intl.PluralRules` API, including:
 
 **Simple (one/other):**
+
 - English (en), German (de), Spanish (es), Italian (it), Portuguese (pt), Dutch (nl), Swedish (sv), Norwegian (no), Danish (da), Finnish (fi)
 
 **Complex (multiple forms):**
+
 - **French (fr)**: one (0-1), other
 - **Arabic (ar)**: zero, one, two, few, many, other
 - **Russian (ru)**: one, few, many, other
@@ -305,6 +290,7 @@ i18nit automatically handles plural rules for **100+ languages** using the `Intl
 - **Ukrainian (uk)**: one, few, many
 
 **No plural forms:**
+
 - Chinese (zh), Japanese (ja), Korean (ko), Vietnamese (vi), Thai (th), Turkish (tr)
 
 **And many more!** All languages supported by JavaScript's `Intl.PluralRules` are automatically supported.
@@ -312,8 +298,6 @@ i18nit automatically handles plural rules for **100+ languages** using the `Intl
 ::: tip Browser Compatibility
 `Intl.PluralRules` is supported in Chrome 63+, Firefox 58+, Safari 13+, and Node.js 10+. For older environments, i18nit gracefully falls back to English-like behavior (one/other).
 :::
-
----
 
 ## Variable Interpolation
 
@@ -400,10 +384,7 @@ const i18n = createI18n({
 
 i18n.t('complex', {
   data: {
-    users: [
-      { profile: { name: 'Alice' } },
-      { profile: { name: 'Bob' } },
-    ],
+    users: [{ profile: { name: 'Alice' } }, { profile: { name: 'Bob' } }],
   },
 });
 // "Name: Alice"
@@ -420,6 +401,7 @@ i18nit supports the following interpolation path formats:
 - `{data.items[0].value}` - Mixed notation
 
 **Limitations:**
+
 - Only **numeric** bracket notation is supported: `[0]`, `[123]`
 - **Quoted keys** are not supported: `["key"]`, `['key']`
 - **Non-numeric brackets** are not supported: `[key]`, `[variableName]`
@@ -524,11 +506,11 @@ try {
   i18n.t('greeting');
 } catch (error) {
   if (error instanceof MissingVariableError) {
-    console.log(error.key);      // 'greeting'
+    console.log(error.key); // 'greeting'
     console.log(error.variable); // 'name'
-    console.log(error.locale);   // 'en'
-    console.log(error.message);  // "Missing variable 'name' for key 'greeting' in locale 'en'"
-    
+    console.log(error.locale); // 'en'
+    console.log(error.message); // "Missing variable 'name' for key 'greeting' in locale 'en'"
+
     // Log to error tracking service
     trackError({
       type: 'missing_i18n_variable',
@@ -541,12 +523,11 @@ try {
 ```
 
 **Benefits of MissingVariableError:**
+
 - Structured data (key, variable, locale) for debugging
 - Can be caught specifically with `instanceof`
 - Useful for error tracking and monitoring
 - Better than generic Error for production debugging
-
----
 
 ## HTML Escaping
 
@@ -584,17 +565,11 @@ const i18n = createI18n({
 });
 
 // Escape for this translation only
-i18n.t('userComment', 
-  { content: '<script>xss</script>' }, 
-  { escape: true }
-);
+i18n.t('userComment', { content: '<script>xss</script>' }, { escape: true });
 // "Comment: &lt;script&gt;xss&lt;/script&gt;"
 
 // No escaping
-i18n.t('userComment', 
-  { content: '<b>Important</b>' }, 
-  { escape: false }
-);
+i18n.t('userComment', { content: '<b>Important</b>' }, { escape: false });
 // "Comment: <b>Important</b>"
 ```
 
@@ -610,14 +585,12 @@ const i18n = createI18n({
 });
 
 // Variables are escaped when escape is enabled
-i18n.t('greeting', 
-  { name: '<script>alert("xss")</script>' }, 
-  { escape: true }
-);
+i18n.t('greeting', { name: '<script>alert("xss")</script>' }, { escape: true });
 // "Hello, &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;!"
 ```
 
 **Escaped Characters:**
+
 - `<` → `&lt;`
 - `>` → `&gt;`
 - `&` → `&amp;`
@@ -627,8 +600,6 @@ i18n.t('greeting',
 ::: warning Security
 Always escape user-generated content in translations to prevent XSS attacks. Use global escaping or per-translation escaping based on your needs.
 :::
-
----
 
 ## Async Loading
 
@@ -708,8 +679,6 @@ await Promise.all([i18n.load('es'), i18n.load('fr'), i18n.load('de')]);
 console.log('All translations loaded');
 ```
 
----
-
 ## Message Functions
 
 ### Basic Functions
@@ -787,8 +756,6 @@ i18n.t('scoreMessage', { score: 95, maxScore: 100 });
 // "Excellent! 95/100 (95.0%)"
 ```
 
----
-
 ## Namespaces
 
 ### Creating Namespaces
@@ -853,8 +820,6 @@ await auth.tl('loginError', undefined, { locale: 'fr' });
 // Same as: await i18n.tl('auth.loginError', undefined, { locale: 'fr' })
 ```
 
----
-
 ## Formatting Helpers
 
 ### Number Formatting
@@ -905,8 +870,6 @@ i18n.date(Date.now(), { dateStyle: 'medium' });
 // "Feb 9, 2026"
 ```
 
----
-
 ## HTML Escaping
 
 ### Global Escaping
@@ -946,8 +909,6 @@ i18n.t('safe', { content: '<script>xss</script>' }, { escape: true });
 i18n.t('html', { content: '<b>bold</b>' }, { escape: false });
 // "This has HTML: <b>bold</b>"
 ```
-
----
 
 ## Message Management
 
@@ -995,8 +956,6 @@ if (i18n.has('greeting', 'es')) {
   console.log('Spanish greeting exists');
 }
 ```
-
----
 
 ## Subscriptions
 
@@ -1052,8 +1011,6 @@ onUnmounted(() => {
 });
 </script>
 ```
-
----
 
 ## Best Practices
 
@@ -1200,8 +1157,6 @@ function Component() {
 }
 ```
 
----
-
 ## Migration Guide
 
 ### From i18next
@@ -1239,4 +1194,3 @@ const i18n = createI18n({ ... });
 ---
 
 For complete application examples, see [Examples](./examples.md). For detailed API reference, see [API Reference](./api.md).
-

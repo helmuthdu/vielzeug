@@ -13,11 +13,13 @@ These are complete application examples. For API reference and basic usage, see 
 ## Basic Logging Operations
 
 ::: details 🔍 Browser Console Tips
+
 - Press `F12` or `Cmd+Option+I` (Mac) / `Ctrl+Shift+I` (Windows) to open DevTools
 - Filter logs by level using the console filter
 - Use `console.clear()` or `Cmd+K` / `Ctrl+L` to clear console
 - Group logs are collapsible for better organization
-:::
+  :::
+
 ### Standard Log Levels
 
 ```ts
@@ -161,15 +163,15 @@ Logit.setPrefix('App');
 
 // Create nested scopes
 const apiLogger = Logit.scope('api');
-apiLogger.info('Request received');  // [APP.API] Request received
+apiLogger.info('Request received'); // [APP.API] Request received
 
 // Further nesting
 Logit.setPrefix('App.api');
 const v1Logger = Logit.scope('v1');
 const v2Logger = Logit.scope('v2');
 
-v1Logger.info('GET /users');  // [APP.API.V1] GET /users
-v2Logger.info('GET /users');  // [APP.API.V2] GET /users
+v1Logger.info('GET /users'); // [APP.API.V1] GET /users
+v2Logger.info('GET /users'); // [APP.API.V2] GET /users
 ```
 
 ### Creating Reusable Logger Wrappers
@@ -223,7 +225,7 @@ Logit.setPrefix(''); // Need to clean up
 const authLogger = Logit.scope('auth');
 const apiLogger = Logit.scope('api');
 
-authLogger.info('Login');  // [AUTH] Login
+authLogger.info('Login'); // [AUTH] Login
 apiLogger.info('Request'); // [API] Request
 // No cleanup needed, no global mutation
 ```
@@ -262,11 +264,12 @@ Logit.error('Error'); // [ERROR] Error
 
 ::: danger ⚠️ Production Logging
 Be careful with log levels in production:
+
 - Disable `trace` and `debug` in production
 - Consider remote logging for error tracking
 - Avoid logging sensitive data (passwords, tokens, PII)
 - Monitor log volume to avoid performance issues
-:::
+  :::
 
 ### Development vs Production
 

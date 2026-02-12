@@ -21,23 +21,23 @@ Validating user input, API responses, and configuration data is critical but oft
 // Manual validation
 function validateUser(data: unknown) {
   const errors: string[] = [];
-  
+
   if (typeof data !== 'object' || data === null) {
     throw new Error('Expected object');
   }
-  
+
   const user = data as Record<string, unknown>;
-  
+
   if (typeof user.email !== 'string' || !user.email.includes('@')) {
     errors.push('Invalid email');
   }
-  
+
   if (typeof user.age !== 'number' || user.age < 18) {
     errors.push('Must be at least 18');
   }
-  
+
   if (errors.length) throw new Error(errors.join(', '));
-  
+
   return user as { email: string; age: number };
 }
 ```
@@ -59,16 +59,16 @@ const user = userSchema.parse(data);
 
 ### Comparison with Alternatives
 
-| Feature                   | Validit   | Zod       | Yup       |
-| ------------------------- | --------- | --------- | --------- |
-| Bundle Size               | **2.0 KB** | ~12 KB    | ~15 KB    |
-| Dependencies              | 0         | 0         | Many      |
-| TypeScript                | Native    | Native    | Good      |
-| Async Validation          | ✅        | ✅        | ✅        |
-| Parallel Arrays           | ✅        | ❌        | ❌        |
-| Convenience Schemas       | ✅        | ❌        | ❌        |
-| Transform Support         | ✅        | ✅        | ✅        |
-| Custom Refinements        | ✅        | ✅        | ✅        |
+| Feature             | Validit    | Zod    | Yup    |
+| ------------------- | ---------- | ------ | ------ |
+| Bundle Size         | **2.0 KB** | ~12 KB | ~15 KB |
+| Dependencies        | 0          | 0      | Many   |
+| TypeScript          | Native     | Native | Good   |
+| Async Validation    | ✅         | ✅     | ✅     |
+| Parallel Arrays     | ✅         | ❌     | ❌     |
+| Convenience Schemas | ✅         | ❌     | ❌     |
+| Transform Support   | ✅         | ✅     | ✅     |
+| Custom Refinements  | ✅         | ✅     | ✅     |
 
 ## When to Use Validit
 
@@ -118,7 +118,8 @@ type User = Infer<typeof schema>;
 Full async support for database checks, API calls, and complex validations.
 
 ```ts
-const schema = v.string()
+const schema = v
+  .string()
   .email()
   .refineAsync(async (email) => {
     const exists = await checkDatabase(email);
@@ -134,11 +135,13 @@ Validate large arrays efficiently with parallel processing.
 
 ```ts
 const schema = v.array(
-  v.object({
-    id: v.number(),
-    name: v.string(),
-  }).refineAsync(async (item) => await validate(item)),
-  { parallel: true } // Process all items concurrently
+  v
+    .object({
+      id: v.number(),
+      name: v.string(),
+    })
+    .refineAsync(async (item) => await validate(item)),
+  { parallel: true }, // Process all items concurrently
 );
 
 await schema.parseAsync(largeArray);
@@ -149,11 +152,11 @@ await schema.parseAsync(largeArray);
 Pre-built schemas for common patterns save you time and code.
 
 ```ts
-v.email()        // Instead of v.string().email()
-v.url()          // Instead of v.string().url()
-v.uuid()         // UUID validation
-v.positiveInt()  // Positive integers
-v.negativeInt()  // Negative integers
+v.email(); // Instead of v.string().email()
+v.url(); // Instead of v.string().url()
+v.uuid(); // UUID validation
+v.positiveInt(); // Positive integers
+v.negativeInt(); // Negative integers
 ```
 
 ### 🔧 Transform Support
@@ -161,15 +164,18 @@ v.negativeInt()  // Negative integers
 Apply transformations after validation for data normalization.
 
 ```ts
-const schema = v.string()
+const schema = v
+  .string()
   .email()
-  .transform(email => email.toLowerCase().trim());
+  .transform((email) => email.toLowerCase().trim());
 
 schema.parse('  USER@EXAMPLE.COM  ');
 // Returns: 'user@example.com'
 ```
 
-## 📦 Installation
+## 🏁 Quick Start
+
+### Installation
 
 ::: code-group
 
@@ -187,7 +193,19 @@ yarn add @vielzeug/validit
 
 :::
 
-## 🎯 Quick Examples
+### Basic Example
+
+```ts
+import { v } from '@vielzeug/validit';
+
+const userSchema = v.object({
+  email: v.email().required(),
+  age: v.number().int().min(18).required(),
+});
+
+// Validate and get typed data
+const user = userSchema.parse(data);
+```
 
 ### Form Validation
 
@@ -195,16 +213,18 @@ yarn add @vielzeug/validit
 import { v, type Infer } from '@vielzeug/validit';
 
 const registrationSchema = v.object({
-  username: v.string()
+  username: v
+    .string()
     .min(3)
     .max(20)
     .pattern(/^[a-zA-Z0-9_]+$/)
     .required('Username is required'),
   email: v.email().required('Email is required'),
-  password: v.string()
+  password: v
+    .string()
     .min(8)
-    .refine(val => /[A-Z]/.test(val), 'Must contain uppercase')
-    .refine(val => /[0-9]/.test(val), 'Must contain number')
+    .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
+    .refine((val) => /[0-9]/.test(val), 'Must contain number')
     .required(),
   age: v.positiveInt().min(13).required(),
 });
@@ -213,7 +233,7 @@ type Registration = Infer<typeof registrationSchema>;
 
 const result = registrationSchema.safeParse(formData);
 if (!result.success) {
-  result.error.issues.forEach(issue => {
+  result.error.issues.forEach((issue) => {
     console.log(`${issue.path.join('.')}: ${issue.message}`);
   });
 }
@@ -229,16 +249,18 @@ const apiResponseSchema = v.object({
     name: v.string(),
     email: v.email(),
   }),
-  meta: v.object({
-    timestamp: v.date(),
-    version: v.string(),
-  }).optional(),
+  meta: v
+    .object({
+      timestamp: v.date(),
+      version: v.string(),
+    })
+    .optional(),
 });
 
 async function fetchData() {
   const response = await fetch('/api/data');
   const json = await response.json();
-  
+
   return apiResponseSchema.parse(json);
 }
 ```
@@ -246,7 +268,8 @@ async function fetchData() {
 ### Async Username Check
 
 ```ts
-const usernameSchema = v.string()
+const usernameSchema = v
+  .string()
   .min(3)
   .max(20)
   .refineAsync(async (username) => {
@@ -257,17 +280,17 @@ const usernameSchema = v.string()
 const result = await usernameSchema.safeParseAsync('john_doe');
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Schemas
 
 Schemas define the shape and constraints of your data:
 
 ```ts
-const stringSchema = v.string();           // Any string
-const emailSchema = v.email();             // Email validation
-const numberSchema = v.number().min(0);    // Number >= 0
-const arraySchema = v.array(v.string());   // Array of strings
+const stringSchema = v.string(); // Any string
+const emailSchema = v.email(); // Email validation
+const numberSchema = v.number().min(0); // Number >= 0
+const arraySchema = v.array(v.string()); // Array of strings
 ```
 
 ### Validation
@@ -302,18 +325,71 @@ type Data = Infer<typeof schema>;
 // { id: number; name: string; tags?: string[] }
 ```
 
-## 🎓 Learn More
+## 📚 Documentation
 
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Next Steps</p>
-    <ul>
-      <li><a href="./usage">Usage Guide</a> - Comprehensive guide to all features</li>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Real-world usage examples</li>
-    </ul>
-  </div>
-</div>
+Explore comprehensive guides and references:
+
+- **[Usage Guide](./usage)** - Complete guide to all validation features
+- **[API Reference](./api)** - Detailed API documentation with all methods
+- **[Examples](./examples)** - Real-world examples and patterns
+
+## ❓ FAQ
+
+### **Q: How does Validit compare to Zod?**
+
+Validit is designed to be smaller (~2KB vs ~12KB) and focuses on simplicity. Zod offers more advanced features like brand types and preprocessing.
+
+### **Q: Can I use Validit with React?**
+
+Yes! Validit is framework-agnostic and works great with React, Vue, Svelte, or any JavaScript framework.
+
+### **Q: Does Validit support async validation?**
+
+Yes, use `refineAsync()` for async validations and `parseAsync()` or `safeParseAsync()` to execute them.
+
+### **Q: Can I create custom validators?**
+
+Yes, use `refine()` for sync validators or `refineAsync()` for async validators:
+
+```ts
+const schema = v.string().refine((val) => val.length > 5, 'Must be longer than 5 characters');
+```
+
+## 🐛 Troubleshooting
+
+### **Validation always fails**
+
+Check that your data matches the schema type. Use `safeParse()` to see detailed error messages:
+
+```ts
+const result = schema.safeParse(data);
+if (!result.success) {
+  console.log(result.error.issues);
+}
+```
+
+### **Type inference not working**
+
+Make sure you're using `type Infer` from validit:
+
+```ts
+import { v, type Infer } from '@vielzeug/validit';
+
+const schema = v.object({ name: v.string() });
+type Data = Infer<typeof schema>;
+```
+
+### **Async validation not running**
+
+Use `parseAsync()` or `safeParseAsync()` instead of `parse()`:
+
+```ts
+// ❌ Won't run async validators
+const result = schema.parse(data);
+
+// ✅ Runs async validators
+const result = await schema.parseAsync(data);
+```
 
 ## 🤝 Contributing
 
@@ -323,3 +399,9 @@ Contributions are welcome! Please read the [Contributing Guide](https://github.c
 
 MIT © [Vielzeug Contributors](https://github.com/helmuthdu/vielzeug/graphs/contributors)
 
+## 🔗 Useful Links
+
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/validit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+- [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/validit/CHANGELOG.md)

@@ -64,10 +64,11 @@ const schema = {
 ### Create Instance
 
 ::: warning 🔍 Choosing an Adapter
+
 - **IndexedDB**: Recommended for production (larger storage, better performance)
 - **LocalStorage**: Simple apps with small data (<5MB)
 - Use the shorthand config for quick setup
-:::
+  :::
 
 ::: code-group
 
@@ -306,7 +307,7 @@ for (const group of byRoleTyped) {
 }
 
 // Example: Filter groups
-const adminGroup = byRoleTyped.find(g => g.key === 'admin');
+const adminGroup = byRoleTyped.find((g) => g.key === 'admin');
 if (adminGroup) {
   console.log('Admin users:', adminGroup.values);
 }

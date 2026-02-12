@@ -180,6 +180,45 @@ await db.bulkDelete(
 );
 ```
 
+## 🎓 Core Concepts
+
+### Schemas
+
+Define your data structure with TypeScript types and indexes:
+
+```ts
+const schema = {
+  tableName: {
+    key: 'id', // Primary key field
+    indexes: ['email'], // Fields to index for fast queries
+    record: {} as MyType, // TypeScript type definition
+  },
+};
+```
+
+### Adapters
+
+Choose between LocalStorage and IndexedDB based on your needs:
+
+- **LocalStorage**: Simple, synchronous, ~10MB limit
+- **IndexedDB**: Powerful, async, unlimited storage, transactions
+
+### Query Builder
+
+Chain methods to filter, sort, and transform your data:
+
+```ts
+await db.query('users').equals('role', 'admin').orderBy('createdAt', 'desc').limit(10).toArray();
+```
+
+### TTL (Time-To-Live)
+
+Set automatic expiration on records:
+
+```ts
+await db.put('cache', data, 3600000); // Expires in 1 hour
+```
+
 ## 📚 Documentation
 
 - **[Usage Guide](./usage.md)**: Detailed setup, adapters, and basic operations

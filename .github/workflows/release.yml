@@ -16,6 +16,7 @@ on:
           - '@vielzeug/permit'
           - '@vielzeug/toolkit'
           - '@vielzeug/validit'
+          - '@vielzeug/wireit'
       bump:
         description: 'Version bump (only used if no change files exist)'
         required: true

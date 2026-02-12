@@ -2,6 +2,10 @@
 
 Complete guide to installing and using Logit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
 ## Installation
 
 ::: code-group
@@ -26,28 +30,12 @@ yarn add @vielzeug/logit
 import { Logit } from '@vielzeug/logit';
 
 // Optional: Import types
-import type { 
-  LogitOptions, 
-  LogitLevel, 
-  LogitType,
-  ScopedLogger,
-  LogitRemoteOptions 
-} from '@vielzeug/logit';
+import type { LogitOptions, LogitLevel, LogitType, ScopedLogger, LogitRemoteOptions } from '@vielzeug/logit';
 ```
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
 
 ## Table of Contents
 
-- [Basic Usage](#basic-usage)
-- [Scoped Loggers](#scoped-loggers)
-- [Log Levels](#log-levels)
-- [Display Variants](#display-variants)
-- [Remote Logging](#remote-logging)
-- [Configuration](#configuration)
-- [Utility Methods](#utility-methods)
+[[toc]]
 
 ## Basic Usage
 
@@ -105,9 +93,9 @@ const dbLogger = Logit.scope('database');
 const cacheLogger = Logit.scope('cache');
 
 // Use them independently
-apiLogger.info('GET /users');          // [API] GET /users
-dbLogger.error('Connection timeout');  // [DATABASE] Connection timeout
-cacheLogger.debug('Cache hit');        // [CACHE] Cache hit
+apiLogger.info('GET /users'); // [API] GET /users
+dbLogger.error('Connection timeout'); // [DATABASE] Connection timeout
+cacheLogger.debug('Cache hit'); // [CACHE] Cache hit
 
 // Global namespace is unchanged
 Logit.getPrefix(); // '' (empty)
@@ -129,11 +117,11 @@ Logit.setPrefix('App');
 
 // Create nested scopes
 const apiLogger = Logit.scope('api');
-apiLogger.info('Request');  // [APP.API] Request
+apiLogger.info('Request'); // [APP.API] Request
 
 Logit.setPrefix('App.api');
 const v1Logger = Logit.scope('v1');
-v1Logger.info('GET /users');  // [APP.API.V1] GET /users
+v1Logger.info('GET /users'); // [APP.API.V1] GET /users
 ```
 
 ### Benefits of Scoped Loggers
@@ -150,13 +138,12 @@ Logit.setPrefix(''); // Need to clean up
 ```
 
 **Advantages:**
+
 - No global state mutation
 - Safe for concurrent operations
 - Easy to pass to modules/functions
 - Clean separation of concerns
 - Type-safe
-
----
 
 ## Log Levels
 
@@ -206,17 +193,17 @@ Logit.toggleTimestamp(); // Toggles current state
 
 // Explicitly set timestamps
 Logit.toggleTimestamp(false); // Hide timestamps
-Logit.toggleTimestamp(true);  // Show timestamps
+Logit.toggleTimestamp(true); // Show timestamps
 
 // Toggle environment indicator (without arguments)
 Logit.toggleEnvironment(); // Toggles current state
 
 // Explicitly set environment
 Logit.toggleEnvironment(false); // Hide environment indicator (🅿/🅳)
-Logit.toggleEnvironment(true);  // Show environment indicator
+Logit.toggleEnvironment(true); // Show environment indicator
 
 // Check current state
-const hasTimestamps = Logit.getTimestamp();    // boolean
+const hasTimestamps = Logit.getTimestamp(); // boolean
 const hasEnvironment = Logit.getEnvironment(); // boolean
 ```
 
@@ -245,11 +232,7 @@ Logit.setRemote({
           timestamp: metadata.timestamp,
           namespace: metadata.namespace,
           environment: metadata.environment,
-          args: metadata.args.map((arg) => 
-            arg instanceof Error 
-              ? { message: arg.message, stack: arg.stack } 
-              : arg
-          ),
+          args: metadata.args.map((arg) => (arg instanceof Error ? { message: arg.message, stack: arg.stack } : arg)),
         }),
       });
     }
@@ -274,7 +257,7 @@ Logit.setRemote({
     if (type === 'error') {
       Sentry.captureMessage(metadata.args.join(' '), {
         level: 'error',
-        tags: { 
+        tags: {
           namespace: metadata.namespace,
           environment: metadata.environment,
         },
@@ -288,14 +271,10 @@ Logit.setRemote({
 // Datadog integration
 Logit.setRemote({
   handler: (type, metadata) => {
-    window.DD_LOGS?.logger.log(
-      type,
-      metadata.args.join(' '),
-      { 
-        namespace: metadata.namespace,
-        environment: metadata.environment,
-      }
-    );
+    window.DD_LOGS?.logger.log(type, metadata.args.join(' '), {
+      namespace: metadata.namespace,
+      environment: metadata.environment,
+    });
   },
   logLevel: 'info',
 });

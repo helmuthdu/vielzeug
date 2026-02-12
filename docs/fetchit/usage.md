@@ -2,6 +2,14 @@
 
 Complete guide to installing and using Fetchit in your projects.
 
+::: tip 💡 API Reference
+This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+:::
+
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -25,10 +33,6 @@ yarn add @vielzeug/fetchit
 ```ts
 import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
 ```
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
-:::
 
 ## Two Ways to Use Fetchit
 

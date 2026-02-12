@@ -1792,8 +1792,6 @@ customElements.define('company-form', CompanyForm);
 
 :::
 
----
-
 ## See Also
 
 - [API Reference](./api.md) - Complete API documentation

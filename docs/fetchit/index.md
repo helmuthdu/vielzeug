@@ -382,6 +382,72 @@ function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
+## 🎓 Core Concepts
+
+### HTTP Client
+
+The foundational layer for making HTTP requests:
+
+```ts
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
+  timeout: 5000,
+  headers: { Authorization: 'Bearer token' },
+  dedupe: true, // Request deduplication (default: true)
+});
+```
+
+Features: request/response interceptors, automatic retries, timeout handling, and request deduplication.
+
+### Query Client
+
+Advanced caching and state management for server data:
+
+```ts
+const queryClient = createQueryClient({
+  cache: {
+    staleTime: 5000, // How long data is fresh (default: 0)
+    gcTime: 300000, // Garbage collection time (default: 5 minutes)
+  },
+  refetch: {
+    onFocus: true, // Refetch when window regains focus
+    onReconnect: true, // Refetch when network reconnects
+  },
+});
+```
+
+Features: automatic caching, background refetching, query invalidation, and optimistic updates.
+
+### Query Keys
+
+Unique identifiers for cached queries. Use arrays for type-safe, hierarchical keys:
+
+```ts
+const queryKeys = {
+  users: {
+    all: () => ['users'],
+    detail: (id: string) => ['users', id],
+    list: (filters: object) => ['users', 'list', filters],
+  },
+};
+```
+
+### Stale-While-Revalidate
+
+Fetchit returns cached data immediately while fetching fresh data in the background:
+
+- **staleTime**: How long data is considered fresh (no refetch if fresh)
+- **gcTime**: How long unused data stays in cache before garbage collection
+
+```ts
+await queryClient.fetch({
+  queryKey: ['users', '1'],
+  queryFn: () => http.get('/users/1'),
+  staleTime: 5000, // Fresh for 5 seconds
+  gcTime: 300000, // Cache for 5 minutes
+});
+```
+
 ## 📚 Documentation
 
 - **[Usage Guide](./usage.md)**: Service configuration, interceptors, and error handling

@@ -2,6 +2,10 @@
 
 Complete API documentation for `@vielzeug/permit`.
 
+## Table of Contents
+
+[[toc]]
+
 ## Core Methods
 
 ### `Permit.register(role, resource, actions)`
@@ -254,8 +258,6 @@ if (adminPerms) {
 
 **Note:** Returns a deep copy to prevent external modification of internal state. All nested Maps and action objects are cloned.
 
----
-
 ## Constants
 
 ### `WILDCARD`
@@ -305,8 +307,6 @@ Permit.register(ANONYMOUS, 'posts', { view: true });
 const malformedUser = null;
 Permit.check(malformedUser, 'posts', 'view'); // true
 ```
-
----
 
 ## Types
 
@@ -453,10 +453,7 @@ const editorResources: ResourcePermissions<User, any> = new Map([
 Type for the complete permissions registry.
 
 ```ts
-type RolesWithPermissions<T extends BaseUser, D extends PermissionData> = Map<
-  string,
-  ResourcePermissions<T, D>
->;
+type RolesWithPermissions<T extends BaseUser, D extends PermissionData> = Map<string, ResourcePermissions<T, D>>;
 ```
 
 **Example:**
@@ -468,8 +465,10 @@ const allPermissions: RolesWithPermissions<User, any> = new Map([
   ['viewer', viewerResources],
 ]);
 ```
+
 }
-```
+
+````
 
 ---
 
@@ -479,7 +478,7 @@ Exported constant for wildcard matching.
 
 ```ts
 export const WILDCARD = '*';
-```
+````
 
 Use this constant to define permissions that apply to all resources or roles.
 
@@ -496,8 +495,6 @@ Permit.register('admin', WILDCARD, {
   delete: true,
 });
 ```
-
----
 
 ## Advanced Usage
 

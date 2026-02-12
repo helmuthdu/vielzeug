@@ -44,6 +44,9 @@ features:
   - title: '@vielzeug/validit'
     details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
+  - title: '@vielzeug/wireit'
+    details: "<img src='/vielzeug/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
+    link: /wireit/
 ---
 
 ## 🚀 Why Vielzeug?
@@ -53,7 +56,7 @@ features:
 - **Consistent API**: Learn one package, and you'll feel at home in all of them.
 - **Modern**: Optimized for ES Modules, tree-shaking, and modern runtimes.
 
-## 🎓 Quick Start
+## 🏁 Quick Start
 
 ::: code-group
 

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/wireit",
+      "comment": "new wireit lib",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/wireit"
+}

@@ -73,15 +73,15 @@ form.submit(async (values) => {
 
 ### Comparison with Alternatives
 
-| Feature             | Formit       | Formik       | React Hook Form |
-| ------------------- | ------------ | ------------ | --------------- |
-| Bundle Size         | **~2.1 KB**  | ~13KB        | ~8KB            |
-| Dependencies        | 0            | React        | React           |
-| TypeScript          | Native       | Good         | Excellent       |
-| Framework           | Agnostic     | React only   | React only      |
-| Granular Validation | ✅           | ❌           | ⚠️              |
-| Field Subscriptions | ✅           | ✅           | ✅              |
-| Custom Bind Config  | ✅           | ❌           | ❌              |
+| Feature             | Formit      | Formik     | React Hook Form |
+| ------------------- | ----------- | ---------- | --------------- |
+| Bundle Size         | **~2.1 KB** | ~13KB      | ~8KB            |
+| Dependencies        | 0           | React      | React           |
+| TypeScript          | Native      | Good       | Excellent       |
+| Framework           | Agnostic    | React only | React only      |
+| Granular Validation | ✅          | ❌         | ⚠️              |
+| Field Subscriptions | ✅          | ✅         | ✅              |
+| Custom Bind Config  | ✅          | ❌         | ❌              |
 
 ## When to Use Formit
 
@@ -244,6 +244,57 @@ function LoginForm() {
     </form>
   );
 }
+```
+
+## 🎓 Core Concepts
+
+### Form State
+
+Formit manages three types of state for you:
+
+- **Values**: The actual form data
+- **Errors**: Validation error messages per field
+- **Meta**: Dirty, touched, and submission state
+
+### Field Paths
+
+Access nested values using dot notation or arrays:
+
+```ts
+form.setValue('user.address.city', 'New York');
+form.getValue('items[0].name');
+form.getValue(['user', 'profile', 'email']);
+```
+
+### Validation
+
+Three levels of validation:
+
+1. **Field-level**: Individual field validators
+2. **Form-level**: Cross-field validation
+3. **Async**: Server-side validation (email uniqueness, etc.)
+
+### Subscriptions
+
+React to form changes:
+
+```ts
+// Subscribe to entire form
+form.subscribe((state) => console.log(state));
+
+// Subscribe to specific field
+form.subscribeField('email', (value, error) => {
+  console.log('Email:', value, error);
+});
+```
+
+### Binding
+
+Automatically wire up inputs with two-way binding:
+
+```ts
+<input {...form.bind('email')} />
+// Generates: value, onChange, onBlur, name
 ```
 
 ## 📚 Documentation
@@ -431,14 +482,14 @@ validators: async (value) => {
   const valid = await checkEmail(value);
   if (!valid) return 'Invalid email';
   // Missing return for valid case!
-}
+};
 
 // ✅ Correct - always returns
 validators: async (value) => {
   const valid = await checkEmail(value);
   if (!valid) return 'Invalid email';
   return undefined; // or just return;
-}
+};
 ```
 
 :::

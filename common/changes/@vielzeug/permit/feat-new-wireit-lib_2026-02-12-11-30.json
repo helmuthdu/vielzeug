@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/permit",
+      "comment": "update docs",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/permit"
+}
