@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/stateit",
+  "entries": [
+    {
+      "version": "1.1.2",
+      "tag": "@vielzeug/stateit_v1.1.2",
+      "date": "Thu, 12 Feb 2026 21:32:58 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "new stateit lib",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e40e244da748675b904a3c6047802b53bad45e15"
+          }
+        ]
+      }
+    }
+  ]
+}
