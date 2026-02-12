@@ -9,7 +9,7 @@ Lightweight, type-safe schema validation for TypeScript. Build robust validation
 - ✅ **Lightweight** - ~3.5 KB gzipped
 - ✅ **Intuitive API** - Inspired by Zod but simpler
 - ✅ **Composable** - Build complex schemas from simple primitives
-- ✅ **Async Validation** - Full support for async validators with parallel array validation
+- ✅ **Async Validation** - Full support for async validators
 - ✅ **Convenience Helpers** - Pre-built schemas for common patterns (email, URL, UUID, etc.)
 - ✅ **Framework Agnostic** - Works anywhere JavaScript runs
 
@@ -182,14 +182,6 @@ const result = await schema.safeParseAsync(value);
 if (result.success) {
   console.log(result.data);
 }
-
-// Parallel array validation
-const schema = v.array(
-  v.string().refineAsync(async (item) => await validate(item)),
-  { parallel: true } // Validate items in parallel
-);
-
-await schema.parseAsync(['item1', 'item2', 'item3']);
 ```
 
 ## Usage Examples
@@ -345,8 +337,7 @@ const itemsSchema = v.array(
     name: v.string(),
   }).refineAsync(async (item) => {
     return await validateItem(item);
-  }, 'Invalid item'),
-  { parallel: true } // Validate all items in parallel
+  }, 'Invalid item')
 );
 
 await itemsSchema.parseAsync(items);
@@ -432,19 +423,18 @@ validit is inspired by Zod but focuses on simplicity and smaller bundle size:
 | Brand Types              | ❌      | ✅     |
 | Discriminated Unions     | ✅      | ✅     |
 
-If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation and parallel processing, use validit.
+If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation, use validit.
 
 ## Performance & Code Quality
 
 validit is designed with performance and maintainability in mind:
 
-### **Parallel Array Validation**
+### **Efficient Validation**
 ```typescript
-// Validate large arrays efficiently
+// Validate arrays with async validators
 const schema = v.array(
   v.object({ id: v.number(), data: v.string() })
-    .refineAsync(async (item) => await validateItem(item)),
-  { parallel: true } // Process all items concurrently
+    .refineAsync(async (item) => await validateItem(item))
 );
 
 // Much faster for large datasets

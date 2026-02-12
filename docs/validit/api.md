@@ -116,19 +116,17 @@ v.oneOf('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
 
 ### Complex Schemas
 
-#### `v.array(schema, options?)`
+#### `v.array(schema)`
 
 Creates an array schema.
 
 ```ts
-v.array(v.string()); // string[]
-v.array(v.number(), { parallel: true }); // number[] with parallel validation
+v.array(v.number()); // number[]
 ```
 
 **Parameters:**
 
 - `schema: Schema<T>` - Schema for array items
-- `options?: { parallel?: boolean }` - Validation options
 
 **Methods:**
 
@@ -576,24 +574,6 @@ Built-in error codes for internationalization:
 
 ## Performance Tips
 
-### Parallel Array Validation
-
-For large arrays with async validation, use parallel mode:
-
-```ts
-const schema = v.array(
-  v
-    .object({
-      id: v.number(),
-      data: v.string(),
-    })
-    .refineAsync(async (item) => await validate(item)),
-  { parallel: true }, // Validate all items concurrently
-);
-
-// Much faster for large datasets
-await schema.parseAsync(largeArray);
-```
 
 ### Reuse Schemas
 

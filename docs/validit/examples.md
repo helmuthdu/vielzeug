@@ -1011,29 +1011,6 @@ const apiKeySchema = v
   }, 'Invalid or expired API key');
 ```
 
-### Parallel Batch Validation
-
-Validate multiple items efficiently using parallel mode.
-
-```ts
-const itemSchema = v
-  .object({
-    id: v.uuid(),
-    name: v.string(),
-  })
-  .refineAsync(async (item) => {
-    // Simulate async validation (e.g., checking against database)
-    const exists = await checkItemExists(item.id);
-    return !exists;
-  }, 'Item already exists');
-
-const batchSchema = v.array(itemSchema, { parallel: true });
-
-// Validate 1000 items in parallel
-const items = generateItems(1000);
-const result = await batchSchema.safeParseAsync(items);
-// Much faster than sequential validation!
-```
 
 ## Union & Discriminated Unions
 

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "docs update",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}
