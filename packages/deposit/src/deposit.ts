@@ -1,11 +1,18 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
+
+/* ============================================
+   deposit - Lightweight client-side data storage
+   ============================================ */
+
 import { Logit } from '@vielzeug/logit';
 import { arrange, group, max, min, type Predicate, search } from '@vielzeug/toolkit';
 
+/* -------------------- Core Types -------------------- */
+
 export type DepotDataRecord<T, K extends keyof T = keyof T> = {
-  indexes?: K[];
   key: K;
   record: T;
+  indexes?: K[];
 };
 
 type DataSchemaDef = Record<string, Record<string, unknown>>;
@@ -23,11 +30,6 @@ export type DepositMigrationFn<S extends DepositDataSchema> = (
 ) => void | Promise<void>;
 
 export type DepositStorageAdapter<S extends DepositDataSchema> = {
-  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
-  bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
-  clear<K extends keyof S>(table: K): Promise<void>;
-  count<K extends keyof S>(table: K): Promise<number>;
-  delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
   get<K extends keyof S, T extends S[K]['record']>(
     table: K,
     key: KeyType<S, K>,
@@ -35,6 +37,11 @@ export type DepositStorageAdapter<S extends DepositDataSchema> = {
   ): Promise<T | undefined>;
   getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
   put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+  delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
+  clear<K extends keyof S>(table: K): Promise<void>;
+  count<K extends keyof S>(table: K): Promise<number>;
+  bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
   connect?(): Promise<void>;
 };
 
@@ -54,10 +61,6 @@ type PatchOperation<T, K = any> =
   | { type: 'delete'; key: K }
   | { type: 'clear' };
 
-/**
- * Extracts the key type for a given table in the schema.
- * Returns the type of the record's key field.
- */
 type KeyType<S extends DepositDataSchema, K extends keyof S> = S[K]['record'][S[K]['key']];
 
 type AdapterConfig<S extends DepositDataSchema> = {
@@ -67,6 +70,74 @@ type AdapterConfig<S extends DepositDataSchema> = {
   schema: S;
   migrationFn?: DepositMigrationFn<S>;
 };
+
+/* -------------------- Schema Validation -------------------- */
+
+function validateDepositSchema<S extends DepositDataSchema>(schema: S): void {
+  for (const [tableName, def] of Object.entries(schema)) {
+    const recordDef = def as DepotDataRecord<any>;
+    if (!recordDef || recordDef.key === undefined) {
+      throw new Error(
+        `Invalid schema: table "${tableName}" missing required "key" field. ` +
+          'Schema entries must have shape: { key: K, record: T, indexes?: K[] }',
+      );
+    }
+  }
+}
+
+/* -------------------- Helper Functions -------------------- */
+
+function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { expiresAt?: number } {
+  if (ttl === undefined) return value;
+  return { ...value, expiresAt: Date.now() + ttl };
+}
+
+function unwrapWithExpiry<T extends Record<string, unknown>>(
+  value: T & { expiresAt?: number },
+  now: number,
+  onExpire?: () => void | Promise<void>,
+): T | undefined {
+  if (value.expiresAt === undefined) return value;
+
+  if (now >= value.expiresAt) {
+    if (onExpire) {
+      const result = onExpire();
+      if (result && typeof (result as Promise<void>).then === 'function') {
+        (result as Promise<void>).catch((err) => {
+          const logger = Logit.scope('Deposit');
+          logger.warn('Failed to clean up expired entry', err);
+        });
+      }
+    }
+    return undefined;
+  }
+
+  return value;
+}
+
+export function runSafe<T extends (...args: any[]) => any>(fn: T, label = 'OPERATION_FAILED'): T {
+  return ((...args: any[]) => {
+    try {
+      const result = fn(...args);
+
+      if (result && typeof result.then === 'function') {
+        return result.catch((err: Error) => {
+          const logger = Logit.scope('Deposit');
+          logger.error(label, err);
+          return undefined;
+        });
+      }
+
+      return result;
+    } catch (err) {
+      const logger = Logit.scope('Deposit');
+      logger.error(label, err);
+      return undefined;
+    }
+  }) as unknown as T;
+}
+
+/* -------------------- Deposit Class -------------------- */
 
 export class Deposit<S extends DepositDataSchema> {
   private readonly adapter: DepositStorageAdapter<S>;
@@ -92,26 +163,6 @@ export class Deposit<S extends DepositDataSchema> {
     }
   }
 
-  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]) {
-    return this.adapter.bulkDelete(table, keys);
-  }
-
-  bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) {
-    return this.adapter.bulkPut(table, values, ttl);
-  }
-
-  clear<K extends keyof S>(table: K) {
-    return this.adapter.clear(table);
-  }
-
-  count<K extends keyof S>(table: K): Promise<number> {
-    return this.adapter.count(table);
-  }
-
-  delete<K extends keyof S>(table: K, key: KeyType<S, K>) {
-    return this.adapter.delete(table, key);
-  }
-
   get<K extends keyof S, T extends S[K]['record']>(
     table: K,
     key: KeyType<S, K>,
@@ -126,6 +177,26 @@ export class Deposit<S extends DepositDataSchema> {
 
   put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number) {
     return this.adapter.put(table, value, ttl);
+  }
+
+  delete<K extends keyof S>(table: K, key: KeyType<S, K>) {
+    return this.adapter.delete(table, key);
+  }
+
+  clear<K extends keyof S>(table: K) {
+    return this.adapter.clear(table);
+  }
+
+  count<K extends keyof S>(table: K): Promise<number> {
+    return this.adapter.count(table);
+  }
+
+  bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) {
+    return this.adapter.bulkPut(table, values, ttl);
+  }
+
+  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]) {
+    return this.adapter.bulkDelete(table, keys);
   }
 
   query<K extends keyof S>(table: K): QueryBuilder<S[K]['record']> {
@@ -201,7 +272,7 @@ export class Deposit<S extends DepositDataSchema> {
   }
 }
 
-/** -------------------- QueryBuilder -------------------- **/
+/* -------------------- QueryBuilder -------------------- */
 
 export class QueryBuilder<T extends Record<string, unknown>> {
   private operations: Array<{ op: (data: T[]) => T[]; name: string; args: unknown[] }> = [];
@@ -241,13 +312,11 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   private pushOp(op: (data: T[]) => T[], name = 'op', args: unknown[] = []): this {
     this.operations.push({ args, name, op });
-    this.cachedSignature = null; // Invalidate cached signature
+    this.cachedSignature = null;
     const opSignature = this.getOpSignature();
     this.invalidateMemo((key: string) => key.startsWith(opSignature));
     return this;
   }
-
-  /** ---- Core select/where operations (no implicit state) ---- */
 
   where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): this {
     return this.pushOp((data) => data.filter((r) => predicate(r[field], r)), 'where', [field, predicate]);
@@ -300,8 +369,6 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return this.pushOp((data) => data.filter((item, idx, arr) => fns.some((fn) => fn(item, idx, arr))), 'or', fns);
   }
 
-  /** ---- Ordering / slicing ---- */
-
   orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): this {
     return this.pushOp(
       (data) => arrange(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
@@ -333,8 +400,6 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   reverse(): this {
     return this.pushOp((data) => [...data].reverse(), 'reverse', []);
   }
-
-  /** ---- Aggregations ---- */
 
   async count(): Promise<number> {
     return (await this.toArray()).length;
@@ -369,8 +434,6 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
   }
 
-  /** ---- Transformations ---- */
-
   modify(callback: (record: T) => T | undefined, context?: { field: keyof T; value: unknown }): this {
     this.hasMutatingOp = true;
     this.dataVersion++;
@@ -392,48 +455,13 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     );
   }
 
-  /**
-   * Groups records by a field value.
-   *
-   * @param field - The field to group by
-   * @returns QueryBuilder instance for chaining
-   *
-   * @remarks
-   * This method changes the result structure. The return type is cast to `T[]` for chaining,
-   * but the actual structure is `Array<{ key: T[K], values: T[] }>`.
-   *
-   * For type-safe results, use {@link toGrouped} instead.
-   *
-   * @example
-   * ```ts
-   * // Option 1: Cast the result manually
-   * const grouped = await query.groupBy('status').toArray();
-   * const result = grouped as unknown as Array<{ key: string, values: User[] }>;
-   *
-   * // Option 2: Use type-safe toGrouped() method (recommended)
-   * const result = await query.toGrouped('status');
-   * ```
-   */
   groupBy<K extends keyof T>(field: K): this {
     return this.pushOp((data) => group(data, (item) => item[field] as any) as unknown as T[], 'groupBy', [field]);
   }
 
-  /**
-   * Type-safe alternative to `groupBy().toArray()`.
-   *
-   * @param field - The field to group by
-   * @returns Promise resolving to grouped results with correct typing
-   *
-   * @example
-   * ```ts
-   * const grouped = await query.toGrouped('status');
-   * // Type: Array<{ key: string, values: User[] }>
-   * ```
-   */
   async toGrouped<K extends keyof T>(field: K): Promise<Array<{ key: T[K]; values: T[] }>> {
     const data = await this.executeOperations();
     const grouped = group(data, (item) => item[field] as any);
-    // group() returns an object, we need to convert to array format
     return Object.entries(grouped).map(([key, values]) => ({
       key: key as T[K],
       values: values as T[],
@@ -443,8 +471,6 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   search(query: string, tone?: number): this {
     return this.pushOp((data) => search(data as unknown as any[], query, tone) as unknown as T[]);
   }
-
-  /** ---- Execution / state ---- */
 
   reset(): this {
     this.operations = [];
@@ -468,7 +494,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   private async executeOperations(): Promise<T[]> {
     const originalData = (await this.adapter.getAll(this.table)) as T[];
-    let data = originalData.slice(); // Create a shallow copy
+    let data = originalData.slice();
 
     for (const { op } of this.operations) {
       data = op(data);
@@ -476,8 +502,6 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
     return data;
   }
-
-  /** ---- Query builder DSL (typed) ---- */
 
   build(conditions: Array<QueryCondition<T>>): this {
     for (const cond of conditions) {
@@ -521,27 +545,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 }
 
-/** -------------------- Schema Validation -------------------- **/
-
-/**
- * Validates that the schema has a proper structure with key fields
- * Throws clear error early if the schema is malformed
- */
-function validateDepositSchema<S extends DepositDataSchema>(schema: S): void {
-  for (const [tableName, def] of Object.entries(schema)) {
-    const recordDef = def as DepotDataRecord<any>;
-    if (!recordDef || recordDef.key === undefined) {
-      throw new Error(
-        'Invalid schema: table "' +
-          tableName +
-          '" missing required "key" field. ' +
-          'Schema entries must have shape: { key: K, record: T, indexes?: K[] }',
-      );
-    }
-  }
-}
-
-/** -------------------- LocalStorageAdapter -------------------- **/
+/* -------------------- LocalStorageAdapter -------------------- */
 
 export class LocalStorageAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
   private readonly dbName: string;
@@ -554,34 +558,6 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
     this.version = version;
     this.schema = schema;
   }
-
-  /** ---- Public API Methods ---- */
-
-  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]) => {
-    const promises = keys.map((key) => this.delete(table, key));
-    await Promise.all(promises);
-  }, 'BULK_DELETE_FAILED');
-
-  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) => {
-    const promises = values.map((v) => this.put(table, v, ttl));
-    await Promise.all(promises);
-  }, 'BULK_PUT_FAILED');
-
-  clear = runSafe(async <K extends keyof S>(table: K) => {
-    const prefix = this.getStorageKey(table);
-    const keysToRemove = this.getTableKeys(prefix);
-    for (const k of keysToRemove) {
-      localStorage.removeItem(k);
-    }
-  }, 'CLEAR_FAILED');
-
-  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
-    return (await this.getAll(table)).length;
-  }, 'COUNT_FAILED');
-
-  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>) => {
-    localStorage.removeItem(this.getStorageKey(table, String(key)));
-  }, 'DELETE_FAILED');
 
   get = runSafe(
     async <K extends keyof S, T extends S[K]['record']>(
@@ -628,7 +604,31 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
     localStorage.setItem(this.getStorageKey(table, String(key)), JSON.stringify(wrapWithExpiry(value, ttl)));
   }, 'PUT_FAILED');
 
-  /** ---- Private Helper Methods ---- */
+  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>) => {
+    localStorage.removeItem(this.getStorageKey(table, String(key)));
+  }, 'DELETE_FAILED');
+
+  clear = runSafe(async <K extends keyof S>(table: K) => {
+    const prefix = this.getStorageKey(table);
+    const keysToRemove = this.getTableKeys(prefix);
+    for (const k of keysToRemove) {
+      localStorage.removeItem(k);
+    }
+  }, 'CLEAR_FAILED');
+
+  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
+    return (await this.getAll(table)).length;
+  }, 'COUNT_FAILED');
+
+  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) => {
+    const promises = values.map((v) => this.put(table, v, ttl));
+    await Promise.all(promises);
+  }, 'BULK_PUT_FAILED');
+
+  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]) => {
+    const promises = keys.map((key) => this.delete(table, key));
+    await Promise.all(promises);
+  }, 'BULK_DELETE_FAILED');
 
   private getTableKeys(prefix: string): string[] {
     return Object.keys(localStorage).filter((k) => k.startsWith(prefix));
@@ -649,32 +649,26 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
           const idPart = this.extractKeyFromStorageKey(storageKey);
           await this.delete(table, idPart as KeyType<S, typeof table>);
         } catch (err) {
-          // Log but don't throw - this is fire-and-forget cleanup
-          Logit.setPrefix('Deposit');
-          Logit.warn(`Failed to delete expired entry: ${storageKey}`, err);
+          const logger = Logit.scope('Deposit');
+          logger.warn(`Failed to delete expired entry: ${storageKey}`, err);
         }
       });
     } catch (err) {
-      // Corrupted JSON - silently skip and delete instead of throwing
-      // This prevents one corrupted entry from breaking the entire getAll batch
       try {
         const idPart = this.extractKeyFromStorageKey(storageKey);
         await this.delete(table, idPart as KeyType<S, typeof table>);
       } catch (deleteErr) {
-        // Even if delete fails, don't throw - just log
-        Logit.setPrefix('Deposit');
-        Logit.warn(`Failed to delete corrupted entry: ${storageKey}`, deleteErr);
+        const logger = Logit.scope('Deposit');
+        logger.warn(`Failed to delete corrupted entry: ${storageKey}`, deleteErr);
       }
 
-      // Log the corruption but return undefined to skip this entry
-      Logit.setPrefix('Deposit');
-      Logit.warn(`Skipping corrupted entry: ${storageKey}`, err);
+      const logger = Logit.scope('Deposit');
+      logger.warn(`Skipping corrupted entry: ${storageKey}`, err);
       return undefined;
     }
   }
 
   private extractKeyFromStorageKey(storageKey: string): string {
-    // Extract key from encoded storage key format: encodedDbName:version:encodedTable:encodedKey
     const parts = storageKey.split(':');
     if (parts.length < 4) {
       throw new Error(`Invalid storage key format: ${storageKey}`);
@@ -694,13 +688,12 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
   }
 
   private getStorageKey<K extends keyof S>(table: K, key?: string | number): string {
-    // Use encodeURIComponent to safely handle special characters including ':'
     const prefix = `${encodeURIComponent(this.dbName)}:${this.version}:${encodeURIComponent(String(table))}:`;
     return key === undefined || key === '' ? prefix : prefix + encodeURIComponent(String(key));
   }
 }
 
-/** -------------------- IndexedDBAdapter -------------------- **/
+/* -------------------- IndexedDBAdapter -------------------- */
 
 export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
   private db: IDBDatabase | null = null;
@@ -716,8 +709,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     this.schema = schema;
     this.migrationFn = migrationFn;
   }
-
-  /** ---- Public API Methods ---- */
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -739,37 +730,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
       request.onerror = () => reject(new Error('Failed to open IndexedDB'));
     });
   }
-
-  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
-      await Promise.all(promises);
-    });
-  }, 'BULK_DELETE_FAILED');
-
-  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
-      await Promise.all(promises);
-    });
-  }, 'BULK_PUT_FAILED');
-
-  clear = runSafe(async <K extends keyof S>(table: K): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.clear());
-    });
-  }, 'CLEAR_FAILED');
-
-  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
-    const records = await this.getAll(table);
-    return records.length;
-  }, 'COUNT_FAILED');
-
-  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> => {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.delete(key as IDBKeyRange));
-    });
-  }, 'DELETE_FAILED');
 
   get = runSafe(
     async <K extends keyof S, T extends S[K]['record']>(
@@ -805,9 +765,38 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     });
   }, 'PUT_FAILED');
 
-  /** ---- Private Helper Methods ---- */
+  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      await this.requestToPromise(store.delete(key as IDBKeyRange));
+    });
+  }, 'DELETE_FAILED');
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: necessary for schema validation and error handling
+  clear = runSafe(async <K extends keyof S>(table: K): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      await this.requestToPromise(store.clear());
+    });
+  }, 'CLEAR_FAILED');
+
+  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
+    const records = await this.getAll(table);
+    return records.length;
+  }, 'COUNT_FAILED');
+
+  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
+      await Promise.all(promises);
+    });
+  }, 'BULK_PUT_FAILED');
+
+  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
+    await this.withTransaction(table, 'readwrite', async (store) => {
+      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
+      await Promise.all(promises);
+    });
+  }, 'BULK_DELETE_FAILED');
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Schema creation requires validation logic
   private createObjectStores(db: IDBDatabase): void {
     for (const [name, def] of Object.entries(this.schema)) {
       if (db.objectStoreNames.contains(name)) continue;
@@ -818,35 +807,29 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
 
       const indexes = recordDef.indexes;
       if (indexes && Array.isArray(indexes)) {
-        // Track created indexes to avoid duplicates
         const createdIndexes = new Set<string>();
 
         for (const index of indexes) {
           const indexName = index as string;
 
-          // Skip if already created (duplicate in schema)
           if (createdIndexes.has(indexName)) {
-            Logit.setPrefix('Deposit');
-            Logit.warn(`Duplicate index "${indexName}" in table "${name}" schema - skipping`);
+            const logger = Logit.scope('Deposit');
+            logger.warn(`Duplicate index "${indexName}" in table "${name}" schema - skipping`);
             continue;
           }
 
-          // Skip if trying to index the key path (redundant)
           if (indexName === keyPath) {
-            Logit.setPrefix('Deposit');
-            Logit.warn(`Skipping index on key path "${indexName}" in table "${name}" - redundant`);
+            const logger = Logit.scope('Deposit');
+            logger.warn(`Skipping index on key path "${indexName}" in table "${name}" - redundant`);
             continue;
           }
 
           try {
-            // Create index with default options (non-unique, no multiEntry)
-            // For custom options, users should use migrationFn
             store.createIndex(indexName, indexName);
             createdIndexes.add(indexName);
           } catch (err) {
-            Logit.setPrefix('Deposit');
-            Logit.error(`Failed to create index "${indexName}" in table "${name}"`, err);
-            // Continue creating other indexes
+            const logger = Logit.scope('Deposit');
+            logger.error(`Failed to create index "${indexName}" in table "${name}"`, err);
           }
         }
       }
@@ -878,21 +861,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED')();
   }
 
-  /**
-   * Executes a function within a transaction context
-   *
-   * Important notes:
-   * - The fn callback must use the provided store parameter for all operations
-   * - The fn's async operations must complete before the transaction auto-commits
-   * - If fn throws or rejects, the transaction is aborted
-   * - The result is only returned after transaction.oncomplete fires
-   * - Don't rely on fn's return value being immediately available - wait for tx.oncomplete
-   *
-   * @param tables - Table name(s) to access
-   * @param mode - Transaction mode ('readonly' | 'readwrite')
-   * @param fn - Function that receives the object store and performs operations
-   * @returns Promise that resolves with fn's result after transaction completes
-   */
   private async withTransaction<T>(
     tables: keyof S | (keyof S)[],
     mode: 'readonly' | 'readwrite',
@@ -909,7 +877,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
       let result: T | undefined;
       let callbackError: Error | undefined;
 
-      // Execute the callback function
       fn(store)
         .then((r) => {
           result = r;
@@ -919,7 +886,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
           this.abortTransaction(tx);
         });
 
-      // Transaction completes successfully - return the result from fn
       tx.oncomplete = () => {
         if (callbackError) {
           reject(new Error(`Transaction callback failed for ${tablesStr}`, { cause: callbackError }));
@@ -928,10 +894,8 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
         }
       };
 
-      // Transaction encountered an error
       tx.onerror = () => reject(new Error(`Transaction error for ${tablesStr}`, { cause: tx.error }));
 
-      // Transaction was aborted (either by callback error or external abort)
       tx.onabort = () => {
         const error = callbackError || tx.error || new Error('Transaction aborted');
         reject(new Error(`Transaction aborted for ${tablesStr}`, { cause: error }));
@@ -945,70 +909,4 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
       req.onerror = () => reject(req.error ?? new Error('IndexedDB request failed'));
     });
   }
-}
-
-/**
- * Wraps a value with an expiry timestamp if TTL is provided.
- */
-function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { expiresAt?: number } {
-  if (ttl === undefined) return value;
-  return { ...value, expiresAt: Date.now() + ttl };
-}
-
-/**
- * Unwraps a value from an expiry wrapper, returns undefined if expired.
- * If expired, calls onExpire callback synchronously (fire-and-forget for async cleanup).
- */
-function unwrapWithExpiry<T extends Record<string, unknown>>(
-  value: T & { expiresAt?: number },
-  now: number,
-  onExpire?: () => void | Promise<void>,
-): T | undefined {
-  if (value.expiresAt === undefined) return value;
-
-  if (now >= value.expiresAt) {
-    // Fire-and-forget cleanup - don't block on async deletion
-    if (onExpire) {
-      const result = onExpire();
-      // If it's a promise, catch errors to prevent unhandled rejections
-      if (result && typeof (result as Promise<void>).then === 'function') {
-        (result as Promise<void>).catch((err) => {
-          Logit.setPrefix('Deposit');
-          Logit.warn('Failed to clean up expired entry', err);
-        });
-      }
-    }
-    return undefined;
-  }
-
-  return value;
-}
-
-/** -------------------- runSafe -------------------- **/
-
-/**
- * Wraps a function to suppress errors and log them with a consistent prefix.
- * For async functions, catches both sync and async errors.
- */
-export function runSafe<T extends (...args: any[]) => any>(fn: T, label = 'OPERATION_FAILED'): T {
-  return ((...args: any[]) => {
-    try {
-      const result = fn(...args);
-
-      // Handle async functions
-      if (result && typeof result.then === 'function') {
-        return result.catch((err: Error) => {
-          Logit.setPrefix('Deposit');
-          Logit.error(label, err);
-          return undefined;
-        });
-      }
-
-      return result;
-    } catch (err) {
-      Logit.setPrefix('Deposit');
-      Logit.error(label, err);
-      return undefined;
-    }
-  }) as unknown as T;
 }
