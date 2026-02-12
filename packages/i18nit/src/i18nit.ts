@@ -1,3 +1,5 @@
+/* -------------------- Core Types -------------------- */
+
 export type Locale = string;
 
 export type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
@@ -16,7 +18,7 @@ export type MessageValue = string | PluralMessages | MessageFunction;
 
 export type Messages = Record<string, MessageValue>;
 
-export type TranslateParams = {
+export type TranslateOptions = {
   locale?: Locale;
   fallback?: string;
   escape?: boolean;
@@ -32,9 +34,10 @@ export type I18nConfig = {
   missingVar?: 'preserve' | 'empty' | 'error';
 };
 
-/**
- * Error thrown when a required variable is missing during interpolation.
- */
+export type LocaleChangeHandler = (locale: Locale) => void;
+
+/* -------------------- Errors -------------------- */
+
 export class MissingVariableError extends Error {
   readonly key: string;
   readonly variable: string;
@@ -49,7 +52,7 @@ export class MissingVariableError extends Error {
   }
 }
 
-/* Helpers */
+/* -------------------- HTML Escaping -------------------- */
 
 const HTML_ENTITIES: Record<string, string> = {
   "'": '&#39;',
@@ -59,131 +62,106 @@ const HTML_ENTITIES: Record<string, string> = {
   '>': '&gt;',
 };
 
-const escapeHtml = (str: string): string => str.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
+}
+
+/* -------------------- Path Resolution -------------------- */
 
 /**
- * Join array elements with natural language formatting using Intl.ListFormat.
- * Automatically supports 100+ languages with proper grammar and conjunctions.
- *
- * Uses the browser/Node.js built-in Intl.ListFormat API which handles:
- * - Locale-specific conjunctions (and/or/etc)
- * - Proper grammar for each language
- * - Oxford comma rules
- * - Right-to-left languages
- *
- * @param items - Array items to join
- * @param locale - Target locale
- * @param type - List type ('conjunction' for "and", 'disjunction' for "or")
- * @returns Formatted list string
+ * Resolves nested properties using dot notation and bracket notation.
+ * Supports: 'user.name', 'items[0]', 'user.items[0].name'
  */
-const formatList = (items: unknown[], locale: string, type: 'conjunction' | 'disjunction'): string => {
-  if (items.length === 0) return '';
-
-  const stringItems = items.map(String);
-
-  try {
-    // Use Intl.ListFormat for automatic locale-aware formatting
-    const formatter = new Intl.ListFormat(locale, { style: 'long', type });
-    return formatter.format(stringItems);
-  } catch {
-    // Fallback for environments without Intl.ListFormat support (very rare)
-    if (stringItems.length === 1) return stringItems[0];
-    if (stringItems.length === 2) {
-      const conjunction = type === 'conjunction' ? 'and' : 'or';
-      return `${stringItems[0]} ${conjunction} ${stringItems[1]}`;
-    }
-    const conjunction = type === 'conjunction' ? 'and' : 'or';
-    const last = stringItems[stringItems.length - 1];
-    const rest = stringItems.slice(0, -1);
-    return `${rest.join(', ')} ${conjunction} ${last}`;
-  }
-};
-
-/**
- * Resolve nested properties using dot notation and numeric bracket notation.
- * Safely handles array access - returns undefined for out-of-bounds indices.
- *
- * @param obj - Object to traverse
- * @param path - Path string to resolve
- * @returns Value at a path or undefined if not found
- */
-const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
-  // Try direct access first (supports literal keys with dots)
+function resolvePath(obj: Record<string, unknown>, path: string): unknown {
+  // Try direct access first (handles keys with dots)
   if (path in obj) return obj[path];
 
-  // Parse and traverse path - matches: word characters, numbers
-  // Regex: /[^.[\]]+/g matches segments between dots and brackets
+  // Parse path segments
   const parts = path.match(/[^.[\]]+/g) || [];
   let value: unknown = obj;
 
   for (const part of parts) {
     if (value == null || typeof value !== 'object') return undefined;
 
-    // Safe array access - check bounds
     if (Array.isArray(value)) {
       const index = Number(part);
-      if (!Number.isNaN(index) && index >= 0 && index < value.length) {
-        value = value[index];
-      } else {
+      if (Number.isNaN(index) || index < 0 || index >= value.length) {
         return undefined;
       }
+      value = value[index];
     } else {
       value = (value as Record<string, unknown>)[part];
     }
   }
 
   return value;
+}
+
+/* -------------------- List Formatting -------------------- */
+
+/**
+ * Formats an array as a natural language list using Intl.ListFormat.
+ * Automatically handles locale-specific conjunctions and grammar.
+ */
+function formatList(items: unknown[], locale: string, type: 'conjunction' | 'disjunction'): string {
+  if (items.length === 0) return '';
+
+  const stringItems = items.map(String);
+
+  try {
+    const formatter = new Intl.ListFormat(locale, { style: 'long', type });
+    return formatter.format(stringItems);
+  } catch {
+    // Fallback for environments without Intl.ListFormat
+    if (stringItems.length === 1) return stringItems[0];
+    if (stringItems.length === 2) {
+      const separator = type === 'conjunction' ? 'and' : 'or';
+      return `${stringItems[0]} ${separator} ${stringItems[1]}`;
+    }
+    const separator = type === 'conjunction' ? 'and' : 'or';
+    const last = stringItems.pop()!;
+    return `${stringItems.join(', ')} ${separator} ${last}`;
+  }
+}
+
+/* -------------------- Variable Interpolation -------------------- */
+
+type InterpolateOptions = {
+  locale?: Locale;
+  missingVar?: 'preserve' | 'empty' | 'error';
+  key?: string;
 };
 
 /**
- * Interpolate variables into a template string.
+ * Interpolates variables into a template string.
  *
- * Template format:
- * - {variableName} - Simple variable
- * - {nested.path} - Nested object access
- * - {array[0]} - Array index (safe - returns empty if out of bounds)
- * - {array} - Array join with default separator (', ')
- * - {array|and} - Array join with locale-aware 'and' (automatically supports 100+ languages via Intl.ListFormat)
- * - {array|or} - Array join with locale-aware 'or' (automatically supports 100+ languages via Intl.ListFormat)
- * - {array| - } - Array join with custom separator
- * - {array.length} - Array length
- *
- * Uses Intl.ListFormat for locale-aware list formatting, which automatically handles:
- * - All languages supported by the browser/runtime (100+ languages)
- * - Proper conjunctions for each language
- * - Oxford comma rules
- * - Right-to-left languages
- * - No manual language configuration needed
- *
- * @param template - Template string with {variable} placeholders
- * @param vars - Variables object
- * @param options - Interpolation options
- * @returns Interpolated string
- * @throws {MissingVariableError} When missingVar is 'error' and a variable is not found
+ * Supported formats:
+ * - {name} - Simple variable
+ * - {user.name} - Nested property
+ * - {items[0]} - Array index
+ * - {items} - Array (comma-separated)
+ * - {items|and} - Array with locale-aware "and"
+ * - {items|or} - Array with locale-aware "or"
+ * - {items| - } - Array with custom separator
+ * - {items.length} - Array length
  */
-const interpolate = (
-  template: string,
-  vars: Record<string, unknown>,
-  options: {
-    locale?: Locale;
-    missingVar?: 'preserve' | 'empty' | 'error';
-    key?: string; // For better error messages
-  } = {},
-): string => {
+function interpolate(template: string, vars: Record<string, unknown>, options: InterpolateOptions = {}): string {
   const missingVar = options.missingVar ?? 'empty';
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Variable interpolation requires conditional logic
-  return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (match, key, separator) => {
-    // Handle array.length special case
-    let isLengthAccess = false;
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for variable interpolation
+  return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (match, key: string, separator?: string) => {
+    // Handle .length property
     let actualKey = key;
+    let isLength = false;
+
     if (key.endsWith('.length')) {
-      isLengthAccess = true;
-      actualKey = key.slice(0, -7); // Remove '.length'
+      actualKey = key.slice(0, -7);
+      isLength = true;
     }
 
     const value = resolvePath(vars, actualKey);
 
+    // Handle missing variables
     if (value == null) {
       if (missingVar === 'preserve') return match;
       if (missingVar === 'error') {
@@ -194,27 +172,15 @@ const interpolate = (
 
     // Handle arrays
     if (Array.isArray(value)) {
-      // Array length
-      if (isLengthAccess) {
-        return String(value.length);
-      }
+      if (isLength) return String(value.length);
 
-      // Array joining with separator
       if (separator !== undefined) {
-        // Locale-aware special separators using Intl.ListFormat
-        if (separator === 'and') {
-          const locale = options.locale || 'en';
-          return formatList(value, locale, 'conjunction');
-        }
-        if (separator === 'or') {
-          const locale = options.locale || 'en';
-          return formatList(value, locale, 'disjunction');
-        }
-        // Custom separator
+        const locale = options.locale || 'en';
+        if (separator === 'and') return formatList(value, locale, 'conjunction');
+        if (separator === 'or') return formatList(value, locale, 'disjunction');
         return value.map(String).join(separator);
       }
 
-      // Default array join with comma and space
       return value.map(String).join(', ');
     }
 
@@ -223,44 +189,33 @@ const interpolate = (
       try {
         return new Intl.NumberFormat(options.locale).format(value);
       } catch {
-        // Fall through to string conversion
+        // Fall through
       }
     }
 
     return String(value);
   });
-};
+}
 
-/* Pluralization */
-
-type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+/* -------------------- Pluralization -------------------- */
 
 /**
- * Get the plural form for a number in a given locale using Intl.PluralRules API.
- *
- * Automatically handles all locale-specific plural rules including:
- * - English: one/other
- * - Arabic: zero/one/two/few/many/other
- * - Russian/Polish: one/few/many/other
- * - And 100+ other languages
- *
- * @param locale - Locale string (e.g., 'en-US', 'fr')
- * @param count - Number to pluralize
- * @returns Plural category
+ * Gets the plural form for a number using Intl.PluralRules.
+ * Automatically handles all locale-specific plural rules.
  */
-const getPluralForm = (locale: Locale, count: number): PluralCategory => {
+function getPluralForm(locale: Locale, count: number): PluralForm {
   const n = Math.abs(Math.floor(count));
 
   try {
-    const pluralRules = new Intl.PluralRules(locale);
-    return pluralRules.select(n) as PluralCategory;
+    const rules = new Intl.PluralRules(locale);
+    return rules.select(n) as PluralForm;
   } catch {
-    // Fallback to English-like behavior if locale is invalid
+    // Fallback to English-like behavior
     return n === 1 ? 'one' : 'other';
   }
-};
+}
 
-type LocaleChangeHandler = (locale: Locale) => void;
+/* -------------------- I18n Class -------------------- */
 
 class I18n {
   private locale: Locale;
@@ -277,17 +232,18 @@ class I18n {
   constructor(config: I18nConfig = {}) {
     this.locale = config.locale ?? 'en';
     this.fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
-
     this.escape = config.escape ?? false;
     this.missingKey = config.missingKey ?? ((key) => key);
     this.missingVar = config.missingVar ?? 'empty';
 
+    // Load initial messages
     if (config.messages) {
       for (const [locale, messages] of Object.entries(config.messages)) {
         this.catalogs.set(locale, messages);
       }
     }
 
+    // Register loaders
     if (config.loaders) {
       for (const [locale, loader] of Object.entries(config.loaders)) {
         this.loaders.set(locale, loader);
@@ -295,7 +251,7 @@ class I18n {
     }
   }
 
-  // Locale Management
+  /* -------------------- Locale Management -------------------- */
 
   setLocale(locale: Locale): void {
     if (this.locale === locale) return;
@@ -307,14 +263,20 @@ class I18n {
     return this.locale;
   }
 
-  // Message Management
+  /* -------------------- Message Management -------------------- */
 
+  /**
+   * Adds messages to a locale (merges with existing).
+   */
   add(locale: Locale, messages: Messages): void {
     const existing = this.catalogs.get(locale) ?? {};
     this.catalogs.set(locale, { ...existing, ...messages });
     this.notifySubscribers();
   }
 
+  /**
+   * Sets messages for a locale (replaces existing).
+   */
   set(locale: Locale, messages: Messages): void {
     this.catalogs.set(locale, messages);
     this.notifySubscribers();
@@ -329,13 +291,16 @@ class I18n {
   }
 
   has(key: string, locale?: Locale): boolean {
-    return this.findMessage(key, locale) !== undefined;
+    return this.findMessage(key, locale ?? this.locale) !== undefined;
   }
 
-  // Async Loaders
+  /* -------------------- Async Loaders -------------------- */
 
   async load(locale: Locale): Promise<void> {
+    // Return existing loading promise
     if (this.loading.has(locale)) return this.loading.get(locale);
+
+    // Already loaded
     if (this.catalogs.has(locale)) return;
 
     const loader = this.loaders.get(locale);
@@ -346,9 +311,7 @@ class I18n {
         const messages = await loader();
         this.add(locale, messages);
       } catch (error) {
-        // Log loader failures for visibility
         console.warn(`[I18n] Failed to load locale '${locale}':`, error);
-        // Re-throw so callers can handle errors
         throw error;
       } finally {
         this.loading.delete(locale);
@@ -365,20 +328,26 @@ class I18n {
 
   async hasAsync(key: string, locale?: Locale): Promise<boolean> {
     const targetLocale = locale ?? this.locale;
+
     if (!this.catalogs.has(targetLocale) && this.loaders.has(targetLocale)) {
       await this.load(targetLocale);
     }
+
     return this.has(key, targetLocale);
   }
 
-  // Translation
+  /* -------------------- Translation -------------------- */
 
-  t(key: string, vars?: Record<string, unknown>, options?: TranslateParams): string {
+  /**
+   * Translates a key with optional variables.
+   */
+  t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string {
     const opts = options ?? {};
     const targetLocale = opts.locale ?? this.locale;
     const shouldEscape = opts.escape ?? this.escape;
 
     const message = this.findMessage(key, targetLocale);
+
     if (message === undefined) {
       return opts.fallback ?? this.missingKey(key, targetLocale);
     }
@@ -386,22 +355,24 @@ class I18n {
     return this.formatMessage(message, vars ?? {}, targetLocale, shouldEscape, key);
   }
 
-  async tl(key: string, vars?: Record<string, unknown>, options?: TranslateParams): Promise<string> {
+  /**
+   * Translates a key with automatic async loading.
+   */
+  async tl(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): Promise<string> {
     const targetLocale = options?.locale ?? this.locale;
 
     if (!this.catalogs.has(targetLocale) && this.loaders.has(targetLocale)) {
       try {
         await this.load(targetLocale);
       } catch {
-        // Loader errors are already logged in load(), continue with fallback
-        // This catch prevents the error from propagating to the caller
+        // Error already logged in load()
       }
     }
 
     return this.t(key, vars, options);
   }
 
-  // Formatting Helpers
+  /* -------------------- Formatting Helpers -------------------- */
 
   number(value: number, options?: Intl.NumberFormatOptions, locale?: Locale): string {
     try {
@@ -420,26 +391,29 @@ class I18n {
     }
   }
 
-  // Namespaced Translator
+  /* -------------------- Namespaced Translator -------------------- */
 
   namespace(ns: string) {
     return {
-      t: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) =>
+      t: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) =>
         this.t(`${ns}.${key}`, vars, options),
-      tl: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) =>
+      tl: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) =>
         this.tl(`${ns}.${key}`, vars, options),
     };
   }
 
-  // Subscriptions
+  /* -------------------- Subscriptions -------------------- */
 
   subscribe(handler: LocaleChangeHandler): () => void {
     this.subscribers.add(handler);
+
+    // Call handler immediately with the current locale
     try {
       handler(this.locale);
     } catch {
       // Ignore handler errors
     }
+
     return () => this.subscribers.delete(handler);
   }
 
@@ -453,10 +427,10 @@ class I18n {
     }
   }
 
-  // Internal Helpers
+  /* -------------------- Internal Helpers -------------------- */
 
-  private findMessage(key: string, locale?: Locale): MessageValue | undefined {
-    const locales = this.getLocaleChain(locale ?? this.locale);
+  private findMessage(key: string, locale: Locale): MessageValue | undefined {
+    const locales = this.getLocaleChain(locale);
 
     for (const loc of locales) {
       const messages = this.catalogs.get(loc);
@@ -486,7 +460,7 @@ class I18n {
     return chain;
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for message formatting
   private formatMessage(
     message: MessageValue,
     vars: Record<string, unknown>,
@@ -494,7 +468,7 @@ class I18n {
     shouldEscape: boolean,
     key?: string,
   ): string {
-    // Handle function messages
+    // Function messages
     if (typeof message === 'function') {
       try {
         const result = message(vars, {
@@ -507,12 +481,12 @@ class I18n {
       }
     }
 
-    // Handle plural messages
+    // Plural messages
     if (typeof message === 'object' && 'other' in message) {
       const count = Number(vars.count ?? 0);
       const pluralMsg = message as PluralMessages;
 
-      // Prefer an explicit 'zero' form when the count is 0
+      // Prefer an explicit 'zero' form
       let form: PluralForm;
       if (count === 0 && pluralMsg.zero !== undefined) {
         form = 'zero';
@@ -525,7 +499,7 @@ class I18n {
       return shouldEscape ? escapeHtml(result) : result;
     }
 
-    // Handle string messages
+    // String messages
     if (typeof message === 'string') {
       const result = interpolate(message, vars, { key, locale, missingVar: this.missingVar });
       return shouldEscape ? escapeHtml(result) : result;
@@ -534,6 +508,8 @@ class I18n {
     return '';
   }
 }
+
+/* -------------------- Factory Function -------------------- */
 
 export function createI18n(config?: I18nConfig): I18n {
   return new I18n(config);
