@@ -65,10 +65,10 @@ Control which logs are displayed based on severity:
 // Set minimum log level
 Logit.setLogLevel('warn');
 
-Logit.debug('Not shown');   // ❌ Below threshold
-Logit.info('Not shown');    // ❌ Below threshold
-Logit.warn('Shown');        // ✅ At threshold
-Logit.error('Shown');       // ✅ Above threshold
+Logit.debug('Not shown'); // ❌ Below threshold
+Logit.info('Not shown'); // ❌ Below threshold
+Logit.warn('Shown'); // ✅ At threshold
+Logit.error('Shown'); // ✅ Above threshold
 
 // Disable all logs
 Logit.setLogLevel('off');
@@ -78,6 +78,7 @@ Logit.setLogLevel('debug');
 ```
 
 **Log Level Hierarchy (most to least verbose):**
+
 ```
 debug → trace → time → table → info → success → warn → error → off
 ```
@@ -106,7 +107,7 @@ Add context to your logs with namespaces:
 
 ```typescript
 Logit.setPrefix('Auth');
-Logit.info('Login attempt');     // [AUTH] Login attempt
+Logit.info('Login attempt'); // [AUTH] Login attempt
 Logit.error('Invalid credentials'); // [AUTH] Invalid credentials
 
 // Clear namespace
@@ -126,9 +127,9 @@ const apiLogger = Logit.scope('api');
 const dbLogger = Logit.scope('database');
 const cacheLogger = Logit.scope('cache');
 
-apiLogger.info('GET /users');          // [APP.API] GET /users
-dbLogger.error('Connection timeout');  // [APP.DATABASE] Connection timeout
-cacheLogger.debug('Cache hit');        // [APP.CACHE] Cache hit
+apiLogger.info('GET /users'); // [APP.API] GET /users
+dbLogger.error('Connection timeout'); // [APP.DATABASE] Connection timeout
+cacheLogger.debug('Cache hit'); // [APP.CACHE] Cache hit
 
 // Global namespace unchanged
 Logit.getPrefix(); // 'App'
@@ -136,10 +137,11 @@ Logit.getPrefix(); // 'App'
 // Nested scopes
 Logit.setPrefix('App.api');
 const v1Logger = Logit.scope('v1');
-v1Logger.info('Request');              // [APP.API.V1] Request
+v1Logger.info('Request'); // [APP.API.V1] Request
 ```
 
 **Benefits:**
+
 - No global state mutation
 - Safe for concurrent operations
 - Clean separation of concerns
@@ -174,12 +176,13 @@ Logit.setRemote({
 Logit.setLogLevel('debug'); // Console shows all logs
 // But remote only receives warn/error
 
-Logit.info('Local only');  // ✅ Console, ❌ Remote
-Logit.warn('Both');        // ✅ Console, ✅ Remote
-Logit.error('Both');       // ✅ Console, ✅ Remote
+Logit.info('Local only'); // ✅ Console, ❌ Remote
+Logit.warn('Both'); // ✅ Console, ✅ Remote
+Logit.error('Both'); // ✅ Console, ✅ Remote
 ```
 
 **Metadata sent to handler:**
+
 ```typescript
 {
   args: any[],           // Log arguments
@@ -208,11 +211,7 @@ Logit.setRemote({
 // Datadog
 Logit.setRemote({
   handler: (type, metadata) => {
-    window.DD_LOGS?.logger.log(
-      type,
-      metadata.args.join(' '),
-      { namespace: metadata.namespace }
-    );
+    window.DD_LOGS?.logger.log(type, metadata.args.join(' '), { namespace: metadata.namespace });
   },
   logLevel: 'info',
 });
@@ -238,7 +237,7 @@ Automatically shows production/development indicators:
 // Enable environment indicator (default)
 Logit.showEnvironment(true);
 Logit.info('Message'); // 🅸 🅳 Message (in development)
-                       // 🅸 🅿 Message (in production)
+// 🅸 🅿 Message (in production)
 
 // Disable environment indicator
 Logit.showEnvironment(false);
@@ -291,12 +290,13 @@ Logit.assert(user !== null, 'User should exist', { userId: 123 });
 
 ```typescript
 Logit.setup({
-  logLevel: 'info',        // Minimum log level
-  namespace: 'MyApp',      // Global namespace
-  variant: 'symbol',       // Display variant
-  timestamp: true,         // Show timestamps
-  environment: true,       // Show environment indicator
-  remote: {                // Remote logging config
+  logLevel: 'info', // Minimum log level
+  namespace: 'MyApp', // Global namespace
+  variant: 'symbol', // Display variant
+  timestamp: true, // Show timestamps
+  environment: true, // Show environment indicator
+  remote: {
+    // Remote logging config
     handler: remoteHandler,
     logLevel: 'warn',
   },
@@ -306,11 +306,11 @@ Logit.setup({
 ### Getters
 
 ```typescript
-Logit.getLevel();         // Current log level
-Logit.getPrefix();        // Current namespace
-Logit.getTimestamp();     // Timestamp enabled?
-Logit.getEnvironment();   // Environment indicator enabled?
-Logit.getVariant();       // Current variant
+Logit.getLevel(); // Current log level
+Logit.getPrefix(); // Current namespace
+Logit.getTimestamp(); // Timestamp enabled?
+Logit.getEnvironment(); // Environment indicator enabled?
+Logit.getVariant(); // Current variant
 ```
 
 ### Setters
@@ -463,11 +463,13 @@ Logit.groupEnd();
 ## Browser vs Node.js
 
 ### Browser
+
 - Styled console output with colors and symbols
 - CSS-based formatting
 - Environment detection via `import.meta.env` or `process.env`
 
 ### Node.js
+
 - Plain text output with labels
 - No CSS styling
 - Environment detection via `process.env.NODE_ENV`
@@ -475,11 +477,13 @@ Logit.groupEnd();
 **Example output:**
 
 **Browser:**
+
 ```
 🅸 🅳 14:23:45.123 User authenticated
 ```
 
 **Node.js:**
+
 ```
 INFO | 🅳 | User authenticated
 ```
@@ -489,7 +493,7 @@ INFO | 🅳 | User authenticated
 Full TypeScript support with exported types:
 
 ```typescript
-import { 
+import {
   Logit,
   type LogitType,
   type LogitLevel,
@@ -552,11 +556,11 @@ if (process.env.NODE_ENV === 'production') {
 ### 4. Leverage Log Levels Appropriately
 
 ```typescript
-Logit.debug('Detailed debugging info');      // Development only
-Logit.info('User logged in');                // General information
-Logit.success('Payment processed');          // Success states
-Logit.warn('API rate limit: 90%');           // Warnings
-Logit.error('Payment failed:', error);       // Errors
+Logit.debug('Detailed debugging info'); // Development only
+Logit.info('User logged in'); // General information
+Logit.success('Payment processed'); // Success states
+Logit.warn('API rate limit: 90%'); // Warnings
+Logit.error('Payment failed:', error); // Errors
 ```
 
 ## Performance
@@ -588,4 +592,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ---
 
 Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
-

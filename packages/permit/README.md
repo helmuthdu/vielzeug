@@ -62,6 +62,7 @@ Permit.check(user, 'posts', 'delete'); // false
 ### Permission Actions
 
 Four standard CRUD actions are supported:
+
 - `read` - Read/view access
 - `create` - Create new resources
 - `update` - Modify existing resources
@@ -70,14 +71,16 @@ Four standard CRUD actions are supported:
 ### Permission Types
 
 #### Static Permissions (Boolean)
+
 ```typescript
 Permit.register('admin', 'posts', {
-  read: true,  // Always allowed
+  read: true, // Always allowed
   delete: false, // Always denied
 });
 ```
 
 #### Dynamic Permissions (Function)
+
 ```typescript
 Permit.register('editor', 'posts', {
   update: (user, data) => {
@@ -94,6 +97,7 @@ Permit.check(user, 'posts', 'update'); // false (no data provided)
 ### Wildcards
 
 #### Wildcard Role - Apply to All Users
+
 ```typescript
 import { WILDCARD } from '@vielzeug/permit';
 
@@ -105,6 +109,7 @@ Permit.check(anyUser, 'posts', 'read'); // true
 ```
 
 #### Wildcard Resource - Apply to All Resources
+
 ```typescript
 // Admins can view everything
 Permit.register('admin', WILDCARD, { read: true });
@@ -116,7 +121,9 @@ Permit.check(admin, 'anything', 'read'); // true
 ```
 
 #### Precedence
+
 Specific permissions override wildcard permissions:
+
 ```typescript
 Permit.register('admin', WILDCARD, { read: true });
 Permit.register('admin', 'secrets', { read: false });
@@ -169,15 +176,18 @@ Permit.register<TUser, TData>(
 ```
 
 **Parameters:**
+
 - `role` - Role identifier (normalized)
 - `resource` - Resource identifier (normalized)
 - `actions` - Object mapping actions to permissions (boolean or function)
 
 **Throws:**
+
 - `Error` if role or resource is empty
 - `Error` if invalid action is provided
 
 **Example:**
+
 ```typescript
 Permit.register('moderator', 'comments', {
   read: true,
@@ -189,6 +199,7 @@ Permit.register('moderator', 'comments', {
 ```
 
 **Behavior:**
+
 - Merges with existing permissions (doesn't replace)
 - Validates action keys at runtime
 - Normalizes role and resource
@@ -209,12 +220,14 @@ Permit.set<TUser, TData>(
 ```
 
 **Parameters:**
+
 - `role` - Role identifier
 - `resource` - Resource identifier
 - `actions` - Permission actions
 - `replace` - If `true`, replaces existing; if `false`, merges (default: `false`)
 
 **Example:**
+
 ```typescript
 // Merge with existing
 Permit.set('editor', 'posts', { read: true, create: true });
@@ -239,6 +252,7 @@ Permit.check<TUser, TData>(
 ```
 
 **Parameters:**
+
 - `user` - User object with `id` and `roles` properties
 - `resource` - Resource identifier
 - `action` - Permission action to check
@@ -247,6 +261,7 @@ Permit.check<TUser, TData>(
 **Returns:** `true` if allowed, `false` otherwise
 
 **Example:**
+
 ```typescript
 const user = { id: '123', roles: ['editor'] };
 
@@ -258,6 +273,7 @@ Permit.check(user, 'posts', 'update', { authorId: '123' }); // boolean
 ```
 
 **Behavior:**
+
 - First-match-wins policy (first allow grants access)
 - Checks specific roles before wildcard
 - Function permissions return `false` if data is undefined
@@ -278,11 +294,13 @@ Permit.unregister(
 ```
 
 **Parameters:**
+
 - `role` - Role identifier
 - `resource` - Resource identifier
 - `action` - Optional specific action to remove
 
 **Example:**
+
 ```typescript
 // Remove specific action
 Permit.unregister('editor', 'posts', 'delete');
@@ -292,6 +310,7 @@ Permit.unregister('editor', 'posts');
 ```
 
 **Behavior:**
+
 - Automatically cleans up empty resource entries
 - Automatically cleans up empty role entries
 - Safe to call on non-existent permissions
@@ -307,12 +326,14 @@ Permit.hasRole(user: BaseUser, role: string): boolean
 ```
 
 **Parameters:**
+
 - `user` - User object
 - `role` - Role to check for
 
 **Returns:** `true` if user has the role, `false` otherwise
 
 **Example:**
+
 ```typescript
 const user = { id: '1', roles: ['admin', 'editor'] };
 
@@ -322,6 +343,7 @@ Permit.hasRole(user, 'moderator'); // false
 ```
 
 **Behavior:**
+
 - Case-insensitive comparison
 - Returns `true` for ANONYMOUS if user is malformed
 
@@ -336,6 +358,7 @@ Permit.clear(): void
 ```
 
 **Example:**
+
 ```typescript
 Permit.clear();
 // All permissions removed
@@ -354,6 +377,7 @@ get roles(): RolesWithPermissions
 **Returns:** Deep copy of the permission registry
 
 **Example:**
+
 ```typescript
 const permissions = Permit.roles;
 
@@ -367,6 +391,7 @@ for (const [role, resources] of permissions) {
 ```
 
 **Behavior:**
+
 - Returns deep copy (modifications don't affect internal state)
 - Useful for debugging and introspection
 
@@ -439,13 +464,13 @@ Inspect all registered permissions:
 ```typescript
 function auditPermissions() {
   const permissions = Permit.roles;
-  
+
   for (const [role, resources] of permissions) {
     console.log(`\nRole: ${role}`);
-    
+
     for (const [resource, actions] of resources) {
       console.log(`  Resource: ${resource}`);
-      
+
       for (const [action, permission] of Object.entries(actions)) {
         const type = typeof permission === 'function' ? 'dynamic' : 'static';
         console.log(`    ${action}: ${type}`);
@@ -467,7 +492,7 @@ describe('Permissions', () => {
 
   it('should allow admin to delete posts', () => {
     Permit.register('admin', 'posts', { delete: true });
-    
+
     const admin = { id: '1', roles: ['admin'] };
     expect(Permit.check(admin, 'posts', 'delete')).toBe(true);
   });
@@ -476,7 +501,7 @@ describe('Permissions', () => {
     Permit.register('editor', 'posts', {
       update: (user, data) => user.id === data.authorId,
     });
-    
+
     const editor = { id: '1', roles: ['editor'] };
     expect(Permit.check(editor, 'posts', 'update', { authorId: '2' })).toBe(false);
   });
@@ -519,6 +544,7 @@ Permit.check(user, 'posts', 'update', { authorId: '123' }); // true/false
 ### Allow-on-Any Policy
 
 Permission checks use "allow on any true" policy:
+
 - First matching allow grants access
 - No explicit deny rules
 - Absence of permission = deny
@@ -639,16 +665,16 @@ Permit.register(ROLES.ADMIN, 'posts', { delete: true });
 
 ## Comparison
 
-| Feature | @vielzeug/permit | casl | accesscontrol |
-|---------|------------------|------|---------------|
-| Bundle Size | **~2KB** | ~15KB | ~10KB |
-| Dependencies | 1 (logging) | Multiple | 0 |
-| TypeScript | First-class | Good | Basic |
-| Dynamic Permissions | ✅ Functions | ✅ Conditions | ❌ |
-| Normalization | ✅ Built-in | ❌ | ❌ |
-| Wildcards | ✅ Role + Resource | ⚠️ Limited | ✅ |
-| Type Exports | ✅ All types | ⚠️ Some | ❌ |
-| Security Defaults | ✅ Safe malformed users | ⚠️ | ⚠️ |
+| Feature             | @vielzeug/permit        | casl          | accesscontrol |
+| ------------------- | ----------------------- | ------------- | ------------- |
+| Bundle Size         | **~2KB**                | ~15KB         | ~10KB         |
+| Dependencies        | 1 (logging)             | Multiple      | 0             |
+| TypeScript          | First-class             | Good          | Basic         |
+| Dynamic Permissions | ✅ Functions            | ✅ Conditions | ❌            |
+| Normalization       | ✅ Built-in             | ❌            | ❌            |
+| Wildcards           | ✅ Role + Resource      | ⚠️ Limited    | ✅            |
+| Type Exports        | ✅ All types            | ⚠️ Some       | ❌            |
+| Security Defaults   | ✅ Safe malformed users | ⚠️            | ⚠️            |
 
 ## License
 
@@ -664,4 +690,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ---
 
 Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
-

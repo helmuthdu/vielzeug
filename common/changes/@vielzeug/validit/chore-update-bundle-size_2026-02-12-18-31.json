@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/validit",
+      "comment": "update bundle sizes",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/validit"
+}

@@ -11,7 +11,7 @@ Type-safe form state management with effortless validation. Build robust forms w
 - ✅ **Nested Paths** - Deep object and array support with dot/bracket notation
 - ✅ **Performance** - Targeted validation (only touched fields, specific subsets)
 - ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Lightweight** - Zero dependencies, minimal footprint
+- ✅ **Lightweight** - 2.4 KB gzipped, zero dependencies
 - ✅ **Developer Experience** - Intuitive API with comprehensive helpers
 
 ## Installation

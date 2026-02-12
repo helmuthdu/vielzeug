@@ -12,7 +12,7 @@ Type-safe browser storage utility with a unified API for IndexedDB and LocalStor
 - ✅ **Transactions** - Atomic operations across multiple tables
 - ✅ **Migrations** - Built-in schema versioning for IndexedDB
 - ✅ **Resilient** - Graceful handling of corrupted entries
-- ✅ **Lightweight** - ~5.3 KB gzipped
+- ✅ **Lightweight** - 4.4 KB gzipped
 - ✅ **Zero Runtime Dependencies** - Only development dependencies for utilities
 
 ## Installation
@@ -411,7 +411,7 @@ await db.get('invalid', 'key');
 | Query Builder      | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
 | Migrations         | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
 | LocalStorage       | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size        | **~4.2 KB**    | ~20 KB      | ~8 KB       | 0 KB             |
+| Bundle Size        | **~4 KB**      | ~20 KB      | ~8 KB       | 0 KB             |
 | TTL Support        | ✅ Native      | ❌          | ❌          | ❌               |
 | Schema Validation  | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
 | Type-safe Grouping | ✅ Yes         | ❌          | ❌          | ❌               |

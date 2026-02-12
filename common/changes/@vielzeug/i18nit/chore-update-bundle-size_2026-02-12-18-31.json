@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "update bundle sizes",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}

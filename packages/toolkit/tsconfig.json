@@ -1,7 +1,5 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.d.ts", "src/**/*.ts",
-    "../deposit/src/storage.util.examples.ts"
-  ],
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "../deposit/src/storage.util.examples.ts"],
   "exclude": ["node_modules"]
 }

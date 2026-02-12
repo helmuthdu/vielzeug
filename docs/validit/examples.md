@@ -1011,7 +1011,6 @@ const apiKeySchema = v
   }, 'Invalid or expired API key');
 ```
 
-
 ## Union & Discriminated Unions
 
 ### API Response Union

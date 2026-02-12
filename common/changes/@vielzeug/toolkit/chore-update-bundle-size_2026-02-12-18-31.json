@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/toolkit",
+      "comment": "update bundle sizes",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/toolkit"
+}

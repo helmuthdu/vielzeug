@@ -60,7 +60,7 @@ npm install @vielzeug/i18nit
 - Pluralization and interpolation support
 - Async translation loading
 - Framework agnostic with React hooks
-- Locale fallback support (1.2 KB gzipped)
+- Locale fallback support (2.4 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/i18nit/) • [Examples](https://helmuthdu.github.io/vielzeug/i18nit/examples)
 
@@ -79,7 +79,7 @@ npm install @vielzeug/fetchit
 - Separate HTTP and Query clients for flexibility
 - Smart caching with configurable staleness
 - Request deduplication
-- Automatic retry logic (2.9 KB gzipped)
+- Automatic retry logic (3.4 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/fetchit/) • [Examples](https://helmuthdu.github.io/vielzeug/fetchit/examples)
 
@@ -98,7 +98,7 @@ npm install @vielzeug/deposit
 - Unified API for IndexedDB and LocalStorage
 - Advanced querying and filtering
 - Schema migrations
-- TTL (Time-To-Live) support (3.9 KB gzipped)
+- TTL (Time-To-Live) support (4.4 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/deposit/) • [Examples](https://helmuthdu.github.io/vielzeug/deposit/examples)
 
@@ -117,7 +117,7 @@ npm install @vielzeug/logit
 - Multiple log levels with filtering
 - Custom themes and colors
 - Remote logging support
-- Scoped loggers (1.9 KB gzipped)
+- Scoped loggers (2.4 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/logit/) • [Examples](https://helmuthdu.github.io/vielzeug/logit/examples)
 
@@ -136,7 +136,7 @@ npm install @vielzeug/permit
 - Role-based access control (RBAC)
 - Dynamic rules with context
 - Wildcard support
-- Type-safe permission checks (1.5 KB gzipped)
+- Type-safe permission checks (2.0 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/logit/) • [Examples](https://helmuthdu.github.io/vielzeug/permit/examples)
 
@@ -154,10 +154,48 @@ npm install @vielzeug/toolkit
 
 - 100+ utilities for arrays, objects, strings, dates, and more
 - Full TypeScript support with inference
-- Tree-shakeable by design (0.1-0.2 KB per utility)
+- Tree-shakeable by design (0.1-0.5 KB per utility)
 - Zero dependencies
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/toolkit/) • [Examples](https://helmuthdu.github.io/vielzeug/toolkit/examples)
+
+---
+
+### [@vielzeug/validit](packages/validit) - Schema Validation
+
+Lightweight, type-safe schema validation with async support and zero dependencies.
+
+```bash
+npm install @vielzeug/validit
+```
+
+**Key Features:**
+
+- Type-safe schema definitions with inference
+- Async validation support
+- Custom refinements and transforms
+- Comprehensive error handling (2.8 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/validit/) • [Examples](https://helmuthdu.github.io/vielzeug/validit/examples)
+
+---
+
+### [@vielzeug/wireit](packages/wireit) - Dependency Injection
+
+Type-safe dependency injection container with async support and scoped lifetimes.
+
+```bash
+npm install @vielzeug/wireit
+```
+
+**Key Features:**
+
+- Type-safe container with token-based dependencies
+- Async factory support
+- Scoped lifetimes (singleton, transient, scoped)
+- Testing helpers (2.1 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/wireit/) • [Examples](https://helmuthdu.github.io/vielzeug/wireit/examples)
 
 ## 🏁 Quick Start
 
@@ -256,7 +294,9 @@ vielzeug/
 │   ├── i18nit/        # Internationalization
 │   ├── logit/         # Logging utility
 │   ├── permit/        # Permission management
-│   └── toolkit/       # Utility library
+│   ├── toolkit/       # Utility library
+│   ├── validit/       # Schema validation
+│   └── wireit/        # Dependency injection
 ├── docs/              # VitePress documentation
 └── common/            # Shared configuration
 ```
@@ -278,17 +318,17 @@ All sizes are measured as **minified + gzipped** production builds:
 
 | Package           | Minified Size              | Gzipped Size  | Dependencies |
 | ----------------- | -------------------------- | ------------- | ------------ |
-| @vielzeug/deposit | **18.8 KB**                | 5.3 KB        | 1\*          |
-| @vielzeug/fetchit | **10.7 KB**                | 3.5 KB        | 2\*          |
-| @vielzeug/formit  | **7.3 KB**                 | 2.4 KB        | 0            |
-| @vielzeug/i18nit  | **7.1 KB**                 | 2.3 KB        | 0            |
-| @vielzeug/logit   | **8.3 KB**                 | 2.7 KB        | 0            |
-| @vielzeug/permit  | **7.0 KB**                 | 2.3 KB        | 1\*          |
-| @vielzeug/toolkit | **0.1-0.2 KB** per utility | 0.2-0.5 KB    | 0-1\*        |
-| @vielzeug/validit | **14.8 KB**                | 3.5 KB        | 0            |
-| @vielzeug/wireit  | **8.2 KB**                 | 2.2 KB        | 0            |
+| @vielzeug/deposit | **16 KB**                  | **4.4 KB**    | 2\*          |
+| @vielzeug/fetchit | **10 KB**                  | **3.4 KB**    | 1\*          |
+| @vielzeug/formit  | **7.2 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/i18nit  | **7.4 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/logit   | **6.8 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
+| @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
+| @vielzeug/validit | **14 KB**                  | **2.8 KB**    | 0            |
+| @vielzeug/wireit  | **8.0 KB**                 | **2.1 KB**    | 0            |
 
-\* Only depends on other @vielzeug packages (permit depends on @vielzeug/logit; fetchit depends on @vielzeug/toolkit and @vielzeug/logit; deposit depends on @vielzeug/logit; toolkit utilities may depend on other toolkit utilities)
+\* Only depends on other @vielzeug packages (deposit depends on @vielzeug/logit and @vielzeug/toolkit; fetchit depends on @vielzeug/toolkit; permit depends on @vielzeug/logit; toolkit utilities may depend on other toolkit utilities)
 
 ## 🌐 Browser & Node.js Support
 

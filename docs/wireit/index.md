@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.2_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.1_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -79,7 +79,7 @@ const service = container.get(UserService);
 
 | Feature          | Wireit    | InversifyJS | TSyringe |
 | ---------------- | --------- | ----------- | -------- |
-| Bundle Size      | **~3 KB** | ~14KB       | ~7KB     |
+| Bundle Size      | **~2 KB** | ~14KB       | ~7KB     |
 | Dependencies     | 0         | 1           | 2        |
 | Decorators       | ❌        | ✅          | ✅       |
 | Async Support    | ✅        | ✅          | ❌       |

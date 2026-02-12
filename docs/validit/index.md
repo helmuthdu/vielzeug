@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.5_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-2.8_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -59,16 +59,16 @@ const user = userSchema.parse(data);
 
 ### Comparison with Alternatives
 
-| Feature             | Validit    | Zod    | Yup    |
-| ------------------- | ---------- | ------ | ------ |
-| Bundle Size         | **2.0 KB** | ~12 KB | ~15 KB |
-| Dependencies        | 0          | 0      | Many   |
-| TypeScript          | Native     | Native | Good   |
-| Async Validation    | ✅         | ✅     | ✅     |
-| Parallel Arrays     | ✅         | ❌     | ❌     |
-| Convenience Schemas | ✅         | ❌     | ❌     |
-| Transform Support   | ✅         | ✅     | ✅     |
-| Custom Refinements  | ✅         | ✅     | ✅     |
+| Feature             | Validit   | Zod    | Yup    |
+| ------------------- | --------- | ------ | ------ |
+| Bundle Size         | **~3 KB** | ~12 KB | ~15 KB |
+| Dependencies        | 0         | 0      | Many   |
+| TypeScript          | Native    | Native | Good   |
+| Async Validation    | ✅        | ✅     | ✅     |
+| Parallel Arrays     | ✅        | ❌     | ❌     |
+| Convenience Schemas | ✅        | ❌     | ❌     |
+| Transform Support   | ✅        | ✅     | ✅     |
+| Custom Refinements  | ✅        | ✅     | ✅     |
 
 ## When to Use Validit
 
@@ -128,7 +128,6 @@ const schema = v
 
 await schema.parseAsync('user@example.com');
 ```
-
 
 ### 🎨 Convenience Schemas
 
