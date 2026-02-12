@@ -49,6 +49,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/stateit",
+      "projectFolder": "packages/stateit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/toolkit",
       "projectFolder": "packages/toolkit",
       "shouldPublish": true,

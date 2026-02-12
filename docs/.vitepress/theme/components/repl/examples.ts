@@ -225,6 +225,186 @@ Permit.register('user', 'profile', {
 console.log('Permit initialized!')`,
     },
   },
+  stateit: {
+    'basic-store': {
+      name: 'Basic Store - Counter',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+// Create a simple counter store
+const counterStore = createStore({ count: 0 })
+
+// Subscribe to changes
+counterStore.subscribe((state, prev) => {
+  console.log(\`Count changed: \${prev.count} → \${state.count}\`)
+})
+
+// Update state
+console.log('Initial:', counterStore.get())
+counterStore.set({ count: 1 })
+counterStore.set({ count: 2 })
+counterStore.set({ count: 3 })`,
+    },
+    'selective-subscription': {
+      name: 'Selective Subscription',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const userStore = createStore({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com'
+})
+
+// Subscribe to specific field only
+userStore.subscribe(
+  (state) => state.name,
+  (name, prevName) => {
+    console.log(\`Name: \${prevName} → \${name}\`)
+  }
+)
+
+// Only name changes trigger the subscription
+userStore.set({ name: 'Bob' }) // Logs
+userStore.set({ age: 31 }) // Doesn't log
+userStore.set({ email: 'bob@example.com' }) // Doesn't log
+userStore.set({ name: 'Charlie' }) // Logs`,
+    },
+    'async-updates': {
+      name: 'Async State Updates',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const dataStore = createStore({
+  data: null,
+  loading: false,
+  error: null
+})
+
+// Subscribe to loading state
+dataStore.subscribe(
+  (state) => state.loading,
+  (loading) => {
+    console.log('Loading:', loading)
+  }
+)
+
+// Simulate async data fetch
+async function fetchData() {
+  dataStore.set({ loading: true, error: null })
+  
+  try {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    const data = { id: 1, title: 'Sample Data' }
+    
+    dataStore.set({ data, loading: false })
+    console.log('Data loaded:', data)
+  } catch (error) {
+    dataStore.set({ error, loading: false })
+    console.error('Error:', error)
+  }
+}
+
+await fetchData()`,
+    },
+    'scoped-stores': {
+      name: 'Scoped Stores - Isolated State',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const appStore = createStore({
+  theme: 'light',
+  language: 'en'
+})
+
+// Create child store with overrides
+const draftStore = appStore.createChild({
+  theme: 'dark'
+})
+
+console.log('Parent theme:', appStore.get().theme) // 'light'
+console.log('Child theme:', draftStore.get().theme) // 'dark'
+
+// Child changes don't affect parent
+draftStore.set({ language: 'es' })
+console.log('Parent language:', appStore.get().language) // 'en'
+console.log('Child language:', draftStore.get().language) // 'es'`,
+    },
+    'computed-values': {
+      name: 'Computed Values via Subscriptions',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const cartStore = createStore({
+  items: [
+    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
+    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
+  ]
+})
+
+// Subscribe to computed total
+cartStore.subscribe(
+  (state) => state.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  ),
+  (total) => {
+    console.log('Cart total: $' + total.toFixed(2))
+  }
+)
+
+// Initial total logged
+// Update cart
+cartStore.set({
+  items: [
+    ...cartStore.get().items,
+    { id: 3, name: 'Orange', price: 1.2, quantity: 4 }
+  ]
+})`,
+    },
+    'todo-list': {
+      name: 'Todo List Example',
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const todoStore = createStore({
+  todos: [],
+  filter: 'all' // 'all' | 'active' | 'completed'
+})
+
+// Subscribe to filtered todos
+todoStore.subscribe(
+  (state) => {
+    const { todos, filter } = state
+    switch (filter) {
+      case 'active':
+        return todos.filter(t => !t.completed)
+      case 'completed':
+        return todos.filter(t => t.completed)
+      default:
+        return todos
+    }
+  },
+  (filtered) => {
+    console.log('Filtered todos:', filtered)
+  }
+)
+
+// Add todos
+const todos = [
+  { id: 1, text: 'Learn Stateit', completed: false },
+  { id: 2, text: 'Build app', completed: false },
+  { id: 3, text: 'Deploy', completed: false }
+]
+
+todoStore.set({ todos })
+
+// Mark one as completed
+const updatedTodos = todoStore.get().todos.map(t =>
+  t.id === 1 ? { ...t, completed: true } : t
+)
+todoStore.set({ todos: updatedTodos })
+
+// Change filter
+todoStore.set({ filter: 'active' })
+todoStore.set({ filter: 'completed' })`,
+    },
+  },
   validit: {
     'basic-schema': {
       name: 'Basic Schema',

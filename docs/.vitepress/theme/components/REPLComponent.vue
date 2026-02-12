@@ -309,26 +309,28 @@ let currentLibraryModule = null;
 
 // Library descriptions
 const libraryDescriptions = {
-  toolkit: 'A comprehensive utility library with functions for arrays, objects, and more.',
   deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
   formit: 'Type-safe form state and validation for React and beyond.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
+  stateit: 'Tiny, framework-agnostic state management with reactive subscriptions.',
+  toolkit: 'A comprehensive utility library with functions for arrays, objects, and more.',
   validit: 'Type-safe schema validation with advanced error handling.',
   wireit: 'Lightweight dependency injection container with IoC principles.',
 };
 
 // Library loaders
 const libraryLoaders = {
-  toolkit: () => import('@vielzeug/toolkit'),
   deposit: () => import('@vielzeug/deposit'),
   fetchit: () => import('@vielzeug/fetchit'),
   formit: () => import('@vielzeug/formit'),
   i18nit: () => import('@vielzeug/i18nit'),
   logit: () => import('@vielzeug/logit'),
   permit: () => import('@vielzeug/permit'),
+  stateit: () => import('@vielzeug/stateit'),
+  toolkit: () => import('@vielzeug/toolkit'),
   validit: () => import('@vielzeug/validit'),
   wireit: () => import('@vielzeug/wireit'),
 };
@@ -355,6 +357,7 @@ const libraryExports = ref({
   i18nit: ['createI18n'],
   logit: ['Logit'],
   permit: ['Permit'],
+  stateit: ['createStore', 'createTestStore', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
   validit: ['v'],
   wireit: [
     'createContainer',

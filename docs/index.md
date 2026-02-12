@@ -41,6 +41,9 @@ features:
   - title: '@vielzeug/permit'
     details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/
+  - title: '@vielzeug/stateit'
+    details: "<img src='/vielzeug/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    link: /stateit/
   - title: '@vielzeug/validit'
     details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
