@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "docs update",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}

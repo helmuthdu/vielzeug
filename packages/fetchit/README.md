@@ -6,7 +6,7 @@ Modern, type-safe HTTP client with intelligent caching, request deduplication, a
 
 - ✅ **Type-Safe** - Full TypeScript support with automatic type inference
 - ✅ **Zero Dependencies** - Only requires `@vielzeug/toolkit` for retry logic
-- ✅ **Lightweight** - ~3 KB gzipped
+- ✅ **Lightweight** - ~3.5 KB gzipped
 - ✅ **Smart Caching** - TanStack Query-inspired caching with stale-while-revalidate
 - ✅ **Request Deduplication** - Prevents duplicate in-flight requests
 - ✅ **Async Validation** - Built-in retry logic with exponential backoff

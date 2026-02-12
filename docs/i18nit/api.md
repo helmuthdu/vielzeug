@@ -924,12 +924,114 @@ i18n.t('userInfo', { user: { name: 'Bob', email: 'bob@example.com' } });
 
 ```ts
 const messages = {
-  list: 'Items: {items[0]}, {items[1]}',
+  first: 'First: {items[0]}',
+  outOfBounds: 'Tenth: {items[10]}', // Safe - returns empty if out of bounds
 };
 
-i18n.t('list', { items: ['apple', 'banana'] });
-// "Items: apple, banana"
+i18n.t('first', { items: ['apple', 'banana'] });
+// "First: apple"
+
+i18n.t('outOfBounds', { items: ['apple'] });
+// "Tenth: " (empty, no error)
 ```
+
+**Array joining:**
+
+```ts
+const messages = {
+  // Default comma separator
+  shopping: 'Shopping list: {items}',
+
+  // Natural "and" list
+  guests: 'Invited: {names|and}',
+
+  // Natural "or" list
+  options: 'Choose: {choices|or}',
+
+  // Custom separator
+  path: 'Path: {folders| / }',
+
+  // Array length
+  count: 'You have {items.length} items',
+
+  // Combined features
+  summary: 'First: {items[0]}, Total: {items.length}, All: {items|and}',
+};
+
+// Default comma
+i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
+// "Shopping list: Apple, Banana, Orange"
+
+// "and" separator
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invited: Alice, Bob and Charlie"
+
+// "or" separator
+i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
+// "Choose: Tea, Coffee or Juice"
+
+// Custom separator
+i18n.t('path', { folders: ['home', 'user', 'documents'] });
+// "Path: home / user / documents"
+
+// Array length
+i18n.t('count', { items: ['A', 'B', 'C'] });
+// "You have 3 items"
+
+// Combined
+i18n.t('summary', { items: ['Apple', 'Banana', 'Orange'] });
+// "First: Apple, Total: 3, All: Apple, Banana and Orange"
+```
+
+**Array handling summary:**
+
+| Syntax              | Description                                            | Example Output                |
+| ------------------- | ------------------------------------------------------ | ----------------------------- |
+| `{items}`           | Default join (`, `)                                    | `"A, B, C"`                   |
+| `{items\|and}`      | Locale-aware "and" via Intl.ListFormat (100+ languages) | `"A, B, and C"` (English)     |
+| `{items\|or}`       | Locale-aware "or" via Intl.ListFormat (100+ languages)  | `"A, B, or C"` (English)      |
+| `{items\| - }`      | Custom separator                                       | `"A - B - C"`                 |
+| `{items.length}`    | Array length                                           | `"3"`                         |
+| `{items[0]}`        | Safe index (empty if bounds)                           | `"A"` or `""`                 |
+| `{items[0].name}`   | Nested array access                                    | Accesses nested object        |
+| `{user.items}`      | Nested array join                                      | `"A, B, C"`                   |
+| `{user.items\|and}` | Nested array with separator                            | `"A, B, and C"` (English)     |
+
+**Intl.ListFormat - Automatic Language Support:**
+
+The `and` and `or` separators use the browser/runtime's built-in **Intl.ListFormat API** which automatically handles list formatting for **100+ languages** with:
+
+- ✅ **Automatic conjunctions** - Correct "and"/"or" word for each language
+- ✅ **Proper grammar** - Oxford comma, locale-specific punctuation
+- ✅ **Unicode CLDR standards** - International standard for list formatting
+- ✅ **Right-to-left languages** - Arabic, Hebrew, etc.
+- ✅ **Zero maintenance** - No manual language configuration required
+
+**Examples across languages:**
+
+| Language   | Locale | "and" Example                    | "or" Example                     |
+| ---------- | ------ | -------------------------------- | -------------------------------- |
+| English    | en     | "A, B, and C" (Oxford comma)     | "A, B, or C" (Oxford comma)      |
+| Spanish    | es     | "A, B y C"                       | "A, B o C"                       |
+| French     | fr     | "A, B et C"                      | "A, B ou C"                      |
+| German     | de     | "A, B und C"                     | "A, B oder C"                    |
+| Italian    | it     | "A, B e C"                       | "A, B o C"                       |
+| Portuguese | pt     | "A, B e C"                       | "A, B ou C"                      |
+| Russian    | ru     | "A, B и C"                       | "A, B или C"                     |
+| Japanese   | ja     | "A、B、C" (Japanese comma)       | "A、B、または C"                 |
+| Chinese    | zh     | "A、B和C"                        | "A、B或C"                        |
+| Arabic     | ar     | Proper RTL with "و"              | Proper RTL with "أو"             |
+
+And **90+ more languages** automatically supported!
+
+**Browser Support:**
+- Chrome 72+ (2019)
+- Firefox 78+ (2020)
+- Safari 14.1+ (2021)
+- Edge 79+ (2020)
+- Node.js 12+ (2019)
+
+For older environments, gracefully falls back to English formatting.
 
 ---
 

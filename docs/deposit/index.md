@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-4.2_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-5.3_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>

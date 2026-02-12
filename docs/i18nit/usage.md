@@ -353,12 +353,15 @@ i18n.t('address', {
 
 ### Array Variables
 
+#### Array Index Access (Safe)
+
 ```ts
 const i18n = createI18n({
   messages: {
     en: {
       firstItem: 'First: {items[0]}',
-      shopping: 'Shopping list: {items[0]}, {items[1]}, {items[2]}',
+      thirdItem: 'Third: {items[2]}',
+      outOfBounds: 'Tenth: {items[10]}',
     },
   },
 });
@@ -366,8 +369,224 @@ const i18n = createI18n({
 i18n.t('firstItem', { items: ['Apple', 'Banana', 'Orange'] });
 // "First: Apple"
 
-i18n.t('shopping', { items: ['Milk', 'Bread', 'Eggs'] });
-// "Shopping list: Milk, Bread, Eggs"
+i18n.t('thirdItem', { items: ['Apple', 'Banana', 'Orange'] });
+// "Third: Orange"
+
+// Safe - returns empty string for out-of-bounds
+i18n.t('outOfBounds', { items: ['Apple'] });
+// "Tenth: "
+```
+
+#### Array Joining (Default Separator)
+
+Arrays can be automatically joined with a comma and space:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      shopping: 'Shopping list: {items}',
+      tags: 'Tags: {tags}',
+    },
+  },
+});
+
+i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
+// "Shopping list: Apple, Banana, Orange"
+
+i18n.t('tags', { tags: ['typescript', 'javascript', 'node'] });
+// "Tags: typescript, javascript, node"
+
+// Works with any array length
+i18n.t('shopping', { items: [] });
+// "Shopping list: "
+
+i18n.t('shopping', { items: ['Apple'] });
+// "Shopping list: Apple"
+```
+
+#### Array with "and" Separator
+
+Use `{array|and}` for natural language lists with **automatic locale-aware formatting via Intl.ListFormat**:
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: { guests: 'Invited: {names|and}' },
+    es: { guests: 'Invitados: {names|and}' },
+    fr: { guests: 'Invités: {names|and}' },
+    de: { guests: 'Gäste: {names|and}' },
+  },
+});
+
+// English: uses "and" with Oxford comma
+i18n.t('guests', { names: [] });
+// "Invited: "
+
+i18n.t('guests', { names: ['Alice'] });
+// "Invited: Alice"
+
+i18n.t('guests', { names: ['Alice', 'Bob'] });
+// "Invited: Alice and Bob"
+
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invited: Alice, Bob, and Charlie"
+
+// Spanish: automatically uses "y"
+i18n.setLocale('es');
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invitados: Alice, Bob y Charlie"
+
+// French: automatically uses "et"
+i18n.setLocale('fr');
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Invités: Alice, Bob et Charlie"
+
+// German: automatically uses "und"
+i18n.setLocale('de');
+i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
+// "Gäste: Alice, Bob und Charlie"
+```
+
+::: tip Intl.ListFormat - Zero Configuration
+The `and` separator uses the browser/runtime's built-in **Intl.ListFormat API** which automatically:
+- **Supports 100+ languages** - All languages available in your environment
+- **Handles proper grammar** - Oxford comma, locale-specific punctuation, RTL languages
+- **Follows Unicode CLDR standards** - International standard for list formatting
+- **Requires zero maintenance** - No manual language configuration needed
+
+Works in all modern browsers (Chrome 72+, Firefox 78+, Safari 14.1+, Edge 79+, Node.js 12+).
+:::
+
+#### Array with "or" Separator
+
+Use `{array|or}` for choices with **automatic locale-aware formatting via Intl.ListFormat**:
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: { options: 'Choose: {choices|or}' },
+    es: { options: 'Elige: {choices|or}' },
+    fr: { options: 'Choisir: {choices|or}' },
+  },
+});
+
+// English: uses "or" with Oxford comma
+i18n.t('options', { choices: ['Tea'] });
+// "Choose: Tea"
+
+i18n.t('options', { choices: ['Tea', 'Coffee'] });
+// "Choose: Tea or Coffee"
+
+i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
+// "Choose: Tea, Coffee, or Juice"
+
+// Spanish: automatically uses "o"
+i18n.setLocale('es');
+i18n.t('options', { choices: ['Té', 'Café', 'Jugo'] });
+// "Elige: Té, Café o Jugo"
+
+// French: automatically uses "ou"
+i18n.setLocale('fr');
+i18n.t('options', { choices: ['Thé', 'Café', 'Jus'] });
+// "Choisir: Thé, Café ou Jus"
+```
+
+::: tip Automatic Language Support
+The `or` separator automatically works with **100+ languages** including:
+- European: English, Spanish, French, German, Italian, Portuguese, Russian, Polish, Dutch, Swedish, Danish, Norwegian, Finnish, Czech, and more
+- Asian: Japanese, Chinese, Korean, Thai, Vietnamese, Indonesian, and more
+- Middle Eastern: Arabic, Hebrew, Persian, Turkish, and more
+- African: Swahili, Zulu, Afrikaans, and more
+- And many others!
+
+No manual configuration required - it just works! ✨
+:::
+
+#### Array with Custom Separators
+
+Use `{array|separator}` for custom separators:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      path: 'Path: {folders| / }',
+      items: 'Items: {list| - }',
+      codes: 'Codes: {codes| | }',
+      steps: 'Steps: {steps| → }',
+    },
+  },
+});
+
+i18n.t('path', { folders: ['home', 'user', 'documents'] });
+// "Path: home / user / documents"
+
+i18n.t('items', { list: ['A', 'B', 'C'] });
+// "Items: A - B - C"
+
+i18n.t('codes', { codes: ['X', 'Y', 'Z'] });
+// "Codes: X | Y | Z"
+
+i18n.t('steps', { steps: ['Open', 'Edit', 'Save'] });
+// "Steps: Open → Edit → Save"
+```
+
+#### Array Length
+
+Access array length with `{array.length}`:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      count: 'You have {items.length} items',
+      summary: '{items.length} items in {categories.length} categories',
+      results: 'Found {results.length} results',
+    },
+  },
+});
+
+i18n.t('count', { items: ['A', 'B', 'C'] });
+// "You have 3 items"
+
+i18n.t('count', { items: [] });
+// "You have 0 items"
+
+i18n.t('summary', {
+  items: ['Book', 'Pen'],
+  categories: ['Office', 'School', 'Home'],
+});
+// "2 items in 3 categories"
+```
+
+#### Complex Array Scenarios
+
+Combine multiple array features:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      mixed: 'First: {items[0]}, Total: {items.length}, All: {items|and}',
+      cart: 'Your cart ({cart.length}): {cart}',
+      nested: '{users[0].name} has {users[0].items.length} items: {users[0].items}',
+    },
+  },
+});
+
+i18n.t('mixed', { items: ['Apple', 'Banana', 'Orange'] });
+// "First: Apple, Total: 3, All: Apple, Banana and Orange"
+
+i18n.t('cart', { cart: ['Book', 'Pen', 'Notebook'] });
+// "Your cart (3): Book, Pen, Notebook"
+
+i18n.t('nested', {
+  users: [{ name: 'Alice', items: ['Book', 'Pen', 'Notebook'] }],
+});
+// "Alice has 3 items: Book, Pen, Notebook"
 ```
 
 ### Mixed Notation
@@ -397,8 +616,24 @@ i18nit supports the following interpolation path formats:
 - `{name}` - Simple variable
 - `{user.name}` - Nested object property
 - `{user.profile.email}` - Deep nested property
-- `{items[0]}` - Array index
+- `{items[0]}` - Array index (safe - returns empty if out of bounds)
+- `{items}` - Array join with default separator (`, `)
+- `{items|and}` - Array join with natural "and" (e.g., "A, B and C")
+- `{items|or}` - Array join with natural "or" (e.g., "A, B or C")
+- `{items| - }` - Array join with custom separator
+- `{items.length}` - Array length
 - `{data.items[0].value}` - Mixed notation
+
+**Array Features Summary:**
+
+| Syntax | Description | Example Output |
+|--------|-------------|----------------|
+| `{items}` | Default join | `"A, B, C"` |
+| `{items\|and}` | Natural "and" list | `"A, B and C"` |
+| `{items\|or}` | Natural "or" list | `"A, B or C"` |
+| `{items\| - }` | Custom separator | `"A - B - C"` |
+| `{items.length}` | Array length | `"3"` |
+| `{items[0]}` | Safe index | `"A"` or `""` |
 
 **Limitations:**
 
