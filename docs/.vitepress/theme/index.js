@@ -1,15 +1,15 @@
 import DefaultTheme from 'vitepress/theme';
-import { Logit } from '../../../packages/logit/src/logit';
-import REPLComponent from './components/REPLComponent.vue';
+import { Logit } from '../../../packages/logit/src';
+import Repl from './components/REPL.vue';
 
 import './theme.css';
 
 export default {
   ...DefaultTheme,
   enhanceApp({ app }) {
-    app.component('REPLComponent', REPLComponent);
+    app.component('REPL', Repl);
 
-    // Make Logit available on window object
+    // Make Logit available on a window object
     if (typeof window !== 'undefined') {
       window.Logit = Logit;
     }
