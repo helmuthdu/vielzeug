@@ -2,6 +2,27 @@
   "name": "@vielzeug/validit",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/validit_v1.1.2",
+      "date": "Fri, 13 Feb 2026 09:03:42 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "update bundle sizes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8dc7031f6425e5c98c716c3df2db30be51b1b58a"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "add UUID validation method to StringSchema",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3c2fcce09fe4158aa781a595e06d4f6616d283d2"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/validit_v1.1.1",
       "date": "Thu, 12 Feb 2026 17:52:26 GMT",

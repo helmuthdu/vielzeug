@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/validit
 
-This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Feb 2026 09:03:42 GMT and should not be manually modified.
+
+## 1.1.2
+Fri, 13 Feb 2026 09:03:42 GMT
+
+### Patches
+
+- add UUID validation method to StringSchema
 
 ## 1.1.1
 Thu, 12 Feb 2026 17:52:26 GMT
