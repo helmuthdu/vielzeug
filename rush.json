@@ -49,6 +49,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/routeit",
+      "projectFolder": "packages/routeit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/stateit",
       "projectFolder": "packages/stateit",
       "shouldPublish": true,

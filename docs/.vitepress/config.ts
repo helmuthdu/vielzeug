@@ -32,16 +32,16 @@ export default defineConfig({
         items: [
           {
             items: [
-              { link: '/toolkit/', text: 'Toolkit' },
               { link: '/logit/', text: 'Logit' },
+              { link: '/toolkit/', text: 'Toolkit' },
             ],
             text: 'Core & Utilities',
           },
           {
             items: [
               { link: '/deposit/', text: 'Deposit' },
-              { link: '/stateit/', text: 'Stateit' },
               { link: '/fetchit/', text: 'Fetchit' },
+              { link: '/stateit/', text: 'Stateit' },
             ],
             text: 'Data & State',
           },
@@ -55,8 +55,9 @@ export default defineConfig({
           },
           {
             items: [
-              { link: '/wireit/', text: 'Wireit' },
               { link: '/permit/', text: 'Permit' },
+              { link: '/routeit/', text: 'Routeit' },
+              { link: '/wireit/', text: 'Wireit' },
             ],
             text: 'Architecture & Security',
           },
@@ -200,6 +201,29 @@ export default defineConfig({
           text: 'API Reference',
         },
         { link: '/permit/examples', text: 'Examples' },
+      ],
+      '/routeit/': [
+        { link: '/routeit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/routeit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/routeit/usage#middleware', text: 'Middleware' },
+            { link: '/routeit/usage#navigation', text: 'Navigation' },
+            { link: '/routeit/usage#named-routes', text: 'Named Routes' },
+          ],
+          link: '/routeit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/routeit/api#router-methods', text: 'Router Methods' },
+            { link: '/routeit/api#navigation-methods', text: 'Navigation' },
+            { link: '/routeit/api#middleware', text: 'Middleware' },
+          ],
+          link: '/routeit/api',
+          text: 'API Reference',
+        },
+        { link: '/routeit/examples', text: 'Examples' },
       ],
       '/stateit/': [
         { link: '/stateit/', text: 'Overview' },
@@ -498,6 +522,7 @@ export default defineConfig({
         '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),
         '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
         '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
+        '@vielzeug/routeit': resolve(__dirname, '../../packages/routeit/src'),
         '@vielzeug/stateit': resolve(__dirname, '../../packages/stateit/src'),
         '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
         '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),

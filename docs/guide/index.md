@@ -17,25 +17,26 @@ The Vielzeug ecosystem is organized into several focused packages:
 
 ### Core & Utilities
 
-- **[Toolkit](/toolkit/)**: 100+ essential utilities for arrays, objects, math, and more.
 - **[Logit](/logit/)**: Beautiful and flexible logging for development and production.
+- **[Toolkit](/toolkit/)**: 100+ essential utilities for arrays, objects, math, and more.
 
 ### Data & State
 
 - **[Deposit](/deposit/)**: Type-safe local storage with schemas and expiration.
-- **[Stateit](/stateit/)**: Tiny, framework-agnostic reactive state management.
 - **[Fetchit](/fetchit/)**: Modern HTTP client with intelligent caching and deduplication.
+- **[Stateit](/stateit/)**: Tiny, framework-agnostic reactive state management.
 
 ### Frontend & Logic
 
 - **[Formit](/formit/)**: Flexible, type-safe form state and validation.
-- **[i18nit](/i18nit/)**: Lightweight, type-safe internationalization.
 - **[Validit](/validit/)**: Powerful schema validation with advanced error handling.
+- **[i18nit](/i18nit/)**: Lightweight, type-safe internationalization.
 
 ### Architecture & Security
 
-- **[Wireit](/wireit/)**: Lightweight dependency injection container.
 - **[Permit](/permit/)**: Simple yet powerful Role-Based Access Control (RBAC).
+- **[Routeit](/routeit/)**: Lightweight, type-safe client-side routing with middleware support.
+- **[Wireit](/wireit/)**: Lightweight dependency injection container.
 
 ## Why Vielzeug?
 
