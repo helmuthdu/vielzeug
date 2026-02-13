@@ -676,3 +676,16 @@ store.set({ count: 2 });
 history.undo(); // Back to count: 1
 history.redo(); // Forward to count: 2
 ```
+
+## Next Steps
+
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+    </ul>
+  </div>
+</div>

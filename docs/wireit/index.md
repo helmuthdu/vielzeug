@@ -107,66 +107,13 @@ const service = container.get(UserService);
 
 ## 🚀 Key Features
 
-### Type-Safe Resolution
-
-Full TypeScript inference from tokens to resolved instances:
-
-```ts
-const Logger = createToken<ILogger>('Logger');
-container.register(Logger, { useClass: ConsoleLogger });
-
-const logger = container.get(Logger); // Type: ILogger ✅
-```
-
-### Async Support
-
-Handle async initialization seamlessly:
-
-```ts
-container.registerFactory(
-  Database,
-  async (config) => {
-    const db = new PrismaClient();
-    await db.$connect();
-    return db;
-  },
-  [Config],
-  { async: true, lifetime: 'singleton' },
-);
-
-const db = await container.getAsync(Database);
-```
-
-### Scoped Execution
-
-Perfect for request-scoped dependencies:
-
-```ts
-app.use(async (req, res) => {
-  await container.runInScope(
-    async (scope) => {
-      const handler = scope.get(RequestHandler);
-      await handler.process(req, res);
-    },
-    [[RequestId, { useValue: req.id }]],
-  );
-});
-```
-
-### Testing Utilities
-
-Built-in helpers for easy testing:
-
-```ts
-import { createTestContainer, withMock } from '@vielzeug/wireit';
-
-const { container, dispose } = createTestContainer(baseContainer);
-
-await withMock(container, Database, mockDb, async () => {
-  const service = container.get(UserService);
-  // service uses mockDb
-});
-```
+- **Async Support**: Handle [async initialization](./usage.md#advanced-features) seamlessly.
+- **Container Hierarchies**: Create [parent/child container relationships](./usage.md#container-management) for scoped dependency management.
+- **Lifecycle Management**: Support for [Singleton, Transient, and Request lifetimes](./usage.md#lifetimes).
+- **Scoped Execution**: Perfect for request-scoped dependencies. See [Lifetimes](./usage.md#lifetimes).
+- **Testing First**: Built-in support for [mocking dependencies and test containers](./usage.md#testing).
+- **Testing Utilities**: Built-in [helpers for easy testing](./api.md#testing-utilities).
+- **Type-Safe Resolution**: Full [TypeScript inference](./usage.md#tokens) from tokens to resolved instances.
 
 ## 🏁 Quick Start
 
@@ -250,9 +197,10 @@ Create parent/child containers for isolation and inheritance:
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage)** - Complete guide to dependency injection with Wireit
-- **[API Reference](./api)** - Detailed API documentation with all methods
-- **[Examples](./examples)** - Real-world examples and framework integrations
+- **[Usage Guide](./usage.md)** - Complete guide to dependency injection with Wireit
+- **[API Reference](./api.md)** - Detailed API documentation with all methods
+- **[Examples](./examples.md)** - Real-world examples and framework integrations
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

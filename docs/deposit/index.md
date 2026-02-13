@@ -73,16 +73,16 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 ## 🚀 Key Features
 
-- **Unified API**: Switch between LocalStorage and IndexedDB without changing your code
-- **Type-safe**: Define your schemas once and enjoy full autocompletion and type checking
-- **Schema Validation**: Early validation of schema structure with clear error messages
-- **Advanced Querying**: Rich QueryBuilder with filters, sorting, grouping, pagination, and type-safe `toGrouped()`
-- **Migrations**: Robust support for schema versioning and data migrations in IndexedDB
-- **Transactions**: Ensure data integrity with atomic operations across multiple tables
-- **TTL (Time-To-Live)**: Native support for automatic record expiration
-- **Resilient**: Gracefully handles corrupted entries without breaking batch operations
-- **Isomorphic**: Works in all modern browsers with minimal footprint
-- **Minimal Dependencies**: Only @vielzeug/logit and @vielzeug/toolkit
+- **Advanced Querying**: Rich [QueryBuilder](./usage.md#query-builder) with filters, sorting, grouping, pagination, and type-safe `toGrouped()`.
+- **Isomorphic**: Works in all modern browsers with minimal footprint.
+- **Lightweight & Fast**: Low dependencies (@vielzeug/{logit,toolkit}) and only **~4 KB gzipped**.
+- **Migrations**: Robust support for [schema versioning and data migrations](./usage.md#schema-migrations) in IndexedDB.
+- **Resilient**: [Gracefully handles corrupted entries](./usage.md#corrupted-entry-handling) without breaking batch operations.
+- **Schema Validation**: Early [Schema Validation](./usage.md#schema-validation) with clear error messages.
+- **TTL (Time-To-Live)**: Native support for [automatic record expiration](./usage.md#ttl-time-to-live).
+- **Transactions**: Ensure data integrity with [atomic operations](./usage.md#transactions) across multiple tables.
+- **Type-safe**: Define your schemas at once and enjoy full autocompletion and type checking.
+- **Unified API**: Switch between LocalStorage and IndexedDB without changing your code.
 
 ## 🏁 Quick Start
 
@@ -224,6 +224,7 @@ await db.put('cache', data, 3600000); // Expires in 1 hour
 - **[Usage Guide](./usage.md)**: Detailed setup, adapters, and basic operations
 - **[API Reference](./api.md)**: Comprehensive documentation of all methods and types
 - **[Examples](./examples.md)**: Practical patterns for querying, transactions, and migrations
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

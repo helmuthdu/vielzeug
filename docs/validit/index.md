@@ -89,71 +89,12 @@ const user = userSchema.parse(data);
 
 ## 🚀 Key Features
 
-### ⚡ Lightweight & Fast
-
-Zero dependencies and only **~2 KB gzipped**. Optimized for both bundle size and runtime performance.
-
-```ts
-import { v } from '@vielzeug/validit';
-// That's it - no other imports needed
-```
-
-### 🎯 Type-Safe
-
-Full TypeScript support with automatic type inference from your schemas.
-
-```ts
-const schema = v.object({
-  id: v.positiveInt(),
-  email: v.email(),
-  role: v.oneOf('admin', 'user', 'guest'),
-});
-
-type User = Infer<typeof schema>;
-// { id: number; email: string; role: 'admin' | 'user' | 'guest' }
-```
-
-### 🔄 Async Validation
-
-Full async support for database checks, API calls, and complex validations.
-
-```ts
-const schema = v
-  .string()
-  .email()
-  .refineAsync(async (email) => {
-    const exists = await checkDatabase(email);
-    return !exists;
-  }, 'Email already registered');
-
-await schema.parseAsync('user@example.com');
-```
-
-### 🎨 Convenience Schemas
-
-Pre-built schemas for common patterns save you time and code.
-
-```ts
-v.email(); // Instead of v.string().email()
-v.url(); // Instead of v.string().url()
-v.uuid(); // UUID validation
-v.positiveInt(); // Positive integers
-v.negativeInt(); // Negative integers
-```
-
-### 🔧 Transform Support
-
-Apply transformations after validation for data normalization.
-
-```ts
-const schema = v
-  .string()
-  .email()
-  .transform((email) => email.toLowerCase().trim());
-
-schema.parse('  USER@EXAMPLE.COM  ');
-// Returns: 'user@example.com'
-```
+- **Async Validation**: Built-in support for [asynchronous rules and database checks](./usage.md#async-validation).
+- **Convenience Schemas**: Pre-built schemas for [common patterns](./api.md#factory-object-v) save you time and code.
+- **Error Handling**: Structured [ValidationError](./usage.md#error-handling) with precise path and error code information.
+- **Lightweight & Fast**: Zero dependencies and only **~2 KB gzipped**. Optimized for both bundle size and [runtime performance](./api.md#performance-tips).
+- **Transform Support**: Apply [transformations after validation](./usage.md#modifiers) for data normalization.
+- **Type-Safe**: Full TypeScript support with [automatic type inference](./usage.md#type-inference) from your schemas.
 
 ## 🏁 Quick Start
 
@@ -311,9 +252,10 @@ type Data = Infer<typeof schema>;
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage)** - Complete guide to all validation features
-- **[API Reference](./api)** - Detailed API documentation with all methods
-- **[Examples](./examples)** - Real-world examples and patterns
+- **[Usage Guide](./usage.md)** - Complete guide to all validation features
+- **[API Reference](./api.md)** - Detailed API documentation with all methods
+- **[Examples](./examples.md)** - Real-world examples and patterns
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

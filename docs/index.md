@@ -11,10 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /toolkit/
-    - theme: alt
-      text: API Reference
-      link: /toolkit/api
+      link: /guide/introduction
     - theme: alt
       text: View on GitHub
       link: https://github.com/helmuthdu/vielzeug

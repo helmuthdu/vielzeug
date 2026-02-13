@@ -103,15 +103,15 @@ store.subscribe(
 
 ## 🚀 Key Features
 
-- **Type-Safe**: Full TypeScript support with precise type inference
-- **Reactive Subscriptions**: Subscribe to full state or selected slices
-- **Scoped Stores**: Create child stores for isolated state management
-- **Custom Equality**: Configurable equality checks for fine-grained control
-- **Async Support**: First-class support for async state updates
-- **Batched Updates**: Automatic notification batching for optimal performance
-- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
-- **Lightweight**: ~2.4 KB gzipped, zero dependencies
-- **Testing Friendly**: Built-in testing helpers and utilities
+- **Async Support**: First-class support for [async state updates](./usage.md#async-state-updates)
+- **Batched Updates**: Automatic notification batching for [optimal performance](./usage.md#performance-tips).
+- **Custom Equality**: Configurable [equality checks](./usage.md#custom-equality) for fine-grained control
+- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS. See [Common Patterns](./usage.md#common-patterns).
+- **Lightweight & Fast**: Zero dependencies and only **~2 KB gzipped**.
+- **Reactive Subscriptions**: [Subscribe](./usage.md#subscriptions) to full state or selected slices.
+- **Scoped Stores**: Create [child stores](./usage.md#scoped-stores) for isolated state management
+- **Testing Friendly**: Built-in testing helpers and utilities.
+- **Type-Safe**: Full TypeScript support with [precise type inference](./usage.md#type-safety).
 
 ## 🏁 Quick Start
 
@@ -289,6 +289,13 @@ await store.runInScope(
 
 console.log(store.get().count); // Original value (unchanged)
 ```
+
+## 📚 Documentation
+
+- **[Usage Guide](./usage.md)**: Store creation, subscriptions, and scoped stores
+- **[API Reference](./api.md)**: Complete list of all available methods and types
+- **[Examples](./examples.md)**: Practical patterns and framework integrations
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

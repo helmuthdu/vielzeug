@@ -1428,6 +1428,15 @@ const i18n = createI18n({ ... });
 - **Simpler API**: Less configuration, more straightforward
 - **Smaller Bundle**: Much lighter weight
 
----
+## Next Steps
 
-For complete application examples, see [Examples](./examples.md). For detailed API reference, see [API Reference](./api.md).
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+    </ul>
+  </div>
+</div>

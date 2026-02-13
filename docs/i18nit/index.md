@@ -105,22 +105,21 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ## 🚀 Key Features
 
-- **Type-Safe**: Full TypeScript support with generic types and type inference
-- **Universal Pluralization**: Support for 100+ languages via Intl.PluralRules API (Arabic, Polish, Russian, Chinese, and more)
-- **Smart Array Handling**: Auto-join with locale-aware separators via Intl.ListFormat (`{items|and}` automatically works in 100+ languages), length access (`{items.length}`), and safe indexing
-- **Path Interpolation**: Dot notation and bracket notation for nested data (`{user.name}`, `{items[0]}`)
-- **Async Loading**: Lazy-load translations with automatic caching and deduplication
-- **Locale Fallbacks**: Automatic fallback chain (e.g., de-CH → de → en)
-- **Message Functions**: Dynamic translations with number/date helpers
-- **Namespaced Keys**: Organize translations by feature or module
-- **Reactive Subscriptions**: Subscribe to locale changes for UI updates
-- **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping
-- **Structured Errors**: `MissingVariableError` with key, variable, and locale context
-- **Missing Variable Strategies**: Choose between empty, preserve, or error for missing variables
-- **Zero Dependencies**: No external dependencies, fully self-contained
-- **Tiny Bundle**: ~2.3KB gzipped
-- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
-- **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining graceful fallback
+- **Async Loading**: Lazy-load translations with [automatic caching and deduplication](./usage.md#async-loading).
+- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
+- **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping.
+- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
+- **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining a graceful fallback.
+- **Locale Fallbacks**: Automatic [fallback chain](./usage.md#fallback-translations) (e.g., de-CH → de → en).
+- **Message Functions**: Dynamic translations with [number/date helpers](./usage.md#message-functions).
+- **Missing Variable Strategies**: Choose between empty, preserve, or error for missing variables.
+- **Namespaced Keys**: Organize translations by [feature or module](./usage.md#namespaces).
+- **Path Interpolation**: Dot notation and bracket notation for [nested data](./usage.md#variable-interpolation).
+- **Reactive Subscriptions**: Subscribe to [locale changes](./usage.md#subscriptions) for UI updates.
+- **Smart Array Handling**: Auto-join with locale-aware separators via [Intl.ListFormat](./usage.md#array-variables).
+- **Structured Errors**: `MissingVariableError` with key, variable, and locale context.
+- **Type-Safe**: Full TypeScript support with generic types and type inference.
+- **Universal Pluralization**: Support for 100+ languages via [Intl.PluralRules API](./usage.md#pluralization).
 
 ## 🏁 Quick Start
 
@@ -520,9 +519,10 @@ const unsubscribe = i18n.subscribe(handler);
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage)** - Complete guide to all i18n features
-- **[API Reference](./api)** - Detailed API documentation with all methods
-- **[Examples](./examples)** - Real-world examples and framework integrations
+- **[Usage Guide](./usage.md)** - Complete guide to all i18n features
+- **[API Reference](./api.md)** - Detailed API documentation with all methods
+- **[Examples](./examples.md)** - Real-world examples and framework integrations
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

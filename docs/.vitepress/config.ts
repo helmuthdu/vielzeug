@@ -27,16 +27,42 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo-main.svg',
     nav: [
-      { link: '/deposit/', text: 'Deposit' },
-      { link: '/fetchit/', text: 'Fetchit' },
-      { link: '/formit/', text: 'Formit' },
-      { link: '/i18nit/', text: 'i18nit' },
-      { link: '/logit/', text: 'Logit' },
-      { link: '/permit/', text: 'Permit' },
-      { link: '/stateit/', text: 'Stateit' },
-      { link: '/toolkit/', text: 'Toolkit' },
-      { link: '/validit/', text: 'Validit' },
-      { link: '/wireit/', text: 'Wireit' },
+      { link: '/guide/', text: 'Guide' },
+      {
+        items: [
+          {
+            items: [
+              { link: '/toolkit/', text: 'Toolkit' },
+              { link: '/logit/', text: 'Logit' },
+            ],
+            text: 'Core & Utilities',
+          },
+          {
+            items: [
+              { link: '/deposit/', text: 'Deposit' },
+              { link: '/stateit/', text: 'Stateit' },
+              { link: '/fetchit/', text: 'Fetchit' },
+            ],
+            text: 'Data & State',
+          },
+          {
+            items: [
+              { link: '/formit/', text: 'Formit' },
+              { link: '/i18nit/', text: 'i18nit' },
+              { link: '/validit/', text: 'Validit' },
+            ],
+            text: 'Frontend & Logic',
+          },
+          {
+            items: [
+              { link: '/wireit/', text: 'Wireit' },
+              { link: '/permit/', text: 'Permit' },
+            ],
+            text: 'Architecture & Security',
+          },
+        ],
+        text: 'Packages',
+      },
       { link: '/repl', text: 'REPL' },
     ],
     search: {
@@ -45,54 +71,185 @@ export default defineConfig({
     sidebar: {
       '/deposit/': [
         { link: '/deposit/', text: 'Overview' },
-        { link: '/deposit/api', text: 'API Reference' },
-        { link: '/deposit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/deposit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/deposit/usage#advanced-features', text: 'Advanced Features' },
+            { link: '/deposit/usage#bulk-operations', text: 'Bulk Operations' },
+            { link: '/deposit/usage#schema-migrations', text: 'Schema Migrations' },
+          ],
+          link: '/deposit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/deposit/api#core-classes', text: 'Core Classes' },
+            { link: '/deposit/api#deposit-methods', text: 'Deposit Methods' },
+            { link: '/deposit/api#querybuilder-methods', text: 'QueryBuilder' },
+          ],
+          link: '/deposit/api',
+          text: 'API Reference',
+        },
         { link: '/deposit/examples', text: 'Examples' },
       ],
       '/fetchit/': [
         { link: '/fetchit/', text: 'Overview' },
-        { link: '/fetchit/api', text: 'API Reference' },
-        { link: '/fetchit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/fetchit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/fetchit/usage#advanced-features', text: 'Advanced Features' },
+            { link: '/fetchit/usage#configuration-options', text: 'Configuration' },
+          ],
+          link: '/fetchit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/fetchit/api#query-client-methods', text: 'Query Client API' },
+            { link: '/fetchit/api#http-client-methods', text: 'HTTP Client API' },
+            { link: '/fetchit/api#type-safe-query-keys', text: 'Query Keys' },
+          ],
+          link: '/fetchit/api',
+          text: 'API Reference',
+        },
         { link: '/fetchit/examples', text: 'Examples' },
       ],
       '/formit/': [
         { link: '/formit/', text: 'Overview' },
-        { link: '/formit/api', text: 'API Reference' },
-        { link: '/formit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/formit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/formit/usage#validation', text: 'Validation' },
+            { link: '/formit/usage#framework-integration', text: 'Framework Integration' },
+          ],
+          link: '/formit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/formit/api#createform', text: 'createForm()' },
+            { link: '/formit/api#form-methods', text: 'Form Methods' },
+          ],
+          link: '/formit/api',
+          text: 'API Reference',
+        },
         { link: '/formit/examples', text: 'Examples' },
       ],
       '/i18nit/': [
         { link: '/i18nit/', text: 'Overview' },
-        { link: '/i18nit/api', text: 'API Reference' },
-        { link: '/i18nit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/i18nit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/i18nit/usage#pluralization', text: 'Pluralization' },
+            { link: '/i18nit/usage#variable-interpolation', text: 'Interpolation' },
+            { link: '/i18nit/usage#async-loading', text: 'Async Loading' },
+          ],
+          link: '/i18nit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/i18nit/api#createi18n', text: 'createI18n()' },
+            { link: '/i18nit/api#i18n-instance', text: 'I18n Instance' },
+            { link: '/i18nit/api#configuration', text: 'Configuration' },
+          ],
+          link: '/i18nit/api',
+          text: 'API Reference',
+        },
         { link: '/i18nit/examples', text: 'Examples' },
       ],
       '/logit/': [
         { link: '/logit/', text: 'Overview' },
-        { link: '/logit/api', text: 'API Reference' },
-        { link: '/logit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/logit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/logit/usage#scoped-loggers', text: 'Scoped Loggers' },
+            { link: '/logit/usage#remote-logging', text: 'Remote Logging' },
+          ],
+          link: '/logit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/logit/api#core-logging-methods', text: 'Logging Methods' },
+            { link: '/logit/api#scoped-logger-methods', text: 'Scoped Loggers' },
+          ],
+          link: '/logit/api',
+          text: 'API Reference',
+        },
         { link: '/logit/examples', text: 'Examples' },
       ],
       '/permit/': [
         { link: '/permit/', text: 'Overview' },
-        { link: '/permit/api', text: 'API Reference' },
-        { link: '/permit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/permit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/permit/usage#advanced-features', text: 'Wildcards & more' },
+            { link: '/permit/usage#permission-patterns', text: 'Patterns' },
+          ],
+          link: '/permit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/permit/api#core-methods', text: 'Core Methods' },
+            { link: '/permit/api#constants', text: 'Constants' },
+            { link: '/permit/api#types', text: 'Types' },
+          ],
+          link: '/permit/api',
+          text: 'API Reference',
+        },
         { link: '/permit/examples', text: 'Examples' },
       ],
       '/stateit/': [
         { link: '/stateit/', text: 'Overview' },
-        { link: '/stateit/api', text: 'API Reference' },
-        { link: '/stateit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/stateit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/stateit/usage#subscriptions', text: 'Subscriptions' },
+            { link: '/stateit/usage#scoped-stores', text: 'Scoped Stores' },
+          ],
+          link: '/stateit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/stateit/api#store-class', text: 'Store Class' },
+            { link: '/stateit/api#utility-functions', text: 'Utilities' },
+          ],
+          link: '/stateit/api',
+          text: 'API Reference',
+        },
         { link: '/stateit/examples', text: 'Examples' },
       ],
       '/toolkit/': [
         { link: '/toolkit/', text: 'Overview' },
-        { link: '/toolkit/api', text: 'API Reference' },
-        { link: '/toolkit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/toolkit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/toolkit/usage#import-strategies', text: 'Import Strategies' },
+            { link: '/toolkit/usage#performance-tips', text: 'Performance' },
+          ],
+          link: '/toolkit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/toolkit/api#array-utilities', text: 'Array' },
+            { link: '/toolkit/api#async-utilities', text: 'Async' },
+            { link: '/toolkit/api#object-utilities', text: 'Object' },
+            { link: '/toolkit/api#string-utilities', text: 'String' },
+            { link: '/toolkit/api#math-utilities', text: 'Math' },
+            { link: '/toolkit/api#function-utilities', text: 'Function' },
+            { link: '/toolkit/api#typed-utilities', text: 'Typed' },
+          ],
+          link: '/toolkit/api',
+          text: 'API Reference',
+        },
         {
           items: [
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/array/aggregate', text: 'aggregate' },
                 { link: '/toolkit/examples/array/alternate', text: 'alternate' },
@@ -124,7 +281,7 @@ export default defineConfig({
               text: 'Array',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/async/attempt', text: 'attempt' },
                 { link: '/toolkit/examples/async/defer', text: 'defer' },
@@ -142,7 +299,7 @@ export default defineConfig({
               text: 'Async',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/string/camelCase', text: 'camelCase' },
                 { link: '/toolkit/examples/string/kebabCase', text: 'kebabCase' },
@@ -155,7 +312,7 @@ export default defineConfig({
               text: 'String',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/object/clone', text: 'clone' },
                 { link: '/toolkit/examples/object/diff', text: 'diff' },
@@ -171,7 +328,7 @@ export default defineConfig({
               text: 'Object',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/date/expires', text: 'expires' },
                 { link: '/toolkit/examples/date/interval', text: 'interval' },
@@ -181,7 +338,7 @@ export default defineConfig({
               text: 'Date',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/function/assert', text: 'assert' },
                 { link: '/toolkit/examples/function/assertParams', text: 'assertParams' },
@@ -203,7 +360,7 @@ export default defineConfig({
               text: 'Function',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/math/abs', text: 'abs' },
                 { link: '/toolkit/examples/math/add', text: 'add' },
@@ -227,7 +384,7 @@ export default defineConfig({
               text: 'Math',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/money/currency', text: 'currency' },
                 { link: '/toolkit/examples/money/exchange', text: 'exchange' },
@@ -236,7 +393,7 @@ export default defineConfig({
               text: 'Money',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/random/draw', text: 'draw' },
                 { link: '/toolkit/examples/random/random', text: 'random' },
@@ -247,7 +404,7 @@ export default defineConfig({
               text: 'Random',
             },
             {
-              collapsed: false,
+              collapsed: true,
               items: [
                 { link: '/toolkit/examples/typed/ge', text: 'ge' },
                 { link: '/toolkit/examples/typed/gt', text: 'gt' },
@@ -281,19 +438,51 @@ export default defineConfig({
               text: 'Typed',
             },
           ],
-          text: 'API',
+          text: 'Examples',
         },
       ],
       '/validit/': [
         { link: '/validit/', text: 'Overview' },
-        { link: '/validit/api', text: 'API Reference' },
-        { link: '/validit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/validit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/validit/usage#primitive-schemas', text: 'Primitives' },
+            { link: '/validit/usage#complex-schemas', text: 'Complex' },
+            { link: '/validit/usage#async-validation', text: 'Async' },
+          ],
+          link: '/validit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/validit/api#factory-object-v', text: 'v (Factory)' },
+            { link: '/validit/api#schema-methods', text: 'Schema Methods' },
+          ],
+          link: '/validit/api',
+          text: 'API Reference',
+        },
         { link: '/validit/examples', text: 'Examples' },
       ],
       '/wireit/': [
         { link: '/wireit/', text: 'Overview' },
-        { link: '/wireit/api', text: 'API Reference' },
-        { link: '/wireit/usage', text: 'Usage' },
+        {
+          items: [
+            { link: '/wireit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/wireit/usage#tokens', text: 'Tokens' },
+            { link: '/wireit/usage#providers', text: 'Providers' },
+            { link: '/wireit/usage#lifetimes', text: 'Lifetimes' },
+          ],
+          link: '/wireit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/wireit/api#container', text: 'Container API' },
+            { link: '/wireit/api#testing-utilities', text: 'Testing' },
+          ],
+          link: '/wireit/api',
+          text: 'API Reference',
+        },
         { link: '/wireit/examples', text: 'Examples' },
       ],
     },

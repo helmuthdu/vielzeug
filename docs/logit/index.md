@@ -102,18 +102,17 @@ Logit.setRemote({
 
 ## 🚀 Key Features
 
-- **Styled Console Output**: Beautiful colored logs with symbols, icons, or text
-- **Log Level Filtering**: Control verbosity (debug, trace, info, success, warn, error, off)
-- **Scoped Loggers**: Create isolated loggers with namespaced prefixes without global mutation
-- **Remote Logging**: Send logs to external services (Sentry, Datadog, etc.) with rich metadata
-- **Environment Detection**: Automatic production/development indicators
-- **Timestamps**: Optional timestamp display with millisecond precision
-- **Multiple Variants**: Symbol, icon, or text-based display modes
-- **Advanced Utilities**: Built-in timing, grouping, tables, and assertions
-- **Async Remote Logging**: Non-blocking Promise-based remote logging
-- **Type-Safe**: Full TypeScript support with proper type definitions
-- **Zero Dependencies**: Lightweight (~3KB gzipped), fast, and secure
+- **Advanced Utilities**: Built-in [timing](./usage.md#timing-operations), [grouping](./usage.md#grouping-logs), [tables](./usage.md#using-tables), and [assertions](./usage.md#assertions).
+- **Async Remote Logging**: Non-blocking Promise-based remote logging.
+- **Environment Detection**: Automatic [production/development indicators](./usage.md#environment-specific-configuration).
 - **Framework Agnostic**: Works in browser and Node.js
+- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
+- **Log Level Filtering**: [Control verbosity](./usage.md#log-levels) (debug, trace, info, success, warn, error, off).
+- **Multiple Variants**: Symbol, icon, or text-based [display modes](./usage.md#display-variants).
+- **Remote Logging**: [Send logs to external services](./usage.md#remote-logging) (Sentry, Datadog, etc.) with rich metadata.
+- **Scoped Loggers**: Create [isolated loggers](./usage.md#scoped-loggers) with namespaced prefixes without global mutation.
+- **Timestamps**: Optional [timestamp display](./usage.md#timestamps-and-environment) with millisecond precision.
+- **Type-Safe**: Full TypeScript support with proper type definitions.
 
 ## 🏁 Quick Start
 
@@ -349,6 +348,7 @@ Logit.setup({
 - **[Usage Guide](./usage.md)**: Installation, global configuration, and scoped loggers
 - **[API Reference](./api.md)**: Complete list of methods, levels, and handler options
 - **[Examples](./examples.md)**: Patterns for remote logging, custom themes, and more
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

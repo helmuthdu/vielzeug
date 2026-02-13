@@ -390,10 +390,13 @@ For older browsers, use a transpiler like Babel or SWC.
 
 ## Next Steps
 
-- Explore the [API Reference](./api.md) for a complete list of utilities
-- Check out [Examples](./examples/array.md) for category-specific guides
-- Try utilities in the [REPL](/repl) without any setup
-
----
-
-Need help? Visit our [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions) or [open an issue](https://github.com/helmuthdu/vielzeug/issues).
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+    </ul>
+  </div>
+</div>

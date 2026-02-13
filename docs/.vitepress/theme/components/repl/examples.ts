@@ -1,411 +1,6 @@
 export const examples = {
-  toolkit: {
-    'array-chunk': {
-      name: 'chunk - Split array into chunks',
-      code: `import { chunk } from '@vielzeug/toolkit'
-
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-console.log('Original:', numbers)
-console.log('Chunks of 3:', chunk(numbers, 3))
-console.log('Chunks of 4:', chunk(numbers, 4))
-
-// Practical use case: Batch processing
-const userIds = [101, 102, 103, 104, 105, 106, 107, 108]
-const batches = chunk(userIds, 3)
-console.log('User ID batches:', batches)`,
-    },
-    'array-filter': {
-      name: 'filter - Filter array elements',
-      code: `import { filter } from '@vielzeug/toolkit'
-
-const users = [
-  { name: 'Alice', age: 25, active: true },
-  { name: 'Bob', age: 30, active: false },
-  { name: 'Charlie', age: 35, active: true },
-  { name: 'David', age: 28, active: true }
-]
-
-const activeUsers = filter(users, u => u.active)
-console.log('Active users:', activeUsers)
-
-const over30 = filter(users, u => u.age > 30)
-console.log('Users over 30:', over30)
-
-// Async filter support
-const asyncFiltered = await filter(users, async (u) => {
-  await new Promise(r => setTimeout(r, 10))
-  return u.age >= 28
-})
-console.log('Async filtered:', asyncFiltered)`,
-    },
-    'array-map': {
-      name: 'map - Transform array elements',
-      code: `import { map } from '@vielzeug/toolkit'
-
-const numbers = [1, 2, 3, 4, 5]
-
-const doubled = map(numbers, n => n * 2)
-console.log('Doubled:', doubled)
-
-const strings = map(numbers, n => \`Number: \${n}\`)
-console.log('Formatted:', strings)
-
-// Async map support
-const asyncMapped = await map(numbers, async (n) => {
-  await new Promise(r => setTimeout(r, 10))
-  return n * 3
-})
-console.log('Async tripled:', asyncMapped)`,
-    },
-    'array-group': {
-      name: 'group - Group array by key',
-      code: `import { group } from '@vielzeug/toolkit'
-
-const items = [
-  { type: 'fruit', name: 'apple', price: 1.2 },
-  { type: 'vegetable', name: 'carrot', price: 0.8 },
-  { type: 'fruit', name: 'banana', price: 0.5 },
-  { type: 'vegetable', name: 'broccoli', price: 1.5 },
-  { type: 'fruit', name: 'orange', price: 0.9 }
-]
-
-const byType = group(items, item => item.type)
-console.log('Grouped by type:', byType)
-
-// Group by price range
-const byPriceRange = group(items, item => 
-  item.price < 1 ? 'cheap' : 'expensive'
-)
-console.log('Grouped by price:', byPriceRange)`,
-    },
-    'array-search': {
-      name: 'search - Fuzzy search in arrays',
-      code: `import { search } from '@vielzeug/toolkit'
-
-const users = [
-  { name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
-  { name: 'Bob Smith', email: 'bob@example.com', role: 'user' },
-  { name: 'Charlie Brown', email: 'charlie@example.com', role: 'user' },
-  { name: 'David Miller', email: 'david@example.com', role: 'moderator' }
-]
-
-const results1 = search(users, 'alice')
-console.log('Search "alice":', results1)
-
-const results2 = search(users, 'smith')
-console.log('Search "smith":', results2)
-
-const results3 = search(users, 'admin')
-console.log('Search "admin":', results3)`,
-    },
-    'array-uniq': {
-      name: 'uniq - Remove duplicates',
-      code: `import { uniq } from '@vielzeug/toolkit'
-
-const numbers = [1, 2, 2, 3, 3, 3, 4, 5, 5]
-console.log('Unique numbers:', uniq(numbers))
-
-const tags = ['javascript', 'react', 'vue', 'react', 'angular', 'vue']
-console.log('Unique tags:', uniq(tags))
-
-// Works with objects too (by reference)
-const obj1 = { id: 1 }
-const obj2 = { id: 2 }
-const objects = [obj1, obj2, obj1, obj2]
-console.log('Unique objects:', uniq(objects))`,
-    },
-    'object-merge': {
-      name: 'merge - Deep merge objects',
-      code: `import { merge } from '@vielzeug/toolkit'
-
-const obj1 = { a: 1, b: { c: 2 }, d: [1, 2] }
-const obj2 = { b: { d: 3 }, e: 4, d: [3, 4] }
-const obj3 = { a: 10, f: 5 }
-
-const merged = merge(obj1, obj2, obj3)
-console.log('Merged:', merged)
-
-// Nested merge
-const config1 = {
-  api: { baseUrl: 'https://api.dev', timeout: 5000 },
-  features: { darkMode: true }
-}
-const config2 = {
-  api: { timeout: 10000, retries: 3 },
-  features: { notifications: true }
-}
-
-console.log('Merged configs:', merge(config1, config2))`,
-    },
-    'object-clone': {
-      name: 'clone - Deep clone object',
-      code: `import { clone } from '@vielzeug/toolkit'
-
-const original = { 
-  a: 1, 
-  b: { c: 2, d: [3, 4] },
-  date: new Date(),
-  regex: /test/g
-}
-const copy = clone(original)
-
-copy.b.c = 99
-copy.b.d.push(5)
-
-console.log('Original:', original)
-console.log('Copy:', copy)
-console.log('Deep equal:', original.b.c === 2) // true`,
-    },
-    'object-diff': {
-      name: 'diff - Compare objects',
-      code: `import { diff } from '@vielzeug/toolkit'
-
-const before = {
-  name: 'Alice',
-  age: 25,
-  email: 'alice@old.com',
-  settings: { theme: 'light', lang: 'en' }
-}
-
-const after = {
-  name: 'Alice',
-  age: 26,
-  email: 'alice@new.com',
-  settings: { theme: 'dark', lang: 'en' }
-}
-
-const changes = diff(before, after)
-console.log('Changes detected:', changes)`,
-    },
-    'string-camelcase': {
-      name: 'camelCase - Convert to camelCase',
-      code: `import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/toolkit'
-
-const input = 'hello world example'
-
-console.log('camelCase:', camelCase(input))
-console.log('PascalCase:', pascalCase(input))
-console.log('kebab-case:', kebabCase(input))
-console.log('snake_case:', snakeCase(input))
-
-// Different input formats
-const formats = [
-  'hello-world',
-  'hello_world',
-  'HelloWorld',
-  'helloWorld'
-]
-
-formats.forEach(str => {
-  console.log(\`"\${str}" → camelCase: \${camelCase(str)}\`)
-})`,
-    },
-    'math-average': {
-      name: 'average - Calculate average',
-      code: `import { average, sum, min, max, median } from '@vielzeug/toolkit'
-
-const numbers = [10, 20, 30, 40, 50]
-console.log('Numbers:', numbers)
-console.log('Average:', average(numbers))
-console.log('Sum:', sum(numbers))
-console.log('Min:', min(numbers))
-console.log('Max:', max(numbers))
-console.log('Median:', median(numbers))
-
-const grades = [85, 90, 78, 92, 88]
-console.log('\\nGrades:', grades)
-console.log('Average grade:', average(grades).toFixed(2))`,
-    },
-    'function-debounce': {
-      name: 'debounce - Debounce function',
-      code: `import { debounce } from '@vielzeug/toolkit'
-
-let searchCount = 0
-const handleSearch = (query) => {
-  searchCount++
-  console.log(\`Search #\${searchCount}: "\${query}"\`)
-}
-
-const debouncedSearch = debounce(handleSearch, 300)
-
-// Only the last call within 300ms will execute
-debouncedSearch('c')
-debouncedSearch('ca')
-debouncedSearch('cat')
-
-setTimeout(() => {
-  console.log('Final search count:', searchCount) // Should be 1
-}, 500)`,
-    },
-    'function-throttle': {
-      name: 'throttle - Throttle function calls',
-      code: `import { throttle } from '@vielzeug/toolkit'
-
-let scrollCount = 0
-const handleScroll = () => {
-  scrollCount++
-  console.log(\`Scroll event #\${scrollCount}\`)
-}
-
-const throttledScroll = throttle(handleScroll, 200)
-
-// Simulate rapid scroll events
-for (let i = 0; i < 10; i++) {
-  setTimeout(() => throttledScroll(), i * 50)
-}
-
-setTimeout(() => {
-  console.log('Total throttled calls:', scrollCount)
-}, 1000)`,
-    },
-    'function-pipe': {
-      name: 'pipe - Compose functions',
-      code: `import { pipe, compose } from '@vielzeug/toolkit'
-
-const add5 = (n) => n + 5
-const multiply2 = (n) => n * 2
-const square = (n) => n * n
-
-// Pipe: left to right
-const pipeResult = pipe(
-  () => 3,
-  add5,      // 3 + 5 = 8
-  multiply2, // 8 * 2 = 16
-  square     // 16 * 16 = 256
-)
-
-console.log('Pipe result:', pipeResult())
-
-// Compose: right to left
-const composeResult = compose(
-  square,     // last
-  multiply2,
-  add5        // first
-)
-
-console.log('Compose result:', composeResult(3)) // Same result`,
-    },
-    'function-curry': {
-      name: 'curry - Curry functions',
-      code: `import { curry } from '@vielzeug/toolkit'
-
-const add = (a, b, c) => a + b + c
-
-const curriedAdd = curry(add)
-
-console.log('All at once:', curriedAdd(1, 2, 3))
-console.log('One by one:', curriedAdd(1)(2)(3))
-console.log('Partially:', curriedAdd(1, 2)(3))
-
-// Practical use case
-const greet = curry((greeting, name, punctuation) =>
-  \`\${greeting}, \${name}\${punctuation}\`
-)
-
-const sayHello = greet('Hello')
-const sayHelloToUser = sayHello('User')
-
-console.log(sayHelloToUser('!'))
-console.log(sayHelloToUser('.'))`,
-    },
-    'async-parallel': {
-      name: 'parallel - Controlled parallel execution',
-      code: `import { parallel } from '@vielzeug/toolkit'
-
-const items = [1, 2, 3, 4, 5, 6, 7, 8]
-
-// Process 2 items at a time
-const results = await parallel(2, items, async (item) => {
-  console.log(\`Processing: \${item}\`)
-  await new Promise(r => setTimeout(r, 100))
-  return item * 2
-})
-
-console.log('Results:', results)`,
-    },
-    'async-retry': {
-      name: 'retry - Retry failed operations',
-      code: `import { retry } from '@vielzeug/toolkit'
-
-let attempts = 0
-const unreliableOperation = async () => {
-  attempts++
-  console.log(\`Attempt #\${attempts}\`)
-  
-  if (attempts < 3) {
-    throw new Error('Failed!')
-  }
-  
-  return 'Success!'
-}
-
-try {
-  const result = await retry(unreliableOperation, {
-    times: 5,
-    delay: 100
-  })
-  console.log('Result:', result)
-  console.log('Total attempts:', attempts)
-} catch (err) {
-  console.error('All retries failed:', err.message)
-}`,
-    },
-    'async-queue': {
-      name: 'queue - Sequential async execution',
-      code: `import { queue } from '@vielzeug/toolkit'
-
-const tasks = [
-  () => new Promise(r => setTimeout(() => r('Task 1'), 100)),
-  () => new Promise(r => setTimeout(() => r('Task 2'), 50)),
-  () => new Promise(r => setTimeout(() => r('Task 3'), 75))
-]
-
-console.log('Starting queue...')
-const results = await queue(tasks)
-console.log('Queue completed:', results)`,
-    },
-    'async-pool': {
-      name: 'pool - Parallel execution with concurrency limit',
-      code: `import { pool } from '@vielzeug/toolkit'
-
-const tasks = Array.from({ length: 10 }, (_, i) =>
-  async () => {
-    console.log(\`Task \${i + 1} started\`)
-    await new Promise(r => setTimeout(r, 100))
-    return \`Result \${i + 1}\`
-  }
-)
-
-// Run max 3 tasks in parallel
-const results = await pool(3, tasks)
-console.log('All results:', results)`,
-    },
-    'typed-is': {
-      name: 'Type checking utilities',
-      code: `import { 
-  isString, isNumber, isBoolean, isArray, isObject,
-  isFunction, isDate, isRegex, isNil, isEmpty
-} from '@vielzeug/toolkit'
-
-const values = [
-  'hello', 42, true, [], {}, null, undefined,
-  () => {}, new Date(), /test/
-]
-
-values.forEach(val => {
-  console.log(\`Value: \${val}\`)
-  console.log(\`  String: \${isString(val)}\`)
-  console.log(\`  Number: \${isNumber(val)}\`)
-  console.log(\`  Nil: \${isNil(val)}\`)
-  console.log(\`  Empty: \${isEmpty(val)}\`)
-  console.log('---')
-})`,
-    },
-  },
   deposit: {
     'basic-setup': {
-      name: 'Basic Setup - Initialize Deposit',
       code: `import { Deposit } from '@vielzeug/deposit'
 
 const schema = {
@@ -429,9 +24,44 @@ const db = new Deposit({
 
 console.log('Deposit initialized!')
 console.log('Tables:', Object.keys(schema))`,
+      name: 'Basic Setup - Initialize Deposit',
+    },
+    'bulk-operations': {
+      code: `import { Deposit } from '@vielzeug/deposit'
+
+const schema = {
+  items: {
+    key: 'id',
+    record: { id: 0, value: 0 }
+  }
+}
+
+const db = new Deposit({
+  type: 'localStorage',
+  dbName: 'bulk-demo',
+  version: 1,
+  schema
+})
+
+// Bulk insert
+const items = Array.from({ length: 100 }, (_, i) => ({
+  id: i + 1,
+  value: Math.random() * 1000
+}))
+
+await db.bulkPut('items', items)
+console.log('Inserted 100 items')
+
+// Bulk delete
+const idsToDelete = [1, 2, 3, 4, 5]
+await db.bulkDelete('items', idsToDelete)
+console.log('Deleted 5 items')
+
+const remaining = await db.count('items')
+console.log('Remaining items:', remaining)`,
+      name: 'Bulk Operations',
     },
     'crud-operations': {
-      name: 'CRUD Operations',
       code: `import { Deposit } from '@vielzeug/deposit'
 
 const schema = {
@@ -473,9 +103,9 @@ console.log('Deleted user 2')
 // Count
 const count = await db.count('users')
 console.log('Remaining users:', count)`,
+      name: 'CRUD Operations',
     },
     'query-builder': {
-      name: 'Query Builder - Advanced Queries',
       code: `import { Deposit } from '@vielzeug/deposit'
 
 const schema = {
@@ -515,80 +145,9 @@ const byCategory = await db.query('products')
   .toGrouped('category')
 
 console.log('Products by category:', byCategory)`,
+      name: 'Query Builder - Advanced Queries',
     },
-    'ttl-expiration': {
-      name: 'TTL & Expiration',
-      code: `import { Deposit } from '@vielzeug/deposit'
-
-const schema = {
-  cache: {
-    key: 'id',
-    record: { id: 0, data: '' }
-  }
-}
-
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'cache-demo',
-  version: 1,
-  schema
-})
-
-// Store with TTL (expires in 2 seconds)
-await db.put('cache', 
-  { id: 1, data: 'This will expire' },
-  2000 // 2 seconds
-)
-
-console.log('Item stored with 2s TTL')
-
-// Immediately retrieve
-const item1 = await db.get('cache', 1)
-console.log('Immediate get:', item1)
-
-// Wait and try again
-await new Promise(r => setTimeout(r, 3000))
-
-const item2 = await db.get('cache', 1)
-console.log('After expiration:', item2) // undefined`,
-    },
-    'bulk-operations': {
-      name: 'Bulk Operations',
-      code: `import { Deposit } from '@vielzeug/deposit'
-
-const schema = {
-  items: {
-    key: 'id',
-    record: { id: 0, value: 0 }
-  }
-}
-
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'bulk-demo',
-  version: 1,
-  schema
-})
-
-// Bulk insert
-const items = Array.from({ length: 100 }, (_, i) => ({
-  id: i + 1,
-  value: Math.random() * 1000
-}))
-
-await db.bulkPut('items', items)
-console.log('Inserted 100 items')
-
-// Bulk delete
-const idsToDelete = [1, 2, 3, 4, 5]
-await db.bulkDelete('items', idsToDelete)
-console.log('Deleted 5 items')
-
-const remaining = await db.count('items')
-console.log('Remaining items:', remaining)`,
-    },
-    'transactions': {
-      name: 'Transactions - Atomic Operations',
+    transactions: {
       code: `import { Deposit } from '@vielzeug/deposit'
 
 const schema = {
@@ -626,11 +185,47 @@ await db.transaction(['accounts'], async (stores) => {
 })
 
 console.log('Final balances:', await db.getAll('accounts'))`,
+      name: 'Transactions - Atomic Operations',
+    },
+    'ttl-expiration': {
+      code: `import { Deposit } from '@vielzeug/deposit'
+
+const schema = {
+  cache: {
+    key: 'id',
+    record: { id: 0, data: '' }
+  }
+}
+
+const db = new Deposit({
+  type: 'localStorage',
+  dbName: 'cache-demo',
+  version: 1,
+  schema
+})
+
+// Store with TTL (expires in 2 seconds)
+await db.put('cache', 
+  { id: 1, data: 'This will expire' },
+  2000 // 2 seconds
+)
+
+console.log('Item stored with 2s TTL')
+
+// Immediately retrieve
+const item1 = await db.get('cache', 1)
+console.log('Immediate get:', item1)
+
+// Wait and try again
+await new Promise(r => setTimeout(r, 3000))
+
+const item2 = await db.get('cache', 1)
+console.log('After expiration:', item2) // undefined`,
+      name: 'TTL & Expiration',
     },
   },
   fetchit: {
     'http-client-basic': {
-      name: 'HTTP Client - Basic Requests',
       code: `import { createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -649,9 +244,9 @@ const newTodo = await http.post('/todos', {
   body: { title: 'New Todo', completed: false, userId: 1 }
 })
 console.log('POST /todos:', newTodo)`,
+      name: 'HTTP Client - Basic Requests',
     },
     'http-client-headers': {
-      name: 'HTTP Client - Custom Headers',
       code: `import { createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -675,25 +270,9 @@ console.log('Updated headers:', http.getHeaders())
 // Make request with updated headers
 const data = await http.get('/posts/1')
 console.log('Fetched with new headers:', data)`,
-    },
-    'http-client-params': {
-      name: 'HTTP Client - Query Parameters',
-      code: `import { createHttpClient } from '@vielzeug/fetchit'
-
-const http = createHttpClient({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
-
-// GET with query parameters
-const posts = await http.get('/posts', {
-  params: { userId: 1, _limit: 5 }
-})
-
-console.log('Filtered posts:', posts)
-console.log('Count:', posts.length)`,
+      name: 'HTTP Client - Custom Headers',
     },
     'http-client-methods': {
-      name: 'HTTP Client - All Methods',
       code: `import { createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -725,9 +304,25 @@ console.log('PATCH:', patched.title)
 // DELETE
 await http.delete('/posts/1')
 console.log('DELETE: Success')`,
+      name: 'HTTP Client - All Methods',
+    },
+    'http-client-params': {
+      code: `import { createHttpClient } from '@vielzeug/fetchit'
+
+const http = createHttpClient({
+  baseUrl: 'https://jsonplaceholder.typicode.com'
+})
+
+// GET with query parameters
+const posts = await http.get('/posts', {
+  params: { userId: 1, _limit: 5 }
+})
+
+console.log('Filtered posts:', posts)
+console.log('Count:', posts.length)`,
+      name: 'HTTP Client - Query Parameters',
     },
     'query-client-basic': {
-      name: 'Query Client - Basic Caching',
       code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -755,9 +350,9 @@ const data2 = await queryClient.fetch({
 console.log('Data:', data2.title)
 
 console.log('Cache size:', queryClient.getCacheSize())`,
+      name: 'Query Client - Basic Caching',
     },
     'query-client-invalidate': {
-      name: 'Query Client - Cache Invalidation',
       code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -793,9 +388,9 @@ console.log('Cache size:', queryClient.getCacheSize())
 // Invalidate all 'users' queries
 queryClient.invalidate(['users'])
 console.log('After prefix invalidate:', queryClient.getCacheSize())`,
+      name: 'Query Client - Cache Invalidation',
     },
     'query-client-mutations': {
-      name: 'Query Client - Mutations',
       code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -823,9 +418,9 @@ const result = await queryClient.mutate({
 })
 
 console.log('Mutation result:', result)`,
+      name: 'Query Client - Mutations',
     },
     'query-client-subscriptions': {
-      name: 'Query Client - Subscriptions',
       code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
 
 const http = createHttpClient({
@@ -853,11 +448,11 @@ await queryClient.fetch({
 // Clean up
 unsubscribe()
 console.log('Unsubscribed')`,
+      name: 'Query Client - Subscriptions',
     },
   },
   formit: {
     'create-form': {
-      name: 'Create Form - Basic Setup',
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
@@ -870,9 +465,160 @@ const form = createForm({
 
 console.log('Form created!')
 console.log('Initial values:', form.getValues())`,
+      name: 'Create Form - Basic Setup',
+    },
+    'dynamic-forms': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  initialValues: {
+    tags: ['javascript', 'typescript']
+  }
+})
+
+console.log('Initial tags:', form.getValue('tags'))
+
+// Add a tag
+const currentTags = form.getValue('tags')
+form.setValue('tags', [...currentTags, 'react'])
+console.log('After adding:', form.getValue('tags'))
+
+// Remove a tag
+form.setValue('tags', form.getValue('tags').filter(t => t !== 'typescript'))
+console.log('After removing:', form.getValue('tags'))
+
+// Update a specific tag
+const tags = form.getValue('tags')
+tags[0] = 'vue'
+form.setValue('tags', [...tags])
+console.log('After updating:', form.getValue('tags'))`,
+      name: 'Dynamic Forms - Array Fields',
+    },
+    'field-binding': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  initialValues: {
+    firstName: '',
+    lastName: '',
+    email: ''
+  }
+})
+
+// Create bindings (for use with input elements)
+const firstNameBind = form.bind('firstName')
+const lastNameBind = form.bind('lastName')
+const emailBind = form.bind('email')
+
+console.log('Field bindings created:', {
+  firstName: firstNameBind.name,
+  lastName: lastNameBind.name,
+  email: emailBind.name
+})
+
+// Simulate input changes
+firstNameBind.set('John')
+lastNameBind.set('Doe')
+emailBind.set('john.doe@example.com')
+
+console.log('Form values:', form.getValues())
+
+// Check dirty state
+console.log('Dirty fields:', {
+  firstName: form.isDirty('firstName'),
+  lastName: form.isDirty('lastName'),
+  email: form.isDirty('email')
+})`,
+      name: 'Field Binding for Inputs',
+    },
+    'form-submission': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  initialValues: {
+    username: '',
+    email: ''
+  },
+  fields: {
+    username: {
+      validators: (value) => value ? undefined : 'Username is required'
+    },
+    email: {
+      validators: (value) => {
+        if (!value) return 'Email is required'
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+          return 'Invalid email'
+        }
+      }
+    }
+  }
+})
+
+// Set values
+form.setValue('username', 'johndoe')
+form.setValue('email', 'john@example.com')
+
+// Submit with validation
+try {
+  const result = await form.submit(async (values) => {
+    console.log('Submitting...', values)
+    // Simulate API call
+    await new Promise(r => setTimeout(r, 500))
+    return { success: true, id: 123 }
+  })
+  
+  console.log('✓ Form submitted successfully!', result)
+} catch (error) {
+  if (error.type === 'validation') {
+    console.error('✗ Validation errors:', error.errors)
+  } else {
+    console.error('✗ Submission error:', error)
+  }
+}`,
+      name: 'Form Submission',
+    },
+    'form-subscriptions': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  initialValues: {
+    name: '',
+    email: '',
+    age: 0
+  }
+})
+
+// Subscribe to all form changes
+const unsubscribe = form.subscribe((state) => {
+  console.log('Form state changed:', {
+    values: state.values,
+    errors: Object.keys(state.errors).length,
+    dirty: Object.keys(state.dirty).length,
+    isSubmitting: state.isSubmitting
+  })
+})
+
+// Subscribe to specific field
+const unsubEmail = form.subscribeField('email', (field) => {
+  console.log('Email field:', {
+    value: field.value,
+    error: field.error,
+    touched: field.touched,
+    dirty: field.dirty
+  })
+})
+
+// Make changes
+form.setValue('name', 'Alice')
+form.setValue('email', 'alice@example.com')
+form.setValue('age', 25)
+
+// Cleanup
+unsubscribe()
+unsubEmail()`,
+      name: 'Form Subscriptions',
     },
     'form-validation': {
-      name: 'Form Validation',
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
@@ -921,214 +667,11 @@ form.setValue('password', 'short')
 form.setValue('confirmPassword', 'different')
 await form.validateAll()
 console.log('All errors:', form.getErrors())`,
-    },
-    'form-submission': {
-      name: 'Form Submission',
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  initialValues: {
-    username: '',
-    email: ''
-  },
-  fields: {
-    username: {
-      validators: (value) => value ? undefined : 'Username is required'
-    },
-    email: {
-      validators: (value) => {
-        if (!value) return 'Email is required'
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
-          return 'Invalid email'
-        }
-      }
-    }
-  }
-})
-
-// Set values
-form.setValue('username', 'johndoe')
-form.setValue('email', 'john@example.com')
-
-// Submit with validation
-try {
-  const result = await form.submit(async (values) => {
-    console.log('Submitting...', values)
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 500))
-    return { success: true, id: 123 }
-  })
-  
-  console.log('✓ Form submitted successfully!', result)
-} catch (error) {
-  if (error.type === 'validation') {
-    console.error('✗ Validation errors:', error.errors)
-  } else {
-    console.error('✗ Submission error:', error)
-  }
-}`,
-    },
-    'form-subscriptions': {
-      name: 'Form Subscriptions',
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  initialValues: {
-    name: '',
-    email: '',
-    age: 0
-  }
-})
-
-// Subscribe to all form changes
-const unsubscribe = form.subscribe((state) => {
-  console.log('Form state changed:', {
-    values: state.values,
-    errors: Object.keys(state.errors).length,
-    dirty: Object.keys(state.dirty).length,
-    isSubmitting: state.isSubmitting
-  })
-})
-
-// Subscribe to specific field
-const unsubEmail = form.subscribeField('email', (field) => {
-  console.log('Email field:', {
-    value: field.value,
-    error: field.error,
-    touched: field.touched,
-    dirty: field.dirty
-  })
-})
-
-// Make changes
-form.setValue('name', 'Alice')
-form.setValue('email', 'alice@example.com')
-form.setValue('age', 25)
-
-// Cleanup
-unsubscribe()
-unsubEmail()`,
-    },
-    'field-binding': {
-      name: 'Field Binding for Inputs',
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  initialValues: {
-    firstName: '',
-    lastName: '',
-    email: ''
-  }
-})
-
-// Create bindings (for use with input elements)
-const firstNameBind = form.bind('firstName')
-const lastNameBind = form.bind('lastName')
-const emailBind = form.bind('email')
-
-console.log('Field bindings created:', {
-  firstName: firstNameBind.name,
-  lastName: lastNameBind.name,
-  email: emailBind.name
-})
-
-// Simulate input changes
-firstNameBind.set('John')
-lastNameBind.set('Doe')
-emailBind.set('john.doe@example.com')
-
-console.log('Form values:', form.getValues())
-
-// Check dirty state
-console.log('Dirty fields:', {
-  firstName: form.isDirty('firstName'),
-  lastName: form.isDirty('lastName'),
-  email: form.isDirty('email')
-})`,
-    },
-    'dynamic-forms': {
-      name: 'Dynamic Forms - Array Fields',
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  initialValues: {
-    tags: ['javascript', 'typescript']
-  }
-})
-
-console.log('Initial tags:', form.getValue('tags'))
-
-// Add a tag
-const currentTags = form.getValue('tags')
-form.setValue('tags', [...currentTags, 'react'])
-console.log('After adding:', form.getValue('tags'))
-
-// Remove a tag
-form.setValue('tags', form.getValue('tags').filter(t => t !== 'typescript'))
-console.log('After removing:', form.getValue('tags'))
-
-// Update a specific tag
-const tags = form.getValue('tags')
-tags[0] = 'vue'
-form.setValue('tags', [...tags])
-console.log('After updating:', form.getValue('tags'))`,
+      name: 'Form Validation',
     },
   },
   i18nit: {
-    'basic-setup': {
-      name: 'Basic Setup - Initialize i18n',
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-const i18n = createI18n({
-  locale: 'en',
-  fallback: 'en',
-  messages: {
-    en: { 
-      hello: 'Hello',
-      goodbye: 'Goodbye',
-      welcome: 'Welcome, {name}!'
-    },
-    es: { 
-      hello: 'Hola',
-      goodbye: 'Adiós',
-      welcome: '¡Bienvenido, {name}!'
-    }
-  }
-})
-
-console.log('Current locale:', i18n.getLocale())
-console.log('EN:', i18n.t('hello'))
-
-i18n.setLocale('es')
-console.log('ES:', i18n.t('hello'))
-
-console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
-    },
-    'variable-interpolation': {
-      name: 'Variable Interpolation',
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      greeting: 'Hello, {name}!',
-      info: 'You are {age} years old',
-      path: 'Nested: {user.name} at {user.address.city}',
-      count: 'You have {items.length} items'
-    }
-  }
-})
-
-console.log(i18n.t('greeting', { name: 'Bob' }))
-console.log(i18n.t('info', { age: 30 }))
-console.log(i18n.t('path', { 
-  user: { name: 'Alice', address: { city: 'NYC' } }
-}))
-console.log(i18n.t('count', { items: ['a', 'b', 'c'] }))`,
-    },
     'array-formatting': {
-      name: 'Array Formatting with Separators',
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 const i18n = createI18n({
@@ -1162,37 +705,9 @@ i18n.setLocale('es')
 console.log('\\nSpanish:')
 console.log(i18n.t('and', { options }))
 console.log(i18n.t('or', { flavors: ['vainilla', 'chocolate'] }))`,
-    },
-    'pluralization': {
-      name: 'Pluralization Rules',
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      items: {
-        zero: 'No items',
-        one: 'One item',
-        other: '{count} items'
-      },
-      cats: {
-        one: '{count} cat',
-        other: '{count} cats'
-      }
-    }
-  }
-})
-
-console.log(i18n.t('items', { count: 0 }))
-console.log(i18n.t('items', { count: 1 }))
-console.log(i18n.t('items', { count: 5 }))
-
-console.log(i18n.t('cats', { count: 1 }))
-console.log(i18n.t('cats', { count: 3 }))`,
+      name: 'Array Formatting with Separators',
     },
     'async-loading': {
-      name: 'Async Locale Loading',
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 const i18n = createI18n({
@@ -1233,36 +748,38 @@ console.log('Loading French...')
 await i18n.load('fr')
 i18n.setLocale('fr')
 console.log('French:', i18n.t('greeting'))`,
+      name: 'Async Locale Loading',
     },
-    'namespaces': {
-      name: 'Namespaces for Organization',
+    'basic-setup': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 const i18n = createI18n({
   locale: 'en',
+  fallback: 'en',
   messages: {
-    en: {
-      'common.hello': 'Hello',
-      'common.goodbye': 'Goodbye',
-      'errors.notFound': 'Not found',
-      'errors.unauthorized': 'Unauthorized',
-      'nav.home': 'Home',
-      'nav.about': 'About'
+    en: { 
+      hello: 'Hello',
+      goodbye: 'Goodbye',
+      welcome: 'Welcome, {name}!'
+    },
+    es: { 
+      hello: 'Hola',
+      goodbye: 'Adiós',
+      welcome: '¡Bienvenido, {name}!'
     }
   }
 })
 
-// Use namespace helper
-const common = i18n.namespace('common')
-const errors = i18n.namespace('errors')
-const nav = i18n.namespace('nav')
+console.log('Current locale:', i18n.getLocale())
+console.log('EN:', i18n.t('hello'))
 
-console.log('Common:', common.t('hello'))
-console.log('Errors:', errors.t('notFound'))
-console.log('Nav:', nav.t('home'))`,
+i18n.setLocale('es')
+console.log('ES:', i18n.t('hello'))
+
+console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
+      name: 'Basic Setup - Initialize i18n',
     },
     'formatting-helpers': {
-      name: 'Number and Date Formatting',
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 const i18n = createI18n({ locale: 'en-US' })
@@ -1290,11 +807,89 @@ console.log('Long:', i18n.date(date, {
 i18n.setLocale('de-DE')
 console.log('\\nGerman number:', i18n.number(1234567.89))
 console.log('German date:', i18n.date(date))`,
+      name: 'Number and Date Formatting',
+    },
+    namespaces: {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      'common.hello': 'Hello',
+      'common.goodbye': 'Goodbye',
+      'errors.notFound': 'Not found',
+      'errors.unauthorized': 'Unauthorized',
+      'nav.home': 'Home',
+      'nav.about': 'About'
+    }
+  }
+})
+
+// Use namespace helper
+const common = i18n.namespace('common')
+const errors = i18n.namespace('errors')
+const nav = i18n.namespace('nav')
+
+console.log('Common:', common.t('hello'))
+console.log('Errors:', errors.t('notFound'))
+console.log('Nav:', nav.t('home'))`,
+      name: 'Namespaces for Organization',
+    },
+    pluralization: {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      items: {
+        zero: 'No items',
+        one: 'One item',
+        other: '{count} items'
+      },
+      cats: {
+        one: '{count} cat',
+        other: '{count} cats'
+      }
+    }
+  }
+})
+
+console.log(i18n.t('items', { count: 0 }))
+console.log(i18n.t('items', { count: 1 }))
+console.log(i18n.t('items', { count: 5 }))
+
+console.log(i18n.t('cats', { count: 1 }))
+console.log(i18n.t('cats', { count: 3 }))`,
+      name: 'Pluralization Rules',
+    },
+    'variable-interpolation': {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      greeting: 'Hello, {name}!',
+      info: 'You are {age} years old',
+      path: 'Nested: {user.name} at {user.address.city}',
+      count: 'You have {items.length} items'
+    }
+  }
+})
+
+console.log(i18n.t('greeting', { name: 'Bob' }))
+console.log(i18n.t('info', { age: 30 }))
+console.log(i18n.t('path', { 
+  user: { name: 'Alice', address: { city: 'NYC' } }
+}))
+console.log(i18n.t('count', { items: ['a', 'b', 'c'] }))`,
+      name: 'Variable Interpolation',
     },
   },
   logit: {
     'basic-logging': {
-      name: 'Basic Logging',
       code: `import { Logit } from '@vielzeug/logit'
 
 Logit.debug('Debug message')
@@ -1304,44 +899,9 @@ Logit.warn('Warning message')
 Logit.error('Error message')
 
 console.log('Check your browser console for styled output!')`,
+      name: 'Basic Logging',
     },
-    'log-levels': {
-      name: 'Log Levels',
-      code: `import { Logit } from '@vielzeug/logit'
-
-// Get current level
-console.log('Current level:', Logit.getLevel())
-
-// Set to only show warnings and errors
-Logit.setLogLevel('warn')
-
-Logit.debug('This will not appear')
-Logit.info('This will not appear')
-Logit.warn('This will appear')
-Logit.error('This will appear')
-
-// Reset to show all
-Logit.setLogLevel('debug')
-console.log('\\nAll logs enabled again')`,
-    },
-    'scoped-logging': {
-      name: 'Scoped Logging',
-      code: `import { Logit } from '@vielzeug/logit'
-
-// Create scoped loggers
-const apiLogger = Logit.scope('API')
-const dbLogger = Logit.scope('Database')
-const authLogger = Logit.scope('Auth')
-
-apiLogger.info('Making HTTP request')
-dbLogger.success('Connected to database')
-authLogger.warn('Token expiring soon')
-apiLogger.error('Request failed')
-
-console.log('Check browser console for scoped output!')`,
-    },
-    'configuration': {
-      name: 'Configuration Options',
+    configuration: {
       code: `import { Logit } from '@vielzeug/logit'
 
 // Configure Logit
@@ -1366,9 +926,9 @@ Logit.toggleEnvironment(false)
 Logit.info('Environment indicator hidden')
 
 console.log('Check browser console!')`,
+      name: 'Configuration Options',
     },
     'data-logging': {
-      name: 'Logging Objects and Data',
       code: `import { Logit } from '@vielzeug/logit'
 
 const user = {
@@ -1389,11 +949,46 @@ Logit.debug('Array data:', array)
 Logit.table({ Name: 'Alice', Age: 30, Role: 'Admin' })
 
 console.log('Check browser console for formatted data!')`,
+      name: 'Logging Objects and Data',
+    },
+    'log-levels': {
+      code: `import { Logit } from '@vielzeug/logit'
+
+// Get current level
+console.log('Current level:', Logit.getLevel())
+
+// Set to only show warnings and errors
+Logit.setLogLevel('warn')
+
+Logit.debug('This will not appear')
+Logit.info('This will not appear')
+Logit.warn('This will appear')
+Logit.error('This will appear')
+
+// Reset to show all
+Logit.setLogLevel('debug')
+console.log('\\nAll logs enabled again')`,
+      name: 'Log Levels',
+    },
+    'scoped-logging': {
+      code: `import { Logit } from '@vielzeug/logit'
+
+// Create scoped loggers
+const apiLogger = Logit.scope('API')
+const dbLogger = Logit.scope('Database')
+const authLogger = Logit.scope('Auth')
+
+apiLogger.info('Making HTTP request')
+dbLogger.success('Connected to database')
+authLogger.warn('Token expiring soon')
+apiLogger.error('Request failed')
+
+console.log('Check browser console for scoped output!')`,
+      name: 'Scoped Logging',
     },
   },
   permit: {
     'basic-setup': {
-      name: 'Basic Setup - Role Permissions',
       code: `import { Permit } from '@vielzeug/permit'
 
 // Register permissions for different roles
@@ -1415,37 +1010,9 @@ Permit.register('guest', 'posts', {
 
 console.log('Permissions registered!')
 console.log('Roles:', Permit.roles)`,
-    },
-    'permission-checks': {
-      name: 'Permission Checks',
-      code: `import { Permit } from '@vielzeug/permit'
-
-// Setup permissions
-Permit.register('editor', 'articles', {
-  read: true,
-  create: true,
-  update: true,
-  delete: false
-})
-
-Permit.register('viewer', 'articles', {
-  read: true
-})
-
-// Define users
-const editor = { id: '1', roles: ['editor'] }
-const viewer = { id: '2', roles: ['viewer'] }
-
-// Check permissions
-console.log('Editor can read:', Permit.check(editor, 'articles', 'read'))
-console.log('Editor can create:', Permit.check(editor, 'articles', 'create'))
-console.log('Editor can delete:', Permit.check(editor, 'articles', 'delete'))
-
-console.log('\\nViewer can read:', Permit.check(viewer, 'articles', 'read'))
-console.log('Viewer can create:', Permit.check(viewer, 'articles', 'create'))`,
+      name: 'Basic Setup - Role Permissions',
     },
     'dynamic-permissions': {
-      name: 'Dynamic Permissions - Functions',
       code: `import { Permit } from '@vielzeug/permit'
 
 // Register function-based permissions
@@ -1476,73 +1043,37 @@ console.log('\\nNon-author can update:',
   Permit.check(user2, 'posts', 'update', post))
 console.log('Non-author can delete:', 
   Permit.check(user2, 'posts', 'delete', post))`,
+      name: 'Dynamic Permissions - Functions',
     },
-    'wildcard-permissions': {
-      name: 'Wildcard Permissions',
-      code: `import { Permit, WILDCARD } from '@vielzeug/permit'
+    'permission-checks': {
+      code: `import { Permit } from '@vielzeug/permit'
 
-// Admin has access to all resources
-Permit.register('admin', WILDCARD, {
+// Setup permissions
+Permit.register('editor', 'articles', {
   read: true,
   create: true,
   update: true,
-  delete: true
+  delete: false
 })
 
-// Regular user has limited access
-Permit.register('user', 'posts', {
+Permit.register('viewer', 'articles', {
   read: true
 })
 
-const admin = { id: '1', roles: ['admin'] }
-const user = { id: '2', roles: ['user'] }
+// Define users
+const editor = { id: '1', roles: ['editor'] }
+const viewer = { id: '2', roles: ['viewer'] }
 
-// Admin can access any resource
-console.log('Admin on users:', Permit.check(admin, 'users', 'delete'))
-console.log('Admin on posts:', Permit.check(admin, 'posts', 'delete'))
-console.log('Admin on comments:', Permit.check(admin, 'comments', 'delete'))
+// Check permissions
+console.log('Editor can read:', Permit.check(editor, 'articles', 'read'))
+console.log('Editor can create:', Permit.check(editor, 'articles', 'create'))
+console.log('Editor can delete:', Permit.check(editor, 'articles', 'delete'))
 
-// User has limited access
-console.log('\\nUser on posts read:', Permit.check(user, 'posts', 'read'))
-console.log('User on posts delete:', Permit.check(user, 'posts', 'delete'))`,
-    },
-    'role-hierarchy': {
-      name: 'Role Hierarchy & Multiple Roles',
-      code: `import { Permit } from '@vielzeug/permit'
-
-// Setup role hierarchy
-Permit.register('admin', 'users', {
-  read: true, create: true, update: true, delete: true
-})
-
-Permit.register('moderator', 'posts', {
-  read: true, update: true, delete: true
-})
-
-Permit.register('editor', 'posts', {
-  read: true, update: true
-})
-
-// User with multiple roles
-const userWithMultipleRoles = {
-  id: '1',
-  roles: ['editor', 'moderator']
-}
-
-// Check permission (any role grants access)
-console.log('Can read posts:', 
-  Permit.check(userWithMultipleRoles, 'posts', 'read'))
-console.log('Can delete posts:', 
-  Permit.check(userWithMultipleRoles, 'posts', 'delete'))
-
-// Check role membership
-console.log('\\nHas editor role:', 
-  Permit.hasRole(userWithMultipleRoles, 'editor'))
-console.log('Has admin role:', 
-  Permit.hasRole(userWithMultipleRoles, 'admin'))`,
+console.log('\\nViewer can read:', Permit.check(viewer, 'articles', 'read'))
+console.log('Viewer can create:', Permit.check(viewer, 'articles', 'create'))`,
+      name: 'Permission Checks',
     },
     'permission-management': {
-      name: 'Permission Management',
       code: `import { Permit } from '@vielzeug/permit'
 
 // Register initial permissions
@@ -1575,339 +1106,75 @@ console.log('Delete permission removed')
 // Clear all
 Permit.clear()
 console.log('All permissions cleared')`,
+      name: 'Permission Management',
     },
-  },
-  validit: {
-    'basic-schema': {
-      name: 'Basic Schema Validation',
-      code: `import { v } from '@vielzeug/validit'
+    'role-hierarchy': {
+      code: `import { Permit } from '@vielzeug/permit'
 
-const userSchema = v.object({
-  name: v.string().min(1).max(100),
-  email: v.string().email(),
-  age: v.number().min(0).max(150)
+// Setup role hierarchy
+Permit.register('admin', 'users', {
+  read: true, create: true, update: true, delete: true
 })
 
-// Valid data
-const result1 = userSchema.safeParse({
-  name: 'John Doe',
-  email: 'john@example.com',
-  age: 30
+Permit.register('moderator', 'posts', {
+  read: true, update: true, delete: true
 })
 
-console.log('Valid:', result1.success)
-if (result1.success) {
-  console.log('Data:', result1.data)
+Permit.register('editor', 'posts', {
+  read: true, update: true
+})
+
+// User with multiple roles
+const userWithMultipleRoles = {
+  id: '1',
+  roles: ['editor', 'moderator']
 }
 
-// Invalid data
-const result2 = userSchema.safeParse({
-  name: '',
-  email: 'invalid-email',
-  age: 200
-})
+// Check permission (any role grants access)
+console.log('Can read posts:', 
+  Permit.check(userWithMultipleRoles, 'posts', 'read'))
+console.log('Can delete posts:', 
+  Permit.check(userWithMultipleRoles, 'posts', 'delete'))
 
-console.log('\\nInvalid:', result2.success)
-if (!result2.success) {
-  console.log('Errors:', result2.error.issues)
-}`,
+// Check role membership
+console.log('\\nHas editor role:', 
+  Permit.hasRole(userWithMultipleRoles, 'editor'))
+console.log('Has admin role:', 
+  Permit.hasRole(userWithMultipleRoles, 'admin'))`,
+      name: 'Role Hierarchy & Multiple Roles',
     },
-    'string-validation': {
-      name: 'String Validation',
-      code: `import { v } from '@vielzeug/validit'
+    'wildcard-permissions': {
+      code: `import { Permit, WILDCARD } from '@vielzeug/permit'
 
-const schemas = {
-  email: v.string().email(),
-  url: v.string().url(),
-  uuid: v.string().uuid(),
-  min: v.string().min(3),
-  max: v.string().max(10),
-  length: v.string().length(5),
-  pattern: v.string().pattern(/^[A-Z]+$/),
-}
-
-const tests = {
-  email: 'user@example.com',
-  url: 'https://example.com',
-  uuid: '550e8400-e29b-41d4-a716-446655440000',
-  min: 'abc',
-  max: 'short',
-  length: 'exact',
-  pattern: 'HELLO'
-}
-
-Object.entries(tests).forEach(([key, value]) => {
-  const result = schemas[key].safeParse(value)
-  console.log(\`\${key}: \${result.success}\`)
-})`,
-    },
-    'number-validation': {
-      name: 'Number Validation',
-      code: `import { v } from '@vielzeug/validit'
-
-const schemas = {
-  basic: v.number(),
-  positive: v.number().positive(),
-  min: v.number().min(0),
-  max: v.number().max(100),
-  int: v.number().int(),
-  positiveInt: v.positiveInt()
-}
-
-const tests = [
-  { name: 'positive number', value: 42, schema: 'positive' },
-  { name: 'negative number', value: -5, schema: 'positive' },
-  { name: 'in range', value: 50, schema: 'max' },
-  { name: 'out of range', value: 150, schema: 'max' },
-  { name: 'integer', value: 5, schema: 'int' },
-  { name: 'float', value: 5.5, schema: 'int' }
-]
-
-tests.forEach(({ name, value, schema }) => {
-  const result = schemas[schema].safeParse(value)
-  console.log(\`\${name}: \${result.success}\`)
-})`,
-    },
-    'nested-objects': {
-      name: 'Nested Object Validation',
-      code: `import { v } from '@vielzeug/validit'
-
-const addressSchema = v.object({
-  street: v.string(),
-  city: v.string(),
-  zipCode: v.string().pattern(/^\\d{5}$/),
-  country: v.string()
+// Admin has access to all resources
+Permit.register('admin', WILDCARD, {
+  read: true,
+  create: true,
+  update: true,
+  delete: true
 })
 
-const userSchema = v.object({
-  name: v.string(),
-  email: v.string().email(),
-  address: addressSchema,
-  settings: v.object({
-    theme: v.oneOf('light', 'dark'),
-    notifications: v.boolean()
-  })
+// Regular user has limited access
+Permit.register('user', 'posts', {
+  read: true
 })
 
-const validUser = {
-  name: 'Alice',
-  email: 'alice@example.com',
-  address: {
-    street: '123 Main St',
-    city: 'New York',
-    zipCode: '10001',
-    country: 'USA'
-  },
-  settings: {
-    theme: 'dark',
-    notifications: true
-  }
-}
+const admin = { id: '1', roles: ['admin'] }
+const user = { id: '2', roles: ['user'] }
 
-const result = userSchema.safeParse(validUser)
-console.log('Valid:', result.success)
-if (result.success) {
-  console.log('Validated user:', result.data.name)
-  console.log('City:', result.data.address.city)
-  console.log('Theme:', result.data.settings.theme)
-}`,
-    },
-    'array-validation': {
-      name: 'Array Validation',
-      code: `import { v } from '@vielzeug/validit'
+// Admin can access any resource
+console.log('Admin on users:', Permit.check(admin, 'users', 'delete'))
+console.log('Admin on posts:', Permit.check(admin, 'posts', 'delete'))
+console.log('Admin on comments:', Permit.check(admin, 'comments', 'delete'))
 
-const tagSchema = v.array(v.string()).min(1).max(5)
-const numberSchema = v.array(v.number()).nonempty()
-const userSchema = v.array(v.object({
-  id: v.number(),
-  name: v.string()
-}))
-
-// Valid arrays
-console.log('Tags:', tagSchema.safeParse(['js', 'ts']).success)
-console.log('Numbers:', numberSchema.safeParse([1, 2, 3]).success)
-console.log('Users:', userSchema.safeParse([
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' }
-]).success)
-
-// Invalid arrays
-console.log('\\nEmpty tags:', tagSchema.safeParse([]).success)
-console.log('Too many tags:', 
-  tagSchema.safeParse(['a', 'b', 'c', 'd', 'e', 'f']).success)
-console.log('Invalid user:', userSchema.safeParse([
-  { id: 'invalid', name: 'Alice' }
-]).success)`,
-    },
-    'optional-nullable': {
-      name: 'Optional and Nullable Fields',
-      code: `import { v } from '@vielzeug/validit'
-
-const schema = v.object({
-  required: v.string(),
-  optional: v.string().optional(),
-  nullable: v.string().nullable(),
-  withDefault: v.string().default('default value')
-})
-
-// Valid with minimum fields
-const result1 = schema.safeParse({
-  required: 'value'
-})
-console.log('Minimal:', result1.success)
-if (result1.success) {
-  console.log('Data:', result1.data)
-}
-
-// With optional and nullable
-const result2 = schema.safeParse({
-  required: 'value',
-  optional: 'optional value',
-  nullable: null
-})
-console.log('\\nWith optional:', result2.success)
-
-// Missing required field
-const result3 = schema.safeParse({
-  optional: 'value'
-})
-console.log('Missing required:', result3.success)`,
-    },
-    'refinements': {
-      name: 'Custom Refinements',
-      code: `import { v } from '@vielzeug/validit'
-
-const passwordSchema = v.string()
-  .min(8)
-  .refine(
-    (val) => /[A-Z]/.test(val),
-    'Must contain uppercase letter'
-  )
-  .refine(
-    (val) => /[a-z]/.test(val),
-    'Must contain lowercase letter'
-  )
-  .refine(
-    (val) => /[0-9]/.test(val),
-    'Must contain number'
-  )
-
-const passwords = [
-  'weak',
-  'WeakPass',
-  'WeakPass123'
-]
-
-passwords.forEach(pwd => {
-  const result = passwordSchema.safeParse(pwd)
-  console.log(\`"\${pwd}": \${result.success}\`)
-  if (!result.success) {
-    console.log('  →', result.error.issues[0].message)
-  }
-})`,
-    },
-    'coercion': {
-      name: 'Type Coercion',
-      code: `import { v } from '@vielzeug/validit'
-
-const schema = v.object({
-  age: v.coerce.number(),
-  active: v.coerce.boolean(),
-  createdAt: v.coerce.date()
-})
-
-// Input with string types
-const input = {
-  age: '25',
-  active: 'true',
-  createdAt: '2024-01-15'
-}
-
-const result = schema.safeParse(input)
-console.log('Success:', result.success)
-if (result.success) {
-  console.log('Coerced data:', result.data)
-  console.log('Age type:', typeof result.data.age)
-  console.log('Active type:', typeof result.data.active)
-  console.log('Date type:', result.data.createdAt instanceof Date)
-}`,
+// User has limited access
+console.log('\\nUser on posts read:', Permit.check(user, 'posts', 'read'))
+console.log('User on posts delete:', Permit.check(user, 'posts', 'delete'))`,
+      name: 'Wildcard Permissions',
     },
   },
   stateit: {
-    'basic-store': {
-      name: 'Basic Store - Counter',
-      code: `import { createStore } from '@vielzeug/stateit'
-
-// Create a simple counter store
-const counterStore = createStore({ count: 0 })
-
-// Subscribe to changes
-counterStore.subscribe((state, prev) => {
-  console.log(\`Count changed: \${prev.count} → \${state.count}\`)
-})
-
-// Update state
-console.log('Initial:', counterStore.get())
-counterStore.set({ count: 1 })
-counterStore.set({ count: 2 })
-counterStore.set({ count: 3 })`,
-    },
-    'select-method': {
-      name: 'Select Method - Get State Slices',
-      code: `import { createStore } from '@vielzeug/stateit'
-
-const userStore = createStore({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com',
-  preferences: { theme: 'dark', language: 'en' }
-})
-
-// Select single field
-const name = userStore.select(state => state.name)
-console.log('Name:', name)
-
-// Select nested property
-const theme = userStore.select(state => state.preferences.theme)
-console.log('Theme:', theme)
-
-// Select computed value
-const isAdult = userStore.select(state => state.age >= 18)
-console.log('Is adult:', isAdult)
-
-// Select multiple fields
-const info = userStore.select(state => ({
-  name: state.name,
-  email: state.email
-}))
-console.log('User info:', info)`,
-    },
-    'selective-subscription': {
-      name: 'Selective Subscription',
-      code: `import { createStore } from '@vielzeug/stateit'
-
-const userStore = createStore({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com'
-})
-
-// Subscribe to specific field only
-userStore.subscribe(
-  (state) => state.name,
-  (name, prevName) => {
-    console.log(\`Name: \${prevName} → \${name}\`)
-  }
-)
-
-// Only name changes trigger the subscription
-userStore.set({ name: 'Bob' }) // Logs
-userStore.set({ age: 31 }) // Doesn't log
-userStore.set({ email: 'bob@example.com' }) // Doesn't log
-userStore.set({ name: 'Charlie' }) // Logs`,
-    },
     'async-updates': {
-      name: 'Async State Updates',
       code: `import { createStore } from '@vielzeug/stateit'
 
 const dataStore = createStore({
@@ -1942,31 +1209,27 @@ async function fetchData() {
 }
 
 await fetchData()`,
+      name: 'Async State Updates',
     },
-    'scoped-stores': {
-      name: 'Scoped Stores - Isolated State',
+    'basic-store': {
       code: `import { createStore } from '@vielzeug/stateit'
 
-const appStore = createStore({
-  theme: 'light',
-  language: 'en'
+// Create a simple counter store
+const counterStore = createStore({ count: 0 })
+
+// Subscribe to changes
+counterStore.subscribe((state, prev) => {
+  console.log(\`Count changed: \${prev.count} → \${state.count}\`)
 })
 
-// Create child store with overrides
-const draftStore = appStore.createChild({
-  theme: 'dark'
-})
-
-console.log('Parent theme:', appStore.get().theme) // 'light'
-console.log('Child theme:', draftStore.get().theme) // 'dark'
-
-// Child changes don't affect parent
-draftStore.set({ language: 'es' })
-console.log('Parent language:', appStore.get().language) // 'en'
-console.log('Child language:', draftStore.get().language) // 'es'`,
+// Update state
+console.log('Initial:', counterStore.get())
+counterStore.set({ count: 1 })
+counterStore.set({ count: 2 })
+counterStore.set({ count: 3 })`,
+      name: 'Basic Store - Counter',
     },
     'computed-values': {
-      name: 'Computed Values via Subscriptions',
       code: `import { createStore } from '@vielzeug/stateit'
 
 const cartStore = createStore({
@@ -1995,9 +1258,85 @@ cartStore.set({
     { id: 3, name: 'Orange', price: 1.2, quantity: 4 }
   ]
 })`,
+      name: 'Computed Values via Subscriptions',
+    },
+    'scoped-stores': {
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const appStore = createStore({
+  theme: 'light',
+  language: 'en'
+})
+
+// Create child store with overrides
+const draftStore = appStore.createChild({
+  theme: 'dark'
+})
+
+console.log('Parent theme:', appStore.get().theme) // 'light'
+console.log('Child theme:', draftStore.get().theme) // 'dark'
+
+// Child changes don't affect parent
+draftStore.set({ language: 'es' })
+console.log('Parent language:', appStore.get().language) // 'en'
+console.log('Child language:', draftStore.get().language) // 'es'`,
+      name: 'Scoped Stores - Isolated State',
+    },
+    'select-method': {
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const userStore = createStore({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com',
+  preferences: { theme: 'dark', language: 'en' }
+})
+
+// Select single field
+const name = userStore.select(state => state.name)
+console.log('Name:', name)
+
+// Select nested property
+const theme = userStore.select(state => state.preferences.theme)
+console.log('Theme:', theme)
+
+// Select computed value
+const isAdult = userStore.select(state => state.age >= 18)
+console.log('Is adult:', isAdult)
+
+// Select multiple fields
+const info = userStore.select(state => ({
+  name: state.name,
+  email: state.email
+}))
+console.log('User info:', info)`,
+      name: 'Select Method - Get State Slices',
+    },
+    'selective-subscription': {
+      code: `import { createStore } from '@vielzeug/stateit'
+
+const userStore = createStore({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com'
+})
+
+// Subscribe to specific field only
+userStore.subscribe(
+  (state) => state.name,
+  (name, prevName) => {
+    console.log(\`Name: \${prevName} → \${name}\`)
+  }
+)
+
+// Only name changes trigger the subscription
+userStore.set({ name: 'Bob' }) // Logs
+userStore.set({ age: 31 }) // Doesn't log
+userStore.set({ email: 'bob@example.com' }) // Doesn't log
+userStore.set({ name: 'Charlie' }) // Logs`,
+      name: 'Selective Subscription',
     },
     'todo-list': {
-      name: 'Todo List Example',
       code: `import { createStore } from '@vielzeug/stateit'
 
 const todoStore = createStore({
@@ -2041,11 +1380,442 @@ todoStore.set({ todos: updatedTodos })
 // Change filter
 todoStore.set({ filter: 'active' })
 todoStore.set({ filter: 'completed' })`,
+      name: 'Todo List Example',
+    },
+  },
+  toolkit: {
+    'array-chunk': {
+      code: `import { chunk } from '@vielzeug/toolkit'
+
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+console.log('Original:', numbers)
+console.log('Chunks of 3:', chunk(numbers, 3))
+console.log('Chunks of 4:', chunk(numbers, 4))
+
+// Practical use case: Batch processing
+const userIds = [101, 102, 103, 104, 105, 106, 107, 108]
+const batches = chunk(userIds, 3)
+console.log('User ID batches:', batches)`,
+      name: 'chunk - Split array into chunks',
+    },
+    'array-filter': {
+      code: `import { filter } from '@vielzeug/toolkit'
+
+const users = [
+  { name: 'Alice', age: 25, active: true },
+  { name: 'Bob', age: 30, active: false },
+  { name: 'Charlie', age: 35, active: true },
+  { name: 'David', age: 28, active: true }
+]
+
+const activeUsers = filter(users, u => u.active)
+console.log('Active users:', activeUsers)
+
+const over30 = filter(users, u => u.age > 30)
+console.log('Users over 30:', over30)
+
+// Async filter support
+const asyncFiltered = await filter(users, async (u) => {
+  await new Promise(r => setTimeout(r, 10))
+  return u.age >= 28
+})
+console.log('Async filtered:', asyncFiltered)`,
+      name: 'filter - Filter array elements',
+    },
+    'array-group': {
+      code: `import { group } from '@vielzeug/toolkit'
+
+const items = [
+  { type: 'fruit', name: 'apple', price: 1.2 },
+  { type: 'vegetable', name: 'carrot', price: 0.8 },
+  { type: 'fruit', name: 'banana', price: 0.5 },
+  { type: 'vegetable', name: 'broccoli', price: 1.5 },
+  { type: 'fruit', name: 'orange', price: 0.9 }
+]
+
+const byType = group(items, item => item.type)
+console.log('Grouped by type:', byType)
+
+// Group by price range
+const byPriceRange = group(items, item => 
+  item.price < 1 ? 'cheap' : 'expensive'
+)
+console.log('Grouped by price:', byPriceRange)`,
+      name: 'group - Group array by key',
+    },
+    'array-map': {
+      code: `import { map } from '@vielzeug/toolkit'
+
+const numbers = [1, 2, 3, 4, 5]
+
+const doubled = map(numbers, n => n * 2)
+console.log('Doubled:', doubled)
+
+const strings = map(numbers, n => \`Number: \${n}\`)
+console.log('Formatted:', strings)
+
+// Async map support
+const asyncMapped = await map(numbers, async (n) => {
+  await new Promise(r => setTimeout(r, 10))
+  return n * 3
+})
+console.log('Async tripled:', asyncMapped)`,
+      name: 'map - Transform array elements',
+    },
+    'array-search': {
+      code: `import { search } from '@vielzeug/toolkit'
+
+const users = [
+  { name: 'Alice Johnson', email: 'alice@example.com', role: 'admin' },
+  { name: 'Bob Smith', email: 'bob@example.com', role: 'user' },
+  { name: 'Charlie Brown', email: 'charlie@example.com', role: 'user' },
+  { name: 'David Miller', email: 'david@example.com', role: 'moderator' }
+]
+
+const results1 = search(users, 'alice')
+console.log('Search "alice":', results1)
+
+const results2 = search(users, 'smith')
+console.log('Search "smith":', results2)
+
+const results3 = search(users, 'admin')
+console.log('Search "admin":', results3)`,
+      name: 'search - Fuzzy search in arrays',
+    },
+    'array-uniq': {
+      code: `import { uniq } from '@vielzeug/toolkit'
+
+const numbers = [1, 2, 2, 3, 3, 3, 4, 5, 5]
+console.log('Unique numbers:', uniq(numbers))
+
+const tags = ['javascript', 'react', 'vue', 'react', 'angular', 'vue']
+console.log('Unique tags:', uniq(tags))
+
+// Works with objects too (by reference)
+const obj1 = { id: 1 }
+const obj2 = { id: 2 }
+const objects = [obj1, obj2, obj1, obj2]
+console.log('Unique objects:', uniq(objects))`,
+      name: 'uniq - Remove duplicates',
+    },
+    'async-parallel': {
+      code: `import { parallel } from '@vielzeug/toolkit'
+
+const items = [1, 2, 3, 4, 5, 6, 7, 8]
+
+// Process 2 items at a time
+const results = await parallel(2, items, async (item) => {
+  console.log(\`Processing: \${item}\`)
+  await new Promise(r => setTimeout(r, 100))
+  return item * 2
+})
+
+console.log('Results:', results)`,
+      name: 'parallel - Controlled parallel execution',
+    },
+    'async-pool': {
+      code: `import { pool } from '@vielzeug/toolkit'
+
+const tasks = Array.from({ length: 10 }, (_, i) =>
+  async () => {
+    console.log(\`Task \${i + 1} started\`)
+    await new Promise(r => setTimeout(r, 100))
+    return \`Result \${i + 1}\`
+  }
+)
+
+// Run max 3 tasks in parallel
+const results = await pool(3, tasks)
+console.log('All results:', results)`,
+      name: 'pool - Parallel execution with concurrency limit',
+    },
+    'async-queue': {
+      code: `import { queue } from '@vielzeug/toolkit'
+
+const tasks = [
+  () => new Promise(r => setTimeout(() => r('Task 1'), 100)),
+  () => new Promise(r => setTimeout(() => r('Task 2'), 50)),
+  () => new Promise(r => setTimeout(() => r('Task 3'), 75))
+]
+
+console.log('Starting queue...')
+const results = await queue(tasks)
+console.log('Queue completed:', results)`,
+      name: 'queue - Sequential async execution',
+    },
+    'async-retry': {
+      code: `import { retry } from '@vielzeug/toolkit'
+
+let attempts = 0
+const unreliableOperation = async () => {
+  attempts++
+  console.log(\`Attempt #\${attempts}\`)
+  
+  if (attempts < 3) {
+    throw new Error('Failed!')
+  }
+  
+  return 'Success!'
+}
+
+try {
+  const result = await retry(unreliableOperation, {
+    times: 5,
+    delay: 100
+  })
+  console.log('Result:', result)
+  console.log('Total attempts:', attempts)
+} catch (err) {
+  console.error('All retries failed:', err.message)
+}`,
+      name: 'retry - Retry failed operations',
+    },
+    'function-curry': {
+      code: `import { curry } from '@vielzeug/toolkit'
+
+const add = (a, b, c) => a + b + c
+
+const curriedAdd = curry(add)
+
+console.log('All at once:', curriedAdd(1, 2, 3))
+console.log('One by one:', curriedAdd(1)(2)(3))
+console.log('Partially:', curriedAdd(1, 2)(3))
+
+// Practical use case
+const greet = curry((greeting, name, punctuation) =>
+  \`\${greeting}, \${name}\${punctuation}\`
+)
+
+const sayHello = greet('Hello')
+const sayHelloToUser = sayHello('User')
+
+console.log(sayHelloToUser('!'))
+console.log(sayHelloToUser('.'))`,
+      name: 'curry - Curry functions',
+    },
+    'function-debounce': {
+      code: `import { debounce } from '@vielzeug/toolkit'
+
+let searchCount = 0
+const handleSearch = (query) => {
+  searchCount++
+  console.log(\`Search #\${searchCount}: "\${query}"\`)
+}
+
+const debouncedSearch = debounce(handleSearch, 300)
+
+// Only the last call within 300ms will execute
+debouncedSearch('c')
+debouncedSearch('ca')
+debouncedSearch('cat')
+
+setTimeout(() => {
+  console.log('Final search count:', searchCount) // Should be 1
+}, 500)`,
+      name: 'debounce - Debounce function',
+    },
+    'function-pipe': {
+      code: `import { pipe, compose } from '@vielzeug/toolkit'
+
+const add5 = (n) => n + 5
+const multiply2 = (n) => n * 2
+const square = (n) => n * n
+
+// Pipe: left to right
+const pipeResult = pipe(
+  () => 3,
+  add5,      // 3 + 5 = 8
+  multiply2, // 8 * 2 = 16
+  square     // 16 * 16 = 256
+)
+
+console.log('Pipe result:', pipeResult())
+
+// Compose: right to left
+const composeResult = compose(
+  square,     // last
+  multiply2,
+  add5        // first
+)
+
+console.log('Compose result:', composeResult(3)) // Same result`,
+      name: 'pipe - Compose functions',
+    },
+    'function-throttle': {
+      code: `import { throttle } from '@vielzeug/toolkit'
+
+let scrollCount = 0
+const handleScroll = () => {
+  scrollCount++
+  console.log(\`Scroll event #\${scrollCount}\`)
+}
+
+const throttledScroll = throttle(handleScroll, 200)
+
+// Simulate rapid scroll events
+for (let i = 0; i < 10; i++) {
+  setTimeout(() => throttledScroll(), i * 50)
+}
+
+setTimeout(() => {
+  console.log('Total throttled calls:', scrollCount)
+}, 1000)`,
+      name: 'throttle - Throttle function calls',
+    },
+    'math-average': {
+      code: `import { average, sum, min, max, median } from '@vielzeug/toolkit'
+
+const numbers = [10, 20, 30, 40, 50]
+console.log('Numbers:', numbers)
+console.log('Average:', average(numbers))
+console.log('Sum:', sum(numbers))
+console.log('Min:', min(numbers))
+console.log('Max:', max(numbers))
+console.log('Median:', median(numbers))
+
+const grades = [85, 90, 78, 92, 88]
+console.log('\\nGrades:', grades)
+console.log('Average grade:', average(grades).toFixed(2))`,
+      name: 'average - Calculate average',
+    },
+    'object-clone': {
+      code: `import { clone } from '@vielzeug/toolkit'
+
+const original = { 
+  a: 1, 
+  b: { c: 2, d: [3, 4] },
+  date: new Date(),
+  regex: /test/g
+}
+const copy = clone(original)
+
+copy.b.c = 99
+copy.b.d.push(5)
+
+console.log('Original:', original)
+console.log('Copy:', copy)
+console.log('Deep equal:', original.b.c === 2) // true`,
+      name: 'clone - Deep clone object',
+    },
+    'object-diff': {
+      code: `import { diff } from '@vielzeug/toolkit'
+
+const before = {
+  name: 'Alice',
+  age: 25,
+  email: 'alice@old.com',
+  settings: { theme: 'light', lang: 'en' }
+}
+
+const after = {
+  name: 'Alice',
+  age: 26,
+  email: 'alice@new.com',
+  settings: { theme: 'dark', lang: 'en' }
+}
+
+const changes = diff(before, after)
+console.log('Changes detected:', changes)`,
+      name: 'diff - Compare objects',
+    },
+    'object-merge': {
+      code: `import { merge } from '@vielzeug/toolkit'
+
+const obj1 = { a: 1, b: { c: 2 }, d: [1, 2] }
+const obj2 = { b: { d: 3 }, e: 4, d: [3, 4] }
+const obj3 = { a: 10, f: 5 }
+
+const merged = merge(obj1, obj2, obj3)
+console.log('Merged:', merged)
+
+// Nested merge
+const config1 = {
+  api: { baseUrl: 'https://api.dev', timeout: 5000 },
+  features: { darkMode: true }
+}
+const config2 = {
+  api: { timeout: 10000, retries: 3 },
+  features: { notifications: true }
+}
+
+console.log('Merged configs:', merge(config1, config2))`,
+      name: 'merge - Deep merge objects',
+    },
+    'string-camelcase': {
+      code: `import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/toolkit'
+
+const input = 'hello world example'
+
+console.log('camelCase:', camelCase(input))
+console.log('PascalCase:', pascalCase(input))
+console.log('kebab-case:', kebabCase(input))
+console.log('snake_case:', snakeCase(input))
+
+// Different input formats
+const formats = [
+  'hello-world',
+  'hello_world',
+  'HelloWorld',
+  'helloWorld'
+]
+
+formats.forEach(str => {
+  console.log(\`"\${str}" → camelCase: \${camelCase(str)}\`)
+})`,
+      name: 'camelCase - Convert to camelCase',
+    },
+    'typed-is': {
+      code: `import { 
+  isString, isNumber, isBoolean, isArray, isObject,
+  isFunction, isDate, isRegex, isNil, isEmpty
+} from '@vielzeug/toolkit'
+
+const values = [
+  'hello', 42, true, [], {}, null, undefined,
+  () => {}, new Date(), /test/
+]
+
+values.forEach(val => {
+  console.log(\`Value: \${val}\`)
+  console.log(\`  String: \${isString(val)}\`)
+  console.log(\`  Number: \${isNumber(val)}\`)
+  console.log(\`  Nil: \${isNil(val)}\`)
+  console.log(\`  Empty: \${isEmpty(val)}\`)
+  console.log('---')
+})`,
+      name: 'Type checking utilities',
     },
   },
   validit: {
+    'array-validation': {
+      code: `import { v } from '@vielzeug/validit'
+
+const tagSchema = v.array(v.string()).min(1).max(5)
+const numberSchema = v.array(v.number()).nonempty()
+const userSchema = v.array(v.object({
+  id: v.number(),
+  name: v.string()
+}))
+
+// Valid arrays
+console.log('Tags:', tagSchema.safeParse(['js', 'ts']).success)
+console.log('Numbers:', numberSchema.safeParse([1, 2, 3]).success)
+console.log('Users:', userSchema.safeParse([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' }
+]).success)
+
+// Invalid arrays
+console.log('\\nEmpty tags:', tagSchema.safeParse([]).success)
+console.log('Too many tags:', 
+  tagSchema.safeParse(['a', 'b', 'c', 'd', 'e', 'f']).success)
+console.log('Invalid user:', userSchema.safeParse([
+  { id: 'invalid', name: 'Alice' }
+]).success)`,
+      name: 'Array Validation',
+    },
     'basic-schema': {
-      name: 'Basic Schema',
       code: `import { v } from '@vielzeug/validit'
 
 const userSchema = v.object({
@@ -2054,18 +1824,227 @@ const userSchema = v.object({
   age: v.number().min(0).max(150)
 })
 
-const result = userSchema.safeParse({
+// Valid data
+const result1 = userSchema.safeParse({
   name: 'John Doe',
   email: 'john@example.com',
   age: 30
 })
 
-console.log('Validation result:', result)`,
+console.log('Valid:', result1.success)
+if (result1.success) {
+  console.log('Data:', result1.data)
+}
+
+// Invalid data
+const result2 = userSchema.safeParse({
+  name: '',
+  email: 'invalid-email',
+  age: 200
+})
+
+console.log('\\nInvalid:', result2.success)
+if (!result2.success) {
+  console.log('Errors:', result2.error.issues)
+}`,
+      name: 'Basic Schema Validation',
+    },
+    coercion: {
+      code: `import { v } from '@vielzeug/validit'
+
+const schema = v.object({
+  age: v.coerce.number(),
+  active: v.coerce.boolean(),
+  createdAt: v.coerce.date()
+})
+
+// Input with string types
+const input = {
+  age: '25',
+  active: 'true',
+  createdAt: '2024-01-15'
+}
+
+const result = schema.safeParse(input)
+console.log('Success:', result.success)
+if (result.success) {
+  console.log('Coerced data:', result.data)
+  console.log('Age type:', typeof result.data.age)
+  console.log('Active type:', typeof result.data.active)
+  console.log('Date type:', result.data.createdAt instanceof Date)
+}`,
+      name: 'Type Coercion',
+    },
+    'nested-objects': {
+      code: `import { v } from '@vielzeug/validit'
+
+const addressSchema = v.object({
+  street: v.string(),
+  city: v.string(),
+  zipCode: v.string().pattern(/^\\d{5}$/),
+  country: v.string()
+})
+
+const userSchema = v.object({
+  name: v.string(),
+  email: v.string().email(),
+  address: addressSchema,
+  settings: v.object({
+    theme: v.oneOf('light', 'dark'),
+    notifications: v.boolean()
+  })
+})
+
+const validUser = {
+  name: 'Alice',
+  email: 'alice@example.com',
+  address: {
+    street: '123 Main St',
+    city: 'New York',
+    zipCode: '10001',
+    country: 'USA'
+  },
+  settings: {
+    theme: 'dark',
+    notifications: true
+  }
+}
+
+const result = userSchema.safeParse(validUser)
+console.log('Valid:', result.success)
+if (result.success) {
+  console.log('Validated user:', result.data.name)
+  console.log('City:', result.data.address.city)
+  console.log('Theme:', result.data.settings.theme)
+}`,
+      name: 'Nested Object Validation',
+    },
+    'number-validation': {
+      code: `import { v } from '@vielzeug/validit'
+
+const schemas = {
+  basic: v.number(),
+  positive: v.number().positive(),
+  min: v.number().min(0),
+  max: v.number().max(100),
+  int: v.number().int(),
+  positiveInt: v.positiveInt()
+}
+
+const tests = [
+  { name: 'positive number', value: 42, schema: 'positive' },
+  { name: 'negative number', value: -5, schema: 'positive' },
+  { name: 'in range', value: 50, schema: 'max' },
+  { name: 'out of range', value: 150, schema: 'max' },
+  { name: 'integer', value: 5, schema: 'int' },
+  { name: 'float', value: 5.5, schema: 'int' }
+]
+
+tests.forEach(({ name, value, schema }) => {
+  const result = schemas[schema].safeParse(value)
+  console.log(\`\${name}: \${result.success}\`)
+})`,
+      name: 'Number Validation',
+    },
+    'optional-nullable': {
+      code: `import { v } from '@vielzeug/validit'
+
+const schema = v.object({
+  required: v.string(),
+  optional: v.string().optional(),
+  nullable: v.string().nullable(),
+  withDefault: v.string().default('default value')
+})
+
+// Valid with minimum fields
+const result1 = schema.safeParse({
+  required: 'value'
+})
+console.log('Minimal:', result1.success)
+if (result1.success) {
+  console.log('Data:', result1.data)
+}
+
+// With optional and nullable
+const result2 = schema.safeParse({
+  required: 'value',
+  optional: 'optional value',
+  nullable: null
+})
+console.log('\\nWith optional:', result2.success)
+
+// Missing required field
+const result3 = schema.safeParse({
+  optional: 'value'
+})
+console.log('Missing required:', result3.success)`,
+      name: 'Optional and Nullable Fields',
+    },
+    refinements: {
+      code: `import { v } from '@vielzeug/validit'
+
+const passwordSchema = v.string()
+  .min(8)
+  .refine(
+    (val) => /[A-Z]/.test(val),
+    'Must contain uppercase letter'
+  )
+  .refine(
+    (val) => /[a-z]/.test(val),
+    'Must contain lowercase letter'
+  )
+  .refine(
+    (val) => /[0-9]/.test(val),
+    'Must contain number'
+  )
+
+const passwords = [
+  'weak',
+  'WeakPass',
+  'WeakPass123'
+]
+
+passwords.forEach(pwd => {
+  const result = passwordSchema.safeParse(pwd)
+  console.log(\`"\${pwd}": \${result.success}\`)
+  if (!result.success) {
+    console.log('  →', result.error.issues[0].message)
+  }
+})`,
+      name: 'Custom Refinements',
+    },
+    'string-validation': {
+      code: `import { v } from '@vielzeug/validit'
+
+const schemas = {
+  email: v.string().email(),
+  url: v.string().url(),
+  uuid: v.string().uuid(),
+  min: v.string().min(3),
+  max: v.string().max(10),
+  length: v.string().length(5),
+  pattern: v.string().pattern(/^[A-Z]+$/),
+}
+
+const tests = {
+  email: 'user@example.com',
+  url: 'https://example.com',
+  uuid: '550e8400-e29b-41d4-a716-446655440000',
+  min: 'abc',
+  max: 'short',
+  length: 'exact',
+  pattern: 'HELLO'
+}
+
+Object.entries(tests).forEach(([key, value]) => {
+  const result = schemas[key].safeParse(value)
+  console.log(\`\${key}: \${result.success}\`)
+})`,
+      name: 'String Validation',
     },
   },
   wireit: {
     'basic-container': {
-      name: 'Basic Container - Value Provider',
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
 // Create tokens
@@ -2086,9 +2065,41 @@ const logger = container.get(Logger)
 
 logger.log(\`Config loaded: \${config.apiUrl}\`)
 console.log('Container initialized!')`,
+      name: 'Basic Container - Value Provider',
+    },
+    'child-containers': {
+      code: `import { createContainer, createToken } from '@vielzeug/wireit'
+
+const GlobalConfig = createToken('GlobalConfig')
+const RequestId = createToken('RequestId')
+
+// Parent container
+const parent = createContainer()
+parent.registerValue(GlobalConfig, { 
+  appName: 'MyApp',
+  version: '1.0.0'
+})
+
+// Child container inherits from parent
+const child1 = parent.createChild([
+  [RequestId, { useValue: 'req-001' }]
+])
+
+const child2 = parent.createChild([
+  [RequestId, { useValue: 'req-002' }]
+])
+
+// Both children have access to parent's providers
+const config1 = child1.get(GlobalConfig)
+const id1 = child1.get(RequestId)
+console.log(\`Child 1: \${config1.appName} - Request \${id1}\`)
+
+const config2 = child2.get(GlobalConfig)
+const id2 = child2.get(RequestId)
+console.log(\`Child 2: \${config2.appName} - Request \${id2}\`)`,
+      name: 'Child Containers - Hierarchical DI',
     },
     'class-provider': {
-      name: 'Class Provider - Dependency Injection',
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
 // Define tokens
@@ -2127,9 +2138,9 @@ container
 // Use the service
 const service = container.get(UserService)
 console.log('Users:', service.getAllUsers())`,
+      name: 'Class Provider - Dependency Injection',
     },
     'factory-provider': {
-      name: 'Factory Provider - Custom Creation',
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
 const Config = createToken('Config')
@@ -2160,9 +2171,9 @@ container.registerFactory(
 const logger = container.get(Logger)
 logger.info('Application started!')
 logger.info('Factory provider working!')`,
+      name: 'Factory Provider - Custom Creation',
     },
     lifetimes: {
-      name: 'Lifetimes - Singleton vs Transient',
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
 const SingletonService = createToken('SingletonService')
@@ -2198,41 +2209,9 @@ console.log('Singleton instances:', s1.id, s2.id) // Same ID
 const t1 = container.get(TransientService)
 const t2 = container.get(TransientService)
 console.log('Transient instances:', t1.id, t2.id) // Different IDs`,
-    },
-    'child-containers': {
-      name: 'Child Containers - Hierarchical DI',
-      code: `import { createContainer, createToken } from '@vielzeug/wireit'
-
-const GlobalConfig = createToken('GlobalConfig')
-const RequestId = createToken('RequestId')
-
-// Parent container
-const parent = createContainer()
-parent.registerValue(GlobalConfig, { 
-  appName: 'MyApp',
-  version: '1.0.0'
-})
-
-// Child container inherits from parent
-const child1 = parent.createChild([
-  [RequestId, { useValue: 'req-001' }]
-])
-
-const child2 = parent.createChild([
-  [RequestId, { useValue: 'req-002' }]
-])
-
-// Both children have access to parent's providers
-const config1 = child1.get(GlobalConfig)
-const id1 = child1.get(RequestId)
-console.log(\`Child 1: \${config1.appName} - Request \${id1}\`)
-
-const config2 = child2.get(GlobalConfig)
-const id2 = child2.get(RequestId)
-console.log(\`Child 2: \${config2.appName} - Request \${id2}\`)`,
+      name: 'Lifetimes - Singleton vs Transient',
     },
     'scoped-execution': {
-      name: 'Scoped Execution - Request Scoping',
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
 const RequestId = createToken('RequestId')
@@ -2272,6 +2251,7 @@ const results = await Promise.all([
 ])
 
 console.log('Results:', results)`,
+      name: 'Scoped Execution - Request Scoping',
     },
   },
 };

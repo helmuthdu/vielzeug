@@ -34,7 +34,9 @@ yarn add @vielzeug/fetchit
 import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
 ```
 
-## Two Ways to Use Fetchit
+## Basic Usage
+
+### Two Ways to Use Fetchit
 
 Fetchit provides flexible architecture with separate clients:
 
@@ -42,11 +44,11 @@ Fetchit provides flexible architecture with separate clients:
 2. **Query Client** - Advanced caching and state management
 3. **Use Together or Independently** - Mix and match based on your needs
 
-## HTTP Client (Simple HTTP Requests)
+### HTTP Client (Simple HTTP Requests)
 
 The HTTP client provides clean REST API methods without caching overhead. Perfect for simple requests.
 
-### Creating an HTTP Client
+#### Creating an HTTP Client
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
@@ -74,7 +76,7 @@ const http = createHttpClient({
 - `dedupe` - Enable request deduplication (default: true)
 - `logger` - Optional logger function for debugging requests
 
-### Making Requests
+#### Making Requests
 
 ```ts
 // GET request - returns raw data
@@ -106,7 +108,7 @@ await http.delete('/users/1');
 const data = await http.request<DataType>('CUSTOM', '/endpoint');
 ```
 
-### Query Parameters
+#### Query Parameters
 
 ```ts
 const users = await http.get<User[]>('/users', {
@@ -162,7 +164,7 @@ const [upload1, upload2] = await Promise.all([
 Fetchit uses stable serialization for request bodies, meaning property order doesn't affect deduplication. Binary data types (FormData, Blob, ArrayBuffer) are handled safely without crashing.
 :::
 
-### Managing Headers
+#### Managing Headers
 
 ```ts
 // Update headers dynamically
@@ -180,11 +182,11 @@ const headers = http.getHeaders();
 console.log(headers);
 ```
 
-## Query Client (Advanced Caching)
+### Query Client (Advanced Caching)
 
 The Query client provides intelligent caching, request deduplication, and state management. Works with any HTTP client or fetch function.
 
-### Creating a Query Client
+#### Creating a Query Client
 
 ```ts
 import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
@@ -205,7 +207,7 @@ const queryClient = createQueryClient({
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 ```
 
-### Type-Safe Query Keys
+#### Type-Safe Query Keys
 
 ```ts
 // Define query keys manually with `as const` for type safety
@@ -224,7 +226,7 @@ const user = await queryClient.fetch({
 });
 ```
 
-### Basic Query
+#### Basic Query
 
 ```ts
 // Fetch user with caching
@@ -236,7 +238,7 @@ const user = await queryClient.fetch({
 });
 ```
 
-### Query with Parameters
+#### Query with Parameters
 
 ```ts
 // Query key includes all parameters that affect the data
@@ -251,7 +253,7 @@ const admins = await fetchUsers({ role: 'admin' });
 const adults = await fetchUsers({ age: 18 });
 ```
 
-### Mutations (POST/PUT/DELETE)
+#### Mutations (POST/PUT/DELETE)
 
 ```ts
 // Create user
@@ -270,7 +272,7 @@ const newUser = await queryClient.mutate(
 );
 ```
 
-### Optimistic Updates
+#### Optimistic Updates
 
 ```ts
 // Update user optimistically
@@ -728,7 +730,15 @@ await http.post('/form', { body: params });
 4. **Clean up on logout**: Call `clearCache()` when user logs out
 5. **Use TypeScript**: Define response types for better type safety
 
-## See Also
+## Next Steps
 
-- [API Reference](./api.md) - Complete API documentation
-- [Examples](./examples.md) - Practical code examples
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+    </ul>
+  </div>
+</div>

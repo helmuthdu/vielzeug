@@ -36,7 +36,9 @@ import { Deposit, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposi
 import type { DepositDataSchema, DepositMigrationFn } from '@vielzeug/deposit';
 ```
 
-## Define a Schema
+## Basic Usage
+
+### Define a Schema
 
 The schema defines your tables, their primary keys, indexes, and record types:
 
@@ -74,9 +76,9 @@ const schema = {
 } satisfies DepositDataSchema;
 ```
 
-## Create a Deposit Instance
+### Initialize Deposit
 
-### Using LocalStorage
+#### Using LocalStorage
 
 LocalStorage is simpler but has a smaller storage limit (~5-10MB):
 
@@ -93,7 +95,7 @@ const db = new Deposit({
 });
 ```
 
-### Using IndexedDB
+#### Using IndexedDB
 
 IndexedDB is more powerful with larger storage and index support:
 
@@ -118,9 +120,9 @@ const db = new Deposit({
 });
 ```
 
-## Basic Operations
+### Basic Operations
 
-### Insert/Update Records
+#### Insert/Update Records
 
 ```ts
 // Insert a single user
@@ -144,7 +146,7 @@ await db.put('users', {
 });
 ```
 
-### Retrieve Records
+#### Retrieve Records
 
 ```ts
 // Get a single user
@@ -168,7 +170,7 @@ const allUsers = await db.getAll('users');
 console.log(`Found ${allUsers.length} users`);
 ```
 
-### Delete Records
+#### Delete Records
 
 ```ts
 // Delete a single user
@@ -178,7 +180,7 @@ await db.delete('users', 'u1');
 await db.clear('users');
 ```
 
-### Count Records
+#### Count Records
 
 ```ts
 const userCount = await db.count('users');
@@ -565,7 +567,15 @@ async function searchUsers(query: string) {
 }
 ```
 
-## See Also
+## Next Steps
 
-- [API Reference](./api.md) - Complete API documentation
-- [Examples](./examples.md) - Practical code examples
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+    </ul>
+  </div>
+</div>

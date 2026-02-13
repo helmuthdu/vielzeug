@@ -636,8 +636,9 @@ container.registerFactory(Service, () => new Service());
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./examples">Examples</a> - Real-world usage examples</li>
       <li><a href="./api">API Reference</a> - Complete API documentation</li>
+      <li><a href="./examples">Examples</a> - Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
     </ul>
   </div>
 </div>

@@ -102,16 +102,15 @@ form.submit(async (values) => {
 
 ## 🚀 Key Features
 
-- **Type-Safe**: Full TypeScript support with inferred types from initial values
-- **Path-Based Access**: Dot notation, bracket notation, and array paths for nested data
-- **Powerful Validation**: Field-level and form-level validators with async support
-- **Granular Validation**: Validate only touched fields or specific subsets
-- **Reactive Subscriptions**: Subscribe to form state or individual field changes
-- **Smart Field Binding**: Configurable `bind()` with custom value extractors and onBlur
-- **State Helpers**: Convenient `isDirty()` and `isTouched()` functions
-- **Zero Dependencies**: No external dependencies, fully self-contained
-- **Tiny Bundle**: ~2.1KB gzipped
-- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS
+- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
+- **Granular Validation**: Validate only [touched fields or specific subsets](./usage.md#granular-validation).
+- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
+- **Path-Based Access**: Dot notation, bracket notation, and array paths for [nested data](./usage.md#nested-values).
+- **Powerful Validation**: Field-level and form-level [validators with async support](./usage.md#validation).
+- **Reactive Subscriptions**: Subscribe to [form state or individual field changes](./usage.md#granular-validation).
+- **Smart Field Binding**: Configurable [bind()](./usage.md#field-binding) with custom value extractors and onBlur.
+- **State Helpers**: Convenient [isDirty() and isTouched()](./usage.md#state-helpers) functions.
+- **Type-Safe**: Full TypeScript support with inferred types from initial values.
 
 ## 🏁 Quick Start
 
@@ -302,6 +301,7 @@ Automatically wire up inputs with two-way binding:
 - **[Usage Guide](./usage.md)**: Detailed usage patterns and framework integration
 - **[API Reference](./api.md)**: Complete API documentation and types
 - **[Examples](./examples.md)**: Real-world examples and advanced patterns
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ### Validation Flow
 

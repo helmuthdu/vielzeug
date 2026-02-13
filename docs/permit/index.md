@@ -65,20 +65,20 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 ### Comparison with Alternatives
 
-| Feature            | Permit             | CASL        | Casbin     | Manual If/Else |
-| ------------------ | ------------------ | ----------- | ---------- | -------------- |
-| TypeScript Support | ✅ First-class     | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
-| Dynamic Rules      | ✅ Simple          | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | **~2.0 KB**        | ~15KB       | ~45KB      | 0KB            |
-| Learning Curve     | Low                | Medium      | High       | None           |
-| Role-Based         | ✅                 | ✅          | ✅         | ⚠️ Manual      |
-| Resource-Based     | ✅                 | ✅          | ✅         | ⚠️ Manual      |
-| Wildcards          | ✅ Role + Resource | ⚠️ Limited  | ✅         | ❌             |
-| Normalization      | ✅ Built-in        | ❌          | ❌         | ❌             |
-| Security Defaults  | ✅ Safe            | ⚠️          | ⚠️         | ❌             |
-| Type Exports       | ✅ All             | ⚠️ Some     | ❌         | N/A            |
-| Dependencies       | 1 (logging)        | 5+          | 10+        | N/A            |
-| Isomorphic         | ✅                 | ✅          | ✅         | ✅             |
+| Feature            | Permit              | CASL        | Casbin     | Manual If/Else |
+| ------------------ | ------------------- | ----------- | ---------- | -------------- |
+| TypeScript Support | ✅ First-class      | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
+| Dynamic Rules      | ✅ Simple           | ✅ Advanced | ✅ Complex | ✅ Manual      |
+| Bundle Size (gzip) | **~2 KB**           | ~15KB       | ~45KB      | 0KB            |
+| Learning Curve     | Low                 | Medium      | High       | None           |
+| Role-Based         | ✅                  | ✅          | ✅         | ⚠️ Manual      |
+| Resource-Based     | ✅                  | ✅          | ✅         | ⚠️ Manual      |
+| Wildcards          | ✅ Role + Resource  | ⚠️ Limited  | ✅         | ❌             |
+| Normalization      | ✅ Built-in         | ❌          | ❌         | ❌             |
+| Security Defaults  | ✅ Safe             | ⚠️          | ⚠️         | ❌             |
+| Type Exports       | ✅ All              | ⚠️ Some     | ❌         | N/A            |
+| Dependencies       | 1 (@vielzeug/logit) | 5+          | 10+        | N/A            |
+| Isomorphic         | ✅                  | ✅          | ✅         | ✅             |
 
 ## When to Use Permit
 
@@ -102,15 +102,16 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 ## 🚀 Key Features
 
-- **Role & Resource Based**: Powerful permission model using roles, resources, and actions
-- **Dynamic Rules**: Support for functional rules for complex, context-aware permission checks
-- **Type-safe**: Built with TypeScript for full autocompletion and type safety
+- **Deep Copy Protection**: Immutable [permission registry inspection](./usage.md#inspecting-permissions)
+- **Dynamic Rules**: Support for [functional rules](./usage.md#dynamic-permissions) for complex, context-aware permission checks
+- **Flexible API**: Register, set, unregister, and check permissions with ease. See [Basic Usage](./usage.md#basic-usage).
+- **Lightweight & Fast**: Low dependencies and only **~2 KB gzipped**.
 - **Normalized Matching**: Case-insensitive, trimmed role/resource comparison prevents mismatches
-- **Wildcard Support**: Define permissions for all roles or all resources
-- **Security-First**: Safe handling of malformed users with ANONYMOUS role
+- **Role & Resource Based**: [Powerful permission model](./usage.md#registering-permissions) using roles, resources, and actions.
 - **Runtime Validation**: Validates permission actions at registration
-- **Deep Copy Protection**: Immutable permission registry inspection
-- **Flexible API**: Register, set, unregister, and check permissions with ease
+- **Security-First**: Safe handling of malformed users with [ANONYMOUS role](./usage.md#anonymous-users)
+- **Type-safe**: Built with TypeScript for [full autocompletion and type safety](./usage.md#typescript-generics).
+- **Wildcard Support**: Define permissions for [all roles or all resources](./usage.md#wildcards)
 
 ## 🏁 Quick Start
 
@@ -382,6 +383,7 @@ Permit.register('*', 'posts', { read: true }); // Anyone can view posts
 - **[Usage Guide](./usage.md)**: Installation, configuration, and basic concepts
 - **[API Reference](./api.md)**: Detailed documentation of all methods and types
 - **[Examples](./examples.md)**: Advanced patterns for dynamic rules and wildcards
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

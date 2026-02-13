@@ -106,17 +106,17 @@ const user = await queryClient.fetch({
 
 ## 🚀 Key Features
 
-- **Separate Clients**: HTTP client and Query client work independently
-- **Type-Safe**: Full TypeScript support with generic types and inference
-- **Smart Caching**: Built-in caching with configurable staleness and GC
-- **Deduplication**: Automatically prevent concurrent identical requests
-- **Stable Query Keys**: Property order doesn't matter for cache matching
-- **Auto Parsing**: Intelligent handling of JSON, text, and binary data
-- **Request Retry**: Automatic retry with exponential backoff
-- **Observable State**: Subscribe to query changes for real-time updates
-- **Prefix Invalidation**: `invalidate(['users'])` matches all user-related queries
-- **Rich Error Context**: Custom HttpError class with URL, method, and status
-- **Minimal Dependencies**: Only @vielzeug/toolkit for retry logic
+- **Automatic Data Parsing**: Handles JSON, text, and binary responses intelligently.
+- **Automatic Deduplication**: Prevents [duplicate network requests](./usage.md#request-deduplication) out of the box.
+- **Built-in Retry Logic**: Automatic [Query Retry](./usage.md#query-with-retry) with exponential backoff for reliability.
+- **Detailed Error Context**: Custom `HttpError` includes URL, method, and status for easier debugging.
+- **Full Type Safety**: Enjoy robust TypeScript support with generics and automatic type inference.
+- **Independent Clients**: Use the [HTTP client](./usage.md#http-client-simple-http-requests) for direct requests or the [Query client](./usage.md#query-client-advanced-caching) for advanced caching—each works standalone or together.
+- **Lightweight & Fast**: Low dependencies (@vielzeug/toolkit) and only **~3 KB gzipped**.
+- **Observable State**: [Subscribe](./usage.md#observable-state) to query state changes for real-time UI updates.
+- **Prefix-Based Invalidation**: Invalidate all related queries at once, e.g., `invalidate(['users'])`. See [Cache Management](./usage.md#cache-management).
+- **Smart Caching**: Built-in cache with customizable staleness and garbage collection for efficient data management.
+- **Stable Query Keys**: [Cache keys](./usage.md#stable-query-keys) are order-insensitive for reliable matching.
 
 ## 🏁 Quick Start
 
@@ -453,6 +453,7 @@ await queryClient.fetch({
 - **[Usage Guide](./usage.md)**: Service configuration, interceptors, and error handling
 - **[API Reference](./api.md)**: Complete documentation of all methods and options
 - **[Examples](./examples.md)**: Patterns for caching, cancellation, and file uploads
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

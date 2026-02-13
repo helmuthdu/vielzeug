@@ -55,11 +55,11 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ## 🚀 Key Features
 
-- **100+ Utilities**: Covering all common data structures and tasks.
-- **Type-safe**: Built with TypeScript for excellent developer experience.
-- **Tree-shakeable**: Only include the code you actually use.
-- **Zero Dependencies**: Lightweight and secure.
+- **100+ Utilities**: Covering all common data structures and tasks. See [API Reference](./api.md#array-utilities).
 - **Isomorphic**: Works perfectly in both the Browser and Node.js.
+- **Tree-shakeable**: Only include the code you actually use. See [Basic Usage](./usage.md#basic-usage).
+- **Type-safe**: Built with TypeScript for excellent developer experience. See [TypeScript Configuration](./usage.md#typescript-configuration).
+- **Zero Dependencies**: Lightweight and secure.
 
 ## 🏁 Quick Start
 
@@ -256,7 +256,8 @@ const processUsers = pipe(
 
 - **[Usage Guide](./usage.md)**: Installation, importing, and best practices
 - **[API Reference](./api.md)**: Complete list of all available functions
-- **[REPL](/repl)**: Try the library right in your browser
+- **[Examples](./examples)**: Practical code examples
+- **[Interactive REPL](/repl)**: Try it in your browser
 
 ### 🧩 Utilities by Category
 
