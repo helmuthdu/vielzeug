@@ -41,6 +41,7 @@ v.string(); // string
 - `.pattern(regex: RegExp, message?: string)` - Regex pattern
 - `.email(message?: string)` - Email validation
 - `.url(message?: string)` - URL validation
+- `.uuid(message?: string)` - UUID format
 - `.trim()` - Must be trimmed (validation only, doesn't transform)
 
 #### `v.number()`

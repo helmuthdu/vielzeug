@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/validit",
+      "comment": "add UUID validation method to StringSchema",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/validit"
+}
