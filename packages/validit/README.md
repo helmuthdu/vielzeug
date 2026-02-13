@@ -86,6 +86,7 @@ v.string() // string
   .pattern(/^[a-z]+$/) // regex pattern
   .email() // email validation
   .url() // URL validation
+  .uuid() // UUID validation
   .trim(); // trim whitespace
 ```
 
