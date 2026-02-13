@@ -297,6 +297,10 @@ export class StringSchema extends Schema<string> {
   nonempty(message = 'Must not be empty'): this {
     return this.min(1, message);
   }
+
+  uuid(message = 'Invalid UUID'): this {
+    return this.pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, message);
+  }
 }
 
 /* -------------------- Number Schema -------------------- */
@@ -697,7 +701,6 @@ export const v = {
   union: <T extends readonly [Schema<any>, Schema<any>, ...Schema<any>[]]>(...schemas: T) => new UnionSchema(schemas),
   unknown: () => new Schema([]),
   url: () => new StringSchema().url(),
-  uuid: () =>
-    new StringSchema().pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID'),
+  uuid: () => new StringSchema().uuid(),
   void: () => new LiteralSchema(undefined),
 };
