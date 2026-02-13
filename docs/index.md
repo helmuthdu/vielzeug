@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/introduction
+      link: /guide/
     - theme: alt
       text: View on GitHub
       link: https://github.com/helmuthdu/vielzeug
@@ -35,6 +35,9 @@ features:
   - title: '@vielzeug/permit'
     details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/
+  - title: '@vielzeug/routeit'
+    details: "<img src='/vielzeug/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
+    link: /routeit/
   - title: '@vielzeug/stateit'
     details: "<img src='/vielzeug/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /stateit/

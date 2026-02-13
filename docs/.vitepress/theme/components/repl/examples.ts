@@ -2254,4 +2254,388 @@ console.log('Results:', results)`,
       name: 'Scoped Execution - Request Scoping',
     },
   },
+  routeit: {
+    'basic-routing': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter()
+
+router
+  .get('/', () => {
+    console.log('Home page')
+  })
+  .get('/about', () => {
+    console.log('About page')
+  })
+  .get('/users/:id', ({ params }) => {
+    console.log('User page - ID:', params.id)
+  })
+  .start()
+
+// Navigate
+console.log('Navigating to home...')
+router.navigate('/')
+
+console.log('\\nNavigating to about...')
+router.navigate('/about')
+
+console.log('\\nNavigating to user 123...')
+router.navigate('/users/123')`,
+      name: 'Basic Routing - Simple Navigation',
+    },
+    'middleware-auth': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+// Mock auth service
+const authService = {
+  currentUser: { id: 1, name: 'Alice', roles: ['user'] },
+  isAuthenticated: true
+}
+
+// Auth middleware
+const requireAuth = async (ctx, next) => {
+  if (!authService.isAuthenticated) {
+    console.log('❌ Not authenticated, redirecting to login')
+    ctx.navigate('/login')
+    return
+  }
+  
+  ctx.user = authService.currentUser
+  console.log('✅ Authenticated as:', ctx.user.name)
+  await next()
+}
+
+const router = createRouter()
+
+router
+  .get('/login', () => {
+    console.log('📝 Login page')
+  })
+  .route({
+    path: '/dashboard',
+    middleware: requireAuth,
+    handler: (ctx) => {
+      console.log('📊 Dashboard - Welcome,', ctx.user.name)
+    }
+  })
+  .route({
+    path: '/profile',
+    middleware: requireAuth,
+    handler: (ctx) => {
+      console.log('👤 Profile for:', ctx.user.name)
+      console.log('   User ID:', ctx.user.id)
+      console.log('   Roles:', ctx.user.roles)
+    }
+  })
+  .start()
+
+// Try accessing protected routes
+console.log('\\n--- Accessing Dashboard ---')
+router.navigate('/dashboard')
+
+console.log('\\n--- Accessing Profile ---')
+router.navigate('/profile')`,
+      name: 'Middleware - Authentication',
+    },
+    'named-routes': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter()
+
+router
+  .route({
+    path: '/',
+    name: 'home',
+    handler: () => console.log('🏠 Home')
+  })
+  .route({
+    path: '/users/:id',
+    name: 'userDetail',
+    handler: ({ params }) => {
+      console.log('👤 User Detail - ID:', params.id)
+    }
+  })
+  .route({
+    path: '/posts/:postId/comments/:commentId',
+    name: 'postComment',
+    handler: ({ params }) => {
+      console.log('💬 Post:', params.postId, 'Comment:', params.commentId)
+    }
+  })
+  .start()
+
+// Navigate by name
+console.log('Navigate to home:')
+router.navigateTo('home')
+
+console.log('\\nNavigate to user 42:')
+router.navigateTo('userDetail', { id: '42' })
+
+console.log('\\nNavigate to post comment:')
+router.navigateTo('postComment', { postId: '5', commentId: '12' })
+
+// Build URLs
+console.log('\\n--- Building URLs ---')
+console.log('User 123 URL:', router.urlFor('userDetail', { id: '123' }))
+console.log('Comment URL:', router.urlFor('postComment', { 
+  postId: '10', 
+  commentId: '50' 
+}))`,
+      name: 'Named Routes - Type-Safe Navigation',
+    },
+    'query-params': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter()
+
+router
+  .get('/search', ({ query }) => {
+    console.log('🔍 Search page')
+    console.log('   Query:', query.q)
+    console.log('   Page:', query.page || '1')
+    console.log('   Sort:', query.sort || 'relevance')
+  })
+  .get('/products', ({ query, params }) => {
+    console.log('🛍️ Products page')
+    console.log('   Category:', query.category)
+    console.log('   Price range:', query.min, '-', query.max)
+    console.log('   Tags:', query.tags) // Array support
+  })
+  .get('/users/:id/posts', ({ params, query }) => {
+    console.log('📝 User posts')
+    console.log('   User ID:', params.id)
+    console.log('   Status:', query.status)
+    console.log('   Limit:', query.limit || '10')
+  })
+  .start()
+
+// Navigate with query params
+console.log('Search with query:')
+router.navigate('/search?q=typescript&page=2&sort=recent')
+
+console.log('\\nProducts with filters:')
+router.navigate('/products?category=electronics&min=100&max=500&tags=sale&tags=new')
+
+console.log('\\nUser posts:')
+router.navigate('/users/42/posts?status=published&limit=20')`,
+      name: 'Query Parameters - URL Parsing',
+    },
+    'nested-routes': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter()
+
+router
+  .route({
+    path: '/admin',
+    handler: () => {
+      console.log('📂 Admin section')
+    },
+    children: [
+      {
+        path: '/dashboard',
+        handler: () => {
+          console.log('  📊 Admin Dashboard')
+        }
+      },
+      {
+        path: '/users',
+        handler: () => {
+          console.log('  👥 User Management')
+        }
+      },
+      {
+        path: '/settings',
+        handler: () => {
+          console.log('  ⚙️ Admin Settings')
+        }
+      }
+    ]
+  })
+  .route({
+    path: '/blog',
+    handler: () => {
+      console.log('📝 Blog section')
+    },
+    children: [
+      {
+        path: '/posts/:id',
+        handler: ({ params }) => {
+          console.log('  📄 Post:', params.id)
+        }
+      },
+      {
+        path: '/categories/:category',
+        handler: ({ params }) => {
+          console.log('  🏷️ Category:', params.category)
+        }
+      }
+    ]
+  })
+  .start()
+
+// Navigate to nested routes
+console.log('Admin routes:')
+router.navigate('/admin/dashboard')
+router.navigate('/admin/users')
+router.navigate('/admin/settings')
+
+console.log('\\nBlog routes:')
+router.navigate('/blog/posts/123')
+router.navigate('/blog/categories/javascript')`,
+      name: 'Nested Routes - Route Hierarchy',
+    },
+    'middleware-chain': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+// Logger middleware
+const logger = async (ctx, next) => {
+  console.log('📝 Logger:', ctx.pathname)
+  await next()
+  console.log('✅ Logger: Done')
+}
+
+// Auth middleware
+const auth = async (ctx, next) => {
+  console.log('  🔐 Auth: Checking...')
+  ctx.user = { id: 1, name: 'Alice', role: 'admin' }
+  await next()
+}
+
+// Permission middleware
+const requireAdmin = async (ctx, next) => {
+  console.log('    👮 Permission: Checking admin...')
+  if (ctx.user?.role !== 'admin') {
+    console.log('    ❌ Permission denied')
+    return
+  }
+  console.log('    ✅ Admin verified')
+  await next()
+}
+
+// Data loader middleware
+const loadData = async (ctx, next) => {
+  console.log('      📦 Loading data...')
+  ctx.meta = { loaded: true, timestamp: Date.now() }
+  await next()
+}
+
+const router = createRouter({ middleware: [logger] })
+
+router
+  .route({
+    path: '/admin/panel',
+    middleware: [auth, requireAdmin, loadData],
+    handler: (ctx) => {
+      console.log('        🎯 Handler: Admin panel')
+      console.log('        User:', ctx.user?.name)
+      console.log('        Data loaded:', ctx.meta?.loaded)
+    }
+  })
+  .start()
+
+console.log('Execution order:')
+console.log('Global → Route → Handler\\n')
+router.navigate('/admin/panel')`,
+      name: 'Middleware Chain - Execution Flow',
+    },
+    'route-context': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter()
+
+router
+  .route({
+    path: '/users/:userId/posts/:postId',
+    data: {
+      title: 'Post Detail',
+      requiresAuth: true,
+      breadcrumbs: ['Home', 'Users', 'Posts']
+    },
+    middleware: async (ctx, next) => {
+      // Add custom metadata
+      ctx.meta = {
+        startTime: Date.now(),
+        environment: 'production'
+      }
+      
+      // Simulate user loading
+      ctx.user = {
+        id: parseInt(ctx.params.userId),
+        name: 'Alice'
+      }
+      
+      await next()
+      
+      // Log after handler
+      const elapsed = Date.now() - ctx.meta.startTime
+      console.log(\`\\n⏱️ Took \${elapsed}ms\`)
+    },
+    handler: (ctx) => {
+      console.log('📄 Route Context:')
+      console.log('   Pathname:', ctx.pathname)
+      console.log('   Params:', ctx.params)
+      console.log('   Data:', ctx.data)
+      console.log('   User:', ctx.user)
+      console.log('   Meta:', ctx.meta)
+    }
+  })
+  .start()
+
+router.navigate('/users/42/posts/123?tab=comments&sort=recent')`,
+      name: 'Route Context - Full Context Access',
+    },
+    'url-building': {
+      code: `import { createRouter } from '@vielzeug/routeit'
+
+const router = createRouter({ base: '/app' })
+
+router
+  .route({
+    path: '/users/:id',
+    name: 'user',
+    handler: () => {}
+  })
+  .route({
+    path: '/posts/:postId/comments/:commentId',
+    name: 'comment',
+    handler: () => {}
+  })
+  .start()
+
+console.log('🔗 URL Building Examples:\\n')
+
+// Build with params
+const userUrl = router.buildUrl('/users/:id', { id: '123' })
+console.log('User URL:', userUrl)
+
+// Build with query params
+const searchUrl = router.buildUrl('/search', undefined, {
+  q: 'typescript',
+  page: '2',
+  tags: ['tutorial', 'advanced']
+})
+console.log('Search URL:', searchUrl)
+
+// Build with both
+const profileUrl = router.buildUrl(
+  '/users/:id',
+  { id: '456' },
+  { tab: 'posts', sort: 'recent' }
+)
+console.log('Profile URL:', profileUrl)
+
+// Named routes
+const commentUrl = router.urlFor('comment', {
+  postId: '10',
+  commentId: '25'
+})
+console.log('Comment URL:', commentUrl)
+
+// Named route with query
+const userPostsUrl = router.urlFor('user', { id: '789' })
+console.log('User posts URL:', userPostsUrl)`,
+      name: 'URL Building - Dynamic URLs',
+    },
+  },
 };

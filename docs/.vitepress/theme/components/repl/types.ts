@@ -474,6 +474,82 @@ declare module '@vielzeug/wireit' {
 }
 `;
 
+export const routeitTypes = `
+declare module '@vielzeug/routeit' {
+  export type RouteParams = Record<string, string>;
+  export type QueryParams = Record<string, string | string[]>;
+  export type RouterMode = 'history' | 'hash';
+
+  export type RouteContext<T = unknown> = {
+    params: RouteParams;
+    query: QueryParams;
+    pathname: string;
+    hash: string;
+    data?: T;
+    user?: unknown;
+    meta?: Record<string, unknown>;
+    navigate: (path: string, opts?: NavigateOptions) => void;
+  };
+
+  export type RouteHandler<T = unknown> = (
+    context: RouteContext<T>
+  ) => void | Promise<void>;
+
+  export type Middleware = (
+    context: RouteContext,
+    next: () => Promise<void>
+  ) => void | Promise<void>;
+
+  export type RouteDefinition<T = unknown> = {
+    path: string;
+    handler: RouteHandler<T>;
+    name?: string;
+    data?: T;
+    middleware?: Middleware | Middleware[];
+    children?: RouteDefinition<T>[];
+  };
+
+  export type NavigateOptions = {
+    replace?: boolean;
+    state?: unknown;
+  };
+
+  export type RouterOptions = {
+    mode?: RouterMode;
+    base?: string;
+    notFound?: RouteHandler;
+    middleware?: Middleware | Middleware[];
+  };
+
+  export class Router {
+    route(definition: RouteDefinition): Router;
+    routes(definitions: RouteDefinition[]): Router;
+    get(path: string, handler: RouteHandler): Router;
+    start(): Router;
+    stop(): void;
+    navigate(path: string, options?: NavigateOptions): void;
+    navigateTo(name: string, params?: RouteParams, query?: QueryParams): void;
+    back(): void;
+    forward(): void;
+    go(delta: number): void;
+    buildUrl(path: string, params?: RouteParams, query?: QueryParams): string;
+    urlFor(name: string, params?: RouteParams, query?: QueryParams): string;
+    isActive(pattern: string): boolean;
+    getCurrentPath(): string;
+    getCurrentQuery(): QueryParams;
+    getCurrentHash(): string;
+    getState(): { pathname: string; params: RouteParams; query: QueryParams };
+    getParams(): RouteParams;
+    link(href: string, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
+    linkTo(name: string, params: RouteParams, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
+    subscribe(listener: () => void): () => void;
+    debug(): { mode: RouterMode; base: string; routes: any[] };
+  }
+
+  export function createRouter(options?: RouterOptions): Router;
+}
+`;
+
 export const libraryTypes = {
   deposit: depositTypes,
   fetchit: fetchitTypes,
@@ -481,6 +557,7 @@ export const libraryTypes = {
   i18nit: i18nitTypes,
   logit: logitTypes,
   permit: permitTypes,
+  routeit: routeitTypes,
   stateit: stateitTypes,
   toolkit: toolkitTypes,
   validit: validitTypes,

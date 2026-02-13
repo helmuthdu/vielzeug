@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/routeit",
+      "comment": "initial release",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/routeit"
+}

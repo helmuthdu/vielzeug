@@ -70,6 +70,7 @@ const LIBRARY_DESCRIPTIONS = {
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
+  routeit: 'Client-side routing library with nested routes and middleware support.',
   stateit: 'State management with reactive subscriptions.',
   toolkit: 'Utility library with functions for arrays, objects, and more.',
   validit: 'Type-safe schema validation with advanced error handling.',
@@ -83,6 +84,7 @@ const LIBRARY_LOADERS = {
   i18nit: () => import('@vielzeug/i18nit'),
   logit: () => import('@vielzeug/logit'),
   permit: () => import('@vielzeug/permit'),
+  routeit: () => import('@vielzeug/routeit'),
   stateit: () => import('@vielzeug/stateit'),
   toolkit: () => import('@vielzeug/toolkit'),
   validit: () => import('@vielzeug/validit'),
@@ -97,6 +99,7 @@ const LIBRARY_EXPORTS = {
   i18nit: ['createI18n'],
   logit: ['Logit'],
   permit: ['Permit'],
+  routeit: ['createRouter', 'Router'],
   stateit: ['createStore', 'createTestStore', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
   validit: ['v'],
   wireit: [
