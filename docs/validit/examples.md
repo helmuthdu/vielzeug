@@ -1146,8 +1146,6 @@ const userInputSchema = v.object({
 ### Unit Testing Schemas
 
 ```ts
-import { describe, it, expect } from 'vitest';
-
 describe('userSchema', () => {
   it('should accept valid user', () => {
     const validUser = {
