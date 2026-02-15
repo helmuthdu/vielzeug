@@ -26,11 +26,11 @@ import { v, type Infer } from '@vielzeug/validit';
 
 // Define a schema with convenience helpers
 const userSchema = v.object({
-  id: v.positiveInt(), // Convenience: number().int().positive()
-  name: v.string().min(1).max(100).required(),
-  email: v.email().required(), // Convenience: string().email()
+  id: v.int().positive(), // Convenience: number().int().positive()
+  name: v.string().min(1).max(100), // Non-empty string (min(1) rejects "")
+  email: v.email(), // Convenience: string().email()
   age: v.number().int().min(18).optional(),
-  role: v.oneOf('admin', 'user', 'guest'),
+  role: v.enum('admin', 'user', 'guest'),
 });
 
 // Infer TypeScript type
@@ -70,8 +70,8 @@ Pre-configured schemas for common patterns:
 v.email(); // Email validation (string().email())
 v.url(); // URL validation (string().url())
 v.uuid(); // UUID validation
-v.positiveInt(); // Positive integer (number().int().positive())
-v.negativeInt(); // Negative integer (number().int().negative())
+v.int().positive(); // Positive integer (number().int().positive())
+v.int().negative(); // Negative integer (number().int().negative())
 ```
 
 ### Primitives
@@ -131,7 +131,6 @@ v.array(v.string()) // string[]
   .min(1) // min items
   .max(10) // max items
   .length(5) // exact length
-  .nonempty(); // at least 1 item
 ```
 
 #### Object
@@ -155,11 +154,19 @@ v.union(v.string(), v.number()); // string | number
 ### Modifiers
 
 ```typescript
-schema.optional(); // T | undefined
-schema.required(); // Explicitly mark as required (opposite of optional)
-schema.nullable(); // T | null
-schema.default(value); // T with default value
-schema.refine(check, msg); // Custom sync validation
+schema.optional(); // T | undefined (makes field optional)
+schema.nullable(); // T | null (allows null)
+schema.default(value); // Provides default value when undefined
+```
+
+> **Note**: All schemas reject `null` and `undefined` by default. Use `.optional()` or `.nullable()` to allow them.
+
+To reject empty strings or arrays, use `.min(1)`:
+
+```typescript
+v.string().min(1); // Rejects empty string ""
+v.array(v.string()).min(1); // Rejects empty array []
+```
 schema.describe('name'); // Add description for better error messages
 ```
 
@@ -192,22 +199,19 @@ if (result.success) {
 const registrationSchema = v.object({
   username: v
     .string()
-    .min(3)
+    .min(1, 'Username is required')
     .max(20)
-    .pattern(/^[a-zA-Z0-9_]+$/)
-    .required('Username is required'),
-  email: v.email().required('Email is required'),
+    .pattern(/^[a-zA-Z0-9_]+$/),
+  email: v.email(),
   password: v
     .string()
     .min(8)
     .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
-    .refine((val) => /[0-9]/.test(val), 'Must contain number')
-    .required(),
-  age: v.positiveInt().min(13).required(),
+    .refine((val) => /[0-9]/.test(val), 'Must contain number'),
+  age: v.int().min(13),
   terms: v
     .boolean()
-    .refine((val) => val === true, 'Must accept terms')
-    .required(),
+    .refine((val) => val === true, 'Must accept terms'),
 });
 
 type RegistrationData = Infer<typeof registrationSchema>;
@@ -341,7 +345,7 @@ await userSchema.parseAsync({ email: 'test@example.com', username: 'john' });
 const itemsSchema = v.array(
   v
     .object({
-      id: v.positiveInt(),
+      id: v.int().positive(),
       name: v.string(),
     })
     .refineAsync(async (item) => {

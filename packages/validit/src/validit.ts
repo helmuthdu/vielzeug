@@ -42,27 +42,18 @@ export class Schema<Output = unknown> {
     this._validators = validators;
   }
 
-  /* -------------------- Description -------------------- */
-
   describe(description: string): this {
-    const cloned = this._clone(this._validators);
+    const cloned = this._clone();
     cloned._description = description;
     return cloned;
   }
-
-  /* -------------------- Core Validation -------------------- */
 
   parse(value: unknown): Output {
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
 
-    const issues: Issue[] = [];
-    for (const validate of this._validators) {
-      const result = validate(value, []);
-      if (result) issues.push(...result);
-    }
-
+    const issues = this._runSync(value, []);
     if (issues.length) throw new ValidationError(issues);
     return value as Output;
   }
@@ -76,19 +67,9 @@ export class Schema<Output = unknown> {
   }
 
   async parseAsync(value: unknown): Promise<Output> {
-    const issues: Issue[] = [];
-
-    // Run sync validators
-    for (const validate of this._validators) {
-      const result = validate(value, []);
-      if (result) issues.push(...result);
-    }
-
-    // Run async validators
-    for (const validate of this._asyncValidators) {
-      const result = await validate(value, []);
-      if (result) issues.push(...result);
-    }
+    const syncIssues = this._runSync(value, []);
+    const asyncIssues = await this._runAsync(value, []);
+    const issues = [...syncIssues, ...asyncIssues];
 
     if (issues.length) throw new ValidationError(issues);
     return value as Output;
@@ -102,124 +83,85 @@ export class Schema<Output = unknown> {
     }
   }
 
-  /* -------------------- Refinements -------------------- */
-
   refine(check: (value: Output) => boolean, message = 'Invalid value'): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) => (check(value as Output) ? null : [{ code: 'custom', message, path }]),
-    ]);
+    return this._addValidator((value, path) => (check(value as Output) ? null : [{ code: 'custom', message, path }]));
   }
 
   refineAsync(check: (value: Output) => Promise<boolean>, message = 'Invalid value'): this {
-    const cloned = this._clone(this._validators);
-    cloned._asyncValidators = [
-      ...this._asyncValidators,
-      async (value, path) => {
-        const isValid = await check(value as Output);
-        return isValid ? null : [{ code: 'custom', message, path }];
-      },
-    ];
+    const cloned = this._clone();
+    cloned._asyncValidators.push(async (value, path) => {
+      const isValid = await check(value as Output);
+      return isValid ? null : [{ code: 'custom', message, path }];
+    });
     return cloned;
   }
 
-  /* -------------------- Modifiers -------------------- */
-
   optional(): Schema<Output | undefined> {
-    return this._clone([
-      (value, path) => {
-        if (value === undefined) return null;
-        return this._runValidators(value, path);
-      },
-    ]) as Schema<Output | undefined>;
-  }
-
-  required(message = 'Required'): this {
-    return this._clone([
-      (value, path) => (value !== undefined && value !== null ? null : [{ code: 'required', message, path }]),
-      ...this._validators,
-    ]);
+    return this._clone([(value, path) => (value === undefined ? null : this._runSync(value, path))]) as Schema<
+      Output | undefined
+    >;
   }
 
   nullable(): Schema<Output | null> {
     return this._clone([
-      (value, path) => {
-        if (value === null) return null;
-        return this._runValidators(value, path);
-      },
+      (value, path) => (value === null ? null : this._runSync(value, path)),
     ]) as Schema<Output | null>;
   }
 
   default(defaultValue: Output): this {
-    const cloned = this._clone([
-      (value, path) => {
-        const val = value === undefined ? defaultValue : value;
-        return this._runValidators(val, path);
-      },
-    ]);
+    const cloned = this._clone([(value, path) => this._runSync(value === undefined ? defaultValue : value, path)]);
 
-    // Override parse to return default
-    const originalParse = cloned.parse.bind(cloned);
-    cloned.parse = (value: unknown): Output => {
+    cloned.parse = (value: unknown) => {
       const val = value === undefined ? defaultValue : value;
-      originalParse(val);
-      return val as Output;
-    };
-
-    const originalParseAsync = cloned.parseAsync.bind(cloned);
-    cloned.parseAsync = async (value: unknown): Promise<Output> => {
-      const val = value === undefined ? defaultValue : value;
-      await originalParseAsync(val);
+      const issues = cloned._runSync(val, []);
+      if (issues.length) throw new ValidationError(issues);
       return val as Output;
     };
 
     return cloned;
   }
-
-  /* -------------------- Transformation -------------------- */
 
   transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput> {
     const newSchema = new Schema<NewOutput>(this._validators);
     newSchema._asyncValidators = [...this._asyncValidators];
 
-    // Override parse
     const originalParse = newSchema.parse.bind(newSchema);
-    newSchema.parse = (value: unknown): NewOutput => {
-      originalParse(value);
-      return fn(value as Output);
-    };
+    newSchema.parse = (value: unknown) => fn(originalParse(value) as unknown as Output);
 
-    // Override parseAsync
     const originalParseAsync = newSchema.parseAsync.bind(newSchema);
-    newSchema.parseAsync = async (value: unknown): Promise<NewOutput> => {
-      await originalParseAsync(value);
-      return fn(value as Output);
-    };
+    newSchema.parseAsync = async (value: unknown) => fn((await originalParseAsync(value)) as unknown as Output);
 
     return newSchema;
   }
 
-  /* -------------------- Protected Helpers -------------------- */
-
-  protected _runValidators(value: unknown, path: (string | number)[]): Issue[] | null {
+  protected _runSync(value: unknown, path: (string | number)[]): Issue[] {
     const issues: Issue[] = [];
     for (const validate of this._validators) {
       const result = validate(value, path);
       if (result) issues.push(...result);
     }
-    return issues.length ? issues : null;
+    return issues;
   }
 
-  protected _clone(validators: ValidateFn[]): this {
+  protected async _runAsync(value: unknown, path: (string | number)[]): Promise<Issue[]> {
+    const issues: Issue[] = [];
+    for (const validate of this._asyncValidators) {
+      const result = await validate(value, path);
+      if (result) issues.push(...result);
+    }
+    return issues;
+  }
+
+  protected _addValidator(validator: ValidateFn): this {
+    return this._clone([...this._validators, validator]);
+  }
+
+  protected _clone(validators: ValidateFn[] = this._validators): this {
     const cloned = Object.create(Object.getPrototypeOf(this)) as this;
     cloned._validators = validators;
     cloned._asyncValidators = [...this._asyncValidators];
     if (this._description) cloned._description = this._description;
     return cloned;
-  }
-
-  protected _issue(code: string, message: string, path: (string | number)[] = []): Issue {
-    return { code, message, path };
   }
 }
 
@@ -276,26 +218,19 @@ export class StringSchema extends Schema<string> {
   }
 
   url(message = 'Invalid URL'): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) => {
-        if (typeof value !== 'string') return null;
-        try {
-          new URL(value);
-          return null;
-        } catch {
-          return [{ code: 'invalid_url', message, path }];
-        }
-      },
-    ]);
+    return this._addValidator((value, path) => {
+      if (typeof value !== 'string') return null;
+      try {
+        new URL(value);
+        return null;
+      } catch {
+        return [{ code: 'invalid_url', message, path }];
+      }
+    });
   }
 
   trim(): this {
     return this.refine((val) => val === val.trim(), 'String must be trimmed');
-  }
-
-  nonempty(message = 'Must not be empty'): this {
-    return this.min(1, message);
   }
 
   uuid(message = 'Invalid UUID'): this {
@@ -316,31 +251,23 @@ export class NumberSchema extends Schema<number> {
   }
 
   min(minimum: number, message = `Must be at least ${minimum}`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'number' && value >= minimum
-          ? null
-          : [{ code: 'too_small', message, params: { minimum, type: 'number' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'number' && value >= minimum
+        ? null
+        : [{ code: 'too_small', message, params: { minimum }, path }],
+    );
   }
 
   max(maximum: number, message = `Must be at most ${maximum}`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'number' && value <= maximum
-          ? null
-          : [{ code: 'too_big', message, params: { maximum, type: 'number' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'number' && value <= maximum ? null : [{ code: 'too_big', message, params: { maximum }, path }],
+    );
   }
 
   int(message = 'Must be an integer'): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'number' && Number.isInteger(value) ? null : [{ code: 'invalid_type', message, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'number' && Number.isInteger(value) ? null : [{ code: 'invalid_type', message, path }],
+    );
   }
 
   positive(message = 'Must be positive'): this {
@@ -376,17 +303,15 @@ export class DateSchema extends Schema<Date> {
   }
 
   min(date: Date, message = `Must be after ${date.toISOString()}`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) => (value instanceof Date && value >= date ? null : [{ code: 'too_small', message, path }]),
-    ]);
+    return this._addValidator((value, path) =>
+      value instanceof Date && value >= date ? null : [{ code: 'too_small', message, path }],
+    );
   }
 
   max(date: Date, message = `Must be before ${date.toISOString()}`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) => (value instanceof Date && value <= date ? null : [{ code: 'too_big', message, path }]),
-    ]);
+    return this._addValidator((value, path) =>
+      value instanceof Date && value <= date ? null : [{ code: 'too_big', message, path }],
+    );
   }
 }
 
@@ -467,47 +392,35 @@ export class ArraySchema<T> extends Schema<T[]> {
     }
 
     // Run async validators on the array itself
-    for (const validate of this._asyncValidators) {
-      const result = await validate(value, []);
-      if (result) issues.push(...result);
-    }
+    const asyncIssues = await this._runAsync(value, []);
+    issues.push(...asyncIssues);
 
     if (issues.length) throw new ValidationError(issues);
     return value;
   }
 
   min(length: number, message = `Must have at least ${length} items`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        Array.isArray(value) && value.length >= length
-          ? null
-          : [{ code: 'too_small', message, params: { minimum: length, type: 'array' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      Array.isArray(value) && value.length >= length
+        ? null
+        : [{ code: 'too_small', message, params: { minimum: length }, path }],
+    );
   }
 
   max(length: number, message = `Must have at most ${length} items`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        Array.isArray(value) && value.length <= length
-          ? null
-          : [{ code: 'too_big', message, params: { maximum: length, type: 'array' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      Array.isArray(value) && value.length <= length
+        ? null
+        : [{ code: 'too_big', message, params: { maximum: length }, path }],
+    );
   }
 
   length(exact: number, message = `Must have exactly ${exact} items`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        Array.isArray(value) && value.length === exact
-          ? null
-          : [{ code: 'invalid_length', message, params: { exact, type: 'array' }, path }],
-    ]);
-  }
-
-  nonempty(message = 'Must not be empty'): this {
-    return this.min(1, message);
+    return this._addValidator((value, path) =>
+      Array.isArray(value) && value.length === exact
+        ? null
+        : [{ code: 'invalid_length', message, params: { exact }, path }],
+    );
   }
 }
 
@@ -566,10 +479,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     }
 
     // Run async validators on the object itself
-    for (const validate of this._asyncValidators) {
-      const result = await validate(value, []);
-      if (result) issues.push(...result);
-    }
+    const asyncIssues = await this._runAsync(value, []);
+    issues.push(...asyncIssues);
 
     if (issues.length) throw new ValidationError(issues);
     return value as InferObject<T>;
@@ -628,10 +539,8 @@ export class UnionSchema<T extends readonly Schema<any>[]> extends Schema<Infer<
       const result = await schema.safeParseAsync(value);
       if (result.success) {
         // Run parent async validators
-        for (const validate of this._asyncValidators) {
-          const issues = await validate(value, []);
-          if (issues) throw new ValidationError(issues);
-        }
+        const asyncIssues = await this._runAsync(value, []);
+        if (asyncIssues.length) throw new ValidationError(asyncIssues);
         return result.data;
       }
     }
@@ -689,13 +598,12 @@ export const v = {
   },
   date: () => new DateSchema(),
   email: () => new StringSchema().email(),
+  enum: <T extends readonly [string | number, ...(string | number)[]]>(...values: T) => new EnumSchema(values),
+  int: () => new NumberSchema().int(),
   literal: <T extends string | number | boolean | null | undefined>(value: T) => new LiteralSchema(value),
-  negativeInt: () => new NumberSchema().int().negative(),
   null: () => new LiteralSchema(null),
   number: () => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T) => new ObjectSchema(shape),
-  oneOf: <T extends readonly [string | number, ...(string | number)[]]>(...values: T) => new EnumSchema(values),
-  positiveInt: () => new NumberSchema().int().positive(),
   string: () => new StringSchema(),
   undefined: () => new LiteralSchema(undefined),
   union: <T extends readonly [Schema<any>, Schema<any>, ...Schema<any>[]]>(...schemas: T) => new UnionSchema(schemas),

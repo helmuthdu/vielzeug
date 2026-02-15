@@ -118,8 +118,8 @@ v.number()
   .negative(); // Must be < 0
 
 // Convenience helpers
-v.positiveInt(); // Shorthand for v.number().int().positive()
-v.negativeInt(); // Shorthand for v.number().int().negative()
+v.int().positive(); // Shorthand for v.number().int().positive()
+v.int().negative(); // Shorthand for v.number().int().negative()
 ```
 
 ### Boolean
@@ -147,9 +147,9 @@ v.literal(true); // Exactly true
 ### Enum
 
 ```ts
-v.oneOf('red', 'green', 'blue'); // One of these values
-v.oneOf(1, 2, 3); // One of these numbers
-v.oneOf('admin', 'user', 'guest'); // Union of literals
+v.enum('red', 'green', 'blue'); // One of these values
+v.enum(1, 2, 3); // One of these numbers
+v.enum('admin', 'user', 'guest'); // Union of literals
 ```
 
 ## Complex Schemas
@@ -162,10 +162,9 @@ v.array(v.string());
 
 // With constraints
 v.array(v.string())
-  .min(1) // At least 1 item
+  .min(1) // Rejects null, undefined, and empty arrays
   .max(10) // At most 10 items
-  .length(5) // Exactly 5 items
-  .nonempty(); // At least 1 item
+  .length(5); // Exactly 5 items
 
 // Nested arrays
 v.array(v.array(v.number())); // number[][]
@@ -320,17 +319,43 @@ v.object({
 });
 ```
 
-### required()
+### Default Validation Behavior
 
-Explicitly marks a field as required (opposite of optional).
+::: tip 💡 All Schemas Reject `null` and `undefined` by Default
+You don't need a `required()` method! Every schema already validates that values are not `null` or `undefined`.
 
 ```ts
-v.string().required(); // Rejects null/undefined
-v.string().required('Name is required'); // Custom error message
+v.string().parse(null); // ❌ Throws "Expected string"
+v.number().parse(undefined); // ❌ Throws "Expected number"
+v.array(v.string()).parse(null); // ❌ Throws "Expected array"
+```
 
+:::
+
+**To allow optional values**, use `.optional()`:
+
+```ts
+v.string().optional(); // string | undefined
+v.number().optional(); // number | undefined
+```
+
+**To reject empty strings or arrays**, use `.min(1)`:
+
+```ts
+v.string().min(1); // Rejects "" (empty string)
+v.string().min(1, 'Name is required'); // Custom error message
+
+v.array(v.string()).min(1); // Rejects [] (empty array)
+v.array(v.string()).min(1, 'At least one item required');
+```
+
+**Example in forms:**
+
+```ts
 v.object({
-  name: v.string().required(),
-  email: v.email().required('Email is required'),
+  name: v.string().min(1, 'Name is required'), // Non-empty string
+  email: v.email(), // Non-empty email
+  age: v.number().optional(), // Optional number
 });
 ```
 
@@ -353,7 +378,7 @@ v.number().default(0); // Returns 0 if undefined
 v.boolean().default(false); // Returns false if undefined
 
 v.object({
-  theme: v.oneOf('light', 'dark').default('light'),
+  theme: v.enum('light', 'dark').default('light'),
   language: v.string().default('en'),
 });
 ```
@@ -505,7 +530,7 @@ const schema = v.object({
   name: v.string(),
   email: v.email().optional(),
   age: v.number().nullable(),
-  role: v.oneOf('admin', 'user').default('user'),
+  role: v.enum('admin', 'user').default('user'),
 });
 
 type User = Infer<typeof schema>;
@@ -526,14 +551,14 @@ const schema = v.object({
     name: v.string(),
     contacts: v.array(
       v.object({
-        type: v.oneOf('email', 'phone'),
+        type: v.enum('email', 'phone'),
         value: v.string(),
       }),
     ),
   }),
   settings: v
     .object({
-      theme: v.oneOf('light', 'dark'),
+      theme: v.enum('light', 'dark'),
     })
     .optional(),
 });
@@ -557,7 +582,7 @@ type Data = Infer<typeof schema>;
 
 ### ✅ Do
 
-- Use convenience schemas (`v.email()`, `v.positiveInt()`)
+- Use convenience schemas (`v.email()`, `v.int().positive()`)
 - Add custom error messages for better UX
 - Use `safeParse()` for user input
 - Leverage type inference with `Infer<typeof schema>`

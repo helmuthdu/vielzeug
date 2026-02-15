@@ -541,7 +541,7 @@ declare module '@vielzeug/validit' {
     null: () => any;
     number: () => any;
     object: (shape: any) => any;
-    oneOf: (...values: any[]) => any;
+    enum: (...values: any[]) => any;
     positiveInt: () => any;
     string: () => any;
     undefined: () => any;

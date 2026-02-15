@@ -2702,7 +2702,7 @@ values.forEach(val => {
       code: `import { v } from '@vielzeug/validit'
 
 const tagSchema = v.array(v.string()).min(1).max(5)
-const numberSchema = v.array(v.number()).nonempty()
+const numberSchema = v.array(v.number())
 const userSchema = v.array(v.object({
   id: v.number(),
   name: v.string()
@@ -2800,7 +2800,7 @@ const userSchema = v.object({
   email: v.string().email(),
   address: addressSchema,
   settings: v.object({
-    theme: v.oneOf('light', 'dark'),
+    theme: v.enum('light', 'dark'),
     notifications: v.boolean()
   })
 })
@@ -2838,7 +2838,6 @@ const schemas = {
   min: v.number().min(0),
   max: v.number().max(100),
   int: v.number().int(),
-  positiveInt: v.positiveInt()
 }
 
 const tests = [
