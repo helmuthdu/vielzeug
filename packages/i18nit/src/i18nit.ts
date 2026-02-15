@@ -10,21 +10,12 @@ export type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 
 export type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
 
-export type MessageFunction = (
-  vars: Record<string, unknown>,
-  helpers: {
-    number: (value: number, options?: Intl.NumberFormatOptions) => string;
-    date: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
-  },
-) => string;
-
-export type MessageValue = string | PluralMessages | MessageFunction;
+export type MessageValue = string | PluralMessages;
 
 export type Messages = Record<string, MessageValue>;
 
 export type TranslateOptions = {
   locale?: Locale;
-  fallback?: string;
   escape?: boolean;
 };
 
@@ -34,43 +25,18 @@ export type I18nConfig = {
   messages?: Record<Locale, Messages>;
   loaders?: Record<Locale, () => Promise<Messages>>;
   escape?: boolean;
-  missingKey?: (key: string, locale: Locale) => string;
-  missingVar?: 'preserve' | 'empty' | 'error';
 };
-
-export type LocaleChangeHandler = (locale: Locale) => void;
-
-/* -------------------- Errors -------------------- */
-
-export class MissingVariableError extends Error {
-  readonly key: string;
-  readonly variable: string;
-  readonly locale: Locale;
-
-  constructor(key: string, variable: string, locale: Locale) {
-    super(`Missing variable '${variable}' for key '${key}' in locale '${locale}'`);
-    this.name = 'MissingVariableError';
-    this.key = key;
-    this.variable = variable;
-    this.locale = locale;
-  }
-}
-
-/* -------------------- HTML Escaping -------------------- */
-
-const HTML_ENTITIES: Record<string, string> = {
-  "'": '&#39;',
-  '"': '&quot;',
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-};
-
-function escapeHtml(str: string): string {
-  return str.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
-}
 
 /* -------------------- Path Resolution -------------------- */
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 /**
  * Resolves nested properties using dot notation and bracket notation.
@@ -130,12 +96,6 @@ function formatList(items: unknown[], locale: string, type: 'conjunction' | 'dis
 
 /* -------------------- Variable Interpolation -------------------- */
 
-type InterpolateOptions = {
-  locale?: Locale;
-  missingVar?: 'preserve' | 'empty' | 'error';
-  key?: string;
-};
-
 /**
  * Interpolates variables into a template string.
  *
@@ -149,37 +109,22 @@ type InterpolateOptions = {
  * - {items| - } - Array with custom separator
  * - {items.length} - Array length
  */
-function interpolate(template: string, vars: Record<string, unknown>, options: InterpolateOptions = {}): string {
-  const missingVar = options.missingVar ?? 'empty';
-
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for variable interpolation
-  return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (match, key: string, separator?: string) => {
+function interpolate(template: string, vars: Record<string, unknown>, locale: string): string {
+  return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (_match, key: string, separator?: string) => {
     // Handle .length property
-    let actualKey = key;
-    let isLength = false;
-
-    if (key.endsWith('.length')) {
-      actualKey = key.slice(0, -7);
-      isLength = true;
-    }
+    const isLength = key.endsWith('.length');
+    const actualKey = isLength ? key.slice(0, -7) : key;
 
     const value = resolvePath(vars, actualKey);
 
-    // Handle missing variables
-    if (value == null) {
-      if (missingVar === 'preserve') return match;
-      if (missingVar === 'error') {
-        throw new MissingVariableError(options.key ?? 'unknown', key, options.locale ?? 'unknown');
-      }
-      return '';
-    }
+    // Missing variables are replaced with empty string
+    if (value == null) return '';
 
     // Handle arrays
     if (Array.isArray(value)) {
       if (isLength) return String(value.length);
 
       if (separator !== undefined) {
-        const locale = options.locale || 'en';
         if (separator === 'and') return formatList(value, locale, 'conjunction');
         if (separator === 'or') return formatList(value, locale, 'disjunction');
         return value.map(String).join(separator);
@@ -189,11 +134,11 @@ function interpolate(template: string, vars: Record<string, unknown>, options: I
     }
 
     // Format numbers with locale
-    if (typeof value === 'number' && options.locale) {
+    if (typeof value === 'number') {
       try {
-        return new Intl.NumberFormat(options.locale).format(value);
+        return new Intl.NumberFormat(locale).format(value);
       } catch {
-        // Fall through
+        return String(value);
       }
     }
 
@@ -224,30 +169,23 @@ function getPluralForm(locale: Locale, count: number): PluralForm {
 class I18n {
   private locale: Locale;
   private fallbacks: Locale[];
+  private escape: boolean;
   private catalogs = new Map<Locale, Messages>();
   private loaders = new Map<Locale, () => Promise<Messages>>();
   private loading = new Map<Locale, Promise<void>>();
-  private subscribers = new Set<LocaleChangeHandler>();
-
-  private escape: boolean;
-  private missingKey: (key: string, locale: Locale) => string;
-  private missingVar: 'preserve' | 'empty' | 'error';
+  private subscribers = new Set<(locale: Locale) => void>();
 
   constructor(config: I18nConfig = {}) {
     this.locale = config.locale ?? 'en';
     this.fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
     this.escape = config.escape ?? false;
-    this.missingKey = config.missingKey ?? ((key) => key);
-    this.missingVar = config.missingVar ?? 'empty';
 
-    // Load initial messages
     if (config.messages) {
       for (const [locale, messages] of Object.entries(config.messages)) {
         this.catalogs.set(locale, messages);
       }
     }
 
-    // Register loaders
     if (config.loaders) {
       for (const [locale, loader] of Object.entries(config.loaders)) {
         this.loaders.set(locale, loader);
@@ -340,40 +278,29 @@ class I18n {
     return this.has(key, targetLocale);
   }
 
+  /**
+   * Load multiple locales in parallel.
+   * Useful for preloading all needed locales at app startup.
+   */
+  async loadAll(locales: Locale[]): Promise<void> {
+    await Promise.all(locales.map((locale) => this.load(locale)));
+  }
+
   /* -------------------- Translation -------------------- */
 
   /**
-   * Translates a key with optional variables.
+   * Translates a key with optional variables and options.
+   * Synchronous - locale must be loaded first via load() or provided in config.
    */
   t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string {
-    const opts = options ?? {};
-    const targetLocale = opts.locale ?? this.locale;
-    const shouldEscape = opts.escape ?? this.escape;
+    const targetLocale = options?.locale ?? this.locale;
+    const shouldEscape = options?.escape ?? this.escape;
 
     const message = this.findMessage(key, targetLocale);
+    if (message === undefined) return key;
 
-    if (message === undefined) {
-      return opts.fallback ?? this.missingKey(key, targetLocale);
-    }
-
-    return this.formatMessage(message, vars ?? {}, targetLocale, shouldEscape, key);
-  }
-
-  /**
-   * Translates a key with automatic async loading.
-   */
-  async tl(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): Promise<string> {
-    const targetLocale = options?.locale ?? this.locale;
-
-    if (!this.catalogs.has(targetLocale) && this.loaders.has(targetLocale)) {
-      try {
-        await this.load(targetLocale);
-      } catch {
-        // Error already logged in load()
-      }
-    }
-
-    return this.t(key, vars, options);
+    const result = this.formatMessage(message, vars ?? {}, targetLocale);
+    return shouldEscape ? escapeHtml(result) : result;
   }
 
   /* -------------------- Formatting Helpers -------------------- */
@@ -401,14 +328,12 @@ class I18n {
     return {
       t: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) =>
         this.t(`${ns}.${key}`, vars, options),
-      tl: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) =>
-        this.tl(`${ns}.${key}`, vars, options),
     };
   }
 
   /* -------------------- Subscriptions -------------------- */
 
-  subscribe(handler: LocaleChangeHandler): () => void {
+  subscribe(handler: (locale: Locale) => void): () => void {
     this.subscribers.add(handler);
 
     // Call handler immediately with the current locale
@@ -464,27 +389,7 @@ class I18n {
     return chain;
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for message formatting
-  private formatMessage(
-    message: MessageValue,
-    vars: Record<string, unknown>,
-    locale: Locale,
-    shouldEscape: boolean,
-    key?: string,
-  ): string {
-    // Function messages
-    if (typeof message === 'function') {
-      try {
-        const result = message(vars, {
-          date: (d, opts) => this.date(d, opts, locale),
-          number: (v, opts) => this.number(v, opts, locale),
-        });
-        return shouldEscape ? escapeHtml(result) : result;
-      } catch {
-        return '';
-      }
-    }
-
+  private formatMessage(message: MessageValue, vars: Record<string, unknown>, locale: Locale): string {
     // Plural messages
     if (typeof message === 'object' && 'other' in message) {
       const count = Number(vars.count ?? 0);
@@ -499,14 +404,12 @@ class I18n {
       }
 
       const template = pluralMsg[form] ?? pluralMsg.other;
-      const result = interpolate(template, vars, { key, locale, missingVar: this.missingVar });
-      return shouldEscape ? escapeHtml(result) : result;
+      return interpolate(template, vars, locale);
     }
 
     // String messages
     if (typeof message === 'string') {
-      const result = interpolate(message, vars, { key, locale, missingVar: this.missingVar });
-      return shouldEscape ? escapeHtml(result) : result;
+      return interpolate(message, vars, locale);
     }
 
     return '';

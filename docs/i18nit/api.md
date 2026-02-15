@@ -97,51 +97,11 @@ Collection of translations for a locale.
 ### MissingVariableError
 
 ```ts
-class MissingVariableError extends Error {
-  readonly key: string;
-  readonly variable: string;
-  readonly locale: Locale;
-}
-```
-
-Error thrown when `missingVar: 'error'` is configured and a required variable is missing during interpolation.
-
-**Properties:**
-
-- `key` - The translation key being processed
-- `variable` - The name of the missing variable
-- `locale` - The locale being used
-- `message` - Formatted error message with all context
-
-**Example:**
+### TranslateOptions
 
 ```ts
-import { createI18n, MissingVariableError } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  messages: { en: { greeting: 'Hello, {name}!' } },
-  missingVar: 'error',
-});
-
-try {
-  i18n.t('greeting');
-} catch (error) {
-  if (error instanceof MissingVariableError) {
-    console.log(error.key); // 'greeting'
-    console.log(error.variable); // 'name'
-    console.log(error.locale); // 'en'
-    console.log(error.message);
-    // "Missing variable 'name' for key 'greeting' in locale 'en'"
-  }
-}
-```
-
-### TranslateParams
-
-```ts
-type TranslateParams = {
+type TranslateOptions = {
   locale?: Locale;
-  fallback?: string;
   escape?: boolean;
 };
 ```
@@ -149,7 +109,6 @@ type TranslateParams = {
 Options for translation methods.
 
 - **locale**: Override the current locale for this translation
-- **fallback**: Custom fallback string if translation not found
 - **escape**: Enable/disable HTML escaping for this translation
 
 ### I18nConfig
@@ -161,8 +120,6 @@ type I18nConfig = {
   messages?: Record<Locale, Messages>;
   loaders?: Record<Locale, () => Promise<Messages>>;
   escape?: boolean;
-  missingKey?: (key: string, locale: Locale) => string;
-  missingVar?: 'preserve' | 'empty' | 'error';
 };
 ```
 
@@ -246,33 +203,6 @@ i18n.t('user.name'); // "Name"
 
 ---
 
-#### tl()
-
-Translate with automatic async loading (if loader registered).
-
-```ts
-async tl(key: string, vars?: Record<string, unknown>, options?: TranslateParams): Promise<string>
-```
-
-**Parameters:**
-
-- **key**: Translation key
-- **vars**: Variables for interpolation
-- **options**: Translation options
-
-**Returns:** Promise resolving to translated string
-
-**Example:**
-
-```ts
-// Automatically loads Spanish if not yet loaded
-await i18n.tl('greeting', undefined, { locale: 'es' });
-
-// With variables
-await i18n.tl('welcome', { name: 'Bob' }, { locale: 'fr' });
-```
-
----
 
 ### Locale Management
 
@@ -612,7 +542,7 @@ namespace(ns: string): {
 
 - **ns**: Namespace prefix
 
-**Returns:** Object with `t` and `tl` methods
+**Returns:** Object with `t` method
 
 **Example:**
 
@@ -623,8 +553,8 @@ const user = i18n.namespace('user');
 errors.t('required'); // Same as i18n.t('errors.required')
 user.t('profile.name'); // Same as i18n.t('user.profile.name')
 
-// With async loading
-await errors.tl('validation', undefined, { locale: 'es' });
+// With locale override
+errors.t('validation', undefined, { locale: 'es' });
 ```
 
 ---
@@ -1138,23 +1068,19 @@ user.t('profile.name');
 ### 4. Lazy Load Translations
 
 ```ts
+// Preload at app startup
+await i18n.loadAll(['en', 'es', 'fr']);
+
+// Or configure loaders and load on-demand
 createI18n({
   loaders: {
     es: () => import('./locales/es.json'),
     fr: () => import('./locales/fr.json'),
   },
 });
-```
 
-### 5. Handle Missing Keys
-
-```ts
-createI18n({
-  missingKey: (key, locale) => {
-    console.warn(`Missing: ${key} (${locale})`);
-    return key.split('.').pop() || key;
-  },
-});
+// Load when needed
+await i18n.load('es');
 ```
 
 ---

@@ -29,10 +29,8 @@ yarn add @vielzeug/i18nit
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
 
-// Optional: Import types and errors
-import type { I18n, I18nConfig, Messages, TranslateParams, MessageValue, PluralMessages } from '@vielzeug/i18nit';
-
-import { MissingVariableError } from '@vielzeug/i18nit';
+// Optional: Import types
+import type { I18n, I18nConfig, Messages, TranslateOptions, MessageValue, PluralMessages } from '@vielzeug/i18nit';
 ```
 
 ## Table of Contents
@@ -697,74 +695,26 @@ i18n.t('price', { amount: 1234.56 });
 
 ### Missing Variable Handling
 
-i18nit provides three strategies for handling missing variables:
-
-#### Empty String (Default)
+Missing variables are automatically replaced with empty strings:
 
 ```ts
 const i18n = createI18n({
   messages: {
     en: { greeting: 'Hello, {name}!' },
   },
-  missingVar: 'empty', // Default
 });
 
 i18n.t('greeting'); // "Hello, !"
 i18n.t('greeting', { name: undefined }); // "Hello, !"
+i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
 ```
 
-#### Preserve Placeholders
+**Why empty strings?**
 
-```ts
-const i18n = createI18n({
-  messages: {
-    en: { greeting: 'Hello, {name}!' },
-  },
-  missingVar: 'preserve',
-});
-
-i18n.t('greeting'); // "Hello, {name}!"
-i18n.t('greeting', { name: undefined }); // "Hello, {name}!"
-```
-
-#### Throw Error with Structured Information
-
-```ts
-import { createI18n, MissingVariableError } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  messages: {
-    en: { greeting: 'Hello, {name}!' },
-  },
-  missingVar: 'error',
-});
-
-try {
-  i18n.t('greeting');
-} catch (error) {
-  if (error instanceof MissingVariableError) {
-    console.log(error.key); // 'greeting'
-    console.log(error.variable); // 'name'
-    console.log(error.locale); // 'en'
-    console.log(error.message); // "Missing variable 'name' for key 'greeting' in locale 'en'"
-
-    // Log to error tracking service
-    trackError({
-      type: 'missing_i18n_variable',
-      key: error.key,
-      variable: error.variable,
-      locale: error.locale,
-    });
-  }
-}
-```
-
-**Benefits of MissingVariableError:**
-
-- Structured data (key, variable, locale) for debugging
-- Can be caught specifically with `instanceof`
-- Useful for error tracking and monitoring
-- Better than generic Error for production debugging
+- Simple and predictable behavior
+- Prevents template errors in UI
+- Easy to debug (missing content is visible)
+- No exceptions thrown during rendering
 
 ## HTML Escaping
 
@@ -865,8 +815,13 @@ const i18n = createI18n({
 await i18n.load('es');
 i18n.t('greeting', undefined, { locale: 'es' });
 
-// Or use tl() for automatic loading
-await i18n.tl('greeting', undefined, { locale: 'es' });
+// Preload at app startup
+await i18n.loadAll(['en', 'fr', 'es']);
+
+// Or load explicitly before using
+await i18n.load('es');
+i18n.setLocale('es');
+i18n.t('greeting'); // Now uses Spanish
 ```
 
 ### Dynamic Loader Registration
@@ -1053,8 +1008,12 @@ common.t('save', undefined, { locale: 'es' });
 ```ts
 const auth = i18n.namespace('auth');
 
-await auth.tl('loginError', undefined, { locale: 'fr' });
-// Same as: await i18n.tl('auth.loginError', undefined, { locale: 'fr' })
+// Load locale first
+await i18n.load('fr');
+
+// Then use namespace
+auth.t('loginError', undefined, { locale: 'fr' });
+// Same as: i18n.t('auth.loginError', undefined, { locale: 'fr' })
 ```
 
 ## Formatting Helpers

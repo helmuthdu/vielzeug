@@ -5,7 +5,7 @@ Type-safe, lightweight internationalization (i18n) library for TypeScript applic
 ## Features
 
 - ✅ **Type-Safe** - Full TypeScript support with generic types
-- ✅ **Lightweight** - 2.4 KB gzipped with zero dependencies
+- ✅ **Lightweight** - 1.6 KB gzipped with zero dependencies
 - ✅ **Universal Pluralization** - 100+ languages via Intl.PluralRules API
 - ✅ **Smart Array Handling** - Auto-join with separators, length access, and safe indexing
 - ✅ **Path Interpolation** - Support for nested objects and array indices
@@ -14,7 +14,6 @@ Type-safe, lightweight internationalization (i18n) library for TypeScript applic
 - ✅ **Fallback Chain** - Multiple fallback locales with automatic language variants
 - ✅ **HTML Escaping** - Built-in XSS protection
 - ✅ **Number & Date Formatting** - Locale-aware formatting with Intl API
-- ✅ **Structured Errors** - Detailed error information with MissingVariableError
 - ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
 
 ## Installation
@@ -205,40 +204,15 @@ Examples across languages:
 
 ### Missing Variable Handling
 
-Control how missing variables are handled:
+Missing variables are automatically replaced with empty strings:
 
 ```typescript
-// Empty string (default)
-const i18n1 = createI18n({
+const i18n = createI18n({
   messages: { en: { msg: 'Hello, {name}!' } },
-  missingVar: 'empty',
-});
-i18n1.t('msg'); // "Hello, !"
-
-// Preserve placeholder
-const i18n2 = createI18n({
-  messages: { en: { msg: 'Hello, {name}!' } },
-  missingVar: 'preserve',
-});
-i18n2.t('msg'); // "Hello, {name}!"
-
-// Throw error
-import { MissingVariableError } from '@vielzeug/i18nit';
-
-const i18n3 = createI18n({
-  messages: { en: { msg: 'Hello, {name}!' } },
-  missingVar: 'error',
 });
 
-try {
-  i18n3.t('msg');
-} catch (error) {
-  if (error instanceof MissingVariableError) {
-    console.log(error.key); // 'msg'
-    console.log(error.variable); // 'name'
-    console.log(error.locale); // 'en'
-  }
-}
+i18n.t('msg'); // "Hello, !"
+i18n.t('msg', { name: 'Alice' }); // "Hello, Alice!"
 ```
 
 ### Pluralization
@@ -277,39 +251,6 @@ i18nit uses the browser's built-in `Intl.PluralRules` API to automatically suppo
 - **Chinese (zh)**: other
 - **Japanese (ja)**: other
 - And 90+ more languages...
-
-### Message Functions
-
-For complex dynamic content, use function-based messages:
-
-```typescript
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      // Simple function
-      dynamic: (vars) => `Hello, ${vars.name}!`,
-
-      // With number formatting
-      price: (vars, helpers) =>
-        `Price: ${helpers.number(vars.amount as number, {
-          style: 'currency',
-          currency: 'USD',
-        })}`,
-
-      // With date formatting
-      event: (vars, helpers) =>
-        `Event on ${helpers.date(vars.date as Date, {
-          dateStyle: 'long',
-        })}`,
-    },
-  },
-});
-
-i18n.t('dynamic', { name: 'Eve' }); // "Hello, Eve!"
-i18n.t('price', { amount: 99.99 }); // "Price: $99.99"
-i18n.t('event', { date: new Date('2024-01-15') }); // "Event on January 15, 2024"
-```
 
 ## Advanced Features
 
@@ -357,26 +298,31 @@ const i18n = createI18n({
   },
 });
 
-// Lazy translation - loads locale first
-const text = await i18n.tl('greeting', { name: 'World' }, { locale: 'fr' });
+// Preload at app startup
+await i18n.loadAll(['en', 'fr', 'de']);
 
 // Or load explicitly
-await i18n.load('de');
-i18n.t('greeting', undefined, { locale: 'de' });
+await i18n.load('fr');
+i18n.setLocale('fr');
+i18n.t('greeting'); // Now uses French
 
 // Register loader dynamically
 i18n.register('es', async () => {
   const module = await import('./locales/es.json');
   return module.default;
 });
+
+// Load and use
+await i18n.load('es');
+i18n.t('greeting', undefined, { locale: 'es' });
 ```
 
 **Features:**
 
 - Concurrent requests are deduplicated
-- Failed loads can be retried
-- Errors are logged but don't break fallback
+- Failed loads throw errors (can be caught)
 - Locale is cached after loading
+- Use `loadAll()` to preload multiple locales at once
 
 ### Namespaces
 
@@ -482,22 +428,7 @@ unsubscribe();
 - Analytics/tracking
 - State management integration
 
-### Custom Missing Key Handler
-
-Customize behavior for missing translations:
-
-```typescript
-const i18n = createI18n({
-  missingKey: (key, locale) => {
-    console.warn(`Missing translation: ${key} in ${locale}`);
-    return `[${locale}:${key}]`;
-  },
-});
-
-i18n.t('nonexistent.key'); // "[en:nonexistent.key]"
-```
-
-## API Reference
+### Subscriptions
 
 ### createI18n(config?)
 
@@ -510,8 +441,6 @@ type I18nConfig = {
   messages?: Record<string, Messages>; // Initial translations
   loaders?: Record<string, () => Promise<Messages>>; // Async loaders
   escape?: boolean; // Global HTML escaping (default: false)
-  missingKey?: (key: string, locale: string) => string; // Missing key handler
-  missingVar?: 'preserve' | 'empty' | 'error'; // Missing variable strategy
 };
 ```
 
@@ -530,16 +459,7 @@ i18n.t('greeting', { name: 'Bob' }, { locale: 'fr', escape: true }); // With opt
 **Options:**
 
 - `locale?: string` - Override locale for this translation
-- `fallback?: string` - Custom fallback text
 - `escape?: boolean` - Override HTML escaping
-
-#### `tl(key, vars?, options?)`
-
-Translate a key asynchronously (loads locale if needed).
-
-```typescript
-await i18n.tl('greeting', { name: 'Alice' }, { locale: 'fr' });
-```
 
 ### Locale Management
 
@@ -587,7 +507,6 @@ i18n.date(value, options?, locale?);
 ```typescript
 const ns = i18n.namespace('auth');
 ns.t('login.title');
-await ns.tl('register.title', undefined, { locale: 'fr' });
 ```
 
 ### Subscriptions
@@ -631,7 +550,6 @@ export function useTranslation(namespace?: string) {
 
   return {
     t: ns.t.bind(ns),
-    tl: ns.tl.bind(ns),
     locale: i18n.getLocale(),
     setLocale: i18n.setLocale.bind(i18n),
   };
@@ -677,7 +595,6 @@ export const i18nPlugin: Plugin = {
 export function useI18n() {
   return {
     t: i18n.t.bind(i18n),
-    tl: i18n.tl.bind(i18n),
     locale,
     setLocale: (newLocale: string) => i18n.setLocale(newLocale),
   };
@@ -766,30 +683,6 @@ function t(key: TranslationKeys, vars?: Record<string, unknown>) {
 }
 ```
 
-### 5. Use Structured Error Handling
-
-```typescript
-import { MissingVariableError } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  missingVar: 'error',
-  messages: { en: { greeting: 'Hello, {name}!' } },
-});
-
-try {
-  i18n.t('greeting');
-} catch (error) {
-  if (error instanceof MissingVariableError) {
-    // Log to error tracking service
-    console.error('Missing variable:', {
-      key: error.key,
-      variable: error.variable,
-      locale: error.locale,
-    });
-  }
-}
-```
-
 ## TypeScript Support
 
 Full TypeScript support with type inference:
@@ -822,18 +715,16 @@ const i18n = createI18n(config);
 
 ## Comparison
 
-| Feature            | i18nit                  | i18next     | react-intl    |
-| ------------------ | ----------------------- | ----------- | ------------- |
-| Bundle Size        | **~3KB**                | ~12KB       | ~15KB         |
-| Dependencies       | **0**                   | 2+          | 10+           |
-| TypeScript         | ✅ First-class          | ✅ Good     | ✅ Good       |
-| Pluralization      | ✅ Built-in             | ✅ Plugin   | ✅ Built-in   |
-| Async Loading      | ✅ Built-in             | ✅ Built-in | ⚠️ Manual     |
-| Path Interpolation | ✅ `{user.name}`        | ❌          | ❌            |
-| Message Functions  | ✅ Built-in             | ⚠️ Limited  | ✅ Components |
-| HTML Escaping      | ✅ Built-in             | ⚠️ Manual   | ✅ Built-in   |
-| Structured Errors  | ✅ MissingVariableError | ❌          | ❌            |
-| Framework Agnostic | ✅                      | ✅          | ❌ React only |
+| Feature            | i18nit           | i18next     | react-intl    |
+| ------------------ | ---------------- | ----------- | ------------- |
+| Bundle Size        | **~1.6 KB**      | ~12KB       | ~15KB         |
+| Dependencies       | **0**            | 2+          | 10+           |
+| TypeScript         | ✅ First-class   | ✅ Good     | ✅ Good       |
+| Pluralization      | ✅ Built-in      | ✅ Plugin   | ✅ Built-in   |
+| Async Loading      | ✅ Built-in      | ✅ Built-in | ⚠️ Manual     |
+| Path Interpolation | ✅ `{user.name}` | ❌          | ❌            |
+| HTML Escaping      | ✅ Built-in      | ⚠️ Manual   | ✅ Built-in   |
+| Framework Agnostic | ✅               | ✅          | ❌ React only |
 
 ## License
 

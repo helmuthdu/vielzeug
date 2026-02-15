@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-1.6_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -72,7 +72,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 | Feature            | i18nit                  | i18next     | react-intl    |
 | ------------------ | ----------------------- | ----------- | ------------- |
-| Bundle Size        | **~2 KB**               | ~12KB       | ~15KB         |
+| Bundle Size        | **~1.6 KB**             | ~12KB       | ~15KB         |
 | Dependencies       | **0**                   | 2+          | 10+           |
 | TypeScript         | First-class             | Good        | Good          |
 | Framework          | Agnostic                | Agnostic    | React only    |
@@ -80,9 +80,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 | Async Loading      | ✅ Built-in             | ✅ Built-in | ⚠️ Manual     |
 | Path Interpolation | ✅ `{user.name}`        | ❌          | ❌            |
 | Nested Keys        | ✅                      | ✅          | ✅            |
-| Message Functions  | ✅ Built-in             | ⚠️ Limited  | ✅ Components |
 | HTML Escaping      | ✅ Built-in             | ⚠️ Manual   | ✅ Built-in   |
-| Structured Errors  | ✅ MissingVariableError | ❌          | ❌            |
 
 ## When to Use i18nit
 
@@ -93,8 +91,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 - Async translation loading with automatic caching
 - Framework-agnostic solution
 - Variable interpolation with nested paths (`{user.name}`, `{items[0]}`)
-- Structured error handling with detailed context
-- Minimal bundle size (~2.3KB gzipped)
+- Minimal bundle size (~1.6 KB gzipped)
 - Built-in XSS protection with HTML escaping
 
 ❌ **Don't use i18nit when:**
@@ -108,16 +105,13 @@ i18n.t('items', { count: 5 }); // "5 items"
 - **Async Loading**: Lazy-load translations with [automatic caching and deduplication](./usage.md#async-loading).
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
 - **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping.
-- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
+- **Lightweight & Fast**: No dependencies and only **~1.6 KB gzipped**.
 - **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining a graceful fallback.
 - **Locale Fallbacks**: Automatic [fallback chain](./usage.md#fallback-translations) (e.g., de-CH → de → en).
-- **Message Functions**: Dynamic translations with [number/date helpers](./usage.md#message-functions).
-- **Missing Variable Strategies**: Choose between empty, preserve, or error for missing variables.
 - **Namespaced Keys**: Organize translations by [feature or module](./usage.md#namespaces).
 - **Path Interpolation**: Dot notation and bracket notation for [nested data](./usage.md#variable-interpolation).
 - **Reactive Subscriptions**: Subscribe to [locale changes](./usage.md#subscriptions) for UI updates.
 - **Smart Array Handling**: Auto-join with locale-aware separators via [Intl.ListFormat](./usage.md#array-variables).
-- **Structured Errors**: `MissingVariableError` with key, variable, and locale context.
 - **Type-Safe**: Full TypeScript support with generic types and type inference.
 - **Universal Pluralization**: Support for 100+ languages via [Intl.PluralRules API](./usage.md#pluralization).
 
@@ -265,7 +259,13 @@ const i18n = createI18n({
 });
 
 // Automatically loads and translates
-await i18n.tl('welcome', undefined, { locale: 'es' });
+// Preload locales at app startup
+await i18n.loadAll(['en', 'fr', 'es']);
+
+// Or load individually
+await i18n.load('es');
+i18n.setLocale('es');
+i18n.t('welcome'); // Now uses Spanish
 
 // Or load explicitly
 await i18n.load('fr');
@@ -427,39 +427,24 @@ i18n.t('safeHtml', { content: '<b>bold</b>' }, { escape: false });
 
 ### Custom Missing Key Handler
 
-Customize behavior for missing translations:
+Missing translations return the key itself, and missing variables are replaced with empty strings:
 
 ```ts
 const i18n = createI18n({
-  missingKey: (key, locale) => {
-    console.warn(`Missing translation: ${key} for ${locale}`);
-    return `[${key}]`;
-  },
-});
-
-i18n.t('nonexistent'); // "[nonexistent]"
-```
-
-### Missing Variable Handling
-
-Control what happens when variables are missing:
-
-```ts
-const i18n = createI18n({
-  missingVar: 'preserve', // 'preserve' | 'empty' | 'error'
   messages: {
-    en: { greeting: 'Hello, {name}!' },
+    en: {
+      hello: 'Hello!',
+      greeting: 'Hello, {name}!',
+    },
   },
 });
 
-// 'preserve': Keep placeholder
-i18n.t('greeting'); // "Hello, {name}!"
+// Missing key returns the key
+i18n.t('nonexistent'); // "nonexistent"
 
-// 'empty': Replace with empty string (default)
-// i18n.t('greeting'); // "Hello, !"
-
-// 'error': Throw error
-// i18n.t('greeting'); // throws Error: Missing variable: name
+// Missing variable returns empty string
+i18n.t('greeting'); // "Hello, !"
+i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
 ```
 
 ### Number and Date Formatting
@@ -488,7 +473,6 @@ const i18n = createI18n(config);
 
 // Translation
 i18n.t(key, vars?, options?);
-await i18n.tl(key, vars?, options?); // with loading
 
 // Locale management
 i18n.setLocale(locale);
@@ -630,16 +614,17 @@ Translations show key instead of translated text after changing locale.
 :::
 
 ::: tip Solution
-Use `tl()` instead of `t()` for automatic loading:
+Load the locale before using it:
 
 ```ts
-// ❌ Wrong - doesn't load
+// ❌ Wrong - locale not loaded
 i18n.t('key', undefined, { locale: 'es' });
 
-// ✅ Correct - loads automatically
-await i18n.tl('key', undefined, { locale: 'es' });
+// ✅ Correct - preload at startup
+await i18n.loadAll(['en', 'es']);
+i18n.t('key', undefined, { locale: 'es' });
 
-// Or pre-load
+// Or load on-demand
 await i18n.load('es');
 i18n.t('key', undefined, { locale: 'es' });
 ```

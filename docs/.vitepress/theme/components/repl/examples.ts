@@ -1262,16 +1262,19 @@ const i18n = createI18n({
 
 console.log('Current:', i18n.t('greeting'))
 
-// Load Spanish
-console.log('Loading Spanish...')
+// Method 1: Load individual locales
+console.log('\\nLoading Spanish...')
 await i18n.load('es')
 i18n.setLocale('es')
 console.log('Spanish:', i18n.t('greeting'))
 console.log('Spanish farewell:', i18n.t('farewell'))
 
-// Load French
-console.log('Loading French...')
-await i18n.load('fr')
+// Method 2: Batch preload multiple locales (recommended for app startup)
+console.log('\\nBatch loading all locales...')
+await i18n.loadAll(['en', 'es', 'fr'])
+console.log('All locales loaded!')
+
+// Now use sync t() with any locale
 i18n.setLocale('fr')
 console.log('French:', i18n.t('greeting'))`,
       name: 'Async Locale Loading',
@@ -1304,6 +1307,38 @@ console.log('ES:', i18n.t('hello'))
 
 console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
       name: 'Basic Setup - Initialize i18n',
+    },
+    'preload-pattern': {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+// App initialization - preload all locales at startup
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    en: async () => ({ greeting: 'Hello', welcome: 'Welcome!' }),
+    es: async () => ({ greeting: 'Hola', welcome: '¡Bienvenido!' }),
+    fr: async () => ({ greeting: 'Bonjour', welcome: 'Bienvenue!' })
+  }
+})
+
+// Preload all locales (recommended for app startup)
+console.log('Preloading all locales...')
+await i18n.loadAll(['en', 'es', 'fr'])
+console.log('✓ All locales loaded!\\n')
+
+// Now use sync t() everywhere - no await needed!
+console.log('EN:', i18n.t('greeting'))
+
+i18n.setLocale('es')
+console.log('ES:', i18n.t('greeting'))
+
+i18n.setLocale('fr')
+console.log('FR:', i18n.t('greeting'))
+
+// Perfect for React/Vue components
+console.log('\\nIn component:')
+console.log(i18n.t('welcome')) // No await! ✨`,
+      name: 'Preload Pattern (Recommended)',
     },
     'formatting-helpers': {
       code: `import { createI18n } from '@vielzeug/i18nit'

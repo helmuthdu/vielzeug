@@ -1,4 +1,4 @@
-import { createI18n, MissingVariableError } from './i18nit';
+import { createI18n } from './i18nit';
 
 describe('I18nit', () => {
   describe('Initialization', () => {
@@ -11,12 +11,11 @@ describe('I18nit', () => {
         fallback: 'en',
         locale: 'fr',
         messages: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
-        missingKey: (key, locale) => `[${locale}:${key}]`,
       });
 
       expect(i18n2.getLocale()).toBe('fr');
       expect(i18n2.t('hello')).toBe('Bonjour');
-      expect(i18n2.t('missing')).toBe('[fr:missing]');
+      expect(i18n2.t('missing')).toBe('missing'); // Returns key when not found
     });
 
     test('handles single and multiple fallback locales', () => {
@@ -37,10 +36,9 @@ describe('I18nit', () => {
   });
 
   describe('Translation', () => {
-    test('translates with key fallback and custom fallback', () => {
+    test('translates missing keys by returning the key', () => {
       const i18n = createI18n();
       expect(i18n.t('nonexistent')).toBe('nonexistent');
-      expect(i18n.t('nonexistent', undefined, { fallback: 'Custom' })).toBe('Custom');
     });
 
     test('translates with locale option and escape option', () => {
@@ -75,42 +73,20 @@ describe('I18nit', () => {
       );
     });
 
-    test('handles missing variables with different strategies', () => {
-      const i18n1 = createI18n({
+    test('handles missing variables by replacing with empty string', () => {
+      const i18n = createI18n({
         messages: { en: { msg: 'Hello, {name}!' } },
-        missingVar: 'empty',
-      });
-      const i18n2 = createI18n({
-        messages: { en: { msg: 'Hello, {name}!' } },
-        missingVar: 'preserve',
-      });
-      const i18n3 = createI18n({
-        messages: { en: { msg: 'Hello, {name}!' } },
-        missingVar: 'error',
       });
 
-      expect(i18n1.t('msg')).toBe('Hello, !');
-      expect(i18n2.t('msg')).toBe('Hello, {name}!');
-      expect(() => i18n3.t('msg')).toThrow(MissingVariableError);
+      expect(i18n.t('msg')).toBe('Hello, !');
     });
 
-    test('MissingVariableError provides structured information', () => {
+    test('interpolates available variables correctly', () => {
       const i18n = createI18n({
         messages: { en: { greeting: 'Hello, {name}!' } },
-        missingVar: 'error',
       });
 
-      try {
-        i18n.t('greeting');
-      } catch (error) {
-        expect(error).toBeInstanceOf(MissingVariableError);
-        if (error instanceof MissingVariableError) {
-          expect(error.key).toBe('greeting');
-          expect(error.variable).toBe('name');
-          expect(error.locale).toBe('en');
-          expect(error.message).toBe("Missing variable 'name' for key 'greeting' in locale 'en'");
-        }
-      }
+      expect(i18n.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
     });
 
     test('formats numbers and escapes HTML in interpolation', () => {
@@ -394,41 +370,6 @@ describe('I18nit', () => {
     });
   });
 
-  describe('Message Functions', () => {
-    test('calls message function with vars and helpers', () => {
-      const i18n = createI18n({
-        locale: 'en',
-        messages: {
-          en: {
-            dynamic: (vars) => `Hello, ${vars.name}!`,
-            event: (vars, helpers) => `Event: ${helpers.date(vars.date as Date, { dateStyle: 'short' })}`,
-            price: (vars, helpers) =>
-              `Price: ${helpers.number(vars.amount as number, { currency: 'USD', style: 'currency' })}`,
-          },
-        },
-      });
-
-      expect(i18n.t('dynamic', { name: 'Eve' })).toBe('Hello, Eve!');
-      expect(i18n.t('price', { amount: 99.99 })).toContain('99.99');
-      expect(i18n.t('event', { date: new Date('2024-01-15') })).toMatch(/(2024|1\/15\/24)/);
-    });
-
-    test('returns empty string when function throws and escapes result', () => {
-      const i18n = createI18n({
-        messages: {
-          en: {
-            error: () => {
-              throw new Error('Oops');
-            },
-            html: () => '<b>bold</b>',
-          },
-        },
-      });
-
-      expect(i18n.t('error')).toBe('');
-      expect(i18n.t('html', {}, { escape: true })).toBe('&lt;b&gt;bold&lt;/b&gt;');
-    });
-  });
 
   describe('Locale Management', () => {
     test('gets and sets locale with change detection', () => {
@@ -519,19 +460,21 @@ describe('I18nit', () => {
       expect(called).toBe(2);
     });
 
-    test('tl and hasAsync load locale before execution', async () => {
+    test('load() and hasAsync() load locale before translation', async () => {
       const i18n = createI18n({
         loaders: {
           es: async () => ({ greeting: 'Hola, {name}!' }),
         },
       });
 
-      expect(await i18n.tl('greeting', { name: 'Carlos' }, { locale: 'es' })).toBe('Hola, Carlos!');
+      await i18n.load('es');
+      i18n.setLocale('es');
+      expect(i18n.t('greeting', { name: 'Carlos' })).toBe('Hola, Carlos!');
       expect(await i18n.hasAsync('greeting', 'es')).toBe(true);
       expect(await i18n.hasAsync('missing', 'es')).toBe(false);
     });
 
-    test('tl falls back silently when loader fails', async () => {
+    test('load() handles loader failures gracefully', async () => {
       const i18n = createI18n({
         loaders: {
           es: async () => {
@@ -540,7 +483,7 @@ describe('I18nit', () => {
         },
       });
 
-      expect(await i18n.tl('key', undefined, { locale: 'es' })).toBe('key');
+      await expect(i18n.load('es')).rejects.toThrow('failed');
     });
   });
 
@@ -567,15 +510,16 @@ describe('I18nit', () => {
       expect(app.t('welcome', { name: 'François' }, { locale: 'fr' })).toBe('Bienvenue, François!');
     });
 
-    test('namespaced tl works with loaders', async () => {
+    test('namespaced translation works with loaders', async () => {
       const i18n = createI18n({
         loaders: {
           es: async () => ({ 'app.greeting': 'Hola' }),
         },
       });
 
+      await i18n.load('es');
       const app = i18n.namespace('app');
-      expect(await app.tl('greeting', undefined, { locale: 'es' })).toBe('Hola');
+      expect(app.t('greeting', undefined, { locale: 'es' })).toBe('Hola');
     });
   });
 
