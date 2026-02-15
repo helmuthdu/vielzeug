@@ -135,162 +135,77 @@ console.log(store.get().count); // Original value
 
 #### get()
 
-Gets the current state snapshot.
+Gets the current state snapshot or a selected slice.
 
 ##### Signature
 
 ```ts
 get(): T;
+get<U>(selector: (state: T) => U): U;
 ```
+
+##### Parameters
+
+- `selector?: (state: T) => U` - Optional function to select a slice of state
 
 ##### Returns
 
-Current state object
+Current state object or selected value
 
 ##### Example
 
 ```ts
+// Get full state
 const state = store.get();
 console.log(state.count);
-```
 
----
+// Get selected value
+const count = store.get((state) => state.count);
 
-#### select()
+// Get nested property
+const userName = store.get((state) => state.user.name);
 
-Gets a selected slice of the current state without subscribing.
-Convenience method for type-safe property access.
-
-##### Signature
-
-```ts
-select<U>(selector: (state: T) => U): U;
-```
-
-##### Parameters
-
-- `selector: (state: T) => U` - Function to select a slice of state
-
-##### Returns
-
-The selected value
-
-##### Example
-
-```ts
-// Select a single field
-const count = store.select((state) => state.count);
-
-// Select nested property
-const userName = store.select((state) => state.user.name);
-
-// Select computed value
-const isAdult = store.select((state) => state.age >= 18);
-
-// Select multiple fields as object
-const userInfo = store.select((state) => ({
-  name: state.name,
-  email: state.email,
-}));
-```
-
----
-
-#### getName()
-
-Gets the store name (if configured).
-
-##### Signature
-
-```ts
-getName(): string | undefined;
-```
-
-##### Returns
-
-Store name or undefined
-
-##### Example
-
-```ts
-const name = store.getName(); // 'userStore' or undefined
-```
-
----
-
-#### replace()
-
-Replaces the entire state with a new value.
-
-##### Signature
-
-```ts
-replace(nextState: T): void;
-```
-
-##### Parameters
-
-- `nextState: T` - New state to set
-
-##### Example
-
-```ts
-store.replace({ count: 5, name: 'Updated' });
+// Get computed value
+const isAdult = store.get((state) => state.age >= 18);
 ```
 
 ---
 
 #### set()
 
-Performs a shallow merge of the patch into current state.
+Updates state with partial merge, sync function, or async function.
 
 ##### Signature
 
 ```ts
 set(patch: Partial<T>): void;
+set(updater: (state: T) => T): void;
+set(updater: (state: T) => Promise<T>): Promise<void>;
 ```
 
 ##### Parameters
 
-- `patch: Partial<T>` - Partial state to merge
-
-##### Example
-
-```ts
-store.set({ count: 1 }); // Only updates count field
-```
-
----
-
-#### update()
-
-Updates state using an updater function.
-
-##### Signature
-
-```ts
-update(updater: (state: T) => T | Promise<T>): Promise<void>;
-```
-
-##### Parameters
-
+- `patch: Partial<T>` - Partial state to merge (shallow)
 - `updater: (state: T) => T | Promise<T>` - Function that receives current state and returns new state
 
 ##### Returns
 
-Promise that resolves when update is complete
+`void` for sync updates, `Promise<void>` for async updates
 
 ##### Example
 
 ```ts
-// Synchronous update
-await store.update((state) => ({
+// Partial merge
+store.set({ count: 1 });
+
+// Sync function
+store.set((state) => ({
   ...state,
   count: state.count + 1,
 }));
 
-// Asynchronous update
-await store.update(async (state) => {
+// Async function
+await store.set(async (state) => {
   const data = await fetchData();
   return { ...state, data };
 });
@@ -402,41 +317,6 @@ store.subscribe(
   },
 );
 ```
-
----
-
-#### observe()
-
-Observes all state changes without selective filtering.
-
-##### Signature
-
-```ts
-observe(observer: Subscriber<T>): Unsubscribe;
-```
-
-##### Parameters
-
-- `observer: Subscriber<T>` - Callback for every state change
-
-##### Returns
-
-Unsubscribe function
-
-##### Example
-
-```ts
-const unsubscribe = store.observe((state, prev) => {
-  console.log('State changed from', prev, 'to', state);
-});
-```
-
-::: warning ⚠️ Observer vs Subscribe
-
-- `observe()` is NOT called immediately upon subscription
-- `subscribe()` IS called immediately with current state
-- Use `subscribe()` for most use cases
-  :::
 
 ---
 

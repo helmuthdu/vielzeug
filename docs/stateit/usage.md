@@ -69,52 +69,46 @@ const state = counterStore.get();
 console.log(state.count); // 0
 
 // Select a specific value without subscribing
-const count = counterStore.select((state) => state.count);
+const count = counterStore.get((state) => state.count);
 console.log(count); // 0
 
 // Select nested property
 const userStore = createStore({
   user: { name: 'Alice', profile: { age: 30 } },
 });
-const userName = userStore.select((state) => state.user.name);
+const userName = userStore.get((state) => state.user.name);
 console.log(userName); // 'Alice'
 
 // Select computed value
-const doubleCount = counterStore.select((state) => state.count * 2);
+const doubleCount = counterStore.get((state) => state.count * 2);
 console.log(doubleCount); // 0
 
 // Select multiple fields
-const userInfo = userStore.select((state) => ({
+const userInfo = userStore.get((state) => ({
   name: state.user.name,
   age: state.user.profile.age,
 }));
 console.log(userInfo); // { name: 'Alice', age: 30 }
-
-// Get store name (if configured)
-const name = counterStore.getName(); // 'userStore' or undefined
 ```
 
-::: tip 💡 select() vs get()
-Use `select()` for type-safe property access with selectors. Use `get()` to retrieve the entire state object.
+::: tip 💡 get() Overloads
+Use `get()` without arguments to retrieve the entire state. Use `get(selector)` for type-safe property access with selectors.
 :::
 
 ### Updating State
 
 ```ts
-// Replace entire state
-counterStore.replace({ count: 5 });
-
 // Partial update (shallow merge)
 counterStore.set({ count: 1 });
 
-// Update with function (sync)
-await counterStore.update((state) => ({
+// Update with sync function
+counterStore.set((state) => ({
   ...state,
   count: state.count + 1,
 }));
 
-// Update with function (async)
-await counterStore.update(async (state) => {
+// Update with async function (returns Promise)
+await counterStore.set(async (state) => {
   const data = await fetchData();
   return { ...state, data };
 });
@@ -214,7 +208,7 @@ itemsStore.subscribe(
 Low-level API for observing all changes without filtering:
 
 ```ts
-const unobserve = counterStore.observe((state, prevState) => {
+const unobserve = counterStore.subscribe((state, prevState) => {
   console.log('Raw state change detected');
   // Called for every state change
   // NOT called immediately on subscription
@@ -231,16 +225,6 @@ unobserve();
   :::
 
 ## Store Options
-
-### Named Stores
-
-Useful for debugging and logging:
-
-```ts
-const store = createStore({ count: 0 }, { name: 'counterStore' });
-
-console.log(store.getName()); // 'counterStore'
-```
 
 ### Custom Equality
 
@@ -260,7 +244,7 @@ const store = createStore<State>(
 );
 
 // This won't trigger subscribers (count didn't change)
-store.replace({ count: 0, name: 'changed' });
+store.set({ count: 0, name: 'changed' });
 ```
 
 ## Scoped Stores
@@ -372,7 +356,7 @@ Add cross-cutting concerns:
 
 ```ts
 function withLogging<T extends object>(store: Store<T>) {
-  store.observe((state, prev) => {
+  store.subscribe((state, prev) => {
     console.log('State updated:', {
       from: prev,
       to: state,
@@ -386,11 +370,11 @@ function withPersistence<T extends object>(store: Store<T>, key: string) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
   if (saved) {
-    store.replace(JSON.parse(saved));
+    store.set(JSON.parse(saved));
   }
 
   // Save on changes
-  store.observe((state) => {
+  store.subscribe((state) => {
     localStorage.setItem(key, JSON.stringify(state));
   });
 
@@ -506,7 +490,6 @@ userStore.set({ name: 'Alice' }); // ✅ Valid
 
 ### ✅ Do
 
-- Use descriptive store names for debugging
 - Subscribe to specific fields to avoid unnecessary re-renders
 - Use scoped stores for isolated contexts (e.g., request-scoped)
 - Leverage custom equality functions for performance
@@ -523,7 +506,7 @@ userStore.set({ name: 'Alice' }); // ✅ Valid
 - Don't use stores for local component state
 - Don't share mutable objects in state
 - Don't mix sync and async state updates without handling
-- Don't create deeply nested state (keep it flat)
+- Don't create a deeply nested state (keep it flat)
 
 ## Performance Tips
 
@@ -556,7 +539,7 @@ store.set({ age: 30 });
 store.set({ count: 1, name: 'Alice', age: 30 });
 
 // ✅ Also good - update function
-await store.update((state) => ({
+await store.set((state) => ({
   ...state,
   count: 1,
   name: 'Alice',
@@ -630,7 +613,7 @@ async function updateItem(id: string, updates: Partial<Item>) {
     await api.updateItem(id, updates);
   } catch (error) {
     // Rollback on error
-    itemsStore.replace(prevState);
+    itemsStore.set(prevState);
     throw error;
   }
 }
@@ -644,7 +627,7 @@ class History<T> {
   private future: T[] = [];
 
   constructor(private store: Store<T>) {
-    store.observe((state, prev) => {
+    store.subscribe((state, prev) => {
       this.past.push(prev);
       this.future = [];
     });
@@ -654,7 +637,7 @@ class History<T> {
     const previous = this.past.pop();
     if (previous) {
       this.future.push(this.store.get());
-      this.store.replace(previous);
+      this.store.set(previous);
     }
   }
 
@@ -662,7 +645,7 @@ class History<T> {
     const next = this.future.pop();
     if (next) {
       this.past.push(this.store.get());
-      this.store.replace(next);
+      this.store.set(next);
     }
   }
 }
