@@ -167,6 +167,11 @@ declare module '@vielzeug/deposit' {
     put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
     query<K extends keyof S>(table: K): any;
     patch<K extends keyof S>(table: K, patches: any[]): Promise<void>;
+    transaction<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
+      tables: K[],
+      fn: (stores: T) => Promise<void>,
+      ttl?: number
+    ): Promise<void>;
   }
 
   export type DepositDataSchema<S = DataSchemaDef> = {
@@ -192,6 +197,31 @@ declare module '@vielzeug/deposit' {
     key: K;
     record: T;
   };
+
+  export class LocalStorageAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
+    constructor(dbName: string, version: number, schema: S);
+    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
+    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+    clear<K extends keyof S>(table: K): Promise<void>;
+    count<K extends keyof S>(table: K): Promise<number>;
+    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
+    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
+    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+  }
+
+  export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
+    constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>);
+    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
+    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+    clear<K extends keyof S>(table: K): Promise<void>;
+    count<K extends keyof S>(table: K): Promise<number>;
+    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
+    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
+    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+    connect(): Promise<void>;
+  }
 }
 `;
 

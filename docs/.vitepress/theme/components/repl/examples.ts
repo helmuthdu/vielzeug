@@ -632,7 +632,9 @@ await db.bulkPut('accounts', [
 
 console.log('Initial balances:', await db.getAll('accounts'))
 
-// Transfer money atomically
+// Transfer money with transaction
+// For IndexedDB: Atomic (all succeed or all fail)
+// For LocalStorage: Optimistic (not atomic across tables)
 await db.transaction(['accounts'], async (stores) => {
   const alice = stores.accounts.find(a => a.id === 'alice')
   const bob = stores.accounts.find(a => a.id === 'bob')
@@ -645,7 +647,7 @@ await db.transaction(['accounts'], async (stores) => {
 })
 
 console.log('Final balances:', await db.getAll('accounts'))`,
-      name: 'Transactions - Atomic Operations',
+      name: 'Transactions - Atomic for IndexedDB',
     },
     'ttl-expiration': {
       code: `import { Deposit } from '@vielzeug/deposit'

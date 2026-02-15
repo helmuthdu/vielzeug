@@ -248,13 +248,17 @@ const adults = await db
 
 ### `transaction(tables, fn, ttl?)`
 
-Performs an atomic transaction across multiple tables.
+Performs operations across multiple tables with automatic adapter-appropriate behavior.
+
+**Atomicity:**
+- **IndexedDB**: Fully atomic - all changes happen in a single IDBTransaction (ACID guarantees)
+- **LocalStorage**: Optimistic - changes are applied sequentially (not atomic across tables)
 
 **Parameters:**
 
 - `tables: K[]` - Array of table names
-- `fn: (stores: T) => Promise<void>` - Transaction callback
-- `ttl?: number` - Optional TTL for modified records
+- `fn: (stores: T) => Promise<void>` - Transaction callback receiving store proxies
+- `ttl?: number` - Optional TTL for all modified records
 
 **Returns:** `Promise<void>`
 
@@ -277,11 +281,16 @@ await db.transaction(['users', 'posts'], async (stores) => {
     content: 'My first post',
   });
 
-  // Changes are committed atomically
+  // For IndexedDB: Changes are committed atomically
+  // For LocalStorage: Changes are committed optimistically
 });
 ```
 
-**Note:** If an error occurs, all changes are rolled back.
+**Behavior:**
+- Loads all specified tables into memory
+- Executes the callback with in-memory proxies
+- On success: commits all changes (atomically for IndexedDB)
+- On error: rolls back all changes without persisting
 
 ---
 

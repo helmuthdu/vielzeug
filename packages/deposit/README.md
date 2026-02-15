@@ -196,7 +196,7 @@ await db.bulkPut('temp-data', records, 3600000);
 
 ### Transactions
 
-Perform atomic operations across multiple tables:
+Perform operations across multiple tables. Transactions are **atomic for IndexedDB** (all succeed or all fail) and **optimistic for LocalStorage**:
 
 ```typescript
 await db.transaction(['users', 'posts'], async (stores) => {
@@ -220,7 +220,8 @@ await db.transaction(['users', 'posts'], async (stores) => {
     createdAt: Date.now(),
   });
 
-  // Both changes are committed together
+  // For IndexedDB: Changes are committed atomically in a single transaction
+  // For LocalStorage: Changes are committed optimistically (non-atomic)
   // If any error occurs, all changes are rolled back
 });
 ```

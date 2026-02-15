@@ -283,7 +283,7 @@ Use `toGrouped()` instead of `groupBy().toArray()` for better type safety. The `
 
 ### Transactions
 
-Perform atomic operations across multiple tables:
+Perform operations across multiple tables with automatic atomicity for IndexedDB:
 
 ```ts
 await db.transaction(['users', 'posts'], async (stores) => {
@@ -306,10 +306,16 @@ await db.transaction(['users', 'posts'], async (stores) => {
     createdAt: Date.now(),
   });
 
-  // Both changes are committed together
+  // For IndexedDB: All changes committed atomically in a single transaction
+  // For LocalStorage: Changes committed optimistically (non-atomic)
   // If any error occurs, all changes are rolled back
 });
 ```
+
+::: tip ⚡ Atomicity Guarantees
+- **IndexedDB**: Transactions are fully atomic using a single `IDBTransaction` - all changes succeed together or all fail together (ACID properties)
+- **LocalStorage**: Transactions are optimistic and NOT atomic - tables are updated sequentially. For critical data integrity, use IndexedDB
+:::
 
 ### Patch Operations
 
