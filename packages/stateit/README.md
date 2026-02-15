@@ -43,14 +43,20 @@ counter.subscribe((state, prev) => {
   console.log(`Count changed from ${prev.count} to ${state.count}`);
 });
 
-// Update state
+// Update state - partial merge
 counter.set({ count: 1 });
 
-// Update with function
-await counter.update((state) => ({
+// Update with sync function
+counter.set((state) => ({
   ...state,
   count: state.count + 1,
 }));
+
+// Update with async function
+await counter.set(async (state) => {
+  const data = await fetchData();
+  return { ...state, data };
+});
 ```
 
 ## Core Concepts
@@ -99,20 +105,20 @@ console.log(state.name);
 console.log(state.age);
 
 // Select specific value without subscribing
-const name = store.select((state) => state.name);
+const name = store.get((state) => state.name);
 console.log(name); // 'Alice'
 
 // Select nested property
 const userStore = createStore({
   user: { profile: { email: 'alice@example.com' } },
 });
-const email = userStore.select((state) => state.user.profile.email);
+const email = userStore.get((state) => state.user.profile.email);
 
 // Select computed value
-const isAdult = store.select((state) => state.age >= 18);
+const isAdult = store.get((state) => state.age >= 18);
 
 // Select multiple fields
-const userInfo = store.select((state) => ({
+const userInfo = store.get((state) => ({
   name: state.name,
   email: state.email,
 }));
@@ -121,20 +127,17 @@ const userInfo = store.select((state) => ({
 ### Updating State
 
 ```typescript
-// Replace entire state
-store.replace({ name: 'Bob', age: 25, email: 'bob@example.com' });
-
 // Merge partial state (shallow merge)
 store.set({ age: 31 });
 
-// Update with function (sync)
-await store.update((state) => ({
+// Update with sync function
+store.set((state) => ({
   ...state,
   age: state.age + 1,
 }));
 
-// Update with function (async)
-await store.update(async (state) => {
+// Update with async function (returns Promise)
+await store.set(async (state) => {
   const user = await fetchUser(state.id);
   return { ...state, ...user };
 });
@@ -173,17 +176,6 @@ store.subscribe(
     equality: (a, b) => a.length === b.length, // Only notify if length changes
   },
 );
-```
-
-### Observers
-
-```typescript
-// Low-level observer (not called immediately, no filtering)
-const unobserve = store.observe((state, prevState) => {
-  console.log('Raw state change detected');
-});
-
-unobserve();
 ```
 
 ### Scoped Stores
@@ -362,19 +354,18 @@ const dataStore = createStore({
 
 // Async fetch with loading state
 async function fetchData() {
-  await dataStore.update(async (state) => {
-    // Set loading
-    dataStore.set({ loading: true, error: null });
+  // Set loading
+  dataStore.set({ loading: true, error: null });
 
-    try {
+  try {
+    await dataStore.set(async (state) => {
       const response = await fetch('/api/data');
       const data = await response.json();
-
       return { ...state, data, loading: false };
-    } catch (error) {
-      return { ...state, error, loading: false };
-    }
-  });
+    });
+  } catch (error) {
+    dataStore.set({ error, loading: false });
+  }
 }
 ```
 
@@ -397,9 +388,9 @@ cartStore.subscribe(
 );
 ```
 
-### Derived State with select()
+### Derived State with get()
 
-Use `select()` for one-time reads of computed values without subscribing:
+Use `get()` with a selector for one-time reads of computed values without subscribing:
 
 ```typescript
 const userStore = createStore({
@@ -414,17 +405,17 @@ const userStore = createStore({
 
 // Get computed full name
 function getFullName() {
-  return userStore.select((state) => `${state.firstName} ${state.lastName}`);
+  return userStore.get((state) => `${state.firstName} ${state.lastName}`);
 }
 
 // Get nested property
 function getCity() {
-  return userStore.select((state) => state.address.city);
+  return userStore.get((state) => state.address.city);
 }
 
 // Get multiple derived values
 function getUserSummary() {
-  return userStore.select((state) => ({
+  return userStore.get((state) => ({
     name: `${state.firstName} ${state.lastName}`,
     location: `${state.address.city}, ${state.address.country}`,
     isAdult: state.age >= 18,
@@ -441,7 +432,7 @@ console.log(getUserSummary());
 
 ```typescript
 function withLogging<T extends object>(store: Store<T>) {
-  store.observe((state, prev) => {
+  store.subscribe((state, prev) => {
     console.log('State updated:', {
       from: prev,
       to: state,
@@ -456,11 +447,11 @@ function withPersistence<T extends object>(store: Store<T>, key: string) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
   if (saved) {
-    store.replace(JSON.parse(saved));
+    store.set(JSON.parse(saved));
   }
 
   // Save on changes
-  store.observe((state) => {
+  store.subscribe((state) => {
     localStorage.setItem(key, JSON.stringify(state));
   });
 
@@ -565,21 +556,19 @@ Creates a new store instance.
 #### Read Methods
 
 - `get(): T` - Get current state snapshot
-- `select<U>(selector: (state: T) => U): U` - Get selected value without subscribing
-- `getName(): string | undefined` - Get store name
+- `get<U>(selector: (state: T) => U): U` - Get selected value without subscribing
 
 #### Write Methods
 
-- `replace(nextState: T): void` - Replace entire state
 - `set(patch: Partial<T>): void` - Merge partial state (shallow)
-- `update(updater: (state: T) => T | Promise<T>): Promise<void>` - Update with function
+- `set(updater: (state: T) => T): void` - Update with sync function
+- `set(updater: (state: T) => Promise<T>): Promise<void>` - Update with async function
 - `reset(): void` - Reset to initial state
 
 #### Subscription Methods
 
-- `subscribe(listener: Subscriber<T>): Unsubscribe` - Subscribe to all changes
-- `subscribe<U>(selector: Selector<T, U>, listener: Subscriber<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe` - Subscribe to selected value
-- `observe(observer: Subscriber<T>): Unsubscribe` - Low-level observer (no filtering)
+- `subscribe(listener: Listener<T>): Unsubscribe` - Subscribe to all changes
+- `subscribe<U>(selector: Selector<T, U>, listener: Listener<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe` - Subscribe to selected value
 
 #### Scoping Methods
 
@@ -675,7 +664,7 @@ store.set({ count: 3 });
 While stateit doesn't have built-in DevTools support, you can implement it via observers:
 
 ```typescript
-store.observe((state, prev) => {
+store.subscribe((state, prev) => {
   window.__REDUX_DEVTOOLS_EXTENSION__?.send({
     type: 'STATE_UPDATE',
     payload: state,

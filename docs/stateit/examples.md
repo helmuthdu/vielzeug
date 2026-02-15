@@ -424,8 +424,8 @@ export function setFilter(filter: TodoState['filter']) {
 // Computed values using select() - type-safe property access
 export function getFilteredTodos() {
   // Use select() for clean, type-safe access
-  const todos = todoStore.select((state) => state.todos);
-  const filter = todoStore.select((state) => state.filter);
+  const todos = todoStore.get((state) => state.todos);
+  const filter = todoStore.get((state) => state.filter);
 
   switch (filter) {
     case 'active':
@@ -439,15 +439,15 @@ export function getFilteredTodos() {
 
 // Get specific computed values
 export function getTodoCount() {
-  return todoStore.select((state) => state.todos.length);
+  return todoStore.get((state) => state.todos.length);
 }
 
 export function getCompletedCount() {
-  return todoStore.select((state) => state.todos.filter((t) => t.completed).length);
+  return todoStore.get((state) => state.todos.filter((t) => t.completed).length);
 }
 
 export function getActiveCount() {
-  return todoStore.select((state) => state.todos.filter((t) => !t.completed).length);
+  return todoStore.get((state) => state.todos.filter((t) => !t.completed).length);
 }
 
 export { todoStore };
@@ -514,7 +514,7 @@ export async function login(email: string, password: string) {
 }
 
 export function logout() {
-  authStore.replace({ user: null, token: null, isLoading: false });
+  authStore.set({ user: null, token: null, isLoading: false });
 }
 
 export function isAuthenticated() {
@@ -588,19 +588,19 @@ export function clearCart() {
 
 // Computed values using select()
 export function getCartTotal() {
-  return cartStore.select((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
+  return cartStore.get((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 }
 
 export function getCartItemCount() {
-  return cartStore.select((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+  return cartStore.get((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
 }
 
 export function getCartItems() {
-  return cartStore.select((state) => state.items);
+  return cartStore.get((state) => state.items);
 }
 
 export function hasItems() {
-  return cartStore.select((state) => state.items.length > 0);
+  return cartStore.get((state) => state.items.length > 0);
 }
 
 // Subscribe to cart total for real-time updates
@@ -804,37 +804,37 @@ const userStore = createStore<User>({
 
 // Simple property access
 export function getFirstName() {
-  return userStore.select((state) => state.firstName);
+  return userStore.get((state) => state.firstName);
 }
 
 // Nested property access
 export function getUserCity() {
-  return userStore.select((state) => state.address.city);
+  return userStore.get((state) => state.address.city);
 }
 
 export function getUserTheme() {
-  return userStore.select((state) => state.preferences.theme);
+  return userStore.get((state) => state.preferences.theme);
 }
 
 // Computed values
 export function getFullName() {
-  return userStore.select((state) => `${state.firstName} ${state.lastName}`);
+  return userStore.get((state) => `${state.firstName} ${state.lastName}`);
 }
 
 export function getFullAddress() {
-  return userStore.select((state) => {
+  return userStore.get((state) => {
     const { street, city, country } = state.address;
     return `${street}, ${city}, ${country}`;
   });
 }
 
 export function isAdult() {
-  return userStore.select((state) => state.age >= 18);
+  return userStore.get((state) => state.age >= 18);
 }
 
 // Complex transformations
 export function getUserProfile() {
-  return userStore.select((state) => ({
+  return userStore.get((state) => ({
     name: `${state.firstName} ${state.lastName}`,
     contact: state.email,
     location: `${state.address.city}, ${state.address.country}`,
@@ -844,7 +844,7 @@ export function getUserProfile() {
 
 // Type-safe field selection
 export function getUserSettings() {
-  return userStore.select((state) => ({
+  return userStore.get((state) => ({
     theme: state.preferences.theme,
     notifications: state.preferences.notifications,
   }));
@@ -946,7 +946,7 @@ class UndoManager<T extends object> {
     private store: Store<T>,
     private maxHistory = 50,
   ) {
-    this.unsubscribe = store.observe((state, prev) => {
+    this.unsubscribe = store.subscribe((state, prev) => {
       this.past.push(prev);
 
       // Limit history
@@ -962,7 +962,7 @@ class UndoManager<T extends object> {
     const previous = this.past.pop();
     if (previous) {
       this.future.push(this.store.get());
-      this.store.replace(previous);
+      this.store.set(previous);
       return true;
     }
     return false;
@@ -972,7 +972,7 @@ class UndoManager<T extends object> {
     const next = this.future.pop();
     if (next) {
       this.past.push(this.store.get());
-      this.store.replace(next);
+      this.store.set(next);
       return true;
     }
     return false;
@@ -1024,7 +1024,7 @@ function withDevTools<T extends object>(store: Store<T>, name: string = 'Store')
 
   if (!devTools) return store;
 
-  store.observe((state, prev) => {
+  store.subscribe((state, prev) => {
     devTools.send(
       {
         type: 'STATE_UPDATE',
@@ -1036,7 +1036,7 @@ function withDevTools<T extends object>(store: Store<T>, name: string = 'Store')
 
   devTools.subscribe((message: any) => {
     if (message.type === 'DISPATCH' && message.state) {
-      store.replace(JSON.parse(message.state));
+      store.set(JSON.parse(message.state));
     }
   });
 

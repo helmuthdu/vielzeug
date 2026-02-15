@@ -2203,24 +2203,24 @@ const userStore = createStore({
 })
 
 // Select single field
-const name = userStore.select(state => state.name)
+const name = userStore.get(state => state.name)
 console.log('Name:', name)
 
 // Select nested property
-const theme = userStore.select(state => state.preferences.theme)
+const theme = userStore.get(state => state.preferences.theme)
 console.log('Theme:', theme)
 
 // Select computed value
-const isAdult = userStore.select(state => state.age >= 18)
+const isAdult = userStore.get(state => state.age >= 18)
 console.log('Is adult:', isAdult)
 
 // Select multiple fields
-const info = userStore.select(state => ({
+const info = userStore.get(state => ({
   name: state.name,
   email: state.email
 }))
 console.log('User info:', info)`,
-      name: 'Select Method - Get State Slices',
+      name: 'Get Method - Read State Slices',
     },
     'selective-subscription': {
       code: `import { createStore } from '@vielzeug/stateit'

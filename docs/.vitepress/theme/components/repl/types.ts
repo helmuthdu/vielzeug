@@ -473,7 +473,7 @@ declare module '@vielzeug/permit' {
 
 export const stateitTypes = `
 declare module '@vielzeug/stateit' {
-  export type Subscriber<T> = (state: T, prev: T) => void;
+  export type Listener<T> = (state: T, prev: T) => void;
   export type Selector<T, U> = (state: T) => U;
   export type Unsubscribe = () => void;
   export type EqualityFn<U> = (a: U, b: U) => boolean;
@@ -485,19 +485,17 @@ declare module '@vielzeug/stateit' {
 
   export class Store<T extends object> {
     get(): T;
-    select<U>(selector: Selector<T, U>): U;
-    getName(): string | undefined;
-    replace(nextState: T): void;
+    get<U>(selector: Selector<T, U>): U;
     set(patch: Partial<T>): void;
-    update(updater: (state: T) => T | Promise<T>): Promise<void>;
+    set(updater: (state: T) => T): void;
+    set(updater: (state: T) => Promise<T>): Promise<void>;
     reset(): void;
-    subscribe(listener: Subscriber<T>): Unsubscribe;
+    subscribe(listener: Listener<T>): Unsubscribe;
     subscribe<U>(
       selector: Selector<T, U>,
-      listener: Subscriber<U>,
+      listener: Listener<U>,
       options?: { equality?: EqualityFn<U> }
     ): Unsubscribe;
-    observe(observer: Subscriber<T>): Unsubscribe;
     createChild(patch?: Partial<T>): Store<T>;
     runInScope<R>(
       fn: (scopedStore: Store<T>) => R | Promise<R>,

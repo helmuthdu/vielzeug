@@ -153,7 +153,7 @@ counter.subscribe((state, prev) => {
 counter.set({ count: 1 });
 
 // Update with function
-await counter.update((state) => ({
+await counter.set((state) => ({
   ...state,
   count: state.count + 1,
 }));
@@ -199,9 +199,6 @@ const state = store.get();
 // Access properties
 console.log(state.name);
 console.log(state.age);
-
-// Get store name (if configured)
-const name = store.getName();
 ```
 
 ### Updating State
@@ -210,19 +207,19 @@ Multiple ways to update state:
 
 ```ts
 // Replace entire state
-store.replace({ name: 'Bob', age: 25, email: 'bob@example.com' });
+store.set({ name: 'Bob', age: 25, email: 'bob@example.com' });
 
 // Merge partial state (shallow merge)
 store.set({ age: 31 });
 
 // Update with function (sync)
-await store.update((state) => ({
+await store.set((state) => ({
   ...state,
   age: state.age + 1,
 }));
 
 // Update with function (async)
-await store.update(async (state) => {
+await store.set(async (state) => {
   const user = await fetchUser(state.id);
   return { ...state, ...user };
 });
@@ -325,7 +322,7 @@ store.set({ count: 3 });
 While Stateit doesn't have built-in DevTools support, you can implement it via observers:
 
 ```ts
-store.observe((state, prev) => {
+store.subscribe((state, prev) => {
   window.__REDUX_DEVTOOLS_EXTENSION__?.send({
     type: 'STATE_UPDATE',
     payload: state,
