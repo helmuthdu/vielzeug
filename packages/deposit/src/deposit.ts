@@ -88,53 +88,14 @@ function validateDepositSchema<S extends DepositDataSchema>(schema: S): void {
 /* -------------------- Helper Functions -------------------- */
 
 function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { expiresAt?: number } {
-  if (ttl === undefined) return value;
+  if (!ttl) return value;
   return { ...value, expiresAt: Date.now() + ttl };
 }
 
-function unwrapWithExpiry<T extends Record<string, unknown>>(
-  value: T & { expiresAt?: number },
-  now: number,
-  onExpire?: () => void | Promise<void>,
-): T | undefined {
-  if (value.expiresAt === undefined) return value;
-
-  if (now >= value.expiresAt) {
-    if (onExpire) {
-      const result = onExpire();
-      if (result && typeof (result as Promise<void>).then === 'function') {
-        (result as Promise<void>).catch((err) => {
-          const logger = Logit.scope('Deposit');
-          logger.warn('Failed to clean up expired entry', err);
-        });
-      }
-    }
-    return undefined;
-  }
-
-  return value;
-}
-
-export function runSafe<T extends (...args: any[]) => any>(fn: T, label = 'OPERATION_FAILED'): T {
-  return ((...args: any[]) => {
-    try {
-      const result = fn(...args);
-
-      if (result && typeof result.then === 'function') {
-        return result.catch((err: Error) => {
-          const logger = Logit.scope('Deposit');
-          logger.error(label, err);
-          return undefined;
-        });
-      }
-
-      return result;
-    } catch (err) {
-      const logger = Logit.scope('Deposit');
-      logger.error(label, err);
-      return undefined;
-    }
-  }) as unknown as T;
+function isExpired(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown> & { expiresAt?: number };
+  return obj.expiresAt !== undefined && Date.now() >= obj.expiresAt;
 }
 
 /* -------------------- Deposit Class -------------------- */
@@ -208,14 +169,40 @@ export class Deposit<S extends DepositDataSchema> {
     fn: (stores: T) => Promise<void>,
     ttl?: number,
   ) {
-    const storeMap = await this.loadStores<K, T>(tables);
-    const proxy = this.createStoreProxy(storeMap);
+    // Use native IndexedDB transaction for atomic commits if available
+    if (this.adapter instanceof IndexedDBAdapter) {
+      await (this.adapter as IndexedDBAdapter<S>).atomicTransactionInternal(tables, async (ops) => {
+        // Load all stores into memory
+        const storeMap = {} as T;
+        await Promise.all(
+          tables.map(async (table) => {
+            (storeMap as any)[table] = await ops.getAll(table);
+          }),
+        );
 
-    try {
-      await fn(proxy as T);
-      await this.commitStores(tables, proxy, ttl);
-    } catch (err) {
-      throw new Error(`Transaction failed for tables: ${tables.join(', ')}`, { cause: err });
+        // Execute user function
+        const proxy = this.createStoreProxy(storeMap);
+        await fn(proxy as T);
+
+        // Commit changes atomically
+        await Promise.all(
+          tables.map(async (table) => {
+            await ops.clear(table);
+            await ops.bulkPut(table, storeMap[table], ttl);
+          }),
+        );
+      });
+    } else {
+      // Fall back to optimistic transaction for LocalStorage
+      const storeMap = await this.loadStores<K, T>(tables);
+      const proxy = this.createStoreProxy(storeMap);
+
+      try {
+        await fn(proxy as T);
+        await this.commitStores(tables, proxy, ttl);
+      } catch (err) {
+        throw new Error(`Transaction failed for tables: ${tables.join(', ')}`, { cause: err });
+      }
     }
   }
 
@@ -275,130 +262,86 @@ export class Deposit<S extends DepositDataSchema> {
 /* -------------------- QueryBuilder -------------------- */
 
 export class QueryBuilder<T extends Record<string, unknown>> {
-  private operations: Array<{ op: (data: T[]) => T[]; name: string; args: unknown[] }> = [];
+  private operations: Array<(data: T[]) => T[]> = [];
   private readonly adapter: DepositStorageAdapter<any>;
   private readonly table: string;
-  private memoCache: Map<string, Promise<T[]>> = new Map();
-  private dataVersion = 0;
-  private hasMutatingOp = false;
-  private cachedSignature: string | null = null;
 
   constructor(adapter: DepositStorageAdapter<any>, table: string) {
     this.adapter = adapter;
     this.table = table;
   }
 
-  private getOpSignature(): string {
-    if (this.cachedSignature === null) {
-      this.cachedSignature = this.operations.map((o) => `${o.name}:${JSON.stringify(o.args)}`).join('|');
-    }
-    return this.cachedSignature;
-  }
-
-  private getMemoKey(): string {
-    return `${this.getOpSignature()}|v${this.dataVersion}`;
-  }
-
-  private invalidateMemo(predicate?: (key: string) => boolean): void {
-    if (!predicate) {
-      this.memoCache.clear();
-      return;
-    }
-    const keysToDelete = Array.from(this.memoCache.keys()).filter(predicate);
-    for (const key of keysToDelete) {
-      this.memoCache.delete(key);
-    }
-  }
-
-  private pushOp(op: (data: T[]) => T[], name = 'op', args: unknown[] = []): this {
-    this.operations.push({ args, name, op });
-    this.cachedSignature = null;
-    const opSignature = this.getOpSignature();
-    this.invalidateMemo((key: string) => key.startsWith(opSignature));
+  private pushOp(op: (data: T[]) => T[]): this {
+    this.operations.push(op);
     return this;
   }
 
   where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): this {
-    return this.pushOp((data) => data.filter((r) => predicate(r[field], r)), 'where', [field, predicate]);
+    return this.pushOp((data) => data.filter((r) => predicate(r[field], r)));
   }
 
   equals<K extends keyof T>(field: K, value: T[K]): this {
-    return this.pushOp((data) => data.filter((r) => r[field] === value), 'equals', [field, value]);
+    return this.pushOp((data) => data.filter((r) => r[field] === value));
   }
 
   between<K extends keyof T>(field: K, lower: number, upper: number): this {
-    return this.pushOp(
-      (data) =>
-        data.filter((r) => {
-          const val = r[field] as any;
-          return val >= lower && val <= upper;
-        }),
-      'between',
-      [field, lower, upper],
+    return this.pushOp((data) =>
+      data.filter((r) => {
+        const val = r[field] as any;
+        return val >= lower && val <= upper;
+      }),
     );
   }
 
   startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase = false): this {
     const lowerPrefix = ignoreCase ? prefix.toLowerCase() : prefix;
-    return this.pushOp(
-      (data) =>
-        data.filter((r) => {
-          const value = r[field];
-          if (typeof value !== 'string') return false;
-          const str = ignoreCase ? value.toLowerCase() : value;
-          return str.startsWith(lowerPrefix);
-        }),
-      'startsWith',
-      [field, prefix, ignoreCase],
+    return this.pushOp((data) =>
+      data.filter((r) => {
+        const value = r[field];
+        if (typeof value !== 'string') return false;
+        const str = ignoreCase ? value.toLowerCase() : value;
+        return str.startsWith(lowerPrefix);
+      }),
     );
   }
 
   filter(fn: Predicate<T>): this {
-    return this.pushOp((data) => data.filter(fn), 'filter', [fn]);
+    return this.pushOp((data) => data.filter(fn));
   }
 
   not(fn: Predicate<T>): this {
-    return this.pushOp((data) => data.filter((item, idx, arr) => !fn(item, idx, arr)), 'not', [fn]);
+    return this.pushOp((data) => data.filter((item, idx, arr) => !fn(item, idx, arr)));
   }
 
   and(...fns: Array<Predicate<T>>): this {
-    return this.pushOp((data) => data.filter((item, idx, arr) => fns.every((fn) => fn(item, idx, arr))), 'and', fns);
+    return this.pushOp((data) => data.filter((item, idx, arr) => fns.every((fn) => fn(item, idx, arr))));
   }
 
   or(...fns: Array<Predicate<T>>): this {
-    return this.pushOp((data) => data.filter((item, idx, arr) => fns.some((fn) => fn(item, idx, arr))), 'or', fns);
+    return this.pushOp((data) => data.filter((item, idx, arr) => fns.some((fn) => fn(item, idx, arr))));
   }
 
   orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): this {
     return this.pushOp(
       (data) => arrange(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
-      'orderBy',
-      [field, direction],
     );
   }
 
   limit(n: number): this {
-    return this.pushOp((data) => data.slice(0, n), 'limit', [n]);
+    return this.pushOp((data) => data.slice(0, n));
   }
 
   offset(n: number): this {
-    return this.pushOp((data) => data.slice(n), 'offset', [n]);
+    return this.pushOp((data) => data.slice(n));
   }
 
   page(pageNumber: number, pageSize: number): this {
-    return this.pushOp(
-      (data) => {
-        const start = (pageNumber - 1) * pageSize;
-        const end = start + pageSize;
-        return data.slice(start, end);
-      },
-      'page',
-      [pageNumber, pageSize],
-    );
+    const start = (pageNumber - 1) * pageSize;
+    return this.pushOp((data) => data.slice(start, start + pageSize));
   }
 
   reverse(): this {
-    return this.pushOp((data) => [...data].reverse(), 'reverse', []);
+    return this.pushOp((data) => [...data].reverse());
   }
 
   async count(): Promise<number> {
@@ -434,29 +377,12 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
   }
 
-  modify(callback: (record: T) => T | undefined, context?: { field: keyof T; value: unknown }): this {
-    this.hasMutatingOp = true;
-    this.dataVersion++;
-    this.invalidateModifyCache(context);
-
-    return this.pushOp((data) => data.map((item) => callback(item) ?? item), 'modify', [callback]);
-  }
-
-  private invalidateModifyCache(context?: { field: keyof T; value: unknown }): void {
-    if (!context?.field) {
-      this.invalidateMemo((key: string) => key.includes('modify'));
-      return;
-    }
-
-    const fieldStr = String(context.field);
-    this.invalidateMemo(
-      (key: string) =>
-        key.includes(`"${fieldStr}"`) && (context.value === undefined || key.includes(JSON.stringify(context.value))),
-    );
+  modify(callback: (record: T) => T | undefined): this {
+    return this.pushOp((data) => data.map((item) => callback(item) ?? item));
   }
 
   groupBy<K extends keyof T>(field: K): this {
-    return this.pushOp((data) => group(data, (item) => item[field] as any) as unknown as T[], 'groupBy', [field]);
+    return this.pushOp((data) => group(data, (item) => item[field] as any) as unknown as T[]);
   }
 
   async toGrouped<K extends keyof T>(field: K): Promise<Array<{ key: T[K]; values: T[] }>> {
@@ -474,29 +400,16 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   reset(): this {
     this.operations = [];
-    this.hasMutatingOp = false;
-    this.cachedSignature = null;
-    this.invalidateMemo();
     return this;
   }
 
   async toArray(): Promise<T[]> {
-    const key = this.getMemoKey();
-    const cached = this.memoCache.get(key);
-    if (cached) return cached;
-
-    const promise = this.executeOperations();
-    if (!this.hasMutatingOp) {
-      this.memoCache.set(key, promise);
-    }
-    return promise;
+    return this.executeOperations();
   }
 
   private async executeOperations(): Promise<T[]> {
-    const originalData = (await this.adapter.getAll(this.table)) as T[];
-    let data = originalData.slice();
-
-    for (const { op } of this.operations) {
+    let data = (await this.adapter.getAll(this.table)) as T[];
+    for (const op of this.operations) {
       data = op(data);
     }
 
@@ -559,121 +472,102 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
     this.schema = schema;
   }
 
-  get = runSafe(
-    async <K extends keyof S, T extends S[K]['record']>(
-      table: K,
-      key: KeyType<S, K>,
-      defaultValue?: T,
-    ): Promise<T | undefined> => {
-      const storageKey = this.getStorageKey(table, String(key));
-      const item = localStorage.getItem(storageKey);
-      if (!item) return defaultValue;
+  async get<K extends keyof S, T extends S[K]['record']>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue?: T,
+  ): Promise<T | undefined> {
+    const storageKey = this.getStorageKey(table, String(key));
+    const item = localStorage.getItem(storageKey);
+    if (!item) return defaultValue;
 
-      try {
-        const raw = JSON.parse(item);
-        const now = Date.now();
-        const value = unwrapWithExpiry<T>(raw, now, async () => await this.delete(table, key));
-        return value ?? defaultValue;
-      } catch {
+    try {
+      const parsed = JSON.parse(item);
+
+      // Validate it's an object
+      if (!parsed || typeof parsed !== 'object') {
         await this.delete(table, key);
         return defaultValue;
       }
-    },
-    'GET_FAILED',
-  );
 
-  getAll = runSafe(async <K extends keyof S>(table: K): Promise<S[K]['record'][]> => {
+      if (isExpired(parsed)) {
+        await this.delete(table, key);
+        return defaultValue;
+      }
+      return parsed as T;
+    } catch (err) {
+      const logger = Logit.scope('Deposit');
+      logger.warn(`Removing corrupted entry for key: ${String(key)}`, err);
+      await this.delete(table, key);
+      return defaultValue;
+    }
+  }
+
+  async getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]> {
     const prefix = this.getStorageKey(table);
-    const now = Date.now();
-    const keys = this.getTableKeys(prefix);
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
     const records: S[K]['record'][] = [];
 
-    for (const k of keys) {
-      const record = await this.parseStorageRecord<K>(k, table, now);
-      if (record) {
-        records.push(record);
+    for (const storageKey of keys) {
+      const item = localStorage.getItem(storageKey);
+      if (!item) continue;
+
+      try {
+        const parsed = JSON.parse(item);
+
+        // Validate it's an object
+        if (!parsed || typeof parsed !== 'object') {
+          // Delete corrupted entry
+          localStorage.removeItem(storageKey);
+          continue;
+        }
+
+        if (isExpired(parsed)) {
+          // Delete expired entry
+          localStorage.removeItem(storageKey);
+          continue;
+        }
+
+        records.push(parsed);
+      } catch (err) {
+        // Delete corrupted entry that failed JSON parsing
+        const logger = Logit.scope('Deposit');
+        logger.warn(`Removing corrupted entry: ${storageKey}`, err);
+        localStorage.removeItem(storageKey);
       }
     }
 
     return records;
-  }, 'GET_ALL_FAILED');
+  }
 
-  put = runSafe(async <K extends keyof S>(table: K, value: S[K]['record'], ttl?: number) => {
+  async put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void> {
     const key = this.getRecordKey(value, table);
     if (key === undefined) throw new Error('Missing key for localStorage put');
     localStorage.setItem(this.getStorageKey(table, String(key)), JSON.stringify(wrapWithExpiry(value, ttl)));
-  }, 'PUT_FAILED');
+  }
 
-  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>) => {
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
     localStorage.removeItem(this.getStorageKey(table, String(key)));
-  }, 'DELETE_FAILED');
+  }
 
-  clear = runSafe(async <K extends keyof S>(table: K) => {
+  async clear<K extends keyof S>(table: K): Promise<void> {
     const prefix = this.getStorageKey(table);
-    const keysToRemove = this.getTableKeys(prefix);
-    for (const k of keysToRemove) {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+    for (const k of keys) {
       localStorage.removeItem(k);
     }
-  }, 'CLEAR_FAILED');
+  }
 
-  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
+  async count<K extends keyof S>(table: K): Promise<number> {
     return (await this.getAll(table)).length;
-  }, 'COUNT_FAILED');
-
-  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number) => {
-    const promises = values.map((v) => this.put(table, v, ttl));
-    await Promise.all(promises);
-  }, 'BULK_PUT_FAILED');
-
-  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]) => {
-    const promises = keys.map((key) => this.delete(table, key));
-    await Promise.all(promises);
-  }, 'BULK_DELETE_FAILED');
-
-  private getTableKeys(prefix: string): string[] {
-    return Object.keys(localStorage).filter((k) => k.startsWith(prefix));
   }
 
-  private async parseStorageRecord<K extends keyof S>(
-    storageKey: string,
-    table: K,
-    now: number,
-  ): Promise<S[K]['record'] | undefined> {
-    try {
-      const item = localStorage.getItem(storageKey);
-      if (!item) return undefined;
-
-      const raw = JSON.parse(item);
-      return unwrapWithExpiry<S[K]['record']>(raw, now, async () => {
-        try {
-          const idPart = this.extractKeyFromStorageKey(storageKey);
-          await this.delete(table, idPart as KeyType<S, typeof table>);
-        } catch (err) {
-          const logger = Logit.scope('Deposit');
-          logger.warn(`Failed to delete expired entry: ${storageKey}`, err);
-        }
-      });
-    } catch (err) {
-      try {
-        const idPart = this.extractKeyFromStorageKey(storageKey);
-        await this.delete(table, idPart as KeyType<S, typeof table>);
-      } catch (deleteErr) {
-        const logger = Logit.scope('Deposit');
-        logger.warn(`Failed to delete corrupted entry: ${storageKey}`, deleteErr);
-      }
-
-      const logger = Logit.scope('Deposit');
-      logger.warn(`Skipping corrupted entry: ${storageKey}`, err);
-      return undefined;
-    }
+  async bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> {
+    await Promise.all(values.map((v) => this.put(table, v, ttl)));
   }
 
-  private extractKeyFromStorageKey(storageKey: string): string {
-    const parts = storageKey.split(':');
-    if (parts.length < 4) {
-      throw new Error(`Invalid storage key format: ${storageKey}`);
-    }
-    return decodeURIComponent(parts[parts.length - 1]);
+  async bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
+    await Promise.all(keys.map((key) => this.delete(table, key)));
   }
 
   private getRecordKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number | undefined {
@@ -731,70 +625,144 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     });
   }
 
-  get = runSafe(
-    async <K extends keyof S, T extends S[K]['record']>(
-      table: K,
-      key: KeyType<S, K>,
-      defaultValue?: T,
-    ): Promise<T | undefined> => {
-      return await this.withTransaction(table, 'readonly', async (store) => {
-        const result = (await this.requestToPromise(store.get(key as IDBKeyRange))) as any;
-        if (!result) return defaultValue;
-
-        const now = Date.now();
-        const value = unwrapWithExpiry<T>(result, now, async () => await this.delete(table, key));
-        return value ?? defaultValue;
-      });
-    },
-    'GET_FAILED',
-  );
-
-  getAll = runSafe(async <K extends keyof S>(table: K): Promise<S[K]['record'][]> => {
+  async get<K extends keyof S, T extends S[K]['record']>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue?: T,
+  ): Promise<T | undefined> {
     return await this.withTransaction(table, 'readonly', async (store) => {
-      const result = await this.requestToPromise(store.getAll());
-      const now = Date.now();
-      return result
-        .map((rec) => unwrapWithExpiry<S[K]['record']>(rec, now))
-        .filter((v): v is S[K]['record'] => v !== undefined);
-    });
-  }, 'GET_ALL_FAILED');
+      const result = (await this.requestToPromise(store.get(key as IDBKeyRange))) as any;
+      if (!result) return defaultValue;
 
-  put = runSafe(async <K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void> => {
+      // Validate it's an object before checking expiry
+      if (!result || typeof result !== 'object') {
+        await this.delete(table, key);
+        return defaultValue;
+      }
+
+      if (isExpired(result)) {
+        await this.delete(table, key);
+        return defaultValue;
+      }
+      return result as T;
+    });
+  }
+
+  async getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]> {
+    return await this.withTransaction(table, 'readonly', async (store) => {
+      const results = await this.requestToPromise(store.getAll());
+      return results.filter((rec) => {
+        // Validate it's an object before checking expiry
+        if (!rec || typeof rec !== 'object') return false;
+        return !isExpired(rec);
+      }) as S[K]['record'][];
+    });
+  }
+
+  async put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void> {
     await this.withTransaction(table, 'readwrite', async (store) => {
       await this.requestToPromise(store.put(wrapWithExpiry(value, ttl)));
     });
-  }, 'PUT_FAILED');
+  }
 
-  delete = runSafe(async <K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> => {
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
     await this.withTransaction(table, 'readwrite', async (store) => {
       await this.requestToPromise(store.delete(key as IDBKeyRange));
     });
-  }, 'DELETE_FAILED');
+  }
 
-  clear = runSafe(async <K extends keyof S>(table: K): Promise<void> => {
+  async clear<K extends keyof S>(table: K): Promise<void> {
     await this.withTransaction(table, 'readwrite', async (store) => {
       await this.requestToPromise(store.clear());
     });
-  }, 'CLEAR_FAILED');
+  }
 
-  count = runSafe(async <K extends keyof S>(table: K): Promise<number> => {
-    const records = await this.getAll(table);
-    return records.length;
-  }, 'COUNT_FAILED');
+  async count<K extends keyof S>(table: K): Promise<number> {
+    return (await this.getAll(table)).length;
+  }
 
-  bulkPut = runSafe(async <K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> => {
+  async bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void> {
     await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl))));
-      await Promise.all(promises);
+      await Promise.all(values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl)))));
     });
-  }, 'BULK_PUT_FAILED');
+  }
 
-  bulkDelete = runSafe(async <K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> => {
+  async bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
     await this.withTransaction(table, 'readwrite', async (store) => {
-      const promises = keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange)));
-      await Promise.all(promises);
+      await Promise.all(keys.map((key) => this.requestToPromise(store.delete(key as IDBKeyRange))));
     });
-  }, 'BULK_DELETE_FAILED');
+  }
+
+  /**
+   * Internal method: Execute an atomic transaction across multiple tables.
+   * All operations happen within a single IDBTransaction, ensuring atomicity.
+   * This is used internally by Deposit.transaction() - not part of the public API.
+   */
+  async atomicTransactionInternal<K extends keyof S>(
+    tables: K[],
+    fn: (ops: {
+      getAll: (table: K) => Promise<S[K]['record'][]>;
+      clear: (table: K) => Promise<void>;
+      bulkPut: (table: K, values: S[K]['record'][], ttl?: number) => Promise<void>;
+    }) => Promise<void>,
+  ): Promise<void> {
+    if (!this.db) await this.connect();
+
+    return new Promise<void>((resolve, reject) => {
+      const tableNames = tables.map(String);
+      const tx = this.db!.transaction(tableNames, 'readwrite');
+      const tablesStr = tableNames.join(', ');
+
+      let callbackError: Error | undefined;
+
+      const ops = {
+        getAll: async <T extends K>(table: T): Promise<S[T]['record'][]> => {
+          const store = tx.objectStore(String(table));
+          const results = await this.requestToPromise(store.getAll());
+          return results.filter((rec) => {
+            if (!rec || typeof rec !== 'object') return false;
+            return !isExpired(rec);
+          }) as S[T]['record'][];
+        },
+        clear: async <T extends K>(table: T): Promise<void> => {
+          const store = tx.objectStore(String(table));
+          await this.requestToPromise(store.clear());
+        },
+        bulkPut: async <T extends K>(table: T, values: S[T]['record'][], ttl?: number): Promise<void> => {
+          const store = tx.objectStore(String(table));
+          await Promise.all(values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl)))));
+        },
+      };
+
+      fn(ops)
+        .then(() => {
+          // Success - transaction will auto-commit
+        })
+        .catch((err) => {
+          callbackError = err;
+          try {
+            tx.abort();
+          } catch {
+            // Ignore abort errors
+          }
+        });
+
+      tx.oncomplete = () => {
+        if (callbackError) {
+          reject(new Error(`Atomic transaction failed for ${tablesStr}`, { cause: callbackError }));
+        } else {
+          resolve();
+        }
+      };
+
+      tx.onerror = () => reject(new Error(`Atomic transaction error for ${tablesStr}`, { cause: tx.error }));
+
+      tx.onabort = () => {
+        const error = callbackError || tx.error || new Error('Transaction aborted');
+        reject(new Error(`Atomic transaction aborted for ${tablesStr}`, { cause: error }));
+      };
+    });
+  }
 
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Schema creation requires validation logic
   private createObjectStores(db: IDBDatabase): void {
@@ -845,7 +813,11 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     if (!this.migrationFn) return;
 
     const handleError = (err: unknown) => {
-      this.abortTransaction(tx);
+      try {
+        tx.abort();
+      } catch {
+        // Ignore abort errors
+      }
       reject(new Error('Migration failed', { cause: err }));
     };
 
@@ -855,10 +827,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
     } catch (err) {
       handleError(err);
     }
-  }
-
-  private abortTransaction(tx: IDBTransaction): void {
-    runSafe(() => tx.abort(), 'TRANSACTION_ABORT_FAILED')();
   }
 
   private async withTransaction<T>(
@@ -883,7 +851,11 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
         })
         .catch((err) => {
           callbackError = err;
-          this.abortTransaction(tx);
+          try {
+            tx.abort();
+          } catch {
+            // Ignore abort errors
+          }
         });
 
       tx.oncomplete = () => {

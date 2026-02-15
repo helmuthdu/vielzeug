@@ -404,10 +404,14 @@ await db.put(
 
 ## Transaction Examples
 
+::: tip ⚡ Automatic Atomicity
+Transactions automatically use atomic operations for **IndexedDB** (all changes in a single `IDBTransaction`) and optimistic updates for **LocalStorage**. For critical data integrity, use IndexedDB.
+:::
+
 ### User Registration
 
 ```ts
-// Create user and their first post atomically
+// Create user and their first post atomically (IndexedDB) or optimistically (LocalStorage)
 await db.transaction(['users', 'posts'], async (stores) => {
   const userId = crypto.randomUUID();
 
@@ -430,6 +434,9 @@ await db.transaction(['users', 'posts'], async (stores) => {
     published: true,
     createdAt: Date.now(),
   });
+  
+  // For IndexedDB: Both changes committed atomically
+  // For LocalStorage: Changes committed optimistically
 });
 ```
 
@@ -685,6 +692,7 @@ async function importData(exported: any) {
   await db.transaction(['users', 'posts'], async (stores) => {
     stores.users = exported.data.users;
     stores.posts = exported.data.posts;
+    // Atomically replaces all data for IndexedDB
   });
 }
 ```

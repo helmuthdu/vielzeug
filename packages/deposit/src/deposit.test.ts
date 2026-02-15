@@ -476,6 +476,52 @@ describe('Depot', () => {
     expect(await deposit.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
+  test('transaction is atomic for IndexedDB with multiple tables', async () => {
+    // Transaction automatically uses atomic IDBTransaction for IndexedDB
+    const idbSchema = {
+      posts: {
+        indexes: [] as Array<keyof { id: number; userId: number; title: string }>,
+        key: 'id' as keyof { id: number; userId: number; title: string },
+        record: {} as { id: number; userId: number; title: string },
+      },
+      users: {
+        indexes: [] as Array<keyof User>,
+        key: 'id' as keyof User,
+        record: {} as User,
+      },
+    } as const satisfies DepositDataSchema<any>;
+
+    const idbDeposit = new Deposit({
+      dbName: 'AtomicTestDB',
+      schema: idbSchema,
+      type: 'indexedDB',
+      version: 1,
+    });
+
+    await idbDeposit.bulkPut('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    await idbDeposit.bulkPut('posts', [
+      { id: 1, title: 'Post 1', userId: 1 },
+      { id: 2, title: 'Post 2', userId: 2 },
+    ]);
+
+    // Execute atomic transaction across both tables
+    await idbDeposit.transaction(['users', 'posts'], async (stores) => {
+      (stores as any).users = stores.users.filter((u) => u.id !== 1);
+      (stores as any).posts = stores.posts.filter((p) => p.userId !== 1);
+    });
+
+    // Verify both tables updated
+    expect(await idbDeposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    expect(await idbDeposit.getAll('posts')).toEqual([{ id: 2, title: 'Post 2', userId: 2 }]);
+
+    // Clean up
+    await idbDeposit.clear('users');
+    await idbDeposit.clear('posts');
+  });
+
   test('patch applies put, delete, and clear operations', async () => {
     await deposit.bulkPut('users', [
       { id: 1, name: 'Alice' },

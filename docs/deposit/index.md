@@ -1,6 +1,6 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-4.4_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.1.2-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-4.5_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
 </div>
@@ -47,11 +47,13 @@ await db.put('users', { id: '1', name: 'Alice' });
 | Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
 | Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
 | LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | **~4 KB**      | ~20KB       | ~8KB        | 0KB              |
+| Bundle Size (gzip)   | **~4.5 KB**    | ~20KB       | ~8KB        | 0KB              |
 | TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
-| Transactions         | ✅ Yes         | ✅ Yes      | ❌          | ✅ Complex       |
+| Transactions         | ✅ Atomic*     | ✅ Yes      | ❌          | ✅ Complex       |
 | Schema Validation    | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
 | Dependencies         | 2              | 0           | 0           | N/A              |
+
+\* Transactions are fully atomic for IndexedDB, optimistic for LocalStorage
 
 ## When to Use Deposit
 
@@ -75,12 +77,12 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 - **Advanced Querying**: Rich [QueryBuilder](./usage.md#query-builder) with filters, sorting, grouping, pagination, and type-safe `toGrouped()`.
 - **Isomorphic**: Works in all modern browsers with minimal footprint.
-- **Lightweight & Fast**: Low dependencies (@vielzeug/{logit,toolkit}) and only **~4 KB gzipped**.
+- **Lightweight & Fast**: Low dependencies (@vielzeug/{logit,toolkit}) and only **~4.5 KB gzipped**.
 - **Migrations**: Robust support for [schema versioning and data migrations](./usage.md#schema-migrations) in IndexedDB.
-- **Resilient**: [Gracefully handles corrupted entries](./usage.md#corrupted-entry-handling) without breaking batch operations.
+- **Resilient**: [Gracefully handles corrupted entries](./usage.md#corrupted-entry-handling) with automatic cleanup and logging.
 - **Schema Validation**: Early [Schema Validation](./usage.md#schema-validation) with clear error messages.
 - **TTL (Time-To-Live)**: Native support for [automatic record expiration](./usage.md#ttl-time-to-live).
-- **Transactions**: Ensure data integrity with [atomic operations](./usage.md#transactions) across multiple tables.
+- **Transactions**: [Atomic operations](./usage.md#transactions) for IndexedDB, optimistic updates for LocalStorage.
 - **Type-safe**: Define your schemas at once and enjoy full autocompletion and type checking.
 - **Unified API**: Switch between LocalStorage and IndexedDB without changing your code.
 
