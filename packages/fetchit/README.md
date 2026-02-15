@@ -6,7 +6,7 @@ Modern, type-safe HTTP client with intelligent caching, request deduplication, a
 
 - ✅ **Type-Safe** - Full TypeScript support with automatic type inference
 - ✅ **Zero Dependencies** - Only requires `@vielzeug/toolkit` for retry logic
-- ✅ **Lightweight** - 3.4 KB gzipped
+- ✅ **Lightweight** - 3.37 KB gzipped
 - ✅ **Smart Caching** - TanStack Query-inspired caching with stale-while-revalidate
 - ✅ **Request Deduplication** - Prevents duplicate in-flight requests
 - ✅ **Async Validation** - Built-in retry logic with exponential backoff
@@ -57,10 +57,8 @@ import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient({
-  cache: {
-    staleTime: 5000, // 5 seconds
-    gcTime: 300000, // 5 minutes
-  },
+  staleTime: 5000, // 5 seconds
+  gcTime: 300000, // 5 minutes
 });
 
 // Fetch with caching
@@ -91,7 +89,7 @@ const http = createHttpClient({
 
 // Create query client for caching
 const queryClient = createQueryClient({
-  cache: { staleTime: 5000 },
+  staleTime: 5000,
 });
 
 // Use HTTP client for simple requests
@@ -138,7 +136,6 @@ Creates a simple HTTP client for making requests without caching overhead.
 - `delete(url, config?)` - DELETE request
 - `request(method, url, config?)` - Custom method
 - `setHeaders(headers)` - Update default headers
-- `getHeaders()` - Get current headers
 
 **Example:**
 
@@ -177,8 +174,6 @@ Creates a query client with intelligent caching and state management.
 
 - `staleTime?: number` - Time in ms before data is considered stale (default: 0)
 - `gcTime?: number` - Time in ms before unused cache is garbage collected (default: 300000)
-- `cache?: { staleTime?, gcTime? }` - Nested cache configuration
-- `refetch?: { onFocus?, onReconnect? }` - Auto-refetch configuration
 
 **Methods:**
 
@@ -189,16 +184,15 @@ Creates a query client with intelligent caching and state management.
 - `setData(queryKey, data)` - Manually set cache data
 - `getData(queryKey)` - Get cached data
 - `getState(queryKey)` - Get query state
-- `subscribe(queryKey, listener)` - Subscribe to query changes
-- `unsubscribe(queryKey, listener)` - Unsubscribe from changes
-- `clearCache()` - Clear all cached data
-- `getCacheSize()` - Get number of cached entries
+- `subscribe(queryKey, listener)` - Subscribe to query changes (returns unsubscribe function)
+- `clear()` - Clear all cached data
 
 **Example:**
 
 ```typescript
 const queryClient = createQueryClient({
-  cache: { staleTime: 5000, gcTime: 300000 },
+  staleTime: 5000,
+  gcTime: 300000,
 });
 
 // Fetch with caching
@@ -441,7 +435,7 @@ await http.post('/analytics/event', { body: { event: 'click' } });
 When you need caching and state management:
 
 ```typescript
-const queryClient = createQueryClient({ cache: { staleTime: 5000 } });
+const queryClient = createQueryClient({ staleTime: 5000 });
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
 // Fetch and cache user data
@@ -462,7 +456,7 @@ const http = createHttpClient({
 });
 
 const queryClient = createQueryClient({
-  cache: { staleTime: 5000 },
+  staleTime: 5000,
 });
 
 // HTTP client for simple requests
@@ -488,10 +482,8 @@ await queryClient.mutate(
 
 ```typescript
 const queryClient = createQueryClient({
-  cache: {
-    staleTime: 5000, // 5 seconds - how long data is fresh
-    gcTime: 300000, // 5 minutes - how long to keep unused data
-  },
+  staleTime: 5000, // 5 seconds - how long data is fresh
+  gcTime: 300000, // 5 minutes - how long to keep unused data
 });
 ```
 

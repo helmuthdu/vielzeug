@@ -1,6 +1,6 @@
 <div class="badges">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.4_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/size-3.37_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
 </div>
@@ -77,7 +77,7 @@ const user = await queryClient.fetch({
 | Stable Query Keys     | ✅ Built-in    | ❌             | N/A            | N/A                |
 | Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
 | Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | **~3 KB**      | ~15 KB         | ~13 KB         | 0 KB               |
+| Bundle Size (gzip)    | **~3.37 KB**   | ~15 KB         | ~13 KB         | 0 KB               |
 | Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
 | Dependencies          | 1              | 0              | 7+             | 0                  |
 | Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
@@ -89,7 +89,7 @@ const user = await queryClient.fetch({
 **✅ Use Fetchit when you:**
 
 - Need smart caching without the complexity of TanStack Query
-- Want a lightweight alternative to TanStack Query (~3.2 KB vs ~13 KB)
+- Want a lightweight alternative to TanStack Query (~3.37 KB vs ~13 KB)
 - Build TypeScript applications requiring full type safety
 - Need automatic request deduplication to prevent redundant calls
 - Want built-in caching and retry logic out of the box
@@ -112,7 +112,7 @@ const user = await queryClient.fetch({
 - **Detailed Error Context**: Custom `HttpError` includes URL, method, and status for easier debugging.
 - **Full Type Safety**: Enjoy robust TypeScript support with generics and automatic type inference.
 - **Independent Clients**: Use the [HTTP client](./usage.md#http-client-simple-http-requests) for direct requests or the [Query client](./usage.md#query-client-advanced-caching) for advanced caching—each works standalone or together.
-- **Lightweight & Fast**: Low dependencies (@vielzeug/toolkit) and only **~3 KB gzipped**.
+- **Lightweight & Fast**: Low dependencies (@vielzeug/toolkit) and only **~3.37 KB gzipped**.
 - **Observable State**: [Subscribe](./usage.md#observable-state) to query state changes for real-time UI updates.
 - **Prefix-Based Invalidation**: Invalidate all related queries at once, e.g., `invalidate(['users'])`. See [Cache Management](./usage.md#cache-management).
 - **Smart Caching**: Built-in cache with customizable staleness and garbage collection for efficient data management.
@@ -190,10 +190,8 @@ import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 // 1. Create clients
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient({
-  cache: {
-    staleTime: 5000,
-    gcTime: 300000,
-  },
+  staleTime: 5000,
+  gcTime: 300000,
 });
 
 // 2. Define type-safe query keys manually
@@ -263,7 +261,8 @@ const http = createHttpClient({
 
 // Create query client for caching
 const queryClient = createQueryClient({
-  cache: { staleTime: 5000, gcTime: 300000 },
+  staleTime: 5000,
+  gcTime: 300000,
 });
 
 // Define type-safe query keys manually
@@ -287,7 +286,7 @@ export function clearAuth() {
   http.setHeaders({
     Authorization: undefined, // Removes the header
   });
-  queryClient.clearCache(); // Clear cached authenticated requests
+  queryClient.clear(); // Clear cached authenticated requests
 }
 
 // Wrapper with error handling
@@ -405,14 +404,8 @@ Advanced caching and state management for server data:
 
 ```ts
 const queryClient = createQueryClient({
-  cache: {
-    staleTime: 5000, // How long data is fresh (default: 0)
-    gcTime: 300000, // Garbage collection time (default: 5 minutes)
-  },
-  refetch: {
-    onFocus: true, // Refetch when window regains focus
-    onReconnect: true, // Refetch when network reconnects
-  },
+  staleTime: 5000, // How long data is fresh (default: 0)
+  gcTime: 300000, // Garbage collection time (default: 5 minutes)
 });
 ```
 
@@ -461,7 +454,7 @@ await queryClient.fetch({
 
 Fetchit is inspired by TanStack Query but significantly simpler and lighter:
 
-- **Smaller bundle**: ~3.2 KB vs ~13 KB (gzipped)
+- **Smaller bundle**: ~3.37 KB vs ~13 KB (gzipped)
 - **No React dependency**: Works with any framework (Vue, Svelte, vanilla JS)
 - **Simpler API**: Fewer concepts, easier to learn
 - **Built-in HTTP client**: No need for separate fetch library
@@ -476,7 +469,7 @@ Fetchit is TypeScript-first with modern caching built-in:
 
 - **TypeScript**: First-class TypeScript support with full type inference
 - **Smart caching**: Built-in query caching and deduplication
-- **Smaller bundle**: ~3.2 KB vs ~13 KB (gzipped)
+- **Smaller bundle**: ~3.37 KB vs ~13 KB (gzipped)
 - **Modern**: Uses native fetch API under the hood
 - **Pattern invalidation**: Powerful cache management
 
@@ -506,7 +499,7 @@ Yes! Concurrent identical requests are automatically deduplicated to prevent red
 
 ### How do I manage the cache?
 
-Use the Query Client's built-in cache management methods powered by [@vielzeug/toolkit's cache()](../toolkit/examples/function/cache.md):
+Use the Query Client's built-in cache management methods:
 
 ```ts
 import { createQueryClient } from '@vielzeug/fetchit';
@@ -527,15 +520,13 @@ const state = queryClient.getState(['users', 1]);
 console.log(state.status, state.data, state.error);
 
 // Clear all cache
-queryClient.clearCache();
+queryClient.clear();
 
-// Get cache size
-const size = queryClient.getCacheSize();
-
-// Subscribe to cache changes
+// Subscribe to cache changes (returns unsubscribe function)
 const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
   console.log('User data changed:', state.data);
 });
+// Later: unsubscribe();
 ```
 
 ### How do I handle authentication tokens?
@@ -552,9 +543,6 @@ http.setHeaders({ Authorization: `Bearer ${token}` });
 
 // Remove token (set to undefined)
 http.setHeaders({ Authorization: undefined });
-
-// Get current headers
-const headers = http.getHeaders();
 ```
 
 ## 🐛 Troubleshooting
@@ -636,7 +624,7 @@ queryClient.invalidate(['users', userId]);
 queryClient.invalidate(['users']);
 
 // Clear all cache
-queryClient.clearCache();
+queryClient.clear();
 
 // Manually update cache
 queryClient.setData(['users', userId], updatedData);

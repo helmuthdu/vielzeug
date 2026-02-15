@@ -14,7 +14,7 @@ vi.mock('@vielzeug/logit', () => ({
   },
 }));
 
-describe('Fetchit', () => {
+describe('fetchit', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   const mockJsonResponse = (data: unknown, status = 200) => ({
@@ -34,18 +34,16 @@ describe('Fetchit', () => {
     } as HttpClientOptions);
 
     const queryClient = createQueryClient({
-      cache: options.cache,
-      refetch: options.refetch,
+      gcTime: options.gcTime,
+      staleTime: options.staleTime,
     } as QueryClientOptions);
 
     return {
-      clearCache: queryClient.clearCache,
+      clear: queryClient.clear,
       delete: http.delete,
       fetch: queryClient.fetch,
       get: http.get,
-      getCacheSize: queryClient.getCacheSize,
       getData: queryClient.getData,
-      getHeaders: http.getHeaders,
       getQueryData: queryClient.getData, // Alias
       getQueryState: queryClient.getState, // Alias
       getState: queryClient.getState,
@@ -63,7 +61,6 @@ describe('Fetchit', () => {
       setHeaders: http.setHeaders,
       setQueryData: queryClient.setData, // Alias
       subscribe: queryClient.subscribe,
-      unsubscribe: queryClient.unsubscribe,
     };
   }
 
@@ -149,6 +146,7 @@ describe('Fetchit', () => {
       const result1 = await client.query({
         queryFn: fetchUser,
         queryKey: ['users', 1],
+        staleTime: 10000, // Keep data fresh for 10s
       });
 
       expect(result1).toEqual(mockData);
@@ -158,6 +156,7 @@ describe('Fetchit', () => {
       const result2 = await client.query({
         queryFn: fetchUser,
         queryKey: ['users', 1],
+        staleTime: 10000,
       });
 
       expect(result2).toEqual(mockData);
@@ -346,11 +345,15 @@ describe('Fetchit', () => {
       client.setQueryData(['users', 1], { id: 1 });
       client.setQueryData(['posts', 1], { id: 1 });
 
-      expect(client.getCacheSize()).toBe(2);
+      // Verify data exists
+      expect(client.getQueryData(['users', 1])).toEqual({ id: 1 });
+      expect(client.getQueryData(['posts', 1])).toEqual({ id: 1 });
 
-      client.clearCache();
+      client.clear();
 
-      expect(client.getCacheSize()).toBe(0);
+      // Verify cache cleared
+      expect(client.getQueryData(['users', 1])).toBeUndefined();
+      expect(client.getQueryData(['posts', 1])).toBeUndefined();
     });
   });
 
@@ -736,12 +739,10 @@ describe('Fetchit', () => {
   // ========================================================================
 
   describe('Nested Configuration', () => {
-    it('should accept nested cache configuration', async () => {
+    it('should accept flat cache configuration', async () => {
       const client = createCombinedClient({
-        cache: {
-          gcTime: 60000,
-          staleTime: 10000,
-        },
+        gcTime: 60000,
+        staleTime: 10000,
       });
 
       const mockData = { id: 1 };
@@ -1000,7 +1001,7 @@ describe('Fetchit', () => {
       const { createQueryClient, createHttpClient } = await import('./fetchit');
 
       const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-      const queryClient = createQueryClient({ cache: { staleTime: 10000 } });
+      const queryClient = createQueryClient({ staleTime: 10000 });
 
       const mockData = { id: 1, name: 'User' };
       fetchMock.mockResolvedValue(mockJsonResponse(mockData));
@@ -1029,8 +1030,8 @@ describe('Fetchit', () => {
       expect(states[states.length - 1].data).toEqual({ value: 123 });
 
       // Clear cache
-      queryClient.clearCache();
-      expect(queryClient.getCacheSize()).toBe(0);
+      queryClient.clear();
+      expect(queryClient.getData(['test'])).toBeUndefined();
     });
 
     it('should support mutations with query client', async () => {
@@ -1063,7 +1064,7 @@ describe('Fetchit', () => {
   describe('Stable Key Serialization', () => {
     it('should treat objects with same properties but different order as identical in cache', async () => {
       const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient({ cache: { staleTime: 10000 } });
+      const queryClient = createQueryClient({ staleTime: 10000 });
 
       fetchMock.mockResolvedValue(mockJsonResponse({ id: 1, name: 'User' }));
 
@@ -1104,17 +1105,21 @@ describe('Fetchit', () => {
         queryKey: ['users', { filter: 'inactive', page: 2 }],
       });
 
-      expect(queryClient.getCacheSize()).toBe(2);
+      // Verify data exists
+      expect(queryClient.getData(['users', { filter: 'active', page: 1 }])).toBeDefined();
+      expect(queryClient.getData(['users', { filter: 'inactive', page: 2 }])).toBeDefined();
 
       // Invalidate prefix - should match both regardless of property order
       queryClient.invalidate(['users']);
 
-      expect(queryClient.getCacheSize()).toBe(0);
+      // Verify data cleared
+      expect(queryClient.getData(['users', { filter: 'active', page: 1 }])).toBeUndefined();
+      expect(queryClient.getData(['users', { filter: 'inactive', page: 2 }])).toBeUndefined();
     });
 
     it('should handle nested objects with stable serialization', async () => {
       const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient({ cache: { staleTime: 10000 } });
+      const queryClient = createQueryClient({ staleTime: 10000 });
 
       fetchMock.mockResolvedValue(mockJsonResponse({ data: 'test' }));
 
