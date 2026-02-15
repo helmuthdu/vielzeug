@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "code cleanup and improvements",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}
