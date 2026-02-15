@@ -494,7 +494,7 @@ function logout() {
   http.setHeaders({
     Authorization: undefined, // Removes the header
   });
-  queryClient.clearCache(); // Clear cached authenticated data
+  queryClient.clear(); // Clear cached authenticated data
 }
 ```
 
@@ -571,15 +571,10 @@ const freshUser = await queryClient.fetch({
 ### Cache Cleanup
 
 ```ts
-// Remove all cached queries
-queryClient.clearCache();
+// Clear all cached queries
+queryClient.clear();
+```
 
-// Get cache size
-const size = queryClient.getCacheSize();
-console.log(`Cache has ${size} queries`);
-
-// Invalidate specific queries
-queryClient.invalidate(['users', '1']);
 
 // Invalidate all user queries (pattern matching)
 queryClient.invalidate(['users']);

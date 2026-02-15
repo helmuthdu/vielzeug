@@ -61,7 +61,6 @@ const created = await http.post('/users', { body: newUser });
 - `delete<T>(url, config?): Promise<T>` - DELETE request
 - `request<T>(method, url, config?): Promise<T>` - Custom HTTP method
 - `setHeaders(headers): void` - Update global headers
-- `getHeaders(): Record<string, string>` - Get current headers
 
 ---
 
@@ -72,16 +71,8 @@ Creates a pure query management client. Works with any HTTP client or fetch func
 **Parameters:**
 
 - `options?: QueryClientOptions`
-  - `staleTime?: number` - Default stale time in ms (default: 0)
-  - `gcTime?: number` - Default garbage collection time in ms (default: 300000)
-  - `cache?: object` - Nested cache configuration (alternative)
-    - `staleTime?: number` - Time before data is stale (default: 0)
-    - `gcTime?: number` - Garbage collection time (default: 300000)
-  - `refetch?: object` - Refetch configuration
-    - `onFocus?: boolean` - Refetch on window focus (default: false)
-    - `onReconnect?: boolean` - Refetch on reconnect (default: false)
-
-> **Note:** Options can be flat (`staleTime`, `gcTime`) or nested (`cache.staleTime`, `cache.gcTime`). Both formats are supported.
+  - `staleTime?: number` - Time before data is stale in ms (default: 0)
+  - `gcTime?: number` - Garbage collection time in ms (default: 300000)
 
 **Returns:** Query client instance
 
@@ -90,16 +81,11 @@ Creates a pure query management client. Works with any HTTP client or fetch func
 ```ts
 import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 
-// Flat options (recommended)
 const queryClient = createQueryClient({
   staleTime: 5000,
   gcTime: 300000,
 });
 
-// Nested options (also supported)
-const queryClient = createQueryClient({
-  cache: { staleTime: 5000, gcTime: 300000 },
-});
 
 // Use with HTTP client
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
@@ -126,10 +112,8 @@ const data = await queryClient.fetch({
 - `setData<T>(queryKey, data | updater): void` - Set/update cached data
 - `getState<T>(queryKey): QueryState<T> | null` - Get full query state
 - `invalidate(queryKey): void` - Invalidate query (supports prefix matching)
-- `subscribe<T>(queryKey, listener): () => void` - Subscribe to query changes
-- `unsubscribe<T>(queryKey, listener): void` - Unsubscribe from changes
-- `clearCache(): void` - Clear all cached data
-- `getCacheSize(): number` - Get number of cached queries
+- `subscribe<T>(queryKey, listener): () => void` - Subscribe to query changes (returns unsubscribe function)
+- `clear(): void` - Clear all cached data
 
 ## Type-Safe Query Keys
 
@@ -355,18 +339,6 @@ http.setHeaders({ Authorization: `Bearer ${token}` });
 http.setHeaders({ Authorization: undefined });
 ```
 
-### `getHeaders()`
-
-Get current global headers.
-
-**Returns:** `Record<string, string>`
-
-**Example:**
-
-```ts
-const headers = http.getHeaders();
-console.log(headers.Authorization);
-```
 
 ## Query Client Cache Management
 
@@ -595,44 +567,14 @@ useEffect(() => {
 }, [userId]);
 ```
 
-### `unsubscribe<T>(queryKey, listener)`
-
-Manually unsubscribe a listener (alternative to using the returned function).
-
-**Parameters:**
-
-- `queryKey: QueryKey` - The query key
-- `listener: (state: QueryState<T>) => void` - The listener to remove
-
-**Example:**
-
-```ts
-const listener = (state) => console.log('Changed:', state);
-queryClient.subscribe(['users', '1'], listener);
-queryClient.unsubscribe(['users', '1'], listener);
-```
-
-### `clearCache()`
+### `clear()`
 
 Clears all cached queries and aborts in-flight requests.
 
 **Example:**
 
 ```ts
-queryClient.clearCache();
-```
-
-### `getCacheSize()`
-
-Returns the number of cached queries.
-
-**Returns:** `number`
-
-**Example:**
-
-```ts
-const size = queryClient.getCacheSize();
-console.log(`Cache has ${size} queries`);
+queryClient.clear();
 ```
 
 ### `prefetch<T>(options)`

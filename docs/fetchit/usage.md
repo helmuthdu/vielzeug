@@ -176,10 +176,6 @@ http.setHeaders({
 http.setHeaders({
   Authorization: undefined,
 });
-
-// Get current headers
-const headers = http.getHeaders();
-console.log(headers);
 ```
 
 ### Query Client (Advanced Caching)
@@ -192,15 +188,8 @@ The Query client provides intelligent caching, request deduplication, and state 
 import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 
 const queryClient = createQueryClient({
-  cache: {
-    staleTime: 5000, // Data fresh for 5 seconds
-    gcTime: 300000, // Keep in cache for 5 minutes
-    enabled: true,
-  },
-  refetch: {
-    onFocus: true, // Refetch when window regains focus
-    onReconnect: true, // Refetch when network reconnects
-  },
+  staleTime: 5000, // Data fresh for 5 seconds
+  gcTime: 300000, // Keep in cache for 5 minutes
 });
 
 // Use with HTTP client
@@ -327,10 +316,7 @@ await queryClient.prefetch({
 });
 
 // Clear all cache
-queryClient.clearCache();
-
-// Get cache size
-const size = queryClient.getCacheSize();
+queryClient.clear();
 ```
 
 ### Observable State
@@ -526,9 +512,6 @@ http.setHeaders({
 http.setHeaders({
   Authorization: undefined,
 });
-
-// Get current headers
-const headers = http.getHeaders();
 ```
 
 ### Query Options
@@ -622,10 +605,7 @@ queryClient.setData<User[]>(['users'], (old = []) => [...old, newUser]);
 const cachedUser = queryClient.getData(['users', 1]);
 
 // Clear all cache
-queryClient.clearCache();
-
-// Get cache size
-const size = queryClient.getCacheSize();
+queryClient.clear();
 ```
 
 ### URL Building
@@ -727,7 +707,7 @@ await http.post('/form', { body: params });
 1. **Create one client per API**: Don't create a new client for each request
 2. **Use custom IDs for cache control**: Makes invalidation easier
 3. **Handle errors properly**: Use HttpError for better debugging
-4. **Clean up on logout**: Call `clearCache()` when user logs out
+4. **Clean up on logout**: Call `clear()` when user logs out
 5. **Use TypeScript**: Define response types for better type safety
 
 ## Next Steps

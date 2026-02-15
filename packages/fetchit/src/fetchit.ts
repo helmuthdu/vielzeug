@@ -61,10 +61,6 @@ export type HttpClientOptions = {
 export type QueryClientOptions = {
   staleTime?: number;
   gcTime?: number;
-  cache?: {
-    staleTime?: number;
-    gcTime?: number;
-  };
 };
 
 /* -------------------- Constants -------------------- */
@@ -262,7 +258,7 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
     logger,
   } = opts;
 
-  let globalHeaders = { ...initialHeaders };
+  const globalHeaders: Record<string, string> = { ...initialHeaders };
   const inFlight = new Map<string, Promise<unknown>>();
 
   function log(level: 'info' | 'error', msg: string, meta?: unknown) {
@@ -330,15 +326,18 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
   return {
     delete: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('DELETE', url, cfg),
     get: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('GET', url, cfg),
-    getHeaders: () => ({ ...globalHeaders }),
     patch: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('PATCH', url, cfg),
     post: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('POST', url, cfg),
     put: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('PUT', url, cfg),
     request,
-    setHeaders(next: Record<string, string | undefined>) {
-      globalHeaders = Object.fromEntries(
-        Object.entries({ ...globalHeaders, ...next }).filter(([, v]) => v !== undefined),
-      ) as Record<string, string>;
+    setHeaders(headers: Record<string, string | undefined>) {
+      for (const [key, value] of Object.entries(headers)) {
+        if (value === undefined) {
+          delete globalHeaders[key];
+        } else {
+          globalHeaders[key] = value;
+        }
+      }
     },
   };
 }
@@ -362,8 +361,8 @@ type CacheEntry<T = unknown> = {
  * Creates a query client for managing cached queries.
  */
 export function createQueryClient(opts?: QueryClientOptions) {
-  const staleTimeDefault = opts?.cache?.staleTime ?? opts?.staleTime ?? DEFAULT_STALE;
-  const gcTimeDefault = opts?.cache?.gcTime ?? opts?.gcTime ?? DEFAULT_GC;
+  const staleTimeDefault = opts?.staleTime ?? DEFAULT_STALE;
+  const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
 
   const cache = new Map<string, CacheEntry>();
   const keyMap = new Map<string, string>();
@@ -648,14 +647,6 @@ export function createQueryClient(opts?: QueryClientOptions) {
     return () => entry.observers.delete(listener);
   }
 
-  function unsubscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void) {
-    const id = keyToStr(key);
-    const entry = cache.get(id) as CacheEntry<T> | undefined;
-    if (entry) {
-      entry.observers.delete(listener);
-    }
-  }
-
   async function mutate<TData, TVariables = void>(options: MutationOptions<TData, TVariables>, variables: TVariables) {
     const { mutationFn, onSuccess, onError, onSettled, retry: retryCount = false, retryDelay } = options;
 
@@ -687,9 +678,8 @@ export function createQueryClient(opts?: QueryClientOptions) {
   }
 
   return {
-    clearCache,
+    clear: clearCache,
     fetch: fetchQuery,
-    getCacheSize: () => cache.size,
     getData,
     getState,
     invalidate,
@@ -697,6 +687,5 @@ export function createQueryClient(opts?: QueryClientOptions) {
     prefetch,
     setData,
     subscribe,
-    unsubscribe,
   };
 }

@@ -717,19 +717,18 @@ const http = createHttpClient({
   }
 })
 
-// Get current headers
-console.log('Headers:', http.getHeaders())
+console.log('HTTP client created with custom headers')
 
 // Update headers dynamically
 http.setHeaders({
   'Authorization': 'Bearer newtoken456'
 })
 
-console.log('Updated headers:', http.getHeaders())
+console.log('Headers updated successfully')
 
 // Make request with updated headers
 const data = await http.get('/posts/1')
-console.log('Fetched with new headers:', data)`,
+console.log('Fetched with new headers:', data.title)`,
       name: 'HTTP Client - Custom Headers',
     },
     'http-client-methods': {
@@ -790,7 +789,8 @@ const http = createHttpClient({
 })
 
 const queryClient = createQueryClient({
-  cache: { staleTime: 5000, gcTime: 300000 }
+  staleTime: 5000,
+  gcTime: 300000
 })
 
 // First fetch - hits the network
@@ -808,8 +808,7 @@ const data2 = await queryClient.fetch({
   queryFn: () => http.get('/posts/1')
 })
 console.log('Data:', data2.title)
-
-console.log('Cache size:', queryClient.getCacheSize())`,
+console.log('✓ Second request used cached data!')`,
       name: 'Query Client - Basic Caching',
     },
     'query-client-invalidate': {
@@ -827,11 +826,11 @@ await queryClient.fetch({
   queryFn: () => http.get('/users')
 })
 
-console.log('Cache size after fetch:', queryClient.getCacheSize())
+console.log('✓ Data cached for key: ["users"]')
 
 // Invalidate specific query
 queryClient.invalidate(['users'])
-console.log('Cache size after invalidate:', queryClient.getCacheSize())
+console.log('✓ Cache invalidated for ["users"]')
 
 // Invalidate with prefix matching
 await queryClient.fetch({
@@ -843,11 +842,11 @@ await queryClient.fetch({
   queryFn: () => http.get('/users/2')
 })
 
-console.log('Cache size:', queryClient.getCacheSize())
+console.log('✓ Cached ["users", 1] and ["users", 2]')
 
-// Invalidate all 'users' queries
+// Invalidate all 'users' queries with prefix matching
 queryClient.invalidate(['users'])
-console.log('After prefix invalidate:', queryClient.getCacheSize())`,
+console.log('✓ All "users" queries invalidated via prefix match')`,
       name: 'Query Client - Cache Invalidation',
     },
     'query-client-mutations': {

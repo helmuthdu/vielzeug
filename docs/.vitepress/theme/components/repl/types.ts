@@ -297,7 +297,6 @@ declare module '@vielzeug/fetchit' {
   export function createHttpClient(opts?: HttpClientOptions): {
     delete: (url: string, cfg?: any) => Promise<unknown>;
     get: (url: string, cfg?: any) => Promise<unknown>;
-    getHeaders: () => Record<string, string>;
     patch: (url: string, cfg?: any) => Promise<unknown>;
     post: (url: string, cfg?: any) => Promise<unknown>;
     put: (url: string, cfg?: any) => Promise<unknown>;
@@ -305,10 +304,9 @@ declare module '@vielzeug/fetchit' {
     setHeaders(next: Record<string, string | undefined>): void;
   };
 
-  export function createQueryClient(opts?: any): {
-    clearCache: () => void;
+  export function createQueryClient(opts?: QueryClientOptions): {
+    clear: () => void;
     fetch: <T>(options: any) => Promise<T>;
-    getCacheSize: () => number;
     getData: <T>(key: any) => T | undefined;
     getState: <T>(key: any) => any;
     invalidate: (key: any) => void;
@@ -316,7 +314,6 @@ declare module '@vielzeug/fetchit' {
     prefetch: <T>(opts: any) => Promise<void | T>;
     setData: <T>(key: any, dataOrUpdater: any) => void;
     subscribe: <T = unknown>(key: any, listener: any) => () => boolean;
-    unsubscribe: <T = unknown>(key: any, listener: any) => void;
   };
 
   export type HttpClientOptions = {
@@ -325,6 +322,11 @@ declare module '@vielzeug/fetchit' {
     timeout?: number;
     dedupe?: boolean;
     logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void;
+  };
+
+  export type QueryClientOptions = {
+    staleTime?: number;
+    gcTime?: number;
   };
 }
 `;
