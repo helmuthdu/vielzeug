@@ -511,9 +511,9 @@ const registrationSchema = v
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username cannot exceed 20 characters')
       .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-      .required('Username is required'),
+      .min(1, 'Username is required'),
 
-    email: v.email().required('Email is required'),
+    email: v.email().min(1, 'Email is required'),
 
     password: v
       .string()
@@ -522,21 +522,21 @@ const registrationSchema = v
       .refine((val) => /[a-z]/.test(val), 'Password must contain at least one lowercase letter')
       .refine((val) => /[0-9]/.test(val), 'Password must contain at least one number')
       .refine((val) => /[!@#$%^&*]/.test(val), 'Password must contain at least one special character')
-      .required('Password is required'),
+      .min(1, 'Password is required'),
 
-    confirmPassword: v.string().required('Please confirm your password'),
+    confirmPassword: v.string().min(1, 'Please confirm your password'),
 
     age: v
       .number()
       .int('Age must be a whole number')
       .min(13, 'You must be at least 13 years old')
       .max(120, 'Please enter a valid age')
-      .required('Age is required'),
+      .min(1, 'Age is required'),
 
     agreeToTerms: v
       .boolean()
       .refine((val) => val === true, 'You must accept the terms and conditions')
-      .required(),
+      .min(1),
 
     newsletter: v.boolean().default(false),
   })
@@ -576,9 +576,9 @@ const loginSchema = v.object({
       const user = await findUser(value);
       return user !== null;
     }, 'User not found')
-    .required(),
+    .min(1),
 
-  password: v.string().min(1, 'Password is required').required(),
+  password: v.string().min(8, 'Password is required'),
 
   rememberMe: v.boolean().default(false),
 });
@@ -599,14 +599,14 @@ Nested object validation with optional fields.
 ```ts
 const profileSchema = v.object({
   personal: v.object({
-    firstName: v.string().min(1).max(50).required(),
-    lastName: v.string().min(1).max(50).required(),
+    firstName: v.string().min(1).max(50),
+    lastName: v.string().min(1).max(50),
     bio: v.string().max(500).optional(),
     birthdate: v.date().max(new Date()).optional(),
   }),
 
   contact: v.object({
-    email: v.email().required(),
+    email: v.email().min(1),
     phone: v
       .string()
       .pattern(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
@@ -645,17 +645,13 @@ Validate incoming API requests.
 ```ts
 // POST /api/articles
 const createArticleSchema = v.object({
-  title: v
-    .string()
-    .min(5, 'Title must be at least 5 characters')
-    .max(200, 'Title cannot exceed 200 characters')
-    .required(),
+  title: v.string().min(5, 'Title must be at least 5 characters').max(200, 'Title cannot exceed 200 characters').min(1),
 
-  content: v.string().min(50, 'Content must be at least 50 characters').required(),
+  content: v.string().min(50, 'Content must be at least 50 characters').min(1),
 
   tags: v.array(v.string()).min(1, 'At least one tag is required').max(5, 'Maximum 5 tags allowed'),
 
-  status: v.oneOf('draft', 'published', 'archived').default('draft'),
+  status: v.enum('draft', 'published', 'archived').default('draft'),
 
   publishedAt: v.date().optional(),
 });
@@ -686,7 +682,7 @@ Validate API responses for type safety.
 const userResponseSchema = v.object({
   success: v.boolean(),
   data: v.object({
-    id: v.positiveInt(),
+    id: v.int().positive(),
     username: v.string(),
     email: v.email(),
     avatar: v.url().optional(),
@@ -718,15 +714,15 @@ Validate URL query parameters with coercion.
 ```ts
 const searchQuerySchema = v
   .object({
-    q: v.string().min(1, 'Search query is required').required(),
+    q: v.string().min(1, 'Search query is required'),
 
     page: v.coerce.number().int().positive().default(1),
 
     limit: v.coerce.number().int().min(1).max(100).default(20),
 
-    sort: v.oneOf('relevance', 'date', 'popularity').default('relevance'),
+    sort: v.enum('relevance', 'date', 'popularity').default('relevance'),
 
-    category: v.oneOf('all', 'tech', 'science', 'business', 'sports').default('all'),
+    category: v.enum('all', 'tech', 'science', 'business', 'sports').default('all'),
 
     minPrice: v.coerce.number().positive().optional(),
     maxPrice: v.coerce.number().positive().optional(),
@@ -776,7 +772,7 @@ const appConfigSchema = v.object({
   }),
 
   database: v.object({
-    url: v.string().required('Database URL is required'),
+    url: v.string().min(1, 'Database URL is required'),
 
     poolSize: v.number().int().positive().default(10),
 
@@ -796,8 +792,8 @@ const appConfigSchema = v.object({
   }),
 
   logging: v.object({
-    level: v.oneOf('debug', 'info', 'warn', 'error').default('info'),
-    format: v.oneOf('json', 'pretty').default('json'),
+    level: v.enum('debug', 'info', 'warn', 'error').default('info'),
+    format: v.enum('json', 'pretty').default('json'),
   }),
 
   features: v.object({
@@ -839,16 +835,16 @@ function loadConfig(): AppConfig {
 ```ts
 const productSchema = v.object({
   id: v.uuid(),
-  name: v.string().min(1).max(200).required(),
+  name: v.string().min(1).max(200),
   description: v.string().max(2000).optional(),
 
   price: v.object({
-    amount: v.number().positive().required(),
-    currency: v.oneOf('USD', 'EUR', 'GBP').default('USD'),
+    amount: v.number().positive().min(1),
+    currency: v.enum('USD', 'EUR', 'GBP').default('USD'),
   }),
 
   inventory: v.object({
-    quantity: v.number().int().min(0).required(),
+    quantity: v.number().int().min(0).min(1),
     lowStockThreshold: v.number().int().positive().default(10),
   }),
 
@@ -891,9 +887,9 @@ type Product = Infer<typeof productSchema>;
 const orderSchema = v
   .object({
     customer: v.object({
-      id: v.uuid().required(),
-      email: v.email().required(),
-      name: v.string().required(),
+      id: v.uuid().min(1),
+      email: v.email().min(1),
+      name: v.string().min(1),
     }),
 
     items: v
@@ -909,19 +905,19 @@ const orderSchema = v
 
     shipping: v.object({
       address: v.object({
-        street: v.string().required(),
-        city: v.string().required(),
-        state: v.string().required(),
+        street: v.string().min(1),
+        city: v.string().min(1),
+        state: v.string().min(1),
         zipCode: v.string().pattern(/^\d{5}(-\d{4})?$/),
-        country: v.string().required(),
+        country: v.string().min(1),
       }),
-      method: v.oneOf('standard', 'express', 'overnight'),
+      method: v.enum('standard', 'express', 'overnight'),
       tracking: v.string().optional(),
     }),
 
     payment: v.object({
-      method: v.oneOf('credit_card', 'paypal', 'bank_transfer'),
-      status: v.oneOf('pending', 'completed', 'failed'),
+      method: v.enum('credit_card', 'paypal', 'bank_transfer'),
+      status: v.enum('pending', 'completed', 'failed'),
       transactionId: v.string().optional(),
     }),
 
@@ -1067,7 +1063,7 @@ const bankTransferSchema = v.object({
   type: v.literal('bank_transfer'),
   accountNumber: v.string(),
   routingNumber: v.string(),
-  accountType: v.oneOf('checking', 'savings'),
+  accountType: v.enum('checking', 'savings'),
 });
 
 const paymentMethodSchema = v.union(creditCardSchema, paypalSchema, bankTransferSchema);
@@ -1088,7 +1084,7 @@ type Comment = {
 };
 
 const commentSchema: v.Schema<Comment> = v.object({
-  id: v.positiveInt(),
+  id: v.int().positive(),
   text: v.string().min(1).max(1000),
   author: v.string(),
   replies: v.array(v.any()).optional(), // Simplified for recursion
@@ -1100,7 +1096,7 @@ const commentSchema: v.Schema<Comment> = v.object({
 ```ts
 const shipmentSchema = v
   .object({
-    shippingMethod: v.oneOf('pickup', 'delivery'),
+    shippingMethod: v.enum('pickup', 'delivery'),
     address: v
       .object({
         street: v.string(),

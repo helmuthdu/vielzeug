@@ -99,14 +99,14 @@ v.literal(true); // type: true
 
 - `value: string | number | boolean` - The exact value to match
 
-#### `v.oneOf(...values)`
+#### `v.enum(...values)`
 
 Creates an enum schema from a list of values.
 
 ```ts
-v.oneOf('red', 'green', 'blue'); // 'red' | 'green' | 'blue'
-v.oneOf(1, 2, 3); // 1 | 2 | 3
-v.oneOf('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
+v.enum('red', 'green', 'blue'); // 'red' | 'green' | 'blue'
+v.enum(1, 2, 3); // 1 | 2 | 3
+v.enum('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
 ```
 
 **Parameters:**
@@ -134,7 +134,6 @@ v.array(v.number()); // number[]
 - `.min(length: number, message?: string)` - Minimum items
 - `.max(length: number, message?: string)` - Maximum items
 - `.length(exact: number, message?: string)` - Exact number of items
-- `.nonempty(message?: string)` - At least 1 item
 
 #### `v.object(shape)`
 
@@ -198,20 +197,20 @@ UUID validation.
 v.uuid(); // string (UUID format)
 ```
 
-#### `v.positiveInt()`
+#### `v.int().positive()`
 
 Shorthand for `v.number().int().positive()`.
 
 ```ts
-v.positiveInt(); // number (positive integer)
+v.int().positive(); // number (positive integer)
 ```
 
-#### `v.negativeInt()`
+#### `v.int().negative()`
 
 Shorthand for `v.number().int().negative()`.
 
 ```ts
-v.negativeInt(); // number (negative integer)
+v.int().negative(); // number (negative integer)
 ```
 
 ---
@@ -370,14 +369,13 @@ v.string().optional(); // string | undefined
 v.email().optional(); // string | undefined
 ```
 
-#### `required(message?: string): this`
+::: tip 💡 Validation Defaults
+All schemas **reject `null` and `undefined` by default**. You don't need a `required()` method!
 
-Explicitly requires a value (rejects `null` and `undefined`).
-
-```ts
-v.string().required(); // string (required)
-v.email().required('Email is required'); // Custom message
-```
+- Use `.optional()` to allow `undefined`
+- Use `.nullable()` to allow `null`
+- Use `.min(1)` to reject empty strings or arrays
+  :::
 
 #### `nullable(): this & Schema<Output | null>`
 
@@ -570,7 +568,6 @@ Built-in error codes for internationalization:
 | `invalid_length` | Wrong length             |
 | `too_small`      | Below minimum            |
 | `too_big`        | Above maximum            |
-| `required`       | Missing required value   |
 | `custom`         | Custom refinement failed |
 
 ## Performance Tips
@@ -597,7 +594,7 @@ Convenience schemas are optimized shortcuts:
 ```ts
 // ✅ Preferred
 v.email();
-v.positiveInt();
+v.int().positive();
 
 // ⚠️ Works but longer
 v.string().email();

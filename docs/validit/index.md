@@ -48,8 +48,8 @@ function validateUser(data: unknown) {
 import { v } from '@vielzeug/validit';
 
 const userSchema = v.object({
-  email: v.email().required(),
-  age: v.number().int().min(18).required(),
+  email: v.email(),
+  age: v.number().int().min(18),
 });
 
 // Automatic validation + type inference
@@ -87,6 +87,44 @@ const user = userSchema.parse(data);
 - You want preprocessing hooks (use Zod)
 - You need deeply nested recursive schemas
 
+## 📖 Core Concepts
+
+### Default Validation Behavior
+
+::: tip 💡 Everything is Required by Default
+**All schemas reject `null` and `undefined` automatically** - you don't need a "required" method!
+
+```ts
+v.string().parse(null); // ❌ Throws "Expected string"
+v.number().parse(undefined); // ❌ Throws "Expected number"
+```
+
+:::
+
+**To make fields optional:**
+
+```ts
+v.string().optional(); // string | undefined
+v.number().optional(); // number | undefined
+```
+
+**To reject empty values:**
+
+```ts
+v.string().min(1); // Rejects "" (empty string)
+v.array(v.string()).min(1); // Rejects [] (empty array)
+```
+
+**Example form schema:**
+
+```ts
+const schema = v.object({
+  name: v.string().min(1, 'Name is required'), // Non-empty string
+  email: v.email(), // Non-empty email
+  age: v.number().optional(), // Optional field
+});
+```
+
 ## 🚀 Key Features
 
 - **Async Validation**: Built-in support for [asynchronous rules and database checks](./usage.md#async-validation).
@@ -122,8 +160,8 @@ yarn add @vielzeug/validit
 import { v } from '@vielzeug/validit';
 
 const userSchema = v.object({
-  email: v.email().required(),
-  age: v.number().int().min(18).required(),
+  email: v.email(),
+  age: v.number().int().min(18),
 });
 
 // Validate and get typed data
@@ -138,18 +176,16 @@ import { v, type Infer } from '@vielzeug/validit';
 const registrationSchema = v.object({
   username: v
     .string()
-    .min(3)
+    .min(3, 'Username must be at least 3 characters')
     .max(20)
-    .pattern(/^[a-zA-Z0-9_]+$/)
-    .required('Username is required'),
-  email: v.email().required('Email is required'),
+    .pattern(/^[a-zA-Z0-9_]+$/),
+  email: v.email(),
   password: v
     .string()
-    .min(8)
+    .min(8, 'Password must be at least 8 characters')
     .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
-    .refine((val) => /[0-9]/.test(val), 'Must contain number')
-    .required(),
-  age: v.positiveInt().min(13).required(),
+    .refine((val) => /[0-9]/.test(val), 'Must contain number'),
+  age: v.int().positive().min(13, 'Must be at least 13 years old'),
 });
 
 type Registration = Infer<typeof registrationSchema>;
@@ -168,7 +204,7 @@ if (!result.success) {
 const apiResponseSchema = v.object({
   success: v.boolean(),
   data: v.object({
-    id: v.positiveInt(),
+    id: v.int().positive(),
     name: v.string(),
     email: v.email(),
   }),
