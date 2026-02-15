@@ -195,6 +195,103 @@ declare module '@vielzeug/deposit' {
 }
 `;
 
+export const craftitTypes = `
+declare module '@vielzeug/craftit' {
+  export type Template<T = HTMLElement, S extends object = object> =
+    | string
+    | Node
+    | ((el: WebComponent<T, S>) => string | Node | DocumentFragment);
+
+  export type LifecycleHook<T = HTMLElement, S extends object = object> = (
+    el: WebComponent<T, S>
+  ) => void;
+
+  export type AttributeChangeHook<T = HTMLElement, S extends object = object> = (
+    name: string,
+    oldValue: string | null,
+    newValue: string | null,
+    el: WebComponent<T, S>
+  ) => void;
+
+  export type FormCallbacks<T = HTMLElement, S extends object = object> = {
+    onFormDisabled?: (disabled: boolean, el: WebComponent<T, S>) => void;
+    onFormReset?: (el: WebComponent<T, S>) => void;
+    onFormStateRestore?: (
+      state: string | File | FormData | null,
+      mode: 'restore' | 'autocomplete',
+      el: WebComponent<T, S>
+    ) => void;
+  };
+
+  export type ComponentOptions<T = HTMLElement, S extends object = object> = {
+    template: Template<T, S>;
+    state?: S;
+    styles?: (string | CSSStyleSheet)[];
+    observedAttributes?: readonly string[];
+    formAssociated?: boolean;
+    onConnected?: LifecycleHook<T, S>;
+    onDisconnected?: LifecycleHook<T, S>;
+    onUpdated?: LifecycleHook<T, S>;
+    onAttributeChanged?: AttributeChangeHook<T, S>;
+  } & FormCallbacks<T, S>;
+
+  export type FormHelpers = {
+    value: (value: string) => void;
+    valid: (flags?: ValidityStateFlags, message?: string) => void;
+  };
+
+  export type WebComponent<T = HTMLElement, S extends object = object> = HTMLElement & {
+    readonly state: S;
+    readonly shadow: ShadowRoot;
+    readonly root: T;
+    readonly internals?: ElementInternals;
+    readonly form?: FormHelpers;
+    value?: string;
+    render(): void;
+    flush(): Promise<void>;
+    set(patch: Partial<S> | ((state: S) => S | Promise<S>), options?: { replace?: boolean; silent?: boolean }): Promise<void>;
+    watch<U>(selector: (state: S) => U, callback: (value: U, prev: U) => void): () => void;
+    find<E extends HTMLElement = HTMLElement>(selector: string): E | null;
+    findAll<E extends HTMLElement = HTMLElement>(selector: string): E[];
+    on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void;
+    emit(name: string, detail?: unknown, options?: CustomEventInit): void;
+    delay(callback: () => void, ms: number): number;
+    clear(id: number): void;
+  };
+
+  export function defineElement<T = HTMLElement, S extends object = object>(
+    name: string,
+    options: ComponentOptions<T, S>
+  ): void;
+
+  export function createComponent<T = HTMLElement, S extends object = object>(
+    options: ComponentOptions<T, S>
+  ): CustomElementConstructor;
+
+  export function html(strings: TemplateStringsArray, ...values: unknown[]): string;
+  
+  type ThemeVars<T extends Record<string, string | number>> = {
+    [K in keyof T]: string;
+  };
+  
+  export const css: {
+    (strings: TemplateStringsArray, ...values: unknown[]): string;
+    var(name: string, fallback?: string | number): string;
+    theme<T extends Record<string, string | number>>(
+      light: T,
+      dark?: T,
+      options?: { selector?: string; attribute?: string }
+    ): ThemeVars<T>;
+  };
+
+  export function classMap(classes: Record<string, boolean | undefined>): string;
+  export function styleMap(styles: Partial<CSSStyleDeclaration>): string;
+
+  export function attach<T extends HTMLElement>(element: T, container?: HTMLElement): Promise<T>;
+  export function destroy(element: HTMLElement): void;
+}
+`;
+
 export const fetchitTypes = `
 declare module '@vielzeug/fetchit' {
   export function createHttpClient(opts?: HttpClientOptions): {
@@ -551,6 +648,7 @@ declare module '@vielzeug/routeit' {
 `;
 
 export const libraryTypes = {
+  craftit: craftitTypes,
   deposit: depositTypes,
   fetchit: fetchitTypes,
   formit: formitTypes,

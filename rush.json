@@ -19,6 +19,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/craftit",
+      "projectFolder": "packages/craftit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/fetchit",
       "projectFolder": "packages/fetchit",
       "shouldPublish": true,

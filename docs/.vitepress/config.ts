@@ -47,6 +47,7 @@ export default defineConfig({
           },
           {
             items: [
+              { link: '/craftit/', text: 'Craftit' },
               { link: '/formit/', text: 'Formit' },
               { link: '/i18nit/', text: 'i18nit' },
               { link: '/validit/', text: 'Validit' },
@@ -114,6 +115,30 @@ export default defineConfig({
           text: 'API Reference',
         },
         { link: '/fetchit/examples', text: 'Examples' },
+      ],
+      '/craftit/': [
+        { link: '/craftit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/craftit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/craftit/usage#reactive-state', text: 'Reactive State' },
+            { link: '/craftit/usage#event-handling', text: 'Event Handling' },
+            { link: '/craftit/usage#lifecycle-hooks', text: 'Lifecycle' },
+            { link: '/craftit/usage#form-associated-elements', text: 'Forms' },
+          ],
+          link: '/craftit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/craftit/api#core-functions', text: 'Core Functions' },
+            { link: '/craftit/api#web-component-instance', text: 'Component API' },
+            { link: '/craftit/api#type-definitions', text: 'Types' },
+          ],
+          link: '/craftit/api',
+          text: 'API Reference',
+        },
+        { link: '/craftit/examples', text: 'Examples' },
       ],
       '/formit/': [
         { link: '/formit/', text: 'Overview' },
@@ -517,6 +542,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
+        '@vielzeug/craftit': resolve(__dirname, '../../packages/craftit/src'),
         '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
         '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
         '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),

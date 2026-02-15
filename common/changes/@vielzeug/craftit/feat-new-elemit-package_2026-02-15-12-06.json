@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/craftit",
+      "comment": "new craftit package",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/craftit"
+}

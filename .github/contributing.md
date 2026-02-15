@@ -236,7 +236,6 @@ export function formatFullName(firstName: string, lastName: string): string {
 ### Test Structure
 
 ```typescript
-import { describe, it, expect } from 'vitest';
 import { myFunction } from './my-function';
 describe('myFunction', () => {
   it('should return expected result for valid input', () => {

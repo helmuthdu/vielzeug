@@ -17,6 +17,9 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
+  - title: '@vielzeug/craftit'
+    details: "<img src='/vielzeug/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state and automatic rendering."
+    link: /craftit/
   - title: '@vielzeug/deposit'
     details: "<img src='/vielzeug/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/

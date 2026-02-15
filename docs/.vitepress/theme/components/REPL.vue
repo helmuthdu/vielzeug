@@ -64,6 +64,7 @@ const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
 const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const LIBRARY_DESCRIPTIONS = {
+  craftit: 'Lightweight, type-safe web components with reactive state and automatic rendering.',
   deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
   formit: 'Type-safe form state and validation for React and beyond.',
@@ -78,6 +79,7 @@ const LIBRARY_DESCRIPTIONS = {
 } as const;
 
 const LIBRARY_LOADERS = {
+  craftit: () => import('@vielzeug/craftit'),
   deposit: () => import('@vielzeug/deposit'),
   fetchit: () => import('@vielzeug/fetchit'),
   formit: () => import('@vielzeug/formit'),
@@ -92,7 +94,7 @@ const LIBRARY_LOADERS = {
 } as const;
 
 const LIBRARY_EXPORTS = {
-  toolkit: [],
+  craftit: ['defineElement', 'createComponent', 'html', 'css', 'classMap', 'styleMap', 'attach', 'destroy'],
   deposit: ['Deposit'],
   fetchit: ['createHttpClient', 'createQueryClient'],
   formit: ['createForm'],
@@ -101,6 +103,7 @@ const LIBRARY_EXPORTS = {
   permit: ['Permit'],
   routeit: ['createRouter', 'Router'],
   stateit: ['createStore', 'createTestStore', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
+  toolkit: [],
   validit: ['v'],
   wireit: [
     'createContainer',
