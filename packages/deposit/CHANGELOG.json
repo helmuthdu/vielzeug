@@ -2,6 +2,27 @@
   "name": "@vielzeug/deposit",
   "entries": [
     {
+      "version": "1.1.5",
+      "tag": "@vielzeug/deposit_v1.1.5",
+      "date": "Sun, 15 Feb 2026 21:52:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "code cleanup and improvements",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "52798714ace728f20445ba93d0a3fae694892804"
+          }
+        ],
+        "none": [
+          {
+            "comment": "update bundle sizes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8dc7031f6425e5c98c716c3df2db30be51b1b58a"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/deposit_v1.1.4",
       "date": "Thu, 12 Feb 2026 17:52:26 GMT",

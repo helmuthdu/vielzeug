@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/routeit",
+  "entries": [
+    {
+      "version": "1.0.1",
+      "tag": "@vielzeug/routeit_v1.0.1",
+      "date": "Sun, 15 Feb 2026 21:52:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "initial release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2c7cd5675150011569fdedf411feb0e8f70ed947"
+          }
+        ]
+      }
+    }
+  ]
+}

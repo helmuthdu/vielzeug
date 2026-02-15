@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/craftit",
+  "entries": [
+    {
+      "version": "1.0.1",
+      "tag": "@vielzeug/craftit_v1.0.1",
+      "date": "Sun, 15 Feb 2026 21:52:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "new craftit package",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "a769da253225a37198e1b27193af90ac8154f672"
+          }
+        ]
+      }
+    }
+  ]
+}

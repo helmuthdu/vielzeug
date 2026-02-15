@@ -2,6 +2,27 @@
   "name": "@vielzeug/fetchit",
   "entries": [
     {
+      "version": "1.1.6",
+      "tag": "@vielzeug/fetchit_v1.1.6",
+      "date": "Sun, 15 Feb 2026 21:52:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "code cleanup and improvements",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "57b2e42d9f6df79b29dd7a1750b610ad3f6c7f27"
+          }
+        ],
+        "none": [
+          {
+            "comment": "update bundle sizes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8dc7031f6425e5c98c716c3df2db30be51b1b58a"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.5",
       "tag": "@vielzeug/fetchit_v1.1.5",
       "date": "Thu, 12 Feb 2026 17:52:26 GMT",
