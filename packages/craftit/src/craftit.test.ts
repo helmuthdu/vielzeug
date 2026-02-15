@@ -140,11 +140,11 @@ describe('craftit', () => {
 
           const result = theme.toString();
 
-          expect(result).toContain(':host { --primary-color: #3b82f6; --bg: #fff; }');
+          expect(result).toContain(':host { --bg: #fff; --primary-color: #3b82f6; }');
           expect(result).toContain('@media (prefers-color-scheme: dark)');
-          expect(result).toContain(':host:not([data-theme="light"]) { --primary-color: #60a5fa; --bg: #000; }');
-          expect(result).toContain(':host[data-theme="dark"] { --primary-color: #60a5fa; --bg: #000; }');
-          expect(result).toContain(':host[data-theme="light"] { --primary-color: #3b82f6; --bg: #fff; }');
+          expect(result).toContain(':host:not([data-theme="light"]) { --bg: #000; --primary-color: #60a5fa; }');
+          expect(result).toContain(':host[data-theme="dark"] { --bg: #000; --primary-color: #60a5fa; }');
+          expect(result).toContain(':host[data-theme="light"] { --bg: #fff; --primary-color: #3b82f6; }');
         });
 
         it('should work in template literal', () => {
