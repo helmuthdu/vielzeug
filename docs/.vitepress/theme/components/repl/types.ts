@@ -331,27 +331,87 @@ declare module '@vielzeug/fetchit' {
 
 export const formitTypes = `
 declare module '@vielzeug/formit' {
-  export function createForm<TForm extends Record<string, any> = Record<string, any>>(init?: any): {
-    bind: (path: any, config?: any) => any;
-    getError: (path: any) => string | undefined;
-    getErrors: () => Record<string, string>;
-    getStateSnapshot: () => any;
-    getValue: (path: any) => any;
-    getValues: () => TForm;
-    isDirty: (path: any) => boolean;
-    isTouched: (path: any) => boolean;
-    markTouched: (path: any) => void;
-    reset: (initialValues?: TForm) => void;
-    resetErrors: () => void;
-    setError: (path: any, message?: string) => void;
-    setErrors: (next: any) => void;
-    setValue: (path: any, value: any, options?: any) => any;
-    setValues: (nextValues: Partial<TForm>, options?: any) => void;
-    submit: (onSubmit: (values: TForm) => any, options?: any) => Promise<any>;
-    subscribe: (listener: any) => () => boolean;
-    subscribeField: (path: any, listener: any) => () => void;
-    validateAll: (options?: any) => Promise<Record<string, string>>;
-    validateField: (path: any, signal?: AbortSignal) => Promise<string | undefined>;
+  export type Errors = Map<string, string>;
+  export type MaybePromise<T> = T | Promise<T>;
+  export type FieldValidator = (value: FormDataEntryValue) => MaybePromise<string | undefined | null>;
+  export type FormValidator = (formData: FormData) => MaybePromise<Errors | undefined | null>;
+  
+  export type FieldConfig<TValue = any> = {
+    initialValue?: TValue;
+    validators?: FieldValidator | Array<FieldValidator>;
+  };
+  
+  export type FormInit = {
+    fields?: Record<string, FieldConfig>;
+    validate?: FormValidator;
+  };
+  
+  export type FormState = {
+    errors: Errors;
+    touched: Set<string>;
+    dirty: Set<string>;
+    isValidating: boolean;
+    isSubmitting: boolean;
+    submitCount: number;
+  };
+  
+  export type BindConfig = {
+    valueExtractor?: (event: any) => any;
+    markTouchedOnBlur?: boolean;
+  };
+  
+  export class ValidationError extends Error {
+    readonly errors: Errors;
+    readonly type: 'validation';
+  }
+  
+  export function createForm(init?: FormInit): {
+    // Value management
+    get(name: string): any;
+    set(name: string, value: any, options?: { markDirty?: boolean; markTouched?: boolean }): void;
+    set(entries: Record<string, any> | FormData, options?: { replace?: boolean; markDirty?: boolean }): void;
+    values(): Record<string, any>;
+    data(): FormData;
+    clone(): FormData;
+    
+    // Error management
+    error(name?: string): string | undefined | Errors;
+    error(name: string, message: string): void;
+    errors(nextErrors: Errors | Record<string, string>): void;
+    
+    // Touch/Dirty management
+    touch(name: string): boolean;
+    touch(name: string, mark: boolean): void;
+    dirty(name: string): boolean;
+    
+    // Validation
+    validate(name: string): Promise<string | undefined>;
+    validate(options?: { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] }): Promise<Errors>;
+    
+    // Submission
+    submit(onSubmit: (formData: FormData) => MaybePromise<any>, options?: { signal?: AbortSignal; validate?: boolean }): Promise<any>;
+    
+    // Subscriptions
+    subscribe(listener: (state: FormState) => void): () => void;
+    subscribeField<TValue>(name: string, listener: (payload: {
+      value: TValue | undefined;
+      error?: string;
+      touched: boolean;
+      dirty: boolean;
+    }) => void): () => void;
+    
+    // Field binding
+    bind(name: string, config?: BindConfig): {
+      name: string;
+      value: any;
+      onChange: (event: any) => void;
+      onBlur: () => void;
+      set: (newValue: any | ((prev: any) => any)) => void;
+    };
+    
+    // State management
+    reset(newFormData?: FormData | Record<string, any>): void;
+    snapshot(): FormState;
   };
 }
 `;

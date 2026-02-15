@@ -146,15 +146,20 @@ export default defineConfig({
           items: [
             { link: '/formit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/formit/usage#validation', text: 'Validation' },
+            { link: '/formit/usage#file-uploads', text: 'File Uploads' },
+            { link: '/formit/usage#arrays-and-multi-select', text: 'Arrays & Multi-Select' },
             { link: '/formit/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/formit/usage#advanced-patterns', text: 'Advanced Patterns' },
+            { link: '/formit/usage#best-practices', text: 'Best Practices' },
           ],
           link: '/formit/usage',
           text: 'Usage Guide',
         },
         {
           items: [
-            { link: '/formit/api#createform', text: 'createForm()' },
-            { link: '/formit/api#form-methods', text: 'Form Methods' },
+            { link: '/formit/api#createform-init', text: 'createForm()' },
+            { link: '/formit/api#form-instance-methods', text: 'Form Instance Methods' },
+            { link: '/formit/api#types', text: 'Types' },
           ],
           link: '/formit/api',
           text: 'API Reference',

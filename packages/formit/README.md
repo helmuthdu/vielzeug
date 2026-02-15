@@ -1,29 +1,28 @@
 # @vielzeug/formit
 
-Type-safe form state management with effortless validation. Build robust forms with minimal code and maximum flexibility.
+Lightweight form state management powered by native FormData. Build robust forms with minimal code and maximum simplicity.
 
 ## Features
 
-- ✅ **Type-Safe** - Full TypeScript support with path-based type inference
-- ✅ **Flexible Validation** - Sync/async validators with granular control
-- ✅ **Smart State Tracking** - Automatic dirty and touched state management
-- ✅ **Field Binding** - One-line input integration with customizable extractors
-- ✅ **Nested Paths** - Deep object and array support with dot/bracket notation
-- ✅ **Performance** - Targeted validation (only touched fields, specific subsets)
+- ✅ **Native FormData** - Built on browser-standard FormData API
+- ✅ **Unified API** - One clear way to do everything
+- ✅ **File Upload Support** - Native File/FileList/Blob handling
+- ✅ **Nested Objects** - Automatic flattening with dot notation
+- ✅ **Array Fields** - Full support for multi-select and checkboxes
+- ✅ **Type-Safe** - Full TypeScript support
+- ✅ **Flexible Validation** - Sync/async validators at field and form level
+- ✅ **Smart State Tracking** - Automatic dirty and touched state with Map/Set
+- ✅ **Field Binding** - One-line input integration
 - ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Lightweight** - 2.4 KB gzipped, zero dependencies
-- ✅ **Developer Experience** - Intuitive API with comprehensive helpers
+- ✅ **Lightweight** - ~3 KB gzipped, zero dependencies
 
 ## Installation
 
 ```bash
-# pnpm
 pnpm add @vielzeug/formit
-
-# npm
+# or
 npm install @vielzeug/formit
-
-# yarn
+# or
 yarn add @vielzeug/formit
 ```
 
@@ -31,62 +30,34 @@ yarn add @vielzeug/formit
 
 ```typescript
 import { createForm } from '@vielzeug/formit';
-
-// Define your form structure
-interface LoginForm {
-  email: string;
-  password: string;
-  rememberMe: boolean;
-}
-
-// Create form with validation
-const form = createForm<LoginForm>({
-  initialValues: {
-    email: '',
-    password: '',
-    rememberMe: false,
-  },
+const form = createForm({
   fields: {
     email: {
-      validators: [
-        (value) => (!value ? 'Email is required' : undefined),
-        (value) => (!value.includes('@') ? 'Invalid email' : undefined),
-      ],
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
     },
     password: {
-      validators: (value) =>
-        value.length < 8 ? 'Password must be at least 8 characters' : undefined,
+      value: '',
+      validators: (v) => String(v).length < 8 && 'Min 8 characters',
     },
   },
 });
-
 // Use in your component
 function LoginForm() {
+  const [state, setState] = useState(form.snapshot());
+  useEffect(() => form.subscribe(setState), []);
   return (
     <form onSubmit={async (e) => {
       e.preventDefault();
-      await form.submit(async (values) => {
-        await api.login(values);
+      await form.submit(async (formData) => {
+        await fetch('/api/login', { method: 'POST', body: formData });
       });
     }}>
       <input {...form.bind('email')} type="email" />
-      {form.isTouched('email') && form.getError('email') && (
-        <span>{form.getError('email')}</span>
-      )}
-
+      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
       <input {...form.bind('password')} type="password" />
-      {form.isTouched('password') && form.getError('password') && (
-        <span>{form.getError('password')}</span>
-      )}
-
-      <label>
-        <input {...form.bind('rememberMe')} type="checkbox" />
-        Remember me
-      </label>
-
-      <button type="submit" disabled={form.getStateSnapshot().isSubmitting}>
-        Login
-      </button>
+      {state.errors.get('password') && <span>{state.errors.get('password')}</span>}
+      <button type="submit" disabled={state.isSubmitting}>Login</button>
     </form>
   );
 }
@@ -94,332 +65,203 @@ function LoginForm() {
 
 ## Core Concepts
 
-### Form Creation
+### Form Initialization
+
+Three flexible patterns for defining fields:
+**1. Plain Values**
 
 ```typescript
 const form = createForm({
-  // Initial values
-  initialValues: { name: 'Alice', age: 30 },
-
-  // Field-level validation
   fields: {
-    name: {
-      validators: (value) => (!value ? 'Required' : undefined),
-      initialValue: 'Default Name', // Used if not in initialValues
-    },
-    age: {
-      validators: [
-        (value) => (value < 18 ? 'Must be 18+' : undefined),
-        (value) => (value > 120 ? 'Invalid age' : undefined),
-      ],
-    },
-  },
-
-  // Form-level validation
-  validate: (values) => {
-    const errors: any = {};
-    if (values.password !== values.confirmPassword) {
-      errors.confirmPassword = 'Passwords must match';
-    }
-    return errors;
+    name: '',
+    email: '',
+    age: 0,
   },
 });
 ```
 
-### Path Handling
-
-Formit supports deep nested paths with dot notation and array indices:
+**2. Nested Objects (Auto-Flattened)**
 
 ```typescript
-// Nested objects
-form.setValue('user.profile.name', 'Alice');
-form.getValue('user.profile.name'); // 'Alice'
-
-// Arrays with bracket notation
-form.setValue('items[0].title', 'First Item');
-form.getValue('items[0].title'); // 'First Item'
-
-// Array path format
-form.setValue(['tags', 1], 'tag2');
-form.getValue(['tags', 1]); // 'tag2'
-
-// Auto-creates nested structures
-form.setValue('deep.nested.path', 'value');
-// Creates: { deep: { nested: { path: 'value' } } }
+const form = createForm({
+  fields: {
+    user: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      profile: {
+        age: 25,
+        city: 'NYC',
+      },
+    },
+  },
+});
+// Access with dot notation
+form.get('user.name'); // 'Alice'
+form.get('user.profile.age'); // '25'
 ```
 
-### Validation
-
-#### Field-Level Validators
+**3. With Validators (FieldConfig)**
 
 ```typescript
 const form = createForm({
   fields: {
     email: {
-      validators: [
-        // Sync validation
-        (value) => (!value ? 'Required' : undefined),
-
-        // Async validation
-        async (value) => {
-          const exists = await checkEmailExists(value);
-          return exists ? 'Email already taken' : undefined;
-        },
-
-        // Object return (multiple errors)
-        (value) => ({
-          format: !value.includes('@') ? 'Invalid format' : '',
-          length: value.length < 5 ? 'Too short' : '',
-        }),
-      ],
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: {
+      value: '',
+      validators: [(v) => !v && 'Required', (v) => String(v).length < 8 && 'Too short'],
     },
   },
-});
-
-// Validate single field
-const error = await form.validateField('email');
-
-// Validate all fields
-const errors = await form.validateAll();
-
-// Validate only touched fields (better UX)
-await form.validateAll({ onlyTouched: true });
-
-// Validate specific fields
-await form.validateAll({ fields: ['email', 'password'] });
-```
-
-#### Form-Level Validation
-
-```typescript
-const form = createForm({
-  validate: (values) => {
-    const errors: any = {};
-
-    if (values.password !== values.confirmPassword) {
-      errors.confirmPassword = 'Passwords must match';
+  validate: (formData) => {
+    const errors = new Map();
+    const password = formData.get('password');
+    const confirm = formData.get('confirmPassword');
+    if (password !== confirm) {
+      errors.set('confirmPassword', 'Passwords must match');
     }
-
-    if (values.startDate > values.endDate) {
-      errors.endDate = 'End date must be after start date';
-    }
-
     return errors;
   },
 });
 ```
 
-### Field Binding
-
-Bind fields to inputs with automatic state management:
+### Value Management
 
 ```typescript
-// Basic binding
-<input {...form.bind('email')} />
-
-// Custom value extractor for select/checkbox
-const selectBinding = form.bind('category', {
-  valueExtractor: (e) => e.target.selectedOptions[0].value,
-});
-
-const checkboxBinding = form.bind('agreed', {
-  valueExtractor: (e) => e.target.checked,
-});
-
-// Disable auto-touch on blur
-const binding = form.bind('field', {
-  markTouchedOnBlur: false,
-});
-
-// Binding includes: value, onChange, onBlur, name
-const binding = form.bind('name');
-binding.value;      // Current value
-binding.onChange;   // Change handler
-binding.onBlur;     // Blur handler
-binding.name;       // Field key
-binding.set;        // Setter function
+// Get single value
+const email = form.get('email');
+// Set single value
+form.set('email', 'user@example.com');
+// Set multiple values (merge)
+form.set({ email: 'new@example.com', name: 'Alice' });
+// Replace all values
+form.set({ email: 'reset@example.com' }, { replace: true });
+// Get all values as object
+const allValues = form.values(); // { email: '...', name: '...' }
+// Get native FormData
+const formData = form.data();
 ```
 
-### State Management
+### Arrays and Multi-Select
 
 ```typescript
-// Get/Set values
-form.getValue('email');
-form.setValue('email', 'test@example.com');
+const form = createForm({
+  fields: {
+    tags: ['javascript', 'typescript'],
+    interests: {
+      value: [],
+      validators: (v) => Array.isArray(v) && v.length === 0 && 'Select at least one',
+    },
+  },
+});
+// Get array value
+const tags = form.get('tags'); // ['javascript', 'typescript']
+// Set array value
+form.set('tags', ['vue', 'react']);
+// Empty arrays work correctly
+form.set('tags', []); // Returns [] not undefined
+```
 
-form.getValues(); // All values
-form.setValues({ email: 'new@email.com', name: 'Bob' });
+### Validation
 
-// Replace all values
-form.setValues({ newField: 'value' }, { replace: true });
+```typescript
+// Validate specific field
+const error = await form.validate('email');
+// Validate all fields
+const errors = await form.validate();
+// Validate only touched fields
+const errors = await form.validate({ onlyTouched: true });
+// Validate specific fields
+const errors = await form.validate({ fields: ['email', 'password'] });
+```
 
-// Error management
-form.getError('email');
-form.getErrors(); // All errors
-form.setError('email', 'Custom error');
-form.setErrors({ email: 'Error 1', password: 'Error 2' });
-form.resetErrors();
+### Error Management
 
-// State helpers
-form.isDirty('email'); // Check if modified
-form.isTouched('email'); // Check if touched
-form.markTouched('email'); // Mark as touched
+```typescript
+// Get single error
+const emailError = form.error('email');
+// Set single error
+form.error('email', 'This email is taken');
+// Clear single error
+form.error('email', '');
+// Get all errors
+const allErrors = form.error(); // Map<string, string>
+// Set multiple errors
+form.errors({ email: 'Invalid', password: 'Too short' });
+form.errors(new Map([['email', 'Invalid']]));
+```
 
-// Reset form
-form.reset(); // Reset to initial values
-form.reset({ email: 'new@email.com' }); // Reset to new values
+### State Tracking
 
-// Get state snapshot
-const state = form.getStateSnapshot();
-state.values; // Current values
-state.errors; // Current errors
-state.dirty; // Dirty state map
-state.touched; // Touched state map
-state.isSubmitting; // Submitting status
-state.isValidating; // Validating status
-state.submitCount; // Number of submissions
+```typescript
+// Check if field is dirty (changed from initial)
+const isDirty = form.dirty('email');
+// Check if field is touched (user interacted)
+const isTouched = form.touch('email');
+// Mark field as touched
+form.touch('email', true);
+// Get complete state snapshot
+const state = form.snapshot();
+console.log(state.dirty); // Set<string>
+console.log(state.touched); // Set<string>
+console.log(state.errors); // Map<string, string>
+console.log(state.isValidating); // boolean
+console.log(state.isSubmitting); // boolean
+console.log(state.submitCount); // number
+```
+
+### Field Binding
+
+```typescript
+// Simple binding
+<input {...form.bind('email')} />
+// With custom value extractor
+const binding = form.bind('category', {
+  valueExtractor: (e) => e.selectedOption
+});
+// Disable touch on blur
+<input {...form.bind('name', { markTouchedOnBlur: false })} />
 ```
 
 ### Form Submission
 
 ```typescript
 // Submit with validation
-await form.submit(async (values) => {
-  await api.post('/users', values);
+await form.submit(async (formData) => {
+  const response = await fetch('/api/submit', {
+    method: 'POST',
+    body: formData,
+  });
+  return response.json();
 });
-
 // Skip validation
-await form.submit(
-  async (values) => {
-    await api.post('/draft', values);
-  },
-  { validate: false },
-);
-
+await form.submit(onSubmit, { validate: false });
 // Handle validation errors
 try {
-  await form.submit(async (values) => {
-    await api.post('/users', values);
-  });
+  await form.submit(onSubmit);
 } catch (error) {
   if (error instanceof ValidationError) {
-    console.log('Validation failed:', error.errors);
-  } else {
-    console.error('Submit failed:', error);
+    console.log('Validation errors:', error.errors);
   }
 }
-
-// Abort submission
-const controller = new AbortController();
-form.submit(
-  async (values) => {
-    await api.post('/users', values);
-  },
-  { signal: controller.signal },
-);
-
-// Later...
-controller.abort();
 ```
 
-### Subscriptions
-
-React to form state changes:
-
-```typescript
-// Subscribe to entire form
-const unsubscribe = form.subscribe((state) => {
-  console.log('Form state:', state);
-  console.log('Values:', state.values);
-  console.log('Errors:', state.errors);
-  console.log('Is submitting:', state.isSubmitting);
-});
-
-// Subscribe to specific field
-const unsubscribe = form.subscribeField('email', (field) => {
-  console.log('Value:', field.value);
-  console.log('Error:', field.error);
-  console.log('Dirty:', field.dirty);
-  console.log('Touched:', field.touched);
-});
-
-// Clean up
-unsubscribe();
-```
-
-## Advanced Usage
-
-### Multi-Step Forms
-
-```typescript
-const form = createForm<WizardForm>({
-  /* ... */
-});
-
-// Step 1: Validate only current step fields
-await form.validateAll({ fields: ['firstName', 'lastName'] });
-
-// Step 2: Validate only touched fields
-await form.validateAll({ onlyTouched: true });
-
-// Final step: Validate all
-await form.validateAll();
-```
-
-### Dynamic Forms
-
-```typescript
-// Add item to array
-const items = form.getValue('items') || [];
-form.setValue('items', [...items, { name: '', quantity: 0 }]);
-
-// Update nested item
-form.setValue('items[0].name', 'New Name');
-
-// Remove item
-const updatedItems = items.filter((_, i) => i !== indexToRemove);
-form.setValue('items', updatedItems);
-```
-
-### Custom Value Extraction
-
-```typescript
-// Multi-select
-const multiSelect = form.bind('selectedOptions', {
-  valueExtractor: (e) =>
-    Array.from(e.target.selectedOptions).map(opt => opt.value),
-});
-
-// File input
-const fileInput = form.bind('avatar', {
-  valueExtractor: (e) => e.target.files[0],
-});
-
-// Custom component
-const customBinding = form.bind('customField', {
-  valueExtractor: (customValue) => customValue,
-});
-<CustomInput onChange={customBinding.onChange} />
-```
-
-### Conditional Validation
+### File Uploads
 
 ```typescript
 const form = createForm({
   fields: {
-    country: {
-      validators: (value) => (!value ? 'Required' : undefined),
-    },
-    zipCode: {
-      validators: (value, values) => {
-        // Only validate if country is USA
-        if (values.country === 'USA' && !value) {
-          return 'ZIP code required for USA';
-        }
-        return undefined;
-      },
-    },
+    avatar: null,
+    title: '',
   },
+});
+// Handle file input
+form.set('avatar', fileInput.files[0]);
+// Submit with FormData
+await form.submit(async (formData) => {
+  // FormData is ready with the file
+  await fetch('/api/upload', { method: 'POST', body: formData });
 });
 ```
 
@@ -427,253 +269,275 @@ const form = createForm({
 
 ### React
 
-```typescript
+```tsx
 import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
-
-function useForm<T>(formFactory: () => ReturnType<typeof createForm<T>>) {
-  const [form] = useState(formFactory);
-  const [state, setState] = useState(form.getStateSnapshot());
-
-  useEffect(() => {
-    const unsubscribe = form.subscribe(setState);
-    return unsubscribe;
-  }, [form]);
-
+function useForm(init) {
+  const [form] = useState(() => createForm(init));
+  const [state, setState] = useState(form.snapshot());
+  useEffect(() => form.subscribe(setState), [form]);
   return { form, state };
 }
-
-function MyForm() {
-  const { form, state } = useForm(() => createForm({ /* ... */ }));
-
+// Usage
+function SignupForm() {
+  const { form, state } = useForm({
+    fields: {
+      email: {
+        value: '',
+        validators: (v) => !String(v).includes('@') && 'Invalid email',
+      },
+      password: '',
+    },
+  });
   return (
-    <form onSubmit={async (e) => {
-      e.preventDefault();
-      await form.submit(async (values) => {
-        await api.post('/data', values);
-      });
-    }}>
-      <input {...form.bind('name')} />
-      {state.isSubmitting && <Spinner />}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(async (formData) => {
+          await fetch('/api/signup', { method: 'POST', body: formData });
+        });
+      }}>
+      <input {...form.bind('email')} placeholder="Email" />
+      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+      <input {...form.bind('password')} type="password" />
+      <button type="submit" disabled={state.isSubmitting}>
+        {state.isSubmitting ? 'Submitting...' : 'Sign Up'}
+      </button>
     </form>
   );
 }
 ```
 
-### Vue
+### Vue 3
 
 ```typescript
-import { createForm } from '@vielzeug/formit';
-import { reactive, onMounted, onUnmounted } from 'vue';
-
-export function useForm<T>(config) {
-  const form = createForm<T>(config);
-  const state = reactive(form.getStateSnapshot());
-
-  let unsubscribe: (() => void) | null = null;
-
-  onMounted(() => {
-    unsubscribe = form.subscribe((newState) => {
-      Object.assign(state, newState);
-    });
-  });
-
-  onUnmounted(() => {
-    unsubscribe?.();
-  });
-
+// composables/useForm.ts
+import { ref, onMounted, onUnmounted } from 'vue';
+import { createForm, type FormInit } from '@vielzeug/formit';
+export function useForm(init: FormInit) {
+  const form = createForm(init);
+  const state = ref(form.snapshot());
+  let unsubscribe;
+  onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+  onUnmounted(() => unsubscribe?.());
   return { form, state };
 }
+```
+
+```vue
+<!-- LoginForm.vue -->
+<script setup>
+import { useForm } from '@/composables/useForm';
+const { form, state } = useForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: '',
+  },
+});
+</script>
+<template>
+  <form @submit.prevent="form.submit((fd) => console.log(Object.fromEntries(fd)))">
+    <input v-bind="form.bind('email')" />
+    <span v-if="state.errors.get('email')">{{ state.errors.get('email') }}</span>
+    <button type="submit" :disabled="state.isSubmitting">Submit</button>
+  </form>
+</template>
 ```
 
 ### Svelte
 
-```typescript
+```svelte
+<script>
 import { createForm } from '@vielzeug/formit';
 import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email'
+    }
+  }
+});
+const state = writable(form.snapshot());
+let unsubscribe;
+onMount(() => unsubscribe = form.subscribe(s => state.set(s)));
+onDestroy(() => unsubscribe?.());
+</script>
+<form on:submit|preventDefault={() => form.submit(console.log)}>
+  <input {...form.bind('email')} />
+  {#if $state.errors.get('email')}<span>{$state.errors.get('email')}</span>{/if}
+  <button type="submit" disabled={$state.isSubmitting}>Submit</button>
+</form>
+```
 
-export function useForm<T>(config) {
-  const form = createForm<T>(config);
-  const state = writable(form.getStateSnapshot());
+## Advanced Usage
 
-  let unsubscribe: (() => void) | null = null;
+### Async Validation
 
-  onMount(() => {
-    unsubscribe = form.subscribe((newState) => {
-      state.set(newState);
-    });
-  });
+```typescript
+const form = createForm({
+  fields: {
+    username: {
+      value: '',
+      validators: async (value) => {
+        const { exists } = await fetch(`/api/check-username?username=${value}`).then((r) => r.json());
+        if (exists) return 'Username already taken';
+      },
+    },
+  },
+});
+```
 
-  onDestroy(() => {
-    unsubscribe?.();
-  });
+### Multi-Step Forms
 
-  return { form, state };
+```typescript
+const form = createForm({
+  fields: {
+    // Step 1
+    name: '',
+    email: '',
+    // Step 2
+    address: '',
+    city: '',
+  },
+});
+const steps = [{ fields: ['name', 'email'] }, { fields: ['address', 'city'] }];
+async function validateStep(stepIndex) {
+  const errors = await form.validate({ fields: steps[stepIndex].fields });
+  return errors.size === 0;
 }
+```
+
+### Dynamic Fields
+
+```typescript
+const form = createForm({
+  fields: {
+    items: [] as Array<{ name: string; price: number }>,
+  },
+});
+function addItem() {
+  const items = form.get('items') || [];
+  form.set('items', [...items, { name: '', price: 0 }]);
+}
+function removeItem(index: number) {
+  const items = form.get('items') || [];
+  form.set(
+    'items',
+    items.filter((_, i) => i !== index),
+  );
+}
+```
+
+### Form Reset
+
+```typescript
+const form = createForm({
+  fields: { name: '', email: '' },
+});
+// Reset to initial values
+form.reset();
+// Reset to new values
+form.reset({ name: 'Guest', email: '' });
 ```
 
 ## API Reference
 
-### Form Methods
+### `createForm(init?)`
 
-| Method                            | Description                                                  |
-| --------------------------------- | ------------------------------------------------------------ |
-| `bind(path, config?)`             | Create binding object for input with value, onChange, onBlur |
-| `getValue(path)`                  | Get value at path                                            |
-| `getValues()`                     | Get all form values                                          |
-| `setValue(path, value, options?)` | Set value at path                                            |
-| `setValues(values, options?)`     | Set multiple values                                          |
-| `getError(path)`                  | Get error for field                                          |
-| `getErrors()`                     | Get all errors                                               |
-| `setError(path, message?)`        | Set error for field                                          |
-| `setErrors(errors)`               | Set multiple errors                                          |
-| `resetErrors()`                   | Clear all errors                                             |
-| `isDirty(path)`                   | Check if field is modified                                   |
-| `isTouched(path)`                 | Check if field is touched                                    |
-| `markTouched(path)`               | Mark field as touched                                        |
-| `validateField(path, signal?)`    | Validate single field                                        |
-| `validateAll(options?)`           | Validate all/specific fields                                 |
-| `submit(onSubmit, options?)`      | Submit form with validation                                  |
-| `reset(initialValues?)`           | Reset form state                                             |
-| `getStateSnapshot()`              | Get immutable state snapshot                                 |
-| `subscribe(listener)`             | Subscribe to form changes                                    |
-| `subscribeField(path, listener)`  | Subscribe to field changes                                   |
+Creates a new form instance.
+
+```typescript
+type FormInit = {
+  fields?: Record<string, any>; // Plain values, nested objects, or FieldConfig
+  validate?: FormValidator; // Form-level validator
+};
+type FieldConfig = {
+  value?: any;
+  validators?: FieldValidator | FieldValidator[];
+};
+type FieldValidator = (value: FormDataEntryValue) => string | undefined | null | Promise<string | undefined | null>;
+type FormValidator = (
+  formData: FormData,
+) => Map<string, string> | undefined | null | Promise<Map<string, string> | undefined | null>;
+```
+
+### Form Instance Methods
+
+#### Value Management
+
+- `get(name: string): any` - Get field value
+- `set(name: string, value: any, options?)` - Set single field
+- `set(entries: Record | FormData, options?)` - Set multiple fields
+- `values(): Record<string, any>` - Get all as object
+- `data(): FormData` - Get native FormData
+- `clone(): FormData` - Clone FormData
+
+#### Error Management
+
+- `error(): Map<string, string>` - Get all errors
+- `error(name: string): string | undefined` - Get field error
+- `error(name: string, message: string)` - Set field error
+- `errors(nextErrors: Map | Record)` - Set multiple errors
+
+#### State Tracking
+
+- `dirty(name: string): boolean` - Check if field is dirty
+- `touch(name: string): boolean` - Check if field is touched
+- `touch(name: string, mark: true)` - Mark field as touched
+- `snapshot(): FormState` - Get state snapshot
+
+#### Validation
+
+- `validate(name: string): Promise<string | undefined>` - Validate field
+- `validate(options?): Promise<Map<string, string>>` - Validate form
+
+#### Form Operations
+
+- `submit(onSubmit, options?): Promise<any>` - Submit with validation
+- `reset(newFormData?): void` - Reset form
+- `bind(name, config?)` - Create field binding
+
+#### Subscriptions
+
+- `subscribe(listener): () => void` - Subscribe to form changes
+- `subscribeField(name, listener): () => void` - Subscribe to field changes
 
 ### Types
 
 ```typescript
-// Form configuration
-interface FormInit<TForm> {
-  initialValues?: TForm;
-  fields?: Record<string, FieldConfig>;
-  validate?: (values: TForm) => Errors | Promise<Errors>;
-}
-
-// Field configuration
-interface FieldConfig<TValue, TForm> {
-  initialValue?: TValue;
-  validators?: Validator<TValue, TForm> | Array<Validator<TValue, TForm>>;
-}
-
-type Validator<TValue, TForm> = (
-  value: TValue,
-  values: TForm,
-) => MaybePromise<string | Record<string, string> | undefined | null>;
-
-// Bind configuration
-interface BindConfig {
-  valueExtractor?: (event: any) => any;
-  markTouchedOnBlur?: boolean;
-}
-
-// Form state
-interface FormState<TForm> {
-  values: TForm;
-  errors: Errors;
-  dirty: Record<string, boolean>;
-  touched: Record<string, boolean>;
-  isSubmitting: boolean;
+type FormState = {
+  errors: Map<string, string>;
+  touched: Set<string>;
+  dirty: Set<string>;
   isValidating: boolean;
+  isSubmitting: boolean;
   submitCount: number;
-}
-
-// Validation error
+};
 class ValidationError extends Error {
-  errors: Errors;
-  type: 'validation';
+  readonly type: 'validation';
+  readonly errors: Map<string, string>;
 }
 ```
 
-## Best Practices
+## Examples
 
-### 1. Type Safety
-
-```typescript
-// Define interface for type safety
-interface UserForm {
-  name: string;
-  email: string;
-  age: number;
-}
-
-const form = createForm<UserForm>({
-  initialValues: { name: '', email: '', age: 0 },
-});
-
-// TypeScript will catch errors
-form.setValue('nam', 'test'); // ❌ Error: 'nam' doesn't exist
-form.setValue('name', 123); // ❌ Error: type mismatch
-```
-
-### 2. Validation Strategy
-
-```typescript
-// ✅ Show errors only after touch
-{form.isTouched('email') && form.getError('email') && (
-  <ErrorMessage>{form.getError('email')}</ErrorMessage>
-)}
-
-// ✅ Validate on submit, not on every change
-await form.submit(async (values) => {
-  // Validation happens automatically before this
-});
-```
-
-### 3. Performance Optimization
-
-```typescript
-// ✅ Validate only touched fields for better UX
-await form.validateAll({ onlyTouched: true });
-
-// ✅ Validate specific fields in multi-step forms
-await form.validateAll({ fields: ['step1Field1', 'step1Field2'] });
-```
-
-### 4. Error Handling
-
-```typescript
-// ✅ Handle validation vs submission errors
-try {
-  await form.submit(async (values) => {
-    await api.post('/users', values);
-  });
-} catch (error) {
-  if (error instanceof ValidationError) {
-    // Handle validation errors
-    console.log(error.errors);
-  } else {
-    // Handle API/network errors
-    showNotification('Failed to submit');
-  }
-}
-```
-
-## Comparison
-
-| Feature                   | Formit         | Formik              | React Hook Form |
-| ------------------------- | -------------- | ------------------- | --------------- |
-| Framework Agnostic        | ✅             | ❌ React only       | ❌ React only   |
-| TypeScript Support        | ✅ First-class | ✅ Good             | ✅ Good         |
-| Nested Paths              | ✅ Native      | ✅ Via dot notation | ✅ Via register |
-| Async Validation          | ✅ Built-in    | ✅ Built-in         | ✅ Via resolver |
-| Bundle Size               | **~2KB**       | ~13KB               | ~9KB            |
-| Dependencies              | 0              | React               | React           |
-| Field-Level Subscriptions | ✅             | ⚠️ Limited          | ✅              |
-| Granular Validation       | ✅             | ❌                  | ⚠️ Limited      |
-| Custom Bind Config        | ✅             | ❌                  | ❌              |
+For complete real-world examples, see the [documentation](https://github.com/vielzeug/formit).
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
+MIT
 
-## Links
+## Contributing
 
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://vielzeug.dev)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/formit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+Contributions are welcome! Please read our contributing guidelines.
 
----
+## Support
 
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
+- [Documentation](https://github.com/vielzeug/formit)
+- [Issues](https://github.com/vielzeug/formit/issues)
+- [Discussions](https://github.com/vielzeug/formit/discussions)
