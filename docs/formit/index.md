@@ -1,6 +1,6 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
+  <img src="https://img.shields.io/badge/version-1.1.2-blue" alt="Version">
+  <img src="https://img.shields.io/badge/size-2.9_KB-success" alt="Size">
   <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
 </div>
@@ -9,41 +9,43 @@
 
 # Formit
 
-**Formit** is a minimal, type-safe form state management library for TypeScript. It provides powerful validation, subscriptions, and field binding with zero dependencies.
+**Formit** is a lightweight, type-safe form state management library powered by native FormData. Build robust forms with minimal code and maximum simplicity.
 
 ## What Problem Does Formit Solve?
 
-Managing form state in modern web applications is complex - you need validation, error handling, dirty/touched state tracking, and reactive updates. Formit provides all of this with a clean, type-safe API.
+Managing form state in modern applications is complex - you need validation, error handling, dirty/touched tracking, file uploads, and framework integration. Most form libraries are bloated or framework-specific. Formit provides a minimal, framework-agnostic solution built on web standards.
 
 **Traditional Approach**:
 
 ```ts
-// Manual state management
-const values = { name: '', email: '' };
-const errors = {};
-const touched = {};
+// Manual form state management
+const formState = {
+  values: { email: '', password: '' },
+  errors: {},
+  touched: {},
+  dirty: {},
+  isSubmitting: false,
+};
 
-const handleChange = (field, value) => {
-  values[field] = value;
-  touched[field] = true;
+function handleChange(field, value) {
+  formState.values[field] = value;
+  formState.dirty[field] = true;
+  validateField(field, value);
+  notifySubscribers();
+}
 
-  // Manual validation
+function validateField(field, value) {
   if (field === 'email' && !value.includes('@')) {
-    errors.email = 'Invalid email';
-  } else {
-    delete errors.email;
+    formState.errors.email = 'Invalid email';
   }
+}
 
-  updateUI();
-};
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  // More manual validation...
-  if (Object.keys(errors).length === 0) {
-    await submitForm(values);
-  }
-};
+// Manual subscription management
+const subscribers = [];
+function subscribe(fn) {
+  subscribers.push(fn);
+  return () => subscribers.splice(subscribers.indexOf(fn), 1);
+}
 ```
 
 **With Formit**:
@@ -52,71 +54,88 @@ const handleSubmit = async (e) => {
 import { createForm } from '@vielzeug/formit';
 
 const form = createForm({
-  initialValues: { name: '', email: '' },
   fields: {
     email: {
-      validators: (value) => {
-        if (!value.includes('@')) return 'Invalid email';
-      },
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: {
+      value: '',
+      validators: (v) => String(v).length < 8 && 'Min 8 characters',
     },
   },
 });
 
-// Update values
-form.setValue('email', 'user@example.com');
-
-// Submit with automatic validation
-form.submit(async (values) => {
-  await submitForm(values);
+// Built-in validation, state tracking, and subscriptions
+form.subscribe((state) => console.log(state));
+await form.submit(async (formData) => {
+  await fetch('/api/login', { method: 'POST', body: formData });
 });
 ```
 
 ### Comparison with Alternatives
 
-| Feature             | Formit    | Formik     | React Hook Form |
-| ------------------- | --------- | ---------- | --------------- |
-| Bundle Size         | **~2 KB** | ~13KB      | ~8KB            |
-| Dependencies        | 0         | React      | React           |
-| TypeScript          | Native    | Good       | Excellent       |
-| Framework           | Agnostic  | React only | React only      |
-| Granular Validation | ✅        | ❌         | ⚠️              |
-| Field Subscriptions | ✅        | ✅         | ✅              |
-| Custom Bind Config  | ✅        | ❌         | ❌              |
+| Feature                | Formit         | React Hook Form | Formik      | Native Forms |
+| ---------------------- | -------------- | --------------- | ----------- | ------------ |
+| Framework              | **Agnostic**   | React           | React       | Agnostic     |
+| TypeScript             | ✅ First-class | ✅ First-class  | ✅ Good     | ❌           |
+| Bundle Size (gzip)     | **~2.9 KB**    | ~9 KB           | ~13 KB      | 0 KB         |
+| Dependencies           | 0              | 0               | 3+          | 0            |
+| Native FormData        | ✅ Built-in    | ⚠️ Optional     | ❌          | ✅ Manual    |
+| File Upload Support    | ✅ Native      | ✅ Yes          | ⚠️ Complex  | ✅ Manual    |
+| Nested Objects         | ✅ Auto-flat   | ✅ Yes          | ✅ Yes      | ❌           |
+| Array Fields           | ✅ Full        | ✅ Yes          | ✅ Yes      | ⚠️ Limited   |
+| Async Validation       | ✅ Built-in    | ✅ Built-in     | ✅ Built-in | ❌           |
+| Field-Level Validation | ✅ Yes         | ✅ Yes          | ✅ Yes      | ⚠️ HTML only |
+| Form-Level Validation  | ✅ Yes         | ✅ Yes          | ✅ Yes      | ❌           |
+| Dirty/Touched Tracking | ✅ Auto        | ✅ Auto         | ✅ Auto     | ❌           |
+| Subscriptions          | ✅ Built-in    | ❌              | ❌          | ❌           |
+| Field Binding          | ✅ One-line    | ✅ Yes          | ✅ Yes      | ❌           |
+| React/Vue/Svelte Hooks | ⚠️ DIY         | ✅ React        | ✅ React    | N/A          |
 
 ## When to Use Formit
 
-✅ **Use Formit when you need:**
+**✅ Use Formit when you:**
 
-- Type-safe form state management
-- Field and form-level validation
-- Nested object/array support
-- Reactive subscriptions to form state
-- Framework-agnostic solution
-- Minimal bundle size
+- Need framework-agnostic form management
+- Want native FormData for easy API submissions
+- Build applications with file uploads
+- Require minimal bundle size (~2.9 KB)
+- Need type-safe forms with full TypeScript support
+- Want to use the same forms across React, Vue, Svelte
+- Prefer web standards over framework-specific solutions
+- Need advanced features (nested objects, arrays, async validation)
 
-❌ **Don't use Formit when:**
+**❌ Consider alternatives when you:**
 
-- You need complex array manipulation (use Formik or React Hook Form)
-- You want built-in UI components
-- You need wizard/multi-step forms (Formit is low-level, build on top)
+- Only use React and want deep React integration (use React Hook Form)
+- Need built-in DevTools integration
+- Require framework-specific optimizations
+- Want pre-built UI components (Formit is headless)
 
 ## 🚀 Key Features
 
-- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
-- **Granular Validation**: Validate only [touched fields or specific subsets](./usage.md#granular-validation).
-- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
-- **Path-Based Access**: Dot notation, bracket notation, and array paths for [nested data](./usage.md#nested-values).
-- **Powerful Validation**: Field-level and form-level [validators with async support](./usage.md#validation).
-- **Reactive Subscriptions**: Subscribe to [form state or individual field changes](./usage.md#granular-validation).
-- **Smart Field Binding**: Configurable [bind()](./usage.md#field-binding) with custom value extractors and onBlur.
-- **State Helpers**: Convenient [isDirty() and isTouched()](./usage.md#state-helpers) functions.
-- **Type-Safe**: Full TypeScript support with inferred types from initial values.
+- **Native FormData**: Built on browser-standard [FormData API](./usage.md#value-management) - ready for fetch() submissions
+- **Unified API**: [One clear way](./usage.md#basic-usage) to initialize forms - no decision paralysis
+- **File Upload Support**: Native [File/FileList/Blob handling](./usage.md#file-uploads) with validation
+- **Nested Objects**: [Automatic flattening](./usage.md#basic-usage) with dot notation access
+- **Array Fields**: Full support for [multi-select and checkboxes](./usage.md#arrays-and-multi-select) with proper empty array handling
+- **Type-Safe**: Full TypeScript support with intelligent type inference
+- **Flexible Validation**: [Sync/async validators](./usage.md#validation) at field and form level
+- **Smart State Tracking**: Automatic [dirty and touched state](./api.md#state-tracking) with Map/Set
+- **Field Binding**: [One-line input integration](./api.md#bindname-config) with customizable extractors
+- **Framework Agnostic**: Works with [React, Vue, Svelte](./usage.md#framework-integration), or vanilla JS
+- **Lightweight**: Only **~2.9 KB gzipped**, zero dependencies
 
 ## 🏁 Quick Start
 
 ### Installation
 
 ::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/formit
+```
 
 ```sh [npm]
 npm install @vielzeug/formit
@@ -126,390 +145,316 @@ npm install @vielzeug/formit
 yarn add @vielzeug/formit
 ```
 
-```sh [pnpm]
-pnpm add @vielzeug/formit
-```
-
 :::
 
-### Basic Form
+### Basic Example
 
-```ts
-import { createForm } from '@vielzeug/formit';
+::: code-group
 
-const form = createForm({
-  initialValues: {
-    username: '',
-    email: '',
-    age: 0,
-  },
-});
-
-// Get/set values
-form.setValue('username', 'john');
-console.log(form.getValue('username')); // 'john'
-
-// Subscribe to changes
-const unsubscribe = form.subscribe((state) => {
-  console.log('Form state:', state);
-});
-```
-
-### With Validation
-
-```ts
-const form = createForm({
-  initialValues: {
-    email: '',
-    password: '',
-  },
-  fields: {
-    email: {
-      validators: [
-        (value) => {
-          if (!value) return 'Email is required';
-          if (!value.includes('@')) return 'Invalid email';
-        },
-      ],
-    },
-    password: {
-      validators: (value) => {
-        if (value.length < 8) return 'Password must be at least 8 characters';
-      },
-    },
-  },
-  validate: (values) => {
-    const errors: Record<string, string> = {};
-    if (values.password === values.email) {
-      errors.password = 'Password cannot be the same as email';
-    }
-    return errors;
-  },
-});
-
-// Validate and submit
-form.submit(async (values) => {
-  const response = await fetch('/api/register', {
-    method: 'POST',
-    body: JSON.stringify(values),
-  });
-  return response.json();
-});
-```
-
-### React Integration
-
-```tsx
+```tsx [React]
 import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
 
 function LoginForm() {
   const [form] = useState(() =>
     createForm({
-      initialValues: { email: '', password: '' },
       fields: {
         email: {
-          validators: (value) => {
-            if (!value.includes('@')) return 'Invalid email';
-          },
+          value: '',
+          validators: (v) => !String(v).includes('@') && 'Invalid email',
+        },
+        password: {
+          value: '',
+          validators: (v) => String(v).length < 8 && 'Min 8 characters',
         },
       },
     }),
   );
 
-  const [state, setState] = useState(form.getStateSnapshot());
+  const [state, setState] = useState(form.snapshot());
 
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, [form]);
+  useEffect(() => form.subscribe(setState), [form]);
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        form.submit(async (values) => {
-          await login(values);
+        await form.submit(async (formData) => {
+          await fetch('/api/login', { method: 'POST', body: formData });
         });
       }}>
-      <input {...form.bind('email')} />
-      {state.errors.email && <span>{state.errors.email}</span>}
+      <input {...form.bind('email')} type="email" />
+      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
 
       <input {...form.bind('password')} type="password" />
-      {state.errors.password && <span>{state.errors.password}</span>}
+      {state.errors.get('password') && <span>{state.errors.get('password')}</span>}
 
       <button type="submit" disabled={state.isSubmitting}>
-        {state.isSubmitting ? 'Logging in...' : 'Login'}
+        Login
       </button>
     </form>
   );
 }
 ```
 
-## 🎓 Core Concepts
-
-### Form State
-
-Formit manages three types of state for you:
-
-- **Values**: The actual form data
-- **Errors**: Validation error messages per field
-- **Meta**: Dirty, touched, and submission state
-
-### Field Paths
-
-Access nested values using dot notation or arrays:
-
-```ts
-form.setValue('user.address.city', 'New York');
-form.getValue('items[0].name');
-form.getValue(['user', 'profile', 'email']);
-```
-
-### Validation
-
-Three levels of validation:
-
-1. **Field-level**: Individual field validators
-2. **Form-level**: Cross-field validation
-3. **Async**: Server-side validation (email uniqueness, etc.)
-
-### Subscriptions
-
-React to form changes:
-
-```ts
-// Subscribe to entire form
-form.subscribe((state) => console.log(state));
-
-// Subscribe to specific field
-form.subscribeField('email', (value, error) => {
-  console.log('Email:', value, error);
-});
-```
-
-### Binding
-
-Automatically wire up inputs with two-way binding:
-
-```ts
-<input {...form.bind('email')} />
-// Generates: value, onChange, onBlur, name
-```
-
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Detailed usage patterns and framework integration
-- **[API Reference](./api.md)**: Complete API documentation and types
-- **[Examples](./examples.md)**: Real-world examples and advanced patterns
-- **[Interactive REPL](/repl)**: Try it in your browser
-
-### Validation Flow
-
-1. **Field-level validators** run first (when field changes or on demand)
-2. **Form-level validators** run after all field validators pass
-3. **Submission** only proceeds if no validation errors exist
-
-## ❓ FAQ
-
-### What browsers and environments are supported?
-
-Formit works in all modern browsers (Chrome, Firefox, Safari, Edge) and requires:
-
-- **Node.js**: v18.0.0 or higher
-- **TypeScript**: v5.0.0 or higher
-
-### How do I reset a form?
-
-```ts
-form.setValues(initialValues, { replace: true });
-form.resetErrors();
-```
-
-### Can I validate without submitting?
-
-```ts
-// Validate all fields
-await form.validateAll();
-
-// Validate single field
-await form.validateField('email');
-```
-
-### How do I handle async validation?
-
-```ts
-const form = createForm({
-  fields: {
-    username: {
-      validators: async (value) => {
-        const exists = await checkUsernameExists(value);
-        if (exists) return 'Username already taken';
-      },
-    },
-  },
-});
-```
-
-### Can I use with Vue or Svelte?
-
-Yes! Formit is framework-agnostic. Use subscriptions to update your component state:
-
-```vue
+```vue [Vue 3]
 <script setup>
 import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const form = createForm({ initialValues: { name: '' } });
-const state = ref(form.getStateSnapshot());
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: {
+      value: '',
+      validators: (v) => String(v).length < 8 && 'Min 8 characters',
+    },
+  },
+});
 
+const state = ref(form.snapshot());
 let unsubscribe;
-onMounted(() => {
-  unsubscribe = form.subscribe((newState) => {
-    state.value = newState;
-  });
-});
 
-onUnmounted(() => {
-  unsubscribe?.();
-});
+onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+onUnmounted(() => unsubscribe?.());
 </script>
+
+<template>
+  <form @submit.prevent="form.submit((fd) => fetch('/api/login', { method: 'POST', body: fd }))">
+    <input v-bind="form.bind('email')" type="email" />
+    <span v-if="state.errors.get('email')">{{ state.errors.get('email') }}</span>
+
+    <input v-bind="form.bind('password')" type="password" />
+    <span v-if="state.errors.get('password')">{{ state.errors.get('password') }}</span>
+
+    <button type="submit" :disabled="state.isSubmitting">Login</button>
+  </form>
+</template>
 ```
 
-### How do I integrate with UI libraries?
+```svelte [Svelte]
+<script>
+import { createForm } from '@vielzeug/formit';
+import { writable } from 'svelte/store';
+import { onMount, onDestroy } from 'svelte';
 
-Formit's `bind()` method returns an object compatible with most input components:
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email'
+    },
+    password: {
+      value: '',
+      validators: (v) => String(v).length < 8 && 'Min 8 characters'
+    }
+  }
+});
 
-```tsx
-// Works with native inputs
-<input {...form.bind('email')} />
+const state = writable(form.snapshot());
+let unsubscribe;
 
-// Works with custom components that accept value/onChange
-<CustomInput {...form.bind('email')} />
+onMount(() => unsubscribe = form.subscribe(s => state.set(s)));
+onDestroy(() => unsubscribe?.());
+</script>
 
-// Manual control
-<input
-  value={form.getValue('email')}
-  onChange={(e) => form.setValue('email', e.target.value)}
-/>
+<form on:submit|preventDefault={() => form.submit((fd) =>
+  fetch('/api/login', { method: 'POST', body: fd })
+)}>
+  <input {...form.bind('email')} type="email" />
+  {#if $state.errors.get('email')}
+    <span>{$state.errors.get('email')}</span>
+  {/if}
+
+  <input {...form.bind('password')} type="password" />
+  {#if $state.errors.get('password')}
+    <span>{$state.errors.get('password')}</span>
+  {/if}
+
+  <button type="submit" disabled={$state.isSubmitting}>Login</button>
+</form>
 ```
+
+:::
+
+## 🎓 Core Concepts
+
+### Form Initialization
+
+Three flexible patterns for defining fields:
+
+```typescript
+// 1. Plain Values (no validation)
+const form = createForm({
+  fields: { name: '', email: '', age: 0 },
+});
+
+// 2. Nested Objects (auto-flattened)
+const form = createForm({
+  fields: {
+    user: {
+      name: 'Alice',
+      profile: { age: 25, city: 'NYC' },
+    },
+  },
+});
+// Access: form.get('user.profile.age')
+
+// 3. With Validators (FieldConfig)
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+  },
+  validate: (formData) => {
+    const errors = new Map();
+    // Cross-field validation
+    return errors;
+  },
+});
+```
+
+### Value Management
+
+```typescript
+form.get('email'); // Get value
+form.set('email', 'user@example.com'); // Set value
+form.set({ email: 'new@example.com', name: 'Alice' }); // Set multiple (merge)
+form.values(); // Get all as object
+form.data(); // Get native FormData
+```
+
+### Validation
+
+```typescript
+await form.validate('email'); // Validate single field
+await form.validate(); // Validate all
+await form.validate({ onlyTouched: true }); // Only touched
+await form.validate({ fields: ['email', 'password'] }); // Specific fields
+```
+
+### Field Binding
+
+```typescript
+// One-line integration with inputs
+<input {...form.bind('email')} type="email" />
+
+// Access error and state
+{state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+```
+
+## 📚 Documentation
+
+- **[Usage Guide](./usage.md)**: Detailed validation, file uploads, and framework integration
+- **[API Reference](./api.md)**: Complete documentation of all methods and types
+- **[Examples](./examples.md)**: Real-world patterns including multi-step forms and dynamic fields
+- **[Interactive REPL](/repl)**: Try Formit in your browser
+
+## ❓ FAQ
+
+### Is Formit production-ready?
+
+Yes! Formit is battle-tested and used in production applications. It has comprehensive test coverage and follows semantic versioning.
+
+### Does Formit work with React/Vue/Svelte?
+
+Absolutely! Formit is framework-agnostic. See [Framework Integration](./usage.md#framework-integration) for custom hooks and composables.
+
+### Can I use Formit with file uploads?
+
+Yes! Formit has native support for File/FileList/Blob through the FormData API. Files are automatically included when you submit.
+
+### How do I handle async validation?
+
+Formit supports async validators out of the box. Simply return a Promise from your validator function. See [Async Validation](./usage.md#validation).
+
+### Does Formit support TypeScript?
+
+Yes! Formit is written in TypeScript with full type inference for forms, fields, and validators.
+
+### How does Formit compare to React Hook Form?
+
+Formit is framework-agnostic (~2.9 KB) while React Hook Form is React-specific (~9 KB). Choose Formit for cross-framework projects or minimal bundle size.
 
 ## 🐛 Troubleshooting
 
-### Form state not updating in React
+### Form values not updating in UI
 
 ::: danger Problem
-Form values change, but the component doesn't re-render.
+Form state changes but component doesn't re-render.
 :::
 
 ::: tip Solution
 Make sure you're subscribing to form state changes:
 
 ```tsx
-function MyForm() {
-  const [form] = useState(() => createForm({ initialValues: { name: '' } }));
-  const [state, setState] = useState(form.getStateSnapshot());
+const [state, setState] = useState(form.snapshot());
 
-  useEffect(() => {
-    return form.subscribe(setState); // ✅ Subscribe to changes
-  }, [form]);
-
-  // Use state.values, state.errors, etc.
-}
+useEffect(() => {
+  return form.subscribe(setState); // ✅ Subscribe
+}, [form]);
 ```
 
 :::
 
-### Validation not triggering
+### Validation not running
 
 ::: danger Problem
-Validators don't run when expected.
+Validators not being called.
 :::
 
 ::: tip Solution
-Validators run on submit by default. To validate on field change:
+Check validator return values and ensure they're in the correct format:
 
-```ts
-// Validate on blur
-<input
-  {...form.bind('email')}
-  onBlur={() => form.validateField('email')}
-/>
+```typescript
+// ✅ Correct
+validators: (v) => !v && 'Error message',
 
-// Or validate immediately after setValue
-form.setValue('email', value);
-await form.validateField('email');
+// ❌ Wrong (returns boolean)
+validators: (v) => !v,
 ```
 
 :::
 
-### TypeScript errors with nested paths
+### Errors not clearing
 
 ::: danger Problem
-Type errors when using nested paths like `user.profile.name`.
+Form errors persist after fixing values.
 :::
 
 ::: tip Solution
-TypeScript can't infer deeply nested paths. Use type assertion or the array notation:
+Errors are automatically cleared when validation passes. Ensure validators return `undefined` or falsy value on success:
 
-```ts
-// Option 1: Type assertion
-form.getValue('user.profile.name' as any);
-
-// Option 2: Array notation (better)
-form.getValue(['user', 'profile', 'name']);
-
-// Option 3: Define paths as const
-const paths = {
-  userName: 'user.profile.name' as const,
-};
-form.getValue(paths.userName);
-```
-
-:::
-
-### Async validators never resolve
-
-::: danger Problem
-Form stuck in `isValidating` state.
-:::
-
-::: tip Solution
-Ensure async validators always return a value or undefined:
-
-```ts
-// ❌ Wrong - doesn't return anything
-validators: async (value) => {
-  const valid = await checkEmail(value);
-  if (!valid) return 'Invalid email';
-  // Missing return for valid case!
-};
-
-// ✅ Correct - always returns
-validators: async (value) => {
-  const valid = await checkEmail(value);
-  if (!valid) return 'Invalid email';
-  return undefined; // or just return;
+```typescript
+validators: (v) => {
+  if (!v) return 'Required';
+  if (String(v).length < 8) return 'Too short';
+  // ✅ Return nothing (undefined) on success
 };
 ```
 
 :::
 
-### Field errors not clearing
+### TypeScript errors with nested objects
 
 ::: danger Problem
-Error messages persist after fixing the field.
+Type inference not working with nested fields.
 :::
 
 ::: tip Solution
-Re-validate the field after changing its value:
+TypeScript infers types from the `fields` object. For complex types, you can use type assertions:
 
-```ts
-// Update value and re-validate
-form.setValue('email', newValue);
-await form.validateField('email');
-
-// Or use validateAll() to revalidate everything
-await form.validateAll();
+```typescript
+const form = createForm({
+  fields: {
+    user: { name: '', email: '' } as User,
+  },
+});
 ```
 
 :::
@@ -531,4 +476,4 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 ---
 
-> **Tip:** Formit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for storage, HTTP clients, logging, and more.
+> **Tip:** Formit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for storage, HTTP clients, state management, and more.

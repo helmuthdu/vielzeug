@@ -129,8 +129,6 @@ await withMock(store, { count: 77 }, async () => {
 console.log(store.get().count); // Original value
 ```
 
----
-
 ## Store Class
 
 ### Methods
@@ -508,8 +506,6 @@ await store.runInScope(
 console.log(store.get()); // Parent unchanged
 ```
 
----
-
 ## Utility Functions
 
 ### shallowEqual()
@@ -571,8 +567,6 @@ const state = { a: 1, b: 2 };
 const result = shallowMerge(state, { b: 3, c: 4 });
 // { a: 1, b: 3, c: 4 }
 ```
-
----
 
 ## Type Definitions
 
@@ -650,8 +644,6 @@ type StoreOptions<T> = {
   equals?: EqualityFn<T>;
 };
 ```
-
----
 
 ## Behavior Notes
 

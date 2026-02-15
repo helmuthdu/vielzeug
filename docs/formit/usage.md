@@ -1,4 +1,4 @@
-# Formit Usage Guide
+# Usage Guide
 
 Complete guide to installing and using Formit in your projects.
 
@@ -10,142 +10,102 @@ This guide covers API usage and basic patterns. For complete application example
 
 [[toc]]
 
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/formit
-```
-
-```sh [npm]
-npm install @vielzeug/formit
-```
-
-```sh [yarn]
-yarn add @vielzeug/formit
-```
-
-:::
-
-## Import
-
-```ts
-import { createForm } from '@vielzeug/formit';
-// Optional: Import types
-import type { FormInstance, FormState, FormInit } from '@vielzeug/formit';
-```
-
 ## Basic Usage
 
 ### Creating a Form
 
-```ts
-import { createForm } from '@vielzeug/formit';
+Three ways to initialize fields:
 
+**Plain Values:**
+
+```typescript
 const form = createForm({
-  initialValues: {
-    username: '',
+  fields: {
+    name: '',
     email: '',
     age: 0,
+  },
+});
+```
+
+**Nested Objects:**
+
+```typescript
+const form = createForm({
+  fields: {
+    user: {
+      name: 'Alice',
+      profile: {
+        age: 25,
+        city: 'NYC',
+      },
+    },
+  },
+});
+
+// Access with dot notation
+form.get('user.profile.age'); // '25'
+```
+
+**With Validators:**
+
+```typescript
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
   },
 });
 ```
 
 ### Reading and Writing Values
 
-```ts
-// Get all values
-const values = form.getValues();
-console.log(values); // { username: '', email: '', age: 0 }
+```typescript
+// Get value
+const email = form.get('email');
 
-// Get single value
-const email = form.getValue('email');
-
-// Set single value
-form.setValue('email', 'user@example.com');
+// Set value
+form.set('email', 'user@example.com');
 
 // Set multiple values
-form.setValues({
-  username: 'johndoe',
-  email: 'john@example.com',
+form.set({
+  email: 'user@example.com',
+  name: 'Alice',
 });
 
-// Replace all values
-form.setValues({ username: 'janedoe' }, { replace: true });
-```
+// Get all values
+const all = form.values();
 
-### Nested Values
-
-```ts
-const form = createForm({
-  initialValues: {
-    user: {
-      profile: {
-        name: '',
-        email: '',
-      },
-      settings: {
-        notifications: true,
-      },
-    },
-    items: [
-      { id: 1, name: 'Item 1' },
-      { id: 2, name: 'Item 2' },
-    ],
-  },
-});
-
-// Access nested values
-form.getValue('user.profile.name');
-form.getValue('user.settings.notifications');
-form.getValue('items[0].name');
-form.getValue(['items', 1, 'name']);
-
-// Set nested values
-form.setValue('user.profile.name', 'John Doe');
-form.setValue('items[0].name', 'Updated Item');
+// Get FormData
+const formData = form.data();
 ```
 
 ## Validation
 
 ### Field-Level Validators
 
-```ts
+Single or multiple validators per field:
+
+```typescript
 const form = createForm({
-  initialValues: {
-    email: '',
-    password: '',
-    age: 0,
-  },
   fields: {
     email: {
-      validators: (value) => {
-        if (!value) return 'Email is required';
-        if (!value.includes('@')) return 'Invalid email format';
-        if (value.length > 100) return 'Email too long';
-      },
-    },
-    password: {
+      value: '',
       validators: [
-        (value) => {
-          if (!value) return 'Password is required';
-        },
-        (value) => {
-          if (value.length < 8) return 'Must be at least 8 characters';
-        },
-        (value) => {
-          if (!/[A-Z]/.test(value)) return 'Must contain uppercase letter';
-        },
-        (value) => {
-          if (!/[0-9]/.test(value)) return 'Must contain a number';
-        },
+        (v) => !v && 'Email is required',
+        (v) => v && !String(v).includes('@') && 'Invalid email format',
+        (v) => v && String(v).length > 100 && 'Email too long',
       ],
     },
-    age: {
-      validators: (value) => {
-        if (value < 18) return 'Must be at least 18 years old';
-        if (value > 120) return 'Invalid age';
+    password: {
+      value: '',
+      validators: (v) => {
+        if (!v) return 'Password is required';
+        if (String(v).length < 8) return 'Min 8 characters';
+        if (!/[A-Z]/.test(String(v))) return 'Must contain uppercase';
+        if (!/[0-9]/.test(String(v))) return 'Must contain number';
       },
     },
   },
@@ -154,29 +114,29 @@ const form = createForm({
 
 ### Form-Level Validators
 
-```ts
+Cross-field validation:
+
+```typescript
 const form = createForm({
-  initialValues: {
+  fields: {
     password: '',
     confirmPassword: '',
     startDate: '',
     endDate: '',
   },
-  validate: (values) => {
-    const errors: Record<string, string> = {};
+  validate: (formData) => {
+    const errors = new Map();
 
     // Password matching
-    if (values.password !== values.confirmPassword) {
-      errors.confirmPassword = 'Passwords must match';
+    if (formData.get('password') !== formData.get('confirmPassword')) {
+      errors.set('confirmPassword', 'Passwords must match');
     }
 
     // Date range validation
-    if (values.startDate && values.endDate) {
-      const start = new Date(values.startDate);
-      const end = new Date(values.endDate);
-      if (start > end) {
-        errors.endDate = 'End date must be after start date';
-      }
+    const start = new Date(String(formData.get('startDate')));
+    const end = new Date(String(formData.get('endDate')));
+    if (start > end) {
+      errors.set('endDate', 'End date must be after start date');
     }
 
     return errors;
@@ -186,392 +146,409 @@ const form = createForm({
 
 ### Async Validation
 
-```ts
+```typescript
 const form = createForm({
   fields: {
     username: {
+      value: '',
       validators: async (value) => {
-        if (!value) return 'Username is required';
+        if (!value) return 'Username required';
 
-        // Check if username exists
         const response = await fetch(`/api/check-username?username=${value}`);
         const { exists } = await response.json();
 
-        if (exists) return 'Username is already taken';
-      },
-    },
-    email: {
-      validators: async (value, values) => {
-        // Access other form values
-        if (!value) return 'Email is required';
-
-        const response = await fetch('/api/check-email', {
-          method: 'POST',
-          body: JSON.stringify({ email: value, username: values.username }),
-        });
-
-        const { available } = await response.json();
-        if (!available) return 'Email is already registered';
+        if (exists) return 'Username already taken';
       },
     },
   },
 });
 ```
 
-### Triggering Validation
+### Manual Validation
 
-```ts
-// Validate single field
-const error = await form.validateField('email');
-if (error) {
-  console.log('Validation error:', error);
-}
+```typescript
+// Validate specific field
+const error = await form.validate('email');
 
 // Validate all fields
-const errors = await form.validateAll();
-if (Object.keys(errors).length > 0) {
-  console.log('Form has errors:', errors);
-}
+const errors = await form.validate();
 
-// Validate only touched fields (better UX)
-const errors = await form.validateAll({ onlyTouched: true });
+// Validate only touched fields
+const errors = await form.validate({ onlyTouched: true });
 
-// Validate specific fields (e.g., for multi-step forms)
-const errors = await form.validateAll({ fields: ['email', 'password'] });
+// Validate specific fields
+const errors = await form.validate({ fields: ['email', 'password'] });
+```
 
-// Validation is automatic on submit
-form.submit(async (values) => {
-  // This only runs if validation passes
-  await api.post('/users', values);
+## File Uploads
+
+### Single File
+
+```typescript
+const form = createForm({
+  fields: {
+    avatar: null,
+    title: '',
+  },
+});
+
+// Handle file input
+const fileInput = document.querySelector('input[type="file"]');
+fileInput.addEventListener('change', (e) => {
+  form.set('avatar', e.target.files[0]);
+});
+
+// Submit
+await form.submit(async (formData) => {
+  await fetch('/api/upload', {
+    method: 'POST',
+    body: formData, // FormData ready with file
+  });
 });
 ```
 
-### Error Management
+### Multiple Files
 
-```ts
-// Get all errors
-const errors = form.getErrors();
+```typescript
+const form = createForm({
+  fields: {
+    documents: [],
+  },
+});
 
-// Get specific error
-const emailError = form.getError('email');
+// Handle FileList
+form.set('documents', fileInput.files);
 
-// Set custom error
-form.setError('email', 'This email is banned');
-
-// Set multiple errors
-form.setErrors({ email: 'Invalid', password: 'Too weak' });
-
-// Clear error
-form.setError('email');
-
-// Clear all errors
-form.resetErrors();
+// Or manually build array
+form.set('documents', Array.from(fileInput.files));
 ```
 
-### State Helpers
+### File Validation
 
-```ts
-// Check if field is dirty (modified)
-if (form.isDirty('email')) {
-  console.log('Email has been changed');
-}
+```typescript
+const form = createForm({
+  fields: {
+    avatar: {
+      value: null,
+      validators: (value) => {
+        if (!value) return 'Avatar is required';
 
-// Check if field is touched (user interacted)
-if (form.isTouched('password')) {
-  console.log('User has focused password field');
-}
+        const file = value as File;
+        const maxSize = 5 * 1024 * 1024; // 5MB
 
-// Conditional rendering based on state
-{form.isTouched('email') && form.getError('email') && (
-  <ErrorMessage>{form.getError('email')}</ErrorMessage>
-)}
-
-// Check if entire form is dirty
-const state = form.getStateSnapshot();
-const hasChanges = Object.values(state.dirty).some(Boolean);
+        if (file.size > maxSize) return 'File too large (max 5MB)';
+        if (!file.type.startsWith('image/')) return 'Must be an image';
+      },
+    },
+  },
+});
 ```
 
-### Field Binding
+## Arrays and Multi-Select
 
-```ts
-// Basic binding (includes value, onChange, onBlur, name)
-<input {...form.bind('email')} />
+### Basic Array Handling
 
-// Custom value extractor for select, checkbox, etc.
-const selectBinding = form.bind('category', {
-  valueExtractor: (e) => e.target.selectedOptions[0].value
+```typescript
+const form = createForm({
+  fields: {
+    tags: ['javascript', 'typescript'],
+    interests: [],
+  },
 });
 
-const checkboxBinding = form.bind('agreed', {
-  valueExtractor: (e) => e.target.checked
+// Get array
+const tags = form.get('tags'); // ['javascript', 'typescript']
+
+// Set array
+form.set('tags', ['vue', 'react']);
+
+// Empty arrays work correctly
+form.set('tags', []);
+console.log(form.get('tags')); // [] not undefined
+```
+
+### Multi-Select Inputs
+
+```typescript
+const form = createForm({
+  fields: {
+    skills: {
+      value: [],
+      validators: (v) => Array.isArray(v) && v.length === 0 && 'Select at least one'
+    }
+  }
 });
 
-// Disable auto-touch on blur
-const binding = form.bind('field', {
-  markTouchedOnBlur: false
+// Bind to select element
+<select multiple {...form.bind('skills')}>
+  <option value="js">JavaScript</option>
+  <option value="ts">TypeScript</option>
+  <option value="react">React</option>
+</select>
+```
+
+### Checkboxes
+
+```typescript
+const form = createForm({
+  fields: {
+    interests: []
+  }
 });
 
-// The binding includes:
-const binding = form.bind('name');
-binding.value;      // Current value
-binding.onChange;   // Change handler
-binding.onBlur;     // Blur handler (marks as touched)
-binding.name;       // Field key
-binding.set;        // Setter function
+// Handle checkbox change
+function handleCheckbox(value: string, checked: boolean) {
+  const current = form.get('interests') || [];
+  const updated = checked
+    ? [...current, value]
+    : current.filter(v => v !== value);
+  form.set('interests', updated);
+}
+
+// Usage
+<input
+  type="checkbox"
+  value="coding"
+  checked={(form.get('interests') || []).includes('coding')}
+  onChange={(e) => handleCheckbox('coding', e.target.checked)}
+/>
+```
+
+### Array Validation
+
+```typescript
+const form = createForm({
+  fields: {
+    emails: {
+      value: [],
+      validators: (value) => {
+        if (!Array.isArray(value)) return 'Must be an array';
+        if (value.length === 0) return 'At least one email required';
+        if (value.length > 10) return 'Maximum 10 emails';
+
+        // Validate each item
+        for (let i = 0; i < value.length; i++) {
+          const email = String(value[i]);
+          if (!email.includes('@')) {
+            return `Email #${i + 1} is invalid`;
+          }
+        }
+      },
+    },
+  },
+});
 ```
 
 ## Framework Integration
 
-Formit is framework-agnostic. Below are generic integration patterns for popular frameworks.
+### React
 
-::: code-group
+**Basic Example:**
 
-```tsx [React]
+```tsx
 import { createForm } from '@vielzeug/formit';
 import { useEffect, useState } from 'react';
 
-function LoginForm() {
+function ContactForm() {
   const [form] = useState(() =>
     createForm({
-      initialValues: { email: '', password: '' },
       fields: {
-        email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+        name: '',
+        email: {
+          value: '',
+          validators: (v) => !String(v).includes('@') && 'Invalid email',
+        },
+        message: '',
       },
     }),
   );
 
-  const [state, setState] = useState(form.getStateSnapshot());
+  const [state, setState] = useState(form.snapshot());
+
   useEffect(() => form.subscribe(setState), [form]);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        form.submit(console.log);
+        form.submit(async (formData) => {
+          await fetch('/api/contact', { method: 'POST', body: formData });
+        });
       }}>
+      <input {...form.bind('name')} placeholder="Name" />
+
       <input {...form.bind('email')} placeholder="Email" />
-      {state.errors.email && <span>{state.errors.email}</span>}
+      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+
+      <textarea {...form.bind('message')} />
+
       <button type="submit" disabled={state.isSubmitting}>
-        Submit
+        {state.isSubmitting ? 'Sending...' : 'Send'}
       </button>
     </form>
   );
 }
 ```
 
-```vue [Vue 3]
+**Custom Hook:**
+
+```tsx
+import { useEffect, useState } from 'react';
+import type { FormInit } from '@vielzeug/formit';
+import { createForm } from '@vielzeug/formit';
+
+function useForm(init: FormInit) {
+  const [form] = useState(() => createForm(init));
+  const [state, setState] = useState(form.snapshot());
+
+  useEffect(() => form.subscribe(setState), [form]);
+
+  return { form, state };
+}
+
+// Usage
+function MyForm() {
+  const { form, state } = useForm({
+    fields: {
+      email: {
+        value: '',
+        validators: (v) => !String(v).includes('@') && 'Invalid',
+      },
+    },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.submit(onSubmit);
+      }}>
+      <input {...form.bind('email')} />
+      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+      <button disabled={state.isSubmitting}>Submit</button>
+    </form>
+  );
+}
+```
+
+### Vue 3
+
+**Basic Example:**
+
+```vue
 <script setup>
 import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const form = createForm({
-  initialValues: { email: '', password: '' },
   fields: {
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: '',
   },
 });
 
-const state = ref(form.getStateSnapshot());
+const state = ref(form.snapshot());
 let unsubscribe;
 
 onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
 onUnmounted(() => unsubscribe?.());
+
+const handleSubmit = async () => {
+  await form.submit(async (formData) => {
+    await fetch('/api/login', { method: 'POST', body: formData });
+  });
+};
 </script>
 
 <template>
-  <form @submit.prevent="form.submit(console.log)">
-    <input v-bind="form.bind('email')" />
-    <span v-if="state.errors.email">{{ state.errors.email }}</span>
-    <button type="submit" :disabled="state.isSubmitting">Submit</button>
+  <form @submit.prevent="handleSubmit">
+    <input v-bind="form.bind('email')" type="email" />
+    <span v-if="state.errors.get('email')">
+      {{ state.errors.get('email') }}
+    </span>
+
+    <input v-bind="form.bind('password')" type="password" />
+
+    <button type="submit" :disabled="state.isSubmitting">
+      {{ state.isSubmitting ? 'Logging in...' : 'Login' }}
+    </button>
   </form>
 </template>
 ```
 
-```svelte [Svelte]
+**Composable:**
+
+```typescript
+import { ref, onMounted, onUnmounted } from 'vue';
+import { createForm, type FormInit } from '@vielzeug/formit';
+
+export function useForm(init: FormInit) {
+  const form = createForm(init);
+  const state = ref(form.snapshot());
+  let unsubscribe;
+
+  onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+  onUnmounted(() => unsubscribe?.());
+
+  return { form, state };
+}
+```
+
+### Svelte
+
+```svelte
 <script>
 import { createForm } from '@vielzeug/formit';
 import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
 
 const form = createForm({
-  initialValues: { email: '', password: '' },
   fields: {
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' }
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email'
+    },
+    password: ''
   }
 });
 
-const state = writable(form.getStateSnapshot());
+const state = writable(form.snapshot());
 let unsubscribe;
 
 onMount(() => unsubscribe = form.subscribe(s => state.set(s)));
 onDestroy(() => unsubscribe?.());
+
+async function handleSubmit() {
+  await form.submit(async (formData) => {
+    await fetch('/api/login', { method: 'POST', body: formData });
+  });
+}
 </script>
 
-<form on:submit|preventDefault={() => form.submit(console.log)}>
-  <input {...form.bind('email')} />
-  {#if $state.errors.email}<span>{$state.errors.email}</span>{/if}
-  <button type="submit" disabled={$state.isSubmitting}>Submit</button>
+<form on:submit|preventDefault={handleSubmit}>
+  <input {...form.bind('email')} type="email" />
+  {#if $state.errors.get('email')}
+    <span>{$state.errors.get('email')}</span>
+  {/if}
+
+  <input {...form.bind('password')} type="password" />
+
+  <button type="submit" disabled={$state.isSubmitting}>
+    {$state.isSubmitting ? 'Logging in...' : 'Login'}
+  </button>
 </form>
 ```
 
-```ts [Web Component]
-import { createForm } from '@vielzeug/formit';
-
-class SimpleForm extends HTMLElement {
-  #form = createForm({
-    initialValues: { email: '' },
-    fields: { email: { validators: (v) => !v?.includes('@') && 'Invalid email' } },
-  });
-  #sub;
-
-  connectedCallback() {
-    this.innerHTML = `<form><input name="email"><button>Submit</button></form>`;
-    this.querySelector('form').onsubmit = (e) => {
-      e.preventDefault();
-      this.#form.submit(console.log);
-    };
-    this.#sub = this.#form.subscribe((s) => {
-      this.querySelector('button').disabled = s.isSubmitting;
-    });
-  }
-
-  disconnectedCallback() {
-    this.#sub?.();
-  }
-}
-customElements.define('simple-form', SimpleForm);
-```
-
-:::
-
-> **💡 See Complete Examples**: For full implementation with hooks, composables, error handling, and success states, check [Examples](./examples.md#framework-integration-examples).
-
 ## Advanced Patterns
-
-### Conditional Fields
-
-```ts
-const form = createForm({
-  initialValues: {
-    accountType: 'personal',
-    companyName: '',
-    vatNumber: '',
-  },
-});
-
-// Subscribe and conditionally validate
-form.subscribe((state) => {
-  if (state.values.accountType === 'business') {
-    // Validate business fields
-    if (!state.values.companyName) {
-      form.setError('companyName', 'Company name is required');
-    }
-  } else {
-    // Clear business field errors
-    form.setError('companyName');
-    form.setError('vatNumber');
-  }
-});
-```
-
-### Dynamic Fields
-
-```ts
-const form = createForm({
-  initialValues: {
-    fields: [] as Array<{ name: string; value: string }>,
-  },
-});
-
-// Add field
-function addField() {
-  const fields = form.getValue('fields');
-  form.setValue('fields', [...fields, { name: '', value: '' }]);
-}
-
-// Remove field
-function removeField(index: number) {
-  const fields = form.getValue('fields');
-  form.setValue(
-    'fields',
-    fields.filter((_, i) => i !== index),
-  );
-}
-
-// Update field
-function updateField(index: number, key: 'name' | 'value', value: string) {
-  form.setValue(`fields[${index}].${key}`, value);
-}
-```
-
-### Form Reset
-
-```ts
-const initialValues = {
-  name: '',
-  email: '',
-  password: '',
-};
-
-const form = createForm({ initialValues });
-
-// Reset form
-function resetForm() {
-  form.setValues(initialValues, { replace: true });
-  form.resetErrors();
-}
-```
-
-### Dirty State Tracking
-
-```ts
-const form = createForm({
-  initialValues: { name: '', email: '' },
-});
-
-// Check if form is dirty
-const state = form.getStateSnapshot();
-const isDirty = Object.values(state.dirty).some(Boolean);
-
-// Warn on navigation if dirty
-window.addEventListener('beforeunload', (e) => {
-  const state = form.getStateSnapshot();
-  const isDirty = Object.values(state.dirty).some(Boolean);
-
-  if (isDirty) {
-    e.preventDefault();
-    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-  }
-});
-```
-
-### Debounced Validation
-
-```ts
-import { debounce } from '@vielzeug/toolkit';
-
-const validateUsername = debounce(async (username: string) => {
-  const response = await fetch(`/api/check-username?username=${username}`);
-  return response.json();
-}, 500);
-
-const form = createForm({
-  fields: {
-    username: {
-      validators: async (value) => {
-        const { exists } = await validateUsername(value);
-        if (exists) return 'Username is taken';
-      },
-    },
-  },
-});
-```
 
 ### Multi-Step Forms
 
-```ts
+```typescript
 const form = createForm({
-  initialValues: {
+  fields: {
     // Step 1
     name: '',
     email: '',
@@ -579,237 +556,250 @@ const form = createForm({
     address: '',
     city: '',
     // Step 3
-    payment: '',
-  },
-  fields: {
-    name: { validators: (v) => !v && 'Required' },
-    email: { validators: (v) => !v?.includes('@') && 'Invalid email' },
-    address: { validators: (v) => !v && 'Required' },
-    city: { validators: (v) => !v && 'Required' },
-    payment: { validators: (v) => !v && 'Required' },
+    cardNumber: '',
   },
 });
 
 let currentStep = 1;
 
-async function validateCurrentStep() {
-  const fieldsToValidate =
-    {
-      1: ['name', 'email'],
-      2: ['address', 'city'],
-      3: ['payment'],
-    }[currentStep] || [];
+async function validateStep(step: number) {
+  const stepFields = {
+    1: ['name', 'email'],
+    2: ['address', 'city'],
+    3: ['cardNumber'],
+  };
 
-  // Use the new validateAll({ fields }) option
-  const errors = await form.validateAll({ fields: fieldsToValidate });
-  return Object.keys(errors).length === 0;
-    if (error) return false;
-  }
-  return true;
+  const errors = await form.validate({ fields: stepFields[step] });
+  return errors.size === 0;
 }
 
 async function nextStep() {
-  const isValid = await validateCurrentStep();
+  const isValid = await validateStep(currentStep);
   if (isValid) {
     currentStep++;
   }
 }
 
-async function previousStep() {
-  currentStep--;
-}
-
 async function submitForm() {
-  const isValid = await validateCurrentStep();
+  const isValid = await validateStep(currentStep);
   if (isValid) {
-    await form.submit(async (values) => {
-      await api.post('/complete-registration', values);
+    await form.submit(async (formData) => {
+      await fetch('/api/complete', { method: 'POST', body: formData });
     });
   }
 }
 ```
 
-### Optimistic Updates
+### Dynamic Fields
 
-```ts
+```typescript
 const form = createForm({
-  initialValues: { name: '', email: '' },
+  fields: {
+    items: [] as Array<{ name: string; quantity: number }>,
+  },
 });
 
-async function saveChanges() {
-  const previousValues = form.getValues();
-
-  try {
-    // Show success immediately
-    showToast('Saving...');
-
-    // Submit
-    await form.submit(async (values) => {
-      await api.put('/profile', values);
-    });
-
-    showToast('Saved successfully!');
-  } catch (error) {
-    // Revert on error
-    form.setValues(previousValues, { replace: true });
-    showToast('Failed to save changes');
-  }
+function addItem() {
+  const items = form.get('items') || [];
+  form.set('items', [...items, { name: '', quantity: 0 }]);
 }
+
+function removeItem(index: number) {
+  const items = form.get('items') || [];
+  form.set(
+    'items',
+    items.filter((_, i) => i !== index),
+  );
+}
+
+function updateItem(index: number, field: 'name' | 'quantity', value: any) {
+  const items = form.get('items') || [];
+  const updated = [...items];
+  updated[index] = { ...updated[index], [field]: value };
+  form.set('items', updated);
+}
+```
+
+### Conditional Validation
+
+```typescript
+const form = createForm({
+  fields: {
+    accountType: 'personal',
+    companyName: '',
+    vatNumber: '',
+  },
+});
+
+form.subscribe((state) => {
+  const accountType = form.get('accountType');
+
+  if (accountType === 'business') {
+    // Add business field validation
+    if (!form.get('companyName')) {
+      form.error('companyName', 'Company name required');
+    }
+    if (!form.get('vatNumber')) {
+      form.error('vatNumber', 'VAT number required');
+    }
+  } else {
+    // Clear business field errors
+    form.error('companyName', '');
+    form.error('vatNumber', '');
+  }
+});
+```
+
+### Dirty State Warning
+
+```typescript
+const form = createForm({
+  fields: { name: '', email: '' },
+});
+
+window.addEventListener('beforeunload', (e) => {
+  const state = form.snapshot();
+
+  if (state.dirty.size > 0) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+  }
+});
+```
+
+### Auto-Save
+
+```typescript
+const form = createForm({
+  fields: { content: '' },
+});
+
+let saveTimeout;
+
+form.subscribe((state) => {
+  if (state.dirty.size > 0) {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+      await form.submit(
+        async (formData) => {
+          await fetch('/api/auto-save', { method: 'POST', body: formData });
+        },
+        { validate: false },
+      );
+    }, 1000);
+  }
+});
+```
+
+### Reset to Initial Values
+
+```typescript
+const form = createForm({
+  fields: { name: '', email: '' },
+});
+
+// Reset to initial
+form.reset();
+
+// Reset to new values
+form.reset({ name: 'Guest', email: '' });
+```
+
+### Form Cloning
+
+```typescript
+const form1 = createForm({
+  fields: { name: 'Alice', email: 'alice@example.com' },
+});
+
+// Clone FormData
+const formData = form1.clone();
+
+// Create new form with cloned data
+const form2 = createForm({ fields: {} });
+form2.set(formData);
 ```
 
 ## Best Practices
 
-### 1. Create Form Outside Component
+### 1. Always Subscribe in Framework Effects
 
 ```tsx
-// ❌ Bad - Creates new form on every render
-function MyForm() {
-  const form = createForm({ initialValues: { name: '' } });
-  // ...
-}
+// ✅ Good
+useEffect(() => form.subscribe(setState), [form]);
 
-// ✅ Good - Form persists across renders
-function MyForm() {
-  const [form] = useState(() => createForm({ initialValues: { name: '' } }));
-  // ...
-}
+// ❌ Bad - creates memory leak
+form.subscribe(setState);
 ```
 
-### 2. Use Field Subscriptions for Performance
+### 2. Use Field Binding for Inputs
 
 ```tsx
-// ❌ Bad - Entire component re-renders on any field change
-function MyForm() {
-  const [state, setState] = useState(form.getStateSnapshot());
+// ✅ Good
+<input {...form.bind('email')} />
 
-  useEffect(() => {
-    return form.subscribe(setState);
-  }, []);
-
-  return (
-    <>
-      <input {...form.bind('field1')} />
-      <input {...form.bind('field2')} />
-      {/* 100 more fields */}
-    </>
-  );
-}
-
-// ✅ Good - Only affected components re-render
-function Field({ form, path }: { form: FormInstance; path: string }) {
-  const [field, setField] = useState({ value: '', error: undefined });
-
-  useEffect(() => {
-    return form.subscribeField(path, setField);
-  }, [form, path]);
-
-  return <input {...form.bind(path)} />;
-}
-```
-
-### 3. Validate on Blur
-
-```tsx
+// ❌ Verbose
 <input
-  {...form.bind('email')}
-  onBlur={() => {
-    form.markTouched('email');
-    form.validateField('email');
-  }}
+  name="email"
+  value={form.get('email')}
+  onChange={(e) => form.set('email', e.target.value)}
+  onBlur={() => form.touch('email', true)}
 />
 ```
 
-### 4. Show Errors After Touch
+### 3. Handle Validation Errors
 
-```tsx
-{
-  state.touched.email && state.errors.email && <span className="error">{state.errors.email}</span>;
-}
-```
-
-### 5. Disable Submit While Validating or Submitting
-
-```tsx
-<button type="submit" disabled={state.isValidating || state.isSubmitting}>
-  Submit
-</button>
-```
-
-### 6. Cleanup Subscriptions
-
-```tsx
-// React
-useEffect(() => {
-  const unsubscribe = form.subscribe(setState);
-  return unsubscribe; // Cleanup
-}, [form]);
-
-// Vue
-onUnmounted(() => {
-  unsubscribe();
-});
-
-// Svelte
-onDestroy(() => {
-  unsubscribe();
-});
-```
-
-### 7. Use TypeScript for Type Safety
-
-```ts
-interface RegistrationForm {
-  name: string;
-  email: string;
-  age: number;
-  acceptTerms: boolean;
-}
-
-const form = createForm<RegistrationForm>({
-  initialValues: {
-    name: '',
-    email: '',
-    age: 0,
-    acceptTerms: false,
-  },
-});
-
-// TypeScript will infer correct types
-const email: string = form.getValue('email'); // ✅
-const age: number = form.getValue('age'); // ✅
-```
-
-### 8. Compose Validators
-
-```ts
-// Reusable validators
-const required =
-  (message = 'Required') =>
-  (value: any) => {
-    if (!value) return message;
-  };
-
-const minLength = (min: number, message?: string) => (value: string) => {
-  if (value.length < min) {
-    return message || `Must be at least ${min} characters`;
+```typescript
+// ✅ Good
+try {
+  await form.submit(onSubmit);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    // Handle validation errors
+  } else {
+    // Handle other errors
   }
-};
+}
 
-const email = (value: string) => {
-  if (!value.includes('@')) return 'Invalid email';
-};
+// ❌ Bad - swallows validation errors
+form.submit(onSubmit).catch(console.error);
+```
 
-// Use in form
-const form = createForm({
-  fields: {
-    email: {
-      validators: [required('Email is required'), email],
-    },
-    password: {
-      validators: [required(), minLength(8)],
-    },
+### 4. Use Nested Objects for Organization
+
+```typescript
+// ✅ Good - organized
+fields: {
+  user: {
+    name: '',
+    email: ''
   },
+  address: {
+    street: '',
+    city: ''
+  }
+}
+
+// ❌ Flat - harder to manage
+fields: {
+  userName: '',
+  userEmail: '',
+  addressStreet: '',
+  addressCity: ''
+}
+```
+
+### 5. Validate on Submit, Show Errors on Blur
+
+```typescript
+const binding = form.bind('email', {
+  markTouchedOnBlur: true,
 });
+
+// Show error only if touched
+{
+  state.touched.has('email') && state.errors.get('email');
+}
 ```
 
 ## Next Steps

@@ -267,8 +267,6 @@ styleMap({
 // Result: 'color: red; font-size: 16px; background-color: #fff'
 ```
 
----
-
 ## Testing Functions
 
 ### `attach(element, container?)`
@@ -312,8 +310,6 @@ const el = await attach(document.createElement('my-component'));
 // ... test code ...
 destroy(el); // Removes element
 ```
-
----
 
 ## Component Options
 
@@ -475,8 +471,6 @@ onFormStateRestore(state, mode, el) {
   }
 }
 ```
-
----
 
 ## Web Component Instance
 
@@ -741,8 +735,6 @@ const id = el.delay(() => console.log('hi'), 1000);
 el.clear(id); // Cancel timeout
 ```
 
----
-
 ## Type Definitions
 
 ### `Template<T, S>`
@@ -784,8 +776,6 @@ type FormCallbacks<T = HTMLElement, S extends object = object> = {
   ) => void;
 };
 ```
-
----
 
 ## Best Practices
 
@@ -866,8 +856,6 @@ template: (el) => {
   return html`<div>${el.state.count}</div>`;
 };
 ```
-
----
 
 ## Migration Guide
 

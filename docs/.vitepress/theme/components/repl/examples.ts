@@ -916,7 +916,7 @@ console.log('Unsubscribed')`,
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
+  fields: {
     name: '',
     email: '',
     age: 0
@@ -924,41 +924,102 @@ const form = createForm({
 })
 
 console.log('Form created!')
-console.log('Initial values:', form.getValues())`,
+console.log('Initial values:', form.values())
+console.log('Name:', form.get('name'))
+console.log('Email:', form.get('email'))`,
       name: 'Create Form - Basic Setup',
     },
-    'dynamic-forms': {
+    'nested-values': {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
-    tags: ['javascript', 'typescript']
+  fields: {
+    user: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      profile: {
+        age: 25,
+        city: 'NYC'
+      }
+    },
+    settings: {
+      notifications: true,
+      theme: 'dark'
+    }
   }
 })
 
-console.log('Initial tags:', form.getValue('tags'))
+console.log('Nested object initialized!')
+console.log('User name:', form.get('user.name'))
+console.log('User age:', form.get('user.profile.age'))
+console.log('City:', form.get('user.profile.city'))
+console.log('Theme:', form.get('settings.theme'))
 
-// Add a tag
-const currentTags = form.getValue('tags')
-form.setValue('tags', [...currentTags, 'react'])
-console.log('After adding:', form.getValue('tags'))
+// Update nested values
+form.set('user.profile.city', 'San Francisco')
+console.log('Updated city:', form.get('user.profile.city'))
 
-// Remove a tag
-form.setValue('tags', form.getValue('tags').filter(t => t !== 'typescript'))
-console.log('After removing:', form.getValue('tags'))
+// All values (flattened)
+console.log('All values:', form.values())`,
+      name: 'Nested Values - Auto Flattening',
+    },
+    'field-operations': {
+      code: `import { createForm } from '@vielzeug/formit'
 
-// Update a specific tag
-const tags = form.getValue('tags')
-tags[0] = 'vue'
-form.setValue('tags', [...tags])
-console.log('After updating:', form.getValue('tags'))`,
-      name: 'Dynamic Forms - Array Fields',
+const form = createForm({
+  fields: {
+    name: 'Alice',
+    age: 25
+  }
+})
+
+console.log('Initial:', form.values())
+
+// Set single field
+form.set('name', 'Bob')
+console.log('After set name:', form.get('name'))
+
+// Set multiple fields (merge)
+form.set({ name: 'Charlie', age: 30 })
+console.log('After merge:', form.values())
+
+// Replace all values
+form.set({ name: 'David' }, { replace: true })
+console.log('After replace:', form.values())
+
+// Reset to initial
+form.reset()
+console.log('After reset:', form.values())`,
+      name: 'Field Operations - Get/Set',
+    },
+    'nested-fields': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({})
+
+// Set nested values using dot notation
+form.set('user.name', 'Alice')
+form.set('user.email', 'alice@example.com')
+form.set('user.address.city', 'New York')
+
+console.log('Nested values:', form.values())
+console.log('User name:', form.get('user.name'))
+console.log('City:', form.get('user.address.city'))
+
+// Arrays
+form.set('tags', ['javascript', 'typescript', 'react'])
+console.log('Tags:', form.get('tags'))
+
+// Update nested field
+form.set('user.address.city', 'San Francisco')
+console.log('Updated city:', form.get('user.address.city'))`,
+      name: 'Nested Fields - Dot Notation',
     },
     'field-binding': {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
+  fields: {
     firstName: '',
     lastName: '',
     email: ''
@@ -981,13 +1042,13 @@ firstNameBind.set('John')
 lastNameBind.set('Doe')
 emailBind.set('john.doe@example.com')
 
-console.log('Form values:', form.getValues())
+console.log('Form values:', form.values())
 
 // Check dirty state
 console.log('Dirty fields:', {
-  firstName: form.isDirty('firstName'),
-  lastName: form.isDirty('lastName'),
-  email: form.isDirty('email')
+  firstName: form.dirty('firstName'),
+  lastName: form.dirty('lastName'),
+  email: form.dirty('email')
 })`,
       name: 'Field Binding for Inputs',
     },
@@ -995,18 +1056,16 @@ console.log('Dirty fields:', {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
-    username: '',
-    email: ''
-  },
   fields: {
     username: {
+      value: '',
       validators: (value) => value ? undefined : 'Username is required'
     },
     email: {
+      value: '',
       validators: (value) => {
         if (!value) return 'Email is required'
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) {
           return 'Invalid email'
         }
       }
@@ -1015,12 +1074,13 @@ const form = createForm({
 })
 
 // Set values
-form.setValue('username', 'johndoe')
-form.setValue('email', 'john@example.com')
+form.set('username', 'johndoe')
+form.set('email', 'john@example.com')
 
 // Submit with validation
 try {
-  const result = await form.submit(async (values) => {
+  const result = await form.submit(async (formData) => {
+    const values = Object.fromEntries(formData)
     console.log('Submitting...', values)
     // Simulate API call
     await new Promise(r => setTimeout(r, 500))
@@ -1030,18 +1090,18 @@ try {
   console.log('✓ Form submitted successfully!', result)
 } catch (error) {
   if (error.type === 'validation') {
-    console.error('✗ Validation errors:', error.errors)
+    console.error('✗ Validation errors:', Object.fromEntries(error.errors))
   } else {
     console.error('✗ Submission error:', error)
   }
 }`,
-      name: 'Form Submission',
+      name: 'Form Submission with Validation',
     },
     'form-subscriptions': {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
+  fields: {
     name: '',
     email: '',
     age: 0
@@ -1051,9 +1111,9 @@ const form = createForm({
 // Subscribe to all form changes
 const unsubscribe = form.subscribe((state) => {
   console.log('Form state changed:', {
-    values: state.values,
-    errors: Object.keys(state.errors).length,
-    dirty: Object.keys(state.dirty).length,
+    values: form.values(),
+    errors: state.errors.size,
+    dirty: state.dirty.size,
     isSubmitting: state.isSubmitting
   })
 })
@@ -1069,65 +1129,71 @@ const unsubEmail = form.subscribeField('email', (field) => {
 })
 
 // Make changes
-form.setValue('name', 'Alice')
-form.setValue('email', 'alice@example.com')
-form.setValue('age', 25)
+form.set('name', 'Alice')
+form.set('email', 'alice@example.com')
+form.set('age', 25)
 
 // Cleanup
-unsubscribe()
-unsubEmail()`,
-      name: 'Form Subscriptions',
+setTimeout(() => {
+  unsubscribe()
+  unsubEmail()
+  console.log('Unsubscribed')
+}, 100)`,
+      name: 'Form Subscriptions - Reactive Updates',
     },
     'form-validation': {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
-  initialValues: {
-    email: '',
-    password: '',
-    confirmPassword: ''
-  },
   fields: {
     email: {
+      value: '',
       validators: (value) => {
         if (!value) return 'Email is required'
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) {
           return 'Invalid email format'
         }
       }
     },
     password: {
+      value: '',
       validators: (value) => {
         if (!value) return 'Password is required'
-        if (value.length < 8) return 'Password must be at least 8 characters'
+        if (String(value).length < 8) return 'Min 8 characters'
       }
     },
-    confirmPassword: {
-      validators: (value, values) => {
-        if (value !== values.password) {
-          return 'Passwords do not match'
-        }
-      }
+    confirmPassword: ''
+  },
+  validate: (formData) => {
+    const password = formData.get('password')
+    const confirm = formData.get('confirmPassword')
+    const errors = new Map()
+    
+    if (password !== confirm) {
+      errors.set('confirmPassword', 'Passwords must match')
     }
+    
+    return errors
   }
 })
 
-// Try invalid data
-form.setValue('email', 'invalid-email')
-await form.validateField('email')
-console.log('Email error:', form.getError('email'))
+// Set values
+form.set('email', 'invalid-email')
+form.set('password', 'short')
+form.set('confirmPassword', 'different')
 
-// Try valid data
-form.setValue('email', 'user@example.com')
-await form.validateField('email')
-console.log('Email error after fix:', form.getError('email'))
+// Validate
+const errors = await form.validate()
+console.log('Validation errors:', Object.fromEntries(errors))
 
-// Validate all fields
-form.setValue('password', 'short')
-form.setValue('confirmPassword', 'different')
-await form.validateAll()
-console.log('All errors:', form.getErrors())`,
-      name: 'Form Validation',
+// Fix and revalidate
+form.set('email', 'user@example.com')
+form.set('password', 'password123')
+form.set('confirmPassword', 'password123')
+
+const errors2 = await form.validate()
+console.log('After fixing:', errors2.size === 0 ? '✓ Valid' : 'Still errors')`,
+      name: 'Field & Form Validation',
     },
   },
   i18nit: {
