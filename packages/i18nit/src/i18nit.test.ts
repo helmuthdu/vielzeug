@@ -731,7 +731,7 @@ describe('I18nit', () => {
       const userNs = i18n.namespace('user');
 
       expect(userNs.t('greeting')).toBe('Hello, user!');
-      expect(userNs.t('profile')).toBe('Profile');
+      expect(userNs.t('profile.title')).toBe('Profile');
       expect(userNs.t('profile.description')).toBe('Your profile page');
     });
 
