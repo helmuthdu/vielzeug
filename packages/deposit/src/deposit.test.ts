@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import {
   Deposit,
-  type DepositDataSchema,
   type DepositStorageAdapter,
+  defineSchema,
   IndexedDBAdapter,
   LocalStorageAdapter,
   QueryBuilder,
@@ -11,13 +11,13 @@ import {
 // Define a minimal DataSchemaDef for testing
 type User = { id: number; name?: string; age?: number; city?: string };
 type TestSchemaDef = { users: User };
-const userSchema = {
+
+const userSchema = defineSchema<TestSchemaDef>()({
   users: {
-    indexes: ['name', 'age', 'city'] as Array<keyof User>,
-    key: 'id' as keyof User,
-    record: {} as User,
+    indexes: ['name', 'age', 'city'],
+    key: 'id',
   },
-} as const satisfies DepositDataSchema<TestSchemaDef>;
+});
 
 describe('QueryBuilder', () => {
   const sampleData = [
@@ -188,7 +188,8 @@ describe('LocalStorageAdapter', () => {
   describe('CRUD Operations', () => {
     test('put and get', async () => {
       await adapter.put('users', { id: 1, name: 'Alice' });
-      expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+      const result = await adapter.get('users', 1);
+      expect(result).toEqual({ id: 1, name: 'Alice' });
     });
 
     test('bulkPut and getAll', async () => {
@@ -478,18 +479,17 @@ describe('Depot', () => {
 
   test('transaction is atomic for IndexedDB with multiple tables', async () => {
     // Transaction automatically uses atomic IDBTransaction for IndexedDB
-    const idbSchema = {
+    type Post = { id: number; userId: number; title: string };
+    type MultiTableSchema = { users: User; posts: Post };
+
+    const idbSchema = defineSchema<MultiTableSchema>()({
       posts: {
-        indexes: [] as Array<keyof { id: number; userId: number; title: string }>,
-        key: 'id' as keyof { id: number; userId: number; title: string },
-        record: {} as { id: number; userId: number; title: string },
+        key: 'id',
       },
       users: {
-        indexes: [] as Array<keyof User>,
-        key: 'id' as keyof User,
-        record: {} as User,
+        key: 'id',
       },
-    } as const satisfies DepositDataSchema<any>;
+    });
 
     const idbDeposit = new Deposit({
       dbName: 'AtomicTestDB',

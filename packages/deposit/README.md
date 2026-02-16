@@ -33,7 +33,7 @@ yarn add @vielzeug/deposit
 ### Define Your Schema
 
 ```typescript
-import { Deposit, type DepositDataSchema } from '@vielzeug/deposit';
+import { Deposit, defineSchema } from '@vielzeug/deposit';
 
 interface User {
   id: string;
@@ -53,18 +53,17 @@ interface Post {
   createdAt: number;
 }
 
-const schema = {
+// Clean, type-safe schema definition
+const schema = defineSchema<{ users: User; posts: Post }>()({
   users: {
     key: 'id', // Primary key field
     indexes: ['email', 'role'], // Fields to index for fast lookups
-    record: {} as User, // Type definition
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'published', 'createdAt'],
-    record: {} as Post,
   },
-} satisfies DepositDataSchema;
+});
 ```
 
 ### Create a Depot Instance

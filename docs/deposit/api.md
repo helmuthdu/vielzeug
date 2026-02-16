@@ -758,19 +758,71 @@ type DepositDataSchema = {
 **Example:**
 
 ```ts
-const schema = {
+import { defineSchema } from '@vielzeug/deposit';
+
+// Recommended: Use defineSchema helper for clean syntax
+const schema = defineSchema<{ users: User; posts: Post }>()({
   users: {
     key: 'id',
     indexes: ['email', 'role'],
-    record: {} as { id: string; name: string; email: string; role: string },
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as { id: string; userId: string; title: string; createdAt: number },
   },
-} satisfies DepositDataSchema;
+});
 ```
+
+---
+
+### `defineSchema<S>()(schema)`
+
+Helper function to create a type-safe schema definition with clean syntax.
+
+**Generic Parameters:**
+
+- `S` - Schema definition type (maps table names to record types)
+
+**Parameters:**
+
+- `schema: { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }`
+
+**Returns:** `DepositDataSchema<S>`
+
+**Example:**
+
+```ts
+import { defineSchema } from '@vielzeug/deposit';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface Post {
+  id: number;
+  title: string;
+}
+
+// Curried function for better type inference
+const schema = defineSchema<{ users: User; posts: Post }>()({
+  users: {
+    key: 'id',
+    indexes: ['email'],
+  },
+  posts: {
+    key: 'id',
+  },
+});
+```
+
+**Benefits:**
+
+- ✅ No need for empty `record: {} as Type` declarations
+- ✅ Full type inference and autocomplete for keys and indexes
+- ✅ Clean, minimal syntax
+- ✅ Type-safe field validation
 
 ---
 

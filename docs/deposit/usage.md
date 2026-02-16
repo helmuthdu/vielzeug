@@ -43,6 +43,8 @@ import type { DepositDataSchema, DepositMigrationFn } from '@vielzeug/deposit';
 The schema defines your tables, their primary keys, indexes, and record types:
 
 ```ts
+import { defineSchema } from '@vielzeug/deposit';
+
 // Define your record types
 interface User {
   id: string;
@@ -61,19 +63,17 @@ interface Post {
   createdAt: number;
 }
 
-// Define the schema
-const schema = {
+// Define the schema with type-safe helper
+const schema = defineSchema<{ users: User; posts: Post }>()({
   users: {
     key: 'id', // Primary key field
     indexes: ['email', 'role'], // Indexed fields for fast lookups
-    record: {} as User, // Type assertion for the record
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as Post,
   },
-} satisfies DepositDataSchema;
+});
 ```
 
 ### Initialize Deposit
