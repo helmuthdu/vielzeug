@@ -328,13 +328,22 @@ declare module '@vielzeug/craftit' {
 
 export const fetchitTypes = `
 declare module '@vielzeug/fetchit' {
+  export type HttpRequestConfig = {
+    body?: unknown;
+    params?: Record<string, string | number | boolean | undefined>;  // Path parameters (replace :id or {id})
+    query?: Record<string, string | number | boolean | undefined>;   // Query string parameters (?key=value)
+    dedupe?: boolean;
+    headers?: Record<string, string>;
+    signal?: AbortSignal;
+  };
+
   export function createHttpClient(opts?: HttpClientOptions): {
-    delete: (url: string, cfg?: any) => Promise<unknown>;
-    get: (url: string, cfg?: any) => Promise<unknown>;
-    patch: (url: string, cfg?: any) => Promise<unknown>;
-    post: (url: string, cfg?: any) => Promise<unknown>;
-    put: (url: string, cfg?: any) => Promise<unknown>;
-    request: <T>(method: string, url: string, config?: any) => Promise<T>;
+    delete: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
+    get: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
+    patch: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
+    post: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
+    put: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
+    request: <T>(method: string, url: string, config?: HttpRequestConfig) => Promise<T>;
     setHeaders(next: Record<string, string | undefined>): void;
   };
 

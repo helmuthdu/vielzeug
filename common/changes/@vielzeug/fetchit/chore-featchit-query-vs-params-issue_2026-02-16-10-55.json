@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/fetchit",
+      "comment": "update HTTP client to support query and path parameters",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/fetchit"
+}

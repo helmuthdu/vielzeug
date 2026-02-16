@@ -46,7 +46,8 @@ export type MutationOptions<TData, TVariables> = {
 
 export type HttpRequestConfig = Omit<RequestInit, 'body'> & {
   body?: unknown;
-  params?: Record<string, string | number | undefined>;
+  params?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, string | number | boolean | undefined>;
   dedupe?: boolean;
 };
 
@@ -97,14 +98,43 @@ function toError(e: unknown): Error {
 
 /* -------------------- URL & Body Utilities -------------------- */
 
-function buildUrl(base: string, path: string, params?: Record<string, string | number | undefined>) {
+/**
+ * Build URL with optional path parameters and query string parameters.
+ * @param base - Base URL (e.g., 'https://api.example.com')
+ * @param path - URL path with optional placeholders (e.g., '/users/:id' or '/users/{id}')
+ * @param params - Path parameters to replace in the URL (e.g., { id: '123' } -> '/users/123')
+ * @param query - Query string parameters (e.g., { page: 1, limit: 10 } -> '?page=1&limit=10')
+ * @returns Full URL with path parameters replaced and query string appended
+ */
+function buildUrl(
+  base: string,
+  path: string,
+  params?: Record<string, string | number | boolean | undefined>,
+  query?: Record<string, string | number | boolean | undefined>,
+) {
   const baseClean = (base || '').replace(/\/+$/, '');
-  const pathClean = path.replace(/^\/+/, '');
+  let pathClean = path.replace(/^\/+/, '');
+
+  // Replace path parameters (supports both :param and {param} syntax)
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        // Support both :id and {id} syntax
+        const colonPattern = new RegExp(`:${key}(?=/|$)`, 'g');
+        const bracePattern = new RegExp(`\\{${key}\\}`, 'g');
+        const valueStr = String(value);
+
+        pathClean = pathClean.replace(colonPattern, valueStr).replace(bracePattern, valueStr);
+      }
+    }
+  }
+
   const url = baseClean ? `${baseClean}/${pathClean}` : pathClean;
 
-  if (!params) return url;
+  // Build query string
+  if (!query) return url;
 
-  const qs = Object.entries(params)
+  const qs = Object.entries(query)
     .filter(([, v]) => v !== undefined)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join('&');
@@ -265,10 +295,11 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
     if (logger) logger(level, msg, meta);
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: HTTP request handling requires complexity for deduplication, timeout, retry, and error handling
   async function request<T>(method: string, url: string, config: HttpRequestConfig = {}) {
-    const full = buildUrl(baseUrl, url, config.params);
+    const full = buildUrl(baseUrl, url, config.params, config.query);
     const m = (method || 'GET').toUpperCase();
-    const { body, headers, dedupe: cfgDedupe, signal: extSignal, ...rest } = config;
+    const { body, headers, dedupe: cfgDedupe, signal: extSignal, params, query, ...rest } = config;
     const shouldDedupe = cfgDedupe !== false && dedupe;
 
     const dedupeKey = shouldDedupe
@@ -279,8 +310,9 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
         })
       : '';
 
-    if (shouldDedupe && inFlight.has(dedupeKey)) {
-      return inFlight.get(dedupeKey)! as Promise<T>;
+    if (shouldDedupe && dedupeKey) {
+      const existing = inFlight.get(dedupeKey);
+      if (existing) return existing as Promise<T>;
     }
 
     const { signal, clear } = timeoutSignal(timeout, extSignal ?? null);

@@ -112,13 +112,39 @@ const data = await http.request<DataType>('CUSTOM', '/endpoint');
 
 ```ts
 const users = await http.get<User[]>('/users', {
-  params: {
+  query: {
     role: 'admin',
     age: 18,
     page: 1,
   },
 });
 // Calls: /users?role=admin&age=18&page=1
+```
+
+#### Path Parameters
+
+```ts
+// Using :param syntax
+const user = await http.get<User>('/users/:id', {
+  params: { id: '123' },
+});
+// Calls: /users/123
+
+// Using {param} syntax
+const post = await http.get<Post>('/posts/{postId}', {
+  params: { postId: '456' },
+});
+// Calls: /posts/456
+```
+
+#### Combined Path and Query Parameters
+
+```ts
+const comments = await http.get<Comment[]>('/posts/:postId/comments', {
+  params: { postId: '456' },
+  query: { sort: 'created_at', limit: 20 },
+});
+// Calls: /posts/456/comments?sort=created_at&limit=20
 ```
 
 ### Request Deduplication
@@ -234,7 +260,7 @@ const user = await queryClient.fetch({
 async function fetchUsers(filters: { role?: string; age?: number }) {
   return queryClient.fetch({
     queryKey: ['users', filters], // Include filters in key
-    queryFn: () => http.get<User[]>('/users', { params: filters }),
+    queryFn: () => http.get<User[]>('/users', { query: filters }),
   });
 }
 

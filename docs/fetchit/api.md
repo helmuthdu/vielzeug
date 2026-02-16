@@ -672,8 +672,33 @@ Request configuration for REST methods.
 ```ts
 type HttpRequestConfig = Omit<RequestInit, 'body'> & {
   body?: unknown; // Auto-serialized to JSON or passed as-is for FormData/Blob
-  params?: Record<string, string | number | undefined>; // Query parameters
+  params?: Record<string, string | number | boolean | undefined>; // Path parameters (replace :id or {id} in URL)
+  query?: Record<string, string | number | boolean | undefined>; // Query string parameters (?key=value)
+  dedupe?: boolean; // Enable/disable request deduplication for this request
 };
+```
+
+**Examples:**
+
+```ts
+// Query parameters
+await http.get('/users', {
+  query: { role: 'admin', active: true }
+});
+// → GET /users?role=admin&active=true
+
+// Path parameters
+await http.get('/users/:id', {
+  params: { id: '123' }
+});
+// → GET /users/123
+
+// Combined
+await http.get('/users/:userId/posts', {
+  params: { userId: '123' },
+  query: { status: 'published', limit: 10 }
+});
+// → GET /users/123/posts?status=published&limit=10
 ```
 
 ### `RequestResponse<T>`

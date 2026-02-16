@@ -777,12 +777,27 @@ const http = createHttpClient({
 
 // GET with query parameters
 const posts = await http.get('/posts', {
-  params: { userId: 1, _limit: 5 }
+  query: { userId: 1, _limit: 5 }
 })
 
 console.log('Filtered posts:', posts)
-console.log('Count:', posts.length)`,
-      name: 'HTTP Client - Query Parameters',
+console.log('Count:', posts.length)
+
+// GET with path parameters
+const user = await http.get('/users/:id', {
+  params: { id: 1 }
+})
+
+console.log('User:', user.name)
+
+// Combine path and query parameters
+const userPosts = await http.get('/users/:userId/posts', {
+  params: { userId: 1 },
+  query: { _limit: 3 }
+})
+
+console.log('User posts:', userPosts.length, 'items')`,
+      name: 'HTTP Client - Path & Query Parameters',
     },
     'query-client-basic': {
       code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
@@ -931,92 +946,6 @@ console.log('Name:', form.get('name'))
 console.log('Email:', form.get('email'))`,
       name: 'Create Form - Basic Setup',
     },
-    'nested-values': {
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  fields: {
-    user: {
-      name: 'Alice',
-      email: 'alice@example.com',
-      profile: {
-        age: 25,
-        city: 'NYC'
-      }
-    },
-    settings: {
-      notifications: true,
-      theme: 'dark'
-    }
-  }
-})
-
-console.log('Nested object initialized!')
-console.log('User name:', form.get('user.name'))
-console.log('User age:', form.get('user.profile.age'))
-console.log('City:', form.get('user.profile.city'))
-console.log('Theme:', form.get('settings.theme'))
-
-// Update nested values
-form.set('user.profile.city', 'San Francisco')
-console.log('Updated city:', form.get('user.profile.city'))
-
-// All values (flattened)
-console.log('All values:', form.values())`,
-      name: 'Nested Values - Auto Flattening',
-    },
-    'field-operations': {
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({
-  fields: {
-    name: 'Alice',
-    age: 25
-  }
-})
-
-console.log('Initial:', form.values())
-
-// Set single field
-form.set('name', 'Bob')
-console.log('After set name:', form.get('name'))
-
-// Set multiple fields (merge)
-form.set({ name: 'Charlie', age: 30 })
-console.log('After merge:', form.values())
-
-// Replace all values
-form.set({ name: 'David' }, { replace: true })
-console.log('After replace:', form.values())
-
-// Reset to initial
-form.reset()
-console.log('After reset:', form.values())`,
-      name: 'Field Operations - Get/Set',
-    },
-    'nested-fields': {
-      code: `import { createForm } from '@vielzeug/formit'
-
-const form = createForm({})
-
-// Set nested values using dot notation
-form.set('user.name', 'Alice')
-form.set('user.email', 'alice@example.com')
-form.set('user.address.city', 'New York')
-
-console.log('Nested values:', form.values())
-console.log('User name:', form.get('user.name'))
-console.log('City:', form.get('user.address.city'))
-
-// Arrays
-form.set('tags', ['javascript', 'typescript', 'react'])
-console.log('Tags:', form.get('tags'))
-
-// Update nested field
-form.set('user.address.city', 'San Francisco')
-console.log('Updated city:', form.get('user.address.city'))`,
-      name: 'Nested Fields - Dot Notation',
-    },
     'field-binding': {
       code: `import { createForm } from '@vielzeug/formit'
 
@@ -1053,6 +982,35 @@ console.log('Dirty fields:', {
   email: form.dirty('email')
 })`,
       name: 'Field Binding for Inputs',
+    },
+    'field-operations': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  fields: {
+    name: 'Alice',
+    age: 25
+  }
+})
+
+console.log('Initial:', form.values())
+
+// Set single field
+form.set('name', 'Bob')
+console.log('After set name:', form.get('name'))
+
+// Set multiple fields (merge)
+form.set({ name: 'Charlie', age: 30 })
+console.log('After merge:', form.values())
+
+// Replace all values
+form.set({ name: 'David' }, { replace: true })
+console.log('After replace:', form.values())
+
+// Reset to initial
+form.reset()
+console.log('After reset:', form.values())`,
+      name: 'Field Operations - Get/Set',
     },
     'form-submission': {
       code: `import { createForm } from '@vielzeug/formit'
@@ -1197,6 +1155,63 @@ const errors2 = await form.validate()
 console.log('After fixing:', errors2.size === 0 ? '✓ Valid' : 'Still errors')`,
       name: 'Field & Form Validation',
     },
+    'nested-fields': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({})
+
+// Set nested values using dot notation
+form.set('user.name', 'Alice')
+form.set('user.email', 'alice@example.com')
+form.set('user.address.city', 'New York')
+
+console.log('Nested values:', form.values())
+console.log('User name:', form.get('user.name'))
+console.log('City:', form.get('user.address.city'))
+
+// Arrays
+form.set('tags', ['javascript', 'typescript', 'react'])
+console.log('Tags:', form.get('tags'))
+
+// Update nested field
+form.set('user.address.city', 'San Francisco')
+console.log('Updated city:', form.get('user.address.city'))`,
+      name: 'Nested Fields - Dot Notation',
+    },
+    'nested-values': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  fields: {
+    user: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      profile: {
+        age: 25,
+        city: 'NYC'
+      }
+    },
+    settings: {
+      notifications: true,
+      theme: 'dark'
+    }
+  }
+})
+
+console.log('Nested object initialized!')
+console.log('User name:', form.get('user.name'))
+console.log('User age:', form.get('user.profile.age'))
+console.log('City:', form.get('user.profile.city'))
+console.log('Theme:', form.get('settings.theme'))
+
+// Update nested values
+form.set('user.profile.city', 'San Francisco')
+console.log('Updated city:', form.get('user.profile.city'))
+
+// All values (flattened)
+console.log('All values:', form.values())`,
+      name: 'Nested Values - Auto Flattening',
+    },
   },
   i18nit: {
     'array-formatting': {
@@ -1310,38 +1325,6 @@ console.log('ES:', i18n.t('hello'))
 console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
       name: 'Basic Setup - Initialize i18n',
     },
-    'preload-pattern': {
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-// App initialization - preload all locales at startup
-const i18n = createI18n({
-  locale: 'en',
-  loaders: {
-    en: async () => ({ greeting: 'Hello', welcome: 'Welcome!' }),
-    es: async () => ({ greeting: 'Hola', welcome: '¡Bienvenido!' }),
-    fr: async () => ({ greeting: 'Bonjour', welcome: 'Bienvenue!' })
-  }
-})
-
-// Preload all locales (recommended for app startup)
-console.log('Preloading all locales...')
-await i18n.loadAll(['en', 'es', 'fr'])
-console.log('✓ All locales loaded!\\n')
-
-// Now use sync t() everywhere - no await needed!
-console.log('EN:', i18n.t('greeting'))
-
-i18n.setLocale('es')
-console.log('ES:', i18n.t('greeting'))
-
-i18n.setLocale('fr')
-console.log('FR:', i18n.t('greeting'))
-
-// Perfect for React/Vue components
-console.log('\\nIn component:')
-console.log(i18n.t('welcome')) // No await! ✨`,
-      name: 'Preload Pattern (Recommended)',
-    },
     'formatting-helpers': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
@@ -1426,6 +1409,38 @@ console.log(i18n.t('items', { count: 5 }))
 console.log(i18n.t('cats', { count: 1 }))
 console.log(i18n.t('cats', { count: 3 }))`,
       name: 'Pluralization Rules',
+    },
+    'preload-pattern': {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+// App initialization - preload all locales at startup
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    en: async () => ({ greeting: 'Hello', welcome: 'Welcome!' }),
+    es: async () => ({ greeting: 'Hola', welcome: '¡Bienvenido!' }),
+    fr: async () => ({ greeting: 'Bonjour', welcome: 'Bienvenue!' })
+  }
+})
+
+// Preload all locales (recommended for app startup)
+console.log('Preloading all locales...')
+await i18n.loadAll(['en', 'es', 'fr'])
+console.log('✓ All locales loaded!\\n')
+
+// Now use sync t() everywhere - no await needed!
+console.log('EN:', i18n.t('greeting'))
+
+i18n.setLocale('es')
+console.log('ES:', i18n.t('greeting'))
+
+i18n.setLocale('fr')
+console.log('FR:', i18n.t('greeting'))
+
+// Perfect for React/Vue components
+console.log('\\nIn component:')
+console.log(i18n.t('welcome')) // No await! ✨`,
+      name: 'Preload Pattern (Recommended)',
     },
     'variable-interpolation': {
       code: `import { createI18n } from '@vielzeug/i18nit'
