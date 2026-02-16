@@ -590,9 +590,9 @@ console.log(`Cache contains ${size} entries`);
 ```ts
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
-// Use params option for query parameters
+// Use query option for query string parameters
 const users = await http.get<User[]>('/api/users', {
-  params: {
+  query: {
     page: 1,
     limit: 10,
     sort: 'name',
@@ -607,13 +607,25 @@ const users = await http.get<User[]>('/api/users', {
 ```ts
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
+// Using path parameters
 function getUser(id: string) {
-  return http.get<User>(`/users/${id}`);
+  return http.get<User>('/users/:id', {
+    params: { id },
+  });
 }
 
+// Using query parameters for search
 function searchUsers(query: string, page: number) {
   return http.get<User[]>('/users/search', {
-    params: { q: query, page },
+    query: { q: query, page },
+  });
+}
+
+// Combining both
+function getUserPosts(userId: string, status: string, limit: number) {
+  return http.get<Post[]>('/users/:userId/posts', {
+    params: { userId },
+    query: { status, limit },
   });
 }
 ```

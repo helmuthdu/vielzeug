@@ -118,15 +118,40 @@ describe('fetchit', () => {
       fetchMock.mockResolvedValue(mockJsonResponse([]));
 
       await client.get('/users', {
-        params: { age: 25, role: 'admin' },
+        query: { age: 25, role: 'admin' },
       });
 
       expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?age=25&role=admin', expect.any(Object));
     });
+
+    it('should handle path parameters', async () => {
+      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(mockJsonResponse({ id: '123', name: 'User' }));
+
+      await client.get('/users/:id', {
+        params: { id: '123' },
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/123', expect.any(Object));
+    });
+
+    it('should handle both path parameters and query parameters', async () => {
+      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(mockJsonResponse({ id: '123', posts: [] }));
+
+      await client.get('/users/:id/posts', {
+        params: { id: '123' },
+        query: { limit: 10, offset: 0 },
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/123/posts?limit=10&offset=0', expect.any(Object));
+    });
   });
 
   // ========================================================================
-  // QUERY API (New V2 Features)
+  // QUERY API 
   // ========================================================================
 
   describe('Query API - Caching', () => {

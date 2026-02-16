@@ -202,9 +202,20 @@ const http = createHttpClient({
   headers: { Authorization: 'Bearer token' },
 });
 
-// GET request
+// GET request with query parameters
 const users = await http.get<User[]>('/users', {
-  params: { page: 1, limit: 10 },
+  query: { page: 1, limit: 10 },
+});
+
+// GET request with path parameters
+const user = await http.get<User>('/users/:id', {
+  params: { id: '123' },
+});
+
+// Combined path and query parameters
+const posts = await http.get<Post[]>('/users/:userId/posts', {
+  params: { userId: '123' },
+  query: { status: 'published', limit: 10 },
 });
 
 // POST with body
