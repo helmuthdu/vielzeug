@@ -8,6 +8,7 @@ on:
         required: true
         type: choice
         options:
+          - '@vielzeug/craftit'
           - '@vielzeug/deposit'
           - '@vielzeug/fetchit'
           - '@vielzeug/formit'
