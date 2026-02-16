@@ -75,10 +75,10 @@ import { debounce, throttle } from '@vielzeug/toolkit/function';
 ⚠️ **Avoid** importing the entire library—this prevents tree-shaking:
 
 ```ts
-// ❌ Don't do this - imports everything (~50KB)
+// ❌ Don't do this – imports everything (~50KB)
 import * as toolkit from '@vielzeug/toolkit';
 
-// ✅ Do this instead - imports only what you need
+// ✅ Do this instead – imports only what you need
 import { chunk, group } from '@vielzeug/toolkit';
 ```
 
@@ -169,7 +169,7 @@ Many utilities support async callbacks:
 ```ts
 import { map, filter } from '@vielzeug/toolkit';
 
-// Async map - parallel execution
+// Async map – parallel execution
 const users = await map([1, 2, 3], async (id) => {
   return await fetchUser(id);
 });
@@ -203,17 +203,17 @@ const result = group(
 ```ts
 import { debounce, throttle, memo } from '@vielzeug/toolkit';
 
-// Debounce - delay execution
+// Debounce – delay execution
 const search = debounce((query) => {
   console.log('Searching:', query);
 }, 300);
 
-// Throttle - limit rate
+// Throttle – limit rate
 const trackScroll = throttle(() => {
   console.log('Scroll:', window.scrollY);
 }, 100);
 
-// Memoize - cache results
+// Memoize – cache results
 const calculate = memo((n) => n * n);
 ```
 
@@ -394,9 +394,9 @@ For older browsers, use a transpiler like Babel or SWC.
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

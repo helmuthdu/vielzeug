@@ -575,13 +575,13 @@ const freshUser = await queryClient.fetch({
 queryClient.clear();
 ```
 
-
 // Invalidate all user queries (pattern matching)
 queryClient.invalidate(['users']);
 
 // Check cache size
 console.log(`Cache contains ${size} entries`);
-```
+
+````
 
 ## URL Building
 
@@ -600,7 +600,7 @@ const users = await http.get<User[]>('/api/users', {
   },
 });
 // Actual request: "/api/users?page=1&limit=10&sort=name&active=true"
-```
+````
 
 ### Dynamic URLs
 

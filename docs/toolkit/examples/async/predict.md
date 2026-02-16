@@ -21,9 +21,9 @@ function predict<T>(
 
 ## Parameters
 
-- `fn` - The function to execute, which receives an AbortSignal
-- `options.signal` - The AbortSignal to use for aborting the Promise
-- `options.timeout` - The timeout in milliseconds after which the Promise will be aborted (default: 7000)
+- `fn` – The function to execute, which receives an AbortSignal
+- `options.signal` – The AbortSignal to use for aborting the Promise
+- `options.timeout` – The timeout in milliseconds after which the Promise will be aborted (default: 7000)
 
 ## Returns
 
@@ -99,5 +99,5 @@ try {
 
 ## Related
 
-- [retry](./retry.md) - Retry with exponential backoff
-- [attempt](./attempt.md) - Execute with error handling and retry
+- [retry](./retry.md) – Retry with exponential backoff
+- [attempt](./attempt.md) – Execute with error handling and retry

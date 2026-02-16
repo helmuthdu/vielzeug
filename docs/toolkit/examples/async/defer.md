@@ -21,9 +21,9 @@ function defer<T = void>(): {
 
 Object containing:
 
-- `promise` - The promise instance
-- `resolve` - Function to resolve the promise
-- `reject` - Function to reject the promise
+- `promise` – The promise instance
+- `resolve` – Function to resolve the promise
+- `reject` – Function to reject the promise
 
 ## Examples
 
@@ -88,5 +88,5 @@ await Promise.all([promise1, promise2]);
 
 ## Related
 
-- [race](./race.md) - Race promises with minimum delay
-- [waitFor](./waitFor.md) - Poll for a condition to become true
+- [race](./race.md) – Race promises with minimum delay
+- [waitFor](./waitFor.md) – Poll for a condition to become true

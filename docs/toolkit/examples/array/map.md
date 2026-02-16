@@ -24,7 +24,7 @@ for (let i = 0; i < numbers.length; i++) {
   doubled.push(numbers[i] * 2);
 }
 
-// Async with native map - awkward
+// Async with native map – awkward
 const promises = ids.map((id) => fetchUser(id));
 const users = await Promise.all(promises);
 ```
@@ -35,7 +35,7 @@ const users = await Promise.all(promises);
 // Sync transformation
 const doubled = map(numbers, (x) => x * 2);
 
-// Async transformation - automatic
+// Async transformation – automatic
 const users = await map(ids, async (id) => fetchUser(id));
 ```
 
@@ -194,7 +194,7 @@ const displayProducts = computed(() =>
 </script>
 
 <template>
-  <div v-for="product in displayProducts" :key="product.id">{{ product.name }} - {{ product.formattedPrice }}</div>
+  <div v-for="product in displayProducts" :key="product.id">{{ product.name }} – {{ product.formattedPrice }}</div>
 </template>
 ```
 
@@ -207,16 +207,16 @@ const displayProducts = computed(() =>
 ### Optimization Tips
 
 ```ts
-// ✅ Good - Direct property access
+// ✅ Good – Direct property access
 const names = map(users, (u) => u.name);
 
-// ⚠️ Slower - Additional computation in callback
+// ⚠️ Slower – Additional computation in callback
 const names = map(users, (u) => {
   console.log('Processing:', u); // Side effect on every iteration
   return u.name;
 });
 
-// ✅ Better - Minimize work in callback
+// ✅ Better – Minimize work in callback
 const names = map(users, (u) => u.name);
 console.log('Result:', names);
 ```

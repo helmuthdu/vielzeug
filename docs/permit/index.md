@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.3-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.0_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
-</div>
+<PackageBadges package="permit" />
 
 <img src="/logo-permit.svg" alt="Permit Logo" width="156" class="logo-highlight"/>
 
@@ -65,20 +60,20 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 ### Comparison with Alternatives
 
-| Feature            | Permit              | CASL        | Casbin     | Manual If/Else |
-| ------------------ | ------------------- | ----------- | ---------- | -------------- |
-| TypeScript Support | ✅ First-class      | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
-| Dynamic Rules      | ✅ Simple           | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | **~2 KB**           | ~15KB       | ~45KB      | 0KB            |
-| Learning Curve     | Low                 | Medium      | High       | None           |
-| Role-Based         | ✅                  | ✅          | ✅         | ⚠️ Manual      |
-| Resource-Based     | ✅                  | ✅          | ✅         | ⚠️ Manual      |
-| Wildcards          | ✅ Role + Resource  | ⚠️ Limited  | ✅         | ❌             |
-| Normalization      | ✅ Built-in         | ❌          | ❌         | ❌             |
-| Security Defaults  | ✅ Safe             | ⚠️          | ⚠️         | ❌             |
-| Type Exports       | ✅ All              | ⚠️ Some     | ❌         | N/A            |
-| Dependencies       | 1 (@vielzeug/logit) | 5+          | 10+        | N/A            |
-| Isomorphic         | ✅                  | ✅          | ✅         | ✅             |
+| Feature            | Permit                                               | CASL        | Casbin     | Manual If/Else |
+| ------------------ | ---------------------------------------------------- | ----------- | ---------- | -------------- |
+| TypeScript Support | ✅ First-class                                       | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
+| Dynamic Rules      | ✅ Simple                                            | ✅ Advanced | ✅ Complex | ✅ Manual      |
+| Bundle Size (gzip) | **<PackageInfo package="permit" type="size" />**     | ~15KB       | ~45KB      | 0KB            |
+| Learning Curve     | Low                                                  | Medium      | High       | None           |
+| Role-Based         | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
+| Resource-Based     | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
+| Wildcards          | ✅ Role + Resource                                   | ⚠️ Limited  | ✅         | ❌             |
+| Normalization      | ✅ Built-in                                          | ❌          | ❌         | ❌             |
+| Security Defaults  | ✅ Safe                                              | ⚠️          | ⚠️         | ❌             |
+| Type Exports       | ✅ All                                               | ⚠️ Some     | ❌         | N/A            |
+| Dependencies       | <PackageInfo package="permit" type="dependencies" /> | 5+          | 10+        | N/A            |
+| Isomorphic         | ✅                                                   | ✅          | ✅         | ✅             |
 
 ## When to Use Permit
 
@@ -105,7 +100,7 @@ if (Permit.check(user, 'posts', 'update', post)) {
 - **Deep Copy Protection**: Immutable [permission registry inspection](./usage.md#inspecting-permissions)
 - **Dynamic Rules**: Support for [functional rules](./usage.md#dynamic-permissions) for complex, context-aware permission checks
 - **Flexible API**: Register, set, unregister, and check permissions with ease. See [Basic Usage](./usage.md#basic-usage).
-- **Lightweight & Fast**: Low dependencies and only **~2 KB gzipped**.
+- **Lightweight & Fast**: <PackageInfo package="permit" type="dependencies" /> dependency and only **<PackageInfo package="permit" type="size" /> gzipped**.
 - **Normalized Matching**: Case-insensitive, trimmed role/resource comparison prevents mismatches
 - **Role & Resource Based**: [Powerful permission model](./usage.md#registering-permissions) using roles, resources, and actions.
 - **Runtime Validation**: Validates permission actions at registration
@@ -172,7 +167,7 @@ if (Permit.check(user, 'posts', 'delete')) {
   // This won't run for editor
 }
 
-// 4. Normalization - case-insensitive matching
+// 4. Normalization – case-insensitive matching
 Permit.register('Admin', 'Posts', { read: true });
 const adminUser = { id: 'u2', roles: ['ADMIN'] };
 Permit.check(adminUser, 'posts', 'read'); // true
@@ -539,7 +534,7 @@ Permit.register('admin', WILDCARD, {
   delete: true,
 });
 
-// ❌ Wrong - don't use string literals for actions
+// ❌ Wrong – don't use string literals for actions
 Permit.register('admin', '*', { all: true });
 ```
 

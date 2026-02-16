@@ -15,7 +15,7 @@ function sleep(timeout: number): Promise<void>;
 
 ## Parameters
 
-- `timeout` - The number of milliseconds to wait before resolving the Promise
+- `timeout` – The number of milliseconds to wait before resolving the Promise
 
 ## Returns
 
@@ -81,5 +81,5 @@ async function mockAPICall() {
 
 ## Related
 
-- [delay](./delay.md) - Delay function execution
-- [waitFor](./waitFor.md) - Poll for a condition
+- [delay](./delay.md) – Delay function execution
+- [waitFor](./waitFor.md) – Poll for a condition

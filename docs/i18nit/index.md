@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-1.6_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="i18nit" />
 
 <img src="/logo-i18nit.svg" alt="i18nit Logo" width="156" class="logo-highlight"/>
 
@@ -70,17 +65,17 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ### Comparison with Alternatives
 
-| Feature            | i18nit                  | i18next     | react-intl    |
-| ------------------ | ----------------------- | ----------- | ------------- |
-| Bundle Size        | **~1.6 KB**             | ~12KB       | ~15KB         |
-| Dependencies       | **0**                   | 2+          | 10+           |
-| TypeScript         | First-class             | Good        | Good          |
-| Framework          | Agnostic                | Agnostic    | React only    |
-| Pluralization      | ✅ Built-in             | ✅ Plugin   | ✅ Built-in   |
-| Async Loading      | ✅ Built-in             | ✅ Built-in | ⚠️ Manual     |
-| Path Interpolation | ✅ `{user.name}`        | ❌          | ❌            |
-| Nested Keys        | ✅                      | ✅          | ✅            |
-| HTML Escaping      | ✅ Built-in             | ⚠️ Manual   | ✅ Built-in   |
+| Feature            | i18nit                                                   | i18next     | react-intl  |
+| ------------------ | -------------------------------------------------------- | ----------- | ----------- |
+| Bundle Size        | **<PackageInfo package="i18nit" type="size" />**         | ~12KB       | ~15KB       |
+| Dependencies       | **<PackageInfo package="i18nit" type="dependencies" />** | 2+          | 10+         |
+| TypeScript         | First-class                                              | Good        | Good        |
+| Framework          | Agnostic                                                 | Agnostic    | React only  |
+| Pluralization      | ✅ Built-in                                              | ✅ Plugin   | ✅ Built-in |
+| Async Loading      | ✅ Built-in                                              | ✅ Built-in | ⚠️ Manual   |
+| Path Interpolation | ✅ `{user.name}`                                         | ❌          | ❌          |
+| Nested Keys        | ✅                                                       | ✅          | ✅          |
+| HTML Escaping      | ✅ Built-in                                              | ⚠️ Manual   | ✅ Built-in |
 
 ## When to Use i18nit
 
@@ -91,7 +86,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 - Async translation loading with automatic caching
 - Framework-agnostic solution
 - Variable interpolation with nested paths (`{user.name}`, `{items[0]}`)
-- Minimal bundle size (~1.6 KB gzipped)
+- Minimal bundle size (<PackageInfo package="i18nit" type="size" /> gzipped)
 - Built-in XSS protection with HTML escaping
 
 ❌ **Don't use i18nit when:**
@@ -105,7 +100,7 @@ i18n.t('items', { count: 5 }); // "5 items"
 - **Async Loading**: Lazy-load translations with [automatic caching and deduplication](./usage.md#async-loading).
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
 - **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping.
-- **Lightweight & Fast**: No dependencies and only **~1.6 KB gzipped**.
+- **Lightweight & Fast**: <PackageInfo package="i18nit" type="dependencies" /> dependencies and only **<PackageInfo package="i18nit" type="size" /> gzipped**.
 - **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining a graceful fallback.
 - **Locale Fallbacks**: Automatic [fallback chain](./usage.md#fallback-translations) (e.g., de-CH → de → en).
 - **Namespaced Keys**: Organize translations by [feature or module](./usage.md#namespaces).
@@ -503,9 +498,9 @@ const unsubscribe = i18n.subscribe(handler);
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage.md)** - Complete guide to all i18n features
-- **[API Reference](./api.md)** - Detailed API documentation with all methods
-- **[Examples](./examples.md)** - Real-world examples and framework integrations
+- **[Usage Guide](./usage.md)** – Complete guide to all i18n features
+- **[API Reference](./api.md)** – Detailed API documentation with all methods
+- **[Examples](./examples.md)** – Real-world examples and framework integrations
 - **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
@@ -617,10 +612,10 @@ Translations show key instead of translated text after changing locale.
 Load the locale before using it:
 
 ```ts
-// ❌ Wrong - locale not loaded
+// ❌ Wrong – locale not loaded
 i18n.t('key', undefined, { locale: 'es' });
 
-// ✅ Correct - preload at startup
+// ✅ Correct – preload at startup
 await i18n.loadAll(['en', 'es']);
 i18n.t('key', undefined, { locale: 'es' });
 
@@ -664,7 +659,7 @@ Ensure the variable path matches your data structure:
 // ✅ Correct data structure
 i18n.t('greeting', { user: { name: 'Alice' } });
 
-// ❌ Wrong - flat structure
+// ❌ Wrong – flat structure
 i18n.t('greeting', { 'user.name': 'Alice' });
 ```
 

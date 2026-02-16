@@ -930,9 +930,9 @@ const orderSchema = v
     }),
   })
   .refine((data) => {
-    const calculated = data.totals.subtotal + data.totals.tax + data.totals.shipping - data.totals.discount;
+    const calculated = data.totals.subtotal + data.totals.tax + data.totals.shipping – data.totals.discount;
 
-    return Math.abs(calculated - data.totals.total) < 0.01;
+    return Math.abs(calculated – data.totals.total) < 0.01;
   }, 'Total amount calculation is incorrect');
 
 type Order = Infer<typeof orderSchema>;
@@ -1182,8 +1182,8 @@ describe('userSchema', () => {
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./usage">Usage Guide</a> - Comprehensive usage patterns</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./usage">Usage Guide</a> – Comprehensive usage patterns</li>
     </ul>
   </div>
 </div>

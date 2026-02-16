@@ -15,8 +15,8 @@ function delay<T extends Fn>(fn: T, delay?: number): Promise<ReturnType<T>>;
 
 ## Parameters
 
-- `fn` - The function to be delayed
-- `delay` - The amount of time to delay the function execution, in milliseconds (default: 700)
+- `fn` – The function to be delayed
+- `delay` – The amount of time to delay the function execution, in milliseconds (default: 700)
 
 ## Returns
 
@@ -64,5 +64,5 @@ console.log(result); // 42 (after 1 second)
 
 ## Related
 
-- [sleep](./sleep.md) - Simple async delay without function execution
-- [attempt](./attempt.md) - Execute function with error handling and retry
+- [sleep](./sleep.md) – Simple async delay without function execution
+- [attempt](./attempt.md) – Execute function with error handling and retry

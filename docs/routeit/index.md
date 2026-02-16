@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.1_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="routeit" />
 
 <img src="/logo-routeit.svg" alt="Routeit Logo" width="156" class="logo-highlight"/>
 
@@ -21,7 +16,7 @@ Client-side routing is essential for SPAs, but most routers are either too compl
 // Manual route handling
 window.addEventListener('popstate', () => {
   const path = window.location.pathname;
-  
+
   if (path === '/') {
     renderHome();
   } else if (path.startsWith('/users/')) {
@@ -60,25 +55,25 @@ router.navigate('/users/123');
 
 ### Comparison with Alternatives
 
-| Feature             | Routeit      | React Router | Vue Router  |
-| ------------------- | ------------ | ------------ | ----------- |
-| Bundle Size         | **~3.1 KB**  | ~11KB        | ~22KB       |
-| Dependencies        | 0            | React        | Vue         |
-| TypeScript          | Native       | Good         | Good        |
-| Framework Agnostic  | ✅           | ❌           | ❌          |
-| Middleware System   | ✅           | ❌           | ✅          |
+| Feature            | Routeit                                               | React Router | Vue Router |
+| ------------------ | ----------------------------------------------------- | ------------ | ---------- |
+| Bundle Size        | **<PackageInfo package="routeit" type="size" />**     | ~11KB        | ~22KB      |
+| Dependencies       | <PackageInfo package="routeit" type="dependencies" /> | React        | Vue        |
+| TypeScript         | Native                                                | Good         | Good       |
+| Framework Agnostic | ✅                                                    | ❌           | ❌         |
+| Middleware System  | ✅                                                    | ❌           | ✅         |
 
 ## 🚀 Key Features
 
-- **Type-Safe Parameters** - Automatic extraction and type inference
-- **Middleware System** - Powerful async middleware for auth, logging, and more
-- **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- **Nested Routes** - Support for child routes and layouts
-- **Query Parameters** - Automatic parsing and array support
-- **Permission Integration** - Works seamlessly with @vielzeug/permit
-- **Hash & History Mode** - Choose between hash-based or HTML5 History API
-- **Named Routes** - Navigate by name with parameter substitution
-- **Lightweight** - Only 3.1 KB gzipped, zero dependencies
+- **Type-Safe Parameters** – Automatic extraction and type inference
+- **Middleware System** – Powerful async middleware for auth, logging, and more
+- **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
+- **Nested Routes** – Support for child routes and layouts
+- **Query Parameters** – Automatic parsing and array support
+- **Permission Integration** – Works seamlessly with @vielzeug/permit
+- **Hash & History Mode** – Choose between hash-based or HTML5 History API
+- **Named Routes** – Navigate by name with parameter substitution
+- **Lightweight** – Only <PackageInfo package="routeit" type="size" /> gzipped, <PackageInfo package="routeit" type="dependencies" /> dependencies
 
 ## 🏁 Quick Start
 
@@ -110,9 +105,9 @@ router
 
 ## 📚 Documentation
 
-- [Usage Guide](./usage.md) - Comprehensive usage guide
-- [API Reference](./api.md) - Complete API documentation
-- [Examples](./examples.md) - Real-world examples
+- [Usage Guide](./usage.md) – Comprehensive usage guide
+- [API Reference](./api.md) – Complete API documentation
+- [Examples](./examples.md) – Real-world examples
 
 ## 💡 Core Concepts
 
@@ -122,8 +117,8 @@ Extract dynamic segments from URLs:
 
 ```ts
 router.get('/users/:userId/posts/:postId', ({ params }) => {
-  console.log(params.userId);  // '123'
-  console.log(params.postId);  // '456'
+  console.log(params.userId); // '123'
+  console.log(params.postId); // '456'
 });
 // Matches: /users/123/posts/456
 ```
@@ -148,7 +143,7 @@ router.route({
   middleware: requireAuth,
   handler: (ctx) => {
     console.log('User:', ctx.user);
-  }
+  },
 });
 ```
 
@@ -158,7 +153,7 @@ Automatic query string parsing:
 
 ```ts
 router.get('/search', ({ query }) => {
-  console.log(query.q);      // 'test'
+  console.log(query.q); // 'test'
   console.log(query.filter); // ['new', 'sale']
 });
 // Matches: /search?q=test&filter=new&filter=sale
@@ -174,7 +169,7 @@ router.route({
   name: 'userDetail',
   handler: ({ params }) => {
     console.log('User:', params.id);
-  }
+  },
 });
 
 // Navigate using name
@@ -203,19 +198,23 @@ A: Absolutely! See the [Permission Integration](./usage.md#permission-integratio
 ## 🐛 Troubleshooting
 
 **Routes not matching:**
-- Check path syntax - use `:param` for parameters
+
+- Check path syntax – use `:param` for parameters
 - Ensure router is started with `.start()`
 - Verify base path configuration
 
 **Middleware not executing:**
+
 - Make sure to call `await next()` to continue the chain
 - Check execution order (global → route → handler)
 
 **404 not working:**
+
 - Provide a `notFound` handler in router options
 - Check if another route is matching first
 
 **Hash mode not working:**
+
 - Ensure `mode: 'hash'` is set in router options
 - Check URL format includes `#` (e.g., `#/about`)
 
@@ -233,4 +232,3 @@ MIT © [Vielzeug](https://github.com/yourusername/vielzeug)
 - [npm Package](https://www.npmjs.com/package/@vielzeug/routeit)
 - [Report Issues](https://github.com/yourusername/vielzeug/issues)
 - [Changelog](https://github.com/yourusername/vielzeug/blob/main/packages/routeit/CHANGELOG.md)
-

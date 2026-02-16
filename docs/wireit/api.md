@@ -20,7 +20,7 @@ function createToken<T = unknown>(description?: string): Token<T>;
 
 #### Parameters
 
-- `description?: string` - Optional description for debugging
+- `description?: string` – Optional description for debugging
 
 #### Returns
 
@@ -51,7 +51,7 @@ function createContainer(options?: ContainerOptions): Container;
 
 #### Parameters
 
-- `options?: ContainerOptions` - Optional configuration
+- `options?: ContainerOptions` – Optional configuration
 
 ```ts
 type ContainerOptions = {
@@ -94,7 +94,7 @@ function createTestContainer(base?: Container): {
 
 #### Parameters
 
-- `base?: Container` - Optional base container to inherit from
+- `base?: Container` – Optional base container to inherit from
 
 #### Returns
 
@@ -131,10 +131,10 @@ function withMock<T, R>(container: Container, token: Token<T>, mock: T, fn: () =
 
 #### Parameters
 
-- `container: Container` - The container to modify
-- `token: Token<T>` - Token to mock
-- `mock: T` - Mock value or implementation
-- `fn: () => Promise<R> | R` - Function to execute with mock
+- `container: Container` – The container to modify
+- `token: Token<T>` – Token to mock
+- `mock: T` – Mock value or implementation
+- `fn: () => Promise<R> | R` – Function to execute with mock
 
 #### Returns
 
@@ -170,8 +170,8 @@ register<T>(token: Token<T>, provider: Provider<T>): this;
 
 ##### Parameters
 
-- `token: Token<T>` - Token to register
-- `provider: Provider<T>` - Provider configuration
+- `token: Token<T>` – Token to register
+- `provider: Provider<T>` – Provider configuration
 
 ```ts
 type Provider<T> =
@@ -231,9 +231,9 @@ registerValue<T>(token: Token<T>, value: T, lifetime?: Lifetime): this;
 
 ##### Parameters
 
-- `token: Token<T>` - Token to register
-- `value: T` - Value to register
-- `lifetime?: Lifetime` - Optional lifetime (default: `'singleton'`)
+- `token: Token<T>` – Token to register
+- `value: T` – Value to register
+- `lifetime?: Lifetime` – Optional lifetime (default: `'singleton'`)
 
 ##### Example
 
@@ -259,12 +259,12 @@ registerFactory<T>(
 
 ##### Parameters
 
-- `token: Token<T>` - Token to register
-- `factory: (...deps: any[]) => T | Promise<T>` - Factory function
-- `deps?: Token<any>[]` - Dependencies to inject
-- `options?: object` - Optional configuration
-  - `lifetime?: Lifetime` - Lifetime (default: `'transient'`)
-  - `async?: boolean` - Whether factory is async
+- `token: Token<T>` – Token to register
+- `factory: (...deps: any[]) => T | Promise<T>` – Factory function
+- `deps?: Token<any>[]` – Dependencies to inject
+- `options?: object` – Optional configuration
+  - `lifetime?: Lifetime` – Lifetime (default: `'transient'`)
+  - `async?: boolean` – Whether factory is async
 
 ##### Example
 
@@ -295,7 +295,7 @@ registerMany(providers: Array<[Token<any>, Provider<any>]>): this;
 
 ##### Parameters
 
-- `providers: Array<[Token<any>, Provider<any>]>` - Array of token/provider pairs
+- `providers: Array<[Token<any>, Provider<any>]>` – Array of token/provider pairs
 
 ##### Example
 
@@ -321,7 +321,7 @@ get<T>(token: Token<T>): T;
 
 ##### Parameters
 
-- `token: Token<T>` - Token to resolve
+- `token: Token<T>` – Token to resolve
 
 ##### Returns
 
@@ -329,9 +329,9 @@ The resolved instance
 
 ##### Throws
 
-- `ProviderNotFoundError` - Token not registered
-- `AsyncProviderError` - Provider is async, use `getAsync()`
-- `CircularDependencyError` - Circular dependency detected
+- `ProviderNotFoundError` – Token not registered
+- `AsyncProviderError` – Provider is async, use `getAsync()`
+- `CircularDependencyError` – Circular dependency detected
 
 ##### Example
 
@@ -352,7 +352,7 @@ getAsync<T>(token: Token<T>): Promise<T>;
 
 ##### Parameters
 
-- `token: Token<T>` - Token to resolve
+- `token: Token<T>` – Token to resolve
 
 ##### Returns
 
@@ -377,7 +377,7 @@ getOptional<T>(token: Token<T>): T | undefined;
 
 ##### Parameters
 
-- `token: Token<T>` - Token to resolve
+- `token: Token<T>` – Token to resolve
 
 ##### Returns
 
@@ -443,8 +443,8 @@ alias<T>(source: Token<T>, alias: Token<T>): this;
 
 ##### Parameters
 
-- `source: Token<T>` - Source token
-- `alias: Token<T>` - Alias token
+- `source: Token<T>` – Source token
+- `alias: Token<T>` – Alias token
 
 ##### Example
 
@@ -523,7 +523,7 @@ createChild(overrides?: Array<[Token<any>, Provider<any>]>): Container;
 
 ##### Parameters
 
-- `overrides?: Array<[Token<any>, Provider<any>]>` - Optional initial registrations
+- `overrides?: Array<[Token<any>, Provider<any>]>` – Optional initial registrations
 
 ##### Returns
 
@@ -556,8 +556,8 @@ runInScope<T>(
 
 ##### Parameters
 
-- `fn: (scope: Container) => Promise<T> | T` - Function to execute
-- `overrides?: Array<[Token<any>, Provider<any>]>` - Optional initial registrations
+- `fn: (scope: Container) => Promise<T> | T` – Function to execute
+- `overrides?: Array<[Token<any>, Provider<any>]>` – Optional initial registrations
 
 ##### Returns
 
@@ -604,9 +604,9 @@ type Lifetime = 'singleton' | 'transient' | 'scoped';
 
 Defines when and how often instances are created:
 
-- `singleton` - Created once, shared globally
-- `transient` - Created every time
-- `scoped` - Created once per scope
+- `singleton` – Created once, shared globally
+- `transient` – Created every time
+- `scoped` – Created once per scope
 
 ### Provider
 
@@ -643,8 +643,8 @@ type ContainerOptions = {
 
 Options for creating a container:
 
-- `parent` - Parent container for hierarchical DI
-- `allowOptional` - Return undefined for missing tokens instead of throwing
+- `parent` – Parent container for hierarchical DI
+- `allowOptional` – Return undefined for missing tokens instead of throwing
 
 ## Errors
 
@@ -725,7 +725,7 @@ try {
 ### Token Organization
 
 ```ts
-// tokens.ts - Centralize token definitions
+// tokens.ts – Centralize token definitions
 export const Config = createToken<AppConfig>('Config');
 export const Logger = createToken<ILogger>('Logger');
 export const Database = createToken<PrismaClient>('Database');

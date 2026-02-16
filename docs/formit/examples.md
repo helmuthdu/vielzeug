@@ -244,7 +244,7 @@ async function handleLogin() {
       return response.json();
     });
 
-    // Success - redirect or update UI
+    // Success – redirect or update UI
     console.log('Login successful:', result);
     window.location.href = '/dashboard';
   } catch (error) {
@@ -277,7 +277,7 @@ const registrationForm = createForm({
         async (v) => {
           if (!v) return;
 
-          // Async validation - check if username exists
+          // Async validation – check if username exists
           const response = await fetch(`/api/check-username?username=${v}`);
           const { exists } = await response.json();
 
@@ -467,7 +467,7 @@ async function validateCurrentStep() {
 // Navigate to next step
 async function nextStep() {
   const isValid = await validateCurrentStep();
-  if (isValid && currentStep < steps.length - 1) {
+  if (isValid && currentStep < steps.length – 1) {
     currentStep++;
     updateStepUI();
   }
@@ -732,23 +732,23 @@ async function submitProfile() {
 ### 1. Always Clean Up Subscriptions
 
 ```typescript
-// ✅ Good - cleanup in useEffect
+// ✅ Good – cleanup in useEffect
 useEffect(() => {
   const unsubscribe = form.subscribe(setState);
   return unsubscribe; // Cleanup on unmount
 }, [form]);
 
-// ❌ Bad - memory leak
+// ❌ Bad – memory leak
 form.subscribe(setState);
 ```
 
 ### 2. Use Field Bindings
 
 ```tsx
-// ✅ Good - one line
+// ✅ Good – one line
 <input {...form.bind('email')} />
 
-// ❌ Verbose - manual wiring
+// ❌ Verbose – manual wiring
 <input
   name="email"
   value={form.get('email')}
@@ -760,7 +760,7 @@ form.subscribe(setState);
 ### 3. Handle Validation Errors
 
 ```typescript
-// ✅ Good - proper error handling
+// ✅ Good – proper error handling
 try {
   await form.submit(onSubmit);
 } catch (error) {
@@ -779,12 +779,12 @@ try {
 ### 4. Show Errors Only When Touched
 
 ```tsx
-// ✅ Good - only show after user interaction
+// ✅ Good – only show after user interaction
 {
   state.touched.has('email') && state.errors.get('email') && <span>{state.errors.get('email')}</span>;
 }
 
-// ❌ Bad - shows immediately
+// ❌ Bad – shows immediately
 {
   state.errors.get('email') && <span>{state.errors.get('email')}</span>;
 }
@@ -793,7 +793,7 @@ try {
 ### 5. Use Nested Objects for Organization
 
 ```typescript
-// ✅ Good - organized structure
+// ✅ Good – organized structure
 fields: {
   user: {
     name: '',
@@ -812,5 +812,5 @@ form.get('address.city')
 
 ## See Also
 
-- [API Reference](./api.md) - Complete API documentation
-- [Usage Guide](./usage.md) - Common patterns and best practices
+- [API Reference](./api.md) – Complete API documentation
+- [Usage Guide](./usage.md) – Common patterns and best practices

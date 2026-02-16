@@ -40,9 +40,9 @@ import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchi
 
 Fetchit provides flexible architecture with separate clients:
 
-1. **HTTP Client** - Pure HTTP operations without query overhead
-2. **Query Client** - Advanced caching and state management
-3. **Use Together or Independently** - Mix and match based on your needs
+1. **HTTP Client** – Pure HTTP operations without query overhead
+2. **Query Client** – Advanced caching and state management
+3. **Use Together or Independently** – Mix and match based on your needs
 
 ### HTTP Client (Simple HTTP Requests)
 
@@ -70,16 +70,16 @@ const http = createHttpClient({
 
 **Options:**
 
-- `baseUrl` - Base URL for all requests
-- `timeout` - Request timeout in milliseconds (default: 30000)
-- `headers` - Default headers for all requests
-- `dedupe` - Enable request deduplication (default: true)
-- `logger` - Optional logger function for debugging requests
+- `baseUrl` – Base URL for all requests
+- `timeout` – Request timeout in milliseconds (default: 30000)
+- `headers` – Default headers for all requests
+- `dedupe` – Enable request deduplication (default: true)
+- `logger` – Optional logger function for debugging requests
 
 #### Making Requests
 
 ```ts
-// GET request - returns raw data
+// GET request – returns raw data
 const user = await http.get<User>('/users/1');
 console.log(user.name);
 
@@ -742,9 +742,9 @@ await http.post('/form', { body: params });
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

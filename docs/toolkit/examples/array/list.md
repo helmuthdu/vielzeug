@@ -46,12 +46,12 @@ function list<T>(initialData: readonly T[], config?: LocalConfig<T>): List<T, Pr
 
 ### Parameters
 
-- `initialData: readonly T[]` - The initial array of data to paginate
-- `config?: LocalConfig<T>` - Optional configuration object (see type definition above for all available options)
+- `initialData: readonly T[]` – The initial array of data to paginate
+- `config?: LocalConfig<T>` – Optional configuration object (see type definition above for all available options)
 
 ### Returns
 
-`List<T, Predicate<T>, Sorter<T>>` - A reactive paginated list instance (see type definition above for all available methods and properties)
+`List<T, Predicate<T>, Sorter<T>>` – A reactive paginated list instance (see type definition above for all available methods and properties)
 
 ## Examples
 
@@ -173,7 +173,7 @@ instance.setSort((a, b) => a.name.localeCompare(b.name));
 console.log(instance.current[0].name); // 'Alice'
 
 // Sort by age descending
-instance.setSort((a, b) => b.age - a.age);
+instance.setSort((a, b) => b.age – a.age);
 console.log(instance.current[0].name); // 'Charlie'
 
 // Remove sorting
@@ -198,7 +198,7 @@ console.log(instance.meta.page); // 2
 instance.goTo(3);
 console.log(instance.current); // [7, 8, 9]
 
-// Out of bounds - clamped to valid range
+// Out of bounds – clamped to valid range
 instance.goTo(10);
 console.log(instance.current); // [7, 8, 9] (last page)
 ```
@@ -257,7 +257,7 @@ const instance = list(data, { limit: 3 });
 instance.batch((ctx) => {
   ctx.setLimit(2);
   ctx.setFilter((x) => x % 2 === 0);
-  ctx.setSort((a, b) => b - a);
+  ctx.setSort((a, b) => b – a);
   ctx.goTo(2);
 });
 

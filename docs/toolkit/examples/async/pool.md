@@ -15,7 +15,7 @@ function pool(limit: number): <T>(fn: () => Promise<T>) => Promise<T>;
 
 ## Parameters
 
-- `limit` - Maximum number of concurrent promises
+- `limit` – Maximum number of concurrent promises
 
 ## Returns
 
@@ -87,5 +87,5 @@ const results = await Promise.all([
 
 ## Related
 
-- [parallel](./parallel.md) - Process arrays with controlled concurrency
-- [queue](./queue.md) - Task queue with additional features
+- [parallel](./parallel.md) – Process arrays with controlled concurrency
+- [queue](./queue.md) – Task queue with additional features
