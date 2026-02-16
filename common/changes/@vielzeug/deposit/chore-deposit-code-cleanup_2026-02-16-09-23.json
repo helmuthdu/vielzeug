@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/deposit",
+      "comment": "simplified schema definition",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/deposit"
+}
