@@ -370,7 +370,6 @@ describe('I18nit', () => {
     });
   });
 
-
   describe('Locale Management', () => {
     test('gets and sets locale with change detection', () => {
       const i18n = createI18n({ locale: 'en' });
@@ -668,10 +667,10 @@ describe('I18nit', () => {
         locale: 'en',
         messages: {
           en: {
-            test: 'Hello World',
             nested: {
               test: 'Nested Hello World',
             },
+            test: 'Hello World',
           },
         },
       });
@@ -689,14 +688,14 @@ describe('I18nit', () => {
         messages: {
           en: {
             app: {
+              admin: {
+                dashboard: 'Admin Dashboard',
+              },
               user: {
                 profile: {
                   greeting: 'Welcome, {name}!',
                   settings: 'User Settings',
                 },
-              },
-              admin: {
-                dashboard: 'Admin Dashboard',
               },
             },
             simple: 'Simple message',
@@ -721,8 +720,8 @@ describe('I18nit', () => {
             user: {
               greeting: 'Hello, user!',
               profile: {
-                title: 'Profile',
                 description: 'Your profile page',
+                title: 'Profile',
               },
             },
           },
@@ -732,7 +731,7 @@ describe('I18nit', () => {
       const userNs = i18n.namespace('user');
 
       expect(userNs.t('greeting')).toBe('Hello, user!');
-      expect(userNs.t('profile.title')).toBe('Profile');
+      expect(userNs.t('profile')).toBe('Profile');
       expect(userNs.t('profile.description')).toBe('Your profile page');
     });
 

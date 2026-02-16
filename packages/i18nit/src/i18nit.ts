@@ -113,6 +113,7 @@ function formatList(items: unknown[], locale: string, type: 'conjunction' | 'dis
  * - {items.length} - Array length
  */
 function interpolate(template: string, vars: Record<string, unknown>, locale: string): string {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (_match, key: string, separator?: string) => {
     // Handle .length property
     const isLength = key.endsWith('.length');
