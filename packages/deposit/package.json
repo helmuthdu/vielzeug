@@ -30,7 +30,7 @@
     "@vielzeug/toolkit": "workspace:*"
   },
   "peerDependencies": {
-    "@vielzeug/logit": "^1.0.0"
+    "@vielzeug/logit": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@vielzeug/logit": {
