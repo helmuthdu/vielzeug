@@ -1,436 +1,269 @@
 # Contributing to Vielzeug
 
-Thank you for investing your time in contributing to Vielzeug! 🎉
-We appreciate all contributions, from fixing typos to adding new features. This guide will help you get started.
+Thank you for your interest in contributing to Vielzeug! 🎉
+
+This guide will help you get started. We appreciate all contributions, from fixing typos to adding new features.
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [How to Contribute](#how-to-contribute)
+- [Quick Start](#quick-start)
 - [Development Workflow](#development-workflow)
-- [Project Structure](#project-structure)
-- [Code Style Guidelines](#code-style-guidelines)
-- [Testing Guidelines](#testing-guidelines)
-- [Documentation Guidelines](#documentation-guidelines)
-- [Commit Guidelines](#commit-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Release Process](#release-process)
+- [Making Changes](#making-changes)
+- [Code Guidelines](#code-guidelines)
+- [Submitting Your Work](#submitting-your-work)
+- [Need Help?](#need-help)
 
-## Code of Conduct
-
-By participating in this project, you agree to abide by our Code of Conduct. Please be respectful and constructive in all interactions.
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js**: v18+ (use `nvm` to manage versions)
-- **pnpm**: v8+ (install via `npm install -g pnpm`)
-- **Git**: Latest version
+- **Node.js**: v22+ (use `nvm` to manage versions)
+- **pnpm**: v10+ (install via `npm install -g pnpm`)
 
-### Setting Up Your Development Environment
+### Setup
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/vielzeug.git
-   cd vielzeug
-   ```
-3. **Add upstream remote**:
-   ```bash
-   git remote add upstream https://github.com/helmuthdu/vielzeug.git
-   ```
-4. **Install dependencies** using Rush:
-   ```bash
-   pnpm install
-   ```
-5. **Build all packages**:
-   ```bash
-   rush build
-   ```
-6. **Run tests** to verify setup:
-   ```bash
-   rush test
-   ```
+```bash
+# 1. Fork and clone the repo
+git clone https://github.com/YOUR_USERNAME/vielzeug.git
+cd vielzeug
 
-## How to Contribute
+# 2. Install dependencies
+pnpm install
 
-### 🤔 Have a Question?
+# 3. Build everything
+pnpm build
 
-- Check the [documentation](https://helmuthdu.github.io/vielzeug)
-- Search [existing discussions](https://github.com/helmuthdu/vielzeug/discussions)
-- Start a new discussion if your question hasn't been answered
+# 4. Run tests to verify setup
+pnpm test
+```
 
-### 🐛 Found a Bug?
-
-1. Search [existing issues](https://github.com/helmuthdu/vielzeug/issues) to avoid duplicates
-2. If not found, [create a new issue](https://github.com/helmuthdu/vielzeug/issues/new) with:
-    - Clear, descriptive title
-    - Steps to reproduce the bug
-    - Expected vs actual behavior
-    - Environment details (Node version, OS, etc.)
-    - Code snippets or minimal reproduction
-
-### 💡 Want a New Feature?
-
-1. Search [existing issues](https://github.com/helmuthdu/vielzeug/issues) and [discussions](https://github.com/helmuthdu/vielzeug/discussions)
-2. Open a discussion to propose the feature and get feedback
-3. Once approved, create an issue with detailed requirements
-4. Wait for maintainer approval before starting implementation
-
-### 🔧 Ready to Code?
-
-1. Look through [open issues](https://github.com/helmuthdu/vielzeug/issues)
-2. Pick an issue labeled `good first issue` or `help wanted`
-3. Comment on the issue to let others know you're working on it
-4. Fork the repo and create a branch for your changes
+✅ You're ready to contribute!
 
 ## Development Workflow
 
 ### Working on a Package
 
 ```bash
-# Navigate to the package directory
-cd packages/toolkit
-# Install dependencies (if needed)
-rush update
-# Build the package
-rush build --to .
-# Run tests for this package
-pnpm test
+# Navigate to the package
+cd packages/deposit
+
 # Run tests in watch mode
-pnpm test:watch
-# Lint the code
+pnpm test
+
+# Build the package
+pnpm build
+
+# Lint your code
 pnpm lint
-# Type check
-pnpm type-check
 ```
 
-### Working on Multiple Packages
+### Running Documentation Site
+
+```bash
+# Start dev server
+pnpm docs:dev
+
+# Build docs
+pnpm docs:build
+```
+
+### Common Commands
 
 ```bash
 # Build all packages
-rush build
-# Build specific packages
-rush build --to @vielzeug/toolkit
-rush build --to @vielzeug/formit
-# Test all packages
-rush test
-# Lint all packages
-rush lint
+pnpm build
+
+# Test everything
+pnpm test
+
+# Lint everything
+pnpm lint
+
+# Fix linting issues
+pnpm fix
 ```
 
-### Running the Documentation Site
+## Making Changes
+
+### 1. Pick an Issue
+
+- Browse [open issues](https://github.com/helmuthdu/vielzeug/issues)
+- Look for `good first issue` or `help wanted` labels
+- Comment on the issue to claim it
+
+### 2. Create a Branch
 
 ```bash
-# Start the dev server
-pnpm docs:dev
-# Build the docs
-pnpm docs:build
-# Preview the built docs
-pnpm docs:preview
+git checkout -b feat/my-new-feature
+# or
+git checkout -b fix/bug-description
 ```
+
+### 3. Make Your Changes
+
+**Keep it simple:**
+- Write clear, readable code
+- Add tests for new features
+- Update documentation if needed
+- Follow existing code style
+
+### 4. Test Your Changes
+
+```bash
+# Run tests
+pnpm test
+
+# Check types
+pnpm build
+
+# Lint code
+pnpm lint
+```
+
+## Code Guidelines
+
+### TypeScript Style
+
+```typescript
+// ✅ Good
+export function formatName(first: string, last: string): string {
+  return `${first} ${last}`;
+}
+
+// ❌ Avoid
+export function formatName(first: any, last: any) {
+  return first + ' ' + last;
+}
+```
+
+**Key points:**
+- Use TypeScript (no `any` types)
+- Add JSDoc comments for public APIs
+- Keep functions small and focused
+- Use descriptive names
+
+### Testing
+
+```typescript
+// Simple and clear
+describe('formatName', () => {
+  it('should combine first and last name', () => {
+    const result = formatName('John', 'Doe');
+    expect(result).toBe('John Doe');
+  });
+
+  it('should throw error for empty names', () => {
+    expect(() => formatName('', '')).toThrow();
+  });
+});
+```
+
+**Key points:**
+- Test new features
+- Use descriptive test names
+- Test edge cases
+
+### Documentation
+
+**When adding features:**
+1. Update the package README
+2. Add usage examples
+3. Update API docs if needed
+
+**Use the PackageInfo and PackageBadges components:**
+```markdown
+<!-- In docs -->
+<PackageBadges package="deposit" />
+
+<!-- Inline usage -->
+Only <PackageInfo package="deposit" type="size" /> gzipped!
+```
+
+## Submitting Your Work
+
+### 1. Commit Your Changes
+
+Use clear, descriptive commit messages:
+
+```bash
+# Format: <type>(<package>): <description>
+
+git commit -m "feat(deposit): add TTL support for records"
+git commit -m "fix(fetchit): correct timeout handling"
+git commit -m "docs(formit): update validation examples"
+```
+
+**Common types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation
+- `refactor`: Code cleanup
+- `test`: Tests
+- `chore`: Maintenance
+
+### 2. Push to Your Fork
+
+```bash
+git push origin your-branch-name
+```
+
+### 3. Open a Pull Request
+
+1. Go to the [Vielzeug repository](https://github.com/helmuthdu/vielzeug)
+2. Click "New Pull Request"
+3. Select your fork and branch
+4. Fill out the PR template:
+   - Describe your changes
+   - Link related issues
+   - Note any breaking changes
+
+### 4. Respond to Feedback
+
+- Check your PR for review comments
+- Make requested changes
+- Push updates to the same branch
 
 ## Project Structure
 
 ```
 vielzeug/
-├── .github/              # GitHub workflows, templates
-├── common/               # Rush configuration
-├── docs/                 # VitePress documentation
-│   ├── deposit/
-│   ├── fetchit/
-│   ├── formit/
-│   ├── i18nit/
-│   ├── logit/
-│   ├── permit/
-│   ├── toolkit/
-│   └── validit/
-├── packages/             # All library packages
-│   ├── deposit/          # LocalStorage/IndexedDB abstraction
-│   ├── fetchit/          # HTTP client with caching
-│   ├── formit/           # Form state management
-│   ├── i18nit/           # Internationalization
-│   ├── logit/            # Logging utility
-│   ├── permit/           # Permission management
-│   ├── toolkit/          # Utility functions
-│   └── validit/          # Schema validation
-├── package.json
-├── rush.json             # Rush monorepo configuration
-└── tsconfig.json
+├── packages/           # All packages
+│   ├── craftit/       # Web components
+│   ├── deposit/       # Client-side storage
+│   ├── fetchit/       # HTTP client
+│   ├── formit/        # Form management
+│   ├── i18nit/        # Internationalization
+│   ├── logit/         # Logging
+│   ├── permit/        # Permissions
+│   ├── routeit/       # Routing
+│   ├── stateit/       # State management
+│   ├── toolkit/       # Utilities
+│   ├── validit/       # Validation
+│   └── wireit/        # Dependency injection
+└── docs/              # VitePress documentation
 ```
 
-### Package Structure
+**Each package has:**
+- `src/` - Source code
+- `src/*.test.ts` - Tests
+- `README.md` - Package documentation
+- `package.json` - Package config
 
-Each package follows this structure:
+## Need Help?
 
-```
-packages/[package-name]/
-├── src/
-│   ├── [package-name].ts    # Main source file
-│   ├── [package-name].test.ts  # Tests
-│   └── index.ts             # Public exports
-├── CHANGELOG.json
-├── CHANGELOG.md
-├── package.json
-├── README.md
-├── tsconfig.json
-├── vite.config.ts
-└── vitest.config.ts
-```
+- 💬 **Questions?** [Start a discussion](https://github.com/helmuthdu/vielzeug/discussions)
+- 🐛 **Found a bug?** [Open an issue](https://github.com/helmuthdu/vielzeug/issues)
+- 📖 **Documentation:** [vielzeug.dev](https://helmuthdu.github.io/vielzeug)
 
-## Code Style Guidelines
+## Code of Conduct
 
-### TypeScript
-
-- Use **TypeScript** for all code
-- Prefer **type** over **interface** for simple types
-- Use **explicit return types** for public APIs
-- Avoid **any** - use **unknown** if type is truly unknown
-- Use **strict mode** (already enabled in tsconfig)
-
-### Naming Conventions
-
-- **Variables/Functions**: `camelCase`
-- **Types/Interfaces**: `PascalCase`
-- **Constants**: `UPPER_SNAKE_CASE` (for true constants)
-- **Files**: `kebab-case.ts` or `camelCase.ts` (be consistent within package)
-- **Private members**: Prefix with `#` (private fields) or `_` (private methods)
-
-### Code Organization
-
-- **Keep functions small** and focused (single responsibility)
-- **Extract magic numbers** into named constants
-- **Add JSDoc comments** for public APIs
-- **Group related code** together
-- **Avoid deep nesting** (max 3 levels)
-
-### Example
-
-```typescript
-/**
- * Formats a user's full name
- * @param firstName - The user's first name
- * @param lastName - The user's last name
- * @returns The formatted full name
- */
-export function formatFullName(firstName: string, lastName: string): string {
-  if (!firstName || !lastName) {
-    throw new Error('First name and last name are required');
-  }
-  return `${firstName} ${lastName}`;
-}
-```
-
-## Testing Guidelines
-
-### General Rules
-
-- **Write tests for all new code** (aim for 100% coverage)
-- **Use descriptive test names** (describe what's being tested)
-- **Follow AAA pattern**: Arrange, Act, Assert
-- **Test edge cases** and error scenarios
-- **Keep tests isolated** (no shared state between tests)
-
-### Test Structure
-
-```typescript
-import { myFunction } from './my-function';
-describe('myFunction', () => {
-  it('should return expected result for valid input', () => {
-    // Arrange
-    const input = 'test';
-    // Act
-    const result = myFunction(input);
-    // Assert
-    expect(result).toBe('expected');
-  });
-  it('should throw error for invalid input', () => {
-    // Arrange
-    const invalidInput = null;
-    // Act & Assert
-    expect(() => myFunction(invalidInput)).toThrow('Invalid input');
-  });
-});
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-rush test
-# Run tests for a specific package
-cd packages/toolkit && pnpm test
-# Run tests in watch mode
-pnpm test:watch
-# Run tests with coverage
-pnpm test:coverage
-```
-
-## Documentation Guidelines
-
-### Code Documentation
-
-- Add **JSDoc comments** for all exported functions, classes, and types
-- Include **@param** and **@returns** tags
-- Add **@example** for complex functions
-- Document **edge cases** and **limitations**
-
-### User Documentation
-
-When adding features or making changes:
-
-1. **Update the package README** (`packages/[name]/README.md`)
-2. **Update usage docs** (`docs/[name]/usage.md`)
-3. **Add examples** (`docs/[name]/examples.md`)
-4. **Update API reference** (`docs/[name]/api.md`)
-
-### Documentation Structure
-
-- **Usage Guide**: How to use the feature (basics to advanced)
-- **Examples**: Real-world use cases and code samples
-- **API Reference**: Complete API documentation
-
-## Commit Guidelines
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
-
-### Commit Format
-
-```
-<type>(<scope>): <subject>
-<body>
-<footer>
-```
-
-### Types
-
-- **feat**: New feature
-- **fix**: Bug fix
-- **docs**: Documentation changes
-- **style**: Code style changes (formatting, semicolons, etc.)
-- **refactor**: Code refactoring (no functional changes)
-- **perf**: Performance improvements
-- **test**: Adding or updating tests
-- **build**: Build system or dependency changes
-- **ci**: CI/CD configuration changes
-- **chore**: Other changes (e.g., updating dependencies)
-
-### Scopes
-
-Use the package name as scope:
-
-- `deposit`
-- `fetchit`
-- `formit`
-- `i18nit`
-- `logit`
-- `permit`
-- `toolkit`
-- `validit`
-- `docs`
-- `ci`
-
-### Examples
-
-```bash
-feat(toolkit): add debounce utility function
-fix(formit): correct validation error messages
-docs(fetchit): update usage examples for query client
-refactor(validit): simplify schema validation logic
-test(deposit): add tests for IndexedDB adapter
-```
-
-## Pull Request Process
-
-### Before Submitting
-
-1. **Sync with upstream**:
-   ```bash
-   git fetch upstream
-   git rebase upstream/main
-   ```
-2. **Create a change file** (required for versioning):
-   ```bash
-   rush change
-   ```
-
-    - Select the affected package(s)
-    - Choose change type (patch/minor/major)
-    - Write a clear description of changes
-3. **Run all checks**:
-   ```bash
-   rush build
-   rush test
-   rush lint
-   ```
-4. **Update documentation** (if applicable)
-5. **Self-review your code**:
-    - Remove debug code and console.logs
-    - Check for typos and formatting
-    - Ensure comments are clear and helpful
-
-### Submitting Your PR
-
-1. **Push to your fork**:
-   ```bash
-   git push origin your-branch-name
-   ```
-2. **Open a Pull Request** to the `main` branch
-3. **Fill out the PR template** completely:
-    - Clear description of changes
-    - Link to related issue(s)
-    - Screenshots (if UI changes)
-    - Breaking changes (if any)
-4. **Enable "Allow edits from maintainers"**
-5. **Respond to review feedback** promptly
-
-### PR Requirements
-
-- ✅ All CI checks pass
-- ✅ Tests maintain 100% coverage
-- ✅ Documentation updated
-- ✅ Change file created
-- ✅ No merge conflicts
-- ✅ PR template filled out
-
-## Release Process
-
-### Versioning
-
-We use [Semantic Versioning](https://semver.org/):
-
-- **Patch** (0.0.x): Bug fixes, small improvements
-- **Minor** (0.x.0): New features, non-breaking changes
-- **Major** (x.0.0): Breaking changes
-
-### Release Workflow
-
-1. **Maintainer creates change files**: Contributors run `rush change`
-2. **Rush updates versions**: Based on change files
-3. **GitHub Action publishes**: Automatically to NPM
-4. **Release notes**: Generated from change files
-
-### Prerelease Versions
-
-PRs labeled `prerelease` are published as beta/next versions:
-
-- **Beta**: `1.2.3-beta.1` (for testing new features)
-- **Next**: `1.2.3-next.1` (for canary releases)
-  Bug fixes are NOT published as prereleases.
-
-## Getting Help
-
-- 💬 [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions) - Ask questions
-- 🐛 [GitHub Issues](https://github.com/helmuthdu/vielzeug/issues) - Report bugs
-- 📖 [Documentation](https://helmuthdu.github.io/vielzeug) - Read the docs
+Be respectful and constructive in all interactions. We're all here to build something great together! 🤝
 
 ## Recognition
 
-Contributors are recognized in:
-
+All contributors are recognized in:
 - Release notes
-- Package CHANGELOGs
-- GitHub contributors list
-  Thank you for contributing to Vielzeug! 🙏
+- Package changelogs
+- GitHub contributors page
+
+Thank you for contributing! 🙏
