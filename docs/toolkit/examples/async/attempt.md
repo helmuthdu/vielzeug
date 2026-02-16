@@ -23,11 +23,11 @@ function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
 
 ## Parameters
 
-- `fn` - The function to be executed
-- `options.identifier` - Custom identifier for logging purposes
-- `options.retries` - Number of retry attempts if the function fails (default: 0)
-- `options.silent` - If true, suppresses error logging (default: false)
-- `options.timeout` - Timeout in milliseconds for function execution (default: 7000)
+- `fn` – The function to be executed
+- `options.identifier` – Custom identifier for logging purposes
+- `options.retries` – Number of retry attempts if the function fails (default: 0)
+- `options.silent` – If true, suppresses error logging (default: false)
+- `options.timeout` – Timeout in milliseconds for function execution (default: 7000)
 
 ## Returns
 
@@ -79,5 +79,5 @@ if (!result) {
 
 ## Related
 
-- [retry](./retry.md) - Retry operations with exponential backoff
-- [predict](./predict.md) - Add timeout with AbortSignal
+- [retry](./retry.md) – Retry operations with exponential backoff
+- [predict](./predict.md) – Add timeout with AbortSignal

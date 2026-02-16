@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.1.2-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.9_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="formit" />
 
 <img src="/logo-formit.svg" alt="Formit Logo" width="156" class="logo-highlight"/>
 
@@ -13,7 +8,7 @@
 
 ## What Problem Does Formit Solve?
 
-Managing form state in modern applications is complex - you need validation, error handling, dirty/touched tracking, file uploads, and framework integration. Most form libraries are bloated or framework-specific. Formit provides a minimal, framework-agnostic solution built on web standards.
+Managing form state in modern applications is complex – you need validation, error handling, dirty/touched tracking, file uploads, and framework integration. Most form libraries are bloated or framework-specific. Formit provides a minimal, framework-agnostic solution built on web standards.
 
 **Traditional Approach**:
 
@@ -75,23 +70,23 @@ await form.submit(async (formData) => {
 
 ### Comparison with Alternatives
 
-| Feature                | Formit         | React Hook Form | Formik      | Native Forms |
-| ---------------------- | -------------- | --------------- | ----------- | ------------ |
-| Framework              | **Agnostic**   | React           | React       | Agnostic     |
-| TypeScript             | ✅ First-class | ✅ First-class  | ✅ Good     | ❌           |
-| Bundle Size (gzip)     | **~2.9 KB**    | ~9 KB           | ~13 KB      | 0 KB         |
-| Dependencies           | 0              | 0               | 3+          | 0            |
-| Native FormData        | ✅ Built-in    | ⚠️ Optional     | ❌          | ✅ Manual    |
-| File Upload Support    | ✅ Native      | ✅ Yes          | ⚠️ Complex  | ✅ Manual    |
-| Nested Objects         | ✅ Auto-flat   | ✅ Yes          | ✅ Yes      | ❌           |
-| Array Fields           | ✅ Full        | ✅ Yes          | ✅ Yes      | ⚠️ Limited   |
-| Async Validation       | ✅ Built-in    | ✅ Built-in     | ✅ Built-in | ❌           |
-| Field-Level Validation | ✅ Yes         | ✅ Yes          | ✅ Yes      | ⚠️ HTML only |
-| Form-Level Validation  | ✅ Yes         | ✅ Yes          | ✅ Yes      | ❌           |
-| Dirty/Touched Tracking | ✅ Auto        | ✅ Auto         | ✅ Auto     | ❌           |
-| Subscriptions          | ✅ Built-in    | ❌              | ❌          | ❌           |
-| Field Binding          | ✅ One-line    | ✅ Yes          | ✅ Yes      | ❌           |
-| React/Vue/Svelte Hooks | ⚠️ DIY         | ✅ React        | ✅ React    | N/A          |
+| Feature                | Formit                                               | React Hook Form | Formik      | Native Forms |
+| ---------------------- | ---------------------------------------------------- | --------------- | ----------- | ------------ |
+| Framework              | **Agnostic**                                         | React           | React       | Agnostic     |
+| TypeScript             | ✅ First-class                                       | ✅ First-class  | ✅ Good     | ❌           |
+| Bundle Size (gzip)     | **<PackageInfo package="formit" type="size" />**     | ~9 KB           | ~13 KB      | 0 KB         |
+| Dependencies           | <PackageInfo package="formit" type="dependencies" /> | 0               | 3+          | 0            |
+| Native FormData        | ✅ Built-in                                          | ⚠️ Optional     | ❌          | ✅ Manual    |
+| File Upload Support    | ✅ Native                                            | ✅ Yes          | ⚠️ Complex  | ✅ Manual    |
+| Nested Objects         | ✅ Auto-flat                                         | ✅ Yes          | ✅ Yes      | ❌           |
+| Array Fields           | ✅ Full                                              | ✅ Yes          | ✅ Yes      | ⚠️ Limited   |
+| Async Validation       | ✅ Built-in                                          | ✅ Built-in     | ✅ Built-in | ❌           |
+| Field-Level Validation | ✅ Yes                                               | ✅ Yes          | ✅ Yes      | ⚠️ HTML only |
+| Form-Level Validation  | ✅ Yes                                               | ✅ Yes          | ✅ Yes      | ❌           |
+| Dirty/Touched Tracking | ✅ Auto                                              | ✅ Auto         | ✅ Auto     | ❌           |
+| Subscriptions          | ✅ Built-in                                          | ❌              | ❌          | ❌           |
+| Field Binding          | ✅ One-line                                          | ✅ Yes          | ✅ Yes      | ❌           |
+| React/Vue/Svelte Hooks | ⚠️ DIY                                               | ✅ React        | ✅ React    | N/A          |
 
 ## When to Use Formit
 
@@ -100,7 +95,7 @@ await form.submit(async (formData) => {
 - Need framework-agnostic form management
 - Want native FormData for easy API submissions
 - Build applications with file uploads
-- Require minimal bundle size (~2.9 KB)
+- Require minimal bundle size (<PackageInfo package="formit" type="size" />)
 - Need type-safe forms with full TypeScript support
 - Want to use the same forms across React, Vue, Svelte
 - Prefer web standards over framework-specific solutions
@@ -115,8 +110,8 @@ await form.submit(async (formData) => {
 
 ## 🚀 Key Features
 
-- **Native FormData**: Built on browser-standard [FormData API](./usage.md#value-management) - ready for fetch() submissions
-- **Unified API**: [One clear way](./usage.md#basic-usage) to initialize forms - no decision paralysis
+- **Native FormData**: Built on browser-standard [FormData API](./usage.md#value-management) – ready for fetch() submissions
+- **Unified API**: [One clear way](./usage.md#basic-usage) to initialize forms – no decision paralysis
 - **File Upload Support**: Native [File/FileList/Blob handling](./usage.md#file-uploads) with validation
 - **Nested Objects**: [Automatic flattening](./usage.md#basic-usage) with dot notation access
 - **Array Fields**: Full support for [multi-select and checkboxes](./usage.md#arrays-and-multi-select) with proper empty array handling
@@ -125,7 +120,7 @@ await form.submit(async (formData) => {
 - **Smart State Tracking**: Automatic [dirty and touched state](./api.md#state-tracking) with Map/Set
 - **Field Binding**: [One-line input integration](./api.md#bindname-config) with customizable extractors
 - **Framework Agnostic**: Works with [React, Vue, Svelte](./usage.md#framework-integration), or vanilla JS
-- **Lightweight**: Only **~2.9 KB gzipped**, zero dependencies
+- **Lightweight**: Only **~<PackageInfo package="formit" type="size" /> gzipped**, <PackageInfo package="formit" type="dependencies" /> dependencies
 
 ## 🏁 Quick Start
 

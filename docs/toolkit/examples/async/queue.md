@@ -21,17 +21,17 @@ function queue(options?: { concurrency?: number }): {
 
 ## Parameters
 
-- `options.concurrency` - Maximum number of concurrent promises (default: 1)
+- `options.concurrency` – Maximum number of concurrent promises (default: 1)
 
 ## Returns
 
 Queue instance with:
 
-- `add` - Add a task to the queue
-- `onIdle` - Returns a promise that resolves when queue becomes idle
-- `clear` - Clear all pending tasks
-- `size` - Number of pending tasks
-- `pending` - Number of currently running tasks
+- `add` – Add a task to the queue
+- `onIdle` – Returns a promise that resolves when queue becomes idle
+- `clear` – Clear all pending tasks
+- `size` – Number of pending tasks
+- `pending` – Number of currently running tasks
 
 ## Examples
 
@@ -110,5 +110,5 @@ for (const operation of operations) {
 
 ## Related
 
-- [pool](./pool.md) - Generic promise pooling
-- [parallel](./parallel.md) - Array processing with concurrency
+- [pool](./pool.md) – Generic promise pooling
+- [parallel](./parallel.md) – Array processing with concurrency

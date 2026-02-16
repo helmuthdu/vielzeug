@@ -96,7 +96,7 @@ Collection of translations for a locale.
 
 ### MissingVariableError
 
-```ts
+````ts
 ### TranslateOptions
 
 ```ts
@@ -104,7 +104,7 @@ type TranslateOptions = {
   locale?: Locale;
   escape?: boolean;
 };
-```
+````
 
 Options for translation methods.
 
@@ -202,7 +202,6 @@ i18n.t('user.name'); // "Name"
 - Numbers are automatically formatted based on locale
 
 ---
-
 
 ### Locale Management
 
@@ -855,7 +854,7 @@ i18n.t('userInfo', { user: { name: 'Bob', email: 'bob@example.com' } });
 ```ts
 const messages = {
   first: 'First: {items[0]}',
-  outOfBounds: 'Tenth: {items[10]}', // Safe - returns empty if out of bounds
+  outOfBounds: 'Tenth: {items[10]}', // Safe – returns empty if out of bounds
 };
 
 i18n.t('first', { items: ['apple', 'banana'] });
@@ -920,22 +919,22 @@ i18n.t('summary', { items: ['Apple', 'Banana', 'Orange'] });
 | `{items}`           | Default join (`, `)                                     | `"A, B, C"`               |
 | `{items\|and}`      | Locale-aware "and" via Intl.ListFormat (100+ languages) | `"A, B, and C"` (English) |
 | `{items\|or}`       | Locale-aware "or" via Intl.ListFormat (100+ languages)  | `"A, B, or C"` (English)  |
-| `{items\| - }`      | Custom separator                                        | `"A - B - C"`             |
+| `{items\| – }`      | Custom separator                                        | `"A – B – C"`             |
 | `{items.length}`    | Array length                                            | `"3"`                     |
 | `{items[0]}`        | Safe index (empty if bounds)                            | `"A"` or `""`             |
 | `{items[0].name}`   | Nested array access                                     | Accesses nested object    |
 | `{user.items}`      | Nested array join                                       | `"A, B, C"`               |
 | `{user.items\|and}` | Nested array with separator                             | `"A, B, and C"` (English) |
 
-**Intl.ListFormat - Automatic Language Support:**
+**Intl.ListFormat – Automatic Language Support:**
 
 The `and` and `or` separators use the browser/runtime's built-in **Intl.ListFormat API** which automatically handles list formatting for **100+ languages** with:
 
-- ✅ **Automatic conjunctions** - Correct "and"/"or" word for each language
-- ✅ **Proper grammar** - Oxford comma, locale-specific punctuation
-- ✅ **Unicode CLDR standards** - International standard for list formatting
-- ✅ **Right-to-left languages** - Arabic, Hebrew, etc.
-- ✅ **Zero maintenance** - No manual language configuration required
+- ✅ **Automatic conjunctions** – Correct "and"/"or" word for each language
+- ✅ **Proper grammar** – Oxford comma, locale-specific punctuation
+- ✅ **Unicode CLDR standards** – International standard for list formatting
+- ✅ **Right-to-left languages** – Arabic, Hebrew, etc.
+- ✅ **Zero maintenance** – No manual language configuration required
 
 **Examples across languages:**
 

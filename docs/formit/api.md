@@ -12,7 +12,7 @@ Creates a new form instance.
 
 ### Parameters
 
-- `init?: FormInit` - Optional configuration object
+- `init?: FormInit` – Optional configuration object
 
 ```typescript
 type FormInit = {

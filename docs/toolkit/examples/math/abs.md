@@ -64,7 +64,7 @@ abs(-999999n); // 999999n
 import { abs } from '@vielzeug/toolkit';
 
 function calculateDistance(a: number, b: number): number {
-  return abs(a - b);
+  return abs(a – b);
 }
 
 calculateDistance(10, 5); // 5
@@ -79,7 +79,7 @@ import { abs } from '@vielzeug/toolkit';
 const expected = 100000n; // $1,000.00
 const actual = 95000n; // $950.00
 
-const difference = abs(expected - actual);
+const difference = abs(expected – actual);
 // 5000n ($50.00)
 ```
 
@@ -101,7 +101,7 @@ import { abs } from '@vielzeug/toolkit';
 const temp1 = -5; // -5°C
 const temp2 = 10; // 10°C
 
-const tempDifference = abs(temp1 - temp2);
+const tempDifference = abs(temp1 – temp2);
 // 15 (15°C difference)
 ```
 

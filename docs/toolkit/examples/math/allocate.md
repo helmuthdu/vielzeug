@@ -53,7 +53,7 @@ import { allocate } from '@vielzeug/toolkit';
 
 // Split $100 in ratio 1:2:3
 allocate(100, [1, 2, 3]);
-// [16, 33, 51] - sum is exactly 100
+// [16, 33, 51] – sum is exactly 100
 ```
 
 ### Split by Percentage
@@ -102,11 +102,11 @@ import { allocate } from '@vielzeug/toolkit';
 
 // Split $100 equally among 3 parties
 allocate(100, [1, 1, 1]);
-// [34, 33, 33] - sum is exactly 100 (no penny lost!)
+// [34, 33, 33] – sum is exactly 100 (no penny lost!)
 
 // With bigint (cents)
 allocate(10000n, [1, 1, 1]);
-// [3334n, 3333n, 3333n] - sum is exactly 10000n
+// [3334n, 3333n, 3333n] – sum is exactly 10000n
 ```
 
 ### Tax Distribution

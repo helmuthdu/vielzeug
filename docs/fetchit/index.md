@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-3.37_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-1-success" alt="Dependencies">
-</div>
+<PackageBadges package="fetchit" />
 
 <img src="/logo-fetchit.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
 
@@ -13,7 +8,7 @@
 
 ## What Problem Does Fetchit Solve?
 
-Modern applications need more than just HTTP requests - they need intelligent caching, request deduplication, optimistic updates, and retry logic. Fetchit provides all of this out of the box with a clean, type-safe API.
+Modern applications need more than just HTTP requests – they need intelligent caching, request deduplication, optimistic updates, and retry logic. Fetchit provides all of this out of the box with a clean, type-safe API.
 
 **Traditional Approach**:
 
@@ -43,7 +38,7 @@ async function fetchUser(id: number) {
 }
 ```
 
-**With Fetchit - Use HTTP client for simple requests**:
+**With Fetchit – Use HTTP client for simple requests**:
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
@@ -69,27 +64,27 @@ const user = await queryClient.fetch({
 
 ### Comparison with Alternatives
 
-| Feature               | Fetchit        | TanStack Query | Axios          | Native Fetch       |
-| --------------------- | -------------- | -------------- | -------------- | ------------------ |
-| TypeScript Support    | ✅ First-class | ✅ First-class | ✅ Good        | ⚠️ Basic           |
-| Request Deduplication | ✅ Built-in    | ✅ Built-in    | ❌             | ❌                 |
-| Smart Caching         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
-| Stable Query Keys     | ✅ Built-in    | ❌             | N/A            | N/A                |
-| Auto JSON Parsing     | ✅ Yes         | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
-| Timeout Support       | ✅ Built-in    | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | **~3.37 KB**   | ~15 KB         | ~13 KB         | 0 KB               |
-| Node.js Support       | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
-| Dependencies          | 1              | 0              | 7+             | 0                  |
-| Request Retry         | ✅ Built-in    | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
-| React Hooks           | ❌             | ✅ Yes         | ❌             | ❌                 |
-| Framework Agnostic    | ✅ Yes         | ✅ Yes         | ✅ Yes         | ✅ Yes             |
+| Feature               | Fetchit                                               | TanStack Query | Axios          | Native Fetch       |
+| --------------------- | ----------------------------------------------------- | -------------- | -------------- | ------------------ |
+| TypeScript Support    | ✅ First-class                                        | ✅ First-class | ✅ Good        | ⚠️ Basic           |
+| Request Deduplication | ✅ Built-in                                           | ✅ Built-in    | ❌             | ❌                 |
+| Smart Caching         | ✅ Built-in                                           | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
+| Stable Query Keys     | ✅ Built-in                                           | ❌             | N/A            | N/A                |
+| Auto JSON Parsing     | ✅ Yes                                                | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
+| Timeout Support       | ✅ Built-in                                           | ❌             | ✅ Built-in    | ⚠️ AbortController |
+| Bundle Size (gzip)    | **<PackageInfo package="fetchit" type="size" />**     | ~15 KB         | ~13 KB         | 0 KB               |
+| Node.js Support       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
+| Dependencies          | <PackageInfo package="fetchit" type="dependencies" /> | 0              | 7+             | 0                  |
+| Request Retry         | ✅ Built-in                                           | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
+| React Hooks           | ❌                                                    | ✅ Yes         | ❌             | ❌                 |
+| Framework Agnostic    | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes             |
 
 ## When to Use Fetchit
 
 **✅ Use Fetchit when you:**
 
 - Need smart caching without the complexity of TanStack Query
-- Want a lightweight alternative to TanStack Query (~3.37 KB vs ~13 KB)
+- Want a lightweight alternative to TanStack Query (<PackageInfo package="fetchit" type="size" /> KB vs ~15 KB)
 - Build TypeScript applications requiring full type safety
 - Need automatic request deduplication to prevent redundant calls
 - Want built-in caching and retry logic out of the box
@@ -112,7 +107,7 @@ const user = await queryClient.fetch({
 - **Detailed Error Context**: Custom `HttpError` includes URL, method, and status for easier debugging.
 - **Full Type Safety**: Enjoy robust TypeScript support with generics and automatic type inference.
 - **Independent Clients**: Use the [HTTP client](./usage.md#http-client-simple-http-requests) for direct requests or the [Query client](./usage.md#query-client-advanced-caching) for advanced caching—each works standalone or together.
-- **Lightweight & Fast**: Low dependencies (@vielzeug/toolkit) and only **~3.37 KB gzipped**.
+- **Lightweight & Fast**: Only <PackageInfo package="fetchit" type="dependencies" /> dependency (@vielzeug/toolkit) and **~<PackageInfo package="fetchit" type="size" /> gzipped**.
 - **Observable State**: [Subscribe](./usage.md#observable-state) to query state changes for real-time UI updates.
 - **Prefix-Based Invalidation**: Invalidate all related queries at once, e.g., `invalidate(['users'])`. See [Cache Management](./usage.md#cache-management).
 - **Smart Caching**: Built-in cache with customizable staleness and garbage collection for efficient data management.
@@ -161,7 +156,7 @@ interface User {
   email: string;
 }
 
-// GET request - returns raw data
+// GET request – returns raw data
 const user = await http.get<User>('/users/1');
 console.log(user.name); // Type-safe!
 
@@ -300,7 +295,7 @@ async function apiRequest<T>(
   } catch (error) {
     if (error instanceof HttpError) {
       if (error.status === 401) {
-        // Handle unauthorized - redirect to login
+        // Handle unauthorized – redirect to login
         window.location.href = '/login';
       }
       throw new Error(`Request failed: ${error.message}`);
@@ -578,7 +573,7 @@ Response data type not inferred.
 Explicitly specify response type:
 
 ```ts
-// ✅ Correct - returns data directly
+// ✅ Correct – returns data directly
 const user = await http.get<User>('/users/1');
 console.log(user.name); // Type-safe
 

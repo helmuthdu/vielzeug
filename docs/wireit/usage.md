@@ -565,12 +565,12 @@ describe('UserService with mock logger', () => {
 
 ### ❌ Don't
 
-- **Don't create circular dependencies** - refactor your design
-- **Don't use `get()` with async providers** - use `getAsync()`
+- **Don't create circular dependencies** – refactor your design
+- **Don't use `get()` with async providers** – use `getAsync()`
 - **Don't mutate container** during resolution
-- **Don't register too many transient services** - prefer singletons
-- **Don't use `any` types** - leverage TypeScript inference
-- **Don't access private container internals** - use public API
+- **Don't register too many transient services** – prefer singletons
+- **Don't use `any` types** – leverage TypeScript inference
+- **Don't access private container internals** – use public API
 
 ### Code Organization
 
@@ -636,9 +636,9 @@ container.registerFactory(Service, () => new Service());
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

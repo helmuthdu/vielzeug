@@ -20,10 +20,10 @@ function parallel<T, R>(
 
 ## Parameters
 
-- `limit` - Maximum number of concurrent operations (must be >= 1)
-- `array` - Array of items to process
-- `callback` - Async function to process each item
-- `signal` - Optional AbortSignal to cancel processing
+- `limit` – Maximum number of concurrent operations (must be >= 1)
+- `array` – Array of items to process
+- `callback` – Async function to process each item
+- `signal` – Optional AbortSignal to cancel processing
 
 ## Returns
 
@@ -85,5 +85,5 @@ console.log(results); // ['A', 'B', 'C', 'D', 'E']
 
 ## Related
 
-- [pool](./pool.md) - Generic promise pooling for rate limiting
-- [queue](./queue.md) - Task queue with monitoring
+- [pool](./pool.md) – Generic promise pooling for rate limiting
+- [queue](./queue.md) – Task queue with monitoring

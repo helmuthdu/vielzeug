@@ -279,10 +279,10 @@ defineElement('app-component', {
 
 **Benefits:**
 
-- ✅ **Autocomplete** - Type `theme.` and see all available variables
-- ✅ **Type-safe** - Typos caught at compile time
-- ✅ **Refactoring** - Rename variables safely across codebase
-- ✅ **No string matching** - No more `css.var('primryColor')` bugs!
+- ✅ **Autocomplete** – Type `theme.` and see all available variables
+- ✅ **Type-safe** – Typos caught at compile time
+- ✅ **Refactoring** – Rename variables safely across codebase
+- ✅ **No string matching** – No more `css.var('primryColor')` bugs!
 
 #### Light/Dark Theme with Autocomplete
 
@@ -318,7 +318,7 @@ defineElement('auto-theme-card', {
       ${theme}
 
       .card {
-        /* ✨ Same variable references - CSS handles which theme applies! */
+        /* ✨ Same variable references – CSS handles which theme applies! */
         background: ${theme.backgroundColor};
         color: ${theme.textColor};
         border: 1px solid ${theme.borderColor};
@@ -336,7 +336,7 @@ defineElement('auto-theme-card', {
 
 - Automatically detects user's system preferences
 - Manual override via `data-theme="light"` or `data-theme="dark"` attribute
-- **Same variable references** for both themes - CSS does the work!
+- **Same variable references** for both themes – CSS does the work!
 
 **Manual theme control:**
 
@@ -458,9 +458,9 @@ defineElement('my-app', {
 **What you get:**
 
 - 🎯 **IDE autocomplete** for all theme properties
-- 🔒 **Type safety** - compile-time error for typos
-- 🔄 **Safe refactoring** - rename properties with confidence
-- 📦 **Single import** - just `import { css }`
+- 🔒 **Type safety** – compile-time error for typos
+- 🔄 **Safe refactoring** – rename properties with confidence
+- 📦 **Single import** – just `import { css }`
 
 ### CSSStyleSheet Objects
 
@@ -673,10 +673,10 @@ defineElement('lifecycle-demo', {
     console.log('Component mounted!');
 
     // Perfect place for:
-    // - Event listeners
-    // - API calls
-    // - Subscriptions
-    // - Third-party library initialization
+    // – Event listeners
+    // – API calls
+    // – Subscriptions
+    // – Third-party library initialization
   },
 });
 ```
@@ -693,9 +693,9 @@ defineElement('cleanup-demo', {
     console.log('Component unmounted!');
 
     // Cleanup is mostly automatic, but you can:
-    // - Close connections
-    // - Clear external subscriptions
-    // - Clean up third-party libraries
+    // – Close connections
+    // – Clear external subscriptions
+    // – Clean up third-party libraries
   },
 });
 ```
@@ -713,9 +713,9 @@ defineElement('update-tracker', {
     console.log('Rendered with count:', el.state.count);
 
     // Use for:
-    // - DOM measurements
-    // - Third-party library updates
-    // - Analytics tracking
+    // – DOM measurements
+    // – Third-party library updates
+    // – Analytics tracking
   },
 });
 ```
@@ -1041,10 +1041,10 @@ profile.state.unknown = 'value'; // ❌ TypeScript error
 ### 1. Use Event Delegation
 
 ```ts
-// ✅ Good - works for dynamic elements
+// ✅ Good – works for dynamic elements
 el.on('.item', 'click', handler);
 
-// ❌ Bad - must re-bind after state changes
+// ❌ Bad – must re-bind after state changes
 el.findAll('.item').forEach((item) => {
   item.addEventListener('click', handler);
 });
@@ -1053,10 +1053,10 @@ el.findAll('.item').forEach((item) => {
 ### 2. Batch State Updates
 
 ```ts
-// ✅ Good - single re-render
+// ✅ Good – single re-render
 await el.set({ name: 'Alice', age: 30, email: 'alice@example.com' });
 
-// ❌ Bad - three re-renders
+// ❌ Bad – three re-renders
 el.state.name = 'Alice';
 el.state.age = 30;
 el.state.email = 'alice@example.com';
@@ -1065,7 +1065,7 @@ el.state.email = 'alice@example.com';
 ### 3. Use Watchers for Side Effects
 
 ```ts
-// ✅ Good - declarative
+// ✅ Good – declarative
 el.watch(
   (state) => state.userId,
   async (userId) => {
@@ -1074,7 +1074,7 @@ el.watch(
   },
 );
 
-// ❌ Bad - imperative
+// ❌ Bad – imperative
 el.state.userId = 123;
 const user = await fetchUser(el.state.userId);
 el.state.user = user;
@@ -1083,10 +1083,10 @@ el.state.user = user;
 ### 4. Keep Templates Pure
 
 ```ts
-// ✅ Good - pure template
+// ✅ Good – pure template
 template: (el) => html`<div>Count: ${el.state.count}</div>`;
 
-// ❌ Bad - side effects in template
+// ❌ Bad – side effects in template
 template: (el) => {
   console.log('Rendering...'); // Side effect!
   return html`<div>Count: ${el.state.count}</div>`;

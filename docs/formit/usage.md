@@ -728,7 +728,7 @@ form2.set(formData);
 // ✅ Good
 useEffect(() => form.subscribe(setState), [form]);
 
-// ❌ Bad - creates memory leak
+// ❌ Bad – creates memory leak
 form.subscribe(setState);
 ```
 
@@ -761,14 +761,14 @@ try {
   }
 }
 
-// ❌ Bad - swallows validation errors
+// ❌ Bad – swallows validation errors
 form.submit(onSubmit).catch(console.error);
 ```
 
 ### 4. Use Nested Objects for Organization
 
 ```typescript
-// ✅ Good - organized
+// ✅ Good – organized
 fields: {
   user: {
     name: '',
@@ -780,7 +780,7 @@ fields: {
   }
 }
 
-// ❌ Flat - harder to manage
+// ❌ Flat – harder to manage
 fields: {
   userName: '',
   userEmail: '',
@@ -808,9 +808,9 @@ const binding = form.bind('email', {
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

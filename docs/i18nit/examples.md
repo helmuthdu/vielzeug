@@ -166,14 +166,14 @@ function Label() {
 
 ```tsx [Vue 3]
 // useI18n.ts
-import { createI18n } from '@vielzeug/i18nit'; 
-import { ref, onMounted, onUnmounted } from 'vue'; 
-const i18n = createI18n({ locale: 'en', loaders: { en: () => fetch('/en.json').then(r => r.json()) }}); 
+import { createI18n } from '@vielzeug/i18nit';
+import { ref, onMounted, onUnmounted } from 'vue';
+const i18n = createI18n({ locale: 'en', loaders: { en: () => fetch('/en.json').then(r => r.json()) }});
 
-export function useI18n() { 
-  const locale = ref(i18n.getLocale()); 
+export function useI18n() {
+  const locale = ref(i18n.getLocale());
   let sub; onMounted(() => sub = i18n.subscribe(l => locale.value = l));
-  onUnmounted(() => sub?.()); 
+  onUnmounted(() => sub?.());
   return { t: i18n.t, setLocale: (l) => i18n.load(l).then(() => i18n.setLocale(l)) };
 }
 

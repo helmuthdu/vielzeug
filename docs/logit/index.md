@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.5-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
-</div>
+<PackageBadges package="logit" />
 
 <img src="/logo-logit.svg" alt="Logit Logo" width="156" class="logo-highlight"/>
 
@@ -69,17 +64,17 @@ Logit.setRemote({
 
 ### Comparison with Alternatives
 
-| Feature            | Logit          | Winston       | Pino       | Console   |
-| ------------------ | -------------- | ------------- | ---------- | --------- |
-| TypeScript Support | ✅ First-class | ✅ Good       | ✅ Good    | ⚠️ Basic  |
-| Browser Support    | ✅ Native      | ❌            | ❌         | ✅        |
-| Scoped Loggers     | ✅ Built-in    | ⚠️ Manual     | ⚠️ Child   | ❌        |
-| Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Streams | ❌        |
-| Bundle Size (gzip) | **~2 KB**      | ~50KB+        | ~12KB      | 0KB       |
-| Node.js Support    | ✅             | ✅            | ✅         | ✅        |
-| Dependencies       | 0              | 15+           | 5+         | N/A       |
-| Styled Output      | ✅ Auto        | ✅            | ✅         | ⚠️ Manual |
-| Metadata Support   | ✅ Rich        | ✅            | ✅         | ❌        |
+| Feature            | Logit                                               | Winston       | Pino       | Console   |
+| ------------------ | --------------------------------------------------- | ------------- | ---------- | --------- |
+| TypeScript Support | ✅ First-class                                      | ✅ Good       | ✅ Good    | ⚠️ Basic  |
+| Browser Support    | ✅ Native                                           | ❌            | ❌         | ✅        |
+| Scoped Loggers     | ✅ Built-in                                         | ⚠️ Manual     | ⚠️ Child   | ❌        |
+| Remote Logging     | ✅ Built-in                                         | ✅ Transports | ✅ Streams | ❌        |
+| Bundle Size (gzip) | **<PackageInfo package="logit" type="size" />**     | ~50KB+        | ~12KB      | 0KB       |
+| Node.js Support    | ✅                                                  | ✅            | ✅         | ✅        |
+| Dependencies       | <PackageInfo package="logit" type="dependencies" /> | 15+           | 5+         | N/A       |
+| Styled Output      | ✅ Auto                                             | ✅            | ✅         | ⚠️ Manual |
+| Metadata Support   | ✅ Rich                                             | ✅            | ✅         | ❌        |
 
 ## When to Use Logit
 
@@ -106,7 +101,7 @@ Logit.setRemote({
 - **Async Remote Logging**: Non-blocking Promise-based remote logging.
 - **Environment Detection**: Automatic [production/development indicators](./usage.md#environment-specific-configuration).
 - **Framework Agnostic**: Works in browser and Node.js
-- **Lightweight & Fast**: No dependencies and only **~2 KB gzipped**.
+- **Lightweight & Fast**: <PackageInfo package="logit" type="dependencies" /> dependencies and only **<PackageInfo package="logit" type="size" /> gzipped**.
 - **Log Level Filtering**: [Control verbosity](./usage.md#log-levels) (debug, trace, info, success, warn, error, off).
 - **Multiple Variants**: Symbol, icon, or text-based [display modes](./usage.md#display-variants).
 - **Remote Logging**: [Send logs to external services](./usage.md#remote-logging) (Sentry, Datadog, etc.) with rich metadata.
@@ -269,7 +264,7 @@ app.use((req, res, next) => {
   const start = Date.now();
 
   res.on('finish', () => {
-    const duration = Date.now() - start;
+    const duration = Date.now() – start;
     Logit.setPrefix(`${req.method} ${req.path}`);
 
     if (res.statusCode >= 400) {

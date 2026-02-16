@@ -22,10 +22,10 @@ type Money = {
 Financial calculations require exact precision. Using `bigint` to store amounts in minor units (cents) eliminates floating-point errors:
 
 ```ts
-// ❌ Bad - floating point errors
+// ❌ Bad – floating point errors
 0.1 + 0.2; // 0.30000000000004
 
-// ✅ Good - exact precision with bigint (cents)
+// ✅ Good – exact precision with bigint (cents)
 10n + 20n; // 30n
 ```
 
@@ -64,11 +64,11 @@ exchange(usd, rate); // { amount: 85000n, currency: 'EUR' }
 
 For arithmetic operations on monetary amounts, see:
 
-- [add](./math/add.md) - Add amounts
-- [subtract](./math/subtract.md) - Subtract amounts
-- [multiply](./math/multiply.md) - Multiply by scalars
-- [allocate](./math/allocate.md) - Split proportionally
-- [distribute](./math/distribute.md) - Split evenly
+- [add](./math/add.md) – Add amounts
+- [subtract](./math/subtract.md) – Subtract amounts
+- [multiply](./math/multiply.md) – Multiply by scalars
+- [allocate](./math/allocate.md) – Split proportionally
+- [distribute](./math/distribute.md) – Split evenly
 
 <style>
 .grid-links {

@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.1_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="wireit" />
 
 <img src="/logo-wireit.svg" alt="Wireit Logo" width="156" class="logo-highlight"/>
 
@@ -77,16 +72,16 @@ const service = container.get(UserService);
 
 ### Comparison with Alternatives
 
-| Feature          | Wireit    | InversifyJS | TSyringe |
-| ---------------- | --------- | ----------- | -------- |
-| Bundle Size      | **~2 KB** | ~14KB       | ~7KB     |
-| Dependencies     | 0         | 1           | 2        |
-| Decorators       | ❌        | ✅          | ✅       |
-| Async Support    | ✅        | ✅          | ❌       |
-| Scoped Lifetimes | ✅        | ✅          | ✅       |
-| Testing Helpers  | ✅        | ❌          | ❌       |
-| TypeScript First | ✅        | ✅          | ✅       |
-| No Reflect-meta  | ✅        | ❌          | ❌       |
+| Feature          | Wireit                                               | InversifyJS | TSyringe |
+| ---------------- | ---------------------------------------------------- | ----------- | -------- |
+| Bundle Size      | **~<PackageInfo package="wireit" type="size" />**    | ~14KB       | ~7KB     |
+| Dependencies     | <PackageInfo package="wireit" type="dependencies" /> | 1           | 2        |
+| Decorators       | ❌                                                   | ✅          | ✅       |
+| Async Support    | ✅                                                   | ✅          | ❌       |
+| Scoped Lifetimes | ✅                                                   | ✅          | ✅       |
+| Testing Helpers  | ✅                                                   | ❌          | ❌       |
+| TypeScript First | ✅                                                   | ✅          | ✅       |
+| No Reflect-meta  | ✅                                                   | ❌          | ❌       |
 
 ## When to Use Wireit
 
@@ -173,17 +168,17 @@ const Config = createToken<AppConfig>('Config');
 
 Three provider types for different scenarios:
 
-- **Value** - Register existing instances or plain values
-- **Class** - Register classes to be instantiated
-- **Factory** - Register factory functions for custom creation logic
+- **Value** – Register existing instances or plain values
+- **Class** – Register classes to be instantiated
+- **Factory** – Register factory functions for custom creation logic
 
 ### ⏱️ Lifetimes
 
 Control instance creation and reuse:
 
-- **Singleton** - One instance shared across the entire container
-- **Transient** - New instance created for every resolution
-- **Scoped** - One instance per scope (e.g., per HTTP request)
+- **Singleton** – One instance shared across the entire container
+- **Transient** – New instance created for every resolution
+- **Scoped** – One instance per scope (e.g., per HTTP request)
 
 ### 🌳 Container Hierarchy
 
@@ -197,9 +192,9 @@ Create parent/child containers for isolation and inheritance:
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage.md)** - Complete guide to dependency injection with Wireit
-- **[API Reference](./api.md)** - Detailed API documentation with all methods
-- **[Examples](./examples.md)** - Real-world examples and framework integrations
+- **[Usage Guide](./usage.md)** – Complete guide to dependency injection with Wireit
+- **[API Reference](./api.md)** – Detailed API documentation with all methods
+- **[Examples](./examples.md)** – Real-world examples and framework integrations
 - **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ

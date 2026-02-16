@@ -421,7 +421,7 @@ export function setFilter(filter: TodoState['filter']) {
   todoStore.set({ filter });
 }
 
-// Computed values using select() - type-safe property access
+// Computed values using select() – type-safe property access
 export function getFilteredTodos() {
   // Use select() for clean, type-safe access
   const todos = todoStore.get((state) => state.todos);

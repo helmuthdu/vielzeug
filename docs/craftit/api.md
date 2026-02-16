@@ -14,8 +14,8 @@ Define and register a custom element.
 
 **Parameters:**
 
-- `name: string` - Element tag name (must contain a hyphen, e.g., 'my-component')
-- `options: ComponentOptions<T, S>` - Component configuration
+- `name: string` – Element tag name (must contain a hyphen, e.g., 'my-component')
+- `options: ComponentOptions<T, S>` – Component configuration
 
 **Returns:** `void`
 
@@ -44,7 +44,7 @@ Create a custom element constructor without registering it.
 
 **Parameters:**
 
-- `options: ComponentOptions<T, S>` - Component configuration
+- `options: ComponentOptions<T, S>` – Component configuration
 
 **Returns:** `CustomElementConstructor`
 
@@ -67,8 +67,8 @@ Template string helper for HTML content.
 
 **Parameters:**
 
-- `strings: TemplateStringsArray` - Template string array
-- `...values: unknown[]` - Template values to interpolate
+- `strings: TemplateStringsArray` – Template string array
+- `...values: unknown[]` – Template values to interpolate
 
 **Returns:** `string`
 
@@ -88,10 +88,10 @@ Template string helper for CSS content with CSS variable utilities.
 
 **Parameters:**
 
-- `strings: TemplateStringsArray` - Template string array
-- `...values: unknown[]` - Template values to interpolate
+- `strings: TemplateStringsArray` – Template string array
+- `...values: unknown[]` – Template values to interpolate
 
-**Returns:** `string` - CSS string
+**Returns:** `string` – CSS string
 
 **Example:**
 
@@ -115,10 +115,10 @@ Reference a CSS custom property with `var()`.
 
 **Parameters:**
 
-- `name: string` - Variable name (with or without `--` prefix)
-- `fallback?: string | number` - Optional fallback value
+- `name: string` – Variable name (with or without `--` prefix)
+- `fallback?: string | number` – Optional fallback value
 
-**Returns:** `string` - CSS var() function string
+**Returns:** `string` – CSS var() function string
 
 **Example:**
 
@@ -139,10 +139,10 @@ Create a typed theme with CSS variables and autocomplete support.
 
 **Parameters:**
 
-- `vars: T extends Record<string, string | number>` - Theme variables
-- `selector?: string` - CSS selector (default: `:host`)
+- `vars: T extends Record<string, string | number>` – Theme variables
+- `selector?: string` – CSS selector (default: `:host`)
 
-**Returns:** `ThemeVars<T>` - Typed proxy with autocomplete for all properties
+**Returns:** `ThemeVars<T>` – Typed proxy with autocomplete for all properties
 
 **Example:**
 
@@ -161,9 +161,9 @@ css`
 // Use typed properties (with autocomplete!)
 css`
   .button {
-    color: ${theme.primaryColor}; /* → "var(--primary-color)" - autocomplete! */
-    background: ${theme.backgroundColor}; /* → "var(--background-color)" - autocomplete! */
-    padding: ${theme.spacing}; /* → "var(--spacing)" - autocomplete! */
+    color: ${theme.primaryColor}; /* → "var(--primary-color)" – autocomplete! */
+    background: ${theme.backgroundColor}; /* → "var(--background-color)" – autocomplete! */
+    padding: ${theme.spacing}; /* → "var(--spacing)" – autocomplete! */
   }
 `;
 
@@ -173,10 +173,10 @@ const darkTheme = css.theme({ bgColor: '#000' }, '[data-theme="dark"]');
 
 **Benefits:**
 
-- ✨ **Autocomplete** - Type `theme.` and see all available variables
-- 🔒 **Type-safe** - Typos caught at compile time
-- 🔄 **Refactoring** - Rename variables safely across codebase
-- 📦 **No string matching** - No more `css.var('primryColor')` bugs!
+- ✨ **Autocomplete** – Type `theme.` and see all available variables
+- 🔒 **Type-safe** – Typos caught at compile time
+- 🔄 **Refactoring** – Rename variables safely across codebase
+- 📦 **No string matching** – No more `css.var('primryColor')` bugs!
 
 **Complete Example:**
 
@@ -229,7 +229,7 @@ Generate conditional class strings.
 
 **Parameters:**
 
-- `classes: Record<string, boolean | undefined>` - Object mapping class names to conditions
+- `classes: Record<string, boolean | undefined>` – Object mapping class names to conditions
 
 **Returns:** `string`
 
@@ -252,7 +252,7 @@ Generate inline style strings from objects.
 
 **Parameters:**
 
-- `styles: Partial<CSSStyleDeclaration>` - Object mapping CSS properties to values
+- `styles: Partial<CSSStyleDeclaration>` – Object mapping CSS properties to values
 
 **Returns:** `string`
 
@@ -275,8 +275,8 @@ Attach an element to the DOM and wait for first render.
 
 **Parameters:**
 
-- `element: T extends HTMLElement` - The element to attach
-- `container?: HTMLElement` - Container element (defaults to `document.body`)
+- `element: T extends HTMLElement` – The element to attach
+- `container?: HTMLElement` – Container element (defaults to `document.body`)
 
 **Returns:** `Promise<T>`
 
@@ -299,7 +299,7 @@ Remove an element from the DOM.
 
 **Parameters:**
 
-- `element: HTMLElement` - The element to remove
+- `element: HTMLElement` – The element to remove
 
 **Returns:** `void`
 
@@ -480,8 +480,8 @@ Type representing a web component instance with all available methods and proper
 
 **Generic Parameters:**
 
-- `T` - Root element type (first child in shadow DOM)
-- `S` - State object type
+- `T` – Root element type (first child in shadow DOM)
+- `S` – State object type
 
 ### Properties
 
@@ -577,8 +577,8 @@ Update component state.
 
 **Parameters:**
 
-- `patch: Partial<S> | ((state: S) => S | Promise<S>)` - State update
-- `options?: { replace?: boolean; silent?: boolean }` - Update options
+- `patch: Partial<S> | ((state: S) => S | Promise<S>)` – State update
+- `options?: { replace?: boolean; silent?: boolean }` – Update options
 
 **Returns:** `Promise<void>`
 
@@ -608,10 +608,10 @@ Watch a state slice and react to changes.
 
 **Parameters:**
 
-- `selector: (state: S) => U` - Function to select a slice of state
-- `callback: (value: U, prev: U) => void` - Callback called on changes
+- `selector: (state: S) => U` – Function to select a slice of state
+- `callback: (value: U, prev: U) => void` – Callback called on changes
 
-**Returns:** `() => void` - Unsubscribe function
+**Returns:** `() => void` – Unsubscribe function
 
 ```ts
 const unwatch = el.watch(
@@ -631,7 +631,7 @@ Find a single element in shadow DOM.
 
 **Parameters:**
 
-- `selector: string` - CSS selector
+- `selector: string` – CSS selector
 
 **Returns:** `E | null`
 
@@ -646,7 +646,7 @@ Find all matching elements in shadow DOM.
 
 **Parameters:**
 
-- `selector: string` - CSS selector
+- `selector: string` – CSS selector
 
 **Returns:** `E[]`
 
@@ -661,10 +661,10 @@ Add event listener with automatic cleanup.
 
 **Parameters:**
 
-- `target: string | EventTarget` - CSS selector or EventTarget
-- `event: string` - Event name
-- `handler: EventListener` - Event handler function
-- `options?: AddEventListenerOptions` - Event listener options
+- `target: string | EventTarget` – CSS selector or EventTarget
+- `event: string` – Event name
+- `handler: EventListener` – Event handler function
+- `options?: AddEventListenerOptions` – Event listener options
 
 **Returns:** `void`
 
@@ -688,9 +688,9 @@ Dispatch a custom event.
 
 **Parameters:**
 
-- `name: string` - Event name
-- `detail?: unknown` - Event detail data
-- `options?: CustomEventInit` - CustomEvent options
+- `name: string` – Event name
+- `detail?: unknown` – Event detail data
+- `options?: CustomEventInit` – CustomEvent options
 
 **Returns:** `void`
 
@@ -706,10 +706,10 @@ Set timeout with automatic cleanup.
 
 **Parameters:**
 
-- `callback: () => void` - Function to call
-- `ms: number` - Delay in milliseconds
+- `callback: () => void` – Function to call
+- `ms: number` – Delay in milliseconds
 
-**Returns:** `number` - Timeout ID
+**Returns:** `number` – Timeout ID
 
 ```ts
 const id = el.delay(() => {
@@ -726,7 +726,7 @@ Clear a scheduled timeout.
 
 **Parameters:**
 
-- `id: number` - Timeout ID from `delay()`
+- `id: number` – Timeout ID from `delay()`
 
 **Returns:** `void`
 
@@ -813,10 +813,10 @@ counter.state.unknown = 'value'; // ❌ TypeScript error
 1. **Use Event Delegation**
 
 ```ts
-// ✅ Good - works for dynamic elements
+// ✅ Good – works for dynamic elements
 el.on('.item', 'click', handler);
 
-// ❌ Bad - must re-bind after state changes
+// ❌ Bad – must re-bind after state changes
 el.findAll('.item').forEach((item) => {
   item.addEventListener('click', handler);
 });
@@ -825,10 +825,10 @@ el.findAll('.item').forEach((item) => {
 2. **Batch State Updates**
 
 ```ts
-// ✅ Good - single re-render
+// ✅ Good – single re-render
 await el.set({ name: 'Alice', age: 30, email: 'alice@example.com' });
 
-// ❌ Bad - three re-renders
+// ❌ Bad – three re-renders
 el.state.name = 'Alice';
 el.state.age = 30;
 el.state.email = 'alice@example.com';
@@ -847,10 +847,10 @@ state: {
 4. **Optimize Templates**
 
 ```ts
-// ✅ Good - pure template
+// ✅ Good – pure template
 template: (el) => html`<div>${el.state.count}</div>`;
 
-// ❌ Bad - side effects in template
+// ❌ Bad – side effects in template
 template: (el) => {
   console.log('Rendering'); // Side effect!
   return html`<div>${el.state.count}</div>`;

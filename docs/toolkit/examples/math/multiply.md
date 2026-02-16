@@ -94,7 +94,7 @@ const discountPercent = 20n; // 20% off
 const discountAmount = multiply(originalPrice, discountPercent) / 100n;
 // 3199n ($31.99)
 
-const finalPrice = originalPrice - discountAmount;
+const finalPrice = originalPrice – discountAmount;
 // 12800n ($128.00)
 ```
 

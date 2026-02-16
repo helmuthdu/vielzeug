@@ -13,15 +13,15 @@ Toolkit provides **110+ utilities** organized into 9 categories. All utilities a
 
 ## Quick Navigation
 
-- [Array Utilities](#array-utilities) - Transform, filter, group, and sort arrays
-- [Object Utilities](#object-utilities) - Deep operations, merging, and traversal
-- [String Utilities](#string-utilities) - Formatting, casing, and manipulation
-- [Function Utilities](#function-utilities) - Debounce, throttle, memoize, and retry
-- [Math Utilities](#math-utilities) - Statistics, calculations, and ranges
-- [Money Utilities](#money-utilities) - Currency formatting and conversion
-- [Date Utilities](#date-utilities) - Time intervals and differences
-- [Random Utilities](#random-utilities) - Random values, shuffling, and sampling
-- [Typed Utilities](#typed-utilities) - Type guards and runtime checks
+- [Array Utilities](#array-utilities) – Transform, filter, group, and sort arrays
+- [Object Utilities](#object-utilities) – Deep operations, merging, and traversal
+- [String Utilities](#string-utilities) – Formatting, casing, and manipulation
+- [Function Utilities](#function-utilities) – Debounce, throttle, memoize, and retry
+- [Math Utilities](#math-utilities) – Statistics, calculations, and ranges
+- [Money Utilities](#money-utilities) – Currency formatting and conversion
+- [Date Utilities](#date-utilities) – Time intervals and differences
+- [Random Utilities](#random-utilities) – Random values, shuffling, and sampling
+- [Typed Utilities](#typed-utilities) – Type guards and runtime checks
 
 ## Array Utilities
 
@@ -305,8 +305,8 @@ import { isString, isArray } from '@vielzeug/toolkit/typed';
 
 ## See Also
 
-- [Usage Guide](./usage.md) - Installation and best practices
-- [Examples](./examples/array.md) - Category-specific examples
+- [Usage Guide](./usage.md) – Installation and best practices
+- [Examples](./examples/array.md) – Category-specific examples
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
 - [NPM Package](https://www.npmjs.com/package/@vielzeug/toolkit)
 

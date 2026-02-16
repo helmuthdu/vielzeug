@@ -34,12 +34,7 @@ yarn add @vielzeug/routeit
 import { createRouter } from '@vielzeug/routeit';
 
 // Optional: Import types
-import type {
-  Router,
-  RouteContext,
-  Middleware,
-  RouteDefinition,
-} from '@vielzeug/routeit';
+import type { Router, RouteContext, Middleware, RouteDefinition } from '@vielzeug/routeit';
 ```
 
 ## Basic Usage
@@ -54,8 +49,8 @@ const router = createRouter();
 
 // Router with options
 const router = createRouter({
-  mode: 'history',  // 'history' or 'hash'
-  base: '/',        // Base path for all routes
+  mode: 'history', // 'history' or 'hash'
+  base: '/', // Base path for all routes
 });
 ```
 
@@ -67,7 +62,7 @@ router.route({
   path: '/about',
   handler: () => {
     console.log('About page');
-  }
+  },
 });
 
 // Multiple routes
@@ -83,11 +78,7 @@ router.get('/blog', () => {
 });
 
 // Method chaining
-router
-  .get('/', homeHandler)
-  .get('/about', aboutHandler)
-  .get('/users/:id', userHandler)
-  .start();
+router.get('/', homeHandler).get('/about', aboutHandler).get('/users/:id', userHandler).start();
 ```
 
 ### Route Parameters
@@ -160,7 +151,7 @@ router.navigate('/login', { replace: true });
 
 // Navigate with state
 router.navigate('/profile', {
-  state: { from: '/settings' }
+  state: { from: '/settings' },
 });
 
 // Navigate from within handler
@@ -179,8 +170,8 @@ router.back();
 router.forward();
 
 // Go to specific position
-router.go(-2);  // Back 2 pages
-router.go(1);   // Forward 1 page
+router.go(-2); // Back 2 pages
+router.go(1); // Forward 1 page
 ```
 
 ### Building URLs
@@ -193,21 +184,17 @@ console.log(url); // '/users/123'
 // Build URL with query parameters
 const searchUrl = router.buildUrl('/search', undefined, {
   q: 'test',
-  page: '2'
+  page: '2',
 });
 console.log(searchUrl); // '/search?q=test&page=2'
 
 // Build URL with both
-const fullUrl = router.buildUrl(
-  '/users/:id',
-  { id: '123' },
-  { tab: 'posts', page: '2' }
-);
+const fullUrl = router.buildUrl('/users/:id', { id: '123' }, { tab: 'posts', page: '2' });
 console.log(fullUrl); // '/users/123?tab=posts&page=2'
 
 // Array query parameters
 const filterUrl = router.buildUrl('/products', undefined, {
-  tags: ['new', 'sale']
+  tags: ['new', 'sale'],
 });
 console.log(filterUrl); // '/products?tags=new&tags=sale'
 ```
@@ -223,7 +210,7 @@ router.route({
   name: 'userDetail',
   handler: ({ params }) => {
     console.log('User:', params.id);
-  }
+  },
 });
 
 // Navigate by name
@@ -259,7 +246,7 @@ router.route({
   middleware: loggerMiddleware,
   handler: () => {
     console.log('Dashboard');
-  }
+  },
 });
 ```
 
@@ -269,16 +256,16 @@ router.route({
 const requireAuth: Middleware = async (ctx, next) => {
   // Get user from your auth system
   const user = await getCurrentUser();
-  
+
   if (!user) {
     // Redirect to login if not authenticated
     ctx.navigate('/login');
-    return; // Don't call next() - stops execution
+    return; // Don't call next() – stops execution
   }
-  
+
   // Add user to context
   ctx.user = user;
-  
+
   // Continue to next middleware or handler
   await next();
 };
@@ -289,7 +276,7 @@ router.route({
   middleware: requireAuth,
   handler: (ctx) => {
     console.log('User:', ctx.user);
-  }
+  },
 });
 ```
 
@@ -305,7 +292,7 @@ router.route({
     console.log('Admin page');
     console.log('User:', ctx.user);
     console.log('Data:', ctx.meta.data);
-  }
+  },
 });
 ```
 
@@ -315,11 +302,7 @@ Apply middleware to all routes:
 
 ```ts
 const router = createRouter({
-  middleware: [
-    loggerMiddleware,
-    errorHandler,
-    performanceMonitor
-  ]
+  middleware: [loggerMiddleware, errorHandler, performanceMonitor],
 });
 
 // Execution order:
@@ -333,17 +316,17 @@ Middleware can modify the context:
 ```ts
 const dataLoader: Middleware = async (ctx, next) => {
   // Add metadata
-  ctx.meta = { 
+  ctx.meta = {
     loadedAt: Date.now(),
-    environment: 'production' 
+    environment: 'production',
   };
-  
+
   // Load user data
   ctx.user = await fetchUser();
-  
+
   // Load additional data
   ctx.meta.settings = await fetchSettings();
-  
+
   await next();
 };
 
@@ -354,7 +337,7 @@ router.route({
     console.log('User:', ctx.user);
     console.log('Meta:', ctx.meta);
     console.log('Settings:', ctx.meta.settings);
-  }
+  },
 });
 ```
 
@@ -371,29 +354,26 @@ Permit.register('admin', 'posts', {
   read: true,
   create: true,
   update: true,
-  delete: true
+  delete: true,
 });
 
 Permit.register('user', 'posts', {
   read: true,
   create: true,
   update: (user, data) => user.id === data.authorId,
-  delete: false
+  delete: false,
 });
 
 // Permission middleware factory
-function requirePermission(
-  resource: string, 
-  action: PermissionAction
-): Middleware {
+function requirePermission(resource: string, action: PermissionAction): Middleware {
   return async (ctx, next) => {
     const user = ctx.user as BaseUser;
-    
+
     if (!user || !Permit.check(user, resource, action)) {
       ctx.navigate('/forbidden');
       return;
     }
-    
+
     await next();
   };
 }
@@ -402,13 +382,13 @@ function requirePermission(
 router.route({
   path: '/posts',
   middleware: [requireAuth, requirePermission('posts', 'read')],
-  handler: () => console.log('Posts page')
+  handler: () => console.log('Posts page'),
 });
 
 router.route({
   path: '/posts/:id/edit',
   middleware: [requireAuth, requirePermission('posts', 'update')],
-  handler: ({ params }) => console.log('Edit post:', params.id)
+  handler: ({ params }) => console.log('Edit post:', params.id),
 });
 ```
 
@@ -425,20 +405,20 @@ router.route({
   children: [
     {
       path: '/list',
-      handler: () => console.log('User list')
+      handler: () => console.log('User list'),
       // Matches: /users/list
     },
     {
       path: '/:id',
-      handler: ({ params }) => console.log('User:', params.id)
+      handler: ({ params }) => console.log('User:', params.id),
       // Matches: /users/123
     },
     {
       path: '/:id/edit',
-      handler: ({ params }) => console.log('Edit user:', params.id)
+      handler: ({ params }) => console.log('Edit user:', params.id),
       // Matches: /users/123/edit
-    }
-  ]
+    },
+  ],
 });
 
 // Nested routes with parameters
@@ -454,10 +434,10 @@ router.route({
         // Both orgId and projectId are available
         console.log('Org:', params.orgId);
         console.log('Project:', params.projectId);
-      }
+      },
       // Matches: /organizations/abc/projects/xyz
-    }
-  ]
+    },
+  ],
 });
 ```
 
@@ -496,7 +476,7 @@ router.get('/users/:id', (context) => {
 ### Typed Context
 
 ```ts
-type RouteData = { 
+type RouteData = {
   title: string;
   requiresAuth: boolean;
 };
@@ -505,13 +485,13 @@ router.route<RouteData>({
   path: '/admin',
   data: {
     title: 'Admin Dashboard',
-    requiresAuth: true
+    requiresAuth: true,
   },
   handler: (context) => {
     // context.data is typed as RouteData
     document.title = context.data?.title || 'App';
     console.log('Requires auth:', context.data?.requiresAuth);
-  }
+  },
 });
 ```
 
@@ -539,7 +519,7 @@ Uses HTML5 History API (default):
 ```ts
 const router = createRouter({
   mode: 'history',
-  base: '/'
+  base: '/',
 });
 
 // URLs: https://example.com/about
@@ -552,7 +532,7 @@ Uses hash-based routing (great for static hosting):
 ```ts
 const router = createRouter({
   mode: 'hash',
-  base: '/'
+  base: '/',
 });
 
 // URLs: https://example.com/#/about
@@ -565,7 +545,7 @@ Deploy your app at a subdirectory:
 ```ts
 const router = createRouter({
   mode: 'history',
-  base: '/my-app'
+  base: '/my-app',
 });
 
 router.get('/about', () => {
@@ -585,16 +565,16 @@ Handle routes that don't match:
 const router = createRouter({
   notFound: ({ pathname, navigate }) => {
     console.log('404:', pathname);
-    
+
     // Render 404 page
     document.getElementById('app').innerHTML = `
-      <h1>404 - Page Not Found</h1>
+      <h1>404 – Page Not Found</h1>
       <p>The page "${pathname}" does not exist.</p>
     `;
-    
+
     // Or redirect
     // navigate('/', { replace: true });
-  }
+  },
 });
 ```
 
@@ -621,8 +601,8 @@ const query = router.getCurrentQuery();
 const hash = router.getCurrentHash();
 
 console.log('Current:', pathname); // '/users/123'
-console.log('Query:', query);      // { tab: 'profile' }
-console.log('Hash:', hash);        // 'section-1'
+console.log('Query:', query); // { tab: 'profile' }
+console.log('Hash:', hash); // 'section-1'
 ```
 
 ### Create Links
@@ -635,7 +615,7 @@ document.body.appendChild(link);
 // With attributes
 const styledLink = router.link('/about', 'About', {
   class: 'nav-link',
-  'data-section': 'main'
+  'data-section': 'main',
 });
 
 // Named route link
@@ -688,11 +668,11 @@ const handler: RouteHandler<MyContext> = (ctx) => {
 ### 1. Use Named Routes
 
 ```ts
-// ✅ Good - Easy to refactor
+// ✅ Good – Easy to refactor
 router.route({ path: '/users/:id', name: 'user', handler });
 router.navigateTo('user', { id: '123' });
 
-// ❌ Avoid - Hard to refactor
+// ❌ Avoid – Hard to refactor
 router.navigate('/users/123');
 ```
 
@@ -714,7 +694,7 @@ import { requireAuth, requireAdmin } from './middleware';
 router.route({
   path: '/admin',
   middleware: [requireAuth, requireAdmin],
-  handler: adminHandler
+  handler: adminHandler,
 });
 ```
 
@@ -735,13 +715,13 @@ const loadUser: Middleware<AppContext> = async (ctx, next) => {
 ### 4. Use Route Data
 
 ```ts
-// ✅ Good - Metadata in route definition
+// ✅ Good – Metadata in route definition
 router.route({
   path: '/admin',
   data: { title: 'Admin', requiresAuth: true },
   handler: ({ data }) => {
     document.title = data?.title || 'App';
-  }
+  },
 });
 ```
 
@@ -750,4 +730,3 @@ router.route({
 - Check out [Examples](./examples.md) for real-world usage
 - See [API Reference](./api.md) for complete API documentation
 - Integrate with [Permit](../permit/index.md) for authorization
-

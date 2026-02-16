@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.1.1-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.4_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="stateit" />
 
 <img src="/logo-stateit.svg" alt="Stateit Logo" width="156" class="logo-highlight"/>
 
@@ -13,7 +8,7 @@
 
 ## What Problem Does Stateit Solve?
 
-Managing application state across components and frameworks can be complex - you need reactivity, subscriptions, state updates, and performance optimization. Stateit provides a minimal, framework-agnostic solution that works everywhere.
+Managing application state across components and frameworks can be complex – you need reactivity, subscriptions, state updates, and performance optimization. Stateit provides a minimal, framework-agnostic solution that works everywhere.
 
 **Traditional Approach**:
 
@@ -69,18 +64,18 @@ store.subscribe(
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit      | Zustand   | Jotai     | Valtio  | Pinia     |
-| -------------------- | ------------ | --------- | --------- | ------- | --------- |
-| Bundle Size          | **~2.4 KB**  | ~1.1 KB   | ~3.0 KB   | ~5.4 KB | ~6.5 KB   |
-| Dependencies         | 0            | 1         | 0         | 1       | 1         |
-| Framework            | **Agnostic** | React     | React     | React   | Vue       |
-| TypeScript           | Native       | Excellent | Excellent | Good    | Excellent |
-| Selective Subs       | ✅           | ✅        | ✅        | ✅      | ✅        |
-| Async Updates        | ✅           | ✅        | ✅        | ✅      | ✅        |
-| Scoped Stores        | ✅           | ❌        | ✅        | ❌      | ❌        |
-| Custom Equality      | ✅           | ✅        | ✅        | ❌      | ❌        |
-| Testing Helpers      | ✅           | ❌        | ❌        | ❌      | ❌        |
-| DevTools Integration | ❌           | ✅        | ✅        | ✅      | ✅        |
+| Feature              | Stateit                                               | Zustand   | Jotai     | Valtio  | Pinia     |
+| -------------------- | ----------------------------------------------------- | --------- | --------- | ------- | --------- |
+| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~1.1 KB   | ~3.0 KB   | ~5.4 KB | ~6.5 KB   |
+| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1         | 0         | 1       | 1         |
+| Framework            | **Agnostic**                                          | React     | React     | React   | Vue       |
+| TypeScript           | Native                                                | Excellent | Excellent | Good    | Excellent |
+| Selective Subs       | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
+| Async Updates        | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
+| Scoped Stores        | ✅                                                    | ❌        | ✅        | ❌      | ❌        |
+| Custom Equality      | ✅                                                    | ✅        | ✅        | ❌      | ❌        |
+| Testing Helpers      | ✅                                                    | ❌        | ❌        | ❌      | ❌        |
+| DevTools Integration | ❌                                                    | ✅        | ✅        | ✅      | ✅        |
 
 ## When to Use Stateit
 
@@ -107,7 +102,7 @@ store.subscribe(
 - **Batched Updates**: Automatic notification batching for [optimal performance](./usage.md#performance-tips).
 - **Custom Equality**: Configurable [equality checks](./usage.md#custom-equality) for fine-grained control
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS. See [Common Patterns](./usage.md#common-patterns).
-- **Lightweight & Fast**: Zero dependencies and only **~2 KB gzipped**.
+- **Lightweight & Fast**: <PackageInfo package="stateit" type="dependencies" /> dependencies and only **<PackageInfo package="stateit" type="size" /> gzipped**.
 - **Reactive Subscriptions**: [Subscribe](./usage.md#subscriptions) to full state or selected slices.
 - **Scoped Stores**: Create [child stores](./usage.md#scoped-stores) for isolated state management
 - **Testing Friendly**: Built-in testing helpers and utilities.
@@ -385,10 +380,10 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 Make sure you're using the subscription properly:
 
 ```ts
-// ❌ Wrong - reading once
+// ❌ Wrong – reading once
 const state = store.get();
 
-// ✅ Correct - using subscription
+// ✅ Correct – using subscription
 const state = useSyncExternalStore(
   (callback) => store.subscribe(callback),
   () => store.get(),

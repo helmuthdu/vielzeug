@@ -23,11 +23,11 @@ function retry<T>(
 
 ## Parameters
 
-- `fn` - The asynchronous function to retry
-- `options.times` - The number of retry attempts (default: 3)
-- `options.delay` - The delay in milliseconds between retries (default: 250)
-- `options.backoff` - Exponential backoff factor or custom function (default: 1, no backoff)
-- `options.signal` - AbortSignal to allow canceling retries
+- `fn` – The asynchronous function to retry
+- `options.times` – The number of retry attempts (default: 3)
+- `options.delay` – The delay in milliseconds between retries (default: 250)
+- `options.backoff` – Exponential backoff factor or custom function (default: 1, no backoff)
+- `options.signal` – AbortSignal to allow canceling retries
 
 ## Returns
 
@@ -102,5 +102,5 @@ async function fetchWithRetry(url: string) {
 
 ## Related
 
-- [attempt](./attempt.md) - Execute with error handling and retry
-- [predict](./predict.md) - Add timeout with AbortSignal
+- [attempt](./attempt.md) – Execute with error handling and retry
+- [predict](./predict.md) – Add timeout with AbortSignal

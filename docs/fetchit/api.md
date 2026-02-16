@@ -10,8 +10,8 @@ Complete API documentation for `@vielzeug/fetchit`.
 
 Fetchit provides **two separate clients** for maximum flexibility:
 
-1. **HTTP Client** (`createHttpClient`) - Pure HTTP operations without caching
-2. **Query Client** (`createQueryClient`) - Advanced query management with caching
+1. **HTTP Client** (`createHttpClient`) – Pure HTTP operations without caching
+2. **Query Client** (`createQueryClient`) – Advanced query management with caching
 
 Use them together or independently based on your needs.
 
@@ -24,11 +24,11 @@ Creates a pure HTTP client without query management. Perfect for simple HTTP req
 **Parameters:**
 
 - `options?: HttpClientOptions`
-  - `baseUrl?: string` - Base URL for all requests
-  - `headers?: Record<string, string>` - Default headers for all requests
-  - `timeout?: number` - Request timeout in milliseconds (default: 30000)
-  - `dedupe?: boolean` - Enable request deduplication (default: true)
-  - `logger?: (level, msg, meta) => void` - Optional logger function for debugging
+  - `baseUrl?: string` – Base URL for all requests
+  - `headers?: Record<string, string>` – Default headers for all requests
+  - `timeout?: number` – Request timeout in milliseconds (default: 30000)
+  - `dedupe?: boolean` – Enable request deduplication (default: true)
+  - `logger?: (level, msg, meta) => void` – Optional logger function for debugging
 
 **Returns:** HTTP client instance with REST methods
 
@@ -54,13 +54,13 @@ const created = await http.post('/users', { body: newUser });
 
 **Available Methods:**
 
-- `get<T>(url, config?): Promise<T>` - GET request
-- `post<T>(url, config?): Promise<T>` - POST request
-- `put<T>(url, config?): Promise<T>` - PUT request
-- `patch<T>(url, config?): Promise<T>` - PATCH request
-- `delete<T>(url, config?): Promise<T>` - DELETE request
-- `request<T>(method, url, config?): Promise<T>` - Custom HTTP method
-- `setHeaders(headers): void` - Update global headers
+- `get<T>(url, config?): Promise<T>` – GET request
+- `post<T>(url, config?): Promise<T>` – POST request
+- `put<T>(url, config?): Promise<T>` – PUT request
+- `patch<T>(url, config?): Promise<T>` – PATCH request
+- `delete<T>(url, config?): Promise<T>` – DELETE request
+- `request<T>(method, url, config?): Promise<T>` – Custom HTTP method
+- `setHeaders(headers): void` – Update global headers
 
 ---
 
@@ -71,8 +71,8 @@ Creates a pure query management client. Works with any HTTP client or fetch func
 **Parameters:**
 
 - `options?: QueryClientOptions`
-  - `staleTime?: number` - Time before data is stale in ms (default: 0)
-  - `gcTime?: number` - Garbage collection time in ms (default: 300000)
+  - `staleTime?: number` – Time before data is stale in ms (default: 0)
+  - `gcTime?: number` – Garbage collection time in ms (default: 300000)
 
 **Returns:** Query client instance
 
@@ -85,7 +85,6 @@ const queryClient = createQueryClient({
   staleTime: 5000,
   gcTime: 300000,
 });
-
 
 // Use with HTTP client
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
@@ -105,15 +104,15 @@ const data = await queryClient.fetch({
 
 **Core Methods:**
 
-- `fetch<T>(options): Promise<T>` - Execute a query with caching
-- `mutate<TData, TVariables>(options, variables): Promise<TData>` - Execute a mutation
-- `prefetch<T>(options): Promise<void>` - Prefetch a query
-- `getData<T>(queryKey): T | undefined` - Get cached data
-- `setData<T>(queryKey, data | updater): void` - Set/update cached data
-- `getState<T>(queryKey): QueryState<T> | null` - Get full query state
-- `invalidate(queryKey): void` - Invalidate query (supports prefix matching)
-- `subscribe<T>(queryKey, listener): () => void` - Subscribe to query changes (returns unsubscribe function)
-- `clear(): void` - Clear all cached data
+- `fetch<T>(options): Promise<T>` – Execute a query with caching
+- `mutate<TData, TVariables>(options, variables): Promise<TData>` – Execute a mutation
+- `prefetch<T>(options): Promise<void>` – Prefetch a query
+- `getData<T>(queryKey): T | undefined` – Get cached data
+- `setData<T>(queryKey, data | updater): void` – Set/update cached data
+- `getState<T>(queryKey): QueryState<T> | null` – Get full query state
+- `invalidate(queryKey): void` – Invalidate query (supports prefix matching)
+- `subscribe<T>(queryKey, listener): () => void` – Subscribe to query changes (returns unsubscribe function)
+- `clear(): void` – Clear all cached data
 
 ## Type-Safe Query Keys
 
@@ -135,7 +134,7 @@ const queryKeys = {
   },
 } as const;
 
-// Type-safe usage - autocomplete works!
+// Type-safe usage – autocomplete works!
 queryClient.fetch({
   queryKey: queryKeys.users.detail('123'),
   queryFn: () => http.get('/users/123'),
@@ -156,17 +155,17 @@ Execute a query with automatic caching, deduplication, and smart refetching.
 **Parameters:**
 
 - `options: QueryOptions<T>`
-  - `queryKey: QueryKey` - Array-based unique identifier (e.g., `['users', 1]`)
-  - `queryFn: () => Promise<T>` - Function that fetches the data
-  - `staleTime?: number` - Time in ms before data is stale (default: 0)
-  - `gcTime?: number` - Time in ms before garbage collection (default: 300000)
-  - `enabled?: boolean` - Whether to execute the query (default: true)
-  - `retry?: number | false` - Number of retry attempts (default: 3)
-  - `retryDelay?: number | ((attempt: number) => number)` - Delay between retries
-  - `onSuccess?: (data: T) => void` - Success callback
-  - `onError?: (error: Error) => void` - Error callback
+  - `queryKey: QueryKey` – Array-based unique identifier (e.g., `['users', 1]`)
+  - `queryFn: () => Promise<T>` – Function that fetches the data
+  - `staleTime?: number` – Time in ms before data is stale (default: 0)
+  - `gcTime?: number` – Time in ms before garbage collection (default: 300000)
+  - `enabled?: boolean` – Whether to execute the query (default: true)
+  - `retry?: number | false` – Number of retry attempts (default: 3)
+  - `retryDelay?: number | ((attempt: number) => number)` – Delay between retries
+  - `onSuccess?: (data: T) => void` – Success callback
+  - `onError?: (error: Error) => void` – Error callback
 
-**Returns:** `Promise<T>` - The fetched data
+**Returns:** `Promise<T>` – The fetched data
 
 **Example:**
 
@@ -193,15 +192,15 @@ Execute a mutation (POST, PUT, PATCH, DELETE) with retry support and lifecycle c
 **Parameters:**
 
 - `options: MutationOptions<TData, TVariables>`
-  - `mutationFn: (variables: TVariables) => Promise<TData>` - Function to execute
-  - `retry?: number | false` - Number of retry attempts (default: false)
-  - `retryDelay?: number | ((attempt: number) => number)` - Delay between retries
-  - `onSuccess?: (data: TData, variables: TVariables) => void` - Success callback
-  - `onError?: (error: Error, variables: TVariables) => void` - Error callback
-  - `onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void` - Always called
-- `variables: TVariables` - Variables to pass to mutationFn
+  - `mutationFn: (variables: TVariables) => Promise<TData>` – Function to execute
+  - `retry?: number | false` – Number of retry attempts (default: false)
+  - `retryDelay?: number | ((attempt: number) => number)` – Delay between retries
+  - `onSuccess?: (data: TData, variables: TVariables) => void` – Success callback
+  - `onError?: (error: Error, variables: TVariables) => void` – Error callback
+  - `onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void` – Always called
+- `variables: TVariables` – Variables to pass to mutationFn
 
-**Returns:** `Promise<TData>` - The mutation result
+**Returns:** `Promise<TData>` – The mutation result
 
 **Example:**
 
@@ -224,7 +223,7 @@ const newUser = await queryClient.mutate(
 
 ## HTTP Client Methods
 
-All HTTP client methods return `Promise<T>` - the raw data directly (not wrapped in a response object).
+All HTTP client methods return `Promise<T>` – the raw data directly (not wrapped in a response object).
 
 > **🔥 Automatic Deduplication:** All HTTP requests are automatically deduplicated by default. Concurrent identical requests (same URL, method, and body) will share the same network call. Disable per-request with `{ dedupe: false }`.
 
@@ -234,9 +233,9 @@ Makes a GET request and returns the data directly.
 
 **Config Options:**
 
-- `params?: Record<string, string | number | undefined>` - Query parameters
-- `dedupe?: boolean` - Enable/disable deduplication (default: true)
-- `signal?: AbortSignal` - AbortSignal for request cancellation
+- `params?: Record<string, string | number | undefined>` – Query parameters
+- `dedupe?: boolean` – Enable/disable deduplication (default: true)
+- `signal?: AbortSignal` – AbortSignal for request cancellation
 
 **Example:**
 
@@ -305,9 +304,9 @@ Makes a request with a custom HTTP method. Useful for less common methods like O
 
 **Parameters:**
 
-- `method: string` - HTTP method (e.g., 'OPTIONS', 'HEAD')
-- `url: string` - Request URL
-- `config?: HttpRequestConfig` - Request configuration
+- `method: string` – HTTP method (e.g., 'OPTIONS', 'HEAD')
+- `url: string` – Request URL
+- `config?: HttpRequestConfig` – Request configuration
 
 **Returns:** `Promise<T>`
 
@@ -327,7 +326,7 @@ Update global headers for all future requests.
 
 **Parameters:**
 
-- `headers: Record<string, string | undefined>` - Headers to set (undefined removes header)
+- `headers: Record<string, string | undefined>` – Headers to set (undefined removes header)
 
 **Example:**
 
@@ -338,7 +337,6 @@ http.setHeaders({ Authorization: `Bearer ${token}` });
 // Remove auth token
 http.setHeaders({ Authorization: undefined });
 ```
-
 
 ## Query Client Cache Management
 
@@ -368,8 +366,8 @@ Manually set or update data in the query cache.
 
 **Parameters:**
 
-- `queryKey: QueryKey` - The query key
-- `data: T | ((old: T | undefined) => T)` - New data or updater function
+- `queryKey: QueryKey` – The query key
+- `data: T | ((old: T | undefined) => T)` – New data or updater function
 
 **Example:**
 
@@ -387,9 +385,9 @@ Get cached data for a query.
 
 **Parameters:**
 
-- `queryKey: QueryKey` - The query key
+- `queryKey: QueryKey` – The query key
 
-**Returns:** `T | undefined` - Cached data or undefined
+**Returns:** `T | undefined` – Cached data or undefined
 
 **Example:**
 
@@ -406,9 +404,9 @@ Get the full state of a query including status, error, and metadata.
 
 **Parameters:**
 
-- `queryKey: QueryKey` - The query key
+- `queryKey: QueryKey` – The query key
 
-**Returns:** `QueryState<T> | null` - Query state object or null if not found
+**Returns:** `QueryState<T> | null` – Query state object or null if not found
 
 **QueryState Type:**
 
@@ -445,7 +443,7 @@ Prefetch a query to warm up the cache without consuming the result. Useful for l
 
 **Parameters:**
 
-- `options: QueryOptions<T>` - Same as `query()` options
+- `options: QueryOptions<T>` – Same as `query()` options
 
 **Returns:** `Promise<void>`
 
@@ -478,8 +476,8 @@ Subscribe to changes in a query's cache entry. The listener receives the full qu
 
 **Parameters:**
 
-- `queryKey: QueryKey` - The query key to watch
-- `listener: (state: QueryState<T>) => void` - Callback function called with state on changes
+- `queryKey: QueryKey` – The query key to watch
+- `listener: (state: QueryState<T>) => void` – Callback function called with state on changes
 
 **State Object:**
 
@@ -500,7 +498,7 @@ Subscribe to changes in a query's cache entry. The listener receives the full qu
 }
 ```
 
-**Returns:** `() => void` - Unsubscribe function
+**Returns:** `() => void` – Unsubscribe function
 
 **Example:**
 
@@ -537,10 +535,10 @@ Subscribe to query state changes. Returns an unsubscribe function.
 
 **Parameters:**
 
-- `queryKey: QueryKey` - The query key to watch
-- `listener: (state: QueryState<T>) => void` - Callback invoked on state changes
+- `queryKey: QueryKey` – The query key to watch
+- `listener: (state: QueryState<T>) => void` – Callback invoked on state changes
 
-**Returns:** `() => void` - Unsubscribe function
+**Returns:** `() => void` – Unsubscribe function
 
 **Example:**
 
@@ -583,7 +581,7 @@ Prefetch a query without consuming the result. Useful for warming the cache.
 
 **Parameters:**
 
-- `options: QueryOptions<T>` - Same as `fetch()` options
+- `options: QueryOptions<T>` – Same as `fetch()` options
 
 **Returns:** `Promise<void>`
 
@@ -683,20 +681,20 @@ type HttpRequestConfig = Omit<RequestInit, 'body'> & {
 ```ts
 // Query parameters
 await http.get('/users', {
-  query: { role: 'admin', active: true }
+  query: { role: 'admin', active: true },
 });
 // → GET /users?role=admin&active=true
 
 // Path parameters
 await http.get('/users/:id', {
-  params: { id: '123' }
+  params: { id: '123' },
 });
 // → GET /users/123
 
 // Combined
 await http.get('/users/:userId/posts', {
   params: { userId: '123' },
-  query: { status: 'published', limit: 10 }
+  query: { status: 'published', limit: 10 },
 });
 // → GET /users/123/posts?status=published&limit=10
 ```
@@ -861,7 +859,7 @@ await queryClient.fetch({
 
 **How it works:**
 
-- If `retryDelay` is a function, it's called with `attemptIndex - 1` (0-based)
+- If `retryDelay` is a function, it's called with `attemptIndex – 1` (0-based)
 - If `retryDelay` is a number, it's used as a fixed delay
 - If `retryDelay` is undefined, exponential backoff is used (1s → 2s → 4s → 8s, max 30s)
 - Retry requests respect the query's `AbortController` for cancellation
