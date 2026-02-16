@@ -27,7 +27,7 @@
 
 ## 📦 Packages
 
-### [@vielzeug/craftit](packages/craftit) - Web Components
+### [@vielzeug/craftit](packages/craftit) – Web Components
 
 Lightweight, type-safe web component creation library with reactive state and automatic rendering.
 
@@ -47,7 +47,7 @@ npm install @vielzeug/craftit
 
 ---
 
-### [@vielzeug/deposit](packages/deposit) - Browser Storage
+### [@vielzeug/deposit](packages/deposit) – Browser Storage
 
 Powerful, type-safe browser storage utility with unified API for IndexedDB and LocalStorage.
 
@@ -66,7 +66,7 @@ npm install @vielzeug/deposit
 
 ---
 
-### [@vielzeug/fetchit](packages/fetchit) - HTTP Client & Query Management
+### [@vielzeug/fetchit](packages/fetchit) – HTTP Client & Query Management
 
 Modern, type-safe HTTP client with intelligent caching and query management.
 
@@ -85,7 +85,7 @@ npm install @vielzeug/fetchit
 
 ---
 
-### [@vielzeug/formit](packages/formit) - Form State Management
+### [@vielzeug/formit](packages/formit) – Form State Management
 
 Effortless, type-safe form state and validation for modern web applications.
 
@@ -104,7 +104,7 @@ npm install @vielzeug/formit
 
 ---
 
-### [@vielzeug/i18nit](packages/i18nit) - Internationalization
+### [@vielzeug/i18nit](packages/i18nit) – Internationalization
 
 Lightweight, type-safe internationalization with pluralization and async loading.
 
@@ -123,7 +123,7 @@ npm install @vielzeug/i18nit
 
 ---
 
-### [@vielzeug/logit](packages/logit) - Logging Utility
+### [@vielzeug/logit](packages/logit) – Logging Utility
 
 Flexible, zero-dependency logging utility for browser and Node.js environments.
 
@@ -142,7 +142,7 @@ npm install @vielzeug/logit
 
 ---
 
-### [@vielzeug/permit](packages/permit) - Permission Management
+### [@vielzeug/permit](packages/permit) – Permission Management
 
 Flexible, type-safe permission and role management utility.
 
@@ -161,7 +161,7 @@ npm install @vielzeug/permit
 
 ---
 
-### [@vielzeug/routeit](packages/routeit) - Client-Side Routing
+### [@vielzeug/routeit](packages/routeit) – Client-Side Routing
 
 Lightweight, type-safe client-side routing for SPAs.
 
@@ -180,7 +180,7 @@ npm install @vielzeug/routeit
 
 ---
 
-### [@vielzeug/stateit](packages/stateit) - State Management
+### [@vielzeug/stateit](packages/stateit) – State Management
 
 Tiny, framework-agnostic state management with reactive subscriptions.
 
@@ -199,7 +199,7 @@ npm install @vielzeug/stateit
 
 ---
 
-### [@vielzeug/toolkit](packages/toolkit) - Utility Library
+### [@vielzeug/toolkit](packages/toolkit) – Utility Library
 
 
 Comprehensive, type-safe utility library with 100+ helpers for modern JavaScript.
@@ -219,7 +219,7 @@ npm install @vielzeug/toolkit
 
 ---
 
-### [@vielzeug/validit](packages/validit) - Schema Validation
+### [@vielzeug/validit](packages/validit) – Schema Validation
 
 Lightweight, type-safe schema validation with async support and zero dependencies.
 
@@ -238,7 +238,7 @@ npm install @vielzeug/validit
 
 ---
 
-### [@vielzeug/wireit](packages/wireit) - Dependency Injection
+### [@vielzeug/wireit](packages/wireit) – Dependency Injection
 
 Type-safe dependency injection container with async support and scoped lifetimes.
 

@@ -1,34 +1,75 @@
 # @vielzeug/routeit
 
-Lightweight, type-safe client-side routing. Build powerful SPAs with minimal code and maximum flexibility.
+## What is Routeit?
 
-## Features
+**Routeit** is a lightweight, type-safe client-side routing library for building powerful SPAs with minimal code and maximum flexibility—all in just 3.1 KB.
 
-- ✅ **Type-Safe** - Full TypeScript support with parameter extraction
-- ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS  
-- ✅ **Route Parameters** - Extract params from dynamic routes (`/users/:id`)
-- ✅ **Query Parameters** - Automatic query string parsing
-- ✅ **Middleware System** - Powerful middleware for auth, logging, and more
-- ✅ **Nested Routes** - Support for child routes and layouts
-- ✅ **Hash & History Mode** - Choose between hash-based or HTML5 History API
-- ✅ **Permission Integration** - Works seamlessly with @vielzeug/permit
-- ✅ **Lightweight** - ~3.1 KB gzipped, zero dependencies
-- ✅ **Developer Experience** - Intuitive API with comprehensive utilities
+### The Problem
 
-## Installation
+Client-side routing libraries are often complex and heavy:
+
+- **React Router** is React-specific and adds 10KB+
+- **Vue Router** is Vue-specific
+- **Universal Router** lacks type safety
+- Manual routing leads to bugs and repetition
+- Middleware and guards require custom code
+
+### The Solution
+
+Routeit provides a clean, framework-agnostic routing API:
+
+```typescript
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({ mode: 'history', base: '/' });
+
+router
+  .get('/', () => renderHome())
+  .get('/users/:id', ({ params }) => renderUser(params.id))
+  .get('/posts', () => renderPosts())
+  .start();
+
+// Navigate programmatically
+router.navigate('/users/123');
+```
+
+## ✨ Features
+
+- ✅ **Type-Safe** – Full TypeScript support with parameter extraction
+- ✅ **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS  
+- ✅ **Route Parameters** – Extract params from dynamic routes (`/users/:id`)
+- ✅ **Query Parameters** – Automatic query string parsing
+- ✅ **Middleware System** – Powerful middleware for auth, logging, and more
+- ✅ **Nested Routes** – Support for child routes and layouts
+- ✅ **Hash & History Mode** – Choose between hash-based or HTML5 History API
+- ✅ **Permission Integration** – Works seamlessly with @vielzeug/permit
+- ✅ **Lightweight** – ~3.1 KB gzipped, zero dependencies
+- ✅ **Developer Experience** – Intuitive API with comprehensive utilities
+
+## 🆚 Comparison with Alternatives
+
+| Feature              | Routeit       | React Router | Vue Router  | Universal Router |
+| -------------------- | ------------- | ------------ | ----------- | ---------------- |
+| Bundle Size (gzip)   | **~3.1 KB**   | ~10KB        | ~7KB        | ~2KB             |
+| TypeScript Support   | ✅ First-class| ✅ Good      | ✅ Good     | ⚠️ Limited       |
+| Framework Agnostic   | ✅ Yes        | ❌ React only| ❌ Vue only | ✅ Yes           |
+| Middleware System    | ✅ Built-in   | ⚠️ Manual    | ✅ Guards   | ✅ Yes           |
+| Nested Routes        | ✅ Yes        | ✅ Yes       | ✅ Yes      | ✅ Yes           |
+| Hash & History Mode  | ✅ Both       | ✅ Both      | ✅ Both     | ⚠️ Manual        |
+| Dependencies         | 0             | 2            | 0           | 1                |
+
+## 📦 Installation
 
 ```bash
 # pnpm
 pnpm add @vielzeug/routeit
-
 # npm
 npm install @vielzeug/routeit
-
 # yarn
 yarn add @vielzeug/routeit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { createRouter } from '@vielzeug/routeit';
@@ -59,7 +100,7 @@ router
 router.navigate('/users/123');
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
 ### Router Creation
 
@@ -78,7 +119,7 @@ const router = createRouter({
     document.getElementById('app').innerHTML = '<h1>404 Not Found</h1>';
   },
   middleware: async (ctx, next) => {
-    // Global middleware - runs for every route
+    // Global middleware – runs for every route
     console.log('Navigating to:', ctx.pathname);
     await next();
   },
@@ -270,7 +311,7 @@ const requireAuth: Middleware = async (ctx, next) => {
   
   if (!user) {
     ctx.navigate('/login');
-    return; // Don't call next() - blocks execution
+    return; // Don't call next() – blocks execution
   }
   
   ctx.user = user; // Add user to context
@@ -515,7 +556,7 @@ const fullUrl = router.buildUrl(
 console.log(fullUrl); // '/users/123?tab=posts&page=2'
 ```
 
-## Advanced Usage
+## 🔥 Advanced Usage
 
 ### Custom 404 Handler
 
@@ -527,7 +568,7 @@ const router = createRouter({
     // Render 404 page
     document.getElementById('app').innerHTML = `
       <div>
-        <h1>404 - Page Not Found</h1>
+        <h1>404 – Page Not Found</h1>
         <p>The page "${pathname}" does not exist.</p>
         <button onclick="router.navigate('/')">Go Home</button>
       </div>
@@ -650,18 +691,29 @@ Works in all modern browsers that support:
 - History API (for history mode)
 - hashchange event (for hash mode)
 
-## License
+## 📖 Documentation
 
-MIT
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/routeit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/routeit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/routeit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/routeit/examples)
 
-## Contributing
+## 📄 License
 
-Contributions are welcome! Please read our [contributing guidelines](../../CONTRIBUTING.md) for details.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Links
+## 🤝 Contributing
 
-- [Documentation](https://vielzeug.dev/routeit)
-- [GitHub Repository](https://github.com/yourusername/vielzeug)
-- [npm Package](https://www.npmjs.com/package/@vielzeug/routeit)
-- [Report Issues](https://github.com/yourusername/vielzeug/issues)
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
 

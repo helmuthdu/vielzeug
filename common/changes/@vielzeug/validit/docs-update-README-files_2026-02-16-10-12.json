@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/validit",
+      "comment": "update README",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/validit"
+}

@@ -1,22 +1,80 @@
 # @vielzeug/formit
 
-Lightweight form state management powered by native FormData. Build robust forms with minimal code and maximum simplicity.
+## What is Formit?
 
-## Features
+**Formit** is a lightweight form state management library powered by native FormData. Build robust forms with minimal code and maximum simplicity—no complex schemas, just clean, type-safe form handling.
 
-- ✅ **Native FormData** - Built on browser-standard FormData API
-- ✅ **Unified API** - One clear way to do everything
-- ✅ **File Upload Support** - Native File/FileList/Blob handling
-- ✅ **Nested Objects** - Automatic flattening with dot notation
-- ✅ **Array Fields** - Full support for multi-select and checkboxes
-- ✅ **Type-Safe** - Full TypeScript support
-- ✅ **Flexible Validation** - Sync/async validators at field and form level
-- ✅ **Smart State Tracking** - Automatic dirty and touched state with Map/Set
-- ✅ **Field Binding** - One-line input integration
-- ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Lightweight** - ~3 KB gzipped, zero dependencies
+### The Problem
 
-## Installation
+Form management is unnecessarily complex:
+
+- **React Hook Form** requires schemas and controllers
+- **Formik** has complex APIs and validation setups
+- **Native forms** lack state management and validation
+- Manual state tracking leads to boilerplate code
+- File uploads and nested objects are painful
+- Type safety requires extra configuration
+
+### The Solution
+
+Formit uses native FormData with a simple, powerful API:
+
+```typescript
+import { createForm } from '@vielzeug/formit';
+
+const form = createForm({
+  fields: {
+    email: {
+      value: '',
+      validators: (v) => !String(v).includes('@') && 'Invalid email',
+    },
+    password: {
+      value: '',
+      validators: (v) => String(v).length < 8 && 'Min 8 characters',
+    },
+  },
+});
+
+// Subscribe to changes
+form.subscribe((state) => {
+  console.log('Valid:', state.isValid);
+  console.log('Dirty:', state.isDirty);
+});
+
+// Submit with full validation
+await form.submit(async (values) => {
+  await api.login(values);
+});
+```
+
+## ✨ Features
+
+- ✅ **Native FormData** – Built on browser-standard FormData API
+- ✅ **Unified API** – One clear way to do everything
+- ✅ **File Upload Support** – Native File/FileList/Blob handling
+- ✅ **Nested Objects** – Automatic flattening with dot notation
+- ✅ **Array Fields** – Full support for multi-select and checkboxes
+- ✅ **Type-Safe** – Full TypeScript support
+- ✅ **Flexible Validation** – Sync/async validators at field and form level
+- ✅ **Smart State Tracking** – Automatic dirty and touched state with Map/Set
+- ✅ **Field Binding** – One-line input integration
+- ✅ **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
+- ✅ **Lightweight** – ~3 KB gzipped, zero dependencies
+
+## 🆚 Comparison with Alternatives
+
+| Feature             | Formit       | React Hook Form | Formik      | Native Forms |
+| ------------------- | ------------ | --------------- | ----------- | ------------ |
+| Bundle Size (gzip)  | **~3 KB**    | ~9KB            | ~13KB       | 0KB          |
+| TypeScript Support  | ✅ Built-in  | ✅ Good         | ✅ Good     | ❌           |
+| File Upload Support | ✅ Native    | ⚠️ Manual       | ⚠️ Manual   | ✅ Native    |
+| Nested Objects      | ✅ Automatic | ⚠️ Manual       | ✅ Yes      | ❌           |
+| Framework Agnostic  | ✅ Yes       | ❌ React-only   | ❌ React    | ✅ Yes       |
+| Validation          | ✅ Built-in  | ⚠️ Requires lib | ✅ Built-in | ❌           |
+| State Management    | ✅ Reactive  | ✅ Yes          | ✅ Yes      | ❌           |
+| Dependencies        | 0            | 0               | 1           | 0            |
+
+## 📦 Installation
 
 ```bash
 pnpm add @vielzeug/formit
@@ -26,7 +84,7 @@ npm install @vielzeug/formit
 yarn add @vielzeug/formit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { createForm } from '@vielzeug/formit';
@@ -63,9 +121,9 @@ function LoginForm() {
 }
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
-### Form Initialization
+### Form State
 
 Three flexible patterns for defining fields:
 **1. Plain Values**
@@ -265,7 +323,9 @@ await form.submit(async (formData) => {
 });
 ```
 
-## Framework Integration
+## 🔥 Advanced Features
+
+### Framework Integration
 
 ### React
 
@@ -374,8 +434,6 @@ onDestroy(() => unsubscribe?.());
 </form>
 ```
 
-## Advanced Usage
-
 ### Async Validation
 
 ```typescript
@@ -445,7 +503,7 @@ form.reset();
 form.reset({ name: 'Guest', email: '' });
 ```
 
-## API Reference
+## 🎯 API Reference
 
 ### `createForm(init?)`
 
@@ -470,42 +528,42 @@ type FormValidator = (
 
 #### Value Management
 
-- `get(name: string): any` - Get field value
-- `set(name: string, value: any, options?)` - Set single field
-- `set(entries: Record | FormData, options?)` - Set multiple fields
-- `values(): Record<string, any>` - Get all as object
-- `data(): FormData` - Get native FormData
-- `clone(): FormData` - Clone FormData
+- `get(name: string): any` – Get field value
+- `set(name: string, value: any, options?)` – Set single field
+- `set(entries: Record | FormData, options?)` – Set multiple fields
+- `values(): Record<string, any>` – Get all as object
+- `data(): FormData` – Get native FormData
+- `clone(): FormData` – Clone FormData
 
 #### Error Management
 
-- `error(): Map<string, string>` - Get all errors
-- `error(name: string): string | undefined` - Get field error
-- `error(name: string, message: string)` - Set field error
-- `errors(nextErrors: Map | Record)` - Set multiple errors
+- `error(): Map<string, string>` – Get all errors
+- `error(name: string): string | undefined` – Get field error
+- `error(name: string, message: string)` – Set field error
+- `errors(nextErrors: Map | Record)` – Set multiple errors
 
 #### State Tracking
 
-- `dirty(name: string): boolean` - Check if field is dirty
-- `touch(name: string): boolean` - Check if field is touched
-- `touch(name: string, mark: true)` - Mark field as touched
-- `snapshot(): FormState` - Get state snapshot
+- `dirty(name: string): boolean` – Check if field is dirty
+- `touch(name: string): boolean` – Check if field is touched
+- `touch(name: string, mark: true)` – Mark field as touched
+- `snapshot(): FormState` – Get state snapshot
 
 #### Validation
 
-- `validate(name: string): Promise<string | undefined>` - Validate field
-- `validate(options?): Promise<Map<string, string>>` - Validate form
+- `validate(name: string): Promise<string | undefined>` – Validate field
+- `validate(options?): Promise<Map<string, string>>` – Validate form
 
 #### Form Operations
 
-- `submit(onSubmit, options?): Promise<any>` - Submit with validation
-- `reset(newFormData?): void` - Reset form
-- `bind(name, config?)` - Create field binding
+- `submit(onSubmit, options?): Promise<any>` – Submit with validation
+- `reset(newFormData?): void` – Reset form
+- `bind(name, config?)` – Create field binding
 
 #### Subscriptions
 
-- `subscribe(listener): () => void` - Subscribe to form changes
-- `subscribeField(name, listener): () => void` - Subscribe to field changes
+- `subscribe(listener): () => void` – Subscribe to form changes
+- `subscribeField(name, listener): () => void` – Subscribe to field changes
 
 ### Types
 
@@ -524,20 +582,28 @@ class ValidationError extends Error {
 }
 ```
 
-## Examples
+## 📖 Documentation
 
-For complete real-world examples, see the [documentation](https://github.com/vielzeug/formit).
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/formit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/formit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/formit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/formit/examples)
 
-## License
+## 📄 License
 
-MIT
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please read our contributing guidelines.
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
 
-## Support
+## 🔗 Links
 
-- [Documentation](https://github.com/vielzeug/formit)
-- [Issues](https://github.com/vielzeug/formit/issues)
-- [Discussions](https://github.com/vielzeug/formit/discussions)
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
