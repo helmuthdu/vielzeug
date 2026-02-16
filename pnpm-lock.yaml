@@ -59,13 +59,13 @@ importers:
 
   packages/deposit:
     dependencies:
-      '@vielzeug/logit':
-        specifier: workspace:*
-        version: link:../logit
       '@vielzeug/toolkit':
         specifier: workspace:*
         version: link:../toolkit
     devDependencies:
+      '@vielzeug/logit':
+        specifier: workspace:*
+        version: link:../logit
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

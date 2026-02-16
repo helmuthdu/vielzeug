@@ -1,8 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
+
+import { Logit } from '@vielzeug/logit';
 import {
   Deposit,
-  type DepositDataSchema,
   type DepositStorageAdapter,
+  defineSchema,
   IndexedDBAdapter,
   LocalStorageAdapter,
   QueryBuilder,
@@ -11,13 +13,13 @@ import {
 // Define a minimal DataSchemaDef for testing
 type User = { id: number; name?: string; age?: number; city?: string };
 type TestSchemaDef = { users: User };
-const userSchema = {
+
+const userSchema = defineSchema<TestSchemaDef>()({
   users: {
-    indexes: ['name', 'age', 'city'] as Array<keyof User>,
-    key: 'id' as keyof User,
-    record: {} as User,
+    indexes: ['name', 'age', 'city'],
+    key: 'id',
   },
-} as const satisfies DepositDataSchema<TestSchemaDef>;
+});
 
 describe('QueryBuilder', () => {
   const sampleData = [
@@ -188,7 +190,8 @@ describe('LocalStorageAdapter', () => {
   describe('CRUD Operations', () => {
     test('put and get', async () => {
       await adapter.put('users', { id: 1, name: 'Alice' });
-      expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+      const result = await adapter.get('users', 1);
+      expect(result).toEqual({ id: 1, name: 'Alice' });
     });
 
     test('bulkPut and getAll', async () => {
@@ -478,18 +481,17 @@ describe('Depot', () => {
 
   test('transaction is atomic for IndexedDB with multiple tables', async () => {
     // Transaction automatically uses atomic IDBTransaction for IndexedDB
-    const idbSchema = {
+    type Post = { id: number; userId: number; title: string };
+    type MultiTableSchema = { users: User; posts: Post };
+
+    const idbSchema = defineSchema<MultiTableSchema>()({
       posts: {
-        indexes: [] as Array<keyof { id: number; userId: number; title: string }>,
-        key: 'id' as keyof { id: number; userId: number; title: string },
-        record: {} as { id: number; userId: number; title: string },
+        key: 'id',
       },
       users: {
-        indexes: [] as Array<keyof User>,
-        key: 'id' as keyof User,
-        record: {} as User,
+        key: 'id',
       },
-    } as const satisfies DepositDataSchema<any>;
+    });
 
     const idbDeposit = new Deposit({
       dbName: 'AtomicTestDB',
@@ -555,5 +557,70 @@ describe('Depot', () => {
           version: 1,
         }),
     ).toThrow('Unknown adapter type: unknown');
+  });
+
+  test('integrates with Logit as custom logger', async () => {
+    // Spy on console since Logit outputs to console
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const depositWithLogger = new Deposit({
+      dbName: 'LoggerTestDB',
+      logger: Logit.scope('Deposit'),
+      schema: userSchema,
+      type: 'localStorage',
+      version: 1,
+    });
+
+    // Test that logger is used when handling corrupted data
+    const key = 'LoggerTestDB:1:users:1';
+    localStorage.setItem(key, '{invalid json');
+
+    await depositWithLogger.get('users', 1);
+
+    // Verify Logit logged the warning (Logit outputs to the console with its own formatting)
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    const warnCall = consoleWarnSpy.mock.calls.find((call) =>
+      call.some(
+        (arg) => typeof arg === 'string' && arg.includes('Deposit'),
+      ),
+    );
+    expect(warnCall).toBeDefined();
+
+    // Restore console.warn
+    consoleWarnSpy.mockRestore();
+
+    // Clean up
+    localStorage.clear();
+  });
+
+  test('uses console as default logger when not provided', async () => {
+    // Spy on console.warn to verify default logger behavior
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const depositNoLogger = new Deposit({
+      dbName: 'NoLoggerDB',
+      schema: userSchema,
+      type: 'localStorage',
+      version: 1,
+      // No logger provided - should use console
+    });
+
+    // Test that the console is used when handling corrupted data
+    const key = 'NoLoggerDB:1:users:1';
+    localStorage.setItem(key, '{invalid json');
+
+    await depositNoLogger.get('users', 1);
+
+    // Verify console.warn was called
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Removing corrupted entry for key: 1'),
+      expect.any(Error),
+    );
+
+    // Restore console.warn
+    consoleWarnSpy.mockRestore();
+
+    // Clean up
+    localStorage.clear();
   });
 });

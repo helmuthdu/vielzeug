@@ -198,6 +198,10 @@ declare module '@vielzeug/deposit' {
     record: T;
   };
 
+  export function defineSchema<S extends DataSchemaDef>(): <Schema extends { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }>(
+    schema: Schema
+  ) => DepositDataSchema<S>;
+
   export class LocalStorageAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
     constructor(dbName: string, version: number, schema: S);
     bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;

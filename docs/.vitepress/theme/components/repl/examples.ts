@@ -461,19 +461,20 @@ console.log('Click increment to see watchers in action')`,
   },
   deposit: {
     'basic-setup': {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
+type User = { id: number; name: string; email: string }
+type Post = { id: number; userId: number; title: string; content: string }
+
+const schema = defineSchema<{ users: User; posts: Post }>()({
   users: {
     key: 'id',
-    record: { id: 0, name: '', email: '' },
     indexes: ['email']
   },
   posts: {
-    key: 'id',
-    record: { id: 0, userId: 0, title: '', content: '' }
+    key: 'id'
   }
-}
+})
 
 const db = new Deposit({
   type: 'localStorage',

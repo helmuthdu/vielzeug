@@ -42,23 +42,20 @@ interface Session {
   expiresAt: number;
 }
 
-const schema = {
+const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>()({
   users: {
     key: 'id',
     indexes: ['email', 'role'],
-    record: {} as User,
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'published', 'createdAt'],
-    record: {} as Post,
   },
   sessions: {
     key: 'id',
     indexes: ['userId'],
-    record: {} as Session,
   },
-} satisfies DepositDataSchema;
+});
 ```
 
 ### Create Instance
