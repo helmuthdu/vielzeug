@@ -51,27 +51,22 @@ const messages = {
 };
 ```
 
-### MessageFunction
+### PluralMessages
 
 ```ts
-type MessageFunction = (
-  vars: Record<string, unknown>,
-  helpers: {
-    number: (value: number, options?: Intl.NumberFormatOptions) => string;
-    date: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
-  },
-) => string;
+type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
 ```
 
-A function that returns a dynamic translation string.
+Object defining plural forms for a message. The `other` form is required.
 
 **Example:**
 
 ```ts
 const messages = {
-  timestamp: (vars, helpers) => {
-    const date = vars.date as Date;
-    return `Updated: ${helpers.date(date, { dateStyle: 'short' })}`;
+  items: {
+    zero: 'No items',
+    one: 'One item',
+    other: '{count} items',
   },
 };
 ```
@@ -79,32 +74,49 @@ const messages = {
 ### MessageValue
 
 ```ts
-type MessageValue = string | PluralMessages | MessageFunction;
+type MessageValue = string | PluralMessages;
 ```
 
-A translation can be a string, plural messages object, or a function.
+A translation can be a string or plural messages object.
 
 ### Messages
 
 ```ts
-type Messages = Record<string, MessageValue>;
+type Messages = {
+  [key: string]: MessageValue | Messages;
+};
 ```
 
-Collection of translations for a locale.
+Collection of translations for a locale. Supports both flat keys and nested object structures.
 
-## Errors
-
-### MissingVariableError
-
-````ts
-### TranslateOptions
+**Flat Structure:**
 
 ```ts
-type TranslateOptions = {
-  locale?: Locale;
-  escape?: boolean;
+const messages: Messages = {
+  greeting: 'Hello!',
+  'user.name': 'User Name',
 };
-````
+```
+
+**Nested Structure:**
+
+```ts
+const messages: Messages = {
+  greeting: 'Hello!',
+  user: {
+    name: 'User Name',
+    profile: {
+      title: 'Profile',
+      settings: 'Settings',
+    },
+  },
+};
+```
+
+Both structures can be accessed with dot notation:
+- `i18n.t('greeting')` → "Hello!"
+- `i18n.t('user.name')` → "User Name"
+- `i18n.t('user.profile.title')` → "Profile"
 
 Options for translation methods.
 
@@ -118,12 +130,20 @@ type I18nConfig = {
   locale?: Locale;
   fallback?: Locale | Locale[];
   messages?: Record<Locale, Messages>;
-  loaders?: Record<Locale, () => Promise<Messages>>;
+  loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
   escape?: boolean;
 };
 ```
 
 Configuration object for creating an i18n instance.
+
+**Properties:**
+
+- **locale** (`Locale`, optional): Initial locale (default: `'en'`)
+- **fallback** (`Locale | Locale[]`, optional): Fallback locale(s) for missing translations
+- **messages** (`Record<Locale, Messages>`, optional): Pre-loaded message catalogs
+- **loaders** (`Record<Locale, (locale: Locale) => Promise<Messages>>`, optional): Async loaders for lazy-loading locales. Each loader receives the locale as a parameter, allowing reusable functions.
+- **escape** (`boolean`, optional): Enable HTML escaping by default (default: `false`)
 
 ## createI18n()
 
@@ -148,6 +168,12 @@ function createI18n(config?: I18nConfig): I18n;
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
 
+// Simple loader function that receives locale
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
+  return response.json();
+};
+
 const i18n = createI18n({
   locale: 'en',
   fallback: 'en',
@@ -159,9 +185,11 @@ const i18n = createI18n({
       greeting: '¡Hola!',
     },
   },
+  loaders: {
+    fr: loadLocale,  // Reusable loader receives 'fr'
+    de: loadLocale,  // Same loader receives 'de'
+  },
   escape: false,
-  missingKey: (key) => `[${key}]`,
-  missingVar: 'empty',
 });
 ```
 
@@ -384,24 +412,35 @@ if (i18n.has('greeting', 'es')) {
 Register a loader function for a locale.
 
 ```ts
-register(locale: Locale, loader: () => Promise<Messages>): void
+register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void
 ```
 
 **Parameters:**
 
 - **locale**: Target locale
-- **loader**: Async function that returns messages
+- **loader**: Async function that receives the locale and returns messages
 
 **Example:**
 
 ```ts
-i18n.register('es', async () => {
-  const response = await fetch('/locales/es.json');
+// Reusable loader function
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
   return response.json();
-});
+};
+
+// Register for multiple locales
+i18n.register('es', loadLocale);
+i18n.register('fr', loadLocale);
+i18n.register('de', loadLocale);
 
 // Or with dynamic import
-i18n.register('fr', () => import('./locales/fr.json'));
+const importLoader = async (locale: string) => {
+  const module = await import(`./locales/${locale}.json`);
+  return module.default;
+};
+
+i18n.register('it', importLoader);
 ```
 
 ---
@@ -435,6 +474,40 @@ await Promise.all([i18n.load('es'), i18n.load('fr')]);
 - Does nothing if locale already loaded
 - Caches loading promise to prevent duplicate requests
 - Calls `add()` internally to merge loaded messages
+
+---
+
+#### loadAll()
+
+Load multiple locales in parallel.
+
+```ts
+async loadAll(locales: Locale[]): Promise<void>
+```
+
+**Parameters:**
+
+- **locales**: Array of locales to load
+
+**Returns:** Promise that resolves when all locales are loaded
+
+**Example:**
+
+```ts
+// Preload all locales at app startup
+await i18n.loadAll(['en', 'es', 'fr']);
+console.log('All locales loaded!');
+
+// Then use sync t() everywhere
+i18n.setLocale('es');
+console.log(i18n.t('greeting')); // No await needed
+```
+
+**Notes:**
+
+- Loads all locales in parallel for better performance
+- Useful for preloading all needed locales at app startup
+- Each locale is loaded only once (uses same caching as `load()`)
 
 ---
 
@@ -718,96 +791,6 @@ createI18n({ escape: true });
 // Can be overridden per translation
 i18n.t('key', { html: '<b>bold</b>' }, { escape: false });
 ```
-
----
-
-### missingKey
-
-```ts
-missingKey?: (key: string, locale: Locale) => string
-```
-
-**Default:** `(key) => key`
-
-Custom handler for missing translation keys.
-
-**Example:**
-
-```ts
-createI18n({
-  missingKey: (key, locale) => {
-    console.warn(`Missing: ${key} (${locale})`);
-    return `[${key}]`;
-  },
-});
-```
-
----
-
-### missingVar
-
-```ts
-missingVar?: 'preserve' | 'empty' | 'error'
-```
-
-**Default:** `'empty'`
-
-Strategy for handling missing variables in interpolation.
-
-- **`'preserve'`**: Keep the placeholder (e.g., `{name}`)
-- **`'empty'`**: Replace with empty string
-- **`'error'`**: Throw `MissingVariableError` with structured information
-
-**Example:**
-
-```ts
-// Preserve placeholders
-createI18n({
-  missingVar: 'preserve',
-  messages: { en: { greeting: 'Hello, {name}!' } },
-});
-i18n.t('greeting'); // "Hello, {name}!"
-
-// Empty string (default)
-createI18n({
-  missingVar: 'empty',
-  messages: { en: { greeting: 'Hello, {name}!' } },
-});
-i18n.t('greeting'); // "Hello, !"
-
-// Throw structured error
-import { MissingVariableError } from '@vielzeug/i18nit';
-
-createI18n({
-  missingVar: 'error',
-  messages: { en: { greeting: 'Hello, {name}!' } },
-});
-
-try {
-  i18n.t('greeting');
-} catch (error) {
-  if (error instanceof MissingVariableError) {
-    console.log(error.key); // 'greeting'
-    console.log(error.variable); // 'name'
-    console.log(error.locale); // 'en'
-  }
-}
-```
-
-::: tip Error Tracking
-When using `missingVar: 'error'`, you can catch `MissingVariableError` specifically and send structured error data to your error tracking service (Sentry, Bugsnag, etc.).
-:::
-i18n.t('Hello, {name}!'); // "Hello, {name}!"
-
-// Empty (default)
-createI18n({ missingVar: 'empty' });
-i18n.t('Hello, {name}!'); // "Hello, !"
-
-// Error
-createI18n({ missingVar: 'error' });
-i18n.t('Hello, {name}!'); // throws Error: Missing variable: name
-
-````
 
 ## Message Types
 

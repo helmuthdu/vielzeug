@@ -144,10 +144,18 @@ Recommended singleton pattern for global scope or complex apps.
 import { createI18n } from '@vielzeug/i18nit';
 import { useEffect, useState } from 'react';
 
+// Reusable loader function
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
+  return response.json();
+};
+
 const i18n = createI18n({
   locale: 'en',
   loaders: {
-    en: () => fetch('/en.json').then((r) => r.json()),
+    en: loadLocale,
+    es: loadLocale,
+    fr: loadLocale,
   },
 });
 

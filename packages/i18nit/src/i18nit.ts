@@ -12,7 +12,10 @@ export type PluralMessages = Partial<Record<PluralForm, string>> & { other: stri
 
 export type MessageValue = string | PluralMessages;
 
-export type Messages = Record<string, MessageValue>;
+// Support nested message objects with dot notation access
+export type Messages = {
+  [key: string]: MessageValue | Messages;
+};
 
 export type TranslateOptions = {
   locale?: Locale;
@@ -23,7 +26,7 @@ export type I18nConfig = {
   locale?: Locale;
   fallback?: Locale | Locale[];
   messages?: Record<Locale, Messages>;
-  loaders?: Record<Locale, () => Promise<Messages>>;
+  loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
   escape?: boolean;
 };
 
@@ -166,12 +169,12 @@ function getPluralForm(locale: Locale, count: number): PluralForm {
 
 /* -------------------- I18n Class -------------------- */
 
-class I18n {
+export class I18n {
   private locale: Locale;
   private fallbacks: Locale[];
   private escape: boolean;
   private catalogs = new Map<Locale, Messages>();
-  private loaders = new Map<Locale, () => Promise<Messages>>();
+  private loaders = new Map<Locale, (locale: Locale) => Promise<Messages>>();
   private loading = new Map<Locale, Promise<void>>();
   private subscribers = new Set<(locale: Locale) => void>();
 
@@ -250,7 +253,7 @@ class I18n {
 
     const promise = (async () => {
       try {
-        const messages = await loader();
+        const messages = await loader(locale);
         this.add(locale, messages);
       } catch (error) {
         console.warn(`[I18n] Failed to load locale '${locale}':`, error);
@@ -264,7 +267,7 @@ class I18n {
     return promise;
   }
 
-  register(locale: Locale, loader: () => Promise<Messages>): void {
+  register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void {
     this.loaders.set(locale, loader);
   }
 
@@ -366,10 +369,37 @@ class I18n {
       if (!messages) continue;
 
       const value = resolvePath(messages, key);
-      if (value !== undefined) return value as MessageValue;
+
+      // If the value is a nested Messages object (not a MessageValue), return undefined
+      // This ensures we only return actual translatable strings, not object containers
+      if (value !== undefined && this.isMessageValue(value)) {
+        return value as MessageValue;
+      }
     }
 
     return undefined;
+  }
+
+  /**
+   * Check if a value is a MessageValue (string or PluralMessages) rather than a nested Messages object
+   */
+  private isMessageValue(value: unknown): boolean {
+    if (typeof value === 'string') return true;
+
+    // Check if it's a PluralMessages object (has 'other' key and all values are strings)
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      const obj = value as Record<string, unknown>;
+
+      // If it has 'other' key and values are strings, it's a PluralMessages
+      if ('other' in obj && typeof obj.other === 'string') {
+        return Object.values(obj).every((v) => typeof v === 'string');
+      }
+
+      // Otherwise it's a nested Messages object
+      return false;
+    }
+
+    return false;
   }
 
   private getLocaleChain(locale: Locale): Locale[] {

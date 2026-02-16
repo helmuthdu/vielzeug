@@ -463,7 +463,64 @@ declare module '@vielzeug/formit' {
 
 export const i18nitTypes = `
 declare module '@vielzeug/i18nit' {
-  export function createI18n(config?: any): any;
+  export type Locale = string;
+  
+  export type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+  
+  export type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
+  
+  export type MessageValue = string | PluralMessages;
+  
+  export type Messages = {
+    [key: string]: MessageValue | Messages;
+  };
+  
+  export type TranslateOptions = {
+    locale?: Locale;
+    escape?: boolean;
+  };
+  
+  export type I18nConfig = {
+    locale?: Locale;
+    fallback?: Locale | Locale[];
+    messages?: Record<Locale, Messages>;
+    loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
+    escape?: boolean;
+  };
+  
+  export class I18n {
+    // Translation Methods
+    t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string;
+    
+    // Locale Management
+    getLocale(): Locale;
+    setLocale(locale: Locale): void;
+    
+    // Message Management
+    add(locale: Locale, messages: Messages): void;
+    set(locale: Locale, messages: Messages): void;
+    getMessages(locale: Locale): Messages | undefined;
+    hasLocale(locale: Locale): boolean;
+    has(key: string, locale?: Locale): boolean;
+    
+    // Async Loaders
+    load(locale: Locale): Promise<void>;
+    loadAll(locales: Locale[]): Promise<void>;
+    register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void;
+    hasAsync(key: string, locale?: Locale): Promise<boolean>;
+    
+    // Formatting Helpers
+    number(value: number, options?: Intl.NumberFormatOptions, locale?: Locale): string;
+    date(value: Date | number, options?: Intl.DateTimeFormatOptions, locale?: Locale): string;
+    
+    // Namespaced Translator
+    namespace(ns: string): { t: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) => string };
+    
+    // Subscriptions
+    subscribe(handler: (locale: Locale) => void): () => void;
+  }
+  
+  export function createI18n(config?: I18nConfig): I18n;
 }
 `;
 

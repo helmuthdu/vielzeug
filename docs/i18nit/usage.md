@@ -109,12 +109,36 @@ i18n.t('settings'); // "Settings"
 // Fallback chain: en-US → en → (base language)
 ```
 
-### Nested Keys
+### Nested Keys & Objects
+
+i18nit supports both flat keys with dot notation and nested message objects. Both can be accessed the same way:
+
+#### Flat Structure with Dot Notation
 
 ```ts
 const i18n = createI18n({
   messages: {
     en: {
+      'user.profile.name': 'Name',
+      'user.profile.email': 'Email Address',
+      'user.settings.privacy': 'Privacy',
+      'user.settings.security': 'Security',
+    },
+  },
+});
+
+// Access with dot notation
+i18n.t('user.profile.name'); // "Name"
+i18n.t('user.settings.privacy'); // "Privacy"
+```
+
+#### Nested Object Structure
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      // Nested objects for better organization
       user: {
         profile: {
           name: 'Name',
@@ -129,9 +153,63 @@ const i18n = createI18n({
   },
 });
 
-// Access with dot notation
+// Access the same way with dot notation
 i18n.t('user.profile.name'); // "Name"
 i18n.t('user.settings.privacy'); // "Privacy"
+```
+
+#### Deep Nesting
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      app: {
+        navigation: {
+          menu: {
+            home: 'Home',
+            about: 'About Us',
+            contact: 'Contact',
+          },
+          footer: {
+            copyright: '© 2026 Company',
+            privacy: 'Privacy Policy',
+          },
+        },
+      },
+    },
+  },
+});
+
+i18n.t('app.navigation.menu.home'); // "Home"
+i18n.t('app.navigation.footer.copyright'); // "© 2026 Company"
+```
+
+#### Mixed Flat and Nested
+
+You can mix both approaches in the same messages object:
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: {
+      welcome: 'Welcome!', // Flat
+      'errors.404': 'Not Found', // Flat with dots
+      user: {
+        // Nested
+        name: 'User Name',
+        profile: {
+          title: 'Profile',
+        },
+      },
+    },
+  },
+});
+
+i18n.t('welcome'); // "Welcome!"
+i18n.t('errors.404'); // "Not Found"
+i18n.t('user.name'); // "User Name"
+i18n.t('user.profile.title'); // "Profile"
 ```
 
 ### Literal Keys with Dots
