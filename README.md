@@ -27,61 +27,23 @@
 
 ## 📦 Packages
 
-### [@vielzeug/formit](packages/formit) - Form State Management
+### [@vielzeug/craftit](packages/craftit) - Web Components
 
-Effortless, type-safe form state and validation for React and beyond. Minimal code, maximum power.
+Lightweight, type-safe web component creation library with reactive state and automatic rendering.
 
 ```bash
-npm install @vielzeug/formit
+npm install @vielzeug/craftit
 ```
 
 **Key Features:**
 
-- Type-safe form state with inferred types
-- Field-level and form-level validation
-- Reactive subscriptions
-- Framework agnostic
+- Reactive state management with automatic re-rendering
+- Type-safe component definitions
+- Shadow DOM with automatic styling
+- Form-associated custom elements
+- Event handling and lifecycle hooks (5 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/formit/) • [Examples](https://helmuthdu.github.io/vielzeug/formit/examples)
-
----
-
-### [@vielzeug/i18nit](packages/i18nit) - Internationalization
-
-Lightweight, type-safe internationalization with pluralization, async loading, and framework-agnostic design.
-
-```bash
-npm install @vielzeug/i18nit
-```
-
-**Key Features:**
-
-- Type-safe translations with autocomplete
-- Pluralization and interpolation support
-- Async translation loading
-- Framework agnostic with React hooks
-- Locale fallback support (2.4 KB gzipped)
-
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/i18nit/) • [Examples](https://helmuthdu.github.io/vielzeug/i18nit/examples)
-
----
-
-### [@vielzeug/fetchit](packages/fetchit) - HTTP Client & Query Management
-
-Modern, type-safe HTTP client with intelligent caching and query management.
-
-```bash
-npm install @vielzeug/fetchit
-```
-
-**Key Features:**
-
-- Separate HTTP and Query clients for flexibility
-- Smart caching with configurable staleness
-- Request deduplication
-- Automatic retry logic (3.4 KB gzipped)
-
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/fetchit/) • [Examples](https://helmuthdu.github.io/vielzeug/fetchit/examples)
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/craftit/) • [Examples](https://helmuthdu.github.io/vielzeug/craftit/examples)
 
 ---
 
@@ -97,10 +59,67 @@ npm install @vielzeug/deposit
 
 - Unified API for IndexedDB and LocalStorage
 - Advanced querying and filtering
-- Schema migrations
-- TTL (Time-To-Live) support (4.4 KB gzipped)
+- Schema migrations with versioning
+- TTL (Time-To-Live) support (4.5 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/deposit/) • [Examples](https://helmuthdu.github.io/vielzeug/deposit/examples)
+
+---
+
+### [@vielzeug/fetchit](packages/fetchit) - HTTP Client & Query Management
+
+Modern, type-safe HTTP client with intelligent caching and query management.
+
+```bash
+npm install @vielzeug/fetchit
+```
+
+**Key Features:**
+
+- Separate HTTP and Query clients for flexibility
+- Smart caching with stale-while-revalidate
+- Request deduplication
+- Automatic retry with exponential backoff (3.4 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/fetchit/) • [Examples](https://helmuthdu.github.io/vielzeug/fetchit/examples)
+
+---
+
+### [@vielzeug/formit](packages/formit) - Form State Management
+
+Effortless, type-safe form state and validation for modern web applications.
+
+```bash
+npm install @vielzeug/formit
+```
+
+**Key Features:**
+
+- Type-safe form state with inferred types
+- Field-level and form-level validation
+- Reactive subscriptions
+- Framework agnostic (3 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/formit/) • [Examples](https://helmuthdu.github.io/vielzeug/formit/examples)
+
+---
+
+### [@vielzeug/i18nit](packages/i18nit) - Internationalization
+
+Lightweight, type-safe internationalization with pluralization and async loading.
+
+```bash
+npm install @vielzeug/i18nit
+```
+
+**Key Features:**
+
+- Type-safe translations with autocomplete
+- Pluralization and interpolation support
+- Async translation loading
+- Framework agnostic with React hooks (1.6 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/i18nit/) • [Examples](https://helmuthdu.github.io/vielzeug/i18nit/examples)
 
 ---
 
@@ -117,7 +136,7 @@ npm install @vielzeug/logit
 - Multiple log levels with filtering
 - Custom themes and colors
 - Remote logging support
-- Scoped loggers (2.4 KB gzipped)
+- Scoped loggers (2.7 KB gzipped)
 
 [📖 Documentation](https://helmuthdu.github.io/vielzeug/logit/) • [Examples](https://helmuthdu.github.io/vielzeug/logit/examples)
 
@@ -138,11 +157,50 @@ npm install @vielzeug/permit
 - Wildcard support
 - Type-safe permission checks (2.0 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/logit/) • [Examples](https://helmuthdu.github.io/vielzeug/permit/examples)
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/permit/) • [Examples](https://helmuthdu.github.io/vielzeug/permit/examples)
+
+---
+
+### [@vielzeug/routeit](packages/routeit) - Client-Side Routing
+
+Lightweight, type-safe client-side routing for SPAs.
+
+```bash
+npm install @vielzeug/routeit
+```
+
+**Key Features:**
+
+- Route parameters and query string parsing
+- Middleware system for auth and logging
+- Hash and History mode support
+- Nested routes and layouts (3.1 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/routeit/) • [Examples](https://helmuthdu.github.io/vielzeug/routeit/examples)
+
+---
+
+### [@vielzeug/stateit](packages/stateit) - State Management
+
+Tiny, framework-agnostic state management with reactive subscriptions.
+
+```bash
+npm install @vielzeug/stateit
+```
+
+**Key Features:**
+
+- Reactive subscriptions with selective updates
+- Scoped stores and isolated contexts
+- Async state updates
+- Custom equality checks (2.4 KB gzipped)
+
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/stateit/) • [Examples](https://helmuthdu.github.io/vielzeug/stateit/examples)
 
 ---
 
 ### [@vielzeug/toolkit](packages/toolkit) - Utility Library
+
 
 Comprehensive, type-safe utility library with 100+ helpers for modern JavaScript.
 
@@ -218,12 +276,17 @@ yarn add @vielzeug/formit @vielzeug/fetchit
 
 ```tsx
 import { createForm } from '@vielzeug/formit';
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 import { Logit } from '@vielzeug/logit';
 
 // Setup HTTP client
 const http = createHttpClient({
   baseUrl: 'https://api.example.com',
+});
+
+// Setup query client for caching
+const queryClient = createQueryClient({
+  staleTime: 5000,
 });
 
 // Create form with validation
@@ -243,10 +306,16 @@ const form = createForm({
   },
 });
 
-// Submit with logging
+// Submit with logging and caching
 form.submit(async (values) => {
   try {
-    const user = await http.post('/auth/login', values);
+    const user = await queryClient.mutate(
+      {
+        mutationFn: () => http.post('/auth/login', { body: values }),
+        onSuccess: () => queryClient.invalidate(['user']),
+      },
+      values
+    );
     Logit.success('Login successful!', user);
     return user;
   } catch (error) {
@@ -288,13 +357,16 @@ pnpm docs:dev
 ```
 vielzeug/
 ├── packages/
+│   ├── craftit/       # Web components
 │   ├── deposit/       # Browser storage utility
 │   ├── fetchit/       # HTTP client & query management
 │   ├── formit/        # Form state management
 │   ├── i18nit/        # Internationalization
 │   ├── logit/         # Logging utility
 │   ├── permit/        # Permission management
-│   ├── toolkit/       # Utility library
+│   ├── routeit/       # Client-side routing
+│   ├── stateit/       # State management
+│   ├── toolkit/       # Utility functions
 │   ├── validit/       # Schema validation
 │   └── wireit/        # Dependency injection
 ├── docs/              # VitePress documentation
@@ -318,12 +390,15 @@ All sizes are measured as **minified + gzipped** production builds:
 
 | Package           | Minified Size              | Gzipped Size  | Dependencies |
 | ----------------- | -------------------------- | ------------- | ------------ |
-| @vielzeug/deposit | **16 KB**                  | **4.4 KB**    | 2\*          |
+| @vielzeug/craftit | **18 KB**                  | **5.0 KB**    | 0            |
+| @vielzeug/deposit | **16 KB**                  | **4.5 KB**    | 2\*          |
 | @vielzeug/fetchit | **10 KB**                  | **3.4 KB**    | 1\*          |
-| @vielzeug/formit  | **7.2 KB**                 | **2.4 KB**    | 0            |
-| @vielzeug/i18nit  | **7.4 KB**                 | **2.4 KB**    | 0            |
-| @vielzeug/logit   | **6.8 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/formit  | **7.2 KB**                 | **3.0 KB**    | 0            |
+| @vielzeug/i18nit  | **7.4 KB**                 | **1.6 KB**    | 0            |
+| @vielzeug/logit   | **6.8 KB**                 | **2.7 KB**    | 0            |
 | @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
+| @vielzeug/routeit | **9.0 KB**                 | **3.1 KB**    | 0            |
+| @vielzeug/stateit | **7.0 KB**                 | **2.4 KB**    | 0            |
 | @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
 | @vielzeug/validit | **14 KB**                  | **2.8 KB**    | 0            |
 | @vielzeug/wireit  | **8.0 KB**                 | **2.1 KB**    | 0            |
