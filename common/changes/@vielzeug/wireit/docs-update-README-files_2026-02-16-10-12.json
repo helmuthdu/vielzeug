@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/wireit",
+      "comment": "update README",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/wireit"
+}

@@ -1,33 +1,79 @@
 # @vielzeug/stateit
 
-Tiny, framework-agnostic state management. Simple, powerful, and type-safe - build reactive applications with minimal code.
+## What is Stateit?
 
-## Features
+**Stateit** is a tiny, framework-agnostic state management library. Build reactive applications with simple, powerful state handling—all in just 2.4 KB.
 
-- ✅ **Type-Safe** - Full TypeScript support with precise type inference
-- ✅ **Reactive Subscriptions** - Selective subscriptions with automatic change detection
-- ✅ **Scoped Stores** - Child stores and isolated execution contexts
-- ✅ **Custom Equality** - Configurable equality checks for fine-grained control
-- ✅ **Async Support** - First-class support for async state updates
-- ✅ **Batched Updates** - Automatic notification batching for optimal performance
-- ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
-- ✅ **Lightweight** - ~2.4 KB gzipped, zero dependencies
-- ✅ **Developer Experience** - Intuitive API with comprehensive testing helpers
+### The Problem
 
-## Installation
+State management libraries are often complex or framework-specific:
+
+- **Redux** requires boilerplate and middleware
+- **MobX** has a learning curve with decorators
+- **Zustand** is React-specific
+- **Jotai/Recoil** are React-only
+- Manual state management leads to bugs
+
+### The Solution
+
+Stateit provides a simple, reactive store API:
+
+```typescript
+import { createStore } from '@vielzeug/stateit';
+
+const store = createStore({ count: 0, user: null });
+
+// Subscribe to changes
+store.subscribe((state, prev) => {
+  console.log('Count changed:', prev.count, '→', state.count);
+});
+
+// Update state
+store.set({ count: 1 });
+store.set((state) => ({ count: state.count + 1 }));
+
+// Read state
+const current = store.get();
+```
+
+## ✨ Features
+
+- ✅ **Type-Safe** – Full TypeScript support with precise type inference
+- ✅ **Reactive Subscriptions** – Selective subscriptions with automatic change detection
+- ✅ **Scoped Stores** – Child stores and isolated execution contexts
+- ✅ **Custom Equality** – Configurable equality checks for fine-grained control
+- ✅ **Async Support** – First-class support for async state updates
+- ✅ **Batched Updates** – Automatic notification batching for optimal performance
+- ✅ **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
+- ✅ **Lightweight** – ~2.4 KB gzipped, zero dependencies
+- ✅ **Developer Experience** – Intuitive API with comprehensive testing helpers
+
+## 🆚 Comparison with Alternatives
+
+| Feature                 | stateit    | Zustand            | Jotai              | Valtio             |
+| ----------------------- | ---------- | ------------------ | ------------------ | ------------------ |
+| Bundle Size (gzipped)   | **2.4 KB** | 1.1 KB             | 3.0 KB             | 5.4 KB             |
+| Framework Agnostic      | ✅         | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
+| TypeScript              | ✅ Full    | ✅ Full            | ✅ Full            | ✅ Full            |
+| Selective Subscriptions | ✅         | ✅                 | ✅                 | ✅                 |
+| Async Updates           | ✅         | ✅                 | ✅                 | ✅                 |
+| Scoped Stores           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
+| Custom Equality         | ✅         | ✅                 | ✅                 | ❌                 |
+| Testing Helpers         | ✅         | ❌                 | ❌                 | ❌                 |
+| Dependencies            | **0**      | 1                  | 0                  | 1                  |
+
+## 📦 Installation
 
 ```bash
 # pnpm
 pnpm add @vielzeug/stateit
-
 # npm
 npm install @vielzeug/stateit
-
 # yarn
 yarn add @vielzeug/stateit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { createStore } from '@vielzeug/stateit';
@@ -43,7 +89,7 @@ counter.subscribe((state, prev) => {
   console.log(`Count changed from ${prev.count} to ${state.count}`);
 });
 
-// Update state - partial merge
+// Update state – partial merge
 counter.set({ count: 1 });
 
 // Update with sync function
@@ -59,7 +105,7 @@ await counter.set(async (state) => {
 });
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
 ### Store Creation
 
@@ -341,7 +387,7 @@ const counter = toSvelteStore(counterStore);
 // </script>
 ```
 
-## Advanced Usage
+## 🔥 Advanced Usage
 
 ### Async State Updates
 
@@ -540,7 +586,7 @@ it('notifies subscribers on change', async () => {
 });
 ```
 
-## API Reference
+## 🎯 API Reference
 
 ### `createStore<T>(initialState: T, options?: StoreOptions<T>): Store<T>`
 
@@ -548,42 +594,42 @@ Creates a new store instance.
 
 **Options:**
 
-- `name?: string` - Optional name for debugging
-- `equals?: EqualityFn<T>` - Custom equality function
+- `name?: string` – Optional name for debugging
+- `equals?: EqualityFn<T>` – Custom equality function
 
 ### `Store<T>`
 
 #### Read Methods
 
-- `get(): T` - Get current state snapshot
-- `get<U>(selector: (state: T) => U): U` - Get selected value without subscribing
+- `get(): T` – Get current state snapshot
+- `get<U>(selector: (state: T) => U): U` – Get selected value without subscribing
 
 #### Write Methods
 
-- `set(patch: Partial<T>): void` - Merge partial state (shallow)
-- `set(updater: (state: T) => T): void` - Update with sync function
-- `set(updater: (state: T) => Promise<T>): Promise<void>` - Update with async function
-- `reset(): void` - Reset to initial state
+- `set(patch: Partial<T>): void` – Merge partial state (shallow)
+- `set(updater: (state: T) => T): void` – Update with sync function
+- `set(updater: (state: T) => Promise<T>): Promise<void>` – Update with async function
+- `reset(): void` – Reset to initial state
 
 #### Subscription Methods
 
-- `subscribe(listener: Listener<T>): Unsubscribe` - Subscribe to all changes
-- `subscribe<U>(selector: Selector<T, U>, listener: Listener<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe` - Subscribe to selected value
+- `subscribe(listener: Listener<T>): Unsubscribe` – Subscribe to all changes
+- `subscribe<U>(selector: Selector<T, U>, listener: Listener<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe` – Subscribe to selected value
 
 #### Scoping Methods
 
-- `createChild(patch?: Partial<T>): Store<T>` - Create independent child store
-- `runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>` - Execute with scoped store
+- `createChild(patch?: Partial<T>): Store<T>` – Create independent child store
+- `runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>` – Execute with scoped store
 
 ### Utility Functions
 
-- `shallowEqual(a: unknown, b: unknown): boolean` - Shallow equality check
-- `shallowMerge<T>(state: T, patch: Partial<T>): T` - Shallow merge
+- `shallowEqual(a: unknown, b: unknown): boolean` – Shallow equality check
+- `shallowMerge<T>(state: T, patch: Partial<T>): T` – Shallow merge
 
 ### Testing Helpers
 
-- `createTestStore<T>(baseStore?: Store<T>, patch?: Partial<T>)` - Create test store
-- `withMock<T, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>` - Temporary state override
+- `createTestStore<T>(baseStore?: Store<T>, patch?: Partial<T>)` – Create test store
+- `withMock<T, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>` – Temporary state override
 
 ## Bundle Size
 
@@ -611,20 +657,6 @@ store.subscribe(
 // Compile-time error for invalid keys
 store.set({ invalid: true }); // ❌ Type error
 ```
-
-## Comparison with Alternatives
-
-| Feature                 | stateit    | Zustand            | Jotai              | Valtio             |
-| ----------------------- | ---------- | ------------------ | ------------------ | ------------------ |
-| Bundle Size (gzipped)   | **2.4 KB** | 1.1 KB             | 3.0 KB             | 5.4 KB             |
-| Framework Agnostic      | ✅         | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
-| TypeScript              | ✅ Full    | ✅ Full            | ✅ Full            | ✅ Full            |
-| Selective Subscriptions | ✅         | ✅                 | ✅                 | ✅                 |
-| Async Updates           | ✅         | ✅                 | ✅                 | ✅                 |
-| Scoped Stores           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
-| Custom Equality         | ✅         | ✅                 | ✅                 | ❌                 |
-| Testing Helpers         | ✅         | ❌                 | ❌                 | ❌                 |
-| Dependencies            | **0**      | 1                  | 0                  | 1                  |
 
 ## FAQ
 
@@ -681,17 +713,28 @@ Yes! stateit is:
 - ✅ Zero dependencies
 - ✅ Battle-tested patterns
 
-## Contributing
+## 📖 Documentation
 
-Contributions are welcome! Please read our [Contributing Guide](../../CONTRIBUTING.md) for details.
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/stateit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/stateit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/stateit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/stateit/examples)
 
-## License
+## 📄 License
 
-MIT © [vielzeug](https://github.com/saatkhel/vielzeug)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Links
+## 🤝 Contributing
 
-- [Documentation](https://vielzeug.dev/stateit)
-- [GitHub](https://github.com/saatkhel/vielzeug)
-- [Issues](https://github.com/saatkhel/vielzeug/issues)
-- [Changelog](./CHANGELOG.md)
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

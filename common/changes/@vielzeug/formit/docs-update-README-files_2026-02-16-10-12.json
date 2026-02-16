@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/formit",
+      "comment": "update README",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/formit"
+}

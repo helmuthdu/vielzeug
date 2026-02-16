@@ -46,18 +46,18 @@ const admins = await db.query('users')
 
 ## ✨ Features
 
-- ✅ **Type-Safe** - Full TypeScript support with schema-based type inference
-- ✅ **Unified API** - Switch between IndexedDB and LocalStorage without changing code
-- ✅ **Advanced Querying** - Rich QueryBuilder with filters, sorting, grouping, and pagination
-- ✅ **Schema Validation** - Early validation with clear error messages
-- ✅ **TTL Support** - Native time-to-live for automatic record expiration
-- ✅ **Transactions** - Atomic operations across multiple tables
-- ✅ **Migrations** - Built-in schema versioning for IndexedDB
-- ✅ **Resilient** - Graceful handling of corrupted entries
-- ✅ **Lightweight** - 4.4 KB gzipped
-- ✅ **Zero Runtime Dependencies** - Only development dependencies for utilities
+- ✅ **Type-Safe** – Full TypeScript support with schema-based type inference
+- ✅ **Unified API** – Switch between IndexedDB and LocalStorage without changing code
+- ✅ **Advanced Querying** – Rich QueryBuilder with filters, sorting, grouping, and pagination
+- ✅ **Schema Validation** – Early validation with clear error messages
+- ✅ **TTL Support** – Native time-to-live for automatic record expiration
+- ✅ **Transactions** – Atomic operations across multiple tables
+- ✅ **Migrations** – Built-in schema versioning for IndexedDB
+- ✅ **Resilient** – Graceful handling of corrupted entries
+- ✅ **Lightweight** – 4.4 KB gzipped
+- ✅ **Zero Runtime Dependencies** – Only development dependencies for utilities
 
-## 🆚 Comparison
+## 🆚 Comparison with Alternatives
 
 | Feature              | Deposit        | Dexie.js    | LocalForage | Native IndexedDB |
 | -------------------- | -------------- | ----------- | ----------- | ---------------- |
@@ -78,10 +78,8 @@ const admins = await db.query('users')
 ```bash
 # pnpm
 pnpm add @vielzeug/deposit
-
 # npm
 npm install @vielzeug/deposit
-
 # yarn
 yarn add @vielzeug/deposit
 ```
@@ -221,7 +219,7 @@ const user = await db.get('users', 'u1');
 user?.name; // string
 user?.age;  // number
 
-// ❌ TypeScript error - 'posts' table doesn't have 'email' field
+// ❌ TypeScript error – 'posts' table doesn't have 'email' field
 const post = await db.get('posts', 'p1');
 post?.email; // Error!
 ```
@@ -232,17 +230,17 @@ See the [full API documentation](https://helmuthdu.github.io/vielzeug/deposit/ap
 
 ### Core Methods
 
-- `get(table, key, defaultValue?)` - Get a single record
-- `getAll(table)` - Get all records from a table
-- `put(table, value, ttl?)` - Create or update a record
-- `delete(table, key)` - Delete a record
-- `clear(table)` - Clear all records from a table
-- `count(table)` - Count records in a table
-- `bulkPut(table, values, ttl?)` - Bulk insert/update
-- `bulkDelete(table, keys)` - Bulk delete
-- `query(table)` - Create a query builder
-- `transaction(tables, fn, ttl?)` - Atomic transaction
-- `patch(table, operations)` - Batch operations
+- `get(table, key, defaultValue?)` – Get a single record
+- `getAll(table)` – Get all records from a table
+- `put(table, value, ttl?)` – Create or update a record
+- `delete(table, key)` – Delete a record
+- `clear(table)` – Clear all records from a table
+- `count(table)` – Count records in a table
+- `bulkPut(table, values, ttl?)` – Bulk insert/update
+- `bulkDelete(table, keys)` – Bulk delete
+- `query(table)` – Create a query builder
+- `transaction(tables, fn, ttl?)` – Atomic transaction
+- `patch(table, operations)` – Batch operations
 
 ## 🔥 Advanced Features
 
@@ -400,61 +398,61 @@ await db.patch('users', [
 
 #### Methods
 
-- `put(table, value, ttl?)` - Insert or update a record
-- `get(table, key, defaultValue?)` - Retrieve a record by key
-- `getAll(table)` - Retrieve all records from a table
-- `delete(table, key)` - Delete a record
-- `clear(table)` - Remove all records from a table
-- `count(table)` - Count records in a table
-- `bulkPut(table, values, ttl?)` - Insert/update multiple records
-- `bulkDelete(table, keys)` - Delete multiple records
-- `query(table)` - Create a QueryBuilder for advanced queries
-- `transaction(tables, fn, ttl?)` - Execute atomic operations
-- `patch(table, operations)` - Apply multiple operations atomically
+- `put(table, value, ttl?)` – Insert or update a record
+- `get(table, key, defaultValue?)` – Retrieve a record by key
+- `getAll(table)` – Retrieve all records from a table
+- `delete(table, key)` – Delete a record
+- `clear(table)` – Remove all records from a table
+- `count(table)` – Count records in a table
+- `bulkPut(table, values, ttl?)` – Insert/update multiple records
+- `bulkDelete(table, keys)` – Delete multiple records
+- `query(table)` – Create a QueryBuilder for advanced queries
+- `transaction(tables, fn, ttl?)` – Execute atomic operations
+- `patch(table, operations)` – Apply multiple operations atomically
 
 ### QueryBuilder Methods
 
 #### Filtering
 
-- `equals(field, value)` - Filter by exact match
-- `between(field, lower, upper)` - Filter by range
-- `startsWith(field, prefix, ignoreCase?)` - Filter by string prefix
-- `where(field, predicate)` - Filter with custom predicate
-- `filter(fn)` - Filter with predicate on entire record
-- `not(fn)` - Negate a predicate
-- `and(...fns)` - Combine predicates with AND
-- `or(...fns)` - Combine predicates with OR
+- `equals(field, value)` – Filter by exact match
+- `between(field, lower, upper)` – Filter by range
+- `startsWith(field, prefix, ignoreCase?)` – Filter by string prefix
+- `where(field, predicate)` – Filter with custom predicate
+- `filter(fn)` – Filter with predicate on entire record
+- `not(fn)` – Negate a predicate
+- `and(...fns)` – Combine predicates with AND
+- `or(...fns)` – Combine predicates with OR
 
 #### Ordering & Pagination
 
-- `orderBy(field, direction)` - Sort results
-- `limit(n)` - Limit number of results
-- `offset(n)` - Skip first n results
-- `page(pageNumber, pageSize)` - Paginate results
-- `reverse()` - Reverse order
+- `orderBy(field, direction)` – Sort results
+- `limit(n)` – Limit number of results
+- `offset(n)` – Skip first n results
+- `page(pageNumber, pageSize)` – Paginate results
+- `reverse()` – Reverse order
 
 #### Aggregations
 
-- `count()` - Count matching records
-- `first()` - Get first record
-- `last()` - Get last record
-- `min(field)` - Find minimum value
-- `max(field)` - Find maximum value
-- `sum(field)` - Sum numeric field
-- `average(field)` - Calculate average
+- `count()` – Count matching records
+- `first()` – Get first record
+- `last()` – Get last record
+- `min(field)` – Find minimum value
+- `max(field)` – Find maximum value
+- `sum(field)` – Sum numeric field
+- `average(field)` – Calculate average
 
 #### Transformations
 
-- `modify(callback)` - Transform records
-- `groupBy(field)` - Group by field (returns object)
-- `toGrouped(field)` - Type-safe grouping (returns array) - **Recommended**
-- `search(query, tone?)` - Fuzzy search
+- `modify(callback)` – Transform records
+- `groupBy(field)` – Group by field (returns object)
+- `toGrouped(field)` – Type-safe grouping (returns array) – **Recommended**
+- `search(query, tone?)` – Fuzzy search
 
 #### Execution
 
-- `toArray()` - Execute query and return results
-- `reset()` - Clear all operations
-- `build(conditions)` - Build query from condition objects
+- `toArray()` – Execute query and return results
+- `reset()` – Clear all operations
+- `build(conditions)` – Build query from condition objects
 
 ## Schema Validation
 
@@ -469,7 +467,7 @@ const validSchema = {
   },
 };
 
-// ❌ Invalid schema - will throw immediately
+// ❌ Invalid schema – will throw immediately
 const invalidSchema = {
   users: {
     record: {} as User, // Missing 'key' field
@@ -524,13 +522,13 @@ await db.get('invalid', 'key');
 
 ## Best Practices
 
-1. **Use IndexedDB for production** - Better performance and larger storage
-2. **Define schemas with TypeScript** - Use `{} as YourType` for full type safety
-3. **Index wisely** - Only index fields you'll query frequently
-4. **Batch operations** - Use `bulkPut`/`bulkDelete` instead of loops
-5. **Use `toGrouped()`** - Prefer it over `groupBy()` for type safety
-6. **Handle errors** - Wrap operations in try-catch for error handling
-7. **Increment versions** - For schema changes in IndexedDB
+1. **Use IndexedDB for production** – Better performance and larger storage
+2. **Define schemas with TypeScript** – Use `{} as YourType` for full type safety
+3. **Index wisely** – Only index fields you'll query frequently
+4. **Batch operations** – Use `bulkPut`/`bulkDelete` instead of loops
+5. **Use `toGrouped()`** – Prefer it over `groupBy()` for type safety
+6. **Handle errors** – Wrap operations in try-catch for error handling
+7. **Increment versions** – For schema changes in IndexedDB
 
 ## Examples
 
@@ -660,4 +658,4 @@ Contributions are welcome! Check our [GitHub repository](https://github.com/helm
 
 ---
 
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

@@ -2,35 +2,39 @@
 
 A comprehensive, type-safe utility library for modern JavaScript and TypeScript.
 
-## Features
+## ✨ Features
 
-- 🎯 **119 Type-Safe Utilities** - Covering arrays, objects, strings, async operations, and more
-- 📦 **Tree-Shakeable** - Import only what you need, minimize bundle size
-- 🔒 **Zero Dependencies** - No supply chain risks, no version conflicts
-- 💪 **Full TypeScript Support** - Complete type inference and safety
-- ⚡ **Async-First** - Built-in support for promises and async operations
-- 🧪 **Battle-Tested** - >95% test coverage, production-ready
-- 🌐 **Isomorphic** - Works in both browser and Node.js environments
+- 🎯 **119 Type-Safe Utilities** – Covering arrays, objects, strings, async operations, and more
+- 📦 **Tree-Shakable** – Import only what you need, minimize bundle size
+- 🔒 **Zero Dependencies** – No supply chain risks, no version conflicts
+- 💪 **Full TypeScript Support** – Complete type inference and safety
+- ⚡ **Async-First** – Built-in support for promises and async operations
+- 🧪 **Battle-Tested** – >95% test coverage, production-ready
+- 🌐 **Isomorphic** – Works in both browser and Node.js environments
 
-## Installation
+## 🆚 Comparison with Alternatives
 
-::: code-group
+| Feature                | Toolkit          | Lodash            | Ramda             | Native JS  |
+| ---------------------- | ---------------- | ----------------- | ----------------- | ---------- |
+| TypeScript Support     | ✅ First-class   | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
+| Tree-shakeable         | ✅ By default    | ⚠️ lodash-es only | ✅ Yes            | N/A        |
+| Bundle Size (min+gzip) | ~0.1-1KB/utility | ~24KB (full)      | ~12KB (full)      | 0KB        |
+| Dependencies           | 0                | 0                 | 0                 | N/A        |
+| Async Support          | ✅ Built-in      | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
+| Learning Curve         | Low              | Low               | High (FP focused) | Low        |
 
-```bash [pnpm]
+## 📦 Installation
+
+```bash
+# pnpm
 pnpm add @vielzeug/toolkit
-```
-
-```bash [npm]
+# npm
 npm install @vielzeug/toolkit
-```
-
-```bash [yarn]
+# yarn
 yarn add @vielzeug/toolkit
 ```
 
-:::
-
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { chunk, map, retry, pool } from '@vielzeug/toolkit';
@@ -72,7 +76,7 @@ const flat = flatten([
 ]);
 
 // Sort with custom comparator
-const sorted = sort(items, (a, b) => a.price - b.price);
+const sorted = sort(items, (a, b) => a.price – b.price);
 ```
 
 **Available utilities:**
@@ -149,7 +153,7 @@ const search = debounce((query) => fetchResults(query), 300);
 const onScroll = throttle(() => updateUI(), 100);
 
 // Memoize expensive calculations
-const fibonacci = memo((n) => (n <= 1 ? n : fibonacci(n - 1) + fibonacci(n - 2)));
+const fibonacci = memo((n) => (n <= 1 ? n : fibonacci(n – 1) + fibonacci(n – 2)));
 
 // Function composition
 const transform = pipe(
@@ -380,7 +384,7 @@ async function processBatch(items: any[], batchSize = 10) {
     results.push(...batchResults);
 
     // Delay between batches
-    if (i < batches.length - 1) {
+    if (i < batches.length – 1) {
       await sleep(1000);
     }
   }
@@ -430,10 +434,10 @@ try {
 Toolkit is designed for optimal tree-shaking. Import only what you use:
 
 ```typescript
-// ✅ Good - Only includes chunk function (~0.5KB gzipped)
+// ✅ Good – Only includes chunk function (~0.5KB gzipped)
 import { chunk } from '@vielzeug/toolkit';
 
-// ⚠️ Avoid - Imports entire library (~35KB gzipped)
+// ⚠️ Avoid – Imports entire library (~35KB gzipped)
 import * as toolkit from '@vielzeug/toolkit';
 ```
 
@@ -477,17 +481,6 @@ const results = await map(ids, async (id) => fetchUser(id));
 // Type: Promise<User[]>
 ```
 
-## Comparison with Alternatives
-
-| Feature                | Toolkit          | Lodash            | Ramda             | Native JS  |
-| ---------------------- | ---------------- | ----------------- | ----------------- | ---------- |
-| TypeScript Support     | ✅ First-class   | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
-| Tree-shakeable         | ✅ By default    | ⚠️ lodash-es only | ✅ Yes            | N/A        |
-| Bundle Size (min+gzip) | ~0.1-1KB/utility | ~24KB (full)      | ~12KB (full)      | 0KB        |
-| Dependencies           | 0                | 0                 | 0                 | N/A        |
-| Async Support          | ✅ Built-in      | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
-| Learning Curve         | Low              | Low               | High (FP focused) | Low        |
-
 ## Documentation
 
 - **[Full Documentation](https://helmuthdu.github.io/vielzeug/toolkit/)**
@@ -495,7 +488,7 @@ const results = await map(ids, async (id) => fetchUser(id));
 - **[Usage Guide](https://helmuthdu.github.io/vielzeug/toolkit/usage)**
 - **[Examples](https://helmuthdu.github.io/vielzeug/toolkit/examples/array)**
 
-## Contributing
+## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](../../CONTRIBUTING.md) for details.
 
@@ -518,18 +511,28 @@ pnpm test:watch
 pnpm typecheck
 ```
 
-## License
+## 📖 Documentation
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu/vielzeug)
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/toolkit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/toolkit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/toolkit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/toolkit/examples)
 
-## Related Packages
+## 📄 License
 
-Part of the [@vielzeug](https://helmuthdu.github.io/vielzeug/) monorepo:
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-- **[@vielzeug/deposit](../deposit)** - Type-safe local storage with schemas and expiration
-- **[@vielzeug/fetchit](../fetchit)** - Advanced HTTP client with caching and retries
-- **[@vielzeug/formit](../formit)** - Type-safe form state and validation
-- **[@vielzeug/i18nit](../i18nit)** - Internationalization with TypeScript
-- **[@vielzeug/logit](../logit)** - Beautiful console logging
-- **[@vielzeug/permit](../permit)** - Role-based access control
-- **[@vielzeug/validit](../validit)** - Type-safe validation schemas
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

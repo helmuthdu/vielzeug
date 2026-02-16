@@ -11,14 +11,14 @@ Simple, powerful dependency injection container with full TypeScript support, ze
 
 ## ✨ Features
 
-- 🎯 **Type-Safe** - Full TypeScript inference for tokens and dependencies
-- 🪶 **Lightweight** - 2.1 KB gzipped, zero dependencies
-- 🔄 **Lifetimes** - Singleton, Transient, and Scoped support
-- ⚡ **Async Support** - Handle async factories and dependencies
-- 🌳 **Hierarchical** - Parent/child containers with inheritance
-- 🧪 **Testing Friendly** - Built-in mocking and testing utilities
-- 🔗 **Token Aliasing** - Create aliases for flexible provider management
-- 🚀 **Production Ready** - Comprehensive test coverage
+- 🎯 **Type-Safe** – Full TypeScript inference for tokens and dependencies
+- 🪶 **Lightweight** – 2.1 KB gzipped, zero dependencies
+- 🔄 **Lifetimes** – Singleton, Transient, and Scoped support
+- ⚡ **Async Support** – Handle async factories and dependencies
+- 🌳 **Hierarchical** – Parent/child containers with inheritance
+- 🧪 **Testing Friendly** – Built-in mocking and testing utilities
+- 🔗 **Token Aliasing** – Create aliases for flexible provider management
+- 🚀 **Production Ready** – Comprehensive test coverage
 
 ## 📦 Installation
 
@@ -113,18 +113,18 @@ container.registerFactory(Cache, (config) => new RedisCache(config.redisUrl), [C
 Control when instances are created:
 
 ```typescript
-// Singleton - Created once, reused everywhere (default for classes)
+// Singleton – Created once, reused everywhere (default for classes)
 container.register(Database, {
   useClass: PrismaDatabase,
   lifetime: 'singleton',
 });
 
-// Transient - Created every time (default for factories)
+// Transient – Created every time (default for factories)
 container.registerFactory(RequestId, () => generateId(), [], {
   lifetime: 'transient',
 });
 
-// Scoped - Created once per scope (e.g., per request)
+// Scoped – Created once per scope (e.g., per request)
 container.register(RequestContext, {
   useClass: Context,
   lifetime: 'scoped',
@@ -377,13 +377,13 @@ app.post('/users', async (req, res) => {
 
 Wireit uses TypeScript symbols as tokens to uniquely identify dependencies. The container maintains a registry of providers and resolves dependencies by:
 
-1. **Token Resolution** - Resolves aliases to source tokens
-2. **Circular Detection** - Tracks dependency stack to prevent cycles
-3. **Provider Execution** - Instantiates classes or calls factories
-4. **Instance Caching** - Caches singletons for reuse
-5. **Parent Delegation** - Falls back to parent container if not found
+1. **Token Resolution** – Resolves aliases to source tokens
+2. **Circular Detection** – Tracks dependency stack to prevent cycles
+3. **Provider Execution** – Instantiates classes or calls factories
+4. **Instance Caching** – Caches singletons for reuse
+5. **Parent Delegation** – Falls back to parent container if not found
 
-## 🆚 Comparison
+## 🆚 Comparison with Alternatives
 
 | Feature          | Wireit | InversifyJS | TSyringe |
 | ---------------- | ------ | ----------- | -------- |
@@ -412,23 +412,28 @@ Wireit uses TypeScript symbols as tokens to uniquely identify dependencies. The 
 - Don't mutate container during resolution
 - Don't register too many transient services
 
-## 🤝 Contributing
+## 📖 Documentation
 
-Contributions are welcome! Please check out our [Contributing Guide](../../.github/contributing.md).
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/wireit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/wireit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/wireit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/wireit/examples)
 
 ## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
 ## 🔗 Links
 
-- [Documentation](https://helmuthdu.github.io/vielzeug/wireit/)
-- [GitHub](https://github.com/helmuthdu/vielzeug)
-- [NPM](https://www.npmjs.com/package/@vielzeug/wireit)
-- [Issues](https://github.com/helmuthdu/vielzeug/issues)
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 
 ---
 
-<div align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/helmuthdu">Helmuth Saatkamp</a></sub>
-</div>
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

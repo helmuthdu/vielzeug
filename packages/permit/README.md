@@ -1,33 +1,89 @@
 # @vielzeug/permit
 
-Type-safe, flexible role-based access control (RBAC) system for TypeScript applications. Simple, powerful permission management with zero dependencies.
+## What is Permit?
 
-## Features
+**Permit** is a type-safe, flexible role-based access control (RBAC) system for TypeScript. Build secure authorization logic with dynamic rules, wildcards, and context-aware permissions—all in just 2 KB.
 
-- ✅ **Type-Safe** - Full TypeScript support with generic user and data types
-- ✅ **Flexible Permissions** - Static boolean or dynamic function-based checks
-- ✅ **Wildcard Support** - Define permissions for all roles or resources
-- ✅ **Normalized Matching** - Case-insensitive, trimmed role/resource comparison
-- ✅ **Security-First** - Safe handling of malformed users with ANONYMOUS role
-- ✅ **Runtime Validation** - Validates permission actions at registration
-- ✅ **Zero Dependencies** - Lightweight with only @vielzeug/logit for optional logging
-- ✅ **Deep Copy Protection** - Immutable permission registry inspection
-- ✅ **Framework Agnostic** - Works with any JavaScript/TypeScript framework
+### The Problem
 
-## Installation
+Authorization logic is often scattered and error-prone:
+
+- Manual permission checks lead to security gaps
+- Hard-coded roles make changes difficult
+- No type safety for roles and permissions
+- Context-aware permissions require custom code
+- Testing authorization is complex
+
+### The Solution
+
+Permit provides a clean, type-safe RBAC system:
+
+```typescript
+import { createPermit } from '@vielzeug/permit';
+
+const permit = createPermit<User, Post>()({
+  admin: {
+    posts: true, // Admins can do anything with posts
+  },
+  user: {
+    posts: {
+      create: true,
+      read: true,
+      update: (user, post) => post.authorId === user.id, // Own posts only
+      delete: (user, post) => post.authorId === user.id,
+    },
+  },
+});
+
+// Check permissions
+const canEdit = permit.can(currentUser, 'posts', 'update', post);
+if (canEdit) {
+  // Allow editing
+}
+```
+
+## ✨ Features
+
+- ✅ **Type-Safe** – Full TypeScript support with generic user and data types
+- ✅ **Flexible Permissions** – Static boolean or dynamic function-based checks
+- ✅ **Wildcard Support** – Define permissions for all roles or resources
+- ✅ **Normalized Matching** – Case-insensitive, trimmed role/resource comparison
+- ✅ **Context-Aware** – Dynamic rules based on user and resource data
+- ✅ **Lightweight** – 2.0 KB gzipped with minimal dependencies
+- ✅ **Framework Agnostic** – Works anywhere TypeScript runs
+
+## 🆚 Comparison with Alternatives
+
+| Feature            | Permit         | CASL          | Casbin      | AccessControl |
+| ------------------ | -------------- | ------------- | ----------- | ------------- |
+| Bundle Size (gzip) | **~2.0 KB**    | ~10KB         | ~25KB       | ~5KB          |
+| TypeScript Support | ✅ First-class | ✅ Good       | ⚠️ Limited  | ✅ Good       |
+| Dynamic Rules      | ✅ Functions   | ✅ Abilities  | ✅ Policies | ❌            |
+| Wildcard Support   | ✅ Built-in    | ✅ Yes        | ✅ Yes      | ✅ Yes        |
+| Context-Aware      | ✅ Native      | ✅ Conditions | ✅ Yes      | ❌            |
+| Framework Agnostic | ✅ Yes         | ✅ Yes        | ✅ Yes      | ✅ Yes        |
+| Dependencies       | 1              | 5+            | 10+         | 0             |
+
+## 📦 Installation
+
+- ✅ **Security-First** – Safe handling of malformed users with ANONYMOUS role
+- ✅ **Runtime Validation** – Validates permission actions at registration
+- ✅ **Zero Dependencies** – Lightweight with only @vielzeug/logit for optional logging
+- ✅ **Deep Copy Protection** – Immutable permission registry inspection
+- ✅ **Framework Agnostic** – Works with any JavaScript/TypeScript framework
+
+## 📦 Installation
 
 ```bash
 # pnpm
 pnpm add @vielzeug/permit
-
 # npm
 npm install @vielzeug/permit
-
 # yarn
 yarn add @vielzeug/permit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { Permit } from '@vielzeug/permit';
@@ -57,16 +113,16 @@ Permit.check(user, 'posts', 'update', { authorId: '456' }); // false
 Permit.check(user, 'posts', 'delete'); // false
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
 ### Permission Actions
 
 Four standard CRUD actions are supported:
 
-- `read` - Read/view access
-- `create` - Create new resources
-- `update` - Modify existing resources
-- `delete` - Remove resources
+- `read` – Read/view access
+- `create` – Create new resources
+- `update` – Modify existing resources
+- `delete` – Remove resources
 
 ### Permission Types
 
@@ -96,7 +152,7 @@ Permit.check(user, 'posts', 'update'); // false (no data provided)
 
 ### Wildcards
 
-#### Wildcard Role - Apply to All Users
+#### Wildcard Role – Apply to All Users
 
 ```typescript
 import { WILDCARD } from '@vielzeug/permit';
@@ -108,7 +164,7 @@ const anyUser = { id: '999', roles: ['guest'] };
 Permit.check(anyUser, 'posts', 'read'); // true
 ```
 
-#### Wildcard Resource - Apply to All Resources
+#### Wildcard Resource – Apply to All Resources
 
 ```typescript
 // Admins can view everything
@@ -161,7 +217,7 @@ Permit.check(user, 'POSTS', 'read'); // true
 Permit.check(user, '  posts  ', 'read'); // true
 ```
 
-## API Reference
+## 🎯 API Reference
 
 ### Permit.register()
 
@@ -177,9 +233,9 @@ Permit.register<TUser, TData>(
 
 **Parameters:**
 
-- `role` - Role identifier (normalized)
-- `resource` - Resource identifier (normalized)
-- `actions` - Object mapping actions to permissions (boolean or function)
+- `role` – Role identifier (normalized)
+- `resource` – Resource identifier (normalized)
+- `actions` – Object mapping actions to permissions (boolean or function)
 
 **Throws:**
 
@@ -221,10 +277,10 @@ Permit.set<TUser, TData>(
 
 **Parameters:**
 
-- `role` - Role identifier
-- `resource` - Resource identifier
-- `actions` - Permission actions
-- `replace` - If `true`, replaces existing; if `false`, merges (default: `false`)
+- `role` – Role identifier
+- `resource` – Resource identifier
+- `actions` – Permission actions
+- `replace` – If `true`, replaces existing; if `false`, merges (default: `false`)
 
 **Example:**
 
@@ -253,10 +309,10 @@ Permit.check<TUser, TData>(
 
 **Parameters:**
 
-- `user` - User object with `id` and `roles` properties
-- `resource` - Resource identifier
-- `action` - Permission action to check
-- `data` - Optional contextual data for function-based permissions
+- `user` – User object with `id` and `roles` properties
+- `resource` – Resource identifier
+- `action` – Permission action to check
+- `data` – Optional contextual data for function-based permissions
 
 **Returns:** `true` if allowed, `false` otherwise
 
@@ -295,9 +351,9 @@ Permit.unregister(
 
 **Parameters:**
 
-- `role` - Role identifier
-- `resource` - Resource identifier
-- `action` - Optional specific action to remove
+- `role` – Role identifier
+- `resource` – Resource identifier
+- `action` – Optional specific action to remove
 
 **Example:**
 
@@ -327,8 +383,8 @@ Permit.hasRole(user: BaseUser, role: string): boolean
 
 **Parameters:**
 
-- `user` - User object
-- `role` - Role to check for
+- `user` – User object
+- `role` – Role to check for
 
 **Returns:** `true` if user has the role, `false` otherwise
 
@@ -395,7 +451,7 @@ for (const [role, resources] of permissions) {
 - Returns deep copy (modifications don't affect internal state)
 - Useful for debugging and introspection
 
-## Advanced Usage
+## 🔥 Advanced Usage
 
 ### Multi-Role Users
 
@@ -534,10 +590,10 @@ Permit.register('editor', 'posts', {
   update: (user, data) => user.id === data.authorId,
 });
 
-// Without data - always returns false
+// Without data – always returns false
 Permit.check(user, 'posts', 'update'); // false
 
-// With data - evaluates function
+// With data – evaluates function
 Permit.check(user, 'posts', 'update', { authorId: '123' }); // true/false
 ```
 
@@ -663,30 +719,28 @@ const ROLES = {
 Permit.register(ROLES.ADMIN, 'posts', { delete: true });
 ```
 
-## Comparison
+## 📖 Documentation
 
-| Feature             | @vielzeug/permit        | casl          | accesscontrol |
-| ------------------- | ----------------------- | ------------- | ------------- |
-| Bundle Size         | **~2KB**                | ~15KB         | ~10KB         |
-| Dependencies        | 1 (logging)             | Multiple      | 0             |
-| TypeScript          | First-class             | Good          | Basic         |
-| Dynamic Permissions | ✅ Functions            | ✅ Conditions | ❌            |
-| Normalization       | ✅ Built-in             | ❌            | ❌            |
-| Wildcards           | ✅ Role + Resource      | ⚠️ Limited    | ✅            |
-| Type Exports        | ✅ All types            | ⚠️ Some       | ❌            |
-| Security Defaults   | ✅ Safe malformed users | ⚠️            | ⚠️            |
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/permit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/permit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/permit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/permit/examples)
 
-## License
+## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Links
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://vielzeug.dev)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/permit)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 
 ---
 
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

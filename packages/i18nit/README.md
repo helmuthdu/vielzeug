@@ -1,35 +1,86 @@
 # @vielzeug/i18nit
 
-Type-safe, lightweight internationalization (i18n) library for TypeScript applications. Simple, powerful translation management with zero dependencies.
+## What is I18nit?
 
-## Features
+**I18nit** is a type-safe, lightweight internationalization library for TypeScript. Build multilingual applications with powerful pluralization, nested translations, and lazy loading—all in just 1.6 KB.
 
-- ✅ **Type-Safe** - Full TypeScript support with generic types
-- ✅ **Lightweight** - 1.6 KB gzipped with zero dependencies
-- ✅ **Universal Pluralization** - 100+ languages via Intl.PluralRules API
-- ✅ **Smart Array Handling** - Auto-join with separators, length access, and safe indexing
-- ✅ **Path Interpolation** - Support for nested objects and array indices
-- ✅ **Lazy Loading** - Async locale loading with automatic caching
-- ✅ **Namespaces** - Organize translations by feature or module
-- ✅ **Fallback Chain** - Multiple fallback locales with automatic language variants
-- ✅ **HTML Escaping** - Built-in XSS protection
-- ✅ **Number & Date Formatting** - Locale-aware formatting with Intl API
-- ✅ **Framework Agnostic** - Works with React, Vue, Svelte, or vanilla JS
+### The Problem
 
-## Installation
+Internationalization libraries are often heavy and complex:
+
+- **i18next** is feature-rich but adds 11KB+ to your bundle
+- **react-intl** is React-specific and requires setup
+- **FormatJS** has a steep learning curve
+- Manual translations lead to missing keys and runtime errors
+- Type safety requires extra tooling
+
+### The Solution
+
+I18nit provides a simple, type-safe API using native browser APIs:
+
+```typescript
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      welcome: 'Welcome, {name}!',
+      items: 'You have {count} item | You have {count} items',
+    },
+    es: {
+      welcome: '¡Bienvenido, {name}!',
+      items: 'Tienes {count} artículo | Tienes {count} artículos',
+    },
+  },
+});
+
+// Interpolation
+i18n.t('welcome', { name: 'Alice' }); // "Welcome, Alice!"
+
+// Automatic pluralization
+i18n.t('items', { count: 1 }); // "You have 1 item"
+i18n.t('items', { count: 5 }); // "You have 5 items"
+```
+
+## ✨ Features
+
+- ✅ **Type-Safe** – Full TypeScript support with generic types
+- ✅ **Lightweight** – 1.6 KB gzipped with zero dependencies
+- ✅ **Universal Pluralization** – 100+ languages via Intl.PluralRules API
+- ✅ **Smart Array Handling** – Auto-join with separators, length access, and safe indexing
+- ✅ **Path Interpolation** – Support for nested objects and array indices
+- ✅ **Lazy Loading** – Async locale loading with automatic caching
+- ✅ **Namespaces** – Organize translations by feature or module
+- ✅ **Fallback Chain** – Multiple fallback locales with automatic language variants
+- ✅ **HTML Escaping** – Built-in XSS protection
+- ✅ **Number & Date Formatting** – Locale-aware formatting with Intl API
+- ✅ **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
+
+## 🆚 Comparison with Alternatives
+
+| Feature             | I18nit         | i18next | react-intl | FormatJS     |
+| ------------------- | -------------- | ------- | ---------- | ------------ |
+| Bundle Size (gzip)  | **~1.6 KB**    | ~11KB   | ~14KB      | ~14KB        |
+| TypeScript Support  | ✅ First-class | ✅ Good | ✅ Good    | ✅ Excellent |
+| Pluralization       | ✅ Native Intl | ✅ ICU  | ✅ ICU     | ✅ ICU       |
+| Nested Translations | ✅ Built-in    | ✅ Yes  | ⚠️ Limited | ✅ Yes       |
+| Lazy Loading        | ✅ Async       | ✅ Yes  | ⚠️ Manual  | ✅ Yes       |
+| Framework Agnostic  | ✅ Yes         | ✅ Yes  | ❌ React   | ❌ React     |
+| Dependencies        | 0              | 3       | 5          | 7            |
+
+## 📦 Installation
 
 ```bash
 # pnpm
 pnpm add @vielzeug/i18nit
-
 # npm
 npm install @vielzeug/i18nit
-
 # yarn
 yarn add @vielzeug/i18nit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { createI18n } from '@vielzeug/i18nit';
@@ -70,7 +121,7 @@ i18n.setLocale('es');
 i18n.t('greeting', { name: 'Mundo' }); // "¡Hola, Mundo!"
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
 ### Translation Keys
 
@@ -137,7 +188,7 @@ const i18n = createI18n({
 i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
 // "Shopping list: Apple, Banana, Orange"
 
-// Natural "and" lists (locale-aware via Intl.ListFormat - supports 100+ languages automatically)
+// Natural "and" lists (locale-aware via Intl.ListFormat – supports 100+ languages automatically)
 i18n.t('guests', { names: ['Alice'] });
 // "Invited: Alice"
 i18n.t('guests', { names: ['Alice', 'Bob'] });
@@ -145,7 +196,7 @@ i18n.t('guests', { names: ['Alice', 'Bob'] });
 i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
 // "Invited: Alice, Bob, and Charlie" (Oxford comma in English)
 
-// Natural "or" lists (locale-aware via Intl.ListFormat - supports 100+ languages automatically)
+// Natural "or" lists (locale-aware via Intl.ListFormat – supports 100+ languages automatically)
 i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
 // "Choose: Tea, Coffee, or Juice"
 
@@ -160,21 +211,21 @@ i18n.t('count', { items: ['A', 'B', 'C'] });
 
 **Array Features:**
 
-- `{items}` - Join with comma (`, `)
-- `{items|and}` - Natural "and" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
-- `{items|or}` - Natural "or" list with locale-aware conjunction (uses Intl.ListFormat - supports 100+ languages)
-- `{items| - }` - Custom separator (e.g., "A - B - C")
-- `{items.length}` - Array length
-- `{items[0]}` - Safe index access (returns empty if out of bounds)
+- `{items}` – Join with comma (`, `)
+- `{items|and}` – Natural "and" list with locale-aware conjunction (uses Intl.ListFormat – supports 100+ languages)
+- `{items|or}` – Natural "or" list with locale-aware conjunction (uses Intl.ListFormat – supports 100+ languages)
+- `{items| – }` – Custom separator (e.g., "A – B – C")
+- `{items.length}` – Array length
+- `{items[0]}` – Safe index access (returns empty if out of bounds)
 
 **Locale-Aware List Formatting:**  
 The `and` and `or` separators use the built-in **Intl.ListFormat API** which automatically handles:
 
-- **100+ languages** - Supports all languages available in the browser/runtime
-- **Proper grammar** - Oxford comma, locale-specific punctuation
-- **Right-to-left languages** - Arabic, Hebrew, etc.
-- **Unicode CLDR standards** - International standard for list formatting
-- **No manual configuration** - Zero maintenance required
+- **100+ languages** – Supports all languages available in the browser/runtime
+- **Proper grammar** – Oxford comma, locale-specific punctuation
+- **Right-to-left languages** – Arabic, Hebrew, etc.
+- **Unicode CLDR standards** – International standard for list formatting
+- **No manual configuration** – Zero maintenance required
 
 Examples across languages:
 
@@ -188,13 +239,13 @@ Examples across languages:
 
 #### Supported Path Formats
 
-- `{name}` - Simple variable
-- `{user.name}` - Nested object property
-- `{items[0]}` - Array index (safe - returns empty if out of bounds)
-- `{items}` - Array join with default separator
-- `{items|and}` - Array join with "and"
-- `{items.length}` - Array length
-- `{data.items[0].value}` - Mixed notation
+- `{name}` – Simple variable
+- `{user.name}` – Nested object property
+- `{items[0]}` – Array index (safe – returns empty if out of bounds)
+- `{items}` – Array join with default separator
+- `{items|and}` – Array join with "and"
+- `{items.length}` – Array length
+- `{data.items[0].value}` – Mixed notation
 
 **Limitations:**
 
@@ -252,7 +303,7 @@ i18nit uses the browser's built-in `Intl.PluralRules` API to automatically suppo
 - **Japanese (ja)**: other
 - And 90+ more languages...
 
-## Advanced Features
+## 🔥 Advanced Features
 
 ### Fallback Locales
 
@@ -458,8 +509,8 @@ i18n.t('greeting', { name: 'Bob' }, { locale: 'fr', escape: true }); // With opt
 
 **Options:**
 
-- `locale?: string` - Override locale for this translation
-- `escape?: boolean` - Override HTML escaping
+- `locale?: string` – Override locale for this translation
+- `escape?: boolean` – Override HTML escaping
 
 ### Locale Management
 
@@ -713,30 +764,28 @@ const config: I18nConfig = {
 const i18n = createI18n(config);
 ```
 
-## Comparison
+## 📖 Documentation
 
-| Feature            | i18nit           | i18next     | react-intl    |
-| ------------------ | ---------------- | ----------- | ------------- |
-| Bundle Size        | **~1.6 KB**      | ~12KB       | ~15KB         |
-| Dependencies       | **0**            | 2+          | 10+           |
-| TypeScript         | ✅ First-class   | ✅ Good     | ✅ Good       |
-| Pluralization      | ✅ Built-in      | ✅ Plugin   | ✅ Built-in   |
-| Async Loading      | ✅ Built-in      | ✅ Built-in | ⚠️ Manual     |
-| Path Interpolation | ✅ `{user.name}` | ❌          | ❌            |
-| HTML Escaping      | ✅ Built-in      | ⚠️ Manual   | ✅ Built-in   |
-| Framework Agnostic | ✅               | ✅          | ❌ React only |
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/i18nit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/i18nit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/i18nit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/i18nit/examples)
 
-## License
+## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Links
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://vielzeug.dev)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/i18nit)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 
 ---
 
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

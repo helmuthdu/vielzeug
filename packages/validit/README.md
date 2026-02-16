@@ -2,24 +2,45 @@
 
 Lightweight, type-safe schema validation for TypeScript. Build robust validation with minimal code and maximum type safety.
 
-## Features
+## ✨ Features
 
-- ✅ **Type-Safe** - Full TypeScript support with automatic type inference
-- ✅ **Zero Dependencies** - No external dependencies
-- ✅ **Lightweight** - 2.8 KB gzipped
-- ✅ **Intuitive API** - Inspired by Zod but simpler
-- ✅ **Composable** - Build complex schemas from simple primitives
-- ✅ **Async Validation** - Full support for async validators
-- ✅ **Convenience Helpers** - Pre-built schemas for common patterns (email, URL, UUID, etc.)
-- ✅ **Framework Agnostic** - Works anywhere JavaScript runs
+- ✅ **Type-Safe** – Full TypeScript support with automatic type inference
+- ✅ **Zero Dependencies** – No external dependencies
+- ✅ **Lightweight** – 2.8 KB gzipped
+- ✅ **Intuitive API** – Inspired by Zod but simpler
+- ✅ **Composable** – Build complex schemas from simple primitives
+- ✅ **Async Validation** – Full support for async validators
+- ✅ **Convenience Helpers** – Pre-built schemas for common patterns (email, URL, UUID, etc.)
+- ✅ **Framework Agnostic** – Works anywhere JavaScript runs
 
-## Installation
+## 🆚 Comparison with Alternatives
+
+validit is inspired by Zod but focuses on simplicity and smaller bundle size:
+
+| Feature                   | validit    | Zod    |
+| ------------------------- | ---------- | ------ |
+| Bundle Size (gzipped)     | ~2 KB      | ~12 KB |
+| Type Inference            | ✅         | ✅     |
+| Basic Validation          | ✅         | ✅     |
+| Custom Refinements        | ✅         | ✅     |
+| Async Validation          | ✅         | ✅     |
+| Parallel Array Validation | ✅         | ❌     |
+| Convenience Schemas       | ✅         | ❌     |
+| Transformers              | ✅ (basic) | ✅     |
+| Preprocess                | ❌         | ✅     |
+| Coercion                  | ✅ (basic) | ✅     |
+| Brand Types               | ❌         | ✅     |
+| Discriminated Unions      | ✅         | ✅     |
+
+If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation, use validit.
+
+## 📦 Installation
 
 ```bash
 npm install @vielzeug/validit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { v, type Infer } from '@vielzeug/validit';
@@ -60,7 +81,7 @@ if (result.success) {
 }
 ```
 
-## API Reference
+## 🎯 API Reference
 
 ### Convenience Schemas
 
@@ -417,27 +438,6 @@ type Data = Infer<typeof schema>;
 // }
 ```
 
-## Comparison with Zod
-
-validit is inspired by Zod but focuses on simplicity and smaller bundle size:
-
-| Feature                   | validit    | Zod    |
-| ------------------------- | ---------- | ------ |
-| Bundle Size (gzipped)     | ~2 KB      | ~12 KB |
-| Type Inference            | ✅         | ✅     |
-| Basic Validation          | ✅         | ✅     |
-| Custom Refinements        | ✅         | ✅     |
-| Async Validation          | ✅         | ✅     |
-| Parallel Array Validation | ✅         | ❌     |
-| Convenience Schemas       | ✅         | ❌     |
-| Transformers              | ✅ (basic) | ✅     |
-| Preprocess                | ❌         | ✅     |
-| Coercion                  | ✅ (basic) | ✅     |
-| Brand Types               | ❌         | ✅     |
-| Discriminated Unions      | ✅         | ✅     |
-
-If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation, use validit.
-
 ## Performance & Code Quality
 
 validit is designed with performance and maintainability in mind:
@@ -454,10 +454,28 @@ const schema = v.array(
 await schema.parseAsync(largeArray);
 ```
 
-## License
+## 📖 Documentation
 
-MIT
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/validit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/validit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/validit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/validit/examples)
 
-## Contributing
+## 📄 License
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
+
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

@@ -4,14 +4,14 @@ Lightweight, type-safe web component creation library
 
 ## What is Craftit?
 
-**Craftit** is a modern, minimal library for creating web components with reactive state, automatic rendering, and excellent TypeScript support. Build custom elements with the ergonomics of modern frameworks but with native browser APIs.
+**Craftit** is a modern, minimal library for creating web components with a reactive state, automatic rendering, and excellent TypeScript support. Build custom elements with the ergonomics of modern frameworks but with native browser APIs.
 
 ### The Problem
 
 Creating web components with vanilla Custom Elements API is verbose and error-prone:
 
 ```ts
-// Vanilla Custom Elements - verbose and manual
+// Vanilla Custom Elements – verbose and manual
 class MyCounter extends HTMLElement {
   #count = 0;
   #shadow: ShadowRoot;
@@ -43,7 +43,7 @@ customElements.define('my-counter', MyCounter);
 ### The Solution
 
 ```ts
-// Craftit - reactive and automatic
+// Craftit – reactive and automatic
 import { defineElement, html } from '@vielzeug/craftit';
 
 defineElement('my-counter', {
@@ -64,35 +64,40 @@ defineElement('my-counter', {
 
 ## ✨ Features
 
-- **🔥 Reactive State** - Automatic re-renders on state changes with Proxy-based reactivity
-- **⚡ Efficient Updates** - Smart DOM reconciliation, only updates what changed
-- **🎯 Event Delegation** - Built-in support for dynamic element event handling
-- **📝 Form Support** - Full ElementInternals integration for form participation
-- **🎨 Shadow DOM** - Encapsulated styles with CSSStyleSheet support
-- **🎭 CSS Variables** - Built-in theming support with `css.var()` and `css.theme()`
-- **🔍 Type-Safe** - Complete TypeScript support with full type inference
-- **📦 Tiny Bundle** - Only **~5 KB gzipped** with zero dependencies
-- **🧪 Testable** - Built-in testing utilities (`attach`, `destroy`, `flush`)
-- **🪝 Lifecycle Hooks** - Full control with `onConnected`, `onDisconnected`, `onUpdated`
-- **🌐 Framework Agnostic** - Use with React, Vue, Svelte, or vanilla JS
+- **🔥 Reactive State** – Automatic re-renders on state changes with Proxy-based reactivity
+- **⚡ Efficient Updates** – Smart DOM reconciliation, only updates what changed
+- **🎯 Event Delegation** – Built-in support for dynamic element event handling
+- **📝 Form Support** – Full ElementInternals integration for form participation
+- **🎨 Shadow DOM** – Encapsulated styles with CSSStyleSheet support
+- **🎭 CSS Variables** – Built-in theming support with `css.var()` and `css.theme()`
+- **🔍 Type-Safe** – Complete TypeScript support with full type inference
+- **📦 Tiny Bundle** – Only **~5 KB gzipped** with zero dependencies
+- **🧪 Testable** – Built-in testing utilities (`attach`, `destroy`, `flush`)
+- **🪝 Lifecycle Hooks** – Full control with `onConnected`, `onDisconnected`, `onUpdated`
+- **🌐 Framework Agnostic** – Use with React, Vue, Svelte, or vanilla JS
+
+## 🆚 Comparison with Alternatives
+
+| Feature          | Craftit   | Lit      | Stencil   |
+| ---------------- | --------- | -------- | --------- |
+| Bundle Size      | **~6 KB** | ~15 KB   | ~10 KB    |
+| Dependencies     | 0         | 0        | Many      |
+| TypeScript       | Native    | Good     | Excellent |
+| Reactive State   | Built-in  | External | Built-in  |
+| Event Delegation | ✅        | ❌       | ❌        |
+| Form Integration | ✅        | ⚠️       | ✅        |
+| Learning Curve   | Low       | Medium   | High      |
 
 ## 📦 Installation
 
-::: code-group
-
-```sh [npm]
+```bash
+# pnpm
+pnpm add @vielzeug/craftit
+# npm
 npm install @vielzeug/craftit
-```
-
-```sh [yarn]
+# yarn
 yarn add @vielzeug/craftit
 ```
-
-```sh [pnpm]
-pnpm add @vielzeug/craftit
-```
-
-:::
 
 ## 🚀 Quick Start
 
@@ -289,9 +294,9 @@ defineElement('themed-button', {
 
       button {
         /* ✨ Autocomplete works! Type theme. to see all properties */
-        background: ${theme.primaryColor};  /* var(--primary-color) */
-        color: ${theme.textColor};          /* var(--text-color) */
-        padding: ${theme.spacing};          /* var(--spacing) */
+        background: ${theme.primaryColor}; /* var(--primary-color) */
+        color: ${theme.textColor}; /* var(--text-color) */
+        padding: ${theme.spacing}; /* var(--spacing) */
         border: none;
         border-radius: 8px;
       }
@@ -301,10 +306,11 @@ defineElement('themed-button', {
 ```
 
 **Benefits:**
-- ✅ **Autocomplete** - Type `theme.` and see all variables
-- ✅ **Type-safe** - Typos caught at compile time
-- ✅ **Refactoring** - Rename properties safely
-- ✅ **Single import** - Just `import { css }`
+
+- ✅ **Autocomplete** – Type `theme.` and see all variables
+- ✅ **Type-safe** – Typos caught at compile time
+- ✅ **Refactoring** – Rename properties safely
+- ✅ **Single import** – Just `import { css }`
 
 ### Lifecycle Hooks
 
@@ -417,33 +423,26 @@ destroy(el); // Clean removal
 
 ## 📖 Documentation
 
-- [**Full Documentation**](https://vielzeug.dev/craftit)
-- [**Usage Guide**](https://vielzeug.dev/craftit/usage)
-- [**API Reference**](https://vielzeug.dev/craftit/api)
-- [**Examples**](https://vielzeug.dev/craftit/examples)
-
-## 🆚 Comparison
-
-| Feature          | Craftit    | Lit      | Stencil   |
-| ---------------- | --------- | -------- | --------- |
-| Bundle Size      | **~6 KB** | ~15 KB   | ~10 KB    |
-| Dependencies     | 0         | 0        | Many      |
-| TypeScript       | Native    | Good     | Excellent |
-| Reactive State   | Built-in  | External | Built-in  |
-| Event Delegation | ✅        | ❌       | ❌        |
-| Form Integration | ✅        | ⚠️       | ✅        |
-| Learning Curve   | Low       | Medium   | High      |
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see the [Contributing Guide](../../CONTRIBUTING.md).
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/craftit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/craftit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/craftit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/craftit/examples)
 
 ## 📄 License
 
-MIT © [vielzeug](https://github.com/saatkhel/vielzeug)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
+
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
 
 ## 🔗 Links
 
-- [Documentation](https://vielzeug.dev)
-- [GitHub](https://github.com/saatkhel/vielzeug)
-- [NPM](https://www.npmjs.com/package/@vielzeug/craftit)
+- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
+- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+
+---
+
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

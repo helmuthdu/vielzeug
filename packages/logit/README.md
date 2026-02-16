@@ -1,39 +1,80 @@
 # @vielzeug/logit
 
-Powerful, type-safe console logging utility for TypeScript with styled output, log levels, scoped loggers, and remote logging support.
+## What is Logit?
 
-## Features
+**Logit** is a powerful, type-safe console logging utility for TypeScript with styled output, log levels, scoped loggers, and remote logging support—all in just 2.7 KB.
 
-- ✅ **Styled Console Output** - Beautiful colored logs with symbols, icons, or text
-- ✅ **Log Level Filtering** - Control verbosity (debug, info, warn, error, off)
-- ✅ **Scoped Loggers** - Create isolated loggers with namespaced prefixes
-- ✅ **Remote Logging** - Send logs to external services (Sentry, Datadog, etc.)
-- ✅ **Environment Detection** - Automatic production/development indicators
-- ✅ **Timestamps** - Optional timestamp display
-- ✅ **Type-Safe** - Full TypeScript support
-- ✅ **Framework Agnostic** - Works in browser and Node.js
-- ✅ **Zero Dependencies** - Lightweight with no external dependencies
-- ✅ **Multiple Variants** - Symbol, icon, or text-based display modes
+### The Problem
 
-## Installation
+Console logging in JavaScript is basic and lacks features:
 
-::: code-group
+- **console.log** has no log levels or filtering
+- No styled output or visual distinction between log types
+- No scoped loggers for different modules
+- Remote logging requires custom implementation
+- Type safety is non-existent
 
-```sh [pnpm]
+### The Solution
+
+Logit provides a feature-rich logging API with zero dependencies:
+
+```typescript
+import { Logit } from '@vielzeug/logit';
+
+// Styled output with log levels
+Logit.info('Server started', { port: 3000 });
+Logit.success('User authenticated', { userId: '123' });
+Logit.warn('Rate limit approaching', { remaining: 10 });
+Logit.error('Connection failed', error);
+
+// Scoped loggers
+const apiLogger = Logit.scope('api');
+apiLogger.info('Request received'); // [API] Request received
+
+// Remote logging
+Logit.remote((level, messages) => {
+  sendToSentry({ level, messages });
+});
+
+// Log level filtering
+Logit.setLevel('warn'); // Only show warnings and errors
+```
+
+## ✨ Features
+
+- ✅ **Styled Console Output** – Beautiful colored logs with symbols, icons, or text
+- ✅ **Log Level Filtering** – Control verbosity (debug, info, warn, error, off)
+- ✅ **Scoped Loggers** – Create isolated loggers with namespaced prefixes
+- ✅ **Remote Logging** – Send logs to external services (Sentry, Datadog, etc.)
+- ✅ **Type-Safe** – Full TypeScript support
+- ✅ **Lightweight** – 2.7 KB gzipped with zero dependencies
+- ✅ **Framework Agnostic** – Works in browser and Node.js
+
+## 🆚 Comparison with Alternatives
+
+| Feature            | Logit          | Winston       | Pino          | console.log |
+| ------------------ | -------------- | ------------- | ------------- | ----------- |
+| Bundle Size (gzip) | **~2.7 KB**    | ~80KB         | ~14KB         | 0KB         |
+| TypeScript Support | ✅ First-class | ✅ Good       | ✅ Good       | ❌          |
+| Log Levels         | ✅ Built-in    | ✅ Yes        | ✅ Yes        | ❌          |
+| Styled Output      | ✅ Native      | ⚠️ Plugins    | ⚠️ Plugins    | ❌          |
+| Scoped Loggers     | ✅ Built-in    | ⚠️ Child      | ⚠️ Child      | ❌          |
+| Remote Logging     | ✅ Built-in    | ✅ Transports | ✅ Transports | ❌          |
+| Browser & Node.js  | ✅ Yes         | ❌ Node only  | ✅ Yes        | ✅ Yes      |
+| Dependencies       | 0              | 15+           | 8+            | 0           |
+
+## 📦 Installation
+
+```bash
+# pnpm
 pnpm add @vielzeug/logit
-```
-
-```sh [npm]
+# npm
 npm install @vielzeug/logit
-```
-
-```sh [yarn]
+# yarn
 yarn add @vielzeug/logit
 ```
 
-:::
-
-## Quick Start
+## 🚀 Quick Start
 
 ```typescript
 import { Logit } from '@vielzeug/logit';
@@ -55,7 +96,7 @@ Logit.setPrefix('MyApp');
 Logit.info('This message has a namespace'); // [MYAPP] This message has a namespace
 ```
 
-## Core Concepts
+## 📚 Core Concepts
 
 ### Log Levels
 
@@ -88,15 +129,15 @@ debug → trace → time → table → info → success → warn → error → o
 Choose how log messages are displayed:
 
 ```typescript
-// Symbol variant (default) - Unicode symbols
+// Symbol variant (default) – Unicode symbols
 Logit.setVariant('symbol');
 Logit.info('Message'); // 🅸 Message
 
-// Icon variant - Icon characters
+// Icon variant – Icon characters
 Logit.setVariant('icon');
 Logit.info('Message'); // ℹ Message
 
-// Text variant - Plain text labels
+// Text variant – Plain text labels
 Logit.setVariant('text');
 Logit.info('Message'); // INFO Message
 ```
@@ -147,7 +188,7 @@ v1Logger.info('Request'); // [APP.API.V1] Request
 - Clean separation of concerns
 - Easy to pass to modules/components
 
-## Advanced Features
+## 🔥 Advanced Features
 
 ### Remote Logging
 
@@ -325,7 +366,7 @@ Logit.setRemote({ handler, logLevel: 'error' });
 Logit.setRemoteLogLevel('warn');
 ```
 
-## API Reference
+## 🎯 API Reference
 
 ### Logging Methods
 
@@ -518,11 +559,11 @@ const logger: ScopedLogger = Logit.scope('module');
 ### 1. Use Scoped Loggers for Modules
 
 ```typescript
-// ✅ Good - Each module has its own logger
+// ✅ Good – Each module has its own logger
 const apiLogger = Logit.scope('api');
 const dbLogger = Logit.scope('db');
 
-// ❌ Avoid - Mutating global namespace
+// ❌ Avoid – Mutating global namespace
 Logit.setPrefix('api');
 Logit.info('Request');
 Logit.setPrefix('db');
@@ -578,17 +619,28 @@ Logit.error('Payment failed:', error); // Errors
 - Safari 13+
 - Node.js 10+
 
-## License
+## 📖 Documentation
+
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/logit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/logit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/logit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/logit/examples)
+
+## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Links
+## 🤝 Contributing
+
+Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+
+## 🔗 Links
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://vielzeug.dev)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/logit)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 
 ---
 
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem - A collection of type-safe utilities for modern web development.
+Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.

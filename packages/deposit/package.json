@@ -29,14 +29,6 @@
   "dependencies": {
     "@vielzeug/toolkit": "workspace:*"
   },
-  "peerDependencies": {
-    "@vielzeug/logit": "^1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@vielzeug/logit": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@vielzeug/logit": "workspace:*",
     "typescript": "~5.9.3",
