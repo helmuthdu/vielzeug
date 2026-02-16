@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/formit
 
-This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+
+## 1.1.3
+Sun, 15 Feb 2026 21:52:44 GMT
+
+### Patches
+
+- code cleanup and improvements
 
 ## 1.1.2
 Thu, 12 Feb 2026 17:52:26 GMT

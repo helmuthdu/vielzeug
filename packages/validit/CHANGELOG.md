@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/validit
 
-This log was last generated on Fri, 13 Feb 2026 09:03:42 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+
+## 1.1.3
+Sun, 15 Feb 2026 21:52:44 GMT
+
+### Patches
+
+- code cleanup and improvements
 
 ## 1.1.2
 Fri, 13 Feb 2026 09:03:42 GMT
