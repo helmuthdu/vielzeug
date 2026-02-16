@@ -127,11 +127,11 @@ v1Logger.info('GET /users'); // [APP.API.V1] GET /users
 ### Benefits of Scoped Loggers
 
 ```ts
-// ✅ Good - No global state mutation
+// ✅ Good – No global state mutation
 const logger = Logit.scope('module');
 logger.info('Message');
 
-// ❌ Avoid - Mutates global state
+// ❌ Avoid – Mutates global state
 Logit.setPrefix('module');
 Logit.info('Message');
 Logit.setPrefix(''); // Need to clean up
@@ -172,15 +172,15 @@ const level = Logit.getLevel(); // 'warn'
 Customize log appearance:
 
 ```ts
-// Symbol variant (default) - Shows emoji-like symbols
+// Symbol variant (default) – Shows emoji-like symbols
 Logit.setVariant('symbol');
 Logit.info('Message'); // [🅸] Message
 
-// Icon variant - Shows unicode icons
+// Icon variant – Shows unicode icons
 Logit.setVariant('icon');
 Logit.info('Message'); // [ℹ] Message
 
-// Text variant - Shows plain text labels
+// Text variant – Shows plain text labels
 Logit.setVariant('text');
 Logit.info('Message'); // [INFO] Message
 ```
@@ -352,7 +352,7 @@ Available log levels:
 
 ```ts
 type LogitLevel =
-  | 'debug' // Lowest - shows everything
+  | 'debug' // Lowest – shows everything
   | 'trace'
   | 'time'
   | 'table'
@@ -360,7 +360,7 @@ type LogitLevel =
   | 'success'
   | 'warn'
   | 'error'
-  | 'off'; // Highest - shows nothing
+  | 'off'; // Highest – shows nothing
 ```
 
 ### LogitType
@@ -454,7 +454,7 @@ export const dbLog = {
 ### Structured Logging
 
 ```ts
-// Good - structured with context
+// Good – structured with context
 Logit.info('User action', {
   action: 'purchase',
   userId: user.id,
@@ -463,7 +463,7 @@ Logit.info('User action', {
   timestamp: Date.now(),
 });
 
-// Bad - unstructured string
+// Bad – unstructured string
 Logit.info(`User ${user.id} purchased for $99.99 USD`);
 ```
 
@@ -489,9 +489,9 @@ try {
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

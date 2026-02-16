@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-5.9_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="craftit" />
 
 <img src="/logo-craftit.svg" alt="Craftit Logo" width="156" class="logo-highlight"/>
 
@@ -82,17 +77,17 @@ defineElement('my-counter', {
 
 ### Comparison with Alternatives
 
-| Feature            | Craftit    | Lit      | Stencil   | Vanilla CE |
-| ------------------ | --------- | -------- | --------- | ---------- |
-| Bundle Size        | **~6 KB** | ~15 KB   | ~10 KB    | 0          |
-| Dependencies       | 0         | 0        | Many      | 0          |
-| TypeScript         | Native    | Good     | Excellent | Manual     |
-| Reactive State     | Built-in  | External | Built-in  | Manual     |
-| Event Delegation   | ✅        | ❌       | ❌        | Manual     |
-| Form Integration   | ✅        | ⚠️       | ✅        | Manual     |
-| DOM Reconciliation | ✅        | ✅       | ✅        | ❌         |
-| Learning Curve     | Low       | Medium   | High      | Low        |
-| Testing Utilities  | ✅        | ⚠️       | ✅        | ❌         |
+| Feature            | Craftit                                               | Lit      | Stencil   | Vanilla CE |
+| ------------------ | ----------------------------------------------------- | -------- | --------- | ---------- |
+| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~15 KB   | ~10 KB    | 0          |
+| Dependencies       | <PackageInfo package="craftit" type="dependencies" /> | 0        | Many      | 0          |
+| TypeScript         | Native                                                | Good     | Excellent | Manual     |
+| Reactive State     | Built-in                                              | External | Built-in  | Manual     |
+| Event Delegation   | ✅                                                    | ❌       | ❌        | Manual     |
+| Form Integration   | ✅                                                    | ⚠️       | ✅        | Manual     |
+| DOM Reconciliation | ✅                                                    | ✅       | ✅        | ❌         |
+| Learning Curve     | Low                                                   | Medium   | High      | Low        |
+| Testing Utilities  | ✅                                                    | ⚠️       | ✅        | ❌         |
 
 ## When to Use Craftit
 
@@ -115,13 +110,13 @@ defineElement('my-counter', {
 ## 🚀 Key Features
 
 - **🔥 Reactive State**: Automatic re-renders on state changes with [Proxy-based reactivity](./usage.md#reactive-state).
-- **⚡ Efficient Updates**: Smart [DOM reconciliation](./usage.md#rendering) - only updates what changed.
+- **⚡ Efficient Updates**: Smart [DOM reconciliation](./usage.md#rendering) – only updates what changed.
 - **🎯 Event Delegation**: Built-in support for [dynamic element event handling](./usage.md#event-delegation).
 - **📝 Form Support**: Full [ElementInternals integration](./usage.md#form-associated-elements) for form participation.
 - **🎨 Shadow DOM**: Encapsulated [styles with CSSStyleSheet](./usage.md#styling) support.
 - **🎭 CSS Variables**: Built-in [theming with CSS variables](./usage.md#css-variables-custom-properties) (`css.var()`, `css.theme()`).
 - **🔍 Type-Safe**: Complete TypeScript support with [full type inference](./usage.md#type-safety).
-- **📦 Tiny Bundle**: Only **~5 KB gzipped** with zero dependencies.
+- **📦 Tiny Bundle**: Only **<PackageInfo package="craftit" type="size" /> gzipped** with zero dependencies.
 - **🧪 Testable**: Built-in [testing utilities](./usage.md#testing) (`attach`, `destroy`, `flush`).
 - **🪝 Lifecycle Hooks**: Full control with [lifecycle callbacks](./usage.md#lifecycle-hooks).
 - **🎭 Framework Agnostic**: Use with [React, Vue, Svelte, or vanilla JS](./examples.md#framework-integration).
@@ -333,9 +328,9 @@ defineElement('efficient-list', {
 
 ## 📚 Documentation
 
-- **[Usage Guide](./usage.md)** - Detailed feature explanations
-- **[API Reference](./api.md)** - Complete API documentation
-- **[Examples](./examples.md)** - Real-world usage examples
+- **[Usage Guide](./usage.md)** – Detailed feature explanations
+- **[API Reference](./api.md)** – Complete API documentation
+- **[Examples](./examples.md)** – Real-world usage examples
 
 ## ❓ FAQ
 
@@ -359,12 +354,12 @@ A: Yes! Craftit is stable, tested, and used in production applications.
 ### Component Not Rendering
 
 ```ts
-// ❌ Wrong - missing template
+// ❌ Wrong – missing template
 defineElement('my-el', {
   state: { count: 0 },
 });
 
-// ✅ Correct - template required
+// ✅ Correct – template required
 defineElement('my-el', {
   state: { count: 0 },
   template: html`<div>Count: ${el.state.count}</div>`,
@@ -374,7 +369,7 @@ defineElement('my-el', {
 ### Events Not Working
 
 ```ts
-// ❌ Wrong - binding before element exists
+// ❌ Wrong – binding before element exists
 defineElement('my-el', {
   template: html`<button>Click</button>`,
   onConnected(el) {
@@ -387,10 +382,10 @@ defineElement('my-el', {
 ### State Not Updating
 
 ```ts
-// ❌ Wrong - replacing state object
+// ❌ Wrong – replacing state object
 el.state = { count: 10 }; // This won't work!
 
-// ✅ Correct - mutate existing state
+// ✅ Correct – mutate existing state
 el.state.count = 10;
 
 // ✅ Or use set()

@@ -14,9 +14,9 @@ Registers permissions for a specific role and resource combination.
 
 **Parameters:**
 
-- `role: string` - The role identifier (e.g., 'admin', 'editor', 'user')
-- `resource: string` - The resource identifier (e.g., 'posts', 'comments')
-- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` - Permission definitions for each action
+- `role: string` – The role identifier (e.g., 'admin', 'editor', 'user')
+- `resource: string` – The resource identifier (e.g., 'posts', 'comments')
+- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` – Permission definitions for each action
 
 **Example:**
 
@@ -57,9 +57,9 @@ Permit.register('Admin', 'Posts', { read: true });
 
 **Throws:**
 
-- `Error` - If role is empty or missing
-- `Error` - If resource is empty or missing
-- `Error` - If invalid action is provided (must be 'read', 'create', 'update', or 'delete')
+- `Error` – If role is empty or missing
+- `Error` – If resource is empty or missing
+- `Error` – If invalid action is provided (must be 'read', 'create', 'update', or 'delete')
 
 **Behavior:**
 
@@ -75,12 +75,12 @@ Checks if a user has permission to perform a specific action on a resource.
 
 **Parameters:**
 
-- `user: T extends BaseUser` - User object with `id` and `roles` properties
-- `resource: string` - The resource to check permissions for
-- `action: PermissionAction` - The action to check ('read' | 'create' | 'update' | 'delete')
-- `data?: D` - Optional contextual data for dynamic permission functions
+- `user: T extends BaseUser` – User object with `id` and `roles` properties
+- `resource: string` – The resource to check permissions for
+- `action: PermissionAction` – The action to check ('read' | 'create' | 'update' | 'delete')
+- `data?: D` – Optional contextual data for dynamic permission functions
 
-**Returns:** `boolean` - `true` if permission is granted, `false` otherwise
+**Returns:** `boolean` – `true` if permission is granted, `false` otherwise
 
 **Example:**
 
@@ -101,7 +101,7 @@ Permit.check(userCaps, 'POSTS', 'read'); // Matches 'admin' role, 'posts' resour
 
 **Behavior:**
 
-- Uses "allow on any true" policy - first matching allow grants access
+- Uses "allow on any true" policy – first matching allow grants access
 - Checks specific roles before wildcard role
 - Normalizes role and resource (case-insensitive, trimmed)
 - Function-based permissions require `data` parameter (returns false if data is undefined)
@@ -116,10 +116,10 @@ Sets permissions for a role and resource, optionally replacing existing ones.
 
 **Parameters:**
 
-- `role: string` - The role identifier
-- `resource: string` - The resource identifier
-- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` - Permission definitions
-- `replace?: boolean` - If true, replaces existing; if false, merges (default: false)
+- `role: string` – The role identifier
+- `resource: string` – The resource identifier
+- `actions: Partial<Record<PermissionAction, PermissionCheck<T, D>>>` – Permission definitions
+- `replace?: boolean` – If true, replaces existing; if false, merges (default: false)
 
 **Returns:** `void`
 
@@ -136,9 +136,9 @@ Permit.set('editor', 'posts', { read: true }, true);
 
 **Throws:**
 
-- `Error` - If role is empty or missing
-- `Error` - If resource is empty or missing
-- `Error` - If invalid action is provided
+- `Error` – If role is empty or missing
+- `Error` – If resource is empty or missing
+- `Error` – If invalid action is provided
 
 ---
 
@@ -148,9 +148,9 @@ Removes permissions for a role and resource.
 
 **Parameters:**
 
-- `role: string` - The role identifier
-- `resource: string` - The resource identifier
-- `action?: PermissionAction` - Optional specific action to remove
+- `role: string` – The role identifier
+- `resource: string` – The resource identifier
+- `action?: PermissionAction` – Optional specific action to remove
 
 **Returns:** `void`
 
@@ -178,10 +178,10 @@ Checks if a user has a specific role.
 
 **Parameters:**
 
-- `user: BaseUser` - User object
-- `role: string` - Role to check for
+- `user: BaseUser` – User object
+- `role: string` – Role to check for
 
-**Returns:** `boolean` - `true` if user has the role, `false` otherwise
+**Returns:** `boolean` – `true` if user has the role, `false` otherwise
 
 **Example:**
 
@@ -233,7 +233,7 @@ Permit.register('admin', 'posts', { read: true });
 
 Getter that returns a deep copy of all registered roles and their permissions.
 
-**Returns:** `RolesWithPermissions` - Map of roles to their resource permissions
+**Returns:** `RolesWithPermissions` – Map of roles to their resource permissions
 
 **Example:**
 
@@ -248,7 +248,7 @@ for (const [role, resources] of allRoles) {
   }
 }
 
-// Safe to modify - doesn't affect internal state
+// Safe to modify – doesn't affect internal state
 allRoles.clear(); // Only clears the copy
 const adminPerms = allRoles.get('admin');
 if (adminPerms) {
@@ -323,8 +323,8 @@ interface BaseUser {
 
 **Properties:**
 
-- `id: string` - Unique user identifier
-- `roles: string[]` - Array of role identifiers
+- `id: string` – Unique user identifier
+- `roles: string[]` – Array of role identifiers
 
 **Example:**
 
@@ -347,10 +347,10 @@ type PermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 **Actions:**
 
-- `'read'` - Read/view permission
-- `'create'` - Create/add permission
-- `'update'` - Modify/edit permission
-- `'delete'` - Remove/delete permission
+- `'read'` – Read/view permission
+- `'create'` – Create/add permission
+- `'update'` – Modify/edit permission
+- `'delete'` – Remove/delete permission
 
 ---
 
@@ -364,8 +364,8 @@ type PermissionCheck<T extends BaseUser, D extends PermissionData> = boolean | (
 
 **Variants:**
 
-- `boolean` - Static permission (always true/false)
-- `(user, data) => boolean` - Dynamic permission based on context
+- `boolean` – Static permission (always true/false)
+- `(user, data) => boolean` – Dynamic permission based on context
 
 **Example:**
 

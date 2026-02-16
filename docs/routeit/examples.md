@@ -87,8 +87,7 @@ let unsubscribe;
 onMounted(() => {
   unsubscribe = router.subscribe(() => {
     const state = router.getState();
-    currentView.value = state.pathname === '/' ? 'home' 
-      : state.pathname === '/about' ? 'about' : 'user';
+    currentView.value = state.pathname === '/' ? 'home' : state.pathname === '/about' ? 'about' : 'user';
     userId.value = state.params.id || '';
   });
 });
@@ -124,8 +123,8 @@ onUnmounted(() => unsubscribe?.());
   router
     .get('/', () => { currentView = 'home'; })
     .get('/about', () => { currentView = 'about'; })
-    .get('/users/:id', ({ params }) => { 
-      currentView = 'user'; 
+    .get('/users/:id', ({ params }) => {
+      currentView = 'user';
       userId = params.id;
     })
     .start();
@@ -273,14 +272,10 @@ function App() {
   return (
     <RouterContext.Provider value={router}>
       <nav>
-        <button
-          onClick={() => navigate('/')}
-          className={isActive('/') ? 'active' : ''}>
+        <button onClick={() => navigate('/')} className={isActive('/') ? 'active' : ''}>
           Home
         </button>
-        <button
-          onClick={() => navigate('/about')}
-          className={isActive('/about') ? 'active' : ''}>
+        <button onClick={() => navigate('/about')} className={isActive('/about') ? 'active' : ''}>
           About
         </button>
         <button onClick={() => navigate('/users/123')}>User</button>
@@ -346,12 +341,8 @@ const { pathname, params, navigate, isActive } = useRouter();
 <template>
   <div>
     <nav>
-      <button @click="navigate('/')" :class="{ active: isActive('/') }">
-        Home
-      </button>
-      <button @click="navigate('/about')" :class="{ active: isActive('/about') }">
-        About
-      </button>
+      <button @click="navigate('/')" :class="{ active: isActive('/') }">Home</button>
+      <button @click="navigate('/about')" :class="{ active: isActive('/about') }">About</button>
       <button @click="navigate('/users/123')">User</button>
     </nav>
     <main>
@@ -408,12 +399,12 @@ const { pathname, params, navigate, isActive } = useRouter();
 
 <div>
   <nav>
-    <button 
+    <button
       on:click={() => routerStore.navigate('/')}
       class:active={routerStore.isActive('/')}>
       Home
     </button>
-    <button 
+    <button
       on:click={() => routerStore.navigate('/about')}
       class:active={routerStore.isActive('/about')}>
       About
@@ -472,7 +463,7 @@ class AdvancedRouter extends HTMLElement {
         .start();
 
       this.#routerUnsubscribe = AdvancedRouter.#router.subscribe(() => {
-        AdvancedRouter.#subscribers.forEach(cb => cb(AdvancedRouter.getState()));
+        AdvancedRouter.#subscribers.forEach((cb) => cb(AdvancedRouter.getState()));
       });
     }
 
@@ -484,7 +475,7 @@ class AdvancedRouter extends HTMLElement {
   render(state) {
     const { pathname, params } = state;
     let content = '';
-    
+
     if (pathname === '/') content = '<h1>Home</h1>';
     else if (pathname === '/about') content = '<h1>About</h1>';
     else if (pathname.startsWith('/users')) content = `<h1>User ${params.id}</h1>`;
@@ -685,10 +676,7 @@ Permit.register('viewer', 'posts', {
 });
 
 // Permission middleware factory
-function requirePermission(
-  resource: string,
-  action: PermissionAction
-): Middleware {
+function requirePermission(resource: string, action: PermissionAction): Middleware {
   return async (ctx, next) => {
     const user = ctx.user as BaseUser;
 
@@ -754,9 +742,7 @@ import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
 // Lazy loading middleware
-const lazyLoad = (
-  importFn: () => Promise<{ default: (ctx: any) => void }>
-): Middleware => {
+const lazyLoad = (importFn: () => Promise<{ default: (ctx: any) => void }>): Middleware => {
   return async (ctx, next) => {
     try {
       ctx.meta = ctx.meta || {};
@@ -764,7 +750,7 @@ const lazyLoad = (
 
       const module = await importFn();
       ctx.meta.loading = false;
-      
+
       await module.default(ctx);
       await next();
     } catch (error) {
@@ -809,7 +795,7 @@ export default function analytics(ctx) {
     <h1>Analytics</h1>
     <div id="charts"></div>
   `;
-  
+
   // Load charts library lazily
   import('./charts').then(({ renderCharts }) => {
     renderCharts('#charts');
@@ -838,7 +824,7 @@ const layouts = {
       <footer>© 2024 My App</footer>
     </div>
   `,
-  
+
   dashboard: (content: string) => `
     <div class="dashboard-layout">
       <aside class="sidebar">
@@ -908,14 +894,14 @@ const errorHandler: Middleware = async (ctx, next) => {
     await next();
   } catch (error) {
     console.error('Route error:', error);
-    
+
     // Log to error tracking service
     logError(error, {
       pathname: ctx.pathname,
       params: ctx.params,
       query: ctx.query,
     });
-    
+
     // Show error page
     document.getElementById('app').innerHTML = `
       <div class="error">
@@ -931,7 +917,7 @@ const errorHandler: Middleware = async (ctx, next) => {
 const notFoundHandler = ({ pathname }) => {
   document.getElementById('app').innerHTML = `
     <div class="not-found">
-      <h1>404 - Page Not Found</h1>
+      <h1>404 – Page Not Found</h1>
       <p>The page "${pathname}" does not exist.</p>
       <button onclick="router.navigate('/')">Go Home</button>
     </div>
@@ -964,4 +950,3 @@ function logError(error, context) {
   });
 }
 ```
-

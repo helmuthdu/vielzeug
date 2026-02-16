@@ -18,7 +18,7 @@ The `group` utility partitions an array into an object of collections, based on 
 **Without group**: Grouping requires verbose `reduce` logic that's error-prone and hard to read.
 
 ```ts
-// Manual grouping - verbose and error-prone
+// Manual grouping – verbose and error-prone
 const byRole = users.reduce(
   (acc, user) => {
     const role = user.role;
@@ -270,7 +270,7 @@ group([1, 2, 3], () => 'same'); // { same: [1, 2, 3] }
 // Numeric keys
 group([1, 2, 3], (x) => x % 2); // { '0': [2], '1': [1, 3] }
 
-// Undefined/null keys - coerced to strings
+// Undefined/null keys – coerced to strings
 group([1, 2], (x) => (x === 1 ? undefined : null));
 // { 'undefined': [1], 'null': [2] }
 ```
@@ -305,10 +305,10 @@ interface User {
 
 const users: User[] = [...];
 
-// ✅ Type-safe - 'role' is valid key
+// ✅ Type-safe – 'role' is valid key
 const byRole = group(users, 'role');
 
-// ❌ TypeScript error - 'invalid' is not a key of User
+// ❌ TypeScript error – 'invalid' is not a key of User
 // const invalid = group(users, 'invalid');
 ```
 

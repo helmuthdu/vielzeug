@@ -370,7 +370,7 @@ i18n.t('firstItem', { items: ['Apple', 'Banana', 'Orange'] });
 i18n.t('thirdItem', { items: ['Apple', 'Banana', 'Orange'] });
 // "Third: Orange"
 
-// Safe - returns empty string for out-of-bounds
+// Safe – returns empty string for out-of-bounds
 i18n.t('outOfBounds', { items: ['Apple'] });
 // "Tenth: "
 ```
@@ -447,13 +447,13 @@ i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
 // "Gäste: Alice, Bob und Charlie"
 ```
 
-::: tip Intl.ListFormat - Zero Configuration
+::: tip Intl.ListFormat – Zero Configuration
 The `and` separator uses the browser/runtime's built-in **Intl.ListFormat API** which automatically:
 
-- **Supports 100+ languages** - All languages available in your environment
-- **Handles proper grammar** - Oxford comma, locale-specific punctuation, RTL languages
-- **Follows Unicode CLDR standards** - International standard for list formatting
-- **Requires zero maintenance** - No manual language configuration needed
+- **Supports 100+ languages** – All languages available in your environment
+- **Handles proper grammar** – Oxford comma, locale-specific punctuation, RTL languages
+- **Follows Unicode CLDR standards** – International standard for list formatting
+- **Requires zero maintenance** – No manual language configuration needed
 
 Works in all modern browsers (Chrome 72+, Firefox 78+, Safari 14.1+, Edge 79+, Node.js 12+).
 :::
@@ -502,7 +502,7 @@ The `or` separator automatically works with **100+ languages** including:
 - African: Swahili, Zulu, Afrikaans, and more
 - And many others!
 
-No manual configuration required - it just works! ✨
+No manual configuration required – it just works! ✨
 :::
 
 #### Array with Custom Separators
@@ -514,7 +514,7 @@ const i18n = createI18n({
   messages: {
     en: {
       path: 'Path: {folders| / }',
-      items: 'Items: {list| - }',
+      items: 'Items: {list| – }',
       codes: 'Codes: {codes| | }',
       steps: 'Steps: {steps| → }',
     },
@@ -525,7 +525,7 @@ i18n.t('path', { folders: ['home', 'user', 'documents'] });
 // "Path: home / user / documents"
 
 i18n.t('items', { list: ['A', 'B', 'C'] });
-// "Items: A - B - C"
+// "Items: A – B – C"
 
 i18n.t('codes', { codes: ['X', 'Y', 'Z'] });
 // "Codes: X | Y | Z"
@@ -613,16 +613,16 @@ i18n.t('complex', {
 
 i18nit supports the following interpolation path formats:
 
-- `{name}` - Simple variable
-- `{user.name}` - Nested object property
-- `{user.profile.email}` - Deep nested property
-- `{items[0]}` - Array index (safe - returns empty if out of bounds)
-- `{items}` - Array join with default separator (`, `)
-- `{items|and}` - Array join with natural "and" (e.g., "A, B and C")
-- `{items|or}` - Array join with natural "or" (e.g., "A, B or C")
-- `{items| - }` - Array join with custom separator
-- `{items.length}` - Array length
-- `{data.items[0].value}` - Mixed notation
+- `{name}` – Simple variable
+- `{user.name}` – Nested object property
+- `{user.profile.email}` – Deep nested property
+- `{items[0]}` – Array index (safe – returns empty if out of bounds)
+- `{items}` – Array join with default separator (`, `)
+- `{items|and}` – Array join with natural "and" (e.g., "A, B and C")
+- `{items|or}` – Array join with natural "or" (e.g., "A, B or C")
+- `{items| – }` – Array join with custom separator
+- `{items.length}` – Array length
+- `{data.items[0].value}` – Mixed notation
 
 **Array Features Summary:**
 
@@ -631,7 +631,7 @@ i18nit supports the following interpolation path formats:
 | `{items}`        | Default join       | `"A, B, C"`    |
 | `{items\|and}`   | Natural "and" list | `"A, B and C"` |
 | `{items\|or}`    | Natural "or" list  | `"A, B or C"`  |
-| `{items\| - }`   | Custom separator   | `"A - B - C"`  |
+| `{items\| – }`   | Custom separator   | `"A – B – C"`  |
 | `{items.length}` | Array length       | `"3"`          |
 | `{items[0]}`     | Safe index         | `"A"` or `""`  |
 
@@ -1393,9 +1393,9 @@ const i18n = createI18n({ ... });
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

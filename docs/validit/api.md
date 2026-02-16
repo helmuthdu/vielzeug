@@ -35,14 +35,14 @@ v.string(); // string
 
 **Methods:**
 
-- `.min(length: number, message?: string)` - Minimum length
-- `.max(length: number, message?: string)` - Maximum length
-- `.length(exact: number, message?: string)` - Exact length
-- `.pattern(regex: RegExp, message?: string)` - Regex pattern
-- `.email(message?: string)` - Email validation
-- `.url(message?: string)` - URL validation
-- `.uuid(message?: string)` - UUID format
-- `.trim()` - Must be trimmed (validation only, doesn't transform)
+- `.min(length: number, message?: string)` – Minimum length
+- `.max(length: number, message?: string)` – Maximum length
+- `.length(exact: number, message?: string)` – Exact length
+- `.pattern(regex: RegExp, message?: string)` – Regex pattern
+- `.email(message?: string)` – Email validation
+- `.url(message?: string)` – URL validation
+- `.uuid(message?: string)` – UUID format
+- `.trim()` – Must be trimmed (validation only, doesn't transform)
 
 #### `v.number()`
 
@@ -54,11 +54,11 @@ v.number(); // number
 
 **Methods:**
 
-- `.min(minimum: number, message?: string)` - Minimum value
-- `.max(maximum: number, message?: string)` - Maximum value
-- `.int(message?: string)` - Must be integer
-- `.positive(message?: string)` - Must be > 0
-- `.negative(message?: string)` - Must be < 0
+- `.min(minimum: number, message?: string)` – Minimum value
+- `.max(maximum: number, message?: string)` – Maximum value
+- `.int(message?: string)` – Must be integer
+- `.positive(message?: string)` – Must be > 0
+- `.negative(message?: string)` – Must be < 0
 
 #### `v.boolean()`
 
@@ -78,8 +78,8 @@ v.date(); // Date
 
 **Methods:**
 
-- `.min(date: Date, message?: string)` - After date
-- `.max(date: Date, message?: string)` - Before date
+- `.min(date: Date, message?: string)` – After date
+- `.max(date: Date, message?: string)` – Before date
 
 ---
 
@@ -97,7 +97,7 @@ v.literal(true); // type: true
 
 **Parameters:**
 
-- `value: string | number | boolean` - The exact value to match
+- `value: string | number | boolean` – The exact value to match
 
 #### `v.enum(...values)`
 
@@ -111,7 +111,7 @@ v.enum('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
 
 **Parameters:**
 
-- `...values: [T, ...T[]]` - At least one value required
+- `...values: [T, ...T[]]` – At least one value required
 
 ---
 
@@ -127,13 +127,13 @@ v.array(v.number()); // number[]
 
 **Parameters:**
 
-- `schema: Schema<T>` - Schema for array items
+- `schema: Schema<T>` – Schema for array items
 
 **Methods:**
 
-- `.min(length: number, message?: string)` - Minimum items
-- `.max(length: number, message?: string)` - Maximum items
-- `.length(exact: number, message?: string)` - Exact number of items
+- `.min(length: number, message?: string)` – Minimum items
+- `.max(length: number, message?: string)` – Maximum items
+- `.length(exact: number, message?: string)` – Exact number of items
 
 #### `v.object(shape)`
 
@@ -148,13 +148,13 @@ v.object({
 
 **Parameters:**
 
-- `shape: Record<string, Schema<any>>` - Object shape definition
+- `shape: Record<string, Schema<any>>` – Object shape definition
 
 **Methods:**
 
-- `.partial()` - Make all fields optional
-- `.pick(...keys)` - Select specific fields
-- `.omit(...keys)` - Exclude specific fields
+- `.partial()` – Make all fields optional
+- `.pick(...keys)` – Select specific fields
+- `.omit(...keys)` – Exclude specific fields
 
 #### `v.union(...schemas)`
 
@@ -167,7 +167,7 @@ v.union(v.object({ type: v.literal('a'), value: v.string() }), v.object({ type: 
 
 **Parameters:**
 
-- `...schemas: [Schema<T>, Schema<U>, ...Schema<any>[]]` - At least 2 schemas
+- `...schemas: [Schema<T>, Schema<U>, ...Schema<any>[]]` – At least 2 schemas
 
 ---
 
@@ -412,8 +412,8 @@ v.number().refine((val) => val % 2 === 0, 'Must be even');
 
 **Parameters:**
 
-- `check: (value: Output) => boolean` - Validation function
-- `message?: string` - Error message (default: 'Invalid value')
+- `check: (value: Output) => boolean` – Validation function
+- `message?: string` – Error message (default: 'Invalid value')
 
 #### `refineAsync(check: (value: Output) => Promise<boolean> | boolean, message?: string): this`
 
@@ -428,8 +428,8 @@ v.string().refineAsync(async (val) => {
 
 **Parameters:**
 
-- `check: (value: Output) => Promise<boolean> | boolean` - Async validation function
-- `message?: string` - Error message
+- `check: (value: Output) => Promise<boolean> | boolean` – Async validation function
+- `message?: string` – Error message
 
 ::: warning
 Schemas with async validators must use `parseAsync()` or `safeParseAsync()`. Calling `parse()` will throw an error.
@@ -451,7 +451,7 @@ v.number().int().min(0).describe('age');
 
 **Parameters:**
 
-- `description: string` - Field description
+- `description: string` – Field description
 
 #### `transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>`
 
@@ -467,7 +467,7 @@ v.string().transform((str) => str.split(','));
 
 **Parameters:**
 
-- `fn: (value: Output) => NewOutput` - Transformation function
+- `fn: (value: Output) => NewOutput` – Transformation function
 
 ::: warning
 Transform returns a generic `Schema<NewOutput>`, so you lose type-specific methods. Apply validators before transforming.
@@ -524,8 +524,8 @@ class ValidationError extends Error {
 
 **Properties:**
 
-- `issues: Issue[]` - Array of validation errors
-- `message: string` - Formatted error message
+- `issues: Issue[]` – Array of validation errors
+- `message: string` – Formatted error message
 
 ### `Issue`
 
@@ -542,10 +542,10 @@ type Issue = {
 
 **Properties:**
 
-- `path` - Field path (e.g., `['user', 'email']`)
-- `message` - Error message
-- `code` - Error code (for i18n)
-- `params` - Additional parameters
+- `path` – Field path (e.g., `['user', 'email']`)
+- `message` – Error message
+- `code` – Error code (for i18n)
+- `params` – Additional parameters
 
 ### `ParseResult<T>`
 
@@ -607,8 +607,8 @@ v.number().int().positive();
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./usage">Usage Guide</a> - Comprehensive usage patterns</li>
-      <li><a href="./examples">Examples</a> - Real-world examples</li>
+      <li><a href="./usage">Usage Guide</a> – Comprehensive usage patterns</li>
+      <li><a href="./examples">Examples</a> – Real-world examples</li>
     </ul>
   </div>
 </div>

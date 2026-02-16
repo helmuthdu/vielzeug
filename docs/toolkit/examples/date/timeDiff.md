@@ -59,7 +59,7 @@ timeDiff(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000));
 import { timeDiff } from '@vielzeug/toolkit';
 
 // Event happened 3 hours ago
-timeDiff(new Date(Date.now() - 3 * 60 * 60 * 1000), 'PAST');
+timeDiff(new Date(Date.now() – 3 * 60 * 60 * 1000), 'PAST');
 // { value: 3, unit: 'HOUR' }
 ```
 

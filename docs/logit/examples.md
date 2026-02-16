@@ -25,22 +25,22 @@ These are complete application examples. For API reference and basic usage, see 
 ```ts
 import { Logit } from '@vielzeug/logit';
 
-// Debug - detailed debugging information
+// Debug – detailed debugging information
 Logit.debug('Variable state:', { count: 42, active: true });
 
-// Info - general informational messages
+// Info – general informational messages
 Logit.info('Application started', { version: '1.0.0', port: 3000 });
 
-// Success - successful operation completion
+// Success – successful operation completion
 Logit.success('File uploaded', { filename: 'data.csv', size: '2.3MB' });
 
-// Warning - potentially problematic situations
+// Warning – potentially problematic situations
 Logit.warn('Deprecated method called', { method: 'oldAPI', replacement: 'newAPI' });
 
-// Error - error events and exceptions
+// Error – error events and exceptions
 Logit.error('Database connection failed', new Error('ECONNREFUSED'));
 
-// Trace - very detailed trace information
+// Trace – very detailed trace information
 Logit.trace('Function execution trace', {
   function: 'processData',
   args: [1, 2, 3],
@@ -214,14 +214,14 @@ paymentService.logSuccess('charge', { amount: 99.99, currency: 'USD' });
 ### Comparison: Scoped vs Global Prefix
 
 ```ts
-// ❌ Avoid - Global prefix mutation
+// ❌ Avoid – Global prefix mutation
 Logit.setPrefix('auth');
 Logit.info('Login');
 Logit.setPrefix('api');
 Logit.info('Request');
 Logit.setPrefix(''); // Need to clean up
 
-// ✅ Recommended - Scoped loggers
+// ✅ Recommended – Scoped loggers
 const authLogger = Logit.scope('auth');
 const apiLogger = Logit.scope('api');
 
@@ -334,10 +334,10 @@ Remote logging uses `Promise.resolve().then()` for async execution, ensuring log
 Logit.setRemote({
   handler: async (type, metadata) => {
     // metadata contains:
-    // - args: any[]
-    // - timestamp?: string
-    // - namespace?: string
-    // - environment: 'production' | 'development'
+    // – args: any[]
+    // – timestamp?: string
+    // – namespace?: string
+    // – environment: 'production' | 'development'
 
     // Only send errors and warnings
     if (type === 'error' || type === 'warn') {
@@ -499,7 +499,7 @@ function useLogger(componentName: string) {
     });
 
     return () => {
-      const duration = Date.now() - mountTime.current;
+      const duration = Date.now() – mountTime.current;
       Logit.debug('Component unmounted', {
         duration: `${duration}ms`,
       });
@@ -561,7 +561,7 @@ app.use((req, res, next) => {
 
   // Log response
   res.on('finish', () => {
-    const duration = Date.now() - startTime;
+    const duration = Date.now() – startTime;
     const level = res.statusCode >= 400 ? 'error' : 'info';
 
     Logit.setPrefix(`Request-${requestId}`);
@@ -681,7 +681,7 @@ class PerformanceMonitor {
       return;
     }
 
-    const duration = Date.now() - startTime;
+    const duration = Date.now() – startTime;
     Logit.timeEnd(label);
 
     // Log slow operations

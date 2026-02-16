@@ -62,11 +62,11 @@ import { distribute } from '@vielzeug/toolkit';
 
 // Split $100 among 3 people
 distribute(100, 3);
-// [34, 33, 33] - sum is exactly 100 (first person gets extra penny)
+// [34, 33, 33] – sum is exactly 100 (first person gets extra penny)
 
 // With bigint (cents)
 distribute(10000n, 3);
-// [3334n, 3333n, 3333n] - sum is exactly 10000n
+// [3334n, 3333n, 3333n] – sum is exactly 10000n
 ```
 
 ### Real-World Example: Split Restaurant Bill
@@ -127,7 +127,7 @@ const pricePerBuyer = distribute(bulkPrice, buyers);
 import { distribute } from '@vielzeug/toolkit';
 
 distribute(100, 1);
-// [100] - entire amount goes to single recipient
+// [100] – entire amount goes to single recipient
 ```
 
 ### Small Amounts

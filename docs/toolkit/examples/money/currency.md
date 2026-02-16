@@ -39,7 +39,7 @@ function currency(money: Money, options?: CurrencyFormatOptions): string;
   - `currency`: ISO 4217 currency code (e.g., 'USD', 'EUR', 'JPY')
 - `options`: Optional formatting options
   - `locale`: BCP 47 language tag (default: 'en-US')
-  - `style`: Display style - 'symbol', 'code', or 'name' (default: 'symbol')
+  - `style`: Display style – 'symbol', 'code', or 'name' (default: 'symbol')
   - `minimumFractionDigits`: Minimum decimal places
   - `maximumFractionDigits`: Maximum decimal places
 

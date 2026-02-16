@@ -431,7 +431,7 @@ await db.transaction(['users', 'posts'], async (stores) => {
     published: true,
     createdAt: Date.now(),
   });
-  
+
   // For IndexedDB: Both changes committed atomically
   // For LocalStorage: Changes committed optimistically
 });
@@ -757,14 +757,14 @@ Always use bulk operations instead of loops for better performance.
 ::: code-group
 
 ```ts [❌ Slow]
-// Slow - multiple async operations
+// Slow – multiple async operations
 for (const user of users) {
   await db.put('users', user);
 }
 ```
 
 ```ts [✅ Fast]
-// Fast - single bulk operation
+// Fast – single bulk operation
 await db.bulkPut('users', users);
 ```
 

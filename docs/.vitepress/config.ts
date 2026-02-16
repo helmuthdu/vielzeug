@@ -1,6 +1,8 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitepress';
+import { defineConfig, type UserConfig } from 'vitepress';
+import { getPackagesData } from './theme/utils/packageData';
+import type { ThemeConfig } from './theme/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -25,6 +27,7 @@ export default defineConfig({
     },
   },
   themeConfig: {
+    packages: getPackagesData(),
     logo: '/logo-main.svg',
     nav: [
       { link: '/guide/', text: 'Guide' },
@@ -561,4 +564,4 @@ export default defineConfig({
       },
     },
   },
-});
+} as UserConfig<ThemeConfig>);

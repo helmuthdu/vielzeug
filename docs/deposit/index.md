@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.1.2-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-4.5_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-2-success" alt="Dependencies">
-</div>
+<PackageBadges package="deposit" />
 
 <img src="/logo-deposit.svg" alt="Deposit Logo" width="156" class="logo-highlight"/>
 
@@ -18,7 +13,7 @@ Browser storage APIs are powerful but notoriously complex. IndexedDB requires ve
 **Without Deposit**:
 
 ```ts
-// IndexedDB - verbose and error-prone
+// IndexedDB – verbose and error-prone
 const request = indexedDB.open('myDB', 1);
 request.onupgradeneeded = (event) => {
   const db = event.target.result;
@@ -41,17 +36,17 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 ### Comparison with Alternatives
 
-| Feature              | Deposit        | Dexie.js    | LocalForage | Native IndexedDB |
-| -------------------- | -------------- | ----------- | ----------- | ---------------- |
-| TypeScript Support   | ✅ First-class | ✅ Good     | ⚠️ Limited  | ❌               |
-| Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
-| Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
-| LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | **~4.5 KB**    | ~20KB       | ~8KB        | 0KB              |
-| TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
-| Transactions         | ✅ Atomic*     | ✅ Yes      | ❌          | ✅ Complex       |
-| Schema Validation    | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
-| Dependencies         | 2              | 0           | 0           | N/A              |
+| Feature              | Deposit                                               | Dexie.js    | LocalForage | Native IndexedDB |
+| -------------------- | ----------------------------------------------------- | ----------- | ----------- | ---------------- |
+| TypeScript Support   | ✅ First-class                                        | ✅ Good     | ⚠️ Limited  | ❌               |
+| Query Builder        | ✅ Advanced                                           | ✅ Good     | ❌          | ❌               |
+| Migrations           | ✅ Built-in                                           | ✅ Advanced | ❌          | ⚠️ Manual        |
+| LocalStorage Support | ✅ Unified API                                        | ❌          | ✅          | ❌               |
+| Bundle Size (gzip)   | **<PackageInfo package="deposit" type="size" />**     | ~20KB       | ~8KB        | 0KB              |
+| TTL Support          | ✅ Native                                             | ❌          | ❌          | ❌               |
+| Transactions         | ✅ Atomic\*                                           | ✅ Yes      | ❌          | ✅ Complex       |
+| Schema Validation    | ✅ Built-in                                           | ⚠️ Runtime  | ❌          | ❌               |
+| Dependencies         | <PackageInfo package="deposit" type="dependencies" /> | 0           | 0           | N/A              |
 
 \* Transactions are fully atomic for IndexedDB, optimistic for LocalStorage
 
@@ -77,7 +72,7 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 - **Advanced Querying**: Rich [QueryBuilder](./usage.md#query-builder) with filters, sorting, grouping, pagination, and type-safe `toGrouped()`.
 - **Isomorphic**: Works in all modern browsers with minimal footprint.
-- **Lightweight & Fast**: Low dependencies (@vielzeug/{logit,toolkit}) and only **~4.5 KB gzipped**.
+- **Lightweight & Fast**: Only <PackageInfo package="deposit" type="dependencies" /> dependency (@vielzeug/toolkit) and **<PackageInfo package="deposit" type="size" /> gzipped**.
 - **Migrations**: Robust support for [schema versioning and data migrations](./usage.md#schema-migrations) in IndexedDB.
 - **Resilient**: [Gracefully handles corrupted entries](./usage.md#corrupted-entry-handling) with automatic cleanup and logging.
 - **Schema Validation**: Early [Schema Validation](./usage.md#schema-validation) with clear error messages.
@@ -109,25 +104,30 @@ yarn add @vielzeug/deposit
 ### Basic Setup
 
 ```ts
-import { Deposit, IndexedDBAdapter } from '@vielzeug/deposit';
+import { Deposit, defineSchema } from '@vielzeug/deposit';
 
 // 1. Define your schema with types
-const schema = {
+const schema = defineSchema<{
+  users: { id: string; name: string; email: string };
+  posts: { id: string; userId: string; title: string; createdAt: number };
+}>()({
   users: {
     key: 'id',
     indexes: ['email'],
-    record: {} as { id: string; name: string; email: string },
   },
   posts: {
     key: 'id',
     indexes: ['userId', 'createdAt'],
-    record: {} as { id: string; userId: string; title: string; createdAt: number },
   },
-};
+});
 
-// 2. Initialize the depot
-const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
-const db = new Deposit(adapter);
+// 2. Initialize the deposit instance
+const db = new Deposit({
+  type: 'indexedDB',
+  dbName: 'my-app-db',
+  version: 1,
+  schema,
+});
 
 // 3. Start storing data
 await db.put('users', { id: 'u1', name: 'Alice', email: 'alice@example.com' });
@@ -137,7 +137,7 @@ const user = await db.get('users', 'u1');
 ### Real-World Example: Todo App
 
 ```ts
-import { Deposit, IndexedDBAdapter } from '@vielzeug/deposit';
+import { Deposit, defineSchema } from '@vielzeug/deposit';
 
 interface Todo {
   id: string;
@@ -146,15 +146,19 @@ interface Todo {
   createdAt: number;
 }
 
-const schema = {
+const schema = defineSchema<{ todos: Todo }>()({
   todos: {
     key: 'id',
     indexes: ['completed', 'createdAt'],
-    record: {} as Todo,
   },
-};
+});
 
-const db = new Deposit(new IndexedDBAdapter('todos-db', 1, schema));
+const db = new Deposit({
+  type: 'indexedDB',
+  dbName: 'todos-db',
+  version: 1,
+  schema,
+});
 
 // Add todo
 await db.put('todos', {
@@ -189,13 +193,12 @@ await db.bulkDelete(
 Define your data structure with TypeScript types and indexes:
 
 ```ts
-const schema = {
-  tableName: {
+const schema = defineSchema<{ users: User }>()({
+  users: {
     key: 'id', // Primary key field
     indexes: ['email'], // Fields to index for fast queries
-    record: {} as MyType, // TypeScript type definition
   },
-};
+});
 ```
 
 ### Adapters
@@ -275,7 +278,7 @@ if ('storage' in navigator && 'estimate' in navigator.storage) {
 // Clean up old data
 const oldTodos = await db
   .query('todos')
-  .filter((todo) => todo.createdAt < Date.now() - 30 * 24 * 60 * 60 * 1000)
+  .filter((todo) => todo.createdAt < Date.now() – 30 * 24 * 60 * 60 * 1000)
   .toArray();
 
 await db.bulkDelete(
@@ -293,15 +296,19 @@ Type inference not working.
 :::
 
 ::: tip Solution
-Ensure you're using type assertions in schema:
+Ensure you're using the `defineSchema` helper correctly:
 
 ```ts
-const schema = {
-  users: {
-    record: {} as User, // ✅ Correct
-    // record: User     // ❌ Wrong
-  },
-};
+// ✅ Correct – use defineSchema helper
+const schema = defineSchema<{ users: User; posts: Post }>()({
+  users: { key: 'id', indexes: ['email'] },
+  posts: { key: 'id' },
+});
+
+// ❌ Wrong – missing type parameter or wrong syntax
+const schema = defineSchema()({
+  users: { key: 'id' },
+});
 ```
 
 :::
@@ -317,10 +324,20 @@ Increment the version number:
 
 ```ts
 // Old
-const adapter = new IndexedDBAdapter('my-db', 1, schema);
+const db = new Deposit({
+  type: 'indexedDB',
+  dbName: 'my-db',
+  version: 1,
+  schema,
+});
 
-// New
-const adapter = new IndexedDBAdapter('my-db', 2, schema);
+// New – increment version to trigger migration
+const db = new Deposit({
+  type: 'indexedDB',
+  dbName: 'my-db',
+  version: 2,
+  schema,
+});
 ```
 
 :::

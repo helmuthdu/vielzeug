@@ -64,7 +64,7 @@ const winner = draw(users);
 
 ## Implementation Notes
 
-- Internally leverages the `random` utility to generate an index between `0` and `array.length - 1`.
+- Internally leverages the `random` utility to generate an index between `0` and `array.length – 1`.
 - Throws `TypeError` if the input is not an array.
 - Performance is $O(1)$ as it only picks one index regardless of array size.
 

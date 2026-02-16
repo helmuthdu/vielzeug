@@ -265,7 +265,7 @@ const oldest = await db.query('users').max('age');
 const youngest = await db.query('users').min('age');
 const totalUsers = await db.query('users').count();
 
-// Grouping (type-unsafe - returns object)
+// Grouping (type-unsafe – returns object)
 const byRole = await db.query('users').groupBy('role').toArray();
 // Result: { admin: User[], user: User[] }
 
@@ -313,9 +313,10 @@ await db.transaction(['users', 'posts'], async (stores) => {
 ```
 
 ::: tip ⚡ Atomicity Guarantees
-- **IndexedDB**: Transactions are fully atomic using a single `IDBTransaction` - all changes succeed together or all fail together (ACID properties)
-- **LocalStorage**: Transactions are optimistic and NOT atomic - tables are updated sequentially. For critical data integrity, use IndexedDB
-:::
+
+- **IndexedDB**: Transactions are fully atomic using a single `IDBTransaction` – all changes succeed together or all fail together (ACID properties)
+- **LocalStorage**: Transactions are optimistic and NOT atomic – tables are updated sequentially. For critical data integrity, use IndexedDB
+  :::
 
 ### Patch Operations
 
@@ -351,7 +352,7 @@ const validSchema = {
   },
 };
 
-// ❌ Invalid schema - missing key field
+// ❌ Invalid schema – missing key field
 const invalidSchema = {
   users: {
     record: {} as User, // Missing 'key' field
@@ -579,9 +580,9 @@ async function searchUsers(query: string) {
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2.8_KB-success" alt="Size">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Dependencies">
-</div>
+<PackageBadges package="validit" />
 
 <img src="/logo-validit.svg" alt="Validit Logo" width="156" class="logo-highlight"/>
 
@@ -59,16 +54,16 @@ const user = userSchema.parse(data);
 
 ### Comparison with Alternatives
 
-| Feature             | Validit   | Zod    | Yup    |
-| ------------------- | --------- | ------ | ------ |
-| Bundle Size         | **~3 KB** | ~12 KB | ~15 KB |
-| Dependencies        | 0         | 0      | Many   |
-| TypeScript          | Native    | Native | Good   |
-| Async Validation    | ✅        | ✅     | ✅     |
-| Parallel Arrays     | ✅        | ❌     | ❌     |
-| Convenience Schemas | ✅        | ❌     | ❌     |
-| Transform Support   | ✅        | ✅     | ✅     |
-| Custom Refinements  | ✅        | ✅     | ✅     |
+| Feature             | Validit                                               | Zod    | Yup    |
+| ------------------- | ----------------------------------------------------- | ------ | ------ |
+| Bundle Size         | **<PackageInfo package="validit" type="size" />**     | ~12 KB | ~15 KB |
+| Dependencies        | <PackageInfo package="validit" type="dependencies" /> | 0      | Many   |
+| TypeScript          | Native                                                | Native | Good   |
+| Async Validation    | ✅                                                    | ✅     | ✅     |
+| Parallel Arrays     | ✅                                                    | ❌     | ❌     |
+| Convenience Schemas | ✅                                                    | ❌     | ❌     |
+| Transform Support   | ✅                                                    | ✅     | ✅     |
+| Custom Refinements  | ✅                                                    | ✅     | ✅     |
 
 ## When to Use Validit
 
@@ -77,7 +72,7 @@ const user = userSchema.parse(data);
 - Type-safe runtime validation
 - Async validation with database checks
 - Parallel array validation for performance
-- Minimal bundle size (2 KB)
+- Minimal bundle size (<PackageInfo package="validit" type="size" />)
 - Framework-agnostic solution
 - Clean, readable schemas
 
@@ -87,12 +82,21 @@ const user = userSchema.parse(data);
 - You want preprocessing hooks (use Zod)
 - You need deeply nested recursive schemas
 
+## 🚀 Key Features
+
+- **Async Validation**: Built-in support for [asynchronous rules and database checks](./usage.md#async-validation).
+- **Convenience Schemas**: Pre-built schemas for [common patterns](./api.md#factory-object-v) save you time and code.
+- **Error Handling**: Structured [ValidationError](./usage.md#error-handling) with precise path and error code information.
+- **Lightweight & Fast**: <PackageInfo package="validit" type="dependencies" /> dependencies and only **<PackageInfo package="validit" type="size" /> gzipped**. Optimized for both bundle size and [runtime performance](./api.md#performance-tips).
+- **Transform Support**: Apply [transformations after validation](./usage.md#modifiers) for data normalization.
+- **Type-Safe**: Full TypeScript support with [automatic type inference](./usage.md#type-inference) from your schemas.
+
 ## 📖 Core Concepts
 
 ### Default Validation Behavior
 
 ::: tip 💡 Everything is Required by Default
-**All schemas reject `null` and `undefined` automatically** - you don't need a "required" method!
+**All schemas reject `null` and `undefined` automatically** – you don't need a "required" method!
 
 ```ts
 v.string().parse(null); // ❌ Throws "Expected string"
@@ -124,15 +128,6 @@ const schema = v.object({
   age: v.number().optional(), // Optional field
 });
 ```
-
-## 🚀 Key Features
-
-- **Async Validation**: Built-in support for [asynchronous rules and database checks](./usage.md#async-validation).
-- **Convenience Schemas**: Pre-built schemas for [common patterns](./api.md#factory-object-v) save you time and code.
-- **Error Handling**: Structured [ValidationError](./usage.md#error-handling) with precise path and error code information.
-- **Lightweight & Fast**: Zero dependencies and only **~2 KB gzipped**. Optimized for both bundle size and [runtime performance](./api.md#performance-tips).
-- **Transform Support**: Apply [transformations after validation](./usage.md#modifiers) for data normalization.
-- **Type-Safe**: Full TypeScript support with [automatic type inference](./usage.md#type-inference) from your schemas.
 
 ## 🏁 Quick Start
 
@@ -288,9 +283,9 @@ type Data = Infer<typeof schema>;
 
 Explore comprehensive guides and references:
 
-- **[Usage Guide](./usage.md)** - Complete guide to all validation features
-- **[API Reference](./api.md)** - Detailed API documentation with all methods
-- **[Examples](./examples.md)** - Real-world examples and patterns
+- **[Usage Guide](./usage.md)** – Complete guide to all validation features
+- **[API Reference](./api.md)** – Detailed API documentation with all methods
+- **[Examples](./examples.md)** – Real-world examples and patterns
 - **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ

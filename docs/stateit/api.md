@@ -20,8 +20,8 @@ function createStore<T extends object>(initialState: T, options?: StoreOptions<T
 
 #### Parameters
 
-- `initialState: T` - Initial state object
-- `options?: StoreOptions<T>` - Optional configuration
+- `initialState: T` – Initial state object
+- `options?: StoreOptions<T>` – Optional configuration
 
 ```ts
 type StoreOptions<T> = {
@@ -76,8 +76,8 @@ function createTestStore<T extends object>(
 
 #### Parameters
 
-- `baseStore?: Store<T>` - Optional base store to create child from
-- `patch?: Partial<T>` - Optional partial state for test store
+- `baseStore?: Store<T>` – Optional base store to create child from
+- `patch?: Partial<T>` – Optional partial state for test store
 
 #### Returns
 
@@ -109,9 +109,9 @@ function withMock<T extends object, R>(baseStore: Store<T>, patch: Partial<T>, f
 
 #### Parameters
 
-- `baseStore: Store<T>` - Base store to derive from
-- `patch: Partial<T>` - Temporary state override
-- `fn: () => R | Promise<R>` - Function to execute with overridden state
+- `baseStore: Store<T>` – Base store to derive from
+- `patch: Partial<T>` – Temporary state override
+- `fn: () => R | Promise<R>` – Function to execute with overridden state
 
 #### Returns
 
@@ -146,7 +146,7 @@ get<U>(selector: (state: T) => U): U;
 
 ##### Parameters
 
-- `selector?: (state: T) => U` - Optional function to select a slice of state
+- `selector?: (state: T) => U` – Optional function to select a slice of state
 
 ##### Returns
 
@@ -185,8 +185,8 @@ set(updater: (state: T) => Promise<T>): Promise<void>;
 
 ##### Parameters
 
-- `patch: Partial<T>` - Partial state to merge (shallow)
-- `updater: (state: T) => T | Promise<T>` - Function that receives current state and returns new state
+- `patch: Partial<T>` – Partial state to merge (shallow)
+- `updater: (state: T) => T | Promise<T>` – Function that receives current state and returns new state
 
 ##### Returns
 
@@ -231,7 +231,7 @@ store.reset(); // Reverts to initial state
 
 ---
 
-#### subscribe() - Full State
+#### subscribe() – Full State
 
 Subscribes to all state changes.
 
@@ -243,7 +243,7 @@ subscribe(listener: Subscriber<T>): Unsubscribe;
 
 ##### Parameters
 
-- `listener: Subscriber<T>` - Callback for state changes
+- `listener: Subscriber<T>` – Callback for state changes
 
 ```ts
 type Subscriber<T> = (state: T, prev: T) => void;
@@ -267,7 +267,7 @@ unsubscribe();
 
 ---
 
-#### subscribe() - Selective
+#### subscribe() – Selective
 
 Subscribes to a selected slice of state.
 
@@ -283,9 +283,9 @@ subscribe<U>(
 
 ##### Parameters
 
-- `selector: Selector<T, U>` - Function to select a slice of state
-- `listener: Subscriber<U>` - Callback for selected value changes
-- `options?: { equality?: EqualityFn<U> }` - Optional equality function
+- `selector: Selector<T, U>` – Function to select a slice of state
+- `listener: Subscriber<U>` – Callback for selected value changes
+- `options?: { equality?: EqualityFn<U> }` – Optional equality function
 
 ```ts
 type Selector<T, U> = (state: T) => U;
@@ -332,7 +332,7 @@ createChild(patch?: Partial<T>): Store<T>;
 
 ##### Parameters
 
-- `patch?: Partial<T>` - Optional partial state to merge into child's initial state
+- `patch?: Partial<T>` – Optional partial state to merge into child's initial state
 
 ##### Returns
 
@@ -364,8 +364,8 @@ runInScope<R>(
 
 ##### Parameters
 
-- `fn: (scopedStore: Store<T>) => R | Promise<R>` - Function to execute with scoped store
-- `patch?: Partial<T>` - Optional partial state for child store
+- `fn: (scopedStore: Store<T>) => R | Promise<R>` – Function to execute with scoped store
+- `patch?: Partial<T>` – Optional partial state for child store
 
 ##### Returns
 
@@ -400,8 +400,8 @@ function shallowEqual(a: unknown, b: unknown): boolean;
 
 #### Parameters
 
-- `a: unknown` - First value to compare
-- `b: unknown` - Second value to compare
+- `a: unknown` – First value to compare
+- `b: unknown` – Second value to compare
 
 #### Returns
 
@@ -431,8 +431,8 @@ function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
 
 #### Parameters
 
-- `state: T` - Original state object
-- `patch: Partial<T>` - Partial state to merge
+- `state: T` – Original state object
+- `patch: Partial<T>` – Partial state to merge
 
 #### Returns
 
@@ -530,7 +530,7 @@ type StoreOptions<T> = {
 ### Subscription Timing
 
 - `subscribe()` is called **immediately** with the current state when you subscribe
-- `observe()` is **NOT** called immediately - only on subsequent changes
+- `observe()` is **NOT** called immediately – only on subsequent changes
 - Both are called asynchronously (next microtask) when state changes
 
 ### Batched Updates

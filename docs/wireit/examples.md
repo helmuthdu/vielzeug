@@ -751,8 +751,8 @@ if (config.features.newAuth) {
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./usage">Usage Guide</a> - Complete API and patterns</li>
-      <li><a href="./api">API Reference</a> - Detailed API documentation</li>
+      <li><a href="./usage">Usage Guide</a> – Complete API and patterns</li>
+      <li><a href="./api">API Reference</a> – Detailed API documentation</li>
     </ul>
   </div>
 </div>

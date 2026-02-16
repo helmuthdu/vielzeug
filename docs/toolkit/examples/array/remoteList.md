@@ -50,16 +50,16 @@ function remoteList<T, F = Record<string, unknown>, S = { key?: string; dir?: So
 
 ### Parameters
 
-- `config: RemoteConfig<T, F, S>` - Configuration object with the following properties:
-  - `fetch: (query: RemoteQuery<F, S>) => Promise<RemoteResult<T>>` - **Required**. Function to fetch data from server
-  - `limit?: number` - Items per page (default: 10, minimum: 1)
-  - `debounceMs?: number` - Debounce delay for search in milliseconds (default: 300)
-  - `initialFilter?: F` - Initial filter state
-  - `initialSort?: S` - Initial sort state
+- `config: RemoteConfig<T, F, S>` – Configuration object with the following properties:
+  - `fetch: (query: RemoteQuery<F, S>) => Promise<RemoteResult<T>>` – **Required**. Function to fetch data from server
+  - `limit?: number` – Items per page (default: 10, minimum: 1)
+  - `debounceMs?: number` – Debounce delay for search in milliseconds (default: 300)
+  - `initialFilter?: F` – Initial filter state
+  - `initialSort?: S` – Initial sort state
 
 ### Returns
 
-`RemoteList<T, F, S>` - A reactive server-side paginated list instance
+`RemoteList<T, F, S>` – A reactive server-side paginated list instance
 
 ## Examples
 

@@ -513,12 +513,12 @@ userStore.set({ name: 'Alice' }); // ✅ Valid
 ### Optimize Subscriptions
 
 ```ts
-// ❌ Bad - subscribes to entire state
+// ❌ Bad – subscribes to entire state
 store.subscribe((state) => {
   updateUI(state.count);
 });
 
-// ✅ Good - subscribes only to count
+// ✅ Good – subscribes only to count
 store.subscribe(
   (state) => state.count,
   (count) => {
@@ -530,15 +530,15 @@ store.subscribe(
 ### Batch Updates
 
 ```ts
-// ❌ Bad - multiple notifications
+// ❌ Bad – multiple notifications
 store.set({ count: 1 });
 store.set({ name: 'Alice' });
 store.set({ age: 30 });
 
-// ✅ Good - single notification
+// ✅ Good – single notification
 store.set({ count: 1, name: 'Alice', age: 30 });
 
-// ✅ Also good - update function
+// ✅ Also good – update function
 await store.set((state) => ({
   ...state,
   count: 1,
@@ -666,9 +666,9 @@ history.redo(); // Forward to count: 2
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>

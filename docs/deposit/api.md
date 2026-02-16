@@ -14,7 +14,7 @@ Main class for interacting with browser storage. Provides a unified, type-safe A
 
 **Type Parameters:**
 
-- `S extends DepositDataSchema` - Your schema type defining all tables and their records
+- `S extends DepositDataSchema` – Your schema type defining all tables and their records
 
 ## Deposit Methods
 
@@ -24,7 +24,7 @@ Creates a new Deposit instance.
 
 **Parameters:**
 
-- `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` - Either a custom adapter or configuration object
+- `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` – Either a custom adapter or configuration object
 
 **Example:**
 
@@ -50,9 +50,9 @@ Inserts or updates a single record.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `value: S[K]['record']` - Record to store
-- `ttl?: number` - Optional time-to-live in milliseconds
+- `table: keyof S` – Table name
+- `value: S[K]['record']` – Record to store
+- `ttl?: number` – Optional time-to-live in milliseconds
 
 **Returns:** `Promise<void>`
 
@@ -85,9 +85,9 @@ Retrieves a single record by its key.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `key: KeyType<S, K>` - Record key
-- `defaultValue?: T` - Optional default value if not found
+- `table: keyof S` – Table name
+- `key: KeyType<S, K>` – Record key
+- `defaultValue?: T` – Optional default value if not found
 
 **Returns:** `Promise<T | undefined>`
 
@@ -112,7 +112,7 @@ Retrieves all records from a table.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
+- `table: keyof S` – Table name
 
 **Returns:** `Promise<S[K]['record'][]>`
 
@@ -131,8 +131,8 @@ Deletes a single record by its key.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `key: KeyType<S, K>` - Record key
+- `table: keyof S` – Table name
+- `key: KeyType<S, K>` – Record key
 
 **Returns:** `Promise<void>`
 
@@ -150,7 +150,7 @@ Removes all records from a table.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
+- `table: keyof S` – Table name
 
 **Returns:** `Promise<void>`
 
@@ -168,7 +168,7 @@ Returns the number of records in a table.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
+- `table: keyof S` – Table name
 
 **Returns:** `Promise<number>`
 
@@ -187,9 +187,9 @@ Inserts or updates multiple records in a single operation.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `values: S[K]['record'][]` - Array of records
-- `ttl?: number` - Optional TTL for all records
+- `table: keyof S` – Table name
+- `values: S[K]['record'][]` – Array of records
+- `ttl?: number` – Optional TTL for all records
 
 **Returns:** `Promise<void>`
 
@@ -211,8 +211,8 @@ Deletes multiple records by their keys.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `keys: KeyType<S, K>[]` - Array of keys to delete
+- `table: keyof S` – Table name
+- `keys: KeyType<S, K>[]` – Array of keys to delete
 
 **Returns:** `Promise<void>`
 
@@ -230,7 +230,7 @@ Creates a QueryBuilder for advanced querying.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
+- `table: keyof S` – Table name
 
 **Returns:** `QueryBuilder<S[K]['record']>`
 
@@ -251,14 +251,15 @@ const adults = await db
 Performs operations across multiple tables with automatic adapter-appropriate behavior.
 
 **Atomicity:**
-- **IndexedDB**: Fully atomic - all changes happen in a single IDBTransaction (ACID guarantees)
-- **LocalStorage**: Optimistic - changes are applied sequentially (not atomic across tables)
+
+- **IndexedDB**: Fully atomic – all changes happen in a single IDBTransaction (ACID guarantees)
+- **LocalStorage**: Optimistic – changes are applied sequentially (not atomic across tables)
 
 **Parameters:**
 
-- `tables: K[]` - Array of table names
-- `fn: (stores: T) => Promise<void>` - Transaction callback receiving store proxies
-- `ttl?: number` - Optional TTL for all modified records
+- `tables: K[]` – Array of table names
+- `fn: (stores: T) => Promise<void>` – Transaction callback receiving store proxies
+- `ttl?: number` – Optional TTL for all modified records
 
 **Returns:** `Promise<void>`
 
@@ -287,6 +288,7 @@ await db.transaction(['users', 'posts'], async (stores) => {
 ```
 
 **Behavior:**
+
 - Loads all specified tables into memory
 - Executes the callback with in-memory proxies
 - On success: commits all changes (atomically for IndexedDB)
@@ -300,8 +302,8 @@ Applies a batch of operations (put, delete, clear) atomically.
 
 **Parameters:**
 
-- `table: keyof S` - Table name
-- `patches: PatchOperation[]` - Array of operations
+- `table: keyof S` – Table name
+- `patches: PatchOperation[]` – Array of operations
 
 **Returns:** `Promise<void>`
 
@@ -408,8 +410,8 @@ Sorts results by field.
 
 **Parameters:**
 
-- `field: keyof T` - Field to sort by
-- `direction: 'asc' | 'desc'` - Sort direction (default: 'asc')
+- `field: keyof T` – Field to sort by
+- `direction: 'asc' | 'desc'` – Sort direction (default: 'asc')
 
 **Example:**
 
@@ -503,7 +505,7 @@ Groups records by a field value. Returns an object where keys are the field valu
 
 **Parameters:**
 
-- `field: K` - Field to group by
+- `field: K` – Field to group by
 
 **Returns:** `this` (for chaining)
 
@@ -526,7 +528,7 @@ Type-safe alternative to `groupBy().toArray()`. Returns an array of grouped resu
 
 **Parameters:**
 
-- `field: K` - Field to group by
+- `field: K` – Field to group by
 
 **Returns:** `Promise<Array<{ key: T[K], values: T[] }>>`
 
@@ -553,8 +555,8 @@ Performs fuzzy search across all string fields.
 
 **Parameters:**
 
-- `query: string` - Search query
-- `tone?: number` - Optional search sensitivity
+- `query: string` – Search query
+- `tone?: number` – Optional search sensitivity
 
 **Example:**
 
@@ -643,12 +645,12 @@ const db = new Deposit(adapter);
 **Schema Validation:**
 
 ```ts
-// ✅ Valid - will work
+// ✅ Valid – will work
 const validSchema = {
   users: { key: 'id', record: {} as User },
 };
 
-// ❌ Invalid - will throw immediately
+// ❌ Invalid – will throw immediately
 const invalidSchema = {
   users: { record: {} as User }, // Missing 'key' field
 };
@@ -709,16 +711,16 @@ const schema = {
     record: {} as User,
   },
 };
-// Logs warning: "Duplicate index "email" in table "users" - skipping"
+// Logs warning: "Duplicate index "email" in table "users" – skipping"
 
 const schema2 = {
   users: {
     key: 'id',
-    indexes: ['id'], // Redundant - key path is already indexed
+    indexes: ['id'], // Redundant – key path is already indexed
     record: {} as User,
   },
 };
-// Logs warning: "Skipping index on key path "id" - redundant"
+// Logs warning: "Skipping index on key path "id" – redundant"
 ```
 
 ```ts
@@ -781,7 +783,7 @@ Helper function to create a type-safe schema definition with clean syntax.
 
 **Generic Parameters:**
 
-- `S` - Schema definition type (maps table names to record types)
+- `S` – Schema definition type (maps table names to record types)
 
 **Parameters:**
 

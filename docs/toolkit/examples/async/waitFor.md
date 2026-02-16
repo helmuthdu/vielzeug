@@ -22,10 +22,10 @@ function waitFor(
 
 ## Parameters
 
-- `condition` - Function that returns true when condition is met
-- `options.timeout` - Maximum time to wait in ms (default: 5000)
-- `options.interval` - Polling interval in ms (default: 100)
-- `options.signal` - AbortSignal to cancel waiting
+- `condition` – Function that returns true when condition is met
+- `options.timeout` – Maximum time to wait in ms (default: 5000)
+- `options.interval` – Polling interval in ms (default: 100)
+- `options.signal` – AbortSignal to cancel waiting
 
 ## Returns
 
@@ -103,5 +103,5 @@ async function waitForJobCompletion(jobId: string) {
 
 ## Related
 
-- [sleep](./sleep.md) - Simple async delay
-- [race](./race.md) - Race with minimum delay
+- [sleep](./sleep.md) – Simple async delay
+- [race](./race.md) – Race with minimum delay

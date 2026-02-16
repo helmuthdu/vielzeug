@@ -107,7 +107,7 @@ Displays data in a table format in the console.
 
 **Parameters:**
 
-- `...args: any[]` - Data to display (typically arrays of objects)
+- `...args: any[]` – Data to display (typically arrays of objects)
 
 **Example:**
 
@@ -132,7 +132,7 @@ Starts a timer with the specified label.
 
 **Parameters:**
 
-- `label: string` - Unique identifier for the timer
+- `label: string` – Unique identifier for the timer
 
 **Example:**
 
@@ -152,7 +152,7 @@ Stops a timer and logs the elapsed time.
 
 **Parameters:**
 
-- `label: string` - Timer label (must match the `time()` call)
+- `label: string` – Timer label (must match the `time()` call)
 
 **Example:**
 
@@ -172,9 +172,9 @@ Creates a collapsed group in the console for organizing related logs.
 
 **Parameters:**
 
-- `text: string` - Main group label text
-- `label?: string` - Optional prefix label (default: `'GROUP'`)
-- `time?: number` - Optional start time for elapsed time display (default: `Date.now()`)
+- `text: string` – Main group label text
+- `label?: string` – Optional prefix label (default: `'GROUP'`)
+- `time?: number` – Optional start time for elapsed time display (default: `Date.now()`)
 
 **Example:**
 
@@ -218,9 +218,9 @@ Logs an assertion error if the condition is false.
 
 **Parameters:**
 
-- `valid: boolean` - Condition to check
-- `message: string` - Error message if condition fails
-- `context: Record<string, any>` - Additional context data
+- `valid: boolean` – Condition to check
+- `message: string` – Error message if condition fails
+- `context: Record<string, any>` – Additional context data
 
 **Example:**
 
@@ -244,9 +244,9 @@ Creates a scoped logger with a namespaced prefix without mutating global state.
 
 **Parameters:**
 
-- `namespace: string` - Namespace for the scoped logger
+- `namespace: string` – Namespace for the scoped logger
 
-**Returns:** `ScopedLogger` - Logger instance with all logging methods
+**Returns:** `ScopedLogger` – Logger instance with all logging methods
 
 **Example:**
 
@@ -278,7 +278,7 @@ Initializes or updates Logit configuration with multiple options at once.
 
 **Parameters:**
 
-- `options: LogitOptions` - Configuration object
+- `options: LogitOptions` – Configuration object
 
 **Example:**
 
@@ -306,7 +306,7 @@ Sets the minimum log level to display.
 
 **Parameters:**
 
-- `level: LogitLevel` - Minimum level to show
+- `level: LogitLevel` – Minimum level to show
 
 **Example:**
 
@@ -324,7 +324,7 @@ Sets a namespace prefix for all subsequent logs.
 
 **Parameters:**
 
-- `namespace: string` - Prefix text
+- `namespace: string` – Prefix text
 
 **Example:**
 
@@ -344,7 +344,7 @@ Configures remote logging handler with rich metadata support.
 
 **Parameters:**
 
-- `remote: LogitRemoteOptions` - Remote logging configuration
+- `remote: LogitRemoteOptions` – Remote logging configuration
 
 **Handler Signature:**
 
@@ -392,7 +392,7 @@ Updates the remote logging level without changing the handler.
 
 **Parameters:**
 
-- `level: LogitLevel` - Minimum level for remote logging
+- `level: LogitLevel` – Minimum level for remote logging
 
 **Example:**
 
@@ -415,13 +415,13 @@ Sets the display variant for log messages.
 
 **Parameters:**
 
-- `variant: 'text' | 'icon' | 'symbol'` - Display style
+- `variant: 'text' | 'icon' | 'symbol'` – Display style
 
 **Options:**
 
-- `'symbol'` - Emoji-like symbols (🅳, 🅸, etc.)
-- `'icon'` - Unicode icons (☕, ℹ, ✔, etc.)
-- `'text'` - Plain text (DEBUG, INFO, etc.)
+- `'symbol'` – Emoji-like symbols (🅳, 🅸, etc.)
+- `'icon'` – Unicode icons (☕, ℹ, ✔, etc.)
+- `'text'` – Plain text (DEBUG, INFO, etc.)
 
 **Example:**
 
@@ -439,7 +439,7 @@ Toggles or sets the environment indicator visibility (🅿 for production, 🅳 
 
 **Parameters:**
 
-- `value?: boolean` - Optional: explicitly set the state. If omitted, toggles current state.
+- `value?: boolean` – Optional: explicitly set the state. If omitted, toggles current state.
 
 **Example:**
 
@@ -460,7 +460,7 @@ Toggles or sets timestamp visibility in log output.
 
 **Parameters:**
 
-- `value?: boolean` - Optional: explicitly set the state. If omitted, toggles current state.
+- `value?: boolean` – Optional: explicitly set the state. If omitted, toggles current state.
 
 **Example:**
 
@@ -589,8 +589,8 @@ interface LogitRemoteOptions {
 
 **Properties:**
 
-- `handler` - Function called for remote logging with rich metadata
-- `logLevel` - Minimum level to send to remote handler
+- `handler` – Function called for remote logging with rich metadata
+- `logLevel` – Minimum level to send to remote handler
 
 ---
 
@@ -618,9 +618,9 @@ const logger: ScopedLogger = Logit.scope('module');
 logger.info('Message');
 ```
 
-- `type: LogitType` - The log level/type
-- `...args: any[]` - Original log arguments
-- `logLevel` - Minimum level to trigger remote logging
+- `type: LogitType` – The log level/type
+- `...args: any[]` – Original log arguments
+- `logLevel` – Minimum level to trigger remote logging
 
 ---
 
@@ -630,14 +630,14 @@ Available log levels (ordered by severity).
 
 ```ts
 type LogitLevel =
-  | 'debug' // Lowest - most verbose
+  | 'debug' // Lowest – most verbose
   | 'trace'
   | 'time'
   | 'table'
   | 'info'
   | 'success'
   | 'warn'
-  | 'error' // Highest - least verbose
+  | 'error' // Highest – least verbose
   | 'off'; // Disables all logging
 ```
 

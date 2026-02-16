@@ -1,9 +1,4 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-100+_utilities-success" alt="Utilities">
-  <img src="https://img.shields.io/badge/TypeScript-100%25-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/dependencies-0-success" alt="Zero Dependencies">
-</div>
+<PackageBadges package="toolkit" />
 
 <img src="/logo-toolkit.svg" alt="Toolkit Logo" width="156" class="logo-highlight"/>
 
@@ -25,15 +20,15 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ### Comparison with Alternatives
 
-| Feature                | Toolkit              | Lodash            | Ramda             | Native JS  |
-| ---------------------- | -------------------- | ----------------- | ----------------- | ---------- |
-| TypeScript Support     | ✅ First-class       | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
-| Tree-shakeable         | ✅ By default        | ⚠️ lodash-es only | ✅ Yes            | N/A        |
-| Bundle Size (min+gzip) | ~2-3KB per utility   | ~24KB (full)      | ~12KB (full)      | 0KB        |
-| Dependencies           | 0                    | 0                 | 0                 | N/A        |
-| Learning Curve         | Low                  | Low               | High (FP focused) | Low        |
-| Async Support          | ✅ Built-in          | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
-| Isomorphic             | ✅ Browser + Node.js | ✅ Yes            | ✅ Yes            | ✅ Yes     |
+| Feature                | Toolkit                                               | Lodash            | Ramda             | Native JS  |
+| ---------------------- | ----------------------------------------------------- | ----------------- | ----------------- | ---------- |
+| TypeScript Support     | ✅ First-class                                        | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
+| Tree-shakeable         | ✅ By default                                         | ⚠️ lodash-es only | ✅ Yes            | N/A        |
+| Bundle Size (min+gzip) | ~0.1-1KB per utility                                  | ~24KB (full)      | ~12KB (full)      | 0KB        |
+| Dependencies           | <PackageInfo package="toolkit" type="dependencies" /> | 0                 | 0                 | N/A        |
+| Learning Curve         | Low                                                   | Low               | High (FP focused) | Low        |
+| Async Support          | ✅ Built-in                                           | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
+| Isomorphic             | ✅ Browser + Node.js                                  | ✅ Yes            | ✅ Yes            | ✅ Yes     |
 
 ## When to Use Toolkit
 
@@ -114,14 +109,14 @@ import { debounce } from '@vielzeug/toolkit/function';
 **Without Toolkit** (verbose, error-prone):
 
 ```ts
-// Pagination - manual implementation
+// Pagination – manual implementation
 function paginateProducts(products: Product[], page: number, size: number) {
-  const start = (page - 1) * size;
+  const start = (page – 1) * size;
   const end = start + size;
   return products.slice(start, end);
 }
 
-// Grouping - verbose reduce logic
+// Grouping – verbose reduce logic
 function groupByCategory(products: Product[]) {
   return products.reduce(
     (acc, product) => {
@@ -136,7 +131,7 @@ function groupByCategory(products: Product[]) {
   );
 }
 
-// Debounce - complex timing logic
+// Debounce – complex timing logic
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
@@ -151,19 +146,19 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...
 ```ts
 import { chunk, group, debounce, retry, pool } from '@vielzeug/toolkit';
 
-// Pagination - elegant and clear
+// Pagination – elegant and clear
 const page1 = chunk(products, 20)[0]; // First page of 20 items
 
-// Grouping - type-safe with full inference
+// Grouping – type-safe with full inference
 const byCategory = group(products, (p) => p.category);
-// Type: Record<string, Product[]> - automatically inferred!
+// Type: Record<string, Product[]> – automatically inferred!
 
-// Debounce - maintains original function signature
+// Debounce – maintains original function signature
 const searchProducts = debounce((query: string) => {
   console.log(`Searching for: ${query}`);
 }, 300);
 
-// Async utilities - retry API calls with exponential backoff
+// Async utilities – retry API calls with exponential backoff
 const data = await retry(() => fetch('/api/data').then((r) => r.json()), { times: 3, delay: 1000, backoff: 2 });
 
 // Rate limiting with promise pool
@@ -278,10 +273,10 @@ const processUsers = pipe(
 Toolkit is designed for **optimal tree-shaking**. Import only what you use:
 
 ```ts
-// ✅ Good - Only includes chunk function (~0.5KB gzipped)
+// ✅ Good – Only includes chunk function (~0.5KB gzipped)
 import { chunk } from '@vielzeug/toolkit';
 
-// ⚠️ Avoid - Imports entire library (~50KB gzipped)
+// ⚠️ Avoid – Imports entire library (~50KB gzipped)
 import * as toolkit from '@vielzeug/toolkit';
 ```
 

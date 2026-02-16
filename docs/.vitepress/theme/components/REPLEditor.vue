@@ -43,7 +43,10 @@
             </svg>
             <span>{{ isExecuting ? 'Running...' : 'Run' }}</span>
           </button>
-          <button @click="emit('toggle-expand')" class="btn-icon expand-btn" :title="isExpanded ? 'Collapse' : 'Expand'">
+          <button
+            @click="emit('toggle-expand')"
+            class="btn-icon expand-btn"
+            :title="isExpanded ? 'Collapse' : 'Expand'">
             <svg
               v-if="!isExpanded"
               xmlns="http://www.w3.org/2000/svg"
@@ -271,24 +274,33 @@ const examplesByCategory = computed(() => {
 // Watchers
 // ============================================================================
 
-watch(() => props.selectedExample, (newVal) => {
-  localSelectedExample.value = newVal;
-});
+watch(
+  () => props.selectedExample,
+  (newVal) => {
+    localSelectedExample.value = newVal;
+  },
+);
 
-watch(() => props.selectedLibrary, () => {
-  localSelectedExample.value = '';
-  if (editor) {
-    const savedCode = localStorage.getItem(`${props.storagePrefix}${props.selectedLibrary}`);
-    editor.setValue(savedCode || props.getDefaultCode(props.selectedLibrary));
-  }
-  handleClearOutput();
-});
+watch(
+  () => props.selectedLibrary,
+  () => {
+    localSelectedExample.value = '';
+    if (editor) {
+      const savedCode = localStorage.getItem(`${props.storagePrefix}${props.selectedLibrary}`);
+      editor.setValue(savedCode || props.getDefaultCode(props.selectedLibrary));
+    }
+    handleClearOutput();
+  },
+);
 
-watch(() => props.isDark, (newVal) => {
-  if (window.monaco && editor) {
-    monaco.editor.setTheme(newVal ? 'vs-dark' : 'vs');
-  }
-});
+watch(
+  () => props.isDark,
+  (newVal) => {
+    if (window.monaco && editor) {
+      monaco.editor.setTheme(newVal ? 'vs-dark' : 'vs');
+    }
+  },
+);
 
 // ============================================================================
 // Helper Functions
@@ -420,29 +432,23 @@ const handleRunCode = async () => {
 
     // Transform import statements to use global variables
     // Example: import { Deposit } from '@vielzeug/deposit' -> const { Deposit } = window.deposit || {}
-    code = code.replace(
-      /import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g,
-      (match, imports, libName) => {
-        // Clean up imports and create a destructuring assignment
-        const cleanImports = imports.trim();
-        return `const { ${cleanImports} } = window.${libName} || window || {}`;
-      }
-    );
+    code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, imports, libName) => {
+      // Clean up imports and create a destructuring assignment
+      const cleanImports = imports.trim();
+      return `const { ${cleanImports} } = window.${libName} || window || {}`;
+    });
 
     // Also handle default imports: import Lib from '@vielzeug/lib' -> const Lib = window.lib
-    code = code.replace(
-      /import\s+(\w+)\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g,
-      (match, defaultImport, libName) => {
-        return `const ${defaultImport} = window.${libName}`;
-      }
-    );
+    code = code.replace(/import\s+(\w+)\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, defaultImport, libName) => {
+      return `const ${defaultImport} = window.${libName}`;
+    });
 
     // Remove any remaining import statements that might not be @vielzeug
     code = code.replace(/import\s+.+\s+from\s+['"][^'"]+['"]\s*;?\s*/g, '');
 
     originalConsole.log('🔄 Transformed code:', code);
     originalConsole.log('🌍 Available globals:', {
-      [props.selectedLibrary]: window[props.selectedLibrary] ? '✅' : '❌'
+      [props.selectedLibrary]: window[props.selectedLibrary] ? '✅' : '❌',
     });
 
     // Create function with access to window globals
@@ -570,17 +576,21 @@ const initializeEditor = () => {
   // Listen for keydown events on the editor DOM node
   const editorDomNode = editor.getDomNode();
   if (editorDomNode) {
-    editorDomNode.addEventListener('keydown', (e: KeyboardEvent) => {
-      // Stop propagation for the "/" key to prevent VitePress command menu
-      if (e.key === '/' || e.code === 'Slash') {
-        e.stopPropagation();
-      }
-      // Also prevent other VitePress shortcuts when the editor is focused
-      // Ctrl/Cmd + K (command palette)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.stopPropagation();
-      }
-    }, true); // Use the capture phase to intercept before VitePress
+    editorDomNode.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        // Stop propagation for the "/" key to prevent VitePress command menu
+        if (e.key === '/' || e.code === 'Slash') {
+          e.stopPropagation();
+        }
+        // Also prevent other VitePress shortcuts when the editor is focused
+        // Ctrl/Cmd + K (command palette)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.stopPropagation();
+        }
+      },
+      true,
+    ); // Use the capture phase to intercept before VitePress
   }
 };
 
@@ -632,12 +642,7 @@ const insertTextAtCursor = (text: string) => {
   if (!position) return;
 
   // Create a range at the cursor position
-  const range = new monaco.Range(
-    position.lineNumber,
-    position.column,
-    position.lineNumber,
-    position.column,
-  );
+  const range = new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column);
 
   // Execute the edit
   editor.executeEdits('insert-text', [
@@ -1123,5 +1128,3 @@ defineExpose({
   }
 }
 </style>
-
-

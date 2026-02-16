@@ -15,8 +15,8 @@ function race<T>(promises: Promise<T> | Promise<T>[], minDelay: number): Promise
 
 ## Parameters
 
-- `promises` - Single promise or array of promises to race
-- `minDelay` - Minimum delay in milliseconds before resolving
+- `promises` – Single promise or array of promises to race
+- `minDelay` – Minimum delay in milliseconds before resolving
 
 ## Returns
 
@@ -73,5 +73,5 @@ async function saveData(data: any) {
 
 ## Related
 
-- [sleep](./sleep.md) - Simple async delay
-- [defer](./defer.md) - Manually controlled promises
+- [sleep](./sleep.md) – Simple async delay
+- [defer](./defer.md) – Manually controlled promises

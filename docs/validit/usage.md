@@ -63,10 +63,10 @@ const userSchema = v.object({
 ### Validating Data
 
 ```ts
-// Parse - throws on error
+// Parse – throws on error
 const data = schema.parse(input);
 
-// Safe parse - returns result
+// Safe parse – returns result
 const result = schema.safeParse(input);
 if (result.success) {
   console.log(result.data);
@@ -396,7 +396,7 @@ v.number().int().min(0).describe('age');
 
 ## Custom Refinements
 
-### refine() - Sync
+### refine() – Sync
 
 Add custom validation logic.
 
@@ -417,7 +417,7 @@ v.object({
 }).refine((data) => data.password === data.confirmPassword, 'Passwords must match');
 ```
 
-### refineAsync() - Async
+### refineAsync() – Async
 
 Add async validation (database checks, API calls).
 
@@ -593,7 +593,7 @@ type Data = Infer<typeof schema>;
 - Don't use `parse()` with async validators (use `parseAsync()`)
 - Don't create overly complex nested schemas
 - Don't forget to handle validation errors
-- Don't use `any` types - let inference work
+- Don't use `any` types – let inference work
 
 ## Next Steps
 
@@ -601,9 +601,9 @@ type Data = Infer<typeof schema>;
   <div class="custom-block tip">
     <p class="custom-block-title">💡 Continue Learning</p>
     <ul>
-      <li><a href="./api">API Reference</a> - Complete API documentation</li>
-      <li><a href="./examples">Examples</a> - Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> - Try it in your browser</li>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
     </ul>
   </div>
 </div>
