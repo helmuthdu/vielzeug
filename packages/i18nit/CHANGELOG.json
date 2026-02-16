@@ -2,6 +2,27 @@
   "name": "@vielzeug/i18nit",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/i18nit_v1.2.0",
+      "date": "Mon, 16 Feb 2026 21:17:52 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "update README",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2d0546a3da69f93e3f1a2b04940f732552710af3"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "support nested message objects and improve loader type",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "fb95890d78ccd7d21ab69ed23445a14d296adfba"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/i18nit_v1.1.4",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",
