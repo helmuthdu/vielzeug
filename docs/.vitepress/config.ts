@@ -7,15 +7,15 @@ import { getPackagesData } from './theme/utils/packageData';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  base: '/vielzeug',
+  base: '/',
   description: 'Documentation for the Vielzeug monorepo',
   head: [
     // Favicons
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/vielzeug/favicon/favicon.svg' }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/vielzeug/favicon/favicon-96x96.png' }],
-    ['link', { rel: 'icon', type: 'image/x-icon', href: '/vielzeug/favicon/favicon.ico' }],
-    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/vielzeug/favicon/apple-touch-icon.png' }],
-    ['link', { rel: 'manifest', href: '/vielzeug/favicon/site.webmanifest' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/favicon/favicon-96x96.png' }],
+    ['link', { rel: 'icon', type: 'image/x-icon', href: '/favicon/favicon.ico' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/favicon/apple-touch-icon.png' }],
+    ['link', { rel: 'manifest', href: '/favicon/site.webmanifest' }],
     // Theme and mobile app configuration
     ['meta', { content: '#f6ac2c', name: 'theme-color' }],
     ['meta', { content: 'yes', name: 'apple-mobile-web-app-capable' }],
@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   ignoreDeadLinks: true,
   sitemap: {
-    hostname: 'https://helmuthdu.github.io/vielzeug',
+    hostname: 'https://vielzeug.dev',
     transformItems: (items) => {
       return items.map((item) => {
         return {

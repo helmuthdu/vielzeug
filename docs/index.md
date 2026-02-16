@@ -18,40 +18,40 @@ hero:
 
 features:
   - title: '@vielzeug/craftit'
-    details: "<img src='/vielzeug/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state and automatic rendering."
+    details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state and automatic rendering."
     link: /craftit/
   - title: '@vielzeug/deposit'
-    details: "<img src='/vielzeug/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
+    details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
   - title: '@vielzeug/fetchit'
-    details: "<img src='/vielzeug/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
+    details: "<img src='/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
     link: /fetchit/
   - title: '@vielzeug/formit'
-    details: "<img src='/vielzeug/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
+    details: "<img src='/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
     link: /formit/
   - title: '@vielzeug/i18nit'
-    details: "<img src='/vielzeug/logo-i18nit.svg' class='logo-highlight-smaller' alt='i18nit Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and more."
+    details: "<img src='/logo-i18nit.svg' class='logo-highlight-smaller' alt='i18nit Logo' width='72'/>Lightweight, type-safe i18n with pluralization, async loading, and more."
     link: /i18nit/
   - title: '@vielzeug/logit'
-    details: "<img src='/vielzeug/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
+    details: "<img src='/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
     link: /logit/
   - title: '@vielzeug/permit'
-    details: "<img src='/vielzeug/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
+    details: "<img src='/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/
   - title: '@vielzeug/routeit'
-    details: "<img src='/vielzeug/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
+    details: "<img src='/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
     link: /routeit/
   - title: '@vielzeug/stateit'
-    details: "<img src='/vielzeug/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /stateit/
   - title: '@vielzeug/toolkit'
-    details: "<img src='/vielzeug/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
+    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
     link: /toolkit/
   - title: '@vielzeug/validit'
-    details: "<img src='/vielzeug/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
+    details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
   - title: '@vielzeug/wireit'
-    details: "<img src='/vielzeug/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
+    details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
     link: /wireit/
 ---
 
