@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/fetchit
 
-This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Feb 2026 11:16:45 GMT and should not be manually modified.
+
+## 1.1.7
+Mon, 16 Feb 2026 11:16:45 GMT
+
+### Patches
+
+- update HTTP client to support query and path parameters
 
 ## 1.1.6
 Sun, 15 Feb 2026 21:52:44 GMT

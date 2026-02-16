@@ -2,6 +2,27 @@
   "name": "@vielzeug/fetchit",
   "entries": [
     {
+      "version": "1.1.7",
+      "tag": "@vielzeug/fetchit_v1.1.7",
+      "date": "Mon, 16 Feb 2026 11:16:45 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "update HTTP client to support query and path parameters",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c3cdb051cec02f214e092cc5f59c4004217b5c14"
+          }
+        ],
+        "none": [
+          {
+            "comment": "update README",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2d0546a3da69f93e3f1a2b04940f732552710af3"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.6",
       "tag": "@vielzeug/fetchit_v1.1.6",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",
