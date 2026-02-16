@@ -58,7 +58,7 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 
 ### 🤔 Have a Question?
 
-- Check the [documentation](https://vielzeug.dev)
+- Check the [documentation](https://helmuthdu.github.io/vielzeug)
 - Search [existing discussions](https://github.com/helmuthdu/vielzeug/discussions)
 - Start a new discussion if your question hasn't been answered
 
@@ -424,7 +424,7 @@ PRs labeled `prerelease` are published as beta/next versions:
 
 - 💬 [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions) - Ask questions
 - 🐛 [GitHub Issues](https://github.com/helmuthdu/vielzeug/issues) - Report bugs
-- 📖 [Documentation](https://vielzeug.dev) - Read the docs
+- 📖 [Documentation](https://helmuthdu.github.io/vielzeug) - Read the docs
 
 ## Recognition
 

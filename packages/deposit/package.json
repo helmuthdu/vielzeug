@@ -27,8 +27,15 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@vielzeug/logit": "workspace:*",
     "@vielzeug/toolkit": "workspace:*"
+  },
+  "peerDependencies": {
+    "@vielzeug/logit": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/logit": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "~5.9.3",

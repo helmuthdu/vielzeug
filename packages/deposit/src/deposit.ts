@@ -4,10 +4,16 @@
    deposit - Lightweight client-side data storage
    ============================================ */
 
-import { Logit } from '@vielzeug/logit';
 import { arrange, group, max, min, type Predicate, search } from '@vielzeug/toolkit';
 
 /* -------------------- Core Types -------------------- */
+
+export type Logger = {
+  debug(...args: any[]): void;
+  error(...args: any[]): void;
+  info(...args: any[]): void;
+  warn(...args: any[]): void;
+};
 
 export type DepotDataRecord<T, K extends keyof T = keyof T> = {
   key: K;
@@ -70,6 +76,7 @@ type AdapterConfig<S extends DepositDataSchema> = {
   version: number;
   schema: S;
   migrationFn?: DepositMigrationFn<S>;
+  logger?: Logger;
 };
 
 /* -------------------- Schema Validation -------------------- */
@@ -129,13 +136,13 @@ export class Deposit<S extends DepositDataSchema> {
       return adapterOrConfig;
     }
 
-    const { type, dbName, version, schema, migrationFn } = adapterOrConfig;
+    const { type, dbName, version, schema, migrationFn, logger } = adapterOrConfig;
 
     switch (type) {
       case 'localStorage':
-        return new LocalStorageAdapter(dbName, version, schema);
+        return new LocalStorageAdapter(dbName, version, schema, logger);
       case 'indexedDB':
-        return new IndexedDBAdapter(dbName, version, schema, migrationFn);
+        return new IndexedDBAdapter(dbName, version, schema, migrationFn, logger);
       default:
         throw new Error(`Unknown adapter type: ${type}`);
     }
@@ -481,12 +488,14 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
   private readonly dbName: string;
   private readonly version: number;
   private schema: S;
+  private readonly logger: Logger;
 
-  constructor(dbName: string, version: number, schema: S) {
+  constructor(dbName: string, version: number, schema: S, logger?: Logger) {
     validateDepositSchema(schema);
     this.dbName = dbName;
     this.version = version;
     this.schema = schema;
+    this.logger = logger ?? console;
   }
 
   async get<K extends keyof S, T extends RecordType<S, K>>(
@@ -513,8 +522,7 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
       }
       return parsed as T;
     } catch (err) {
-      const logger = Logit.scope('Deposit');
-      logger.warn(`Removing corrupted entry for key: ${String(key)}`, err);
+      this.logger.warn(`Removing corrupted entry for key: ${String(key)}`, err);
       await this.delete(table, key);
       return defaultValue;
     }
@@ -548,8 +556,7 @@ export class LocalStorageAdapter<S extends DepositDataSchema> implements Deposit
         records.push(parsed);
       } catch (err) {
         // Delete corrupted entry that failed JSON parsing
-        const logger = Logit.scope('Deposit');
-        logger.warn(`Removing corrupted entry: ${storageKey}`, err);
+        this.logger.warn(`Removing corrupted entry: ${storageKey}`, err);
         localStorage.removeItem(storageKey);
       }
     }
@@ -612,13 +619,15 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
   private readonly schema: S;
   private readonly version: number;
   private readonly migrationFn?: DepositMigrationFn<S>;
+  private readonly logger: Logger;
 
-  constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>) {
+  constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>, logger?: Logger) {
     validateDepositSchema(schema);
     this.dbName = dbName;
     this.version = version;
     this.schema = schema;
     this.migrationFn = migrationFn;
+    this.logger = logger ?? console;
   }
 
   async connect(): Promise<void> {
@@ -733,6 +742,14 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
       let callbackError: Error | undefined;
 
       const ops = {
+        bulkPut: async <T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void> => {
+          const store = tx.objectStore(String(table));
+          await Promise.all(values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl)))));
+        },
+        clear: async <T extends K>(table: T): Promise<void> => {
+          const store = tx.objectStore(String(table));
+          await this.requestToPromise(store.clear());
+        },
         getAll: async <T extends K>(table: T): Promise<RecordType<S, T>[]> => {
           const store = tx.objectStore(String(table));
           const results = await this.requestToPromise(store.getAll());
@@ -740,14 +757,6 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
             if (!rec || typeof rec !== 'object') return false;
             return !isExpired(rec);
           }) as RecordType<S, T>[];
-        },
-        clear: async <T extends K>(table: T): Promise<void> => {
-          const store = tx.objectStore(String(table));
-          await this.requestToPromise(store.clear());
-        },
-        bulkPut: async <T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void> => {
-          const store = tx.objectStore(String(table));
-          await Promise.all(values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl)))));
         },
       };
 
@@ -798,14 +807,12 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
           const indexName = index as string;
 
           if (createdIndexes.has(indexName)) {
-            const logger = Logit.scope('Deposit');
-            logger.warn(`Duplicate index "${indexName}" in table "${name}" schema - skipping`);
+            this.logger.warn(`Duplicate index "${indexName}" in table "${name}" schema - skipping`);
             continue;
           }
 
           if (indexName === keyPath) {
-            const logger = Logit.scope('Deposit');
-            logger.warn(`Skipping index on key path "${indexName}" in table "${name}" - redundant`);
+            this.logger.warn(`Skipping index on key path "${indexName}" in table "${name}" - redundant`);
             continue;
           }
 
@@ -813,8 +820,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositSto
             store.createIndex(indexName, indexName);
             createdIndexes.add(indexName);
           } catch (err) {
-            const logger = Logit.scope('Deposit');
-            logger.error(`Failed to create index "${indexName}" in table "${name}"`, err);
+            this.logger.error(`Failed to create index "${indexName}" in table "${name}"`, err);
           }
         }
       }

@@ -1,8 +1,50 @@
 # @vielzeug/deposit
 
-Type-safe browser storage utility with a unified API for IndexedDB and LocalStorage. Build robust offline-first applications with minimal code and maximum flexibility.
+## What is Deposit?
 
-## Features
+**Deposit** is a type-safe browser storage utility that provides a unified API for IndexedDB and LocalStorage. Build robust offline-first applications with powerful querying, transactions, and schema migrations—all with minimal code and maximum flexibility.
+
+### The Problem
+
+Working with browser storage APIs is challenging:
+
+- **IndexedDB** is powerful but has a complex, callback-based API
+- **LocalStorage** is simple but limited to string key-value pairs
+- No built-in TypeScript support or type safety
+- No query capabilities beyond basic get/set
+- Manual JSON serialization and error handling
+- Schema migrations are manual and error-prone
+
+### The Solution
+
+Deposit provides a clean, type-safe abstraction over both storage APIs:
+
+```typescript
+import { Deposit, defineSchema } from '@vielzeug/deposit';
+
+// Define your schema
+const schema = defineSchema<{ users: User; posts: Post }>()({
+  users: { key: 'id', indexes: ['email', 'role'] },
+  posts: { key: 'id', indexes: ['userId', 'published'] },
+});
+
+// Create instance (works with both IndexedDB and LocalStorage!)
+const db = new Deposit({
+  type: 'indexedDB', // or 'localStorage'
+  dbName: 'my-app',
+  version: 1,
+  schema,
+});
+
+// Type-safe operations with powerful querying
+const admins = await db.query('users')
+  .where('role', '=', 'admin')
+  .orderBy('createdAt', 'desc')
+  .limit(10)
+  .toArray();
+```
+
+## ✨ Features
 
 - ✅ **Type-Safe** - Full TypeScript support with schema-based type inference
 - ✅ **Unified API** - Switch between IndexedDB and LocalStorage without changing code
@@ -15,7 +57,23 @@ Type-safe browser storage utility with a unified API for IndexedDB and LocalStor
 - ✅ **Lightweight** - 4.4 KB gzipped
 - ✅ **Zero Runtime Dependencies** - Only development dependencies for utilities
 
-## Installation
+## 🆚 Comparison
+
+| Feature              | Deposit        | Dexie.js    | LocalForage | Native IndexedDB |
+| -------------------- | -------------- | ----------- | ----------- | ---------------- |
+| TypeScript Support   | ✅ First-class | ✅ Good     | ⚠️ Limited  | ❌               |
+| Query Builder        | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
+| Migrations           | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
+| LocalStorage Support | ✅ Unified API | ❌          | ✅          | ❌               |
+| Bundle Size (gzip)   | **~4.5 KB**    | ~20KB       | ~8KB        | 0KB              |
+| TTL Support          | ✅ Native      | ❌          | ❌          | ❌               |
+| Transactions         | ✅ Atomic*     | ✅ Yes      | ❌          | ✅ Complex       |
+| Schema Validation    | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
+| Dependencies         | 1              | 0           | 0           | N/A              |
+
+\* Transactions are fully atomic for IndexedDB, optimistic for LocalStorage
+
+## 📦 Installation
 
 ```bash
 # pnpm
@@ -28,7 +86,7 @@ npm install @vielzeug/deposit
 yarn add @vielzeug/deposit
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Define Your Schema
 
@@ -125,7 +183,68 @@ await db.clear('users');
 const count = await db.count('users');
 ```
 
-## Advanced Features
+## 📚 Core Concepts
+
+### Schema Definition
+
+Deposit uses a type-safe schema definition to validate your data structure:
+
+```typescript
+const schema = defineSchema<{ users: User; posts: Post }>()({
+  users: {
+    key: 'id',           // Primary key field
+    indexes: ['email'],  // Optional indexed fields for fast lookups
+  },
+  posts: {
+    key: 'id',
+    indexes: ['userId', 'createdAt'],
+  },
+});
+```
+
+### Adapters
+
+Deposit supports two storage adapters:
+
+- **IndexedDBAdapter**: Full-featured with transactions, migrations, and large storage capacity
+- **LocalStorageAdapter**: Simple key-value storage with 5-10MB limit
+
+Switch between them without changing your code!
+
+### Type Safety
+
+All operations are fully type-safe based on your schema:
+
+```typescript
+// ✅ TypeScript knows the shape of user
+const user = await db.get('users', 'u1');
+user?.name; // string
+user?.age;  // number
+
+// ❌ TypeScript error - 'posts' table doesn't have 'email' field
+const post = await db.get('posts', 'p1');
+post?.email; // Error!
+```
+
+## 🎯 API Reference
+
+See the [full API documentation](https://helmuthdu.github.io/vielzeug/deposit/api) for complete details.
+
+### Core Methods
+
+- `get(table, key, defaultValue?)` - Get a single record
+- `getAll(table)` - Get all records from a table
+- `put(table, value, ttl?)` - Create or update a record
+- `delete(table, key)` - Delete a record
+- `clear(table)` - Clear all records from a table
+- `count(table)` - Count records in a table
+- `bulkPut(table, values, ttl?)` - Bulk insert/update
+- `bulkDelete(table, keys)` - Bulk delete
+- `query(table)` - Create a query builder
+- `transaction(tables, fn, ttl?)` - Atomic transaction
+- `patch(table, operations)` - Batch operations
+
+## 🔥 Advanced Features
 
 ### Query Builder
 
@@ -403,19 +522,6 @@ const grouped = await db.query('users').toGrouped('role');
 await db.get('invalid', 'key');
 ```
 
-## Comparison with Alternatives
-
-| Feature            | Deposit        | Dexie.js    | LocalForage | Native IndexedDB |
-| ------------------ | -------------- | ----------- | ----------- | ---------------- |
-| TypeScript         | ✅ First-class | ✅ Good     | ⚠️ Limited  | ❌               |
-| Query Builder      | ✅ Advanced    | ✅ Good     | ❌          | ❌               |
-| Migrations         | ✅ Built-in    | ✅ Advanced | ❌          | ⚠️ Manual        |
-| LocalStorage       | ✅ Unified API | ❌          | ✅          | ❌               |
-| Bundle Size        | **~4 KB**      | ~20 KB      | ~8 KB       | 0 KB             |
-| TTL Support        | ✅ Native      | ❌          | ❌          | ❌               |
-| Schema Validation  | ✅ Built-in    | ⚠️ Runtime  | ❌          | ❌               |
-| Type-safe Grouping | ✅ Yes         | ❌          | ❌          | ❌               |
-
 ## Best Practices
 
 1. **Use IndexedDB for production** - Better performance and larger storage
@@ -530,18 +636,25 @@ if (!session) {
 - Safari 10+
 - All modern browsers with IndexedDB and LocalStorage support
 
-## License
+## 📖 Documentation
+
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/deposit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/deposit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/deposit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/deposit/examples)
+
+## 📄 License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
 
-## Links
+## 🔗 Links
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://vielzeug.dev/deposit)
+- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
 - [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 
