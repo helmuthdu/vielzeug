@@ -2,6 +2,27 @@
   "name": "@vielzeug/deposit",
   "entries": [
     {
+      "version": "1.1.6",
+      "tag": "@vielzeug/deposit_v1.1.6",
+      "date": "Mon, 16 Feb 2026 10:16:12 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "simplified schema definition",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "d20673b483418d8839e29d03fb8bb41a2965f6b6"
+          }
+        ],
+        "none": [
+          {
+            "comment": "update README",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2d0546a3da69f93e3f1a2b04940f732552710af3"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.5",
       "tag": "@vielzeug/deposit_v1.1.5",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",

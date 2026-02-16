@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/deposit
 
-This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Feb 2026 10:16:12 GMT and should not be manually modified.
+
+## 1.1.6
+Mon, 16 Feb 2026 10:16:12 GMT
+
+### Patches
+
+- simplified schema definition
 
 ## 1.1.5
 Sun, 15 Feb 2026 21:52:44 GMT
