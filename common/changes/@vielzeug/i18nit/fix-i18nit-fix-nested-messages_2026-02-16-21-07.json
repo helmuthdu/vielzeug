@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "support nested message objects and improve loader type",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}

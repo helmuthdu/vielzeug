@@ -141,6 +141,52 @@ const i18n = createI18n({
 i18n.t('user.profile.title'); // "Profile"
 ```
 
+### Nested Message Objects
+
+You can organize messages using nested objects for better structure:
+
+```typescript
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      // Flat structure
+      welcome: 'Welcome!',
+      
+      // Nested structure - access with dot notation
+      user: {
+        greeting: 'Hello, {name}!',
+        profile: {
+          title: 'User Profile',
+          settings: 'Profile Settings',
+        },
+      },
+      
+      // Deep nesting
+      app: {
+        navigation: {
+          menu: {
+            home: 'Home',
+            about: 'About',
+          },
+        },
+      },
+    },
+  },
+});
+
+// Access nested messages with dot notation
+i18n.t('welcome');                    // "Welcome!"
+i18n.t('user.greeting', { name: 'Alice' }); // "Hello, Alice!"
+i18n.t('user.profile.title');         // "User Profile"
+i18n.t('app.navigation.menu.home');   // "Home"
+
+// Use with namespaces for cleaner code
+const userNs = i18n.namespace('user');
+userNs.t('greeting', { name: 'Bob' }); // "Hello, Bob!"
+userNs.t('profile.title');             // "User Profile"
+```
+
 ### Variable Interpolation
 
 #### Basic Interpolation
@@ -335,19 +381,38 @@ i18n.t('welcome'); // "Welcome!" (en fallback)
 
 ### Async Locale Loading
 
-Load translations on-demand for better performance:
+Load translations on-demand for better performance. Loaders receive the locale as a parameter, allowing you to reuse a single function:
 
 ```typescript
+// Define a reusable loader function
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
+  return response.json();
+};
+
 const i18n = createI18n({
   locale: 'en',
   loaders: {
-    fr: async () => {
-      const response = await fetch('/locales/fr.json');
-      return response.json();
-    },
-    de: async () => import('./locales/de.json'),
+    fr: loadLocale,  // Loader receives 'fr' as parameter
+    de: loadLocale,  // Loader receives 'de' as parameter
+    es: loadLocale,  // Loader receives 'es' as parameter
   },
 });
+
+// Load a locale before using it
+await i18n.load('fr');
+i18n.setLocale('fr');
+i18n.t('greeting'); // Uses loaded French messages
+
+// Or use dynamic imports
+const importLoader = async (locale: string) => {
+  const module = await import(`./locales/${locale}.json`);
+  return module.default;
+};
+
+i18n.register('it', importLoader);
+await i18n.load('it');
+```
 
 // Preload at app startup
 await i18n.loadAll(['en', 'fr', 'de']);

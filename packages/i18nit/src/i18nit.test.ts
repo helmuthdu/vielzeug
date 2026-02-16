@@ -370,7 +370,6 @@ describe('I18nit', () => {
     });
   });
 
-
   describe('Locale Management', () => {
     test('gets and sets locale with change detection', () => {
       const i18n = createI18n({ locale: 'en' });
@@ -426,8 +425,9 @@ describe('I18nit', () => {
       let loadCount = 0;
       const i18n = createI18n({
         loaders: {
-          es: async () => {
+          es: async (locale) => {
             loadCount++;
+            expect(locale).toBe('es');
             await new Promise((resolve) => setTimeout(resolve, 10));
             return { hello: 'Hola' };
           },
@@ -448,8 +448,9 @@ describe('I18nit', () => {
       let called = 0;
       const i18n2 = createI18n({
         loaders: {
-          es: async () => {
+          es: async (locale) => {
             called++;
+            expect(locale).toBe('es');
             throw new Error('failed load');
           },
         },
@@ -463,7 +464,10 @@ describe('I18nit', () => {
     test('load() and hasAsync() load locale before translation', async () => {
       const i18n = createI18n({
         loaders: {
-          es: async () => ({ greeting: 'Hola, {name}!' }),
+          es: async (locale) => {
+            expect(locale).toBe('es');
+            return { greeting: 'Hola, {name}!' };
+          },
         },
       });
 
@@ -477,7 +481,8 @@ describe('I18nit', () => {
     test('load() handles loader failures gracefully', async () => {
       const i18n = createI18n({
         loaders: {
-          es: async () => {
+          es: async (locale) => {
+            expect(locale).toBe('es');
             throw new Error('failed');
           },
         },
@@ -513,7 +518,10 @@ describe('I18nit', () => {
     test('namespaced translation works with loaders', async () => {
       const i18n = createI18n({
         loaders: {
-          es: async () => ({ 'app.greeting': 'Hola' }),
+          es: async (locale) => {
+            expect(locale).toBe('es');
+            return { 'app.greeting': 'Hola' };
+          },
         },
       });
 
@@ -652,6 +660,96 @@ describe('I18nit', () => {
 
       expect(i18n.t('empty')).toBe('');
       expect(i18n.t('special-key_123')).toBe('value');
+    });
+
+    test('handles nested object structures in messages', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: {
+            nested: {
+              test: 'Nested Hello World',
+            },
+            test: 'Hello World',
+          },
+        },
+      });
+
+      // Access flat key
+      expect(i18n.t('test')).toBe('Hello World');
+
+      // Access nested key with dot notation
+      expect(i18n.t('nested.test')).toBe('Nested Hello World');
+    });
+
+    test('handles deeply nested object structures', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: {
+            app: {
+              admin: {
+                dashboard: 'Admin Dashboard',
+              },
+              user: {
+                profile: {
+                  greeting: 'Welcome, {name}!',
+                  settings: 'User Settings',
+                },
+              },
+            },
+            simple: 'Simple message',
+          },
+        },
+      });
+
+      // Access simple key
+      expect(i18n.t('simple')).toBe('Simple message');
+
+      // Access nested keys at different levels
+      expect(i18n.t('app.admin.dashboard')).toBe('Admin Dashboard');
+      expect(i18n.t('app.user.profile.settings')).toBe('User Settings');
+      expect(i18n.t('app.user.profile.greeting', { name: 'Alice' })).toBe('Welcome, Alice!');
+    });
+
+    test('handles nested objects with namespace', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: {
+            user: {
+              greeting: 'Hello, user!',
+              profile: {
+                description: 'Your profile page',
+                title: 'Profile',
+              },
+            },
+          },
+        },
+      });
+
+      const userNs = i18n.namespace('user');
+
+      expect(userNs.t('greeting')).toBe('Hello, user!');
+      expect(userNs.t('profile.title')).toBe('Profile');
+      expect(userNs.t('profile.description')).toBe('Your profile page');
+    });
+
+    test('handles missing keys in nested structures', () => {
+      const i18n = createI18n({
+        locale: 'en',
+        messages: {
+          en: {
+            nested: {
+              exists: 'This exists',
+            },
+          },
+        },
+      });
+
+      // Missing nested key returns the key
+      expect(i18n.t('nested.missing')).toBe('nested.missing');
+      expect(i18n.t('nonexistent.deep.key')).toBe('nonexistent.deep.key');
     });
   });
 });

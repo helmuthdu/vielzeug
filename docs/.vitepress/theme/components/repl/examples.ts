@@ -1253,47 +1253,48 @@ console.log(i18n.t('or', { flavors: ['vainilla', 'chocolate'] }))`,
     'async-loading': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
+// Reusable loader function that receives locale as parameter
+const loadLocale = async (locale: string) => {
+  console.log(\`Loading locale: \${locale}\`)
+  // Simulate loading translations from API
+  await new Promise(r => setTimeout(r, 500))
+  
+  const translations: Record<string, any> = {
+    es: { greeting: 'Hola', farewell: 'Adiós' },
+    fr: { greeting: 'Bonjour', farewell: 'Au revoir' },
+    de: { greeting: 'Hallo', farewell: 'Auf Wiedersehen' }
+  }
+  
+  return translations[locale]
+}
+
 const i18n = createI18n({
   locale: 'en',
   messages: {
-    en: { greeting: 'Hello' }
+    en: { greeting: 'Hello', farewell: 'Goodbye' }
   },
   loaders: {
-    es: async () => {
-      // Simulate loading translations from API
-      await new Promise(r => setTimeout(r, 500))
-      return {
-        greeting: 'Hola',
-        farewell: 'Adiós'
-      }
-    },
-    fr: async () => {
-      await new Promise(r => setTimeout(r, 500))
-      return {
-        greeting: 'Bonjour',
-        farewell: 'Au revoir'
-      }
-    }
+    es: loadLocale,  // Receives 'es' as parameter
+    fr: loadLocale,  // Receives 'fr' as parameter
+    de: loadLocale   // Receives 'de' as parameter
   }
 })
 
 console.log('Current:', i18n.t('greeting'))
 
-// Method 1: Load individual locales
+// Load Spanish
 console.log('\\nLoading Spanish...')
 await i18n.load('es')
 i18n.setLocale('es')
 console.log('Spanish:', i18n.t('greeting'))
 console.log('Spanish farewell:', i18n.t('farewell'))
 
-// Method 2: Batch preload multiple locales (recommended for app startup)
-console.log('\\nBatch loading all locales...')
-await i18n.loadAll(['en', 'es', 'fr'])
-console.log('All locales loaded!')
-
-// Now use sync t() with any locale
-i18n.setLocale('fr')
-console.log('French:', i18n.t('greeting'))`,
+// Dynamically register and load German
+console.log('\\nDynamically registering German...')
+i18n.register('de', loadLocale)
+await i18n.load('de')
+i18n.setLocale('de')
+console.log('German:', i18n.t('greeting'))`,
       name: 'Async Locale Loading',
     },
     'basic-setup': {
@@ -1324,6 +1325,79 @@ console.log('ES:', i18n.t('hello'))
 
 console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
       name: 'Basic Setup - Initialize i18n',
+    },
+    'nested-objects': {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      // Flat key
+      welcome: 'Welcome!',
+      
+      // Nested objects for better organization
+      user: {
+        greeting: 'Hello, {name}!',
+        profile: {
+          title: 'User Profile',
+          settings: 'Profile Settings',
+          bio: 'Biography'
+        }
+      },
+      
+      // Deep nesting
+      app: {
+        navigation: {
+          menu: {
+            home: 'Home',
+            about: 'About Us',
+            contact: 'Contact'
+          }
+        }
+      }
+    },
+    es: {
+      welcome: '¡Bienvenido!',
+      user: {
+        greeting: '¡Hola, {name}!',
+        profile: {
+          title: 'Perfil de Usuario',
+          settings: 'Configuración del Perfil',
+          bio: 'Biografía'
+        }
+      },
+      app: {
+        navigation: {
+          menu: {
+            home: 'Inicio',
+            about: 'Acerca de',
+            contact: 'Contacto'
+          }
+        }
+      }
+    }
+  }
+})
+
+// Access with dot notation
+console.log('Flat:', i18n.t('welcome'))
+console.log('Nested:', i18n.t('user.greeting', { name: 'Alice' }))
+console.log('Deep nested:', i18n.t('user.profile.title'))
+console.log('Very deep:', i18n.t('app.navigation.menu.home'))
+
+// Use with namespaces for cleaner code
+const userNs = i18n.namespace('user')
+console.log('\\nWith namespace:')
+console.log(userNs.t('greeting', { name: 'Bob' }))
+console.log(userNs.t('profile.settings'))
+
+// Switch locale
+i18n.setLocale('es')
+console.log('\\nSpanish:')
+console.log(i18n.t('user.profile.title'))
+console.log(i18n.t('app.navigation.menu.home'))`,
+      name: 'Nested Message Objects',
     },
     'formatting-helpers': {
       code: `import { createI18n } from '@vielzeug/i18nit'
@@ -1413,19 +1487,35 @@ console.log(i18n.t('cats', { count: 3 }))`,
     'preload-pattern': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
-// App initialization - preload all locales at startup
+// Reusable loader function
+const loadTranslations = async (locale: string) => {
+  // Simulate API call
+  await new Promise(r => setTimeout(r, 300))
+  const translations: Record<string, any> = {
+    en: { greeting: 'Hello', welcome: 'Welcome!' },
+    es: { greeting: 'Hola', welcome: '¡Bienvenido!' },
+    fr: { greeting: 'Bonjour', welcome: 'Bienvenue!' }
+  }
+  return translations[locale]
+}
+
+// App initialization - configure loaders
 const i18n = createI18n({
   locale: 'en',
   loaders: {
-    en: async () => ({ greeting: 'Hello', welcome: 'Welcome!' }),
-    es: async () => ({ greeting: 'Hola', welcome: '¡Bienvenido!' }),
-    fr: async () => ({ greeting: 'Bonjour', welcome: 'Bienvenue!' })
+    en: loadTranslations,
+    es: loadTranslations,
+    fr: loadTranslations
   }
 })
 
-// Preload all locales (recommended for app startup)
-console.log('Preloading all locales...')
-await i18n.loadAll(['en', 'es', 'fr'])
+// Preload all locales at app startup
+console.log('Preloading locales...')
+await Promise.all([
+  i18n.load('en'),
+  i18n.load('es'),
+  i18n.load('fr')
+])
 console.log('✓ All locales loaded!\\n')
 
 // Now use sync t() everywhere - no await needed!

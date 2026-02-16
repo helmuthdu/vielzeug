@@ -97,13 +97,14 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ## 🚀 Key Features
 
-- **Async Loading**: Lazy-load translations with [automatic caching and deduplication](./usage.md#async-loading).
+- **Async Loading**: Lazy-load translations with [automatic caching and deduplication](./usage.md#async-loading). Loaders receive locale as parameter for reusable functions.
 - **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS.
 - **HTML Escaping**: Built-in XSS protection with automatic or per-translation escaping.
 - **Lightweight & Fast**: <PackageInfo package="i18nit" type="dependencies" /> dependencies and only **<PackageInfo package="i18nit" type="size" /> gzipped**.
 - **Loader Error Logging**: Failed locale loads are logged for visibility while maintaining a graceful fallback.
 - **Locale Fallbacks**: Automatic [fallback chain](./usage.md#fallback-translations) (e.g., de-CH → de → en).
 - **Namespaced Keys**: Organize translations by [feature or module](./usage.md#namespaces).
+- **Nested Message Objects**: Organize messages with [nested objects](./usage.md#nested-keys--objects) or flat keys with dot notation.
 - **Path Interpolation**: Dot notation and bracket notation for [nested data](./usage.md#variable-interpolation).
 - **Reactive Subscriptions**: Subscribe to [locale changes](./usage.md#subscriptions) for UI updates.
 - **Smart Array Handling**: Auto-join with locale-aware separators via [Intl.ListFormat](./usage.md#array-variables).
@@ -238,27 +239,67 @@ Array formatting uses **Intl.ListFormat API** for automatic support of 100+ lang
 
 ### Async Translation Loading
 
+Loaders receive the locale as a parameter, allowing you to write reusable functions:
+
 ```ts
+// Define a reusable loader function
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
+  return response.json();
+};
+
 const i18n = createI18n({
   locale: 'en',
   loaders: {
-    es: async () => {
-      const response = await fetch('/locales/es.json');
-      return response.json();
-    },
-    fr: async () => {
-      const response = await fetch('/locales/fr.json');
-      return response.json();
+    es: loadLocale,  // Receives 'es' as parameter
+    fr: loadLocale,  // Receives 'fr' as parameter
+    de: loadLocale,  // Receives 'de' as parameter
+  },
+});
+
+// Load a locale before using it
+await i18n.load('es');
+i18n.setLocale('es');
+i18n.t('greeting'); // Uses loaded Spanish messages
+
+// Or register dynamically
+i18n.register('it', loadLocale);
+await i18n.load('it');
+```
+
+### Nested Message Objects
+
+Organize your translations with nested objects or flat keys:
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      // Flat key
+      welcome: 'Welcome!',
+      
+      // Nested objects
+      user: {
+        greeting: 'Hello, {name}!',
+        profile: {
+          title: 'User Profile',
+          settings: 'Profile Settings',
+        },
+      },
     },
   },
 });
 
-// Automatically loads and translates
-// Preload locales at app startup
-await i18n.loadAll(['en', 'fr', 'es']);
+// Access with dot notation
+i18n.t('welcome');                    // "Welcome!"
+i18n.t('user.greeting', { name: 'Alice' }); // "Hello, Alice!"
+i18n.t('user.profile.title');         // "User Profile"
 
-// Or load individually
-await i18n.load('es');
+// Use with namespaces
+const userNs = i18n.namespace('user');
+userNs.t('greeting', { name: 'Bob' }); // "Hello, Bob!"
+```
 i18n.setLocale('es');
 i18n.t('welcome'); // Now uses Spanish
 
