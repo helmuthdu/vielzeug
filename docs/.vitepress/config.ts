@@ -1,8 +1,8 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'vitepress';
-import { getPackagesData } from './theme/utils/packageData';
 import type { ThemeConfig } from './theme/types';
+import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -10,7 +10,14 @@ export default defineConfig({
   base: '/vielzeug',
   description: 'Documentation for the Vielzeug monorepo',
   head: [
-    ['meta', { content: '#008dfc', name: 'theme-color' }],
+    // Favicons
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/vielzeug/favicon/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/vielzeug/favicon/favicon-96x96.png' }],
+    ['link', { rel: 'icon', type: 'image/x-icon', href: '/vielzeug/favicon/favicon.ico' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/vielzeug/favicon/apple-touch-icon.png' }],
+    ['link', { rel: 'manifest', href: '/vielzeug/favicon/site.webmanifest' }],
+    // Theme and mobile app configuration
+    ['meta', { content: '#f6ac2c', name: 'theme-color' }],
     ['meta', { content: 'yes', name: 'apple-mobile-web-app-capable' }],
     ['meta', { content: 'black', name: 'apple-mobile-web-app-status-bar-style' }],
   ],
@@ -27,7 +34,6 @@ export default defineConfig({
     },
   },
   themeConfig: {
-    packages: getPackagesData(),
     logo: '/logo-main.svg',
     nav: [
       { link: '/guide/', text: 'Guide' },
@@ -70,10 +76,35 @@ export default defineConfig({
       },
       { link: '/repl', text: 'REPL' },
     ],
+    packages: getPackagesData(),
     search: {
       provider: 'local',
     },
     sidebar: {
+      '/craftit/': [
+        { link: '/craftit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/craftit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/craftit/usage#reactive-state', text: 'Reactive State' },
+            { link: '/craftit/usage#event-handling', text: 'Event Handling' },
+            { link: '/craftit/usage#lifecycle-hooks', text: 'Lifecycle' },
+            { link: '/craftit/usage#form-associated-elements', text: 'Forms' },
+          ],
+          link: '/craftit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/craftit/api#core-functions', text: 'Core Functions' },
+            { link: '/craftit/api#web-component-instance', text: 'Component API' },
+            { link: '/craftit/api#type-definitions', text: 'Types' },
+          ],
+          link: '/craftit/api',
+          text: 'API Reference',
+        },
+        { link: '/craftit/examples', text: 'Examples' },
+      ],
       '/deposit/': [
         { link: '/deposit/', text: 'Overview' },
         {
@@ -118,30 +149,6 @@ export default defineConfig({
           text: 'API Reference',
         },
         { link: '/fetchit/examples', text: 'Examples' },
-      ],
-      '/craftit/': [
-        { link: '/craftit/', text: 'Overview' },
-        {
-          items: [
-            { link: '/craftit/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/craftit/usage#reactive-state', text: 'Reactive State' },
-            { link: '/craftit/usage#event-handling', text: 'Event Handling' },
-            { link: '/craftit/usage#lifecycle-hooks', text: 'Lifecycle' },
-            { link: '/craftit/usage#form-associated-elements', text: 'Forms' },
-          ],
-          link: '/craftit/usage',
-          text: 'Usage Guide',
-        },
-        {
-          items: [
-            { link: '/craftit/api#core-functions', text: 'Core Functions' },
-            { link: '/craftit/api#web-component-instance', text: 'Component API' },
-            { link: '/craftit/api#type-definitions', text: 'Types' },
-          ],
-          link: '/craftit/api',
-          text: 'API Reference',
-        },
-        { link: '/craftit/examples', text: 'Examples' },
       ],
       '/formit/': [
         { link: '/formit/', text: 'Overview' },
@@ -549,8 +556,8 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
         '@vielzeug/craftit': resolve(__dirname, '../../packages/craftit/src'),
+        '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
         '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
         '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
         '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),

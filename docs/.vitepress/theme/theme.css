@@ -232,12 +232,6 @@
   margin: 0 !important;
 }
 
-.badges {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-
 .logo-highlight {
   background: var(--vp-c-bg-alt);
   border-radius: 1rem;
