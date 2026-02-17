@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/snapit",
+      "comment": "renamed stateit to snapit",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/snapit"
+}
