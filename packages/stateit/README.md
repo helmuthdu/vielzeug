@@ -105,7 +105,7 @@ await counter.set(async (state) => {
 });
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Store Creation
 
@@ -630,11 +630,6 @@ Creates a new store instance.
 
 - `createTestStore<T>(baseStore?: Store<T>, patch?: Partial<T>)` – Create test store
 - `withMock<T, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>` – Temporary state override
-
-## Bundle Size
-
-- **Minified**: ~7.4 KB
-- **Gzipped**: ~2.4 KB
 
 ## TypeScript Support
 

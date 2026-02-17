@@ -121,7 +121,7 @@ function LoginForm() {
 }
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Form State
 

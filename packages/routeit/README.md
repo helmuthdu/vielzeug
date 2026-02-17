@@ -100,7 +100,7 @@ router
 router.navigate('/users/123');
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Router Creation
 
@@ -656,12 +656,6 @@ router.get('/about', () => {
 router.navigate('/contact');
 // Navigates to: https://example.com/my-app/contact
 ```
-
-## Bundle Size
-
-- **Raw**: ~9.9 KB
-- **Minified**: ~5.7 KB  
-- **Gzipped**: ~3.1 KB (ESM) / ~2.1 KB (CJS)
 
 ## TypeScript Support
 

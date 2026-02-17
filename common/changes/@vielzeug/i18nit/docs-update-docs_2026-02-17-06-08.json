@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "update README",
+      "type": "none"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}

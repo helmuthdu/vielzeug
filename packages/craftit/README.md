@@ -207,7 +207,7 @@ defineElement('custom-input', {
 // </form>
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Reactive State
 

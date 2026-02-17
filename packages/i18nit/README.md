@@ -121,7 +121,7 @@ i18n.setLocale('es');
 i18n.t('greeting', { name: 'Mundo' }); // "¡Hola, Mundo!"
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Translation Keys
 
