@@ -2225,12 +2225,12 @@ console.log('User posts URL:', userPostsUrl)`,
       name: 'URL Building - Dynamic URLs',
     },
   },
-  stateit: {
+  snapit: {
     'basic-state': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
 // Create a simple counter state
-const counter = createState({ count: 0, name: 'Counter' })
+const counter = createSnapshot({ count: 0, name: 'Counter' })
 
 // Subscribe to changes
 counter.subscribe((current, prev) => {
@@ -2251,9 +2251,9 @@ console.log('After reset:', counter.get())`,
       name: 'Basic State - Counter',
     },
     'selective-subscription': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const user = createState({
+const user = createSnapshot({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com'
@@ -2283,9 +2283,9 @@ user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
       name: 'Selective Subscriptions',
     },
     'get-with-selector': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const user = createState({
+const user = createSnapshot({
   firstName: 'Alice',
   lastName: 'Johnson',
   age: 30,
@@ -2316,9 +2316,9 @@ console.log('Summary:', summary)`,
       name: 'Get with Selector',
     },
     'async-updates': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const data = createState({
+const data = createSnapshot({
   items: null,
   loading: false,
   error: null
@@ -2357,9 +2357,9 @@ await fetchItems()`,
       name: 'Async State Updates',
     },
     'computed-values': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const cart = createState({
+const cart = createSnapshot({
   items: [
     { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
     { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
@@ -2397,9 +2397,9 @@ cart.set({ taxRate: 0.15 })`,
       name: 'Computed Values',
     },
     'scoped-states': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const app = createState({
+const app = createSnapshot({
   theme: 'light',
   language: 'en',
   user: 'Alice'
@@ -2434,9 +2434,9 @@ console.log('Result:', result)`,
       name: 'Scoped States',
     },
     'custom-equality': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const state = createState({
+const state = createSnapshot({
   items: [1, 2, 3],
   metadata: { updated: Date.now() }
 })
@@ -2465,9 +2465,9 @@ state.set({ metadata: { updated: Date.now() } })`,
       name: 'Custom Equality Functions',
     },
     'todo-list': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const todos = createState({
+const todos = createSnapshot({
   items: [],
   filter: 'all' // 'all' | 'active' | 'completed'
 })
@@ -2513,9 +2513,9 @@ todos.set({ filter: 'completed' })`,
       name: 'Todo List Example',
     },
     'computed-values': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const cart = createState({
+const cart = createSnapshot({
   items: [
     { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
     { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
@@ -2549,9 +2549,9 @@ console.log('\\nNew Total:', total.get().toFixed(2))`,
       name: 'Computed Values',
     },
     'transactions': {
-      code: `import { createState } from '@vielzeug/stateit'
+      code: `import { createSnapshot } from '@vielzeug/snapit'
 
-const user = createState({
+const user = createSnapshot({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com'

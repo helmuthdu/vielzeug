@@ -1,4 +1,4 @@
-# Change Log - @vielzeug/stateit
+# Change Log - @vielzeug/snapit
 
 This log was last generated on Tue, 17 Feb 2026 10:54:37 GMT and should not be manually modified.
 
@@ -21,5 +21,5 @@ Thu, 12 Feb 2026 21:32:58 GMT
 
 ### Patches
 
-- new stateit lib
+- new snapit lib
 

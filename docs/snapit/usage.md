@@ -1,6 +1,6 @@
-# Stateit Usage Guide
+# Snapit Usage Guide
 
-Complete guide to using stateit in your projects.
+Complete guide to using snapit in your projects.
 
 ::: tip 💡 API Reference
 This guide covers usage patterns and examples. For complete type definitions, see [API Reference](./api.md).
@@ -15,15 +15,15 @@ This guide covers usage patterns and examples. For complete type definitions, se
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/stateit
+pnpm add @vielzeug/snapit
 ```
 
 ```sh [npm]
-npm install @vielzeug/stateit
+npm install @vielzeug/snapit
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/stateit
+yarn add @vielzeug/snapit
 ```
 
 :::
@@ -31,11 +31,11 @@ yarn add @vielzeug/stateit
 ## Import
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 // Optional: Import types and utilities
-import type { State, StateOptions, Listener, Selector } from '@vielzeug/stateit';
-import { shallowEqual, shallowMerge } from '@vielzeug/stateit';
+import type { State, StateOptions, Listener, Selector } from '@vielzeug/snapit';
+import { shallowEqual, shallowMerge } from '@vielzeug/snapit';
 ```
 
 ## State Creation
@@ -43,9 +43,9 @@ import { shallowEqual, shallowMerge } from '@vielzeug/stateit';
 ### Basic State
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 console.log(counterState.get()); // { count: 0 }
 ```
@@ -55,7 +55,7 @@ console.log(counterState.get()); // { count: 0 }
 Add a name for debugging purposes:
 
 ```ts
-const userState = createState({ name: 'Alice', age: 30 }, { name: 'userState' });
+const userState = createSnapshot({ name: 'Alice', age: 30 }, { name: 'userState' });
 
 // Useful in DevTools or debugging
 ```
@@ -65,7 +65,7 @@ const userState = createState({ name: 'Alice', age: 30 }, { name: 'userState' })
 Control when updates trigger notifications:
 
 ```ts
-const todoState = createState(
+const todoState = createSnapshot(
   { todos: [], filter: 'all' },
   {
     name: 'todoState',
@@ -85,7 +85,7 @@ todoState.set({ todos: todoState.get().todos }); // No notification
 Full type inference:
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   count: 0,
   user: { name: 'Alice', age: 30 },
   items: ['a', 'b', 'c'],
@@ -108,7 +108,7 @@ const userName: string = state.get().user.name;
 ### Get Current State
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 // Get full state
 const current = state.get();
@@ -124,7 +124,7 @@ console.log(current.name); // "Alice"
 Read a derived or selected value without subscribing:
 
 ```ts
-const userState = createState({
+const userState = createSnapshot({
   firstName: 'Alice',
   lastName: 'Johnson',
   age: 30,
@@ -159,7 +159,7 @@ console.log(summary);
 Shallow merge a partial object:
 
 ```ts
-const state = createState({ count: 0, name: 'Alice', age: 30 });
+const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
 
 // Merge partial update
 state.set({ count: 1 });
@@ -175,7 +175,7 @@ console.log(state.get()); // { count: 2, name: 'Alice', age: 31 }
 Update based on current state:
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 // Increment based on current value
 state.set((current) => ({ count: current.count + 1 }));
@@ -194,7 +194,7 @@ console.log(state.get().count); // 2
 Handle async state updates:
 
 ```ts
-const dataState = createState({
+const dataState = createSnapshot({
   data: null,
   loading: false,
   error: null,
@@ -215,7 +215,7 @@ await dataState.set(async (current) => {
 ### Reset to Initial State
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 state.set({ count: 10, name: 'Bob' });
 console.log(state.get()); // { count: 10, name: 'Bob' }
@@ -229,7 +229,7 @@ console.log(state.get()); // { count: 0, name: 'Alice' }
 ### Subscribe to All Changes
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 const unsubscribe = state.subscribe((curr, prev) => {
   console.log('State changed:');
@@ -252,7 +252,7 @@ unsubscribe();
 Subscribe to specific fields or derived values:
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   count: 0,
   name: 'Alice',
   items: [1, 2, 3],
@@ -283,7 +283,7 @@ state.subscribe(
 Control when selective subscriptions trigger:
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   items: [{ id: 1, name: 'Item 1' }],
 });
 
@@ -308,7 +308,7 @@ state.set({ items: [{ id: 1 }, { id: 2 }] });
 ### Multiple Subscriptions
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 // Multiple subscribers work independently
 const unsub1 = state.subscribe((current) => {
@@ -335,7 +335,7 @@ unsub2();
 Updates are automatically batched for performance:
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 let notificationCount = 0;
 state.subscribe(() => {
@@ -359,7 +359,7 @@ console.log(notificationCount); // 1 (not 3)
 Create an independent child state:
 
 ```ts
-const parentState = createState({
+const parentState = createSnapshot({
   count: 0,
   name: 'Parent',
 });
@@ -383,7 +383,7 @@ console.log(parentState.get().count); // 0 (unchanged)
 Execute code with a temporary scoped state:
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 const result = await state.runInScope(
   async (scopedState) => {
@@ -425,7 +425,7 @@ it('calculates total', () => {
 **Draft Mode:**
 
 ```ts
-const originalState = createState({ title: 'Post', content: 'Hello' });
+const originalState = createSnapshot({ title: 'Post', content: 'Hello' });
 
 // Edit in draft mode
 const draftState = originalState.createChild();
@@ -445,7 +445,7 @@ if (userConfirms) {
 By default, `shallowEqual` is used:
 
 ```ts
-import { shallowEqual } from '@vielzeug/stateit';
+import { shallowEqual } from '@vielzeug/snapit';
 
 const a = { count: 1, name: 'Alice' };
 const b = { count: 1, name: 'Alice' };
@@ -457,7 +457,7 @@ shallowEqual(a, a); // true (same reference)
 ### Custom Equality for State
 
 ```ts
-const state = createState(
+const state = createSnapshot(
   { items: [], filter: 'all' },
   {
     equals: (a, b) => {
@@ -471,7 +471,7 @@ const state = createState(
 ### Custom Equality for Subscriptions
 
 ```ts
-const state = createState({ items: [1, 2, 3] });
+const state = createSnapshot({ items: [1, 2, 3] });
 
 // Only notify if sum changes
 state.subscribe(
@@ -488,7 +488,7 @@ state.subscribe(
 ### Loading Pattern
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   data: null,
   loading: false,
   error: null,
@@ -536,7 +536,7 @@ async function fetchWithRetry(maxRetries = 3) {
 ### Optimistic Updates
 
 ```ts
-const state = createState({ items: [] });
+const state = createSnapshot({ items: [] });
 
 async function addItem(item) {
   // Optimistic update
@@ -558,7 +558,7 @@ async function addItem(item) {
 ### Create Test State
 
 ```ts
-import { createTestState } from '@vielzeug/stateit';
+import { createTestState } from '@vielzeug/snapit';
 
 describe('Counter', () => {
   it('increments count', () => {
@@ -578,7 +578,7 @@ describe('Counter', () => {
 ### Test with Base State
 
 ```ts
-const baseState = createState({ count: 0, name: 'Base' });
+const baseState = createSnapshot({ count: 0, name: 'Base' });
 
 it('inherits from base state', () => {
   const { state: testState, dispose } = createTestState(baseState, { count: 5 });
@@ -598,9 +598,9 @@ it('inherits from base state', () => {
 `withStateMock` creates a temporary scoped state with mocked values and passes it to your callback function. This is useful for testing functions that accept state as a parameter.
 
 ```ts
-import { withStateMock } from '@vielzeug/stateit';
+import { withStateMock } from '@vielzeug/snapit';
 
-const appState = createState({ count: 0, isAdmin: false });
+const appState = createSnapshot({ count: 0, isAdmin: false });
 
 // Function that accepts state as a parameter
 function checkAdminStatus(state: State<AppState>): string {
@@ -641,7 +641,7 @@ it('shows admin panel for admin users', async () => {
 ```ts
 // Testing with different user permissions
 it('checks permissions for different roles', async () => {
-  const userState = createState({ role: 'guest', permissions: [] });
+  const userState = createSnapshot({ role: 'guest', permissions: [] });
 
   function hasPermission(state: State<UserState>, permission: string): boolean {
     return state.get().permissions.includes(permission);
@@ -676,7 +676,7 @@ it('checks permissions for different roles', async () => {
 
 ```ts
 it('handles async operations with mocked state', async () => {
-  const appState = createState({ userId: null, data: null });
+  const appState = createSnapshot({ userId: null, data: null });
 
   async function fetchUserData(state: State<AppState>): Promise<any> {
     const userId = state.get().userId;
@@ -704,7 +704,7 @@ it('handles async operations with mocked state', async () => {
 For simpler cases where you're testing functions that access a global state directly, just modify the state:
 
 ```ts
-const appState = createState({ isAdmin: false });
+const appState = createSnapshot({ isAdmin: false });
 
 function renderAdminPanel(): string {
   // Reads from global appState
@@ -750,7 +750,7 @@ it('tests with isolated state', () => {
 import { vi } from 'vitest';
 
 it('notifies subscribers on change', async () => {
-  const state = createState({ count: 0 });
+  const state = createSnapshot({ count: 0 });
   const listener = vi.fn();
 
   state.subscribe(listener);
@@ -764,7 +764,7 @@ it('notifies subscribers on change', async () => {
 });
 
 it('cleans up subscriptions', () => {
-  const state = createState({ count: 0 });
+  const state = createSnapshot({ count: 0 });
   const listener = vi.fn();
 
   const unsubscribe = state.subscribe(listener);
@@ -784,7 +784,7 @@ Create cached derived values that automatically update when dependencies change.
 ### Basic Computed
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   items: [
     { price: 10, quantity: 2 },
     { price: 20, quantity: 1 },
@@ -810,7 +810,7 @@ console.log(total.get()); // 85
 ### Subscribe to Computed Values
 
 ```ts
-const state = createState({ firstName: 'Alice', lastName: 'Johnson' });
+const state = createSnapshot({ firstName: 'Alice', lastName: 'Johnson' });
 
 const fullName = state.computed((s) => `${s.firstName} ${s.lastName}`);
 
@@ -825,7 +825,7 @@ state.set({ firstName: 'Bob' }); // Logs: Name changed from "Alice Johnson" to "
 ### Custom Equality for Computed
 
 ```ts
-const state = createState({ items: [1, 2, 3] });
+const state = createSnapshot({ items: [1, 2, 3] });
 
 // Only recompute when array length changes
 const itemsComputed = state.computed((s) => s.items, {
@@ -845,7 +845,7 @@ state.set({ items: [1, 2, 3, 4] });
 ### Multiple Computed Values
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   items: [
     { name: 'Apple', price: 1.5, quantity: 2, tax: 0.1 },
     { name: 'Banana', price: 0.8, quantity: 3, tax: 0.1 },
@@ -873,7 +873,7 @@ Batch multiple state updates into a single notification for better performance.
 ### Basic Transaction
 
 ```ts
-const state = createState({ count: 0, name: 'Alice', age: 30 });
+const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
 
 const listener = vi.fn();
 state.subscribe(listener);
@@ -896,7 +896,7 @@ state.transaction(() => {
 ### Transactions with Computed Values
 
 ```ts
-const state = createState({ a: 1, b: 2 });
+const state = createSnapshot({ a: 1, b: 2 });
 const sum = state.computed((s) => s.a + s.b);
 
 const listener = vi.fn();
@@ -914,7 +914,7 @@ console.log(sum.get()); // 15
 ### Nested Transactions
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 state.transaction(() => {
   state.set({ count: 1 });
@@ -934,7 +934,7 @@ console.log(state.get().count); // 4
 ### Reading State During Transaction
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 state.transaction(() => {
   state.set({ count: 1 });
@@ -948,7 +948,7 @@ state.transaction(() => {
 ### Error Handling in Transactions
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 try {
   state.transaction(() => {
@@ -995,13 +995,13 @@ function withPersistence<T extends object>(state: State<T>, key: string) {
 }
 
 // Compose middleware
-const state = withLogging(withPersistence(createState({ count: 0 }), 'counter-state'));
+const state = withLogging(withPersistence(createSnapshot({ count: 0 }), 'counter-state'));
 ```
 
 ### Computed Values
 
 ```ts
-const cartState = createState({
+const cartState = createSnapshot({
   items: [
     { id: 1, price: 10, quantity: 2 },
     { id: 2, price: 20, quantity: 1 },
@@ -1023,9 +1023,9 @@ const total = cartState.get((data) => data.items.reduce((sum, item) => sum + ite
 ### Multiple States Composition
 
 ```ts
-const authState = createState({ user: null, token: null });
-const cartState = createState({ items: [] });
-const uiState = createState({ theme: 'light', sidebarOpen: false });
+const authState = createSnapshot({ user: null, token: null });
+const cartState = createSnapshot({ items: [] });
+const uiState = createSnapshot({ theme: 'light', sidebarOpen: false });
 
 // Sync states
 authState.subscribe((auth) => {
@@ -1054,7 +1054,7 @@ class UndoableState<T extends object> {
   private historyIndex = -1;
 
   constructor(initialState: T) {
-    this.state = createState(initialState);
+    this.state = createSnapshot(initialState);
     this.pushHistory(initialState);
   }
 
@@ -1117,7 +1117,7 @@ state.subscribe(
 ### Custom Equality for Expensive Checks
 
 ```ts
-const state = createState({ largeArray: [] });
+const state = createSnapshot({ largeArray: [] });
 
 // Only notify if length changes
 state.subscribe(
@@ -1145,14 +1145,14 @@ function updateMultiple() {
 
 ```ts
 // ❌ Bad - storing derived data
-const state = createState({
+const state = createSnapshot({
   items: [],
   itemCount: 0, // Derived from items.length
   total: 0, // Derived from items
 });
 
 // ✅ Good - compute on demand
-const state = createState({
+const state = createSnapshot({
   items: [],
 });
 
@@ -1169,4 +1169,4 @@ const total = state.get((s) => s.items.reduce((sum, item) => sum + item.price, 0
 5. **Selective Subscriptions** - Subscribe only to what you need
 6. **Meaningful Names** - Use descriptive state names for debugging
 7. **Test with Helpers** - Use `createTestState` for isolated tests
-8. **Batch Updates** - Let stateit handle batching automatically
+8. **Batch Updates** - Let snapit handle batching automatically

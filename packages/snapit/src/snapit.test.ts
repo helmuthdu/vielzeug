@@ -1,4 +1,4 @@
-import { createState, createTestState, type State, shallowEqual, shallowMerge, withStateMock } from './stateit';
+import { createSnapshot, createTestState, type State, shallowEqual, shallowMerge, withStateMock } from './snapit';
 
 /** -------------------- Utility Tests -------------------- **/
 
@@ -88,7 +88,7 @@ describe('Store - Core Functionality', () => {
   let state: State<CounterState>;
 
   beforeEach(() => {
-    state = createState({ count: 0 });
+    state = createSnapshot({ count: 0 });
   });
 
   it('initializes with initial state', () => {
@@ -117,7 +117,7 @@ describe('Store - Core Functionality', () => {
 
   it('merges state with set() for partial updates', () => {
     type ExtendedState = CounterState & { name: string };
-    const extendedStore = createState<ExtendedState>({ count: 0, name: 'test' });
+    const extendedStore = createSnapshot<ExtendedState>({ count: 0, name: 'test' });
     extendedStore.set({ count: 1 });
     expect(extendedStore.get()).toEqual({ count: 1, name: 'test' });
   });
@@ -156,7 +156,7 @@ describe('Store - Core Functionality', () => {
 
   it('selects a slice of state with get(selector)', () => {
     type UserState = { name: string; age: number; email: string };
-    const userState = createState<UserState>({ age: 30, email: 'alice@example.com', name: 'Alice' });
+    const userState = createSnapshot<UserState>({ age: 30, email: 'alice@example.com', name: 'Alice' });
 
     const name = userState.get((state) => state.name);
     expect(name).toBe('Alice');
@@ -167,7 +167,7 @@ describe('Store - Core Functionality', () => {
 
   it('selects nested properties', () => {
     type NestedState = { user: { profile: { name: string } } };
-    const nestedState = createState<NestedState>({ user: { profile: { name: 'Bob' } } });
+    const nestedState = createSnapshot<NestedState>({ user: { profile: { name: 'Bob' } } });
 
     const profileName = nestedState.get((state) => state.user.profile.name);
     expect(profileName).toBe('Bob');
@@ -181,7 +181,7 @@ describe('Store - Subscriptions', () => {
   let state: State<CounterState>;
 
   beforeEach(() => {
-    state = createState({ count: 0 });
+    state = createSnapshot({ count: 0 });
   });
 
   it('subscribes to full state changes', async () => {
@@ -221,7 +221,7 @@ describe('Store - Subscriptions', () => {
 
   it('does not call listener when selected value unchanged', async () => {
     type ComplexState = { count: number; name: string };
-    const complexState = createState<ComplexState>({ count: 0, name: 'test' });
+    const complexState = createSnapshot<ComplexState>({ count: 0, name: 'test' });
     const listener = vi.fn();
 
     complexState.subscribe(
@@ -238,7 +238,7 @@ describe('Store - Subscriptions', () => {
 
   it('uses custom equality function for selector', async () => {
     type ArrayState = { items: number[] };
-    const arrayStore = createState<ArrayState>({ items: [1, 2, 3] });
+    const arrayStore = createSnapshot<ArrayState>({ items: [1, 2, 3] });
     const listener = vi.fn();
 
     arrayStore.subscribe(
@@ -330,7 +330,7 @@ describe('Store - Child Stores', () => {
   let parentState: State<TestState>;
 
   beforeEach(() => {
-    parentState = createState({ count: 0, name: 'parent' });
+    parentState = createSnapshot({ count: 0, name: 'parent' });
   });
 
   it('creates child store with parent state', () => {
@@ -365,7 +365,7 @@ describe('Store - runInScope', () => {
   let state: State<TestState>;
 
   beforeEach(() => {
-    state = createState({ count: 0 });
+    state = createSnapshot({ count: 0 });
   });
 
   it('executes function with scoped store', async () => {
@@ -412,7 +412,7 @@ describe('createTestState', () => {
   });
 
   it('creates test store from base store', () => {
-    const baseState = createState({ count: 0, name: 'base' });
+    const baseState = createSnapshot({ count: 0, name: 'base' });
     const { state: testState, dispose } = createTestState(baseState);
 
     expect(testState.get()).toEqual({ count: 0, name: 'base' });
@@ -421,7 +421,7 @@ describe('createTestState', () => {
   });
 
   it('creates test store with patch', () => {
-    const baseState = createState({ count: 0, name: 'base' });
+    const baseState = createSnapshot({ count: 0, name: 'base' });
     const { state: testState, dispose } = createTestState(baseState, { count: 10 });
 
     expect(testState.get()).toEqual({ count: 10, name: 'base' });
@@ -430,7 +430,7 @@ describe('createTestState', () => {
   });
 
   it('disposes test store', () => {
-    const baseState = createState({ count: 10 });
+    const baseState = createSnapshot({ count: 10 });
     const { state: testState, dispose } = createTestState(baseState, { count: 5 });
 
     expect(testState.get().count).toBe(5);
@@ -444,7 +444,7 @@ describe('createTestState', () => {
 
 describe('withMock', () => {
   it('temporarily overrides state', async () => {
-    const state = createState({ count: 0, name: 'test' });
+    const state = createSnapshot({ count: 0, name: 'test' });
 
     await withStateMock(state, { count: 77 }, (scopedState) => {
       // Scoped state has the mocked value
@@ -457,7 +457,7 @@ describe('withMock', () => {
   });
 
   it('handles async functions', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
 
     const result = await withStateMock(state, { count: 99 }, async (scopedState) => {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -470,7 +470,7 @@ describe('withMock', () => {
   });
 
   it('can modify scoped state without affecting original', async () => {
-    const state = createState({ count: 0, items: [1, 2, 3] });
+    const state = createSnapshot({ count: 0, items: [1, 2, 3] });
 
     await withStateMock(state, { count: 50 }, (scopedState) => {
       expect(scopedState.get().count).toBe(50);
@@ -493,7 +493,7 @@ describe('withMock', () => {
 describe('Store - Custom Equality', () => {
   it('uses custom equality function', async () => {
     type State = { items: number[] };
-    const state = createState<State>(
+    const state = createSnapshot<State>(
       { items: [1, 2, 3] },
       {
         equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
@@ -516,13 +516,13 @@ describe('Store - Custom Equality', () => {
 
 describe('Store - Edge Cases', () => {
   it('handles empty state object', () => {
-    const state = createState({});
+    const state = createSnapshot({});
     expect(state.get()).toEqual({});
   });
 
   it('handles state with nested objects', () => {
     type NestedState = { user: { profile: { name: string; age: number } } };
-    const state = createState<NestedState>({
+    const state = createSnapshot<NestedState>({
       user: { profile: { age: 25, name: 'Alice' } },
     });
 
@@ -535,7 +535,7 @@ describe('Store - Edge Cases', () => {
 
   it('handles state with arrays', () => {
     type ArrayState = { items: number[] };
-    const state = createState<ArrayState>({ items: [1, 2, 3] });
+    const state = createSnapshot<ArrayState>({ items: [1, 2, 3] });
 
     state.set({ items: [4, 5, 6] });
     expect(state.get().items).toEqual([4, 5, 6]);
@@ -543,7 +543,7 @@ describe('Store - Edge Cases', () => {
 
   it('prevents mutation of original state', () => {
     const initialState = { count: 0, name: 'test' };
-    const state = createState(initialState);
+    const state = createSnapshot(initialState);
 
     state.set({ count: 5 });
 
@@ -551,7 +551,7 @@ describe('Store - Edge Cases', () => {
   });
 
   it('handles rapid sequential updates', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
     state.subscribe(listener);
 
@@ -569,7 +569,7 @@ describe('Store - Edge Cases', () => {
   });
 
   it('handles async updates with race conditions', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
 
     const promises = [
       state.set(async (data) => {
@@ -589,7 +589,7 @@ describe('Store - Edge Cases', () => {
   });
 
   it('handles subscriber errors during initialization', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
 
     expect(() => {
       state.subscribe(() => {
@@ -599,7 +599,7 @@ describe('Store - Edge Cases', () => {
   });
 
   it('handles multiple unsubscribes of same subscription', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
     const unsubscribe = state.subscribe(listener);
 
@@ -611,7 +611,7 @@ describe('Store - Edge Cases', () => {
   });
 
   it('handles updater that returns same reference', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
     state.subscribe(listener);
 
@@ -626,7 +626,7 @@ describe('Store - Edge Cases', () => {
 
 describe('computed', () => {
   it('creates computed value from selector', () => {
-    const state = createState({ items: [{ price: 10 }, { price: 20 }] });
+    const state = createSnapshot({ items: [{ price: 10 }, { price: 20 }] });
 
     const total = state.computed((s) =>
       s.items.reduce((sum, item) => sum + item.price, 0)
@@ -636,7 +636,7 @@ describe('computed', () => {
   });
 
   it('caches computed value when state unchanged', () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const expensive = vi.fn((s: { count: number }) => s.count * 2);
 
     const doubled = state.computed(expensive);
@@ -650,7 +650,7 @@ describe('computed', () => {
   });
 
   it('recomputes when state changes', () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const doubled = state.computed((s) => s.count * 2);
 
     expect(doubled.get()).toBe(2);
@@ -660,7 +660,7 @@ describe('computed', () => {
   });
 
   it('notifies computed subscribers when value changes', async () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const doubled = state.computed((s) => s.count * 2);
 
     const listener = vi.fn();
@@ -674,7 +674,7 @@ describe('computed', () => {
   });
 
   it('does not notify when computed value unchanged', async () => {
-    const state = createState({ count: 1, name: 'Alice' });
+    const state = createSnapshot({ count: 1, name: 'Alice' });
     const count = state.computed((s) => s.count);
 
     const listener = vi.fn();
@@ -689,7 +689,7 @@ describe('computed', () => {
   });
 
   it('uses custom equality function', async () => {
-    const state = createState({ items: [1, 2, 3] });
+    const state = createSnapshot({ items: [1, 2, 3] });
 
     // Only notify when length changes
     const items = state.computed(
@@ -713,7 +713,7 @@ describe('computed', () => {
   });
 
   it('calls subscriber immediately on subscribe', () => {
-    const state = createState({ count: 5 });
+    const state = createSnapshot({ count: 5 });
     const doubled = state.computed((s) => s.count * 2);
 
     const listener = vi.fn();
@@ -723,7 +723,7 @@ describe('computed', () => {
   });
 
   it('handles multiple computed subscribers', async () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const doubled = state.computed((s) => s.count * 2);
 
     const listener1 = vi.fn();
@@ -743,7 +743,7 @@ describe('computed', () => {
   });
 
   it('allows unsubscribing from computed', async () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const doubled = state.computed((s) => s.count * 2);
 
     const listener = vi.fn();
@@ -759,7 +759,7 @@ describe('computed', () => {
   });
 
   it('swallows errors in computed subscribers', async () => {
-    const state = createState({ count: 1 });
+    const state = createSnapshot({ count: 1 });
     const doubled = state.computed((s) => s.count * 2);
 
     const errorListener = vi.fn(() => {
@@ -786,7 +786,7 @@ describe('computed', () => {
 
 describe('transaction', () => {
   it('batches multiple updates into single notification', async () => {
-    const state = createState({ count: 0, name: 'Alice', age: 30 });
+    const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -808,7 +808,7 @@ describe('transaction', () => {
   });
 
   it('does not notify during transaction', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -828,7 +828,7 @@ describe('transaction', () => {
   });
 
   it('handles nested transactions', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -853,7 +853,7 @@ describe('transaction', () => {
   });
 
   it('notifies even if transaction throws', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -874,7 +874,7 @@ describe('transaction', () => {
   });
 
   it('works with computed values', async () => {
-    const state = createState({ a: 1, b: 2 });
+    const state = createSnapshot({ a: 1, b: 2 });
     const sum = state.computed((s) => s.a + s.b);
 
     const listener = vi.fn();
@@ -894,7 +894,7 @@ describe('transaction', () => {
   });
 
   it('allows reading state during transaction', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
 
     state.transaction(() => {
       state.set({ count: 1 });
@@ -908,7 +908,7 @@ describe('transaction', () => {
   });
 
   it('does not affect selective subscriptions batching', async () => {
-    const state = createState({ count: 0, name: 'Alice' });
+    const state = createSnapshot({ count: 0, name: 'Alice' });
     const countListener = vi.fn();
 
     state.subscribe((s) => s.count, countListener);

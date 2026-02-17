@@ -301,7 +301,7 @@ export class State<T extends object> {
 
 /** -------------------- Factory Function -------------------- **/
 
-export function createState<T extends object>(initialState: T, options?: StateOptions<T>): State<T> {
+export function createSnapshot<T extends object>(initialState: T, options?: StateOptions<T>): State<T> {
   return new State<T>(initialState, options);
 }
 

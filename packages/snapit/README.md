@@ -1,40 +1,49 @@
-# @vielzeug/stateit
+# @vielzeug/snapit
 
-## What is Stateit?
+## What is Snapit?
 
-**Stateit** is a tiny, framework-agnostic state management library. Build reactive applications with simple, powerful state handling—all in just 2.4 KB.
+**Snapit** is a tiny, framework-agnostic state management library that lets you **snap** state values in and out with ease. Think of it as taking quick snapshots of your application state—read it, update it, and subscribe to changes with a simple, intuitive API.
 
 ### The Problem
 
 State management libraries are often complex or framework-specific:
 
 - **Redux** requires boilerplate and middleware
-- **MobX** has a learning curve with decorators
+- **MobX** has a learning curve with decorators and observables
 - **Zustand** is React-specific
-- **Jotai/Recoil** are React-only
-- Manual state management leads to bugs
+- **Jotai/Recoil** are React-only with atomic patterns
+- **Valtio** uses proxy magic that can be hard to debug
+- Manual state management leads to bugs and scattered logic
 
 ### The Solution
 
-Stateit provides a simple, reactive state API:
+Snapit provides a simple, reactive state API that lets you **snap** state changes into place:
 
 ```typescript
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-const state = createState({ count: 0, user: null });
+const state = createSnapshot({ count: 0, user: null });
 
 // Subscribe to changes
 state.subscribe((curr, prev) => {
   console.log('Count changed:', prev.count, '→', curr.count);
 });
 
-// Update state
+// Snap in new values
 state.set({ count: 1 });
 state.set((data) => ({ count: data.count + 1 }));
 
-// Read state
+// Snap out the current state
 const snapshot = state.get();
 ```
+
+**Why "Snapit"?**
+
+- **Snap** state values in with `set()`
+- **Snap** state values out with `get()`
+- Get instant **snapshots** of your application state
+- Changes happen in a **snap** - fast and lightweight
+- Simple, **snappy** API that's easy to learn
 
 ## ✨ Features
 
@@ -52,7 +61,7 @@ const snapshot = state.get();
 
 ## 🆚 Comparison with Alternatives
 
-| Feature                 | stateit     | Zustand            | Jotai              | Valtio             |
+| Feature                 | snapit     | Zustand            | Jotai              | Valtio             |
 | ----------------------- | ----------- | ------------------ | ------------------ | ------------------ |
 | Bundle Size (gzipped)   | **~2.5 KB** | ~3.5 KB            | ~6.5 KB            | ~5.8 KB            |
 | Framework Agnostic      | ✅          | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
@@ -70,20 +79,20 @@ const snapshot = state.get();
 
 ```bash
 # pnpm
-pnpm add @vielzeug/stateit
+pnpm add @vielzeug/snapit
 # npm
-npm install @vielzeug/stateit
+npm install @vielzeug/snapit
 # yarn
-yarn add @vielzeug/stateit
+yarn add @vielzeug/snapit
 ```
 
 ## 🚀 Quick Start
 
 ```typescript
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 // Create a state
-const counter = createState({ count: 0 });
+const counter = createSnapshot({ count: 0 });
 
 // Read state
 console.log(counter.get().count); // 0
@@ -114,17 +123,17 @@ await counter.set(async (state) => {
 ### State Creation
 
 ```typescript
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 // Simple state
-const userState = createState({
+const userState = createSnapshot({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com',
 });
 
 // Named state (useful for debugging)
-const appState = createState(
+const appState = createSnapshot(
   {
     theme: 'dark',
     language: 'en',
@@ -133,7 +142,7 @@ const appState = createState(
 );
 
 // Custom equality function
-const todoState = createState(
+const todoState = createSnapshot(
   { todos: [], filter: 'all' },
   {
     equals: (a, b) => {
@@ -159,7 +168,7 @@ const name = state.get((data) => data.name);
 console.log(name); // 'Alice'
 
 // Select nested property
-const userState = createState({
+const userState = createSnapshot({
   user: { profile: { email: 'alice@example.com' } },
 });
 const email = userState.get((data) => data.user.profile.email);
@@ -255,7 +264,7 @@ console.log(state.get().count); // Original value (unchanged)
 
 ```typescript
 // Create cached derived value
-const cart = createState({
+const cart = createSnapshot({
   items: [
     { price: 10, quantity: 2 },
     { price: 20, quantity: 1 },
@@ -282,7 +291,7 @@ console.log(total.get()); // 85
 
 ```typescript
 // Batch multiple updates into single notification
-const state = createState({ count: 0, name: 'Alice', age: 30 });
+const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
 
 state.subscribe((current) => {
   console.log('State updated:', current);
@@ -307,7 +316,7 @@ state.transaction(() => {
 
 ```typescript
 import { useEffect, useSyncExternalStore } from 'react';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
 // Create hook for state integration
 function useState<T extends object>(state: State<T>): T;
@@ -331,8 +340,8 @@ function useState<T extends object, U>(
 }
 
 // Create states
-const counterState = createState({ count: 0 });
-const userState = createState({ name: 'Alice', isLoggedIn: false });
+const counterState = createSnapshot({ count: 0 });
+const userState = createSnapshot({ name: 'Alice', isLoggedIn: false });
 
 // Use in components
 function Counter() {
@@ -361,7 +370,7 @@ function User() {
 
 ```typescript
 import { computed, onUnmounted } from 'vue';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
 // Create composable for state integration
 function useState<T extends object>(state: State<T>) {
@@ -394,7 +403,7 @@ function useSelector<T extends object, U>(state: State<T>, selector: (state: T) 
 }
 
 // Create state
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 // Use in component
 export default {
@@ -415,9 +424,9 @@ export default {
 
 ```typescript
 import { readable } from 'svelte/state';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
-// Create Svelte state from stateit state
+// Create Svelte state from snapit state
 function toState<T extends object>(state: State<T>) {
   return readable(state.get(), (set) => {
     return state.subscribe(set);
@@ -425,7 +434,7 @@ function toState<T extends object>(state: State<T>) {
 }
 
 // Create state
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 // Convert to Svelte state
 const counter = toState(counterState);
@@ -446,7 +455,7 @@ const counter = toState(counterState);
 ### Async State Updates
 
 ```typescript
-const dataState = createState({
+const dataState = createSnapshot({
   data: null,
   loading: false,
   error: null,
@@ -472,7 +481,7 @@ async function fetchData() {
 ### Computed Values
 
 ```typescript
-const cartState = createState({
+const cartState = createSnapshot({
   items: [
     { id: 1, price: 10, quantity: 2 },
     { id: 2, price: 20, quantity: 1 },
@@ -493,7 +502,7 @@ cartState.subscribe(
 Use `get()` with a selector for one-time reads of computed values without subscribing:
 
 ```typescript
-const userState = createState({
+const userState = createSnapshot({
   firstName: 'Alice',
   lastName: 'Johnson',
   age: 30,
@@ -559,15 +568,15 @@ function withPersistence<T extends object>(state: State<T>, key: string) {
 }
 
 // Usage
-const state = withLogging(withPersistence(createState({ count: 0 }), 'counter-state'));
+const state = withLogging(withPersistence(createSnapshot({ count: 0 }), 'counter-state'));
 ```
 
 ### Multiple States Composition
 
 ```typescript
-const authState = createState({ user: null, token: null });
-const cartState = createState({ items: [] });
-const uiState = createState({ theme: 'light', sidebarOpen: false });
+const authState = createSnapshot({ user: null, token: null });
+const cartState = createSnapshot({ items: [] });
+const uiState = createSnapshot({ theme: 'light', sidebarOpen: false });
 
 // Subscribe to multiple states
 function syncStates() {
@@ -592,7 +601,7 @@ function syncStates() {
 ### Testing Helpers
 
 ```typescript
-import { createTestState, withStateMock } from '@vielzeug/stateit';
+import { createTestState, withStateMock } from '@vielzeug/snapit';
 
 describe('Counter', () => {
   it('increments count', () => {
@@ -607,7 +616,7 @@ describe('Counter', () => {
   });
 
   it('uses mocked state', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
 
     await withStateMock(state, { count: 99 }, async () => {
       // State is temporarily overridden
@@ -627,7 +636,7 @@ describe('Counter', () => {
 import { vi } from 'vitest';
 
 it('notifies subscribers on change', async () => {
-  const state = createState({ count: 0 });
+  const state = createSnapshot({ count: 0 });
   const listener = vi.fn();
 
   state.subscribe(listener);
@@ -642,7 +651,7 @@ it('notifies subscribers on change', async () => {
 
 ## 🎯 API Reference
 
-### `createState<T>(initialState: T, options?: StateOptions<T>): State<T>`
+### `createSnapshot<T>(initialState: T, options?: StateOptions<T>): State<T>`
 
 Creates a new state instance.
 
@@ -690,7 +699,7 @@ Creates a new state instance.
 Fully typed with comprehensive type inference:
 
 ```typescript
-const state = createState({ count: 0, name: 'test' });
+const state = createSnapshot({ count: 0, name: 'test' });
 
 // Type inferred: { count: number; name: string }
 const current = state.get();
@@ -709,9 +718,9 @@ state.set({ invalid: true }); // ❌ Type error
 
 ## FAQ
 
-### When should I use stateit?
+### When should I use snapit?
 
-Use stateit when you need:
+Use snapit when you need:
 
 - Simple, predictable state management
 - Framework-agnostic solution
@@ -724,9 +733,9 @@ Use stateit when you need:
 Yes! Create as many states as needed:
 
 ```typescript
-const authStore = createState({ user: null });
-const themeStore = createState({ mode: 'light' });
-const dataStore = createState({ items: [] });
+const authStore = createSnapshot({ user: null });
+const themeStore = createSnapshot({ mode: 'light' });
+const dataStore = createSnapshot({ items: [] });
 ```
 
 ### How does batching work?
@@ -742,7 +751,7 @@ state.set({ count: 3 });
 
 ### Can I use this with Redux DevTools?
 
-While stateit doesn't have built-in DevTools support, you can implement it via observers:
+While snapit doesn't have built-in DevTools support, you can implement it via observers:
 
 ```typescript
 state.subscribe((state, prev) => {
@@ -755,7 +764,7 @@ state.subscribe((state, prev) => {
 
 ### Is it production-ready?
 
-Yes! stateit is:
+Yes! snapit is:
 
 - ✅ Fully tested (49 tests, 100% coverage)
 - ✅ Type-safe
@@ -764,10 +773,10 @@ Yes! stateit is:
 
 ## 📖 Documentation
 
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/stateit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/stateit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/stateit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/stateit/examples)
+- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/snapit)
+- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/snapit/usage)
+- [**API Reference**](https://helmuthdu.github.io/vielzeug/snapit/api)
+- [**Examples**](https://helmuthdu.github.io/vielzeug/snapit/examples)
 
 ## 📄 License
 

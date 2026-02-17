@@ -1,4 +1,4 @@
-# Stateit Examples
+# Snapit Examples
 
 Real-world examples and framework integrations.
 
@@ -14,12 +14,12 @@ React 18+ provides `useSyncExternalStore` for external state:
 
 ```tsx
 import { useSyncExternalStore } from 'react';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
 // Create reusable hooks
-function useStateitState<T extends object>(state: State<T>): T;
-function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
-function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
+function useSnapitState<T extends object>(state: State<T>): T;
+function useSnapitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useSnapitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
@@ -32,13 +32,13 @@ function useStateitState<T extends object, U>(state: State<T>, selector?: (state
 }
 
 // Create global state
-const counterState = createState({ count: 0 });
-const userState = createState({ name: 'Alice', isLoggedIn: false });
+const counterState = createSnapshot({ count: 0 });
+const userState = createSnapshot({ name: 'Alice', isLoggedIn: false });
 
 // Use in components
 function Counter() {
   // Subscribe to specific field
-  const count = useStateitState(counterState, (data) => data.count);
+  const count = useSnapitState(counterState, (data) => data.count);
 
   return (
     <div>
@@ -52,7 +52,7 @@ function Counter() {
 
 function User() {
   // Subscribe to full state
-  const user = useStateitState(userState);
+  const user = useSnapitState(userState);
 
   return (
     <div>
@@ -67,7 +67,7 @@ function User() {
 ### Todo App Example
 
 ```tsx
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 type Todo = {
   id: number;
@@ -80,14 +80,14 @@ type TodoState = {
   filter: 'all' | 'active' | 'completed';
 };
 
-const todoState = createState<TodoState>({
+const todoState = createSnapshot<TodoState>({
   todos: [],
   filter: 'all',
 });
 
 function TodoApp() {
-  const todos = useStateitState(todoState, (data) => data.todos);
-  const filter = useStateitState(todoState, (data) => data.filter);
+  const todos = useSnapitState(todoState, (data) => data.todos);
+  const filter = useSnapitState(todoState, (data) => data.filter);
 
   const filteredTodos = todos.filter((todo) => {
     if (filter === 'active') return !todo.completed;
@@ -167,7 +167,7 @@ type DataState = {
   error: string | null;
 };
 
-const dataState = createState<DataState>({
+const dataState = createSnapshot<DataState>({
   data: null,
   loading: false,
   error: null,
@@ -188,7 +188,7 @@ async function fetchUsers() {
 }
 
 function UserList() {
-  const { data, loading, error } = useStateitState(dataState);
+  const { data, loading, error } = useSnapitState(dataState);
 
   useEffect(() => {
     fetchUsers();
@@ -214,10 +214,10 @@ function UserList() {
 
 ```ts
 import { computed, onUnmounted, ref } from 'vue';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
 // Create composable
-function useStateitState<T extends object>(state: State<T>) {
+function useSnapitState<T extends object>(state: State<T>) {
   const reactive = ref(state.get());
 
   const unsubscribe = state.subscribe((current) => {
@@ -231,7 +231,7 @@ function useStateitState<T extends object>(state: State<T>) {
   return reactive;
 }
 
-function useStateitSelector<T extends object, U>(state: State<T>, selector: (state: T) => U) {
+function useSnapitSelector<T extends object, U>(state: State<T>, selector: (state: T) => U) {
   const selected = ref(selector(state.get()));
 
   const unsubscribe = state.subscribe(selector, (value) => {
@@ -246,13 +246,13 @@ function useStateitSelector<T extends object, U>(state: State<T>, selector: (sta
 }
 
 // Create state
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 // Use in component
 export default {
   setup() {
-    const state = useStateitState(counterState);
-    const count = useStateitSelector(counterState, (s) => s.count);
+    const state = useSnapitState(counterState);
+    const count = useSnapitSelector(counterState, (s) => s.count);
 
     const increment = () => {
       counterState.set({ count: count.value + 1 });
@@ -272,7 +272,7 @@ export default {
 ```vue
 <script setup lang="ts">
 import { computed } from 'vue';
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 type User = {
   name: string;
@@ -280,14 +280,14 @@ type User = {
   age: number;
 };
 
-const userState = createState<User>({
+const userState = createSnapshot<User>({
   name: 'Alice',
   email: 'alice@example.com',
   age: 30,
 });
 
-const state = useStateitState(userState);
-const name = useStateitSelector(userState, (s) => s.name);
+const state = useSnapitState(userState);
+const name = useSnapitSelector(userState, (s) => s.name);
 
 const isAdult = computed(() => state.value.age >= 18);
 
@@ -320,9 +320,9 @@ function updateAge(newAge: number) {
 
 ```ts
 import { readable } from 'svelte/store';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
-// Convert stateit state to Svelte store
+// Convert snapit state to Svelte store
 function toSvelteStore<T extends object>(state: State<T>) {
   return readable(state.get(), (set) => {
     return state.subscribe((current) => {
@@ -332,7 +332,7 @@ function toSvelteStore<T extends object>(state: State<T>) {
 }
 
 // Create state
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 // Convert to Svelte store
 const counter = toSvelteStore(counterState);
@@ -373,7 +373,7 @@ export { counter, counterState };
 
 ```svelte
 <script lang="ts">
-  import { createState } from '@vielzeug/stateit';
+  import { createSnapshot } from '@vielzeug/snapit';
   import { toSvelteStore } from './utils';
 
   type Todo = {
@@ -382,7 +382,7 @@ export { counter, counterState };
     completed: boolean;
   };
 
-  const todoState = createState<{ todos: Todo[] }>({
+  const todoState = createSnapshot<{ todos: Todo[] }>({
     todos: [],
   });
 
@@ -456,9 +456,9 @@ export { counter, counterState };
 ### Basic Counter
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-const counterState = createState({ count: 0 });
+const counterState = createSnapshot({ count: 0 });
 
 // Get DOM elements
 const countEl = document.getElementById('count');
@@ -488,7 +488,7 @@ resetBtn.addEventListener('click', () => {
 ### Form State Management
 
 ```ts
-const formState = createState({
+const formState = createSnapshot({
   name: '',
   email: '',
   age: 0,
@@ -551,10 +551,10 @@ form.addEventListener('submit', (e) => {
 ### Custom Element with State
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 class CounterElement extends HTMLElement {
-  private state = createState({ count: 0 });
+  private state = createSnapshot({ count: 0 });
   private unsubscribe?: () => void;
 
   connectedCallback() {
@@ -601,21 +601,21 @@ customElements.define('counter-element', CounterElement);
 
 ```ts
 // stores/app.ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-export const authState = createState({
+export const authState = createSnapshot({
   user: null as User | null,
   token: null as string | null,
   isAuthenticated: false,
 });
 
-export const uiState = createState({
+export const uiState = createSnapshot({
   theme: 'light' as 'light' | 'dark',
   sidebarOpen: false,
   notifications: [] as Notification[],
 });
 
-export const cartState = createState({
+export const cartState = createSnapshot({
   items: [] as CartItem[],
   total: 0,
 });
@@ -642,7 +642,7 @@ uiState.subscribe(
 function createPersistedState<T extends object>(key: string, initialState: T) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
-  const state = createState<T>(saved ? JSON.parse(saved) : initialState);
+  const state = createSnapshot<T>(saved ? JSON.parse(saved) : initialState);
 
   // Save on changes
   state.subscribe((current) => {
@@ -670,7 +670,7 @@ function debounce(fn: Function, delay: number) {
   };
 }
 
-const searchState = createState({ query: '', results: [] });
+const searchState = createSnapshot({ query: '', results: [] });
 
 const debouncedSearch = debounce(async (query: string) => {
   if (!query) {
@@ -700,7 +700,7 @@ class UndoableState<T extends object> {
   private maxHistory = 50;
 
   constructor(initialState: T) {
-    this.state = createState(initialState);
+    this.state = createSnapshot(initialState);
     this.pushHistory(initialState);
   }
 
@@ -768,29 +768,29 @@ editorState.redo(); // Forward to "Hello World"
 
 ```ts
 import { describe, it, expect, vi } from 'vitest';
-import { createState, createTestState } from '@vielzeug/stateit';
+import { createSnapshot, createTestState } from '@vielzeug/snapit';
 
 describe('Counter State', () => {
   it('initializes with correct value', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     expect(state.get().count).toBe(0);
   });
 
   it('updates count', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     state.set({ count: 5 });
     expect(state.get().count).toBe(5);
   });
 
   it('resets to initial state', () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     state.set({ count: 10 });
     state.reset();
     expect(state.get().count).toBe(0);
   });
 
   it('notifies subscribers', async () => {
-    const state = createState({ count: 0 });
+    const state = createSnapshot({ count: 0 });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -805,7 +805,7 @@ describe('Counter State', () => {
 
 describe('Test State Helper', () => {
   it('creates isolated test state', () => {
-    const baseState = createState({ count: 0 });
+    const baseState = createSnapshot({ count: 0 });
     const { state: testState, dispose } = createTestState(baseState, {
       count: 5,
     });
@@ -823,7 +823,7 @@ describe('Test State Helper', () => {
 ```ts
 describe('Todo App', () => {
   it('adds and completes todos', () => {
-    const todoState = createState({ todos: [], filter: 'all' });
+    const todoState = createSnapshot({ todos: [], filter: 'all' });
 
     // Add todo
     todoState.set((data) => ({
