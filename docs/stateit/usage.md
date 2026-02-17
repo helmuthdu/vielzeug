@@ -135,18 +135,18 @@ const userState = createState({
 });
 
 // Get computed value
-const fullName = userState.get((state) => `${state.firstName} ${state.lastName}`);
+const fullName = userState.get((data) => `${data.firstName} ${data.lastName}`);
 console.log(fullName); // "Alice Johnson"
 
 // Get nested property
-const city = userState.get((state) => state.address.city);
+const city = userState.get((data) => data.address.city);
 console.log(city); // "New York"
 
 // Get multiple derived values
-const summary = userState.get((state) => ({
-  name: `${state.firstName} ${state.lastName}`,
-  location: `${state.address.city}, ${state.address.country}`,
-  isAdult: state.age >= 18,
+const summary = userState.get((data) => ({
+  name: `${data.firstName} ${data.lastName}`,
+  location: `${data.address.city}, ${data.address.country}`,
+  isAdult: data.age >= 18,
 }));
 console.log(summary);
 // { name: "Alice Johnson", location: "New York, USA", isAdult: true }
@@ -231,10 +231,10 @@ console.log(state.get()); // { count: 0, name: 'Alice' }
 ```ts
 const state = createState({ count: 0, name: 'Alice' });
 
-const unsubscribe = state.subscribe((current, prev) => {
+const unsubscribe = state.subscribe((curr, prev) => {
   console.log('State changed:');
   console.log('Previous:', prev);
-  console.log('Current:', current);
+  console.log('Current:', curr);
 });
 
 state.set({ count: 1 });
@@ -260,7 +260,7 @@ const state = createState({
 
 // Subscribe to count field only
 state.subscribe(
-  (state) => state.count,
+  (data) => data.count,
   (count, prevCount) => {
     console.log(`Count changed: ${prevCount} → ${count}`);
   },
@@ -271,7 +271,7 @@ state.set({ name: 'Bob' }); // Does NOT trigger callback
 
 // Subscribe to array length
 state.subscribe(
-  (state) => state.items.length,
+  (data) => data.items.length,
   (length, prevLength) => {
     console.log(`Length changed: ${prevLength} → ${length}`);
   },
@@ -289,7 +289,7 @@ const state = createState({
 
 // Trigger only if array length changes
 state.subscribe(
-  (state) => state.items,
+  (data) => data.items,
   (items) => {
     console.log('Items array changed:', items);
   },
@@ -316,7 +316,7 @@ const unsub1 = state.subscribe((current) => {
 });
 
 const unsub2 = state.subscribe(
-  (state) => state.name,
+  (data) => data.name,
   (name) => {
     console.log('Subscriber 2:', name);
   },
@@ -475,7 +475,7 @@ const state = createState({ items: [1, 2, 3] });
 
 // Only notify if sum changes
 state.subscribe(
-  (state) => state.items.reduce((sum, n) => sum + n, 0),
+  (data) => data.items.reduce((sum, n) => sum + n, 0),
   (sum) => console.log('Sum changed:', sum),
   {
     equality: (a, b) => a === b, // Strict equality
@@ -815,8 +815,8 @@ const state = createState({ firstName: 'Alice', lastName: 'Johnson' });
 const fullName = state.computed((s) => `${s.firstName} ${s.lastName}`);
 
 // Subscribe to computed value changes
-fullName.subscribe((current, prev) => {
-  console.log(`Name changed from "${prev}" to "${current}"`);
+fullName.subscribe((curr, prev) => {
+  console.log(`Name changed from "${prev}" to "${curr}"`);
 });
 
 state.set({ firstName: 'Bob' }); // Logs: Name changed from "Alice Johnson" to "Bob Johnson"
@@ -969,10 +969,10 @@ console.log(state.get().count); // 1
 
 ```ts
 function withLogging<T extends object>(state: State<T>) {
-  state.subscribe((current, prev) => {
+  state.subscribe((curr, prev) => {
     console.log('State updated:', {
       from: prev,
-      to: current,
+      to: curr,
       timestamp: new Date().toISOString(),
     });
   });
@@ -1010,14 +1010,14 @@ const cartState = createState({
 
 // Subscribe to computed total
 cartState.subscribe(
-  (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+  (data) => data.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
   },
 );
 
 // Or get computed value on demand
-const total = cartState.get((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
+const total = cartState.get((data) => data.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 ```
 
 ### Multiple States Composition
@@ -1036,7 +1036,7 @@ authState.subscribe((auth) => {
 });
 
 uiState.subscribe(
-  (state) => state.theme,
+  (data) => data.theme,
   (theme) => {
     document.body.className = theme;
   },
@@ -1101,13 +1101,13 @@ class UndoableState<T extends object> {
 
 ```ts
 // ❌ Bad - subscribes to entire state
-state.subscribe((state) => {
-  updateCountUI(state.count);
+state.subscribe((data) => {
+  updateCountUI(data.count);
 });
 
 // ✅ Good - subscribes only to count
 state.subscribe(
-  (state) => state.count,
+  (data) => data.count,
   (count) => {
     updateCountUI(count);
   },
@@ -1121,7 +1121,7 @@ const state = createState({ largeArray: [] });
 
 // Only notify if length changes
 state.subscribe(
-  (state) => state.largeArray,
+  (data) => data.largeArray,
   (array) => processArray(array),
   {
     equality: (a, b) => a.length === b.length,

@@ -38,7 +38,7 @@ const userState = createState({ name: 'Alice', isLoggedIn: false });
 // Use in components
 function Counter() {
   // Subscribe to specific field
-  const count = useStateitState(counterState, (state) => state.count);
+  const count = useStateitState(counterState, (data) => data.count);
 
   return (
     <div>
@@ -86,8 +86,8 @@ const todoState = createState<TodoState>({
 });
 
 function TodoApp() {
-  const todos = useStateitState(todoState, (state) => state.todos);
-  const filter = useStateitState(todoState, (state) => state.filter);
+  const todos = useStateitState(todoState, (data) => data.todos);
+  const filter = useStateitState(todoState, (data) => data.filter);
 
   const filteredTodos = todos.filter((todo) => {
     if (filter === 'active') return !todo.completed;
@@ -96,23 +96,23 @@ function TodoApp() {
   });
 
   const addTodo = (text: string) => {
-    todoState.set((state) => ({
-      ...state,
-      todos: [...state.todos, { id: Date.now(), text, completed: false }],
+    todoState.set((data) => ({
+      ...data,
+      todos: [...data.todos, { id: Date.now(), text, completed: false }],
     }));
   };
 
   const toggleTodo = (id: number) => {
-    todoState.set((state) => ({
-      ...state,
-      todos: state.todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
+    todoState.set((data) => ({
+      ...data,
+      todos: data.todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
     }));
   };
 
   const deleteTodo = (id: number) => {
-    todoState.set((state) => ({
-      ...state,
-      todos: state.todos.filter((todo) => todo.id !== id),
+    todoState.set((data) => ({
+      ...data,
+      todos: data.todos.filter((todo) => todo.id !== id),
     }));
   };
 
@@ -393,9 +393,9 @@ export { counter, counterState };
   function addTodo() {
     if (!newTodo.trim()) return;
 
-    todoState.set((state) => ({
+    todoState.set((data) => ({
       todos: [
-        ...state.todos,
+        ...data.todos,
         { id: Date.now(), text: newTodo, completed: false },
       ],
     }));
@@ -404,16 +404,16 @@ export { counter, counterState };
   }
 
   function toggleTodo(id: number) {
-    todoState.set((state) => ({
-      todos: state.todos.map((todo) =>
+    todoState.set((data) => ({
+      todos: data.todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       ),
     }));
   }
 
   function deleteTodo(id: number) {
-    todoState.set((state) => ({
-      todos: state.todos.filter((todo) => todo.id !== id),
+    todoState.set((data) => ({
+      todos: data.todos.filter((todo) => todo.id !== id),
     }));
   }
 </script>
@@ -467,17 +467,17 @@ const decrementBtn = document.getElementById('decrement');
 const resetBtn = document.getElementById('reset');
 
 // Subscribe to updates
-counterState.subscribe((state) => {
-  countEl.textContent = state.count.toString();
+counterState.subscribe((data) => {
+  countEl.textContent = data.count.toString();
 });
 
 // Event handlers
 incrementBtn.addEventListener('click', () => {
-  counterState.set((state) => ({ count: state.count + 1 }));
+  counterState.set((data) => ({ count: data.count + 1 }));
 });
 
 decrementBtn.addEventListener('click', () => {
-  counterState.set((state) => ({ count: state.count - 1 }));
+  counterState.set((data) => ({ count: data.count - 1 }));
 });
 
 resetBtn.addEventListener('click', () => {
@@ -501,10 +501,10 @@ const emailInput = document.getElementById('email');
 const ageInput = document.getElementById('age');
 
 // Subscribe to state changes
-formState.subscribe((state) => {
-  nameInput.value = state.name;
-  emailInput.value = state.email;
-  ageInput.value = state.age.toString();
+formState.subscribe((data) => {
+  nameInput.value = data.name;
+  emailInput.value = data.email;
+  ageInput.value = data.age.toString();
 
   // Update error display
   updateErrors(state.errors);
@@ -567,11 +567,11 @@ class CounterElement extends HTMLElement {
 
     // Event listeners
     this.querySelector('#increment')?.addEventListener('click', () => {
-      this.state.set((state) => ({ count: state.count + 1 }));
+      this.state.set((data) => ({ count: data.count + 1 }));
     });
 
     this.querySelector('#decrement')?.addEventListener('click', () => {
-      this.state.set((state) => ({ count: state.count - 1 }));
+      this.state.set((data) => ({ count: data.count - 1 }));
     });
   }
 
@@ -629,7 +629,7 @@ authState.subscribe((auth) => {
 });
 
 uiState.subscribe(
-  (state) => state.theme,
+  (data) => data.theme,
   (theme) => {
     document.body.setAttribute('data-theme', theme);
   },
@@ -826,17 +826,17 @@ describe('Todo App', () => {
     const todoState = createState({ todos: [], filter: 'all' });
 
     // Add todo
-    todoState.set((state) => ({
-      ...state,
-      todos: [...state.todos, { id: 1, text: 'Test', completed: false }],
+    todoState.set((data) => ({
+      ...data,
+      todos: [...data.todos, { id: 1, text: 'Test', completed: false }],
     }));
 
     expect(todoState.get().todos).toHaveLength(1);
 
     // Complete todo
-    todoState.set((state) => ({
-      ...state,
-      todos: state.todos.map((t) => (t.id === 1 ? { ...t, completed: true } : t)),
+    todoState.set((data) => ({
+      ...data,
+      todos: data.todos.map((t) => (t.id === 1 ? { ...t, completed: true } : t)),
     }));
 
     expect(todoState.get().todos[0].completed).toBe(true);

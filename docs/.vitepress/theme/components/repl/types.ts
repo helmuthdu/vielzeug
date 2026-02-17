@@ -575,8 +575,8 @@ declare module '@vielzeug/permit' {
 
 export const stateitTypes = `
 declare module '@vielzeug/stateit' {
-  export type Listener<T> = (state: T, prev: T) => void;
-  export type Selector<T, U> = (state: T) => U;
+  export type Listener<T> = (curr: T, prev: T) => void;
+  export type Selector<T, U> = (data: T) => U;
   export type Unsubscribe = () => void;
   export type EqualityFn<U> = (a: U, b: U) => boolean;
 
@@ -594,8 +594,8 @@ declare module '@vielzeug/stateit' {
     get(): T;
     get<U>(selector: Selector<T, U>): U;
     set(patch: Partial<T>): void;
-    set(updater: (state: T) => T): void;
-    set(updater: (state: T) => Promise<T>): Promise<void>;
+    set(updater: (data: T) => T): void;
+    set(updater: (data: T) => Promise<T>): Promise<void>;
     reset(): void;
     subscribe(listener: Listener<T>): Unsubscribe;
     subscribe<U>(

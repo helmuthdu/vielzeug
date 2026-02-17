@@ -11,14 +11,14 @@ Complete API documentation for stateit.
 ### Listener
 
 ```ts
-type Listener<T> = (state: T, prev: T) => void;
+type Listener<T> = (curr: T, prev: T) => void;
 ```
 
 Callback function that receives current and previous state.
 
 **Parameters:**
 
-- **state**: Current state after update
+- **curr**: Current state after update
 - **prev**: Previous state before update
 
 **Example:**
@@ -48,8 +48,8 @@ Function that selects a value from state.
 **Example:**
 
 ```ts
-const selectCount: Selector<AppState, number> = (state) => state.count;
-const selectFullName: Selector<UserState, string> = (state) => `${state.firstName} ${state.lastName}`;
+const selectCount: Selector<AppState, number> = (data) => data.count;
+const selectFullName: Selector<UserState, string> = (data) => `${data.firstName} ${data.lastName}`;
 ```
 
 ---
@@ -387,7 +387,7 @@ subscribe<U>(
 ```ts
 // Subscribe to count only
 state.subscribe(
-  (state) => state.count,
+  (data) => data.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
   },
@@ -395,7 +395,7 @@ state.subscribe(
 
 // With custom equality
 state.subscribe(
-  (state) => state.items,
+  (data) => data.items,
   (items) => console.log('Items changed'),
   { equality: (a, b) => a.length === b.length },
 );
@@ -903,13 +903,13 @@ Use selectors to avoid unnecessary notifications:
 
 ```ts
 // ❌ Bad - notified on every state change
-state.subscribe((state) => {
-  updateCountUI(state.count);
+state.subscribe((data) => {
+  updateCountUI(data.count);
 });
 
 // ✅ Good - notified only when count changes
 state.subscribe(
-  (state) => state.count,
+  (data) => data.count,
   (count) => {
     updateCountUI(count);
   },
@@ -922,7 +922,7 @@ Use custom equality for expensive comparisons:
 
 ```ts
 state.subscribe(
-  (state) => state.largeArray,
+  (data) => data.largeArray,
   (array) => processArray(array),
   {
     equality: (a, b) => a.length === b.length, // Cheap comparison
@@ -942,7 +942,7 @@ import create from 'zustand';
 
 const useStore = create((set) => ({
   count: 0,
-  increment: () => set((state) => ({ count: state.count + 1 })),
+  increment: () => set((data) => ({ count: data.count + 1 })),
 }));
 
 // Stateit

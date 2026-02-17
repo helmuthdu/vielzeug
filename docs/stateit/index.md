@@ -42,8 +42,8 @@ import { createState } from '@vielzeug/stateit';
 const state = createState({ count: 0, user: null });
 
 // Subscribe to changes
-state.subscribe((current, prev) => {
-  console.log('State changed:', current);
+state.subscribe((curr, prev) => {
+  console.log('State changed:', curr);
 });
 
 // Update state
@@ -118,20 +118,20 @@ const counter = createState({ count: 0 });
 console.log(counter.get().count); // 0
 
 // Subscribe to changes
-counter.subscribe((state, prev) => {
-  console.log(`Count changed from ${prev.count} to ${state.count}`);
+counter.subscribe((curr, prev) => {
+  console.log(`Count changed from ${prev.count} to ${curr.count}`);
 });
 
 // Update state – partial merge
 counter.set({ count: 1 });
 
 // Update with function
-counter.set((state) => ({ count: state.count + 1 }));
+counter.set((data) => ({ count: data.count + 1 }));
 
 // Update with async function
-await counter.set(async (state) => {
-  const data = await fetchData();
-  return { ...state, data };
+await counter.set(async (data) => {
+  const res = await fetchData();
+  return { ...data, res };
 });
 ```
 
@@ -184,7 +184,7 @@ const current = state.get();
 console.log(current.count);
 
 // Get selected value
-const count = state.get((state) => state.count);
+const count = state.get((data) => data.count);
 
 // Get computed value
 const fullName = state.get((s) => `${s.firstName} ${s.lastName}`);
@@ -221,13 +221,13 @@ Subscribe to state changes with full or selective subscriptions:
 
 ```ts
 // Subscribe to all changes
-const unsubscribe = state.subscribe((current, prev) => {
-  console.log('State changed:', current);
+const unsubscribe = state.subscribe((curr, prev) => {
+  console.log('State changed:', curr);
 });
 
 // Subscribe to specific field
 state.subscribe(
-  (state) => state.count,
+  (data) => data.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
   },
@@ -235,7 +235,7 @@ state.subscribe(
 
 // Custom equality
 state.subscribe(
-  (state) => state.items,
+  (data) => data.items,
   (items) => console.log('Items changed:', items),
   { equality: (a, b) => a.length === b.length },
 );
@@ -407,13 +407,13 @@ Check your equality function. By default, `shallowEqual` is used:
 ```ts
 // This may not trigger if items array reference is the same
 state.subscribe(
-  (state) => state.items,
+  (data) => data.items,
   (items) => console.log(items),
 );
 
 // Use custom equality to trigger on length changes
 state.subscribe(
-  (state) => state.items,
+  (data) => data.items,
   (items) => console.log(items),
   { equality: (a, b) => a.length === b.length },
 );
