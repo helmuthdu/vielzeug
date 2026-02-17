@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/stateit
 
-This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Feb 2026 10:54:37 GMT and should not be manually modified.
+
+## 1.2.0
+Tue, 17 Feb 2026 10:54:37 GMT
+
+### Minor changes
+
+- added transaction and computed properties support
 
 ## 1.1.3
 Sun, 15 Feb 2026 21:52:44 GMT
