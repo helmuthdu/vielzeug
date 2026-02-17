@@ -55,10 +55,7 @@ console.log(counterState.get()); // { count: 0 }
 Add a name for debugging purposes:
 
 ```ts
-const userState = createState(
-  { name: 'Alice', age: 30 },
-  { name: 'userState' }
-);
+const userState = createState({ name: 'Alice', age: 30 }, { name: 'userState' });
 
 // Useful in DevTools or debugging
 ```
@@ -76,7 +73,7 @@ const todoState = createState(
       // Only notify if todos array reference or filter changed
       return a.todos === b.todos && a.filter === b.filter;
     },
-  }
+  },
 );
 
 // Won't trigger notifications for same reference
@@ -266,7 +263,7 @@ state.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count changed: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 state.set({ count: 1 }); // Triggers callback
@@ -277,7 +274,7 @@ state.subscribe(
   (state) => state.items.length,
   (length, prevLength) => {
     console.log(`Length changed: ${prevLength} → ${length}`);
-  }
+  },
 );
 ```
 
@@ -298,7 +295,7 @@ state.subscribe(
   },
   {
     equality: (a, b) => a.length === b.length,
-  }
+  },
 );
 
 // Won't trigger (same length)
@@ -322,7 +319,7 @@ const unsub2 = state.subscribe(
   (state) => state.name,
   (name) => {
     console.log('Subscriber 2:', name);
-  }
+  },
 );
 
 state.set({ count: 1 }); // Both subscribers notified
@@ -373,11 +370,11 @@ const childState = parentState.createChild({
 });
 
 console.log(parentState.get()); // { count: 0, name: 'Parent' }
-console.log(childState.get());  // { count: 0, name: 'Child' }
+console.log(childState.get()); // { count: 0, name: 'Child' }
 
 // Mutations are independent
 childState.set({ count: 10 });
-console.log(childState.get().count);  // 10
+console.log(childState.get().count); // 10
 console.log(parentState.get().count); // 0 (unchanged)
 ```
 
@@ -402,7 +399,7 @@ const result = await state.runInScope(
 
     return 'completed';
   },
-  { isTemporary: true } // Optional override
+  { isTemporary: true }, // Optional override
 );
 
 // Original state unchanged
@@ -416,10 +413,7 @@ console.log(result); // "completed"
 
 ```ts
 it('calculates total', () => {
-  const { state: testState, dispose } = createTestState(
-    baseState,
-    { items: [{ price: 10 }, { price: 20 }] }
-  );
+  const { state: testState, dispose } = createTestState(baseState, { items: [{ price: 10 }, { price: 20 }] });
 
   const total = calculateTotal(testState.get());
   expect(total).toBe(30);
@@ -468,12 +462,9 @@ const state = createState(
   {
     equals: (a, b) => {
       // Custom deep equality for items
-      return (
-        a.filter === b.filter &&
-        JSON.stringify(a.items) === JSON.stringify(b.items)
-      );
+      return a.filter === b.filter && JSON.stringify(a.items) === JSON.stringify(b.items);
     },
-  }
+  },
 );
 ```
 
@@ -488,7 +479,7 @@ state.subscribe(
   (sum) => console.log('Sum changed:', sum),
   {
     equality: (a, b) => a === b, // Strict equality
-  }
+  },
 );
 ```
 
@@ -590,10 +581,7 @@ describe('Counter', () => {
 const baseState = createState({ count: 0, name: 'Base' });
 
 it('inherits from base state', () => {
-  const { state: testState, dispose } = createTestState(
-    baseState,
-    { count: 5 }
-  );
+  const { state: testState, dispose } = createTestState(baseState, { count: 5 });
 
   expect(testState.get().count).toBe(5);
   expect(testState.get().name).toBe('Base');
@@ -607,138 +595,151 @@ it('inherits from base state', () => {
 
 ### Mock State for Tests
 
-**Important:** `withStateMock` does NOT actually mock the state that your code reads. It only creates a scoped child state for use within the callback function.
-
-If you need to test code that depends on specific state values, you should **directly modify the state** before running your test:
-
-```ts
-const appState = createState({ user: null, isAdmin: false });
-
-function renderAdminPanel() {
-  // This function reads from appState
-  const state = appState.get();
-  
-  if (state.isAdmin) {
-    return '<div>Admin Panel</div>';
-  }
-  return '<div>Access Denied</div>';
-}
-
-it('shows admin panel for admin users', () => {
-  // Set the state directly for your test
-  appState.set({ user: { name: 'Admin' }, isAdmin: true });
-  
-  const result = renderAdminPanel();
-  expect(result).toContain('Admin Panel');
-  
-  // Clean up after test
-  appState.reset();
-});
-```
-
-**When to use `withStateMock`:**
-
-`withStateMock` is useful when you want to run code that **receives the state as a parameter** and you want to ensure the original state isn't modified:
+`withStateMock` creates a temporary scoped state with mocked values and passes it to your callback function. This is useful for testing functions that accept state as a parameter.
 
 ```ts
 import { withStateMock } from '@vielzeug/stateit';
 
-const appState = createState({ count: 0, settings: { theme: 'light' } });
+const appState = createState({ count: 0, isAdmin: false });
 
-// This function receives state as a parameter
-function processWithState(state: State<AppState>) {
-  const current = state.get();
-  // Do something with the state
-  return current.count * 2;
+// Function that accepts state as a parameter
+function checkAdminStatus(state: State<AppState>): string {
+  const data = state.get();
+  return data.isAdmin ? 'Admin Panel' : 'Access Denied';
 }
 
-it('processes data without affecting original state', async () => {
+it('shows admin panel for admin users', async () => {
   await withStateMock(
     appState,
-    { count: 10 },  // Mock value
-    async () => {
-      // Inside this callback, you could pass a scoped version
-      // But in practice, withStateMock is rarely needed
-      const result = processWithState(appState);
-      expect(result).toBe(20);
+    { isAdmin: true }, // Mocked values
+    (scopedState) => {
+      // The scoped state has the mocked values
+      const result = checkAdminStatus(scopedState);
+      expect(result).toBe('Admin Panel');
+      
+      // You can read the mocked values
+      expect(scopedState.get().isAdmin).toBe(true);
+      expect(scopedState.get().count).toBe(0);
     }
   );
 
   // Original state is unchanged
-  expect(appState.get().count).toBe(0);
+  expect(appState.get().isAdmin).toBe(false);
 });
 ```
 
-**Better Testing Pattern:**
+**How it works:**
 
-For most testing scenarios, use `createTestState` instead:
+1. `withStateMock` creates a child state with your mocked values merged with the original state
+2. The child state is passed to your callback function as `scopedState`
+3. Your callback can use this scoped state for testing
+4. After the callback completes, the scoped state is discarded
+5. The original state remains unchanged
 
-```ts
-import { createTestState } from '@vielzeug/stateit';
-
-it('tests with isolated state', () => {
-  // Create a completely isolated test state
-  const { state: testState, dispose } = createTestState(
-    null,
-    { count: 0, isAdmin: true }
-  );
-  
-  // Your code uses testState instead of the real state
-  function checkAdmin(state: State<any>) {
-    return state.get().isAdmin ? 'Admin' : 'User';
-  }
-  
-  expect(checkAdmin(testState)).toBe('Admin');
-  
-  dispose();
-});
-```
-
-**Practical Example:**
+**Use Cases:**
 
 ```ts
-// Your application code
-const userState = createState({ 
-  name: '', 
-  role: 'guest', 
-  permissions: [] 
-});
+// Testing with different user permissions
+it('checks permissions for different roles', async () => {
+  const userState = createState({ role: 'guest', permissions: [] });
 
-function hasPermission(permission: string): boolean {
-  const state = userState.get();
-  return state.permissions.includes(permission);
-}
-
-// Testing approach 1: Modify state directly (most common)
-it('checks permissions correctly', () => {
-  userState.set({ 
-    name: 'Admin',
-    role: 'admin',
-    permissions: ['read', 'write', 'delete'] 
-  });
-  
-  expect(hasPermission('write')).toBe(true);
-  expect(hasPermission('execute')).toBe(false);
-  
-  userState.reset(); // Clean up
-});
-
-// Testing approach 2: Use isolated test state (better)
-it('checks permissions with test state', () => {
-  const { state: testState, dispose } = createTestState(null, {
-    name: 'Admin',
-    role: 'admin', 
-    permissions: ['read', 'write', 'delete']
-  });
-  
-  // Modify your function to accept state as parameter
-  function hasPermissionInState(state: State<any>, permission: string): boolean {
+  function hasPermission(state: State<UserState>, permission: string): boolean {
     return state.get().permissions.includes(permission);
   }
+
+  // Test admin permissions
+  await withStateMock(
+    userState,
+    { role: 'admin', permissions: ['read', 'write', 'delete'] },
+    (scopedState) => {
+      expect(hasPermission(scopedState, 'write')).toBe(true);
+      expect(hasPermission(scopedState, 'delete')).toBe(true);
+    }
+  );
+
+  // Test guest permissions
+  await withStateMock(
+    userState,
+    { role: 'guest', permissions: ['read'] },
+    (scopedState) => {
+      expect(hasPermission(scopedState, 'read')).toBe(true);
+      expect(hasPermission(scopedState, 'write')).toBe(false);
+    }
+  );
+
+  // Original state unchanged
+  expect(userState.get().role).toBe('guest');
+});
+```
+
+**Async Testing:**
+
+```ts
+it('handles async operations with mocked state', async () => {
+  const appState = createState({ userId: null, data: null });
+
+  async function fetchUserData(state: State<AppState>): Promise<any> {
+    const userId = state.get().userId;
+    // Simulate API call
+    return { id: userId, name: 'Test User' };
+  }
+
+  const result = await withStateMock(
+    appState,
+    { userId: 123 },
+    async (scopedState) => {
+      const data = await fetchUserData(scopedState);
+      expect(data.id).toBe(123);
+      return data;
+    }
+  );
+
+  expect(result.name).toBe('Test User');
+  expect(appState.get().userId).toBe(null); // Original unchanged
+});
+```
+
+**Alternative: Direct State Modification**
+
+For simpler cases where you're testing functions that access a global state directly, just modify the state:
+
+```ts
+const appState = createState({ isAdmin: false });
+
+function renderAdminPanel(): string {
+  // Reads from global appState
+  return appState.get().isAdmin ? 'Admin Panel' : 'Access Denied';
+}
+
+it('shows admin panel', () => {
+  // Set the state directly
+  appState.set({ isAdmin: true });
   
-  expect(hasPermissionInState(testState, 'write')).toBe(true);
-  expect(hasPermissionInState(testState, 'execute')).toBe(false);
+  expect(renderAdminPanel()).toBe('Admin Panel');
   
+  // Clean up
+  appState.reset();
+});
+```
+
+**Alternative: Create Test State**
+
+For complete isolation, create a dedicated test state:
+
+```ts
+it('tests with isolated state', () => {
+  const { state: testState, dispose } = createTestState(null, {
+    count: 0,
+    isAdmin: true
+  });
+
+  function checkAdmin(state: State<any>): string {
+    return state.get().isAdmin ? 'Admin' : 'User';
+  }
+
+  expect(checkAdmin(testState)).toBe('Admin');
+
+
   dispose();
 });
 ```
@@ -758,10 +759,7 @@ it('notifies subscribers on change', async () => {
   state.set({ count: 1 });
   await Promise.resolve(); // Wait for batched notification
 
-  expect(listener).toHaveBeenCalledWith(
-    { count: 1 },
-    { count: 0 }
-  );
+  expect(listener).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
   expect(listener).toHaveBeenCalledTimes(1);
 });
 
@@ -777,6 +775,192 @@ it('cleans up subscriptions', () => {
   state.set({ count: 1 });
   expect(listener).not.toHaveBeenCalled();
 });
+```
+
+## Computed Values
+
+Create cached derived values that automatically update when dependencies change.
+
+### Basic Computed
+
+```ts
+const state = createState({
+  items: [
+    { price: 10, quantity: 2 },
+    { price: 20, quantity: 1 },
+  ],
+});
+
+// Create computed total
+const total = state.computed((s) => s.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
+
+console.log(total.get()); // 40
+
+// Computed value is cached
+console.log(total.get()); // 40 (uses cache, doesn't recompute)
+
+// Updates automatically when state changes
+state.set({
+  items: [...state.get().items, { price: 15, quantity: 3 }],
+});
+
+console.log(total.get()); // 85
+```
+
+### Subscribe to Computed Values
+
+```ts
+const state = createState({ firstName: 'Alice', lastName: 'Johnson' });
+
+const fullName = state.computed((s) => `${s.firstName} ${s.lastName}`);
+
+// Subscribe to computed value changes
+fullName.subscribe((current, prev) => {
+  console.log(`Name changed from "${prev}" to "${current}"`);
+});
+
+state.set({ firstName: 'Bob' }); // Logs: Name changed from "Alice Johnson" to "Bob Johnson"
+```
+
+### Custom Equality for Computed
+
+```ts
+const state = createState({ items: [1, 2, 3] });
+
+// Only recompute when array length changes
+const itemsComputed = state.computed((s) => s.items, {
+  equality: (a, b) => a.length === b.length,
+});
+
+const listener = vi.fn();
+itemsComputed.subscribe(listener);
+
+// Same length - doesn't trigger
+state.set({ items: [4, 5, 6] });
+
+// Different length - triggers
+state.set({ items: [1, 2, 3, 4] });
+```
+
+### Multiple Computed Values
+
+```ts
+const state = createState({
+  items: [
+    { name: 'Apple', price: 1.5, quantity: 2, tax: 0.1 },
+    { name: 'Banana', price: 0.8, quantity: 3, tax: 0.1 },
+  ],
+});
+
+// Subtotal
+const subtotal = state.computed((s) => s.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
+
+// Tax
+const tax = state.computed((s) => s.items.reduce((sum, item) => sum + item.price * item.quantity * item.tax, 0));
+
+// Total (using other computed values)
+const total = state.computed(() => subtotal.get() + tax.get());
+
+console.log(subtotal.get()); // 5.4
+console.log(tax.get()); // 0.54
+console.log(total.get()); // 5.94
+```
+
+## Transactions
+
+Batch multiple state updates into a single notification for better performance.
+
+### Basic Transaction
+
+```ts
+const state = createState({ count: 0, name: 'Alice', age: 30 });
+
+const listener = vi.fn();
+state.subscribe(listener);
+
+// Without transaction - 3 notifications
+state.set({ count: 1 });
+state.set({ name: 'Bob' });
+state.set({ age: 31 });
+// listener called 3 times
+
+// With transaction - 1 notification
+state.transaction(() => {
+  state.set({ count: 1 });
+  state.set({ name: 'Bob' });
+  state.set({ age: 31 });
+});
+// listener called only once with final state
+```
+
+### Transactions with Computed Values
+
+```ts
+const state = createState({ a: 1, b: 2 });
+const sum = state.computed((s) => s.a + s.b);
+
+const listener = vi.fn();
+sum.subscribe(listener);
+
+state.transaction(() => {
+  state.set({ a: 5 });
+  state.set({ b: 10 });
+});
+
+// Computed value updated only once
+console.log(sum.get()); // 15
+```
+
+### Nested Transactions
+
+```ts
+const state = createState({ count: 0 });
+
+state.transaction(() => {
+  state.set({ count: 1 });
+
+  state.transaction(() => {
+    state.set({ count: 2 });
+    state.set({ count: 3 });
+  });
+
+  state.set({ count: 4 });
+});
+
+// Only one notification for entire transaction tree
+console.log(state.get().count); // 4
+```
+
+### Reading State During Transaction
+
+```ts
+const state = createState({ count: 0 });
+
+state.transaction(() => {
+  state.set({ count: 1 });
+  console.log(state.get().count); // 1 (can read during transaction)
+
+  state.set({ count: 2 });
+  console.log(state.get().count); // 2
+});
+```
+
+### Error Handling in Transactions
+
+```ts
+const state = createState({ count: 0 });
+
+try {
+  state.transaction(() => {
+    state.set({ count: 1 });
+    throw new Error('Something went wrong');
+  });
+} catch (error) {
+  console.error(error);
+}
+
+// Changes before error are still applied
+console.log(state.get().count); // 1
 ```
 
 ## Advanced Patterns
@@ -811,12 +995,7 @@ function withPersistence<T extends object>(state: State<T>, key: string) {
 }
 
 // Compose middleware
-const state = withLogging(
-  withPersistence(
-    createState({ count: 0 }),
-    'counter-state'
-  )
-);
+const state = withLogging(withPersistence(createState({ count: 0 }), 'counter-state'));
 ```
 
 ### Computed Values
@@ -831,19 +1010,14 @@ const cartState = createState({
 
 // Subscribe to computed total
 cartState.subscribe(
-  (state) => state.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  ),
+  (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
-  }
+  },
 );
 
 // Or get computed value on demand
-const total = cartState.get((state) =>
-  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-);
+const total = cartState.get((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 ```
 
 ### Multiple States Composition
@@ -865,7 +1039,7 @@ uiState.subscribe(
   (state) => state.theme,
   (theme) => {
     document.body.className = theme;
-  }
+  },
 );
 ```
 
@@ -889,9 +1063,7 @@ class UndoableState<T extends object> {
   }
 
   set(update: Partial<T> | ((current: T) => T)) {
-    const newState = typeof update === 'function'
-      ? update(this.state.get())
-      : { ...this.state.get(), ...update };
+    const newState = typeof update === 'function' ? update(this.state.get()) : { ...this.state.get(), ...update };
 
     this.state.set(newState);
     this.pushHistory(newState);
@@ -938,7 +1110,7 @@ state.subscribe(
   (state) => state.count,
   (count) => {
     updateCountUI(count);
-  }
+  },
 );
 ```
 
@@ -953,7 +1125,7 @@ state.subscribe(
   (array) => processArray(array),
   {
     equality: (a, b) => a.length === b.length,
-  }
+  },
 );
 ```
 
@@ -976,7 +1148,7 @@ function updateMultiple() {
 const state = createState({
   items: [],
   itemCount: 0, // Derived from items.length
-  total: 0,     // Derived from items
+  total: 0, // Derived from items
 });
 
 // ✅ Good - compute on demand
@@ -985,9 +1157,7 @@ const state = createState({
 });
 
 const itemCount = state.get((s) => s.items.length);
-const total = state.get((s) =>
-  s.items.reduce((sum, item) => sum + item.price, 0)
-);
+const total = state.get((s) => s.items.reduce((sum, item) => sum + item.price, 0));
 ```
 
 ## Best Practices
@@ -1000,4 +1170,3 @@ const total = state.get((s) =>
 6. **Meaningful Names** - Use descriptive state names for debugging
 7. **Test with Helpers** - Use `createTestState` for isolated tests
 8. **Batch Updates** - Let stateit handle batching automatically
-

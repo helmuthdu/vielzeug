@@ -56,18 +56,20 @@ const current = state.get();
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit                                               | Zustand         | Jotai           | Valtio      | Pinia           |
-| -------------------- | ----------------------------------------------------- | --------------- | --------------- | ----------- | --------------- |
-| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB         | ~6.5 KB         | ~5.8 KB     | ~35 KB          |
-| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1               | 0               | 1           | 1               |
-| TypeScript           | ✅ First-class                                        | ✅ First-class  | ✅ First-class  | ✅ Good     | ✅ First-class  |
-| Framework            | Agnostic                                              | React only      | React only      | React only  | Vue only        |
-| Async Updates        | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Custom Equality      | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ❌          | ❌              |
-| DevTools Integration | ❌                                                    | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Scoped Stores        | ✅ Yes                                                | ❌              | ✅ Yes          | ❌          | ❌              |
-| Selective Subs       | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Testing Helpers      | ✅ Yes                                                | ❌              | ❌              | ❌          | ❌              |
+| Feature              | Stateit                                               | Zustand        | Jotai          | Valtio     | Pinia          |
+| -------------------- | ----------------------------------------------------- | -------------- | -------------- | ---------- | -------------- |
+| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB        | ~6.5 KB        | ~5.8 KB    | ~35 KB         |
+| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1              | 0              | 1          | 1              |
+| TypeScript           | ✅ First-class                                        | ✅ First-class | ✅ First-class | ✅ Good    | ✅ First-class |
+| Framework            | Agnostic                                              | React only     | React only     | React only | Vue only       |
+| Async Updates        | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Computed Values      | ✅ Yes                                                | ❌             | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Transactions         | ✅ Yes                                                | ❌             | ❌             | ❌         | ❌             |
+| Custom Equality      | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ❌         | ❌             |
+| DevTools Integration | ❌                                                    | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Scoped Stores        | ✅ Yes                                                | ❌             | ✅ Yes         | ❌         | ❌             |
+| Selective Subs       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Testing Helpers      | ✅ Yes                                                | ❌             | ❌             | ❌         | ❌             |
 
 ## When to Use Stateit
 
@@ -92,6 +94,8 @@ const current = state.get();
 
 - **Type-Safe** – Full TypeScript support with precise type inference
 - **Reactive Subscriptions** – [Selective subscriptions](./usage.md#subscriptions) with automatic change detection
+- **Computed Values** – [Cached derived values](./usage.md#computed-values) that update automatically
+- **Transactions** – [Batch multiple updates](./usage.md#transactions) for optimal performance
 - **Scoped States** – [Child states](./usage.md#scoped-states) and isolated execution contexts
 - **Custom Equality** – Configurable [equality checks](./usage.md#custom-equality) for fine-grained control
 - **Async Support** – First-class support for [async state updates](./usage.md#async-state-updates)
@@ -132,10 +136,11 @@ await counter.set(async (state) => {
 ```
 
 ::: tip Next Steps
+
 - See [Usage Guide](./usage.md) for detailed features and patterns
 - Check [Examples](./examples.md) for framework integrations (React, Vue, Svelte)
 - Read [API Reference](./api.md) for complete type definitions
-:::
+  :::
 
 ## 🎓 Core Concepts
 
@@ -154,10 +159,7 @@ const userState = createState({
 });
 
 // Named state (useful for debugging)
-const appState = createState(
-  { theme: 'dark', language: 'en' },
-  { name: 'appSettings' }
-);
+const appState = createState({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
 
 // Custom equality function
 const todoState = createState(
@@ -166,7 +168,7 @@ const todoState = createState(
     equals: (a, b) => {
       return a.todos === b.todos && a.filter === b.filter;
     },
-  }
+  },
 );
 ```
 
@@ -228,14 +230,14 @@ state.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // Custom equality
 state.subscribe(
   (state) => state.items,
   (items) => console.log('Items changed:', items),
-  { equality: (a, b) => a.length === b.length }
+  { equality: (a, b) => a.length === b.length },
 );
 
 // Cleanup
@@ -262,7 +264,7 @@ await state.runInScope(
     scopedState.set({ count: 999 });
     await doSomething();
   },
-  { isTemporary: true }
+  { isTemporary: true },
 );
 
 console.log(state.get().count); // Original value (unchanged)
@@ -281,14 +283,8 @@ import { useSyncExternalStore } from 'react';
 import { createState, type State } from '@vielzeug/stateit';
 
 function useStateitState<T extends object>(state: State<T>): T;
-function useStateitState<T extends object, U>(
-  state: State<T>,
-  selector: (state: T) => U
-): U;
-function useStateitState<T extends object, U>(
-  state: State<T>,
-  selector?: (state: T) => U
-) {
+function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
@@ -296,7 +292,7 @@ function useStateitState<T extends object, U>(
       }
       return state.subscribe(callback);
     },
-    () => (selector ? selector(state.get()) : state.get())
+    () => (selector ? selector(state.get()) : state.get()),
   );
 }
 ```
@@ -335,10 +331,10 @@ import { createTestState, withStateMock } from '@vielzeug/stateit';
 
 it('increments count', () => {
   const { state, dispose } = createTestState(null, { count: 0 });
-  
+
   state.set({ count: 1 });
   expect(state.get().count).toBe(1);
-  
+
   dispose();
 });
 ```
@@ -412,14 +408,14 @@ Check your equality function. By default, `shallowEqual` is used:
 // This may not trigger if items array reference is the same
 state.subscribe(
   (state) => state.items,
-  (items) => console.log(items)
+  (items) => console.log(items),
 );
 
 // Use custom equality to trigger on length changes
 state.subscribe(
   (state) => state.items,
   (items) => console.log(items),
-  { equality: (a, b) => a.length === b.length }
+  { equality: (a, b) => a.length === b.length },
 );
 ```
 
@@ -464,4 +460,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ---
 
 > **Tip:** Stateit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for forms, i18n, HTTP clients, routing, and more.
-

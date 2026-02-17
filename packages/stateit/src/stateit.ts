@@ -10,6 +10,11 @@ export type StateOptions<T> = {
   equals?: EqualityFn<T>;
 };
 
+export type Computed<U> = {
+  get: () => U;
+  subscribe: (listener: Listener<U>) => Unsubscribe;
+};
+
 /** -------------------- Equality Utilities -------------------- **/
 
 export function shallowEqual(a: unknown, b: unknown): boolean {
@@ -55,6 +60,7 @@ export class State<T extends object> {
   private readonly subscriptions = new Map<number, Subscription<T, unknown>>();
   private readonly equals: EqualityFn<T>;
   private scheduled = false;
+  private transacting = false;
 
   constructor(initialState: T, options?: StateOptions<T>) {
     this.state = initialState;
@@ -159,6 +165,82 @@ export class State<T extends object> {
     };
   }
 
+  /** -------------------- Computed Values -------------------- **/
+
+  computed<U>(
+    selector: Selector<T, U>,
+    options?: { equality?: EqualityFn<U> },
+  ): Computed<U> {
+    let cachedValue = selector(this.state);
+    let cachedState = this.state;
+    const equality = (options?.equality ?? shallowEqual) as EqualityFn<U>;
+    const listeners = new Set<Listener<U>>();
+    let isInitialCall = true;
+
+    // Subscribe to state changes
+    this.subscribe((current) => {
+      // Skip the initial call from subscribe
+      if (isInitialCall) {
+        isInitialCall = false;
+        return;
+      }
+
+      const newValue = selector(current);
+      if (!equality(cachedValue as never, newValue as never)) {
+        const prev = cachedValue;
+        cachedValue = newValue;
+        cachedState = current;
+
+        for (const listener of listeners) {
+          try {
+            listener(newValue, prev);
+          } catch {
+            // Swallow errors
+          }
+        }
+      }
+    });
+
+    return {
+      get: () => {
+        // If state changed, recompute
+        if (this.state !== cachedState) {
+          cachedValue = selector(this.state);
+          cachedState = this.state;
+        }
+        return cachedValue;
+      },
+      subscribe: (listener: Listener<U>) => {
+        listeners.add(listener);
+        // Call listener immediately with current value
+        try {
+          listener(cachedValue, cachedValue);
+        } catch {
+          // Swallow errors
+        }
+        return () => listeners.delete(listener);
+      },
+    };
+  }
+
+  /** -------------------- Transactions -------------------- **/
+
+  transaction(fn: () => void): void {
+    if (this.transacting) {
+      // Already in a transaction, just run the function
+      fn();
+      return;
+    }
+
+    this.transacting = true;
+    try {
+      fn();
+    } finally {
+      this.transacting = false;
+      this.notify();
+    }
+  }
+
   /** -------------------- Scoped Stores -------------------- **/
 
   createChild(patch?: Partial<T>): State<T> {
@@ -183,7 +265,7 @@ export class State<T extends object> {
   /** -------------------- Internal Helpers -------------------- **/
 
   private notify(): void {
-    if (this.scheduled) return;
+    if (this.scheduled || this.transacting) return;
 
     this.scheduled = true;
 
@@ -240,7 +322,7 @@ export function createTestState<T extends object>(baseState?: State<T>, patch?: 
 export async function withStateMock<T extends object, R>(
   baseStore: State<T>,
   patch: Partial<T>,
-  fn: () => R | Promise<R>,
+  fn: (scopedState: State<T>) => R | Promise<R>,
 ): Promise<R> {
   return baseStore.runInScope(fn, patch);
 }

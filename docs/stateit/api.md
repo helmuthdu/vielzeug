@@ -49,8 +49,7 @@ Function that selects a value from state.
 
 ```ts
 const selectCount: Selector<AppState, number> = (state) => state.count;
-const selectFullName: Selector<UserState, string> = (state) =>
-  `${state.firstName} ${state.lastName}`;
+const selectFullName: Selector<UserState, string> = (state) => `${state.firstName} ${state.lastName}`;
 ```
 
 ---
@@ -123,15 +122,45 @@ const options: StateOptions<TodoState> = {
 
 ---
 
+### Computed
+
+```ts
+type Computed<U> = {
+  get: () => U;
+  subscribe: (listener: Listener<U>) => Unsubscribe;
+};
+```
+
+Object returned by `state.computed()` containing a cached value and subscription method.
+
+**Properties:**
+
+- **get**: Function to retrieve current computed value
+- **subscribe**: Function to subscribe to computed value changes
+
+**Example:**
+
+```ts
+const state = createState({ count: 5 });
+const doubled: Computed<number> = state.computed((s) => s.count * 2);
+
+// Get computed value
+const value = doubled.get(); // 10
+
+// Subscribe to changes
+const unsubscribe = doubled.subscribe((current, prev) => {
+  console.log(`Doubled: ${prev} → ${current}`);
+});
+```
+
+---
+
 ## Factory Function
 
 ### createState()
 
 ```ts
-function createState<T extends object>(
-  initialState: T,
-  options?: StateOptions<T>
-): State<T>;
+function createState<T extends object>(initialState: T, options?: StateOptions<T>): State<T>;
 ```
 
 Creates a new state instance.
@@ -161,7 +190,7 @@ const todos = createState(
   { items: [] },
   {
     equals: (a, b) => a.items.length === b.items.length,
-  }
+  },
 );
 ```
 
@@ -361,14 +390,14 @@ state.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
-  }
+  },
 );
 
 // With custom equality
 state.subscribe(
   (state) => state.items,
   (items) => console.log('Items changed'),
-  { equality: (a, b) => a.length === b.length }
+  { equality: (a, b) => a.length === b.length },
 );
 ```
 
@@ -377,6 +406,102 @@ state.subscribe(
 - Only called when selected value changes according to equality function
 - Default equality is `shallowEqual`
 - More efficient than subscribing to full state
+
+---
+
+### computed()
+
+```ts
+computed<U>(
+  selector: Selector<T, U>,
+  options?: { equality?: EqualityFn<U> }
+): Computed<U>;
+```
+
+Create a cached computed value that automatically updates when dependencies change.
+
+**Type Parameters:**
+
+- **U**: Computed value type
+
+**Parameters:**
+
+- **selector**: Function to compute value from state
+- **options** (optional): Configuration
+  - **equality**: Custom equality function (defaults to `shallowEqual`)
+
+**Returns:** `Computed<U>` object with `get()` and `subscribe()` methods
+
+**Example:**
+
+```ts
+const state = createState({
+  items: [{ price: 10 }, { price: 20 }],
+});
+
+const total = state.computed((s) => s.items.reduce((sum, item) => sum + item.price, 0));
+
+console.log(total.get()); // 30
+
+// Subscribe to computed changes
+total.subscribe((current, prev) => {
+  console.log(`Total changed: ${prev} → ${current}`);
+});
+
+state.set({ items: [...state.get().items, { price: 15 }] });
+// Logs: Total changed: 30 → 45
+```
+
+**Notes:**
+
+- Computed values are cached until state changes
+- Only recomputes when the actual state object changes
+- Notifies subscribers only when computed value changes
+- Custom equality function controls when subscribers are notified
+- Subscribers are called immediately with current value
+
+---
+
+### transaction()
+
+```ts
+transaction(fn: () => void): void;
+```
+
+Execute multiple state updates in a transaction, batching notifications into a single update.
+
+**Parameters:**
+
+- **fn**: Function containing state updates to batch
+
+**Returns:** `void`
+
+**Example:**
+
+```ts
+const state = createState({ count: 0, name: 'Alice', age: 30 });
+
+state.subscribe((current) => {
+  console.log('State updated:', current);
+});
+
+// Multiple updates batched into one notification
+state.transaction(() => {
+  state.set({ count: 1 });
+  state.set({ name: 'Bob' });
+  state.set({ age: 31 });
+});
+// Logs once: State updated: { count: 1, name: 'Bob', age: 31 }
+```
+
+**Notes:**
+
+- All state changes within transaction are batched
+- Subscribers notified only once after transaction completes
+- Transactions can be nested (notifications still batched)
+- State can be read during transaction
+- If transaction throws, changes up to error are still applied
+- Computed values also benefit from batching
 
 ---
 
@@ -401,7 +526,7 @@ const parent = createState({ count: 0, name: 'Parent' });
 const child = parent.createChild({ name: 'Child' });
 
 console.log(parent.get()); // { count: 0, name: 'Parent' }
-console.log(child.get());  // { count: 0, name: 'Child' }
+console.log(child.get()); // { count: 0, name: 'Child' }
 
 child.set({ count: 10 });
 console.log(parent.get().count); // 0 (unchanged)
@@ -449,7 +574,7 @@ const result = await state.runInScope(
     await doSomething();
     return 'completed';
   },
-  { isTemporary: true }
+  { isTemporary: true },
 );
 
 console.log(state.get().count); // 0 (unchanged)
@@ -546,7 +671,7 @@ const merged = shallowMerge(arr, { 0: 99 });
 ```ts
 function createTestState<T extends object>(
   baseState?: State<T>,
-  patch?: Partial<T>
+  patch?: Partial<T>,
 ): {
   state: State<T>;
   dispose: () => void;
@@ -598,11 +723,11 @@ describe('Counter', () => {
 function withStateMock<T extends object, R>(
   baseState: State<T>,
   patch: Partial<T>,
-  fn: () => R | Promise<R>
+  fn: (scopedState: State<T>) => R | Promise<R>
 ): Promise<R>;
 ```
 
-Execute function with temporarily mocked state.
+Execute function with temporarily mocked state. The scoped state is passed to your callback function.
 
 **Type Parameters:**
 
@@ -611,32 +736,45 @@ Execute function with temporarily mocked state.
 
 **Parameters:**
 
-- **baseState**: State to mock
-- **patch**: Partial state override
-- **fn**: Function to execute
+- **baseState**: State to create mock from
+- **patch**: Partial state to merge with base state
+- **fn**: Function to execute with scoped state
 
 **Returns:** Promise resolving to function result
 
 **Example:**
 
 ```ts
-const appState = createState({ user: null });
+const appState = createState({ user: null, isAdmin: false });
 
-it('shows admin panel', async () => {
+function checkAdmin(state: State<AppState>): string {
+  return state.get().isAdmin ? 'Admin' : 'Guest';
+}
+
+it('checks admin status with mocked state', async () => {
   await withStateMock(
     appState,
-    { user: { name: 'Admin', isAdmin: true } },
-    async () => {
-      const result = await renderAdminPanel();
-      expect(result).toContain('Admin Panel');
+    { user: { name: 'Admin' }, isAdmin: true },
+    (scopedState) => {
+      // scopedState has the mocked values
+      const result = checkAdmin(scopedState);
+      expect(result).toBe('Admin');
+      expect(scopedState.get().isAdmin).toBe(true);
     }
   );
 
   // Original state unchanged
-  expect(appState.get().user).toBe(null);
+  expect(appState.get().isAdmin).toBe(false);
 });
 ```
 
+**Notes:**
+
+- Creates a scoped child state with mocked values
+- Original state is never modified
+- Scoped state is discarded after callback completes
+- Useful for testing functions that accept state as a parameter
+- For simpler testing, consider `createTestState` instead
 **Notes:**
 
 - Uses `runInScope` internally
@@ -667,7 +805,7 @@ state.subscribe(
   (count) => {
     // count is typed as number
     console.log(count.toFixed(2));
-  }
+  },
 );
 ```
 
@@ -774,7 +912,7 @@ state.subscribe(
   (state) => state.count,
   (count) => {
     updateCountUI(count);
-  }
+  },
 );
 ```
 
@@ -788,7 +926,7 @@ state.subscribe(
   (array) => processArray(array),
   {
     equality: (a, b) => a.length === b.length, // Cheap comparison
-  }
+  },
 );
 ```
 
@@ -853,4 +991,3 @@ import { createState } from '@vielzeug/stateit';
 
 const state = createState({ count: 0 });
 ```
-

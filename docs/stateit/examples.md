@@ -18,14 +18,8 @@ import { createState, type State } from '@vielzeug/stateit';
 
 // Create reusable hooks
 function useStateitState<T extends object>(state: State<T>): T;
-function useStateitState<T extends object, U>(
-  state: State<T>,
-  selector: (state: T) => U
-): U;
-function useStateitState<T extends object, U>(
-  state: State<T>,
-  selector?: (state: T) => U
-) {
+function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
@@ -33,7 +27,7 @@ function useStateitState<T extends object, U>(
       }
       return state.subscribe(callback);
     },
-    () => (selector ? selector(state.get()) : state.get())
+    () => (selector ? selector(state.get()) : state.get()),
   );
 }
 
@@ -49,15 +43,9 @@ function Counter() {
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => counterState.set({ count: count + 1 })}>
-        Increment
-      </button>
-      <button onClick={() => counterState.set({ count: count - 1 })}>
-        Decrement
-      </button>
-      <button onClick={() => counterState.reset()}>
-        Reset
-      </button>
+      <button onClick={() => counterState.set({ count: count + 1 })}>Increment</button>
+      <button onClick={() => counterState.set({ count: count - 1 })}>Decrement</button>
+      <button onClick={() => counterState.reset()}>Reset</button>
     </div>
   );
 }
@@ -70,13 +58,7 @@ function User() {
     <div>
       <p>Name: {user.name}</p>
       <p>Status: {user.isLoggedIn ? 'Logged in' : 'Logged out'}</p>
-      <button
-        onClick={() =>
-          userState.set({ isLoggedIn: !user.isLoggedIn })
-        }
-      >
-        Toggle Login
-      </button>
+      <button onClick={() => userState.set({ isLoggedIn: !user.isLoggedIn })}>Toggle Login</button>
     </div>
   );
 }
@@ -116,19 +98,14 @@ function TodoApp() {
   const addTodo = (text: string) => {
     todoState.set((state) => ({
       ...state,
-      todos: [
-        ...state.todos,
-        { id: Date.now(), text, completed: false },
-      ],
+      todos: [...state.todos, { id: Date.now(), text, completed: false }],
     }));
   };
 
   const toggleTodo = (id: number) => {
     todoState.set((state) => ({
       ...state,
-      todos: state.todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      ),
+      todos: state.todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
     }));
   };
 
@@ -142,32 +119,21 @@ function TodoApp() {
   return (
     <div>
       <h1>Todos ({filteredTodos.length})</h1>
-      
+
       <div>
-        <button onClick={() => todoState.set({ filter: 'all' })}>
-          All
-        </button>
-        <button onClick={() => todoState.set({ filter: 'active' })}>
-          Active
-        </button>
-        <button onClick={() => todoState.set({ filter: 'completed' })}>
-          Completed
-        </button>
+        <button onClick={() => todoState.set({ filter: 'all' })}>All</button>
+        <button onClick={() => todoState.set({ filter: 'active' })}>Active</button>
+        <button onClick={() => todoState.set({ filter: 'completed' })}>Completed</button>
       </div>
 
       <ul>
         {filteredTodos.map((todo) => (
           <li key={todo.id}>
-            <input
-              type="checkbox"
-              checked={todo.completed}
-              onChange={() => toggleTodo(todo.id)}
-            />
+            <input type="checkbox" checked={todo.completed} onChange={() => toggleTodo(todo.id)} />
             <span
               style={{
                 textDecoration: todo.completed ? 'line-through' : 'none',
-              }}
-            >
+              }}>
               {todo.text}
             </span>
             <button onClick={() => deleteTodo(todo.id)}>Delete</button>
@@ -181,8 +147,7 @@ function TodoApp() {
           const input = e.currentTarget.elements.namedItem('todo') as HTMLInputElement;
           addTodo(input.value);
           input.value = '';
-        }}
-      >
+        }}>
         <input name="todo" placeholder="Add todo..." />
         <button type="submit">Add</button>
       </form>
@@ -266,10 +231,7 @@ function useStateitState<T extends object>(state: State<T>) {
   return reactive;
 }
 
-function useStateitSelector<T extends object, U>(
-  state: State<T>,
-  selector: (state: T) => U
-) {
+function useStateitSelector<T extends object, U>(state: State<T>, selector: (state: T) => U) {
   const selected = ref(selector(state.get()));
 
   const unsubscribe = state.subscribe(selector, (value) => {
@@ -345,17 +307,9 @@ function updateAge(newAge: number) {
     <p>Email: {{ state.email }}</p>
     <p>Age: {{ state.age }}</p>
     <p>Status: {{ isAdult ? 'Adult' : 'Minor' }}</p>
-    
-    <input
-      :value="name"
-      @input="updateName($event.target.value)"
-      placeholder="Name"
-    />
-    <input
-      type="number"
-      :value="state.age"
-      @input="updateAge(Number($event.target.value))"
-    />
+
+    <input :value="name" @input="updateName($event.target.value)" placeholder="Name" />
+    <input type="number" :value="state.age" @input="updateAge(Number($event.target.value))" />
   </div>
 </template>
 ```
@@ -391,17 +345,17 @@ export { counter, counterState };
 ```svelte
 <script lang="ts">
   import { counter, counterState } from './stores';
-  
+
   $: count = $counter.count;
-  
+
   function increment() {
     counterState.set({ count: count + 1 });
   }
-  
+
   function decrement() {
     counterState.set({ count: count - 1 });
   }
-  
+
   function reset() {
     counterState.reset();
   }
@@ -438,14 +392,14 @@ export { counter, counterState };
 
   function addTodo() {
     if (!newTodo.trim()) return;
-    
+
     todoState.set((state) => ({
       todos: [
         ...state.todos,
         { id: Date.now(), text: newTodo, completed: false },
       ],
     }));
-    
+
     newTodo = '';
   }
 
@@ -466,7 +420,7 @@ export { counter, counterState };
 
 <div>
   <h1>Todos</h1>
-  
+
   <form on:submit|preventDefault={addTodo}>
     <input bind:value={newTodo} placeholder="Add todo..." />
     <button type="submit">Add</button>
@@ -551,7 +505,7 @@ formState.subscribe((state) => {
   nameInput.value = state.name;
   emailInput.value = state.email;
   ageInput.value = state.age.toString();
-  
+
   // Update error display
   updateErrors(state.errors);
 });
@@ -572,20 +526,20 @@ ageInput.addEventListener('input', (e) => {
 // Validation
 function validate(state) {
   const errors = {};
-  
+
   if (!state.name) errors.name = 'Name is required';
   if (!state.email) errors.email = 'Email is required';
   if (state.age < 18) errors.age = 'Must be 18 or older';
-  
+
   return errors;
 }
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();
-  
+
   const errors = validate(formState.get());
   formState.set({ errors });
-  
+
   if (Object.keys(errors).length === 0) {
     console.log('Form submitted:', formState.get());
   }
@@ -678,17 +632,14 @@ uiState.subscribe(
   (state) => state.theme,
   (theme) => {
     document.body.setAttribute('data-theme', theme);
-  }
+  },
 );
 ```
 
 ### Local Storage Persistence
 
 ```ts
-function createPersistedState<T extends object>(
-  key: string,
-  initialState: T
-) {
+function createPersistedState<T extends object>(key: string, initialState: T) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
   const state = createState<T>(saved ? JSON.parse(saved) : initialState);
@@ -758,10 +709,7 @@ class UndoableState<T extends object> {
   }
 
   set(update: Partial<T> | ((current: T) => T)) {
-    const newState =
-      typeof update === 'function'
-        ? update(this.state.get())
-        : { ...this.state.get(), ...update };
+    const newState = typeof update === 'function' ? update(this.state.get()) : { ...this.state.get(), ...update };
 
     this.state.set(newState);
     this.pushHistory(newState);
@@ -888,13 +836,10 @@ describe('Todo App', () => {
     // Complete todo
     todoState.set((state) => ({
       ...state,
-      todos: state.todos.map((t) =>
-        t.id === 1 ? { ...t, completed: true } : t
-      ),
+      todos: state.todos.map((t) => (t.id === 1 ? { ...t, completed: true } : t)),
     }));
 
     expect(todoState.get().todos[0].completed).toBe(true);
   });
 });
 ```
-

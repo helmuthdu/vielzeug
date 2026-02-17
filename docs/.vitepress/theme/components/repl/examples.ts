@@ -2509,10 +2509,77 @@ todos.set((state) => ({
 }))
 
 // Show completed
-todos.set({ filter: 'completed' })// Change filter
-todoStore.set({ filter: 'active' })
-todoStore.set({ filter: 'completed' })`,
+todos.set({ filter: 'completed' })`,
       name: 'Todo List Example',
+    },
+    'computed-values': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const cart = createState({
+  items: [
+    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
+    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
+  ],
+  taxRate: 0.1
+})
+
+// Create computed values
+const subtotal = cart.computed((state) =>
+  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+)
+
+const tax = cart.computed((state) => subtotal.get() * state.taxRate)
+const total = cart.computed(() => subtotal.get() + tax.get())
+
+console.log('Subtotal:', subtotal.get().toFixed(2))
+console.log('Tax:', tax.get().toFixed(2))
+console.log('Total:', total.get().toFixed(2))
+
+// Subscribe to changes
+total.subscribe((current, prev) => {
+  console.log(\`Total: $\${prev.toFixed(2)} → $\${current.toFixed(2)}\`)
+})
+
+// Add item - auto-updates
+cart.set((state) => ({
+  items: [...state.items, { id: 3, name: 'Orange', price: 1.2, quantity: 4 }]
+}))
+
+console.log('\\nNew Total:', total.get().toFixed(2))`,
+      name: 'Computed Values',
+    },
+    'transactions': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const user = createState({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com'
+})
+
+let count = 0
+user.subscribe(() => {
+  count++
+  console.log(\`Update #\${count}\`)
+})
+
+console.log('=== Without transaction ===')
+count = 0
+user.set({ name: 'Bob' })
+user.set({ age: 31 })
+user.set({ email: 'bob@example.com' })
+console.log(\`Updates: \${count}\`)
+
+console.log(\`\\n=== With transaction ===\`)
+count = 0
+user.transaction(() => {
+  user.set({ name: 'Charlie' })
+  user.set({ age: 25 })
+  user.set({ email: 'charlie@example.com' })
+})
+console.log(\`Updates: \${count}\`)
+console.log('Final:', user.get())`,
+      name: 'Transactions',
     },
   },
   toolkit: {

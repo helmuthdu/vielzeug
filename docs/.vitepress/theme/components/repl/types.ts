@@ -585,6 +585,11 @@ declare module '@vielzeug/stateit' {
     equals?: EqualityFn<T>;
   };
 
+  export type Computed<U> = {
+    get: () => U;
+    subscribe: (listener: Listener<U>) => Unsubscribe;
+  };
+
   export class State<T extends object> {
     get(): T;
     get<U>(selector: Selector<T, U>): U;
@@ -598,6 +603,11 @@ declare module '@vielzeug/stateit' {
       listener: Listener<U>,
       options?: { equality?: EqualityFn<U> }
     ): Unsubscribe;
+    computed<U>(
+      selector: Selector<T, U>,
+      options?: { equality?: EqualityFn<U> }
+    ): Computed<U>;
+    transaction(fn: () => void): void;
     createChild(patch?: Partial<T>): State<T>;
     runInScope<R>(
       fn: (scopedState: State<T>) => R | Promise<R>,
@@ -621,7 +631,7 @@ declare module '@vielzeug/stateit' {
   export function withStateMock<T extends object, R>(
     baseState: State<T>,
     patch: Partial<T>,
-    fn: () => R | Promise<R>
+    fn: (scopedState: State<T>) => R | Promise<R>
   ): Promise<R>;
 
   export function shallowEqual(a: unknown, b: unknown): boolean;

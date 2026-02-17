@@ -64,7 +64,7 @@ const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
 const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const LIBRARY_DESCRIPTIONS = {
-  craftit: 'Lightweight, type-safe web components with reactive state and automatic rendering.',
+  craftit: 'Lightweight, type-safe web components with reactive state.',
   deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
   formit: 'Type-safe form state and validation for React and beyond.',

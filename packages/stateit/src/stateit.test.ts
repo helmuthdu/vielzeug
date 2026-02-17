@@ -446,22 +446,44 @@ describe('withMock', () => {
   it('temporarily overrides state', async () => {
     const state = createState({ count: 0, name: 'test' });
 
-    await withStateMock(state, { count: 77 }, () => {
-      // Not accessible - scoped store is isolated
+    await withStateMock(state, { count: 77 }, (scopedState) => {
+      // Scoped state has the mocked value
+      expect(scopedState.get().count).toBe(77);
+      expect(scopedState.get().name).toBe('test');
     });
 
-    expect(state.get().count).toBe(0); // Original unchanged
+    // Original unchanged
+    expect(state.get().count).toBe(0);
   });
 
   it('handles async functions', async () => {
     const state = createState({ count: 0 });
 
-    const result = await withStateMock(state, { count: 99 }, async () => {
+    const result = await withStateMock(state, { count: 99 }, async (scopedState) => {
       await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(scopedState.get().count).toBe(99);
       return 'done';
     });
 
     expect(result).toBe('done');
+    expect(state.get().count).toBe(0);
+  });
+
+  it('can modify scoped state without affecting original', async () => {
+    const state = createState({ count: 0, items: [1, 2, 3] });
+
+    await withStateMock(state, { count: 50 }, (scopedState) => {
+      expect(scopedState.get().count).toBe(50);
+
+      // Modify the scoped state
+      scopedState.set({ count: 100 });
+      expect(scopedState.get().count).toBe(100);
+
+      // Original still unchanged
+      expect(state.get().count).toBe(0);
+    });
+
+    // Original still unchanged after mock
     expect(state.get().count).toBe(0);
   });
 });
@@ -599,3 +621,309 @@ describe('Store - Edge Cases', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+/** -------------------- Computed Values Tests -------------------- **/
+
+describe('computed', () => {
+  it('creates computed value from selector', () => {
+    const state = createState({ items: [{ price: 10 }, { price: 20 }] });
+
+    const total = state.computed((s) =>
+      s.items.reduce((sum, item) => sum + item.price, 0)
+    );
+
+    expect(total.get()).toBe(30);
+  });
+
+  it('caches computed value when state unchanged', () => {
+    const state = createState({ count: 1 });
+    const expensive = vi.fn((s: { count: number }) => s.count * 2);
+
+    const doubled = state.computed(expensive);
+
+    expect(doubled.get()).toBe(2);
+    expect(expensive).toHaveBeenCalledTimes(1);
+
+    // Should use cache
+    expect(doubled.get()).toBe(2);
+    expect(expensive).toHaveBeenCalledTimes(1);
+  });
+
+  it('recomputes when state changes', () => {
+    const state = createState({ count: 1 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    expect(doubled.get()).toBe(2);
+
+    state.set({ count: 5 });
+    expect(doubled.get()).toBe(10);
+  });
+
+  it('notifies computed subscribers when value changes', async () => {
+    const state = createState({ count: 1 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    const listener = vi.fn();
+    doubled.subscribe(listener);
+    listener.mockClear();
+
+    state.set({ count: 5 });
+    await Promise.resolve();
+
+    expect(listener).toHaveBeenCalledWith(10, 2);
+  });
+
+  it('does not notify when computed value unchanged', async () => {
+    const state = createState({ count: 1, name: 'Alice' });
+    const count = state.computed((s) => s.count);
+
+    const listener = vi.fn();
+    count.subscribe(listener);
+    listener.mockClear();
+
+    // Change name but not count
+    state.set({ name: 'Bob' });
+    await Promise.resolve();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('uses custom equality function', async () => {
+    const state = createState({ items: [1, 2, 3] });
+
+    // Only notify when length changes
+    const items = state.computed(
+      (s) => s.items,
+      { equality: (a, b) => a.length === b.length }
+    );
+
+    const listener = vi.fn();
+    items.subscribe(listener);
+    listener.mockClear();
+
+    // Same length, different values
+    state.set({ items: [4, 5, 6] });
+    await Promise.resolve();
+    expect(listener).not.toHaveBeenCalled();
+
+    // Different length
+    state.set({ items: [1, 2, 3, 4] });
+    await Promise.resolve();
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it('calls subscriber immediately on subscribe', () => {
+    const state = createState({ count: 5 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    const listener = vi.fn();
+    doubled.subscribe(listener);
+
+    expect(listener).toHaveBeenCalledWith(10, 10);
+  });
+
+  it('handles multiple computed subscribers', async () => {
+    const state = createState({ count: 1 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    const listener1 = vi.fn();
+    const listener2 = vi.fn();
+
+    doubled.subscribe(listener1);
+    doubled.subscribe(listener2);
+
+    listener1.mockClear();
+    listener2.mockClear();
+
+    state.set({ count: 3 });
+    await Promise.resolve();
+
+    expect(listener1).toHaveBeenCalledWith(6, 2);
+    expect(listener2).toHaveBeenCalledWith(6, 2);
+  });
+
+  it('allows unsubscribing from computed', async () => {
+    const state = createState({ count: 1 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    const listener = vi.fn();
+    const unsubscribe = doubled.subscribe(listener);
+    listener.mockClear();
+
+    unsubscribe();
+
+    state.set({ count: 5 });
+    await Promise.resolve();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('swallows errors in computed subscribers', async () => {
+    const state = createState({ count: 1 });
+    const doubled = state.computed((s) => s.count * 2);
+
+    const errorListener = vi.fn(() => {
+      throw new Error('Computed listener error');
+    });
+    const goodListener = vi.fn();
+
+    doubled.subscribe(errorListener);
+    doubled.subscribe(goodListener);
+
+    errorListener.mockClear();
+    goodListener.mockClear();
+
+    expect(() => {
+      state.set({ count: 3 });
+    }).not.toThrow();
+
+    await Promise.resolve();
+    expect(goodListener).toHaveBeenCalled();
+  });
+});
+
+/** -------------------- Transaction Tests -------------------- **/
+
+describe('transaction', () => {
+  it('batches multiple updates into single notification', async () => {
+    const state = createState({ count: 0, name: 'Alice', age: 30 });
+    const listener = vi.fn();
+
+    state.subscribe(listener);
+    listener.mockClear();
+
+    state.transaction(() => {
+      state.set({ count: 1 });
+      state.set({ name: 'Bob' });
+      state.set({ age: 31 });
+    });
+
+    // Should only notify once after transaction
+    await Promise.resolve();
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(
+      { count: 1, name: 'Bob', age: 31 },
+      { count: 0, name: 'Alice', age: 30 }
+    );
+  });
+
+  it('does not notify during transaction', () => {
+    const state = createState({ count: 0 });
+    const listener = vi.fn();
+
+    state.subscribe(listener);
+    listener.mockClear();
+
+    state.transaction(() => {
+      state.set({ count: 1 });
+      // Listener should not be called yet
+      expect(listener).not.toHaveBeenCalled();
+
+      state.set({ count: 2 });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    // Still not called synchronously
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('handles nested transactions', async () => {
+    const state = createState({ count: 0 });
+    const listener = vi.fn();
+
+    state.subscribe(listener);
+    listener.mockClear();
+
+    state.transaction(() => {
+      state.set({ count: 1 });
+
+      state.transaction(() => {
+        state.set({ count: 2 });
+        state.set({ count: 3 });
+      });
+
+      state.set({ count: 4 });
+    });
+
+    await Promise.resolve();
+
+    // Only one notification for entire transaction tree
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(state.get().count).toBe(4);
+  });
+
+  it('notifies even if transaction throws', async () => {
+    const state = createState({ count: 0 });
+    const listener = vi.fn();
+
+    state.subscribe(listener);
+    listener.mockClear();
+
+    expect(() => {
+      state.transaction(() => {
+        state.set({ count: 1 });
+        throw new Error('Transaction error');
+      });
+    }).toThrow('Transaction error');
+
+    await Promise.resolve();
+
+    // Should still notify with the changes made before error
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(state.get().count).toBe(1);
+  });
+
+  it('works with computed values', async () => {
+    const state = createState({ a: 1, b: 2 });
+    const sum = state.computed((s) => s.a + s.b);
+
+    const listener = vi.fn();
+    sum.subscribe(listener);
+    listener.mockClear();
+
+    state.transaction(() => {
+      state.set({ a: 5 });
+      state.set({ b: 10 });
+    });
+
+    await Promise.resolve();
+
+    // Computed should only update once
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(sum.get()).toBe(15);
+  });
+
+  it('allows reading state during transaction', () => {
+    const state = createState({ count: 0 });
+
+    state.transaction(() => {
+      state.set({ count: 1 });
+      expect(state.get().count).toBe(1);
+
+      state.set({ count: 2 });
+      expect(state.get().count).toBe(2);
+    });
+
+    expect(state.get().count).toBe(2);
+  });
+
+  it('does not affect selective subscriptions batching', async () => {
+    const state = createState({ count: 0, name: 'Alice' });
+    const countListener = vi.fn();
+
+    state.subscribe((s) => s.count, countListener);
+    countListener.mockClear();
+
+    state.transaction(() => {
+      state.set({ count: 1 });
+      state.set({ count: 2 });
+      state.set({ name: 'Bob' }); // Shouldn't trigger count listener
+    });
+
+    await Promise.resolve();
+
+    expect(countListener).toHaveBeenCalledTimes(1);
+    expect(countListener).toHaveBeenCalledWith(2, 0);
+  });
+});
+

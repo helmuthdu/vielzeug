@@ -40,6 +40,8 @@ const snapshot = state.get();
 
 - ✅ **Type-Safe** – Full TypeScript support with precise type inference
 - ✅ **Reactive Subscriptions** – Selective subscriptions with automatic change detection
+- ✅ **Computed Values** – Cached derived values that update automatically
+- ✅ **Transactions** – Batch multiple updates for optimal performance
 - ✅ **Scoped States** – Child states and isolated execution contexts
 - ✅ **Custom Equality** – Configurable equality checks for fine-grained control
 - ✅ **Async Support** – First-class support for async state updates
@@ -50,17 +52,19 @@ const snapshot = state.get();
 
 ## 🆚 Comparison with Alternatives
 
-| Feature                 | stateit    | Zustand            | Jotai              | Valtio             |
-| ----------------------- | ---------- | ------------------ | ------------------ | ------------------ |
-| Bundle Size (gzipped)   | **2.4 KB** | 1.1 KB             | 3.0 KB             | 5.4 KB             |
-| Framework Agnostic      | ✅         | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
-| TypeScript              | ✅ Full    | ✅ Full            | ✅ Full            | ✅ Full            |
-| Selective Subscriptions | ✅         | ✅                 | ✅                 | ✅                 |
-| Async Updates           | ✅         | ✅                 | ✅                 | ✅                 |
-| Scoped States           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
-| Custom Equality         | ✅         | ✅                 | ✅                 | ❌                 |
-| Testing Helpers         | ✅         | ❌                 | ❌                 | ❌                 |
-| Dependencies            | **0**      | 1                  | 0                  | 1                  |
+| Feature                 | stateit     | Zustand            | Jotai              | Valtio             |
+| ----------------------- | ----------- | ------------------ | ------------------ | ------------------ |
+| Bundle Size (gzipped)   | **~2.5 KB** | ~3.5 KB            | ~6.5 KB            | ~5.8 KB            |
+| Framework Agnostic      | ✅          | ❌ (React-focused) | ❌ (React-focused) | ❌ (React-focused) |
+| TypeScript              | ✅ Full     | ✅ Full            | ✅ Full            | ✅ Full            |
+| Selective Subscriptions | ✅          | ✅                 | ✅                 | ✅                 |
+| Computed Values         | ✅          | ❌                 | ✅                 | ✅                 |
+| Transactions            | ✅          | ❌                 | ❌                 | ❌                 |
+| Async Updates           | ✅          | ✅                 | ✅                 | ✅                 |
+| Scoped States           | ✅          | ❌                 | ✅ (atoms)         | ❌                 |
+| Custom Equality         | ✅          | ✅                 | ✅                 | ❌                 |
+| Testing Helpers         | ✅          | ❌                 | ❌                 | ❌                 |
+| Dependencies            | **0**       | 1                  | 0                  | 1                  |
 
 ## 📦 Installation
 
@@ -245,6 +249,56 @@ await state.runInScope(
 );
 
 console.log(state.get().count); // Original value (unchanged)
+```
+
+### Computed Values
+
+```typescript
+// Create cached derived value
+const cart = createState({
+  items: [
+    { price: 10, quantity: 2 },
+    { price: 20, quantity: 1 },
+  ],
+});
+
+const total = cart.computed((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
+
+console.log(total.get()); // 40
+
+// Subscribe to computed value changes
+total.subscribe((current, prev) => {
+  console.log(`Total: ${prev} → ${current}`);
+});
+
+// Computed value updates automatically
+cart.set({
+  items: [...cart.get().items, { price: 15, quantity: 3 }],
+});
+console.log(total.get()); // 85
+```
+
+### Transactions
+
+```typescript
+// Batch multiple updates into single notification
+const state = createState({ count: 0, name: 'Alice', age: 30 });
+
+state.subscribe((current) => {
+  console.log('State updated:', current);
+});
+
+// Multiple updates = multiple notifications (without transaction)
+state.set({ count: 1 }); // notification 1
+state.set({ name: 'Bob' }); // notification 2
+state.set({ age: 31 }); // notification 3
+
+// Batch into single notification (with transaction)
+state.transaction(() => {
+  state.set({ count: 1 });
+  state.set({ name: 'Bob' });
+  state.set({ age: 31 });
+}); // Only 1 notification with final state
 ```
 
 ## Framework Integration
