@@ -77,17 +77,17 @@ defineElement('my-counter', {
 
 ### Comparison with Alternatives
 
-| Feature            | Craftit                                               | Lit      | Stencil   | Vanilla CE |
-| ------------------ | ----------------------------------------------------- | -------- | --------- | ---------- |
-| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~7 KB    | ~30 KB    | 0          |
-| Dependencies       | <PackageInfo package="craftit" type="dependencies" /> | 0        | Many      | 0          |
-| DOM Reconciliation | ✅                                                    | ✅       | ✅        | ❌         |
-| Event Delegation   | ✅                                                    | ❌       | ❌        | Manual     |
-| Form Integration   | ✅                                                    | ⚠️       | ✅        | Manual     |
-| Learning Curve     | Low                                                   | Medium   | High      | Low        |
-| Reactive State     | Built-in                                              | External | Built-in  | Manual     |
-| Testing Utilities  | ✅                                                    | ⚠️       | ✅        | ❌         |
-| TypeScript         | Native                                                | Good     | Excellent | Manual     |
+| Feature            | Craftit                                               | Lit             | Stencil         | Vanilla CE      |
+| ------------------ | ----------------------------------------------------- | --------------- | --------------- | --------------- |
+| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~7 KB           | ~30 KB          | 0               |
+| Dependencies       | <PackageInfo package="craftit" type="dependencies" /> | 0               | Many            | 0               |
+| DOM Reconciliation | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ❌              |
+| Event Delegation   | ✅ Built-in                                           | ❌              | ❌              | ⚠️ Manual       |
+| Form Integration   | ✅ Built-in                                           | ⚠️ Limited      | ✅ Built-in     | ⚠️ Manual       |
+| Learning Curve     | Low                                                   | Medium          | High            | Low             |
+| Reactive State     | ✅ Built-in                                           | ⚠️ External lib | ✅ Built-in     | ⚠️ Manual       |
+| Testing Utilities  | ✅ Yes                                                | ⚠️ Limited      | ✅ Yes          | ❌              |
+| TypeScript         | ✅ First-class                                        | ✅ Good         | ✅ First-class  | ⚠️ Manual       |
 
 ## When to Use Craftit
 

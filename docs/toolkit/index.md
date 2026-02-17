@@ -20,15 +20,15 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ### Comparison with Alternatives
 
-| Feature                | Toolkit                                               | Lodash            | Ramda             | Native JS  |
-| ---------------------- | ----------------------------------------------------- | ----------------- | ----------------- | ---------- |
-| Dependencies           | <PackageInfo package="toolkit" type="dependencies" /> | 0                 | 0                 | N/A        |
-| Bundle Size (min+gzip) | ~0.1-1KB per utility                                  | ~26KB (full)      | ~16KB (full)      | 0KB        |
-| TypeScript             | ✅ Native                                             | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
-| Async Support          | ✅ Built-in                                           | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
-| Isomorphic             | ✅ Browser + Node.js                                  | ✅ Yes            | ✅ Yes            | ✅ Yes     |
-| Tree-shakeable         | ✅ By default                                         | ⚠️ lodash-es only | ✅ Yes            | N/A        |
-| Learning Curve         | Low                                                   | Low               | High (FP focused) | Low        |
+| Feature                | Toolkit                                               | Lodash            | Ramda             | Native JS   |
+| ---------------------- | ----------------------------------------------------- | ----------------- | ----------------- | ----------- |
+| Dependencies           | <PackageInfo package="toolkit" type="dependencies" /> | 0                 | 0                 | N/A         |
+| Bundle Size (min+gzip) | ~0.1-1 KB per utility                                 | ~26 KB (full)     | ~16 KB (full)     | 0 KB        |
+| TypeScript             | ✅ First-class                                        | ⚠️ Via @types     | ⚠️ Via @types     | ⚠️ Limited  |
+| Async Support          | ✅ Built-in                                           | ⚠️ Limited        | ⚠️ Limited        | ⚠️ Manual   |
+| Isomorphic             | ✅ Yes                                                | ✅ Yes            | ✅ Yes            | ✅ Yes      |
+| Tree-shakeable         | ✅ By default                                         | ⚠️ lodash-es only | ✅ Yes            | N/A         |
+| Learning Curve         | Low                                                   | Low               | High (FP focused) | Low         |
 
 ## When to Use Toolkit
 

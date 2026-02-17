@@ -72,16 +72,16 @@ const service = container.get(UserService);
 
 ### Comparison with Alternatives
 
-| Feature          | Wireit                                               | InversifyJS | TSyringe |
-| ---------------- | ---------------------------------------------------- | ----------- | -------- |
-| Bundle Size      | **<PackageInfo package="wireit" type="size" />**     | ~17KB       | ~6KB     |
-| Dependencies     | <PackageInfo package="wireit" type="dependencies" /> | 1           | 2        |
-| Async Support    | ✅                                                   | ✅          | ❌       |
-| Decorators       | ❌                                                   | ✅          | ✅       |
-| No Reflect-meta  | ✅                                                   | ❌          | ❌       |
-| Scoped Lifetimes | ✅                                                   | ✅          | ✅       |
-| Testing Helpers  | ✅                                                   | ❌          | ❌       |
-| TypeScript       | ✅                                                   | ✅          | ✅       |
+| Feature          | Wireit                                               | InversifyJS    | TSyringe    |
+| ---------------- | ---------------------------------------------------- | -------------- | ----------- |
+| Bundle Size      | **<PackageInfo package="wireit" type="size" />**     | ~17 KB         | ~6 KB       |
+| Dependencies     | <PackageInfo package="wireit" type="dependencies" /> | 1              | 2           |
+| TypeScript       | ✅ First-class                                       | ✅ First-class | ✅ Good     |
+| Async Support    | ✅ Yes                                               | ✅ Yes         | ❌          |
+| Decorators       | ❌                                                   | ✅ Required    | ✅ Required |
+| No Reflect-meta  | ✅ Yes                                               | ❌             | ❌          |
+| Scoped Lifetimes | ✅ Yes                                               | ✅ Yes         | ✅ Yes      |
+| Testing Helpers  | ✅ Built-in                                          | ❌             | ❌          |
 
 ## When to Use Wireit
 

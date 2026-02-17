@@ -64,18 +64,18 @@ store.subscribe(
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit                                               | Zustand   | Jotai     | Valtio  | Pinia     |
-| -------------------- | ----------------------------------------------------- | --------- | --------- | ------- | --------- |
-| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB   | ~6.5 KB   | ~5.8 KB | ~35 KB    |
-| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1         | 0         | 1       | 1         |
-| TypeScript           | Native                                                | Excellent | Excellent | Good    | Excellent |
-| Framework            | **Agnostic**                                          | React     | React     | React   | Vue       |
-| Async Updates        | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
-| Custom Equality      | ✅                                                    | ✅        | ✅        | ❌      | ❌        |
-| DevTools Integration | ❌                                                    | ✅        | ✅        | ✅      | ✅        |
-| Scoped Stores        | ✅                                                    | ❌        | ✅        | ❌      | ❌        |
-| Selective Subs       | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
-| Testing Helpers      | ✅                                                    | ❌        | ❌        | ❌      | ❌        |
+| Feature              | Stateit                                               | Zustand         | Jotai           | Valtio      | Pinia           |
+| -------------------- | ----------------------------------------------------- | --------------- | --------------- | ----------- | --------------- |
+| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB         | ~6.5 KB         | ~5.8 KB     | ~35 KB          |
+| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1               | 0               | 1           | 1               |
+| TypeScript           | ✅ First-class                                        | ✅ First-class  | ✅ First-class  | ✅ Good     | ✅ First-class  |
+| Framework            | Agnostic                                              | React only      | React only      | React only  | Vue only        |
+| Async Updates        | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
+| Custom Equality      | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ❌          | ❌              |
+| DevTools Integration | ❌                                                    | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
+| Scoped Stores        | ✅ Yes                                                | ❌              | ✅ Yes          | ❌          | ❌              |
+| Selective Subs       | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
+| Testing Helpers      | ✅ Yes                                                | ❌              | ❌              | ❌          | ❌              |
 
 ## When to Use Stateit
 
@@ -134,7 +134,7 @@ counter.set((state) => ({ count: state.count + 1 }));
 - Check [Examples](./examples.md) for framework integrations
   :::
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Store Creation
 

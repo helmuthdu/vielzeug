@@ -54,16 +54,16 @@ const user = userSchema.parse(data);
 
 ### Comparison with Alternatives
 
-| Feature             | Validit                                               | Zod    | Yup    |
-| ------------------- | ----------------------------------------------------- | ------ | ------ |
-| Bundle Size         | **<PackageInfo package="validit" type="size" />**     | ~63 KB | ~14 KB |
-| Dependencies        | <PackageInfo package="validit" type="dependencies" /> | 0      | Many   |
-| TypeScript          | Native                                                | Native | Good   |
-| Async Validation    | ✅                                                    | ✅     | ✅     |
-| Convenience Schemas | ✅                                                    | ❌     | ❌     |
-| Custom Refinements  | ✅                                                    | ✅     | ✅     |
-| Parallel Arrays     | ✅                                                    | ❌     | ❌     |
-| Transform Support   | ✅                                                    | ✅     | ✅     |
+| Feature             | Validit                                               | Zod             | Yup         |
+| ------------------- | ----------------------------------------------------- | --------------- | ----------- |
+| Bundle Size         | **<PackageInfo package="validit" type="size" />**     | ~63 KB          | ~14 KB      |
+| Dependencies        | <PackageInfo package="validit" type="dependencies" /> | 0               | Many        |
+| TypeScript          | ✅ First-class                                        | ✅ First-class  | ✅ Good     |
+| Async Validation    | ✅ Yes                                                | ✅ Yes          | ✅ Yes      |
+| Convenience Schemas | ✅ Yes                                                | ❌              | ❌          |
+| Custom Refinements  | ✅ Yes                                                | ✅ Yes          | ✅ Yes      |
+| Parallel Arrays     | ✅ Yes                                                | ❌              | ❌          |
+| Transform Support   | ✅ Yes                                                | ✅ Yes          | ✅ Yes      |
 
 ## When to Use Validit
 
@@ -91,7 +91,29 @@ const user = userSchema.parse(data);
 - **Transform Support**: Apply [transformations after validation](./usage.md#modifiers) for data normalization.
 - **Type-Safe**: Full TypeScript support with [automatic type inference](./usage.md#type-inference) from your schemas.
 
-## 📖 Core Concepts
+## 🏁 Quick Start
+
+```ts
+import { v } from '@vielzeug/validit';
+
+const userSchema = v.object({
+  email: v.email(),
+  age: v.number().int().min(18),
+  role: v.enum(['admin', 'user']),
+});
+
+// Validate and get typed data
+const user = userSchema.parse(data);
+// Type: { email: string; age: number; role: 'admin' | 'user' }
+```
+
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for all schema types, async validation, and transforms
+- Check [Examples](./examples.md) for form validation and API response validation
+  :::
+
+## 🎓 Core Concepts
 
 ### Default Validation Behavior
 
@@ -119,7 +141,7 @@ v.string().min(1); // Rejects "" (empty string)
 v.array(v.string()).min(1); // Rejects [] (empty array)
 ```
 
-**Example form schema:**
+**Example schema:**
 
 ```ts
 const schema = v.object({
@@ -128,99 +150,6 @@ const schema = v.object({
   age: v.number().optional(), // Optional field
 });
 ```
-
-## 🏁 Quick Start
-
-```ts
-import { v } from '@vielzeug/validit';
-
-const userSchema = v.object({
-  email: v.email(),
-  age: v.number().int().min(18),
-  role: v.enum(['admin', 'user']),
-});
-
-// Validate and get typed data
-const user = userSchema.parse(data);
-// Type: { email: string; age: number; role: 'admin' | 'user' }
-```
-
-::: tip Next Steps
-
-- See [Usage Guide](./usage.md) for all schema types, async validation, and transforms
-- Check [Examples](./examples.md) for form validation and API response validation
-  :::
-
-```ts
-import { v, type Infer } from '@vielzeug/validit';
-
-const registrationSchema = v.object({
-  username: v
-    .string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(20)
-    .pattern(/^[a-zA-Z0-9_]+$/),
-  email: v.email(),
-  password: v
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
-    .refine((val) => /[0-9]/.test(val), 'Must contain number'),
-  age: v.int().positive().min(13, 'Must be at least 13 years old'),
-});
-
-type Registration = Infer<typeof registrationSchema>;
-
-const result = registrationSchema.safeParse(formData);
-if (!result.success) {
-  result.error.issues.forEach((issue) => {
-    console.log(`${issue.path.join('.')}: ${issue.message}`);
-  });
-}
-```
-
-### API Response Validation
-
-```ts
-const apiResponseSchema = v.object({
-  success: v.boolean(),
-  data: v.object({
-    id: v.int().positive(),
-    name: v.string(),
-    email: v.email(),
-  }),
-  meta: v
-    .object({
-      timestamp: v.date(),
-      version: v.string(),
-    })
-    .optional(),
-});
-
-async function fetchData() {
-  const response = await fetch('/api/data');
-  const json = await response.json();
-
-  return apiResponseSchema.parse(json);
-}
-```
-
-### Async Username Check
-
-```ts
-const usernameSchema = v
-  .string()
-  .min(3)
-  .max(20)
-  .refineAsync(async (username) => {
-    const available = await checkAvailability(username);
-    return available;
-  }, 'Username already taken');
-
-const result = await usernameSchema.safeParseAsync('john_doe');
-```
-
-## 🎓 Core Concepts
 
 ### Schemas
 
@@ -264,6 +193,33 @@ const schema = v.object({
 type Data = Infer<typeof schema>;
 // { id: number; name: string; tags?: string[] }
 ```
+
+### Custom Validation
+
+Add custom validation logic with refinements:
+
+```ts
+// Sync validation
+const passwordSchema = v
+  .string()
+  .min(8)
+  .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
+  .refine((val) => /[0-9]/.test(val), 'Must contain number');
+
+// Async validation (e.g., database checks)
+const usernameSchema = v
+  .string()
+  .min(3)
+  .refineAsync(async (username) => {
+    const available = await checkAvailability(username);
+    return available;
+  }, 'Username already taken');
+
+// Use parseAsync for async validators
+const result = await usernameSchema.safeParseAsync('john_doe');
+```
+
+See [Custom Validation](./usage.md#custom-validation) for more patterns.
 
 ## ❓ FAQ
 

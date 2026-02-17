@@ -55,13 +55,34 @@ router.navigate('/users/123');
 
 ### Comparison with Alternatives
 
-| Feature            | Routeit                                               | React Router | Vue Router |
-| ------------------ | ----------------------------------------------------- | ------------ | ---------- |
-| Bundle Size        | **<PackageInfo package="routeit" type="size" />**     | ~65KB        | ~42KB      |
-| Dependencies       | <PackageInfo package="routeit" type="dependencies" /> | React        | Vue        |
-| TypeScript         | Native                                                | Good         | Good       |
-| Framework Agnostic | ✅                                                    | ❌           | ❌         |
-| Middleware System  | ✅                                                    | ❌           | ✅         |
+| Feature            | Routeit                                               | React Router | Vue Router  |
+| ------------------ | ----------------------------------------------------- | ------------ | ----------- |
+| Bundle Size        | **<PackageInfo package="routeit" type="size" />**     | ~65 KB       | ~42 KB      |
+| Dependencies       | <PackageInfo package="routeit" type="dependencies" /> | React        | Vue         |
+| TypeScript         | ✅ First-class                                        | ✅ Good      | ✅ Good     |
+| Framework          | Agnostic                                              | React only   | Vue only    |
+| Middleware System  | ✅ Built-in                                           | ❌           | ✅ Built-in |
+
+## When to Use Routeit
+
+**✅ Use Routeit when you:**
+
+- Need framework-agnostic routing across React, Vue, Svelte, or vanilla JS
+- Want a powerful middleware system for auth, logging, and request handling
+- Require minimal bundle size (<PackageInfo package="routeit" type="size" />)
+- Need type-safe route parameters and query strings
+- Want to integrate with @vielzeug/permit for permission-based routing
+- Build SPAs with nested routes and layouts
+- Need both hash and history mode support
+- Prefer zero dependencies for better security and maintainability
+
+**❌ Consider alternatives when you:**
+
+- Only use React and need deep React integration (use React Router)
+- Only use Vue and want Vue-specific optimizations (use Vue Router)
+- Need server-side rendering (SSR) with file-based routing
+- Build static sites without client-side navigation
+- Require framework-specific DevTools integration
 
 ## 🚀 Key Features
 
@@ -98,7 +119,7 @@ router
 - Check [Examples](./examples.md) for framework integrations
   :::
 
-## Core Concepts
+## 🎓 Core Concepts
 
 ### Route Parameters
 
