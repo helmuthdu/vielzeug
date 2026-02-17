@@ -4,401 +4,447 @@
 
 # Stateit
 
-**Stateit** is a tiny, framework-agnostic state management library for TypeScript. Build reactive applications with simple, powerful, and type-safe state management.
+**Stateit** is a tiny, framework-agnostic state management library. Build reactive applications with simple, powerful state handling—all in just **<PackageInfo package="stateit" type="size" />** gzipped.
 
 ## What Problem Does Stateit Solve?
 
-Managing application state across components and frameworks can be complex – you need reactivity, subscriptions, state updates, and performance optimization. Stateit provides a minimal, framework-agnostic solution that works everywhere.
+State management libraries are often complex or framework-specific. Redux requires boilerplate, MobX has a learning curve, and Zustand is React-only. Stateit provides simple, reactive state with zero dependencies and works everywhere.
 
 **Traditional Approach**:
 
 ```ts
-// Manual state management
-let state = { count: 0, user: null };
-const listeners = [];
+// Manual state management with subscriptions
+class StateManager {
+  private state = {};
+  private listeners = new Set();
 
-function setState(updates) {
-  state = { ...state, ...updates };
-  listeners.forEach((fn) => fn(state));
+  get() {
+    return this.state;
+  }
+
+  set(newState) {
+    this.state = { ...this.state, ...newState };
+    this.listeners.forEach((listener) => listener(this.state));
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
 }
-
-function subscribe(listener) {
-  listeners.push(listener);
-  return () => {
-    const index = listeners.indexOf(listener);
-    listeners.splice(index, 1);
-  };
-}
-
-// Manual subscription management
-subscribe((state) => {
-  console.log('State changed:', state);
-});
-
-setState({ count: 1 });
 ```
 
 **With Stateit**:
 
 ```ts
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 
-const store = createStore({ count: 0, user: null });
+const state = createState({ count: 0, user: null });
 
 // Subscribe to changes
-store.subscribe((state, prev) => {
-  console.log('State changed:', state);
+state.subscribe((current, prev) => {
+  console.log('State changed:', current);
 });
 
 // Update state
-store.set({ count: 1 });
+state.set({ count: 1 });
+state.set((current) => ({ count: current.count + 1 }));
 
-// Selective subscriptions
-store.subscribe(
-  (state) => state.count,
-  (count) => {
-    console.log('Count:', count);
-  },
-);
+// Read state
+const current = state.get();
 ```
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit                                               | Zustand         | Jotai           | Valtio      | Pinia           |
-| -------------------- | ----------------------------------------------------- | --------------- | --------------- | ----------- | --------------- |
-| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB         | ~6.5 KB         | ~5.8 KB     | ~35 KB          |
-| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1               | 0               | 1           | 1               |
-| TypeScript           | ✅ First-class                                        | ✅ First-class  | ✅ First-class  | ✅ Good     | ✅ First-class  |
-| Framework            | Agnostic                                              | React only      | React only      | React only  | Vue only        |
-| Async Updates        | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Custom Equality      | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ❌          | ❌              |
-| DevTools Integration | ❌                                                    | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Scoped Stores        | ✅ Yes                                                | ❌              | ✅ Yes          | ❌          | ❌              |
-| Selective Subs       | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ✅ Yes      | ✅ Yes          |
-| Testing Helpers      | ✅ Yes                                                | ❌              | ❌              | ❌          | ❌              |
+| Feature              | Stateit                                               | Zustand        | Jotai          | Valtio     | Pinia          |
+| -------------------- | ----------------------------------------------------- | -------------- | -------------- | ---------- | -------------- |
+| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB        | ~6.5 KB        | ~5.8 KB    | ~35 KB         |
+| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1              | 0              | 1          | 1              |
+| TypeScript           | ✅ First-class                                        | ✅ First-class | ✅ First-class | ✅ Good    | ✅ First-class |
+| Framework            | Agnostic                                              | React only     | React only     | React only | Vue only       |
+| Async Updates        | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Computed Values      | ✅ Yes                                                | ❌             | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Transactions         | ✅ Yes                                                | ❌             | ❌             | ❌         | ❌             |
+| Custom Equality      | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ❌         | ❌             |
+| DevTools Integration | ❌                                                    | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Scoped Stores        | ✅ Yes                                                | ❌             | ✅ Yes         | ❌         | ❌             |
+| Selective Subs       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
+| Testing Helpers      | ✅ Yes                                                | ❌             | ❌             | ❌         | ❌             |
 
 ## When to Use Stateit
 
-✅ **Use Stateit when you need:**
+**✅ Use Stateit when you:**
 
-- Framework-agnostic state management
-- Simple, predictable state updates
-- Type-safe state and subscriptions
-- Fine-grained subscription control
-- Scoped/isolated state contexts
-- Minimal bundle size impact
-- Testing with isolated stores
+- Need lightweight state management (<PackageInfo package="stateit" type="size" /> gzipped)
+- Want a framework-agnostic state that works with React, Vue, Svelte, or vanilla JS
+- Need type-safe state with full TypeScript inference
+- Want selective subscriptions to avoid unnecessary re-renders
+- Need async state updates with proper batching
+- Want scoped states for testing or isolated contexts
+- Prefer zero dependencies and minimal bundle size
 
-❌ **Don't use Stateit when:**
+**❌ Consider alternatives when you:**
 
-- You need built-in DevTools integration
-- You want framework-specific optimizations (use Zustand/Pinia)
-- You need computed/derived state with automatic dependencies
-- You want time-travel debugging out of the box
+- Need React-specific hooks out of the box (use Zustand or Jotai)
+- Need a complex middleware system (use Redux)
+- Need proxy-based reactivity (use Valtio or MobX)
+- Building a simple app with minimal state needs
 
 ## 🚀 Key Features
 
-- **Async Support**: First-class support for [async state updates](./usage.md#async-state-updates)
-- **Batched Updates**: Automatic notification batching for [optimal performance](./usage.md#performance-tips).
-- **Custom Equality**: Configurable [equality checks](./usage.md#custom-equality) for fine-grained control
-- **Framework Agnostic**: Works with React, Vue, Svelte, or vanilla JS. See [Common Patterns](./usage.md#common-patterns).
-- **Lightweight & Fast**: <PackageInfo package="stateit" type="dependencies" /> dependencies and only **<PackageInfo package="stateit" type="size" /> gzipped**.
-- **Reactive Subscriptions**: [Subscribe](./usage.md#subscriptions) to full state or selected slices.
-- **Scoped Stores**: Create [child stores](./usage.md#scoped-stores) for isolated state management
-- **Testing Friendly**: Built-in testing helpers and utilities.
-- **Type-Safe**: Full TypeScript support with [precise type inference](./usage.md#type-safety).
+- **Type-Safe** – Full TypeScript support with precise type inference
+- **Reactive Subscriptions** – [Selective subscriptions](./usage.md#subscriptions) with automatic change detection
+- **Computed Values** – [Cached derived values](./usage.md#computed-values) that update automatically
+- **Transactions** – [Batch multiple updates](./usage.md#transactions) for optimal performance
+- **Scoped States** – [Child states](./usage.md#scoped-states) and isolated execution contexts
+- **Custom Equality** – Configurable [equality checks](./usage.md#custom-equality) for fine-grained control
+- **Async Support** – First-class support for [async state updates](./usage.md#async-state-updates)
+- **Batched Updates** – Automatic notification batching for optimal performance
+- **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
+- **Lightweight** – **<PackageInfo package="stateit" type="size" />** gzipped, zero dependencies
+- **Testing Helpers** – Built-in [testing utilities](./usage.md#testing) for easy unit tests
 
 ## 🏁 Quick Start
 
-```ts
-import { createStore } from '@vielzeug/stateit';
+### Basic Usage
 
-// Create a store
-const counter = createStore({ count: 0 });
+```ts
+import { createState } from '@vielzeug/stateit';
+
+// Create state
+const counter = createState({ count: 0 });
+
+// Read state
+console.log(counter.get().count); // 0
 
 // Subscribe to changes
 counter.subscribe((state, prev) => {
-  console.log(`Count: ${prev.count} → ${state.count}`);
+  console.log(`Count changed from ${prev.count} to ${state.count}`);
 });
 
-// Update state
-counter.set({ count: 1 }); // Triggers subscriber
+// Update state – partial merge
+counter.set({ count: 1 });
 
 // Update with function
 counter.set((state) => ({ count: state.count + 1 }));
+
+// Update with async function
+await counter.set(async (state) => {
+  const data = await fetchData();
+  return { ...state, data };
+});
 ```
 
 ::: tip Next Steps
 
-- See [Usage Guide](./usage.md) for selective subscriptions, async updates, and more
-- Check [Examples](./examples.md) for framework integrations
+- See [Usage Guide](./usage.md) for detailed features and patterns
+- Check [Examples](./examples.md) for framework integrations (React, Vue, Svelte)
+- Read [API Reference](./api.md) for complete type definitions
   :::
 
 ## 🎓 Core Concepts
 
-### Store Creation
+### State Creation
 
-Create stores with optional configuration:
+Create state with initial values and optional configuration:
 
 ```ts
-// Simple store
-const userStore = createStore({
+import { createState } from '@vielzeug/stateit';
+
+// Simple state
+const userState = createState({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com',
 });
 
-// Named store (useful for debugging)
-const appStore = createStore({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
+// Named state (useful for debugging)
+const appState = createState({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
 
 // Custom equality function
-const todoStore = createStore(
+const todoState = createState(
   { todos: [], filter: 'all' },
   {
     equals: (a, b) => {
-      // Only trigger updates if todos array actually changed
       return a.todos === b.todos && a.filter === b.filter;
     },
   },
 );
 ```
 
+Learn more in [State Creation](./usage.md#state-creation).
+
 ### Reading State
 
-Access state with type-safe methods:
+Access state with `get()` for one-time reads or selectors:
 
 ```ts
 // Get current state snapshot
-const state = store.get();
+const current = state.get();
+console.log(current.count);
 
-// Access properties
-console.log(state.name);
-console.log(state.age);
+// Get selected value
+const count = state.get((state) => state.count);
+
+// Get computed value
+const fullName = state.get((s) => `${s.firstName} ${s.lastName}`);
 ```
+
+See [Reading State](./usage.md#reading-state) for more patterns.
 
 ### Updating State
 
-Multiple ways to update state:
+Update state with partial objects or updater functions:
 
 ```ts
-// Replace entire state
-store.set({ name: 'Bob', age: 25, email: 'bob@example.com' });
+// Partial merge
+state.set({ count: 1 });
 
-// Merge partial state (shallow merge)
-store.set({ age: 31 });
+// Sync updater
+state.set((current) => ({ count: current.count + 1 }));
 
-// Update with function (sync)
-await store.set((state) => ({
-  ...state,
-  age: state.age + 1,
-}));
-
-// Update with function (async)
-await store.set(async (state) => {
-  const user = await fetchUser(state.id);
-  return { ...state, ...user };
+// Async updater
+await state.set(async (current) => {
+  const data = await fetchData();
+  return { ...current, data };
 });
 
 // Reset to initial state
-store.reset();
+state.reset();
 ```
+
+Learn about [Updating State](./usage.md#updating-state).
 
 ### Subscriptions
 
-Subscribe to state changes:
+Subscribe to state changes with full or selective subscriptions:
 
 ```ts
-// Subscribe to all state changes
-const unsubscribe = store.subscribe((state, prevState) => {
-  console.log('State changed:', state);
-  console.log('Previous state:', prevState);
+// Subscribe to all changes
+const unsubscribe = state.subscribe((current, prev) => {
+  console.log('State changed:', current);
 });
 
-// Unsubscribe when done
-unsubscribe();
-
 // Subscribe to specific field
-store.subscribe(
+state.subscribe(
   (state) => state.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
   },
 );
 
-// Subscribe with custom equality
-store.subscribe(
+// Custom equality
+state.subscribe(
   (state) => state.items,
-  (items) => {
-    console.log('Items changed:', items);
-  },
-  {
-    equality: (a, b) => a.length === b.length, // Only notify if length changes
-  },
+  (items) => console.log('Items changed:', items),
+  { equality: (a, b) => a.length === b.length },
 );
+
+// Cleanup
+unsubscribe();
 ```
 
-### Scoped Stores
+Read more about [Subscriptions](./usage.md#subscriptions).
 
-Create isolated state contexts:
+### Scoped States
+
+Create isolated child states for testing or temporary contexts:
 
 ```ts
-// Create independent child store
-const childStore = store.createChild({ isDraft: true });
+// Create independent child state
+const childState = state.createChild({ isDraft: true });
 
-childStore.set({ name: 'Modified' });
-console.log(childStore.get().name); // "Modified"
-console.log(store.get().name); // Original value (unchanged)
+childState.set({ name: 'Modified' });
+console.log(childState.get().name); // "Modified"
+console.log(state.get().name); // Original value (unchanged)
 
 // Run code in isolated scope
-await store.runInScope(
-  async (scopedStore) => {
-    scopedStore.set({ count: 999 });
-    console.log(scopedStore.get().count); // 999
+await state.runInScope(
+  async (scopedState) => {
+    scopedState.set({ count: 999 });
     await doSomething();
   },
   { isTemporary: true },
 );
 
-console.log(store.get().count); // Original value (unchanged)
+console.log(state.get().count); // Original value (unchanged)
 ```
+
+Explore [Scoped States](./usage.md#scoped-states).
 
 ## ❓ FAQ
 
-### Can I use multiple stores?
+### **Q: How do I use stateit with React?**
 
-Yes! Create as many stores as you need:
+Use `useSyncExternalStore` for React 18+:
 
 ```ts
-const authStore = createStore({ user: null, token: null });
-const themeStore = createStore({ mode: 'light', sidebarOpen: false });
-const dataStore = createStore({ items: [], isLoading: false });
+import { useSyncExternalStore } from 'react';
+import { createState, type State } from '@vielzeug/stateit';
+
+function useStateitState<T extends object>(state: State<T>): T;
+function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
+  return useSyncExternalStore(
+    (callback) => {
+      if (selector) {
+        return state.subscribe(selector, callback);
+      }
+      return state.subscribe(callback);
+    },
+    () => (selector ? selector(state.get()) : state.get()),
+  );
+}
 ```
 
-### How does batching work?
+See [React Integration](./examples.md#react) for more details.
 
-State changes within the same synchronous tick are automatically batched:
+### **Q: How do I persist state to localStorage?**
 
-```ts
-store.set({ count: 1 });
-store.set({ count: 2 });
-store.set({ count: 3 });
-// Subscribers called once with final state (count: 3)
-```
-
-### Can I use this with Redux DevTools?
-
-While Stateit doesn't have built-in DevTools support, you can implement it via observers:
+Create a middleware pattern:
 
 ```ts
-store.subscribe((state, prev) => {
-  window.__REDUX_DEVTOOLS_EXTENSION__?.send({
-    type: 'STATE_UPDATE',
-    payload: state,
+function withPersistence<T extends object>(state: State<T>, key: string) {
+  // Load from localStorage
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    state.set(JSON.parse(saved));
+  }
+
+  // Save on changes
+  state.subscribe((current) => {
+    localStorage.setItem(key, JSON.stringify(current));
   });
+
+  return state;
+}
+
+const state = withPersistence(createState({ count: 0 }), 'counter');
+```
+
+### **Q: How do I test components using stateit?**
+
+Use the testing helpers:
+
+```ts
+import { createTestState, withStateMock } from '@vielzeug/stateit';
+
+it('increments count', () => {
+  const { state, dispose } = createTestState(null, { count: 0 });
+
+  state.set({ count: 1 });
+  expect(state.get().count).toBe(1);
+
+  dispose();
 });
 ```
 
-### How do I handle computed values?
+See [Testing](./usage.md#testing) for more patterns.
 
-Use framework-specific solutions or subscriptions:
+### **Q: How do I handle async state updates?**
+
+Use async updater functions:
 
 ```ts
-// With subscriptions
-let doubleCount = 0;
-store.subscribe(
-  (state) => state.count * 2,
-  (value) => {
-    doubleCount = value;
-  },
-);
+const state = createState({ data: null, loading: false });
 
-// Or derive on-demand
-function getDoubleCount() {
-  return store.get().count * 2;
-}
-
-// In React
-const doubleCount = useMemo(() => state.count * 2, [state.count]);
-
-// In Vue
-const doubleCount = computed(() => state.value.count * 2);
+await state.set(async (current) => {
+  const response = await fetch('/api/data');
+  const data = await response.json();
+  return { ...current, data, loading: false };
+});
 ```
 
-### Is it production-ready?
+### **Q: Can I use multiple states together?**
 
-Yes! Stateit is:
+Yes! Create separate states and compose them:
 
-- ✅ Fully tested (49 tests, 100% coverage)
-- ✅ Type-safe with comprehensive type inference
-- ✅ Zero dependencies
-- ✅ Battle-tested patterns from other state libraries
-- ✅ Used in production applications
+```ts
+const authState = createState({ user: null, token: null });
+const cartState = createState({ items: [] });
+const uiState = createState({ theme: 'light' });
+
+// Subscribe to changes across states
+authState.subscribe((auth) => {
+  if (!auth.user) {
+    cartState.set({ items: [] }); // Clear cart on logout
+  }
+});
+```
 
 ## 🐛 Troubleshooting
 
-### Subscribers not being called
+### State not updating after set()
 
 ::: danger Problem
-State changes but subscribers don't fire.
+Calling `set()` but UI doesn't update.
 :::
 
 ::: tip Solution
-Wait for the microtask to complete (batched notifications):
+Make sure you're subscribing to changes. State updates are batched asynchronously:
 
 ```ts
-store.set({ count: 1 });
-await Promise.resolve(); // Wait for batched notification
+state.subscribe((current) => {
+  // This will be called after batched updates
+  updateUI(current);
+});
 
-// Or in tests
-await new Promise((resolve) => setTimeout(resolve, 0));
+state.set({ count: 1 });
+await Promise.resolve(); // Wait for batched notification
 ```
 
 :::
 
-### State not updating in React
+### Selective subscription not triggering
 
 ::: danger Problem
-Component doesn't re-render when state changes.
+Subscription with selector doesn't trigger when expected.
 :::
 
 ::: tip Solution
-Use subscription properly with `useSyncExternalStore`:
+Check your equality function. By default, `shallowEqual` is used:
 
 ```ts
-// ❌ Wrong – reading once
-const state = store.get();
+// This may not trigger if items array reference is the same
+state.subscribe(
+  (state) => state.items,
+  (items) => console.log(items),
+);
 
-// ✅ Correct – using subscription
-const state = useSyncExternalStore(
-  (callback) => store.subscribe(callback),
-  () => store.get(),
+// Use custom equality to trigger on length changes
+state.subscribe(
+  (state) => state.items,
+  (items) => console.log(items),
+  { equality: (a, b) => a.length === b.length },
 );
 ```
 
 :::
 
-### TypeScript errors with state updates
+### Memory leaks with subscriptions
 
 ::: danger Problem
-Type errors when updating state.
+Subscriptions not being cleaned up.
 :::
 
 ::: tip Solution
-Ensure your updates match the state type:
+Always unsubscribe when done:
 
 ```ts
-type State = { count: number; name: string };
-const store = createStore<State>({ count: 0, name: 'test' });
+// Store unsubscribe function
+const unsubscribe = state.subscribe(callback);
 
-store.set({ count: 1 }); // ✅ Valid
-store.set({ invalid: true }); // ❌ Type error
+// Clean up when component unmounts or effect cleanup
+return () => {
+  unsubscribe();
+};
 ```
 
 :::
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md) for details.
+Found a bug or want to contribute? Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
 
 ## 📄 License
 
@@ -407,6 +453,10 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 ## 🔗 Useful Links
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/stateit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/stateit)
 - [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/stateit/CHANGELOG.md)
+
+---
+
+> **Tip:** Stateit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for forms, i18n, HTTP clients, routing, and more.

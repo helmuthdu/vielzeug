@@ -2226,213 +2226,360 @@ console.log('User posts URL:', userPostsUrl)`,
     },
   },
   stateit: {
-    'async-updates': {
-      code: `import { createStore } from '@vielzeug/stateit'
+    'basic-state': {
+      code: `import { createState } from '@vielzeug/stateit'
 
-const dataStore = createStore({
-  data: null,
-  loading: false,
-  error: null
-})
-
-// Subscribe to loading state
-dataStore.subscribe(
-  (state) => state.loading,
-  (loading) => {
-    console.log('Loading:', loading)
-  }
-)
-
-// Simulate async data fetch
-async function fetchData() {
-  dataStore.set({ loading: true, error: null })
-  
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    const data = { id: 1, title: 'Sample Data' }
-    
-    dataStore.set({ data, loading: false })
-    console.log('Data loaded:', data)
-  } catch (error) {
-    dataStore.set({ error, loading: false })
-    console.error('Error:', error)
-  }
-}
-
-await fetchData()`,
-      name: 'Async State Updates',
-    },
-    'basic-store': {
-      code: `import { createStore } from '@vielzeug/stateit'
-
-// Create a simple counter store
-const counterStore = createStore({ count: 0 })
+// Create a simple counter state
+const counter = createState({ count: 0, name: 'Counter' })
 
 // Subscribe to changes
-counterStore.subscribe((state, prev) => {
-  console.log(\`Count changed: \${prev.count} → \${state.count}\`)
+counter.subscribe((current, prev) => {
+  console.log(\`Count: \${prev.count} → \${current.count}\`)
 })
 
-// Update state
-console.log('Initial:', counterStore.get())
-counterStore.set({ count: 1 })
-counterStore.set({ count: 2 })
-counterStore.set({ count: 3 })`,
-      name: 'Basic Store - Counter',
-    },
-    'computed-values': {
-      code: `import { createStore } from '@vielzeug/stateit'
+// Update state - partial merge
+console.log('Initial:', counter.get())
+counter.set({ count: 1 })
+counter.set({ count: 2 })
 
-const cartStore = createStore({
-  items: [
-    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
-    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
-  ]
-})
+// Update with function
+counter.set((state) => ({ count: state.count + 1 }))
 
-// Subscribe to computed total
-cartStore.subscribe(
-  (state) => state.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  ),
-  (total) => {
-    console.log('Cart total: $' + total.toFixed(2))
-  }
-)
-
-// Initial total logged
-// Update cart
-cartStore.set({
-  items: [
-    ...cartStore.get().items,
-    { id: 3, name: 'Orange', price: 1.2, quantity: 4 }
-  ]
-})`,
-      name: 'Computed Values via Subscriptions',
-    },
-    'scoped-stores': {
-      code: `import { createStore } from '@vielzeug/stateit'
-
-const appStore = createStore({
-  theme: 'light',
-  language: 'en'
-})
-
-// Create child store with overrides
-const draftStore = appStore.createChild({
-  theme: 'dark'
-})
-
-console.log('Parent theme:', appStore.get().theme) // 'light'
-console.log('Child theme:', draftStore.get().theme) // 'dark'
-
-// Child changes don't affect parent
-draftStore.set({ language: 'es' })
-console.log('Parent language:', appStore.get().language) // 'en'
-console.log('Child language:', draftStore.get().language) // 'es'`,
-      name: 'Scoped Stores - Isolated State',
-    },
-    'select-method': {
-      code: `import { createStore } from '@vielzeug/stateit'
-
-const userStore = createStore({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com',
-  preferences: { theme: 'dark', language: 'en' }
-})
-
-// Select single field
-const name = userStore.get(state => state.name)
-console.log('Name:', name)
-
-// Select nested property
-const theme = userStore.get(state => state.preferences.theme)
-console.log('Theme:', theme)
-
-// Select computed value
-const isAdult = userStore.get(state => state.age >= 18)
-console.log('Is adult:', isAdult)
-
-// Select multiple fields
-const info = userStore.get(state => ({
-  name: state.name,
-  email: state.email
-}))
-console.log('User info:', info)`,
-      name: 'Get Method - Read State Slices',
+// Reset to initial
+counter.reset()
+console.log('After reset:', counter.get())`,
+      name: 'Basic State - Counter',
     },
     'selective-subscription': {
-      code: `import { createStore } from '@vielzeug/stateit'
+      code: `import { createState } from '@vielzeug/stateit'
 
-const userStore = createStore({
+const user = createState({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com'
 })
 
 // Subscribe to specific field only
-userStore.subscribe(
+user.subscribe(
   (state) => state.name,
   (name, prevName) => {
-    console.log(\`Name: \${prevName} → \${name}\`)
+    console.log(\`Name changed: \${prevName} → \${name}\`)
   }
 )
 
-// Only name changes trigger the subscription
-userStore.set({ name: 'Bob' }) // Logs
-userStore.set({ age: 31 }) // Doesn't log
-userStore.set({ email: 'bob@example.com' }) // Doesn't log
-userStore.set({ name: 'Charlie' }) // Logs`,
-      name: 'Selective Subscription',
+// Subscribe to computed value
+user.subscribe(
+  (state) => state.age >= 18,
+  (isAdult) => {
+    console.log('Is adult:', isAdult)
+  }
+)
+
+// Only name changes trigger name subscription
+user.set({ name: 'Bob' }) // Triggers name subscriber
+user.set({ age: 31 }) // Doesn't trigger name subscriber
+user.set({ email: 'bob@example.com' }) // No name change
+user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
+      name: 'Selective Subscriptions',
+    },
+    'get-with-selector': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const user = createState({
+  firstName: 'Alice',
+  lastName: 'Johnson',
+  age: 30,
+  address: {
+    city: 'New York',
+    country: 'USA'
+  }
+})
+
+// Get full state
+console.log('Full state:', user.get())
+
+// Get with selector - computed value
+const fullName = user.get((s) => \`\${s.firstName} \${s.lastName}\`)
+console.log('Full name:', fullName)
+
+// Get nested property
+const city = user.get((s) => s.address.city)
+console.log('City:', city)
+
+// Get multiple derived values
+const summary = user.get((s) => ({
+  name: \`\${s.firstName} \${s.lastName}\`,
+  location: \`\${s.address.city}, \${s.address.country}\`,
+  isAdult: s.age >= 18
+}))
+console.log('Summary:', summary)`,
+      name: 'Get with Selector',
+    },
+    'async-updates': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const data = createState({
+  items: null,
+  loading: false,
+  error: null
+})
+
+// Subscribe to loading state
+data.subscribe(
+  (state) => state.loading,
+  (loading) => console.log('Loading:', loading)
+)
+
+// Async fetch with loading states
+async function fetchItems() {
+  data.set({ loading: true, error: null })
+  
+  try {
+    // Use async updater
+    await data.set(async (current) => {
+      // Simulate API call
+      await new Promise(r => setTimeout(r, 1000))
+      const items = [
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' }
+      ]
+      return { ...current, items, loading: false }
+    })
+    
+    console.log('Success! Items:', data.get().items)
+  } catch (error) {
+    data.set({ error: error.message, loading: false })
+    console.error('Error:', error)
+  }
+}
+
+await fetchItems()`,
+      name: 'Async State Updates',
+    },
+    'computed-values': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const cart = createState({
+  items: [
+    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
+    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
+  ],
+  taxRate: 0.1
+})
+
+// Subscribe to computed total
+cart.subscribe(
+  (state) => {
+    const subtotal = state.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    )
+    const tax = subtotal * state.taxRate
+    return subtotal + tax
+  },
+  (total) => {
+    console.log('Cart total: $' + total.toFixed(2))
+  }
+)
+
+// Initial total logged above
+
+// Update cart - add item
+cart.set((state) => ({
+  items: [
+    ...state.items,
+    { id: 3, name: 'Orange', price: 1.2, quantity: 4 }
+  ]
+}))
+
+// Update tax rate
+cart.set({ taxRate: 0.15 })`,
+      name: 'Computed Values',
+    },
+    'scoped-states': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const app = createState({
+  theme: 'light',
+  language: 'en',
+  user: 'Alice'
+})
+
+// Create child state with overrides
+const draft = app.createChild({
+  theme: 'dark'
+})
+
+console.log('Parent theme:', app.get().theme) // 'light'
+console.log('Child theme:', draft.get().theme) // 'dark'
+
+// Child changes don't affect parent
+draft.set({ language: 'es', user: 'Bob' })
+console.log('\\nAfter child update:')
+console.log('Parent:', app.get())
+console.log('Child:', draft.get())
+
+// Run in isolated scope
+const result = await app.runInScope(
+  async (scoped) => {
+    scoped.set({ theme: 'dark', user: 'Temporary' })
+    console.log('\\nScoped state:', scoped.get())
+    return 'completed'
+  }
+)
+
+console.log('\\nAfter scope:')
+console.log('Parent unchanged:', app.get())
+console.log('Result:', result)`,
+      name: 'Scoped States',
+    },
+    'custom-equality': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const state = createState({
+  items: [1, 2, 3],
+  metadata: { updated: Date.now() }
+})
+
+// Subscribe with custom equality - only notify if length changes
+state.subscribe(
+  (state) => state.items,
+  (items) => {
+    console.log('Items array changed:', items)
+  },
+  {
+    equality: (a, b) => a.length === b.length
+  }
+)
+
+// Won't trigger (same length)
+state.set({ items: [4, 5, 6] })
+console.log('After replacing items (same length) - no log above')
+
+// Will trigger (different length)
+state.set({ items: [1, 2, 3, 4] })
+console.log('After adding item - logged above')
+
+// Won't trigger (metadata change doesn't affect items)
+state.set({ metadata: { updated: Date.now() } })`,
+      name: 'Custom Equality Functions',
     },
     'todo-list': {
-      code: `import { createStore } from '@vielzeug/stateit'
+      code: `import { createState } from '@vielzeug/stateit'
 
-const todoStore = createStore({
-  todos: [],
+const todos = createState({
+  items: [],
   filter: 'all' // 'all' | 'active' | 'completed'
 })
 
 // Subscribe to filtered todos
-todoStore.subscribe(
+todos.subscribe(
   (state) => {
-    const { todos, filter } = state
+    const { items, filter } = state
     switch (filter) {
       case 'active':
-        return todos.filter(t => !t.completed)
+        return items.filter(t => !t.completed)
       case 'completed':
-        return todos.filter(t => t.completed)
+        return items.filter(t => t.completed)
       default:
-        return todos
+        return items
     }
   },
   (filtered) => {
-    console.log('Filtered todos:', filtered)
+    console.log(\`\${todos.get().filter} todos (\${filtered.length}):\`, filtered)
   }
 )
 
 // Add todos
-const todos = [
+const items = [
   { id: 1, text: 'Learn Stateit', completed: false },
   { id: 2, text: 'Build app', completed: false },
-  { id: 3, text: 'Deploy', completed: false }
+  { id: 3, text: 'Deploy', completed: true }
 ]
+todos.set({ items })
 
-todoStore.set({ todos })
+// Filter to active only
+todos.set({ filter: 'active' })
 
-// Mark one as completed
-const updatedTodos = todoStore.get().todos.map(t =>
-  t.id === 1 ? { ...t, completed: true } : t
-)
-todoStore.set({ todos: updatedTodos })
+// Complete a todo
+todos.set((state) => ({
+  items: state.items.map(t =>
+    t.id === 2 ? { ...t, completed: true } : t
+  )
+}))
 
-// Change filter
-todoStore.set({ filter: 'active' })
-todoStore.set({ filter: 'completed' })`,
+// Show completed
+todos.set({ filter: 'completed' })`,
       name: 'Todo List Example',
+    },
+    'computed-values': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const cart = createState({
+  items: [
+    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
+    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
+  ],
+  taxRate: 0.1
+})
+
+// Create computed values
+const subtotal = cart.computed((state) =>
+  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+)
+
+const tax = cart.computed((state) => subtotal.get() * state.taxRate)
+const total = cart.computed(() => subtotal.get() + tax.get())
+
+console.log('Subtotal:', subtotal.get().toFixed(2))
+console.log('Tax:', tax.get().toFixed(2))
+console.log('Total:', total.get().toFixed(2))
+
+// Subscribe to changes
+total.subscribe((current, prev) => {
+  console.log(\`Total: $\${prev.toFixed(2)} → $\${current.toFixed(2)}\`)
+})
+
+// Add item - auto-updates
+cart.set((state) => ({
+  items: [...state.items, { id: 3, name: 'Orange', price: 1.2, quantity: 4 }]
+}))
+
+console.log('\\nNew Total:', total.get().toFixed(2))`,
+      name: 'Computed Values',
+    },
+    'transactions': {
+      code: `import { createState } from '@vielzeug/stateit'
+
+const user = createState({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com'
+})
+
+let count = 0
+user.subscribe(() => {
+  count++
+  console.log(\`Update #\${count}\`)
+})
+
+console.log('=== Without transaction ===')
+count = 0
+user.set({ name: 'Bob' })
+user.set({ age: 31 })
+user.set({ email: 'bob@example.com' })
+console.log(\`Updates: \${count}\`)
+
+console.log(\`\\n=== With transaction ===\`)
+count = 0
+user.transaction(() => {
+  user.set({ name: 'Charlie' })
+  user.set({ age: 25 })
+  user.set({ email: 'charlie@example.com' })
+})
+console.log(\`Updates: \${count}\`)
+console.log('Final:', user.get())`,
+      name: 'Transactions',
     },
   },
   toolkit: {

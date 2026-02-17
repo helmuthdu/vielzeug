@@ -1,231 +1,240 @@
 # Stateit Examples
 
-Real-world examples demonstrating common use cases and patterns with Stateit.
-
-::: tip 💡 Complete Applications
-These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
-:::
+Real-world examples and framework integrations.
 
 ## Table of Contents
 
 [[toc]]
 
-## Framework Integration
+## React
 
-::: details 🎯 Why Two Patterns?
-We provide both **inline** and **hook/composable** patterns because:
+### Basic Integration with useSyncExternalStore
 
-- **Inline**: Quick prototyping, direct usage
-- **Hook/Composable**: Reusable across components, better separation of concerns
+React 18+ provides `useSyncExternalStore` for external state:
 
-Choose based on your project structure and team preferences.
-:::
-
-Complete examples showing how to integrate Stateit with React, Vue, Svelte, and Web Components.
-
-### Basic Integration (Inline)
-
-Directly create and use a store instance within components.
-
-::: code-group
-
-```tsx [React]
-import { createStore } from '@vielzeug/stateit';
+```tsx
 import { useSyncExternalStore } from 'react';
+import { createState, type State } from '@vielzeug/stateit';
 
-const counterStore = createStore({ count: 0 });
-
-function Counter() {
-  const state = useSyncExternalStore(
-    (callback) => counterStore.subscribe(callback),
-    () => counterStore.get(),
-  );
-
-  return (
-    <div>
-      <p>Count: {state.count}</p>
-      <button onClick={() => counterStore.set({ count: state.count + 1 })}>Increment</button>
-      <button onClick={() => counterStore.reset()}>Reset</button>
-    </div>
-  );
-}
-```
-
-```vue [Vue 3]
-<script setup lang="ts">
-import { createStore } from '@vielzeug/stateit';
-import { computed, onUnmounted } from 'vue';
-
-const counterStore = createStore({ count: 0 });
-
-const state = computed(() => counterStore.get());
-
-const unsubscribe = counterStore.subscribe(() => {
-  state.value = counterStore.get();
-});
-
-onUnmounted(() => {
-  unsubscribe();
-});
-
-const increment = () => {
-  counterStore.set({ count: state.value.count + 1 });
-};
-
-const reset = () => {
-  counterStore.reset();
-};
-</script>
-
-<template>
-  <div>
-    <p>Count: {{ state.count }}</p>
-    <button @click="increment">Increment</button>
-    <button @click="reset">Reset</button>
-  </div>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { createStore } from '@vielzeug/stateit';
-  import { readable } from 'svelte/store';
-  import { onDestroy } from 'svelte';
-
-  const counterStore = createStore({ count: 0 });
-
-  const state = readable(counterStore.get(), (set) => {
-    return counterStore.subscribe(set);
-  });
-
-  function increment() {
-    counterStore.set({ count: $state.count + 1 });
-  }
-
-  function reset() {
-    counterStore.reset();
-  }
-</script>
-
-<div>
-  <p>Count: {$state.count}</p>
-  <button on:click={increment}>Increment</button>
-  <button on:click={reset}>Reset</button>
-</div>
-```
-
-```ts [Web Component]
-import { createStore } from '@vielzeug/stateit';
-
-class CounterComponent extends HTMLElement {
-  #store = createStore({ count: 0 });
-  #unsubscribe;
-
-  connectedCallback() {
-    this.innerHTML = `
-      <div>
-        <p>Count: <span id="count">0</span></p>
-        <button id="increment">Increment</button>
-        <button id="reset">Reset</button>
-      </div>
-    `;
-
-    this.querySelector('#increment').addEventListener('click', () => {
-      this.#store.set({ count: this.#store.get().count + 1 });
-    });
-
-    this.querySelector('#reset').addEventListener('click', () => {
-      this.#store.reset();
-    });
-
-    this.#unsubscribe = this.#store.subscribe((state) => {
-      this.querySelector('#count').textContent = String(state.count);
-    });
-  }
-
-  disconnectedCallback() {
-    this.#unsubscribe?.();
-  }
-}
-
-customElements.define('counter-component', CounterComponent);
-```
-
-:::
-
-### Advanced Integration (Hook/Composable)
-
-Create reusable hooks/composables for store integration.
-
-::: code-group
-
-```tsx [React]
-import { createStore, type Store } from '@vielzeug/stateit';
-import { useSyncExternalStore } from 'react';
-
-// Create hook for store integration
-function useStore<T extends object>(store: Store<T>): T;
-function useStore<T extends object, U>(store: Store<T>, selector: (state: T) => U): U;
-function useStore<T extends object, U>(store: Store<T>, selector?: (state: T) => U) {
+// Create reusable hooks
+function useStateitState<T extends object>(state: State<T>): T;
+function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
-        return store.subscribe(selector, callback);
+        return state.subscribe(selector, callback);
       }
-      return store.subscribe(callback);
+      return state.subscribe(callback);
     },
-    () => (selector ? selector(store.get()) : store.get()),
+    () => (selector ? selector(state.get()) : state.get()),
   );
 }
 
-// Create stores
-const counterStore = createStore({ count: 0 });
+// Create global state
+const counterState = createState({ count: 0 });
+const userState = createState({ name: 'Alice', isLoggedIn: false });
 
 // Use in components
 function Counter() {
   // Subscribe to specific field
-  const count = useStore(counterStore, (state) => state.count);
+  const count = useStateitState(counterState, (state) => state.count);
 
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => counterStore.set({ count: count + 1 })}>Increment</button>
+      <button onClick={() => counterState.set({ count: count + 1 })}>Increment</button>
+      <button onClick={() => counterState.set({ count: count - 1 })}>Decrement</button>
+      <button onClick={() => counterState.reset()}>Reset</button>
     </div>
   );
 }
 
-function FullStateExample() {
+function User() {
   // Subscribe to full state
-  const state = useStore(counterStore);
+  const user = useStateitState(userState);
 
-  return <div>Count: {state.count}</div>;
+  return (
+    <div>
+      <p>Name: {user.name}</p>
+      <p>Status: {user.isLoggedIn ? 'Logged in' : 'Logged out'}</p>
+      <button onClick={() => userState.set({ isLoggedIn: !user.isLoggedIn })}>Toggle Login</button>
+    </div>
+  );
 }
 ```
 
-```vue [Vue 3]
-<script setup lang="ts">
-import { createStore, type Store } from '@vielzeug/stateit';
-import { computed, onUnmounted } from 'vue';
+### Todo App Example
 
-// Create composable for store integration
-function useStore<T extends object>(store: Store<T>) {
-  const state = computed(() => store.get());
+```tsx
+import { createState } from '@vielzeug/stateit';
 
-  const unsubscribe = store.subscribe(() => {
-    state.value = store.get();
+type Todo = {
+  id: number;
+  text: string;
+  completed: boolean;
+};
+
+type TodoState = {
+  todos: Todo[];
+  filter: 'all' | 'active' | 'completed';
+};
+
+const todoState = createState<TodoState>({
+  todos: [],
+  filter: 'all',
+});
+
+function TodoApp() {
+  const todos = useStateitState(todoState, (state) => state.todos);
+  const filter = useStateitState(todoState, (state) => state.filter);
+
+  const filteredTodos = todos.filter((todo) => {
+    if (filter === 'active') return !todo.completed;
+    if (filter === 'completed') return todo.completed;
+    return true;
+  });
+
+  const addTodo = (text: string) => {
+    todoState.set((state) => ({
+      ...state,
+      todos: [...state.todos, { id: Date.now(), text, completed: false }],
+    }));
+  };
+
+  const toggleTodo = (id: number) => {
+    todoState.set((state) => ({
+      ...state,
+      todos: state.todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
+    }));
+  };
+
+  const deleteTodo = (id: number) => {
+    todoState.set((state) => ({
+      ...state,
+      todos: state.todos.filter((todo) => todo.id !== id),
+    }));
+  };
+
+  return (
+    <div>
+      <h1>Todos ({filteredTodos.length})</h1>
+
+      <div>
+        <button onClick={() => todoState.set({ filter: 'all' })}>All</button>
+        <button onClick={() => todoState.set({ filter: 'active' })}>Active</button>
+        <button onClick={() => todoState.set({ filter: 'completed' })}>Completed</button>
+      </div>
+
+      <ul>
+        {filteredTodos.map((todo) => (
+          <li key={todo.id}>
+            <input type="checkbox" checked={todo.completed} onChange={() => toggleTodo(todo.id)} />
+            <span
+              style={{
+                textDecoration: todo.completed ? 'line-through' : 'none',
+              }}>
+              {todo.text}
+            </span>
+            <button onClick={() => deleteTodo(todo.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem('todo') as HTMLInputElement;
+          addTodo(input.value);
+          input.value = '';
+        }}>
+        <input name="todo" placeholder="Add todo..." />
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  );
+}
+```
+
+### Async Data Fetching
+
+```tsx
+import { useEffect } from 'react';
+
+type DataState = {
+  data: User[] | null;
+  loading: boolean;
+  error: string | null;
+};
+
+const dataState = createState<DataState>({
+  data: null,
+  loading: false,
+  error: null,
+});
+
+async function fetchUsers() {
+  dataState.set({ loading: true, error: null });
+
+  try {
+    await dataState.set(async (current) => {
+      const response = await fetch('/api/users');
+      const data = await response.json();
+      return { ...current, data, loading: false };
+    });
+  } catch (error) {
+    dataState.set({ error: error.message, loading: false });
+  }
+}
+
+function UserList() {
+  const { data, loading, error } = useStateitState(dataState);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!data) return <div>No data</div>;
+
+  return (
+    <ul>
+      {data.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Vue
+
+### Composable Integration
+
+```ts
+import { computed, onUnmounted, ref } from 'vue';
+import { createState, type State } from '@vielzeug/stateit';
+
+// Create composable
+function useStateitState<T extends object>(state: State<T>) {
+  const reactive = ref(state.get());
+
+  const unsubscribe = state.subscribe((current) => {
+    reactive.value = current;
   });
 
   onUnmounted(() => {
     unsubscribe();
   });
 
-  return state;
+  return reactive;
 }
 
-function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U) {
-  const selected = computed(() => selector(store.get()));
+function useStateitSelector<T extends object, U>(state: State<T>, selector: (state: T) => U) {
+  const selected = ref(selector(state.get()));
 
-  const unsubscribe = store.subscribe(selector, (value) => {
+  const unsubscribe = state.subscribe(selector, (value) => {
     selected.value = value;
   });
 
@@ -236,813 +245,601 @@ function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state
   return selected;
 }
 
-// Create store
-const counterStore = createStore({ count: 0 });
+// Create state
+const counterState = createState({ count: 0 });
 
 // Use in component
-const state = useStore(counterStore);
-const count = useStoreSelector(counterStore, (s) => s.count);
+export default {
+  setup() {
+    const state = useStateitState(counterState);
+    const count = useStateitSelector(counterState, (s) => s.count);
 
-const increment = () => {
-  counterStore.set({ count: count.value + 1 });
+    const increment = () => {
+      counterState.set({ count: count.value + 1 });
+    };
+
+    const decrement = () => {
+      counterState.set({ count: count.value - 1 });
+    };
+
+    return { state, count, increment, decrement };
+  },
 };
+```
+
+### Composition API Example
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue';
+import { createState } from '@vielzeug/stateit';
+
+type User = {
+  name: string;
+  email: string;
+  age: number;
+};
+
+const userState = createState<User>({
+  name: 'Alice',
+  email: 'alice@example.com',
+  age: 30,
+});
+
+const state = useStateitState(userState);
+const name = useStateitSelector(userState, (s) => s.name);
+
+const isAdult = computed(() => state.value.age >= 18);
+
+function updateName(newName: string) {
+  userState.set({ name: newName });
+}
+
+function updateAge(newAge: number) {
+  userState.set({ age: newAge });
+}
 </script>
 
 <template>
   <div>
-    <p>Count: {{ count }}</p>
-    <button @click="increment">Increment</button>
+    <h2>User Profile</h2>
+    <p>Name: {{ name }}</p>
+    <p>Email: {{ state.email }}</p>
+    <p>Age: {{ state.age }}</p>
+    <p>Status: {{ isAdult ? 'Adult' : 'Minor' }}</p>
+
+    <input :value="name" @input="updateName($event.target.value)" placeholder="Name" />
+    <input type="number" :value="state.age" @input="updateAge(Number($event.target.value))" />
   </div>
 </template>
 ```
 
-```svelte [Svelte (SvelteKit)]
-<script lang="ts">
-  import { createStore, type Store } from '@vielzeug/stateit';
-  import { readable, type Readable } from 'svelte/store';
+## Svelte
 
-  // Create Svelte store from stateit store
-  function toSvelteStore<T extends object>(store: Store<T>): Readable<T> {
-    return readable(store.get(), (set) => {
-      return store.subscribe(set);
+### Store Adapter
+
+```ts
+import { readable } from 'svelte/store';
+import { createState, type State } from '@vielzeug/stateit';
+
+// Convert stateit state to Svelte store
+function toSvelteStore<T extends object>(state: State<T>) {
+  return readable(state.get(), (set) => {
+    return state.subscribe((current) => {
+      set(current);
     });
-  }
+  });
+}
 
-  // Create store
-  const counterStore = createStore({ count: 0 });
+// Create state
+const counterState = createState({ count: 0 });
 
-  // Convert to Svelte store
-  const counter = toSvelteStore(counterStore);
+// Convert to Svelte store
+const counter = toSvelteStore(counterState);
+
+export { counter, counterState };
+```
+
+### Component Usage
+
+```svelte
+<script lang="ts">
+  import { counter, counterState } from './stores';
+
+  $: count = $counter.count;
 
   function increment() {
-    counterStore.set({ count: $counter.count + 1 });
+    counterState.set({ count: count + 1 });
+  }
+
+  function decrement() {
+    counterState.set({ count: count - 1 });
+  }
+
+  function reset() {
+    counterState.reset();
   }
 </script>
 
 <div>
-  <p>Count: {$counter.count}</p>
-  <button on:click={increment}>Increment</button>
+  <h1>Counter: {count}</h1>
+  <button on:click={increment}>+</button>
+  <button on:click={decrement}>-</button>
+  <button on:click={reset}>Reset</button>
 </div>
 ```
 
-```ts [Web Component (Full)]
-import { createStore, type Store } from '@vielzeug/stateit';
+### Todo List Example
 
-// Store manager for web components
-class StoreManager<T extends object> {
-  private unsubscribers = new Set<() => void>();
+```svelte
+<script lang="ts">
+  import { createState } from '@vielzeug/stateit';
+  import { toSvelteStore } from './utils';
 
-  constructor(private store: Store<T>) {}
+  type Todo = {
+    id: number;
+    text: string;
+    completed: boolean;
+  };
 
-  subscribe(element: HTMLElement, updater: (state: T) => void) {
-    const unsubscribe = this.store.subscribe((state) => {
-      updater(state);
-    });
-    this.unsubscribers.add(unsubscribe);
-    return unsubscribe;
+  const todoState = createState<{ todos: Todo[] }>({
+    todos: [],
+  });
+
+  const todos = toSvelteStore(todoState);
+
+  let newTodo = '';
+
+  function addTodo() {
+    if (!newTodo.trim()) return;
+
+    todoState.set((state) => ({
+      todos: [
+        ...state.todos,
+        { id: Date.now(), text: newTodo, completed: false },
+      ],
+    }));
+
+    newTodo = '';
   }
 
-  dispose() {
-    this.unsubscribers.forEach((unsub) => unsub());
-    this.unsubscribers.clear();
+  function toggleTodo(id: number) {
+    todoState.set((state) => ({
+      todos: state.todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      ),
+    }));
   }
 
-  get() {
-    return this.store.get();
+  function deleteTodo(id: number) {
+    todoState.set((state) => ({
+      todos: state.todos.filter((todo) => todo.id !== id),
+    }));
   }
+</script>
 
-  set(updates: Partial<T>) {
-    this.store.set(updates);
+<div>
+  <h1>Todos</h1>
+
+  <form on:submit|preventDefault={addTodo}>
+    <input bind:value={newTodo} placeholder="Add todo..." />
+    <button type="submit">Add</button>
+  </form>
+
+  <ul>
+    {#each $todos.todos as todo (todo.id)}
+      <li>
+        <input
+          type="checkbox"
+          checked={todo.completed}
+          on:change={() => toggleTodo(todo.id)}
+        />
+        <span class:completed={todo.completed}>
+          {todo.text}
+        </span>
+        <button on:click={() => deleteTodo(todo.id)}>Delete</button>
+      </li>
+    {/each}
+  </ul>
+</div>
+
+<style>
+  .completed {
+    text-decoration: line-through;
+    opacity: 0.6;
   }
+</style>
+```
+
+## Vanilla JavaScript
+
+### Basic Counter
+
+```ts
+import { createState } from '@vielzeug/stateit';
+
+const counterState = createState({ count: 0 });
+
+// Get DOM elements
+const countEl = document.getElementById('count');
+const incrementBtn = document.getElementById('increment');
+const decrementBtn = document.getElementById('decrement');
+const resetBtn = document.getElementById('reset');
+
+// Subscribe to updates
+counterState.subscribe((state) => {
+  countEl.textContent = state.count.toString();
+});
+
+// Event handlers
+incrementBtn.addEventListener('click', () => {
+  counterState.set((state) => ({ count: state.count + 1 }));
+});
+
+decrementBtn.addEventListener('click', () => {
+  counterState.set((state) => ({ count: state.count - 1 }));
+});
+
+resetBtn.addEventListener('click', () => {
+  counterState.reset();
+});
+```
+
+### Form State Management
+
+```ts
+const formState = createState({
+  name: '',
+  email: '',
+  age: 0,
+  errors: {},
+});
+
+const form = document.querySelector('form');
+const nameInput = document.getElementById('name');
+const emailInput = document.getElementById('email');
+const ageInput = document.getElementById('age');
+
+// Subscribe to state changes
+formState.subscribe((state) => {
+  nameInput.value = state.name;
+  emailInput.value = state.email;
+  ageInput.value = state.age.toString();
+
+  // Update error display
+  updateErrors(state.errors);
+});
+
+// Handle input changes
+nameInput.addEventListener('input', (e) => {
+  formState.set({ name: e.target.value });
+});
+
+emailInput.addEventListener('input', (e) => {
+  formState.set({ email: e.target.value });
+});
+
+ageInput.addEventListener('input', (e) => {
+  formState.set({ age: Number(e.target.value) });
+});
+
+// Validation
+function validate(state) {
+  const errors = {};
+
+  if (!state.name) errors.name = 'Name is required';
+  if (!state.email) errors.email = 'Email is required';
+  if (state.age < 18) errors.age = 'Must be 18 or older';
+
+  return errors;
 }
 
-// Usage in Web Component
-const counterStore = createStore({ count: 0, name: 'Counter' });
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
 
-class AdvancedCounter extends HTMLElement {
-  #manager = new StoreManager(counterStore);
+  const errors = validate(formState.get());
+  formState.set({ errors });
+
+  if (Object.keys(errors).length === 0) {
+    console.log('Form submitted:', formState.get());
+  }
+});
+```
+
+## Web Components
+
+### Custom Element with State
+
+```ts
+import { createState } from '@vielzeug/stateit';
+
+class CounterElement extends HTMLElement {
+  private state = createState({ count: 0 });
+  private unsubscribe?: () => void;
 
   connectedCallback() {
-    this.innerHTML = `
-      <div class="counter">
-        <h2 id="name">Counter</h2>
-        <p>Count: <span id="count">0</span></p>
-        <button id="increment">+</button>
-        <button id="decrement">-</button>
-        <button id="reset">Reset</button>
-      </div>
-    `;
+    this.render();
 
-    this.#manager.subscribe(this, (state) => {
-      this.querySelector('#count').textContent = String(state.count);
-      this.querySelector('#name').textContent = state.name;
+    // Subscribe to state changes
+    this.unsubscribe = this.state.subscribe(() => {
+      this.render();
     });
 
-    this.querySelector('#increment').addEventListener('click', () => {
-      const { count } = this.#manager.get();
-      this.#manager.set({ count: count + 1 });
+    // Event listeners
+    this.querySelector('#increment')?.addEventListener('click', () => {
+      this.state.set((state) => ({ count: state.count + 1 }));
     });
 
-    this.querySelector('#decrement').addEventListener('click', () => {
-      const { count } = this.#manager.get();
-      this.#manager.set({ count: count - 1 });
-    });
-
-    this.querySelector('#reset').addEventListener('click', () => {
-      counterStore.reset();
+    this.querySelector('#decrement')?.addEventListener('click', () => {
+      this.state.set((state) => ({ count: state.count - 1 }));
     });
   }
 
   disconnectedCallback() {
-    this.#manager.dispose();
+    this.unsubscribe?.();
+  }
+
+  render() {
+    const { count } = this.state.get();
+
+    this.innerHTML = `
+      <div>
+        <h2>Count: ${count}</h2>
+        <button id="increment">+</button>
+        <button id="decrement">-</button>
+      </div>
+    `;
   }
 }
 
-customElements.define('advanced-counter', AdvancedCounter);
+customElements.define('counter-element', CounterElement);
 ```
-
-:::
-
-## Common Use Cases
-
-### Todo List
-
-Complete todo list with add, toggle, and delete functionality.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type Todo = {
-  id: string;
-  text: string;
-  completed: boolean;
-};
-
-type TodoState = {
-  todos: Todo[];
-  filter: 'all' | 'active' | 'completed';
-};
-
-const todoStore = createStore<TodoState>({
-  todos: [],
-  filter: 'all',
-});
-
-// Actions
-export function addTodo(text: string) {
-  const { todos } = todoStore.get();
-  todoStore.set({
-    todos: [
-      ...todos,
-      {
-        id: crypto.randomUUID(),
-        text,
-        completed: false,
-      },
-    ],
-  });
-}
-
-export function toggleTodo(id: string) {
-  const { todos } = todoStore.get();
-  todoStore.set({
-    todos: todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
-  });
-}
-
-export function deleteTodo(id: string) {
-  const { todos } = todoStore.get();
-  todoStore.set({
-    todos: todos.filter((todo) => todo.id !== id),
-  });
-}
-
-export function setFilter(filter: TodoState['filter']) {
-  todoStore.set({ filter });
-}
-
-// Computed values using select() – type-safe property access
-export function getFilteredTodos() {
-  // Use select() for clean, type-safe access
-  const todos = todoStore.get((state) => state.todos);
-  const filter = todoStore.get((state) => state.filter);
-
-  switch (filter) {
-    case 'active':
-      return todos.filter((t) => !t.completed);
-    case 'completed':
-      return todos.filter((t) => t.completed);
-    default:
-      return todos;
-  }
-}
-
-// Get specific computed values
-export function getTodoCount() {
-  return todoStore.get((state) => state.todos.length);
-}
-
-export function getCompletedCount() {
-  return todoStore.get((state) => state.todos.filter((t) => t.completed).length);
-}
-
-export function getActiveCount() {
-  return todoStore.get((state) => state.todos.filter((t) => !t.completed).length);
-}
-
-export { todoStore };
-```
-
-::: tip 💡 select() for Computed Values
-Use `select()` to derive values from state without subscribing. Perfect for one-time reads or computed getters.
-:::
-
-### Authentication State
-
-Manage user authentication state with token persistence.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type AuthState = {
-  user: { id: string; name: string; email: string } | null;
-  token: string | null;
-  isLoading: boolean;
-};
-
-const authStore = createStore<AuthState>({
-  user: null,
-  token: null,
-  isLoading: false,
-});
-
-// Load token from localStorage
-const savedToken = localStorage.getItem('auth_token');
-if (savedToken) {
-  authStore.set({ token: savedToken });
-}
-
-// Persist token changes
-authStore.subscribe(
-  (state) => state.token,
-  (token) => {
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    } else {
-      localStorage.removeItem('auth_token');
-    }
-  },
-);
-
-// Actions
-export async function login(email: string, password: string) {
-  authStore.set({ isLoading: true });
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const { user, token } = await response.json();
-    authStore.set({ user, token, isLoading: false });
-  } catch (error) {
-    authStore.set({ isLoading: false });
-    throw error;
-  }
-}
-
-export function logout() {
-  authStore.set({ user: null, token: null, isLoading: false });
-}
-
-export function isAuthenticated() {
-  return !!authStore.get().user;
-}
-
-export { authStore };
-```
-
-### Shopping Cart
-
-Shopping cart with items, quantities, and total calculation.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type CartItem = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-};
-
-type CartState = {
-  items: CartItem[];
-};
-
-const cartStore = createStore<CartState>({
-  items: [],
-});
-
-// Actions
-export function addToCart(item: Omit<CartItem, 'quantity'>) {
-  const { items } = cartStore.get();
-  const existing = items.find((i) => i.id === item.id);
-
-  if (existing) {
-    cartStore.set({
-      items: items.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)),
-    });
-  } else {
-    cartStore.set({
-      items: [...items, { ...item, quantity: 1 }],
-    });
-  }
-}
-
-export function removeFromCart(id: string) {
-  const { items } = cartStore.get();
-  cartStore.set({
-    items: items.filter((item) => item.id !== id),
-  });
-}
-
-export function updateQuantity(id: string, quantity: number) {
-  const { items } = cartStore.get();
-
-  if (quantity <= 0) {
-    removeFromCart(id);
-    return;
-  }
-
-  cartStore.set({
-    items: items.map((item) => (item.id === id ? { ...item, quantity } : item)),
-  });
-}
-
-export function clearCart() {
-  cartStore.set({ items: [] });
-}
-
-// Computed values using select()
-export function getCartTotal() {
-  return cartStore.get((state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
-}
-
-export function getCartItemCount() {
-  return cartStore.get((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
-}
-
-export function getCartItems() {
-  return cartStore.get((state) => state.items);
-}
-
-export function hasItems() {
-  return cartStore.get((state) => state.items.length > 0);
-}
-
-// Subscribe to cart total for real-time updates
-cartStore.subscribe(
-  (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-  (total) => {
-    console.log('Cart total:', total);
-  },
-);
-
-export { cartStore };
-```
-
-### Data Fetching with Loading States
-
-Async data fetching with loading, error, and success states.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type AsyncState<T> = {
-  data: T | null;
-  loading: boolean;
-  error: Error | null;
-};
-
-function createAsyncStore<T>(initialData: T | null = null) {
-  return createStore<AsyncState<T>>({
-    data: initialData,
-    loading: false,
-    error: null,
-  });
-}
-
-// Usage: User data
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-const userStore = createAsyncStore<User>();
-
-export async function fetchUser(id: string) {
-  userStore.set({ loading: true, error: null });
-
-  try {
-    const response = await fetch(`/api/users/${id}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch user');
-    }
-
-    const user = await response.json();
-    userStore.set({ data: user, loading: false });
-  } catch (error) {
-    userStore.set({
-      error: error as Error,
-      loading: false,
-    });
-  }
-}
-
-export async function updateUser(id: string, updates: Partial<User>) {
-  const currentData = userStore.get().data;
-
-  // Optimistic update
-  if (currentData) {
-    userStore.set({
-      data: { ...currentData, ...updates },
-    });
-  }
-
-  try {
-    const response = await fetch(`/api/users/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
-
-    const user = await response.json();
-    userStore.set({ data: user });
-  } catch (error) {
-    // Rollback on error
-    userStore.set({
-      data: currentData,
-      error: error as Error,
-    });
-  }
-}
-
-export { userStore };
-```
-
-### Theme Management
-
-Theme switcher with persistence and DOM updates.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type Theme = 'light' | 'dark' | 'auto';
-
-type ThemeState = {
-  theme: Theme;
-  isDark: boolean;
-};
-
-// Detect system theme
-function getSystemTheme(): boolean {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
-// Load saved theme
-const savedTheme = localStorage.getItem('theme') as Theme | null;
-
-const themeStore = createStore<ThemeState>({
-  theme: savedTheme || 'auto',
-  isDark: savedTheme === 'dark' || (savedTheme === 'auto' && getSystemTheme()),
-});
-
-// Listen to system theme changes
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-  const { theme } = themeStore.get();
-  if (theme === 'auto') {
-    themeStore.set({ isDark: e.matches });
-  }
-});
-
-// Apply theme to DOM
-themeStore.subscribe(
-  (state) => state.isDark,
-  (isDark) => {
-    document.documentElement.classList.toggle('dark', isDark);
-  },
-);
-
-// Persist theme
-themeStore.subscribe(
-  (state) => state.theme,
-  (theme) => {
-    localStorage.setItem('theme', theme);
-  },
-);
-
-// Actions
-export function setTheme(theme: Theme) {
-  const isDark = theme === 'dark' || (theme === 'auto' && getSystemTheme());
-  themeStore.set({ theme, isDark });
-}
-
-export function toggleTheme() {
-  const { isDark } = themeStore.get();
-  themeStore.set({
-    theme: isDark ? 'light' : 'dark',
-    isDark: !isDark,
-  });
-}
-
-export { themeStore };
-```
-
-### Derived State with select()
-
-Use `select()` for type-safe derived state and computed values.
-
-```ts
-import { createStore } from '@vielzeug/stateit';
-
-type User = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  age: number;
-  address: {
-    street: string;
-    city: string;
-    country: string;
-  };
-  preferences: {
-    theme: 'light' | 'dark';
-    notifications: boolean;
-  };
-};
-
-const userStore = createStore<User>({
-  firstName: 'Alice',
-  lastName: 'Johnson',
-  email: 'alice@example.com',
-  age: 30,
-  address: {
-    street: '123 Main St',
-    city: 'New York',
-    country: 'USA',
-  },
-  preferences: {
-    theme: 'light',
-    notifications: true,
-  },
-});
-
-// Simple property access
-export function getFirstName() {
-  return userStore.get((state) => state.firstName);
-}
-
-// Nested property access
-export function getUserCity() {
-  return userStore.get((state) => state.address.city);
-}
-
-export function getUserTheme() {
-  return userStore.get((state) => state.preferences.theme);
-}
-
-// Computed values
-export function getFullName() {
-  return userStore.get((state) => `${state.firstName} ${state.lastName}`);
-}
-
-export function getFullAddress() {
-  return userStore.get((state) => {
-    const { street, city, country } = state.address;
-    return `${street}, ${city}, ${country}`;
-  });
-}
-
-export function isAdult() {
-  return userStore.get((state) => state.age >= 18);
-}
-
-// Complex transformations
-export function getUserProfile() {
-  return userStore.get((state) => ({
-    name: `${state.firstName} ${state.lastName}`,
-    contact: state.email,
-    location: `${state.address.city}, ${state.address.country}`,
-    isDarkMode: state.preferences.theme === 'dark',
-  }));
-}
-
-// Type-safe field selection
-export function getUserSettings() {
-  return userStore.get((state) => ({
-    theme: state.preferences.theme,
-    notifications: state.preferences.notifications,
-  }));
-}
-```
-
-::: tip 💡 When to Use select()
-
-- ✅ One-time reads of specific values
-- ✅ Computed/derived values
-- ✅ Type-safe property access
-- ✅ Building APIs that return state slices
-- ❌ Not needed for subscriptions (use selector parameter instead)
-  :::
 
 ## Advanced Patterns
 
-### Multi-Store Coordination
-
-Coordinate multiple stores for complex state management.
+### Global App State
 
 ```ts
-import { createStore } from '@vielzeug/stateit';
+// stores/app.ts
+import { createState } from '@vielzeug/stateit';
 
-// Stores
-const authStore = createStore({ user: null, token: null });
-const cartStore = createStore({ items: [] });
-const notificationStore = createStore({ messages: [] });
+export const authState = createState({
+  user: null as User | null,
+  token: null as string | null,
+  isAuthenticated: false,
+});
 
-// Clear cart when user logs out
-authStore.subscribe((auth) => {
-  if (!auth.user) {
-    cartStore.set({ items: [] });
+export const uiState = createState({
+  theme: 'light' as 'light' | 'dark',
+  sidebarOpen: false,
+  notifications: [] as Notification[],
+});
+
+export const cartState = createState({
+  items: [] as CartItem[],
+  total: 0,
+});
+
+// Sync states
+authState.subscribe((auth) => {
+  if (!auth.isAuthenticated) {
+    // Clear cart on logout
+    cartState.set({ items: [], total: 0 });
   }
 });
 
-// Show notification when items added to cart
-cartStore.subscribe(
-  (state) => state.items.length,
-  (count, prevCount) => {
-    if (count > prevCount) {
-      const { messages } = notificationStore.get();
-      notificationStore.set({
-        messages: [...messages, { id: Date.now(), text: 'Item added to cart', type: 'success' }],
-      });
-    }
+uiState.subscribe(
+  (state) => state.theme,
+  (theme) => {
+    document.body.setAttribute('data-theme', theme);
   },
 );
 ```
 
-### Request-Scoped State
-
-Use scoped stores for request-specific state.
+### Local Storage Persistence
 
 ```ts
-import { createStore } from '@vielzeug/stateit';
-import type { Request, Response, NextFunction } from 'express';
+function createPersistedState<T extends object>(key: string, initialState: T) {
+  // Load from localStorage
+  const saved = localStorage.getItem(key);
+  const state = createState<T>(saved ? JSON.parse(saved) : initialState);
 
-const appStore = createStore({
-  config: { apiUrl: 'https://api.example.com' },
-});
+  // Save on changes
+  state.subscribe((current) => {
+    localStorage.setItem(key, JSON.stringify(current));
+  });
 
-// Express middleware
-export async function requestContext(req: Request, res: Response, next: NextFunction) {
-  await appStore.runInScope(
-    async (requestStore) => {
-      // Request-specific state
-      requestStore.set({
-        requestId: req.id,
-        userId: req.user?.id,
-      });
-
-      // Make store available to route handlers
-      req.context = requestStore;
-
-      next();
-    },
-    {
-      requestId: req.id,
-      userId: req.user?.id,
-    },
-  );
+  return state;
 }
+
+// Usage
+const settingsState = createPersistedState('app-settings', {
+  theme: 'light',
+  language: 'en',
+});
 ```
 
-### Undo/Redo Implementation
-
-Implement undo/redo functionality.
+### Debounced Updates
 
 ```ts
-import { createStore, type Store } from '@vielzeug/stateit';
+function debounce(fn: Function, delay: number) {
+  let timeout: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+}
 
-class UndoManager<T extends object> {
-  private past: T[] = [];
-  private future: T[] = [];
-  private unsubscribe: () => void;
+const searchState = createState({ query: '', results: [] });
 
-  constructor(
-    private store: Store<T>,
-    private maxHistory = 50,
-  ) {
-    this.unsubscribe = store.subscribe((state, prev) => {
-      this.past.push(prev);
+const debouncedSearch = debounce(async (query: string) => {
+  if (!query) {
+    searchState.set({ results: [] });
+    return;
+  }
 
-      // Limit history
-      if (this.past.length > maxHistory) {
-        this.past.shift();
-      }
+  const results = await fetch(`/api/search?q=${query}`).then((r) => r.json());
+  searchState.set({ results });
+}, 300);
 
-      this.future = [];
-    });
+// Usage in input handler
+searchInput.addEventListener('input', (e) => {
+  const query = e.target.value;
+  searchState.set({ query });
+  debouncedSearch(query);
+});
+```
+
+### Undo/Redo Pattern
+
+```ts
+class UndoableState<T extends object> {
+  private state: State<T>;
+  private history: T[] = [];
+  private historyIndex = -1;
+  private maxHistory = 50;
+
+  constructor(initialState: T) {
+    this.state = createState(initialState);
+    this.pushHistory(initialState);
+  }
+
+  get() {
+    return this.state.get();
+  }
+
+  set(update: Partial<T> | ((current: T) => T)) {
+    const newState = typeof update === 'function' ? update(this.state.get()) : { ...this.state.get(), ...update };
+
+    this.state.set(newState);
+    this.pushHistory(newState);
   }
 
   undo() {
-    const previous = this.past.pop();
-    if (previous) {
-      this.future.push(this.store.get());
-      this.store.set(previous);
-      return true;
+    if (this.canUndo()) {
+      this.historyIndex--;
+      this.state.set(this.history[this.historyIndex]);
     }
-    return false;
   }
 
   redo() {
-    const next = this.future.pop();
-    if (next) {
-      this.past.push(this.store.get());
-      this.store.set(next);
-      return true;
+    if (this.canRedo()) {
+      this.historyIndex++;
+      this.state.set(this.history[this.historyIndex]);
     }
-    return false;
   }
 
   canUndo() {
-    return this.past.length > 0;
+    return this.historyIndex > 0;
   }
 
   canRedo() {
-    return this.future.length > 0;
+    return this.historyIndex < this.history.length - 1;
   }
 
-  clear() {
-    this.past = [];
-    this.future = [];
+  subscribe(listener: Listener<T>) {
+    return this.state.subscribe(listener);
   }
 
-  dispose() {
-    this.unsubscribe();
+  private pushHistory(state: T) {
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push(state);
+
+    if (this.history.length > this.maxHistory) {
+      this.history.shift();
+    } else {
+      this.historyIndex++;
+    }
   }
 }
 
 // Usage
-const editorStore = createStore({ content: '' });
-const undoManager = new UndoManager(editorStore);
+const editorState = new UndoableState({ content: '' });
 
-// Make changes
-editorStore.set({ content: 'Hello' });
-editorStore.set({ content: 'Hello World' });
-
-// Undo
-undoManager.undo(); // Back to 'Hello'
-undoManager.undo(); // Back to ''
-
-// Redo
-undoManager.redo(); // Forward to 'Hello'
+editorState.set({ content: 'Hello' });
+editorState.set({ content: 'Hello World' });
+editorState.undo(); // Back to "Hello"
+editorState.redo(); // Forward to "Hello World"
 ```
 
-### DevTools Integration
+## Testing Examples
 
-Integrate with Redux DevTools for debugging.
+### Unit Tests
 
 ```ts
-import { createStore } from '@vielzeug/stateit';
+import { describe, it, expect, vi } from 'vitest';
+import { createState, createTestState } from '@vielzeug/stateit';
 
-function withDevTools<T extends object>(store: Store<T>, name: string = 'Store') {
-  const devTools = (window as any).__REDUX_DEVTOOLS_EXTENSION__?.connect({ name });
-
-  if (!devTools) return store;
-
-  store.subscribe((state, prev) => {
-    devTools.send(
-      {
-        type: 'STATE_UPDATE',
-        payload: state,
-      },
-      state,
-    );
+describe('Counter State', () => {
+  it('initializes with correct value', () => {
+    const state = createState({ count: 0 });
+    expect(state.get().count).toBe(0);
   });
 
-  devTools.subscribe((message: any) => {
-    if (message.type === 'DISPATCH' && message.state) {
-      store.set(JSON.parse(message.state));
-    }
+  it('updates count', () => {
+    const state = createState({ count: 0 });
+    state.set({ count: 5 });
+    expect(state.get().count).toBe(5);
   });
 
-  return store;
-}
+  it('resets to initial state', () => {
+    const state = createState({ count: 0 });
+    state.set({ count: 10 });
+    state.reset();
+    expect(state.get().count).toBe(0);
+  });
 
-// Usage
-const store = withDevTools(createStore({ count: 0 }), 'Counter Store');
+  it('notifies subscribers', async () => {
+    const state = createState({ count: 0 });
+    const listener = vi.fn();
+
+    state.subscribe(listener);
+    listener.mockClear();
+
+    state.set({ count: 1 });
+    await Promise.resolve();
+
+    expect(listener).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
+  });
+});
+
+describe('Test State Helper', () => {
+  it('creates isolated test state', () => {
+    const baseState = createState({ count: 0 });
+    const { state: testState, dispose } = createTestState(baseState, {
+      count: 5,
+    });
+
+    expect(testState.get().count).toBe(5);
+    expect(baseState.get().count).toBe(0);
+
+    dispose();
+  });
+});
+```
+
+### Integration Tests
+
+```ts
+describe('Todo App', () => {
+  it('adds and completes todos', () => {
+    const todoState = createState({ todos: [], filter: 'all' });
+
+    // Add todo
+    todoState.set((state) => ({
+      ...state,
+      todos: [...state.todos, { id: 1, text: 'Test', completed: false }],
+    }));
+
+    expect(todoState.get().todos).toHaveLength(1);
+
+    // Complete todo
+    todoState.set((state) => ({
+      ...state,
+      todos: state.todos.map((t) => (t.id === 1 ? { ...t, completed: true } : t)),
+    }));
+
+    expect(todoState.get().todos[0].completed).toBe(true);
+  });
+});
 ```

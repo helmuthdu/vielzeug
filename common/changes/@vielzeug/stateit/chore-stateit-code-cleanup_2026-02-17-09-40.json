@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/stateit",
+      "comment": "added transaction and computed properties support",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/stateit"
+}

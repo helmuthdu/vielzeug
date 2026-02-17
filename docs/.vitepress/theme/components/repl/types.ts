@@ -175,7 +175,7 @@ declare module '@vielzeug/deposit' {
   }
 
   export type DepositDataSchema<S = DataSchemaDef> = {
-    [K in keyof S]: DepotDataRecord<S[K], keyof S[K]>;
+    [K in keyof S]: DepositDataRecord<S[K], keyof S[K]>;
   };
 
   export type DepositMigrationFn<S extends DepositDataSchema> = (db: IDBDatabase, oldVersion: number, newVersion: number | null, transaction: IDBTransaction, schema: S) => void | Promise<void>;
@@ -192,7 +192,7 @@ declare module '@vielzeug/deposit' {
     connect?(): Promise<void>;
   };
 
-  export type DepotDataRecord<T, K extends keyof T = keyof T> = {
+  export type DepositDataRecord<T, K extends keyof T = keyof T> = {
     indexes?: K[];
     key: K;
     record: T;
@@ -580,12 +580,17 @@ declare module '@vielzeug/stateit' {
   export type Unsubscribe = () => void;
   export type EqualityFn<U> = (a: U, b: U) => boolean;
 
-  export type StoreOptions<T> = {
+  export type StateOptions<T> = {
     name?: string;
     equals?: EqualityFn<T>;
   };
 
-  export class Store<T extends object> {
+  export type Computed<U> = {
+    get: () => U;
+    subscribe: (listener: Listener<U>) => Unsubscribe;
+  };
+
+  export class State<T extends object> {
     get(): T;
     get<U>(selector: Selector<T, U>): U;
     set(patch: Partial<T>): void;
@@ -598,33 +603,39 @@ declare module '@vielzeug/stateit' {
       listener: Listener<U>,
       options?: { equality?: EqualityFn<U> }
     ): Unsubscribe;
-    createChild(patch?: Partial<T>): Store<T>;
+    computed<U>(
+      selector: Selector<T, U>,
+      options?: { equality?: EqualityFn<U> }
+    ): Computed<U>;
+    transaction(fn: () => void): void;
+    createChild(patch?: Partial<T>): State<T>;
     runInScope<R>(
-      fn: (scopedStore: Store<T>) => R | Promise<R>,
+      fn: (scopedState: State<T>) => R | Promise<R>,
       patch?: Partial<T>
     ): Promise<R>;
   }
 
-  export function createStore<T extends object>(
+  export function createState<T extends object>(
     initialState: T,
-    options?: StoreOptions<T>
-  ): Store<T>;
+    options?: StateOptions<T>
+  ): State<T>;
 
-  export function createTestStore<T extends object>(
-    baseStore?: Store<T>,
+  export function createTestState<T extends object>(
+    baseState?: State<T>,
     patch?: Partial<T>
   ): {
-    store: Store<T>;
+    state: State<T>;
     dispose: () => void;
   };
 
-  export function withMock<T extends object, R>(
-    baseStore: Store<T>,
+  export function withStateMock<T extends object, R>(
+    baseState: State<T>,
     patch: Partial<T>,
-    fn: () => R | Promise<R>
+    fn: (scopedState: State<T>) => R | Promise<R>
   ): Promise<R>;
 
   export function shallowEqual(a: unknown, b: unknown): boolean;
+  export function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
   export function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
 }
 `;

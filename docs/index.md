@@ -18,7 +18,7 @@ hero:
 
 features:
   - title: '@vielzeug/craftit'
-    details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state and automatic rendering."
+    details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state."
     link: /craftit/
   - title: '@vielzeug/deposit'
     details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
@@ -45,7 +45,7 @@ features:
     details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /stateit/
   - title: '@vielzeug/toolkit'
-    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library with 119+ functions for arrays, objects, strings, math, dates, and more."
+    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
     link: /toolkit/
   - title: '@vielzeug/validit'
     details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
@@ -101,7 +101,7 @@ Have questions? Found a bug? Want to contribute?
 
 <div style="text-align: center; color: var(--vp-c-text-2); font-size: 0.9em;">
 
-Released under the [MIT License](https://github.com/helmuthdu/vielzeug/blob/main/LICENSE).  
+Released under the [MIT License](https://github.com/helmuthdu/vielzeug/blob/main/LICENSE).
 [Vielzeug Contributors](https://github.com/helmuthdu/vielzeug/graphs/contributors).
 
 </div>
