@@ -201,19 +201,6 @@ All packages are:
 - ✅ Actively maintained
 - ✅ Semantically versioned
 
-## Package Comparison
-
-How does Vielzeug stack up?
-
-| Feature            | Vielzeug             | Lodash         | Zod + RHF + TanStack | Native   |
-| ------------------ |----------------------| -------------- | -------------------- | -------- |
-| **Bundle Size**    | 0.1-1 KB per package | 24 KB (full)   | 40+ KB combined      | 0 KB     |
-| **TypeScript**     | Native, first-class  | Via @types     | Good                 | Manual   |
-| **Dependencies**   | 0-1 per package      | 0              | Many                 | N/A      |
-| **Tree-shakeable** | Yes, by default      | lodash-es only | Varies               | N/A      |
-| **Framework**      | Agnostic             | Agnostic       | React-focused        | Agnostic |
-| **Learning Curve** | Low                  | Low            | Medium-High          | Low      |
-
 ## Getting Help
 
 - 📖 **Documentation**: Each package has detailed docs with examples

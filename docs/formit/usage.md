@@ -10,6 +10,24 @@ This guide covers API usage and basic patterns. For complete application example
 
 [[toc]]
 
+## Installation
+
+::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/formit
+```
+
+```sh [npm]
+npm install @vielzeug/formit
+```
+
+```sh [yarn]
+yarn add @vielzeug/formit
+```
+
+:::
+
 ## Basic Usage
 
 ### Creating a Form
@@ -80,6 +98,266 @@ const all = form.values();
 
 // Get FormData
 const formData = form.data();
+```
+
+## Advanced Patterns
+
+### Multi-Step Forms
+
+```typescript
+const form = createForm({
+  fields: {
+    // Step 1
+    name: '',
+    email: '',
+    // Step 2
+    address: '',
+    city: '',
+    // Step 3
+    cardNumber: '',
+  },
+});
+
+let currentStep = 1;
+
+async function validateStep(step: number) {
+  const stepFields = {
+    1: ['name', 'email'],
+    2: ['address', 'city'],
+    3: ['cardNumber'],
+  };
+
+  const errors = await form.validate({ fields: stepFields[step] });
+  return errors.size === 0;
+}
+
+async function nextStep() {
+  const isValid = await validateStep(currentStep);
+  if (isValid) {
+    currentStep++;
+  }
+}
+
+async function submitForm() {
+  const isValid = await validateStep(currentStep);
+  if (isValid) {
+    await form.submit(async (formData) => {
+      await fetch('/api/complete', { method: 'POST', body: formData });
+    });
+  }
+}
+```
+
+### Dynamic Fields
+
+```typescript
+const form = createForm({
+  fields: {
+    items: [] as Array<{ name: string; quantity: number }>,
+  },
+});
+
+function addItem() {
+  const items = form.get('items') || [];
+  form.set('items', [...items, { name: '', quantity: 0 }]);
+}
+
+function removeItem(index: number) {
+  const items = form.get('items') || [];
+  form.set(
+    'items',
+    items.filter((_, i) => i !== index),
+  );
+}
+
+function updateItem(index: number, field: 'name' | 'quantity', value: any) {
+  const items = form.get('items') || [];
+  const updated = [...items];
+  updated[index] = { ...updated[index], [field]: value };
+  form.set('items', updated);
+}
+```
+
+### Conditional Validation
+
+```typescript
+const form = createForm({
+  fields: {
+    accountType: 'personal',
+    companyName: '',
+    vatNumber: '',
+  },
+});
+
+form.subscribe((state) => {
+  const accountType = form.get('accountType');
+
+  if (accountType === 'business') {
+    // Add business field validation
+    if (!form.get('companyName')) {
+      form.error('companyName', 'Company name required');
+    }
+    if (!form.get('vatNumber')) {
+      form.error('vatNumber', 'VAT number required');
+    }
+  } else {
+    // Clear business field errors
+    form.error('companyName', '');
+    form.error('vatNumber', '');
+  }
+});
+```
+
+### Dirty State Warning
+
+```typescript
+const form = createForm({
+  fields: { name: '', email: '' },
+});
+
+window.addEventListener('beforeunload', (e) => {
+  const state = form.snapshot();
+
+  if (state.dirty.size > 0) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+  }
+});
+```
+
+### Auto-Save
+
+```typescript
+const form = createForm({
+  fields: { content: '' },
+});
+
+let saveTimeout;
+
+form.subscribe((state) => {
+  if (state.dirty.size > 0) {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+      await form.submit(
+        async (formData) => {
+          await fetch('/api/auto-save', { method: 'POST', body: formData });
+        },
+        { validate: false },
+      );
+    }, 1000);
+  }
+});
+```
+
+### Reset to Initial Values
+
+```typescript
+const form = createForm({
+  fields: { name: '', email: '' },
+});
+
+// Reset to initial
+form.reset();
+
+// Reset to new values
+form.reset({ name: 'Guest', email: '' });
+```
+
+### Form Cloning
+
+```typescript
+const form1 = createForm({
+  fields: { name: 'Alice', email: 'alice@example.com' },
+});
+
+// Clone FormData
+const formData = form1.clone();
+
+// Create new form with cloned data
+const form2 = createForm({ fields: {} });
+form2.set(formData);
+```
+
+## Best Practices
+
+### 1. Always Subscribe in Framework Effects
+
+```tsx
+// ✅ Good
+useEffect(() => form.subscribe(setState), [form]);
+
+// ❌ Bad – creates memory leak
+form.subscribe(setState);
+```
+
+### 2. Use Field Binding for Inputs
+
+```tsx
+// ✅ Good
+<input {...form.bind('email')} />
+
+// ❌ Verbose
+<input
+  name="email"
+  value={form.get('email')}
+  onChange={(e) => form.set('email', e.target.value)}
+  onBlur={() => form.touch('email', true)}
+/>
+```
+
+### 3. Handle Validation Errors
+
+```typescript
+// ✅ Good
+try {
+  await form.submit(onSubmit);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    // Handle validation errors
+  } else {
+    // Handle other errors
+  }
+}
+
+// ❌ Bad – swallows validation errors
+form.submit(onSubmit).catch(console.error);
+```
+
+### 4. Use Nested Objects for Organization
+
+```typescript
+// ✅ Good – organized
+fields: {
+  user: {
+    name: '',
+    email: ''
+  },
+  address: {
+    street: '',
+    city: ''
+  }
+}
+
+// ❌ Flat – harder to manage
+fields: {
+  userName: '',
+  userEmail: '',
+  addressStreet: '',
+  addressCity: ''
+}
+```
+
+### 5. Validate on Submit, Show Errors on Blur
+
+```typescript
+const binding = form.bind('email', {
+  markTouchedOnBlur: true,
+});
+
+// Show error only if touched
+{
+  state.touched.has('email') && state.errors.get('email');
+}
 ```
 
 ## Validation
@@ -540,266 +818,6 @@ async function handleSubmit() {
     {$state.isSubmitting ? 'Logging in...' : 'Login'}
   </button>
 </form>
-```
-
-## Advanced Patterns
-
-### Multi-Step Forms
-
-```typescript
-const form = createForm({
-  fields: {
-    // Step 1
-    name: '',
-    email: '',
-    // Step 2
-    address: '',
-    city: '',
-    // Step 3
-    cardNumber: '',
-  },
-});
-
-let currentStep = 1;
-
-async function validateStep(step: number) {
-  const stepFields = {
-    1: ['name', 'email'],
-    2: ['address', 'city'],
-    3: ['cardNumber'],
-  };
-
-  const errors = await form.validate({ fields: stepFields[step] });
-  return errors.size === 0;
-}
-
-async function nextStep() {
-  const isValid = await validateStep(currentStep);
-  if (isValid) {
-    currentStep++;
-  }
-}
-
-async function submitForm() {
-  const isValid = await validateStep(currentStep);
-  if (isValid) {
-    await form.submit(async (formData) => {
-      await fetch('/api/complete', { method: 'POST', body: formData });
-    });
-  }
-}
-```
-
-### Dynamic Fields
-
-```typescript
-const form = createForm({
-  fields: {
-    items: [] as Array<{ name: string; quantity: number }>,
-  },
-});
-
-function addItem() {
-  const items = form.get('items') || [];
-  form.set('items', [...items, { name: '', quantity: 0 }]);
-}
-
-function removeItem(index: number) {
-  const items = form.get('items') || [];
-  form.set(
-    'items',
-    items.filter((_, i) => i !== index),
-  );
-}
-
-function updateItem(index: number, field: 'name' | 'quantity', value: any) {
-  const items = form.get('items') || [];
-  const updated = [...items];
-  updated[index] = { ...updated[index], [field]: value };
-  form.set('items', updated);
-}
-```
-
-### Conditional Validation
-
-```typescript
-const form = createForm({
-  fields: {
-    accountType: 'personal',
-    companyName: '',
-    vatNumber: '',
-  },
-});
-
-form.subscribe((state) => {
-  const accountType = form.get('accountType');
-
-  if (accountType === 'business') {
-    // Add business field validation
-    if (!form.get('companyName')) {
-      form.error('companyName', 'Company name required');
-    }
-    if (!form.get('vatNumber')) {
-      form.error('vatNumber', 'VAT number required');
-    }
-  } else {
-    // Clear business field errors
-    form.error('companyName', '');
-    form.error('vatNumber', '');
-  }
-});
-```
-
-### Dirty State Warning
-
-```typescript
-const form = createForm({
-  fields: { name: '', email: '' },
-});
-
-window.addEventListener('beforeunload', (e) => {
-  const state = form.snapshot();
-
-  if (state.dirty.size > 0) {
-    e.preventDefault();
-    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-  }
-});
-```
-
-### Auto-Save
-
-```typescript
-const form = createForm({
-  fields: { content: '' },
-});
-
-let saveTimeout;
-
-form.subscribe((state) => {
-  if (state.dirty.size > 0) {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {
-      await form.submit(
-        async (formData) => {
-          await fetch('/api/auto-save', { method: 'POST', body: formData });
-        },
-        { validate: false },
-      );
-    }, 1000);
-  }
-});
-```
-
-### Reset to Initial Values
-
-```typescript
-const form = createForm({
-  fields: { name: '', email: '' },
-});
-
-// Reset to initial
-form.reset();
-
-// Reset to new values
-form.reset({ name: 'Guest', email: '' });
-```
-
-### Form Cloning
-
-```typescript
-const form1 = createForm({
-  fields: { name: 'Alice', email: 'alice@example.com' },
-});
-
-// Clone FormData
-const formData = form1.clone();
-
-// Create new form with cloned data
-const form2 = createForm({ fields: {} });
-form2.set(formData);
-```
-
-## Best Practices
-
-### 1. Always Subscribe in Framework Effects
-
-```tsx
-// ✅ Good
-useEffect(() => form.subscribe(setState), [form]);
-
-// ❌ Bad – creates memory leak
-form.subscribe(setState);
-```
-
-### 2. Use Field Binding for Inputs
-
-```tsx
-// ✅ Good
-<input {...form.bind('email')} />
-
-// ❌ Verbose
-<input
-  name="email"
-  value={form.get('email')}
-  onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.touch('email', true)}
-/>
-```
-
-### 3. Handle Validation Errors
-
-```typescript
-// ✅ Good
-try {
-  await form.submit(onSubmit);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    // Handle validation errors
-  } else {
-    // Handle other errors
-  }
-}
-
-// ❌ Bad – swallows validation errors
-form.submit(onSubmit).catch(console.error);
-```
-
-### 4. Use Nested Objects for Organization
-
-```typescript
-// ✅ Good – organized
-fields: {
-  user: {
-    name: '',
-    email: ''
-  },
-  address: {
-    street: '',
-    city: ''
-  }
-}
-
-// ❌ Flat – harder to manage
-fields: {
-  userName: '',
-  userEmail: '',
-  addressStreet: '',
-  addressCity: ''
-}
-```
-
-### 5. Validate on Submit, Show Errors on Blur
-
-```typescript
-const binding = form.bind('email', {
-  markTouchedOnBlur: true,
-});
-
-// Show error only if touched
-{
-  state.touched.has('email') && state.errors.get('email');
-}
 ```
 
 ## Next Steps

@@ -66,18 +66,18 @@ const user = await queryClient.fetch({
 
 | Feature               | Fetchit                                               | TanStack Query | Axios          | Native Fetch       |
 | --------------------- | ----------------------------------------------------- | -------------- | -------------- | ------------------ |
-| TypeScript Support    | ✅ First-class                                        | ✅ First-class | ✅ Good        | ⚠️ Basic           |
+| Bundle Size (gzip)    | **<PackageInfo package="fetchit" type="size" />**     | ~17 KB         | ~25 KB         | 0 KB               |
+| Dependencies          | <PackageInfo package="fetchit" type="dependencies" /> | 0              | 7+             | 0                  |
+| Auto JSON Parsing     | ✅ Yes                                                | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
+| Framework Agnostic    | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes             |
+| Node.js Support       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
+| React Hooks           | ❌                                                    | ✅ Yes         | ❌             | ❌                 |
 | Request Deduplication | ✅ Built-in                                           | ✅ Built-in    | ❌             | ❌                 |
+| Request Retry         | ✅ Built-in                                           | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
 | Smart Caching         | ✅ Built-in                                           | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
 | Stable Query Keys     | ✅ Built-in                                           | ❌             | N/A            | N/A                |
-| Auto JSON Parsing     | ✅ Yes                                                | ❌ Manual      | ✅ Yes         | ⚠️ Manual          |
 | Timeout Support       | ✅ Built-in                                           | ❌             | ✅ Built-in    | ⚠️ AbortController |
-| Bundle Size (gzip)    | **<PackageInfo package="fetchit" type="size" />**     | ~15 KB         | ~13 KB         | 0 KB               |
-| Node.js Support       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ (v18+)          |
-| Dependencies          | <PackageInfo package="fetchit" type="dependencies" /> | 0              | 7+             | 0                  |
-| Request Retry         | ✅ Built-in                                           | ✅ Built-in    | ⚠️ Via plugins | ❌                 |
-| React Hooks           | ❌                                                    | ✅ Yes         | ❌             | ❌                 |
-| Framework Agnostic    | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes             |
+| TypeScript            | ✅ First-class                                        | ✅ First-class | ✅ Good        | ⚠️ Basic           |
 
 ## When to Use Fetchit
 
@@ -115,132 +115,47 @@ const user = await queryClient.fetch({
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/fetchit
-```
-
-```sh [npm]
-npm install @vielzeug/fetchit
-```
-
-```sh [yarn]
-yarn add @vielzeug/fetchit
-```
-
-:::
-
-### Basic Usage
-
-#### Option 1: HTTP Client Only (Simple)
+**Simple HTTP requests:**
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
 
-// 1. Create HTTP client
-const http = createHttpClient({
-  baseUrl: 'https://api.example.com',
-  timeout: 5000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 2. Make type-safe requests
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// GET request – returns raw data
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const user = await http.get<User>('/users/1');
-console.log(user.name); // Type-safe!
-
-// POST request with body
-const created = await http.post<User>('/users', {
-  body: {
-    name: 'Alice',
-    email: 'alice@example.com',
-  },
-});
-
-// PUT request
-const updated = await http.put<User>('/users/1', {
-  body: { name: 'Alice Smith' },
-});
-
-// DELETE request
-await http.delete('/users/1');
 ```
 
-#### Option 2: Query Client for Advanced Caching
+**Advanced caching with Query Client:**
 
 ```ts
 import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
 
-// 1. Create clients
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient({
-  staleTime: 5000,
-  gcTime: 300000,
-});
-
-// 2. Define type-safe query keys manually
-const queryKeys = {
-  users: {
-    all: () => ['users'] as const,
-    detail: (id: string) => ['users', id] as const,
-    list: (filters: { role?: string }) => ['users', 'list', filters] as const,
-  },
-} as const;
-
-// 3. Fetch with caching
-const user = await queryClient.fetch({
-  queryKey: queryKeys.users.detail('1'),
-  queryFn: () => http.get<User>('/users/1'),
-  staleTime: 5000,
-});
-
-// 4. Mutations
-await queryClient.mutate(
-  {
-    mutationFn: (newUser: Partial<User>) => http.post('/users', { body: newUser }),
-    onSuccess: (data) => {
-      // Invalidate and refetch
-      queryClient.invalidate(queryKeys.users.all());
-    },
-  },
-  { name: 'Alice', email: 'alice@example.com' },
-);
-```
-
-#### Option 3: Use Any Fetch Function with Query Client
-
-```ts
-import { createQueryClient } from '@vielzeug/fetchit';
-
 const queryClient = createQueryClient();
 
-// Use with native fetch
-const data = await queryClient.fetch({
-  queryKey: ['todos', '1'],
-  queryFn: () => fetch('https://api.example.com/todos/1').then((r) => r.json()),
-});
-
-// Use with axios
-import axios from 'axios';
-
 const user = await queryClient.fetch({
-  queryKey: ['users', '1'],
-  queryFn: () => axios.get('/users/1').then((r) => r.data),
+  queryKey: ['users', userId],
+  queryFn: () => http.get<User>(`/users/${userId}`),
+  staleTime: 5000, // Fresh for 5 seconds
 });
 ```
 
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for HTTP Client and Query Client details
+- Check [Examples](./examples.md) for framework integrations
+  :::
+  import axios from 'axios';
+
+const user = await queryClient.fetch({
+queryKey: ['users', '1'],
+queryFn: () => axios.get('/users/1').then((r) => r.data),
+});
+
+```text
+
 ### Real-World Example: API Client with Auth
+
+```
 
 ```ts
 import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
@@ -435,13 +350,6 @@ await queryClient.fetch({
   gcTime: 300000, // Cache for 5 minutes
 });
 ```
-
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Service configuration, interceptors, and error handling
-- **[API Reference](./api.md)**: Complete documentation of all methods and options
-- **[Examples](./examples.md)**: Patterns for caching, cancellation, and file uploads
-- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

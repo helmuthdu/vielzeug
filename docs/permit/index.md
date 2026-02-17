@@ -62,18 +62,18 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 | Feature            | Permit                                               | CASL        | Casbin     | Manual If/Else |
 | ------------------ | ---------------------------------------------------- | ----------- | ---------- | -------------- |
-| TypeScript Support | ✅ First-class                                       | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
+| Bundle Size (gzip) | **<PackageInfo package="permit" type="size" />**     | ~4KB        | ~32KB      | 0KB            |
+| Dependencies       | <PackageInfo package="permit" type="dependencies" /> | 5+          | 10+        | N/A            |
 | Dynamic Rules      | ✅ Simple                                            | ✅ Advanced | ✅ Complex | ✅ Manual      |
-| Bundle Size (gzip) | **<PackageInfo package="permit" type="size" />**     | ~15KB       | ~45KB      | 0KB            |
+| Isomorphic         | ✅                                                   | ✅          | ✅         | ✅             |
 | Learning Curve     | Low                                                  | Medium      | High       | None           |
-| Role-Based         | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
-| Resource-Based     | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
-| Wildcards          | ✅ Role + Resource                                   | ⚠️ Limited  | ✅         | ❌             |
 | Normalization      | ✅ Built-in                                          | ❌          | ❌         | ❌             |
+| Resource-Based     | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
+| Role-Based         | ✅                                                   | ✅          | ✅         | ⚠️ Manual      |
 | Security Defaults  | ✅ Safe                                              | ⚠️          | ⚠️         | ❌             |
 | Type Exports       | ✅ All                                               | ⚠️ Some     | ❌         | N/A            |
-| Dependencies       | <PackageInfo package="permit" type="dependencies" /> | 5+          | 10+        | N/A            |
-| Isomorphic         | ✅                                                   | ✅          | ✅         | ✅             |
+| TypeScript Support | ✅ First-class                                       | ✅ Good     | ⚠️ Basic   | ⚠️ Manual      |
+| Wildcards          | ✅ Role + Resource                                   | ⚠️ Limited  | ✅         | ❌             |
 
 ## When to Use Permit
 
@@ -110,30 +110,10 @@ if (Permit.check(user, 'posts', 'update', post)) {
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/permit
-```
-
-```sh [npm]
-npm install @vielzeug/permit
-```
-
-```sh [yarn]
-yarn add @vielzeug/permit
-```
-
-:::
-
-### Basic Setup
-
 ```ts
-import { Permit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
+import { Permit } from '@vielzeug/permit';
 
-// 1. Register role-based permissions
+// Register permissions
 Permit.register('admin', 'posts', {
   read: true,
   create: true,
@@ -147,33 +127,23 @@ Permit.register('editor', 'posts', {
   update: true,
 });
 
-Permit.register('viewer', 'posts', {
-  read: true,
-});
-
-// 2. Public permissions for unauthenticated users
-Permit.register(ANONYMOUS, 'posts', {
-  read: true,
-});
-
-// 3. Check permissions
+// Check permissions
 const user = { id: 'u1', roles: ['editor'] };
 
 if (Permit.check(user, 'posts', 'create')) {
-  // User can create posts
+  // User can create posts ✅
 }
 
 if (Permit.check(user, 'posts', 'delete')) {
-  // This won't run for editor
+  // User cannot delete ❌
 }
-
-// 4. Normalization – case-insensitive matching
-Permit.register('Admin', 'Posts', { read: true });
-const adminUser = { id: 'u2', roles: ['ADMIN'] };
-Permit.check(adminUser, 'posts', 'read'); // true
 ```
 
-### Real-World Example: Blog Platform
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for dynamic rules, wildcards, and advanced patterns
+- Check [Examples](./examples.md) for real-world implementations
+  :::
 
 ```ts
 import { Permit, WILDCARD } from '@vielzeug/permit';
@@ -372,13 +342,6 @@ Special roles and resources:
 ```ts
 Permit.register('*', 'posts', { read: true }); // Anyone can view posts
 ```
-
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Installation, configuration, and basic concepts
-- **[API Reference](./api.md)**: Detailed documentation of all methods and types
-- **[Examples](./examples.md)**: Advanced patterns for dynamic rules and wildcards
-- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

@@ -56,14 +56,14 @@ const user = userSchema.parse(data);
 
 | Feature             | Validit                                               | Zod    | Yup    |
 | ------------------- | ----------------------------------------------------- | ------ | ------ |
-| Bundle Size         | **<PackageInfo package="validit" type="size" />**     | ~12 KB | ~15 KB |
+| Bundle Size         | **<PackageInfo package="validit" type="size" />**     | ~63 KB | ~14 KB |
 | Dependencies        | <PackageInfo package="validit" type="dependencies" /> | 0      | Many   |
 | TypeScript          | Native                                                | Native | Good   |
 | Async Validation    | ✅                                                    | ✅     | ✅     |
-| Parallel Arrays     | ✅                                                    | ❌     | ❌     |
 | Convenience Schemas | ✅                                                    | ❌     | ❌     |
-| Transform Support   | ✅                                                    | ✅     | ✅     |
 | Custom Refinements  | ✅                                                    | ✅     | ✅     |
+| Parallel Arrays     | ✅                                                    | ❌     | ❌     |
+| Transform Support   | ✅                                                    | ✅     | ✅     |
 
 ## When to Use Validit
 
@@ -131,39 +131,25 @@ const schema = v.object({
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/validit
-```
-
-```sh [npm]
-npm install @vielzeug/validit
-```
-
-```sh [yarn]
-yarn add @vielzeug/validit
-```
-
-:::
-
-### Basic Example
-
 ```ts
 import { v } from '@vielzeug/validit';
 
 const userSchema = v.object({
   email: v.email(),
   age: v.number().int().min(18),
+  role: v.enum(['admin', 'user']),
 });
 
 // Validate and get typed data
 const user = userSchema.parse(data);
+// Type: { email: string; age: number; role: 'admin' | 'user' }
 ```
 
-### Form Validation
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for all schema types, async validation, and transforms
+- Check [Examples](./examples.md) for form validation and API response validation
+  :::
 
 ```ts
 import { v, type Infer } from '@vielzeug/validit';
@@ -279,30 +265,21 @@ type Data = Infer<typeof schema>;
 // { id: number; name: string; tags?: string[] }
 ```
 
-## 📚 Documentation
-
-Explore comprehensive guides and references:
-
-- **[Usage Guide](./usage.md)** – Complete guide to all validation features
-- **[API Reference](./api.md)** – Detailed API documentation with all methods
-- **[Examples](./examples.md)** – Real-world examples and patterns
-- **[Interactive REPL](/repl)**: Try it in your browser
-
 ## ❓ FAQ
 
-### **Q: How does Validit compare to Zod?**
+### How does Validit compare to Zod?
 
 Validit is designed to be smaller (~2KB vs ~12KB) and focuses on simplicity. Zod offers more advanced features like brand types and preprocessing.
 
-### **Q: Can I use Validit with React?**
+### Can I use Validit with React?
 
 Yes! Validit is framework-agnostic and works great with React, Vue, Svelte, or any JavaScript framework.
 
-### **Q: Does Validit support async validation?**
+### Does Validit support async validation?
 
 Yes, use `refineAsync()` for async validations and `parseAsync()` or `safeParseAsync()` to execute them.
 
-### **Q: Can I create custom validators?**
+### Can I create custom validators?
 
 Yes, use `refine()` for sync validators or `refineAsync()` for async validators:
 
@@ -312,8 +289,13 @@ const schema = v.string().refine((val) => val.length > 5, 'Must be longer than 5
 
 ## 🐛 Troubleshooting
 
-### **Validation always fails**
+### Validation always fails
 
+::: danger Problem
+Schema validation fails even with correct data.
+:::
+
+::: tip Solution
 Check that your data matches the schema type. Use `safeParse()` to see detailed error messages:
 
 ```ts
@@ -323,8 +305,15 @@ if (!result.success) {
 }
 ```
 
-### **Type inference not working**
+:::
 
+### Type inference not working
+
+::: danger Problem
+TypeScript types not inferred from schema.
+:::
+
+::: tip Solution
 Make sure you're using `type Infer` from validit:
 
 ```ts
@@ -334,8 +323,15 @@ const schema = v.object({ name: v.string() });
 type Data = Infer<typeof schema>;
 ```
 
-### **Async validation not running**
+:::
 
+### Async validation not running
+
+::: danger Problem
+Async validators not being executed.
+:::
+
+::: tip Solution
 Use `parseAsync()` or `safeParseAsync()` instead of `parse()`:
 
 ```ts
@@ -345,6 +341,8 @@ const result = schema.parse(data);
 // ✅ Runs async validators
 const result = await schema.parseAsync(data);
 ```
+
+:::
 
 ## 🤝 Contributing
 

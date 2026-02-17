@@ -79,15 +79,15 @@ defineElement('my-counter', {
 
 | Feature            | Craftit                                               | Lit      | Stencil   | Vanilla CE |
 | ------------------ | ----------------------------------------------------- | -------- | --------- | ---------- |
-| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~15 KB   | ~10 KB    | 0          |
+| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~7 KB    | ~30 KB    | 0          |
 | Dependencies       | <PackageInfo package="craftit" type="dependencies" /> | 0        | Many      | 0          |
-| TypeScript         | Native                                                | Good     | Excellent | Manual     |
-| Reactive State     | Built-in                                              | External | Built-in  | Manual     |
+| DOM Reconciliation | ✅                                                    | ✅       | ✅        | ❌         |
 | Event Delegation   | ✅                                                    | ❌       | ❌        | Manual     |
 | Form Integration   | ✅                                                    | ⚠️       | ✅        | Manual     |
-| DOM Reconciliation | ✅                                                    | ✅       | ✅        | ❌         |
 | Learning Curve     | Low                                                   | Medium   | High      | Low        |
+| Reactive State     | Built-in                                              | External | Built-in  | Manual     |
 | Testing Utilities  | ✅                                                    | ⚠️       | ✅        | ❌         |
+| TypeScript         | Native                                                | Good     | Excellent | Manual     |
 
 ## When to Use Craftit
 
@@ -123,120 +123,31 @@ defineElement('my-counter', {
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [npm]
-npm install @vielzeug/craftit
-```
-
-```sh [yarn]
-yarn add @vielzeug/craftit
-```
-
-```sh [pnpm]
-pnpm add @vielzeug/craftit
-```
-
-:::
-
-### Basic Component
-
 ```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
+import { defineElement, html } from '@vielzeug/craftit';
 
-defineElement('hello-world', {
-  template: html`
-    <div class="greeting">
-      <h1>Hello, World!</h1>
-      <p>Welcome to Craftit!</p>
-    </div>
-  `,
-
-  styles: [
-    css`
-      .greeting {
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 8px;
-      }
-    `,
-  ],
-});
-
-// Use in HTML
-// <hello-world></hello-world>
-```
-
-### With State and Interactivity
-
-```ts
 defineElement('click-counter', {
-  state: {
-    count: 0,
-  },
+  state: { count: 0 },
 
   template: (el) => html`
-    <div class="counter">
+    <div>
       <p>Count: ${el.state.count}</p>
-      <button class="increment">+</button>
-      <button class="decrement">-</button>
-      <button class="reset">Reset</button>
+      <button>Increment</button>
     </div>
   `,
 
-  styles: [
-    css`
-      .counter {
-        padding: 1rem;
-      }
-      button {
-        margin: 0.5rem;
-      }
-    `,
-  ],
-
   onConnected(el) {
-    el.on('.increment', 'click', () => el.state.count++);
-    el.on('.decrement', 'click', () => el.state.count--);
-    el.on('.reset', 'click', () => (el.state.count = 0));
+    el.on('button', 'click', () => el.state.count++); // Auto re-renders!
   },
 });
 ```
 
-### Form Integration
+::: tip Next Steps
 
-```ts
-defineElement('custom-input', {
-  state: { value: '' },
-
-  template: (el) => html`
-    <label>
-      <span>Username</span>
-      <input type="text" value="${el.state.value}" />
-    </label>
-  `,
-
-  formAssociated: true,
-  observedAttributes: ['value'] as const,
-
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const input = e.currentTarget as HTMLInputElement;
-      el.state.value = input.value;
-      el.form?.value(input.value);
-    });
-  },
-});
-
-// Use in forms
-// <form>
-//   <custom-input name="username"></custom-input>
-//   <button type="submit">Submit</button>
-// </form>
-```
+- See [Usage Guide](./usage.md) for complete API and patterns
+- Check [Examples](./examples.md) for framework integrations (React, Vue, Svelte)
+- Read [API Reference](./api.md) for detailed documentation
+  :::
 
 ## 📘 Core Concepts
 
@@ -326,32 +237,38 @@ defineElement('efficient-list', {
 });
 ```
 
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)** – Detailed feature explanations
-- **[API Reference](./api.md)** – Complete API documentation
-- **[Examples](./examples.md)** – Real-world usage examples
-
 ## ❓ FAQ
 
-**Q: How does Craftit compare to Lit?**  
-A: Craftit is simpler and smaller (~5 KB vs ~15 KB). Lit has more features like directives and SSR support. Choose Craftit for simplicity, Lit for advanced features.
+### How does Craftit compare to Lit?
 
-**Q: Can I use Craftit with React/Vue/Svelte?**  
-A: Yes! Craftit creates standard web components that work anywhere. See [Framework Integration](./examples.md#framework-integration).
+Craftit is simpler and smaller (<PackageInfo package="craftit" type="size" /> vs ~7 KB). Lit has more features like directives and SSR support. Choose Craftit for simplicity, Lit for advanced features.
 
-**Q: Does Craftit support TypeScript?**  
-A: Absolutely! Craftit is written in TypeScript with full type inference and type safety.
+### Can I use Craftit with React/Vue/Svelte?
 
-**Q: What about browser support?**  
-A: Craftit requires modern browsers (Chrome 77+, Firefox 93+, Safari 16.4+) for features like ElementInternals and Shadow DOM.
+Yes! Craftit creates standard web components that work anywhere. See [Framework Integration](./examples.md#framework-integration).
 
-**Q: Can I use Craftit in production?**  
-A: Yes! Craftit is stable, tested, and used in production applications.
+### Does Craftit support TypeScript?
+
+Absolutely! Craftit is written in TypeScript with full type inference and type safety.
+
+### What about browser support?
+
+Craftit requires modern browsers (Chrome 77+, Firefox 93+, Safari 16.4+) for features like ElementInternals and Shadow DOM.
+
+### Can I use Craftit in production?
+
+Yes! Craftit is stable, tested, and used in production applications.
 
 ## 🐛 Troubleshooting
 
 ### Component Not Rendering
+
+::: danger Problem
+Component is defined but doesn't render anything.
+:::
+
+::: tip Solution
+Ensure you provide a `template` function:
 
 ```ts
 // ❌ Wrong – missing template
@@ -366,20 +283,37 @@ defineElement('my-el', {
 });
 ```
 
+:::
+
 ### Events Not Working
 
+::: danger Problem
+Event listeners not firing on elements.
+:::
+
+::: tip Solution
+Bind events in `onConnected` lifecycle hook after elements exist:
+
 ```ts
-// ❌ Wrong – binding before element exists
+// ✅ Correct – binding after element exists
 defineElement('my-el', {
   template: html`<button>Click</button>`,
   onConnected(el) {
-    // This is correct timing ✅
     el.on('button', 'click', () => console.log('clicked'));
   },
 });
 ```
 
+:::
+
 ### State Not Updating
+
+::: danger Problem
+State changes don't trigger re-renders.
+:::
+
+::: tip Solution
+Mutate the state object or use `set()` method:
 
 ```ts
 // ❌ Wrong – replacing state object
@@ -391,6 +325,8 @@ el.state.count = 10;
 // ✅ Or use set()
 el.set({ count: 10 });
 ```
+
+:::
 
 ## 🤝 Contributing
 

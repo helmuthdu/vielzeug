@@ -66,15 +66,15 @@ Logit.setRemote({
 
 | Feature            | Logit                                               | Winston       | Pino       | Console   |
 | ------------------ | --------------------------------------------------- | ------------- | ---------- | --------- |
-| TypeScript Support | ✅ First-class                                      | ✅ Good       | ✅ Good    | ⚠️ Basic  |
-| Browser Support    | ✅ Native                                           | ❌            | ❌         | ✅        |
-| Scoped Loggers     | ✅ Built-in                                         | ⚠️ Manual     | ⚠️ Child   | ❌        |
-| Remote Logging     | ✅ Built-in                                         | ✅ Transports | ✅ Streams | ❌        |
-| Bundle Size (gzip) | **<PackageInfo package="logit" type="size" />**     | ~50KB+        | ~12KB      | 0KB       |
-| Node.js Support    | ✅                                                  | ✅            | ✅         | ✅        |
+| Bundle Size (gzip) | **<PackageInfo package="logit" type="size" />**     | ~44KB+        | ~4KB       | 0KB       |
 | Dependencies       | <PackageInfo package="logit" type="dependencies" /> | 15+           | 5+         | N/A       |
-| Styled Output      | ✅ Auto                                             | ✅            | ✅         | ⚠️ Manual |
+| Browser Support    | ✅ Native                                           | ❌            | ❌         | ✅        |
 | Metadata Support   | ✅ Rich                                             | ✅            | ✅         | ❌        |
+| Node.js Support    | ✅                                                  | ✅            | ✅         | ✅        |
+| Remote Logging     | ✅ Built-in                                         | ✅ Transports | ✅ Streams | ❌        |
+| Scoped Loggers     | ✅ Built-in                                         | ⚠️ Manual     | ⚠️ Child   | ❌        |
+| Styled Output      | ✅ Auto                                             | ✅            | ✅         | ⚠️ Manual |
+| TypeScript Support | ✅ First-class                                      | ✅ Good       | ✅ Good    | ⚠️ Basic  |
 
 ## When to Use Logit
 
@@ -111,57 +111,27 @@ Logit.setRemote({
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/logit
-```
-
-```sh [npm]
-npm install @vielzeug/logit
-```
-
-```sh [yarn]
-yarn add @vielzeug/logit
-```
-
-:::
-
-### Basic Usage
-
 ```ts
 import { Logit } from '@vielzeug/logit';
 
-// Standard log levels
-Logit.debug('Debugging information', { userId: '123' });
+// Log at different levels
 Logit.info('System initialized');
-Logit.success('Operation completed successfully');
 Logit.warn('Memory usage high', { usage: '85%' });
 Logit.error('Failed to fetch data', new Error('Network error'));
 
 // Create scoped loggers (recommended)
 const apiLogger = Logit.scope('api');
-const dbLogger = Logit.scope('database');
+apiLogger.info('Request started'); // [API] Request started
 
-apiLogger.info('Request started', { url: '/users' }); // [API] Request started
-dbLogger.info('Connection established'); // [DATABASE] Connection established
-
-// Control log level globally
+// Control verbosity
 Logit.setLogLevel('warn'); // Only warn and error will show
-
-// Advanced features
-Logit.table([
-  { name: 'Alice', age: 30 },
-  { name: 'Bob', age: 25 },
-]);
-Logit.time('operation');
-// ... do work ...
-Logit.timeEnd('operation');
 ```
 
-### Real-World Example: Full-Stack App
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for remote logging, timing, tables, and more
+- Check [Examples](./examples.md) for framework integrations
+  :::
 
 ```ts
 import { Logit } from '@vielzeug/logit';
@@ -338,13 +308,6 @@ Logit.setup({
 });
 ```
 
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Installation, global configuration, and scoped loggers
-- **[API Reference](./api.md)**: Complete list of methods, levels, and handler options
-- **[Examples](./examples.md)**: Patterns for remote logging, custom themes, and more
-- **[Interactive REPL](/repl)**: Try it in your browser
-
 ## ❓ FAQ
 
 ### Is Logit production-ready?
@@ -383,7 +346,7 @@ Logit automatically formats output based on environment (browser CSS vs Node.js)
 
 ```ts [Symbol Variant]
 Logit.setVariant('symbol');
-// Output: 🅳, 🅸, 🅂, 🆆, 🅴
+// Output: 🅳, 🅸, 🆂, 🆆, 🅴
 ```
 
 ```ts [Icon Variant]

@@ -580,9 +580,7 @@ describe('Depot', () => {
     // Verify Logit logged the warning (Logit outputs to the console with its own formatting)
     expect(consoleWarnSpy).toHaveBeenCalled();
     const warnCall = consoleWarnSpy.mock.calls.find((call) =>
-      call.some(
-        (arg) => typeof arg === 'string' && arg.includes('Deposit'),
-      ),
+      call.some((arg) => typeof arg === 'string' && arg.includes('Deposit')),
     );
     expect(warnCall).toBeDefined();
 

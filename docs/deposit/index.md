@@ -38,15 +38,15 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 | Feature              | Deposit                                               | Dexie.js    | LocalForage | Native IndexedDB |
 | -------------------- | ----------------------------------------------------- | ----------- | ----------- | ---------------- |
-| TypeScript Support   | ✅ First-class                                        | ✅ Good     | ⚠️ Limited  | ❌               |
-| Query Builder        | ✅ Advanced                                           | ✅ Good     | ❌          | ❌               |
-| Migrations           | ✅ Built-in                                           | ✅ Advanced | ❌          | ⚠️ Manual        |
+| Bundle Size (gzip)   | **<PackageInfo package="deposit" type="size" />**     | ~32KB       | ~10KB       | 0KB              |
+| Dependencies         | <PackageInfo package="deposit" type="dependencies" /> | 0           | 0           | N/A              |
 | LocalStorage Support | ✅ Unified API                                        | ❌          | ✅          | ❌               |
-| Bundle Size (gzip)   | **<PackageInfo package="deposit" type="size" />**     | ~20KB       | ~8KB        | 0KB              |
+| Migrations           | ✅ Built-in                                           | ✅ Advanced | ❌          | ⚠️ Manual        |
+| Query Builder        | ✅ Advanced                                           | ✅ Good     | ❌          | ❌               |
+| Schema Validation    | ✅ Built-in                                           | ⚠️ Runtime  | ❌          | ❌               |
 | TTL Support          | ✅ Native                                             | ❌          | ❌          | ❌               |
 | Transactions         | ✅ Atomic\*                                           | ✅ Yes      | ❌          | ✅ Complex       |
-| Schema Validation    | ✅ Built-in                                           | ⚠️ Runtime  | ❌          | ❌               |
-| Dependencies         | <PackageInfo package="deposit" type="dependencies" /> | 0           | 0           | N/A              |
+| TypeScript           | ✅ First-class                                        | ✅ Good     | ⚠️ Limited  | ❌               |
 
 \* Transactions are fully atomic for IndexedDB, optimistic for LocalStorage
 
@@ -83,108 +83,27 @@ await db.put('users', { id: '1', name: 'Alice' });
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/deposit
-```
-
-```sh [npm]
-npm install @vielzeug/deposit
-```
-
-```sh [yarn]
-yarn add @vielzeug/deposit
-```
-
-:::
-
-### Basic Setup
-
 ```ts
 import { Deposit, defineSchema } from '@vielzeug/deposit';
 
-// 1. Define your schema with types
+// Define schema with types
 const schema = defineSchema<{
   users: { id: string; name: string; email: string };
-  posts: { id: string; userId: string; title: string; createdAt: number };
 }>()({
-  users: {
-    key: 'id',
-    indexes: ['email'],
-  },
-  posts: {
-    key: 'id',
-    indexes: ['userId', 'createdAt'],
-  },
+  users: { key: 'id', indexes: ['email'] },
 });
 
-// 2. Initialize the deposit instance
-const db = new Deposit({
-  type: 'indexedDB',
-  dbName: 'my-app-db',
-  version: 1,
-  schema,
-});
-
-// 3. Start storing data
+// Initialize and use
+const db = new Deposit({ type: 'indexedDB', dbName: 'my-app', version: 1, schema });
 await db.put('users', { id: 'u1', name: 'Alice', email: 'alice@example.com' });
 const user = await db.get('users', 'u1');
 ```
 
-### Real-World Example: Todo App
+::: tip Next Steps
 
-```ts
-import { Deposit, defineSchema } from '@vielzeug/deposit';
-
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
-}
-
-const schema = defineSchema<{ todos: Todo }>()({
-  todos: {
-    key: 'id',
-    indexes: ['completed', 'createdAt'],
-  },
-});
-
-const db = new Deposit({
-  type: 'indexedDB',
-  dbName: 'todos-db',
-  version: 1,
-  schema,
-});
-
-// Add todo
-await db.put('todos', {
-  id: crypto.randomUUID(),
-  text: 'Learn Deposit',
-  completed: false,
-  createdAt: Date.now(),
-});
-
-// Query active todos
-const activeTodos = await db.query('todos').equals('completed', false).orderBy('createdAt', 'desc').toArray();
-
-// Update todo (put with same id)
-const todo = await db.get('todos', 'todo-id');
-if (todo) {
-  await db.put('todos', { ...todo, completed: true });
-}
-
-// Delete completed todos
-const completed = await db.query('todos').equals('completed', true).toArray();
-
-await db.bulkDelete(
-  'todos',
-  completed.map((t) => t.id),
-);
-```
+- See [Usage Guide](./usage.md) for detailed API and patterns
+- Check [Examples](./examples.md) for real-world applications
+  :::
 
 ## 🎓 Core Concepts
 
@@ -223,13 +142,6 @@ Set automatic expiration on records:
 ```ts
 await db.put('cache', data, 3600000); // Expires in 1 hour
 ```
-
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Detailed setup, adapters, and basic operations
-- **[API Reference](./api.md)**: Comprehensive documentation of all methods and types
-- **[Examples](./examples.md)**: Practical patterns for querying, transactions, and migrations
-- **[Interactive REPL](/repl)**: Try it in your browser
 
 ## ❓ FAQ
 

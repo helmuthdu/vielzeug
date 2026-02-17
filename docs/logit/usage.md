@@ -82,6 +82,52 @@ Logit.info('Role:', user.role);
 Logit.groupEnd();
 ```
 
+## Advanced Features
+
+Logit offers advanced logging capabilities including scoped loggers, remote logging, log level filtering, and environment-specific configuration.
+
+### Log Level Filtering
+
+Control which logs are displayed based on severity:
+
+```ts
+// Only show warnings and errors
+Logit.setLogLevel('warn');
+
+// Show everything (including debug)
+Logit.setLogLevel('debug');
+
+// Disable all logging
+Logit.setLogLevel('off');
+```
+
+### Display Variants
+
+Customize how log messages appear:
+
+```ts
+// Use emoji symbols (default)
+Logit.setVariant('symbol'); // [🅸] Message
+
+// Use unicode icons
+Logit.setVariant('icon'); // [ℹ] Message
+
+// Use plain text
+Logit.setVariant('text'); // [INFO] Message
+```
+
+### Environment Indicators
+
+Show or hide environment indicators:
+
+```ts
+// Toggle environment indicator
+Logit.toggleEnvironment(); // Shows 🅿 (production) or 🅳 (development)
+
+// Explicitly set
+Logit.toggleEnvironment(false); // Hide indicator
+```
+
 ## Scoped Loggers
 
 Create isolated loggers with namespaced prefixes without mutating global state:

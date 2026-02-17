@@ -79,6 +79,71 @@ const data = await schema.parseAsync(input);
 const result = await schema.safeParseAsync(input);
 ```
 
+## Advanced Features
+
+Validit offers powerful validation capabilities including custom refinements, async validation, type transformations, and comprehensive error handling.
+
+### Custom Refinements
+
+Add custom validation logic with `.refine()`:
+
+```ts
+const passwordSchema = v
+  .string()
+  .min(8)
+  .refine(
+    (val) => /[A-Z]/.test(val) && /[0-9]/.test(val),
+    'Must contain uppercase letter and number'
+  );
+```
+
+### Conditional Validation
+
+Apply validation rules based on other field values:
+
+```ts
+const schema = v.object({
+  type: v.union([v.literal('email'), v.literal('phone')]),
+  contact: v.string(),
+}).refine((data) => {
+  if (data.type === 'email') {
+    return /^[^@]+@[^@]+$/.test(data.contact);
+  }
+  return /^\d{10}$/.test(data.contact);
+}, 'Invalid contact format');
+```
+
+### Async Validation
+
+Validate against external services or databases:
+
+```ts
+const emailSchema = v.string().email().refineAsync(
+  async (email) => {
+    const response = await fetch(`/api/check-email?email=${email}`);
+    const { available } = await response.json();
+    return available;
+  },
+  'Email already taken'
+);
+
+// Use with parseAsync
+const result = await emailSchema.safeParseAsync('test@example.com');
+```
+
+### Transform Values
+
+Transform validated data using `.transform()`:
+
+```ts
+const trimmedEmail = v
+  .string()
+  .email()
+  .transform((email) => email.toLowerCase().trim());
+
+const csvToArray = v.string().transform((str) => str.split(','));
+```
+
 ## Primitive Schemas
 
 ### String

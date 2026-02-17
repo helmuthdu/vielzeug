@@ -66,16 +66,16 @@ store.subscribe(
 
 | Feature              | Stateit                                               | Zustand   | Jotai     | Valtio  | Pinia     |
 | -------------------- | ----------------------------------------------------- | --------- | --------- | ------- | --------- |
-| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~1.1 KB   | ~3.0 KB   | ~5.4 KB | ~6.5 KB   |
+| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB   | ~6.5 KB   | ~5.8 KB | ~35 KB    |
 | Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1         | 0         | 1       | 1         |
-| Framework            | **Agnostic**                                          | React     | React     | React   | Vue       |
 | TypeScript           | Native                                                | Excellent | Excellent | Good    | Excellent |
-| Selective Subs       | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
+| Framework            | **Agnostic**                                          | React     | React     | React   | Vue       |
 | Async Updates        | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
-| Scoped Stores        | ✅                                                    | ❌        | ✅        | ❌      | ❌        |
 | Custom Equality      | ✅                                                    | ✅        | ✅        | ❌      | ❌        |
-| Testing Helpers      | ✅                                                    | ❌        | ❌        | ❌      | ❌        |
 | DevTools Integration | ❌                                                    | ✅        | ✅        | ✅      | ✅        |
+| Scoped Stores        | ✅                                                    | ❌        | ✅        | ❌      | ❌        |
+| Selective Subs       | ✅                                                    | ✅        | ✅        | ✅      | ✅        |
+| Testing Helpers      | ✅                                                    | ❌        | ❌        | ❌      | ❌        |
 
 ## When to Use Stateit
 
@@ -110,34 +110,11 @@ store.subscribe(
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [npm]
-npm install @vielzeug/stateit
-```
-
-```sh [yarn]
-yarn add @vielzeug/stateit
-```
-
-```sh [pnpm]
-pnpm add @vielzeug/stateit
-```
-
-:::
-
-### Basic Store
-
 ```ts
 import { createStore } from '@vielzeug/stateit';
 
 // Create a store
 const counter = createStore({ count: 0 });
-
-// Read state
-console.log(counter.get().count); // 0
 
 // Subscribe to changes
 counter.subscribe((state, prev) => {
@@ -145,14 +122,17 @@ counter.subscribe((state, prev) => {
 });
 
 // Update state
-counter.set({ count: 1 });
+counter.set({ count: 1 }); // Triggers subscriber
 
 // Update with function
-await counter.set((state) => ({
-  ...state,
-  count: state.count + 1,
-}));
+counter.set((state) => ({ count: state.count + 1 }));
 ```
+
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for selective subscriptions, async updates, and more
+- Check [Examples](./examples.md) for framework integrations
+  :::
 
 ## 📚 Core Concepts
 
@@ -282,13 +262,6 @@ await store.runInScope(
 console.log(store.get().count); // Original value (unchanged)
 ```
 
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Store creation, subscriptions, and scoped stores
-- **[API Reference](./api.md)**: Complete list of all available methods and types
-- **[Examples](./examples.md)**: Practical patterns and framework integrations
-- **[Interactive REPL](/repl)**: Try it in your browser
-
 ## ❓ FAQ
 
 ### Can I use multiple stores?
@@ -365,7 +338,12 @@ Yes! Stateit is:
 
 ### Subscribers not being called
 
-Make sure you're waiting for the microtask to complete:
+::: danger Problem
+State changes but subscribers don't fire.
+:::
+
+::: tip Solution
+Wait for the microtask to complete (batched notifications):
 
 ```ts
 store.set({ count: 1 });
@@ -375,9 +353,16 @@ await Promise.resolve(); // Wait for batched notification
 await new Promise((resolve) => setTimeout(resolve, 0));
 ```
 
+:::
+
 ### State not updating in React
 
-Make sure you're using the subscription properly:
+::: danger Problem
+Component doesn't re-render when state changes.
+:::
+
+::: tip Solution
+Use subscription properly with `useSyncExternalStore`:
 
 ```ts
 // ❌ Wrong – reading once
@@ -390,9 +375,16 @@ const state = useSyncExternalStore(
 );
 ```
 
+:::
+
 ### TypeScript errors with state updates
 
-Make sure your updates match the state type:
+::: danger Problem
+Type errors when updating state.
+:::
+
+::: tip Solution
+Ensure your updates match the state type:
 
 ```ts
 type State = { count: number; name: string };
@@ -401,6 +393,8 @@ const store = createStore<State>({ count: 0, name: 'test' });
 store.set({ count: 1 }); // ✅ Valid
 store.set({ invalid: true }); // ❌ Type error
 ```
+
+:::
 
 ## 🤝 Contributing
 

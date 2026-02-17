@@ -146,12 +146,15 @@ describe('fetchit', () => {
         query: { limit: 10, offset: 0 },
       });
 
-      expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/123/posts?limit=10&offset=0', expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.example.com/users/123/posts?limit=10&offset=0',
+        expect.any(Object),
+      );
     });
   });
 
   // ========================================================================
-  // QUERY API 
+  // QUERY API
   // ========================================================================
 
   describe('Query API - Caching', () => {
