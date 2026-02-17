@@ -41,9 +41,9 @@ features:
   - title: '@vielzeug/routeit'
     details: "<img src='/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
     link: /routeit/
-  - title: '@vielzeug/stateit'
-    details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
-    link: /stateit/
+  - title: '@vielzeug/snapit'
+    details: "<img src='/logo-snapit.svg' class='logo-highlight-smaller' alt='Snapit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    link: /snapit/
   - title: '@vielzeug/toolkit'
     details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
     link: /toolkit/

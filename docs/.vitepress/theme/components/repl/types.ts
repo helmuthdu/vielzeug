@@ -573,8 +573,8 @@ declare module '@vielzeug/permit' {
 }
 `;
 
-export const stateitTypes = `
-declare module '@vielzeug/stateit' {
+export const snapitTypes = `
+declare module '@vielzeug/snapit' {
   export type Listener<T> = (curr: T, prev: T) => void;
   export type Selector<T, U> = (data: T) => U;
   export type Unsubscribe = () => void;
@@ -615,7 +615,7 @@ declare module '@vielzeug/stateit' {
     ): Promise<R>;
   }
 
-  export function createState<T extends object>(
+  export function createSnapshot<T extends object>(
     initialState: T,
     options?: StateOptions<T>
   ): State<T>;
@@ -827,7 +827,7 @@ export const libraryTypes = {
   logit: logitTypes,
   permit: permitTypes,
   routeit: routeitTypes,
-  stateit: stateitTypes,
+  snapit: snapitTypes,
   toolkit: toolkitTypes,
   validit: validitTypes,
   wireit: wireitTypes,

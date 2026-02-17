@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    name: 'stateit',
+    name: 'snapit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
   },
 });

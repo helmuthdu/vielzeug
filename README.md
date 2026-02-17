@@ -180,12 +180,12 @@ npm install @vielzeug/routeit
 
 ---
 
-### [@vielzeug/stateit](packages/stateit) – State Management
+### [@vielzeug/snapit](packages/snapit) – State Management
 
-Tiny, framework-agnostic state management with reactive subscriptions.
+Simple, reactive state management for modern web apps.
 
 ```bash
-npm install @vielzeug/stateit
+npm install @vielzeug/snapit
 ```
 
 **Key Features:**
@@ -195,7 +195,7 @@ npm install @vielzeug/stateit
 - Async state updates
 - Custom equality checks (2.4 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/stateit/) • [Examples](https://helmuthdu.github.io/vielzeug/stateit/examples)
+[📖 Documentation](https://helmuthdu.github.io/vielzeug/snapit/) • [Examples](https://helmuthdu.github.io/vielzeug/snapit/examples)
 
 ---
 
@@ -365,7 +365,7 @@ vielzeug/
 │   ├── logit/         # Logging utility
 │   ├── permit/        # Permission management
 │   ├── routeit/       # Client-side routing
-│   ├── stateit/       # State management
+│   ├── snapit/       # State management
 │   ├── toolkit/       # Utility functions
 │   ├── validit/       # Schema validation
 │   └── wireit/        # Dependency injection
@@ -398,7 +398,7 @@ All sizes are measured as **minified + gzipped** production builds:
 | @vielzeug/logit   | **6.8 KB**                 | **2.7 KB**    | 0            |
 | @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
 | @vielzeug/routeit | **9.0 KB**                 | **3.1 KB**    | 0            |
-| @vielzeug/stateit | **7.0 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/snapit | **7.0 KB**                 | **2.4 KB**    | 0            |
 | @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
 | @vielzeug/validit | **14 KB**                  | **2.8 KB**    | 0            |
 | @vielzeug/wireit  | **8.0 KB**                 | **2.1 KB**    | 0            |

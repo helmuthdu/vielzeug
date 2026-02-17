@@ -21,7 +21,7 @@ Client-side data management made simple:
 | ------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------- |
 | **[Deposit](/deposit/)** | Type-safe IndexedDB & LocalStorage wrapper with schemas, TTL, and migrations | <PackageInfo package="deposit" type="size" /> |
 | **[Fetchit](/fetchit/)** | Modern HTTP client with smart caching, deduplication, and query management   | <PackageInfo package="fetchit" type="size" /> |
-| **[Stateit](/stateit/)** | Tiny reactive state management with subscriptions and async support          | <PackageInfo package="stateit" type="size" /> |
+| **[Snapit](/snapit/)** | Tiny reactive state management with subscriptions and async support          | <PackageInfo package="snapit" type="size" /> |
 
 ### 🎨 Frontend & Forms
 
@@ -70,7 +70,7 @@ yarn add @vielzeug/toolkit
 
 ```typescript
 import { debounce, groupBy } from '@vielzeug/toolkit';
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 import { createHttpClient } from '@vielzeug/fetchit';
 
 // Debounce search input
@@ -79,7 +79,7 @@ const search = debounce((query: string) => {
 }, 300);
 
 // Reactive state management
-const store = createState({ count: 0 });
+const store = createSnapshot({ count: 0 });
 store.subscribe((data) => console.log(data.count));
 store.set((data) => ({ count: data.count + 1 }));
 
@@ -147,9 +147,9 @@ const canDelete = permit.can(currentUser, 'posts', 'delete');
 ### Reactive State
 
 ```typescript
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-const store = createState({ todos: [], filter: 'all' });
+const store = createSnapshot({ todos: [], filter: 'all' });
 
 // Subscribe to specific values
 store.subscribe(

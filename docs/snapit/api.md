@@ -1,6 +1,6 @@
-# Stateit API Reference
+# Snapit API Reference
 
-Complete API documentation for stateit.
+Complete API documentation for snapit.
 
 ## Table of Contents
 
@@ -141,7 +141,7 @@ Object returned by `state.computed()` containing a cached value and subscription
 **Example:**
 
 ```ts
-const state = createState({ count: 5 });
+const state = createSnapshot({ count: 5 });
 const doubled: Computed<number> = state.computed((s) => s.count * 2);
 
 // Get computed value
@@ -157,10 +157,10 @@ const unsubscribe = doubled.subscribe((current, prev) => {
 
 ## Factory Function
 
-### createState()
+### createSnapshot()
 
 ```ts
-function createState<T extends object>(initialState: T, options?: StateOptions<T>): State<T>;
+function createSnapshot<T extends object>(initialState: T, options?: StateOptions<T>): State<T>;
 ```
 
 Creates a new state instance.
@@ -180,13 +180,13 @@ Creates a new state instance.
 
 ```ts
 // Simple state
-const counter = createState({ count: 0 });
+const counter = createSnapshot({ count: 0 });
 
 // With name
-const user = createState({ name: 'Alice' }, { name: 'userState' });
+const user = createSnapshot({ name: 'Alice' }, { name: 'userState' });
 
 // With custom equality
-const todos = createState(
+const todos = createSnapshot(
   { items: [] },
   {
     equals: (a, b) => a.items.length === b.items.length,
@@ -435,7 +435,7 @@ Create a cached computed value that automatically updates when dependencies chan
 **Example:**
 
 ```ts
-const state = createState({
+const state = createSnapshot({
   items: [{ price: 10 }, { price: 20 }],
 });
 
@@ -479,7 +479,7 @@ Execute multiple state updates in a transaction, batching notifications into a s
 **Example:**
 
 ```ts
-const state = createState({ count: 0, name: 'Alice', age: 30 });
+const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
 
 state.subscribe((current) => {
   console.log('State updated:', current);
@@ -522,7 +522,7 @@ Create an independent child state.
 **Example:**
 
 ```ts
-const parent = createState({ count: 0, name: 'Parent' });
+const parent = createSnapshot({ count: 0, name: 'Parent' });
 const child = parent.createChild({ name: 'Child' });
 
 console.log(parent.get()); // { count: 0, name: 'Parent' }
@@ -566,7 +566,7 @@ Execute function with a scoped state that doesn't affect original.
 **Example:**
 
 ```ts
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 const result = await state.runInScope(
   async (scopedState) => {
@@ -745,7 +745,7 @@ Execute function with temporarily mocked state. The scoped state is passed to yo
 **Example:**
 
 ```ts
-const appState = createState({ user: null, isAdmin: false });
+const appState = createSnapshot({ user: null, isAdmin: false });
 
 function checkAdmin(state: State<AppState>): string {
   return state.get().isAdmin ? 'Admin' : 'Guest';
@@ -788,7 +788,7 @@ it('checks admin status with mocked state', async () => {
 ### Full Type Inference
 
 ```ts
-const state = createState({ count: 0, name: 'Alice' });
+const state = createSnapshot({ count: 0, name: 'Alice' });
 
 // Types are inferred automatically
 const current = state.get(); // Type: { count: number; name: string }
@@ -818,7 +818,7 @@ interface User {
   email: string;
 }
 
-const userState = createState<{ user: User | null }>({
+const userState = createSnapshot<{ user: User | null }>({
   user: null,
 });
 
@@ -839,8 +839,8 @@ if (userState.get().user) {
   }
 }
 
-// Stateit respects strict mode
-const state = createState<{ value: string | null }>({ value: null });
+// Snapit respects strict mode
+const state = createSnapshot<{ value: string | null }>({ value: null });
 
 const value = state.get().value;
 // Type: string | null (not just string)
@@ -945,10 +945,10 @@ const useStore = create((set) => ({
   increment: () => set((data) => ({ count: data.count + 1 })),
 }));
 
-// Stateit
-import { createState } from '@vielzeug/stateit';
+// Snapit
+import { createSnapshot } from '@vielzeug/snapit';
 
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 
 const increment = () => {
   state.set((current) => ({ count: current.count + 1 }));
@@ -970,8 +970,8 @@ function reducer(state = initialState, action) {
   }
 }
 
-// Stateit
-const state = createState({ count: 0 });
+// Snapit
+const state = createSnapshot({ count: 0 });
 
 const increment = () => {
   state.set((current) => ({ count: current.count + 1 }));
@@ -986,8 +986,8 @@ import { proxy, useSnapshot } from 'valtio';
 
 const state = proxy({ count: 0 });
 
-// Stateit
-import { createState } from '@vielzeug/stateit';
+// Snapit
+import { createSnapshot } from '@vielzeug/snapit';
 
-const state = createState({ count: 0 });
+const state = createSnapshot({ count: 0 });
 ```

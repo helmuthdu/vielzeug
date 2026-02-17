@@ -1,9 +1,9 @@
 {
-  "name": "@vielzeug/stateit",
+  "name": "@vielzeug/snapit",
   "entries": [
     {
       "version": "1.2.0",
-      "tag": "@vielzeug/stateit_v1.2.0",
+      "tag": "@vielzeug/snapit_v1.2.0",
       "date": "Tue, 17 Feb 2026 10:54:37 GMT",
       "comments": {
         "minor": [
@@ -29,7 +29,7 @@
     },
     {
       "version": "1.1.3",
-      "tag": "@vielzeug/stateit_v1.1.3",
+      "tag": "@vielzeug/snapit_v1.1.3",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",
       "comments": {
         "patch": [
@@ -43,12 +43,12 @@
     },
     {
       "version": "1.1.2",
-      "tag": "@vielzeug/stateit_v1.1.2",
-      "date": "Thu, 12 Feb 2026 21:32:58 GMT",
+      "tag": "@vielzeug/snapit_v1.1.2",
+      "date": "Mon, 09 Dec 2024 22:33:28 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "new stateit lib",
+            "comment": "new snapit lib",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "e40e244da748675b904a3c6047802b53bad45e15"
           }

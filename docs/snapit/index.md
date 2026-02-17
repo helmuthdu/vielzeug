@@ -1,14 +1,16 @@
-<PackageBadges package="stateit" />
+<PackageBadges package="snapit" />
 
-<img src="/logo-stateit.svg" alt="Stateit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-snapit.svg" alt="Snapit Logo" width="156" class="logo-highlight"/>
 
-# Stateit
+# Snapit
 
-**Stateit** is a tiny, framework-agnostic state management library. Build reactive applications with simple, powerful state handling—all in just **<PackageInfo package="stateit" type="size" />** gzipped.
+**Snapit** is a tiny, framework-agnostic state management library that lets you **snap** state values in and out with ease. Build reactive applications with a simple, powerful API—all in just **<PackageInfo package="snapit" type="size" />** gzipped.
 
-## What Problem Does Stateit Solve?
+Think of it as taking quick snapshots of your application state—**snap** values in with `set()`, **snap** them out with `get()`, and watch changes happen in a snap!
 
-State management libraries are often complex or framework-specific. Redux requires boilerplate, MobX has a learning curve, and Zustand is React-only. Stateit provides simple, reactive state with zero dependencies and works everywhere.
+## What Problem Does Snapit Solve?
+
+State management libraries are often complex or framework-specific. Redux requires boilerplate, MobX has a learning curve with observables, and Zustand/Jotai are React-only. Snapit provides a simple, reactive state with zero dependencies that works everywhere—in a snap!
 
 **Traditional Approach**:
 
@@ -34,32 +36,38 @@ class StateManager {
 }
 ```
 
-**With Stateit**:
+**With Snapit**:
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
-const state = createState({ count: 0, user: null });
+const state = createSnapshot({ count: 0, user: null });
 
 // Subscribe to changes
 state.subscribe((curr, prev) => {
   console.log('State changed:', curr);
 });
 
-// Update state
+// Snap in new values
 state.set({ count: 1 });
 state.set((current) => ({ count: current.count + 1 }));
 
-// Read state
-const current = state.get();
+// Snap out the current state
+const snapshot = state.get();
 ```
+
+**Why "Snapit"?**
+- 📸 Get instant **snapshots** of your state
+- ⚡ Changes happen in a **snap** - fast and lightweight  
+- 🔄 **Snap** values in with `set()`, **snap** them out with `get()`
+- 🎯 Simple, **snappy** API that's easy to learn
 
 ### Comparison with Alternatives
 
-| Feature              | Stateit                                               | Zustand        | Jotai          | Valtio     | Pinia          |
+| Feature              | Snapit                                               | Zustand        | Jotai          | Valtio     | Pinia          |
 | -------------------- | ----------------------------------------------------- | -------------- | -------------- | ---------- | -------------- |
-| Bundle Size          | **~<PackageInfo package="stateit" type="size" />**    | ~3.5 KB        | ~6.5 KB        | ~5.8 KB    | ~35 KB         |
-| Dependencies         | <PackageInfo package="stateit" type="dependencies" /> | 1              | 0              | 1          | 1              |
+| Bundle Size          | **~<PackageInfo package="snapit" type="size" />**    | ~3.5 KB        | ~6.5 KB        | ~5.8 KB    | ~35 KB         |
+| Dependencies         | <PackageInfo package="snapit" type="dependencies" /> | 1              | 0              | 1          | 1              |
 | TypeScript           | ✅ First-class                                        | ✅ First-class | ✅ First-class | ✅ Good    | ✅ First-class |
 | Framework            | Agnostic                                              | React only     | React only     | React only | Vue only       |
 | Async Updates        | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
@@ -71,11 +79,11 @@ const current = state.get();
 | Selective Subs       | ✅ Yes                                                | ✅ Yes         | ✅ Yes         | ✅ Yes     | ✅ Yes         |
 | Testing Helpers      | ✅ Yes                                                | ❌             | ❌             | ❌         | ❌             |
 
-## When to Use Stateit
+## When to Use Snapit
 
-**✅ Use Stateit when you:**
+**✅ Use Snapit when you:**
 
-- Need lightweight state management (<PackageInfo package="stateit" type="size" /> gzipped)
+- Need lightweight state management (<PackageInfo package="snapit" type="size" /> gzipped)
 - Want a framework-agnostic state that works with React, Vue, Svelte, or vanilla JS
 - Need type-safe state with full TypeScript inference
 - Want selective subscriptions to avoid unnecessary re-renders
@@ -101,7 +109,7 @@ const current = state.get();
 - **Async Support** – First-class support for [async state updates](./usage.md#async-state-updates)
 - **Batched Updates** – Automatic notification batching for optimal performance
 - **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS
-- **Lightweight** – **<PackageInfo package="stateit" type="size" />** gzipped, zero dependencies
+- **Lightweight** – **<PackageInfo package="snapit" type="size" />** gzipped, zero dependencies
 - **Testing Helpers** – Built-in [testing utilities](./usage.md#testing) for easy unit tests
 
 ## 🏁 Quick Start
@@ -109,10 +117,10 @@ const current = state.get();
 ### Basic Usage
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 // Create state
-const counter = createState({ count: 0 });
+const counter = createSnapshot({ count: 0 });
 
 // Read state
 console.log(counter.get().count); // 0
@@ -149,20 +157,20 @@ await counter.set(async (data) => {
 Create state with initial values and optional configuration:
 
 ```ts
-import { createState } from '@vielzeug/stateit';
+import { createSnapshot } from '@vielzeug/snapit';
 
 // Simple state
-const userState = createState({
+const userState = createSnapshot({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com',
 });
 
 // Named state (useful for debugging)
-const appState = createState({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
+const appState = createSnapshot({ theme: 'dark', language: 'en' }, { name: 'appSettings' });
 
 // Custom equality function
-const todoState = createState(
+const todoState = createSnapshot(
   { todos: [], filter: 'all' },
   {
     equals: (a, b) => {
@@ -274,17 +282,17 @@ Explore [Scoped States](./usage.md#scoped-states).
 
 ## ❓ FAQ
 
-### **Q: How do I use stateit with React?**
+### **Q: How do I use snapit with React?**
 
 Use `useSyncExternalStore` for React 18+:
 
 ```ts
 import { useSyncExternalStore } from 'react';
-import { createState, type State } from '@vielzeug/stateit';
+import { createSnapshot, type State } from '@vielzeug/snapit';
 
-function useStateitState<T extends object>(state: State<T>): T;
-function useStateitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
-function useStateitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
+function useSnapitState<T extends object>(state: State<T>): T;
+function useSnapitState<T extends object, U>(state: State<T>, selector: (state: T) => U): U;
+function useSnapitState<T extends object, U>(state: State<T>, selector?: (state: T) => U) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
@@ -319,15 +327,15 @@ function withPersistence<T extends object>(state: State<T>, key: string) {
   return state;
 }
 
-const state = withPersistence(createState({ count: 0 }), 'counter');
+const state = withPersistence(createSnapshot({ count: 0 }), 'counter');
 ```
 
-### **Q: How do I test components using stateit?**
+### **Q: How do I test components using snapit?**
 
 Use the testing helpers:
 
 ```ts
-import { createTestState, withStateMock } from '@vielzeug/stateit';
+import { createTestState, withStateMock } from '@vielzeug/snapit';
 
 it('increments count', () => {
   const { state, dispose } = createTestState(null, { count: 0 });
@@ -346,7 +354,7 @@ See [Testing](./usage.md#testing) for more patterns.
 Use async updater functions:
 
 ```ts
-const state = createState({ data: null, loading: false });
+const state = createSnapshot({ data: null, loading: false });
 
 await state.set(async (current) => {
   const response = await fetch('/api/data');
@@ -360,9 +368,9 @@ await state.set(async (current) => {
 Yes! Create separate states and compose them:
 
 ```ts
-const authState = createState({ user: null, token: null });
-const cartState = createState({ items: [] });
-const uiState = createState({ theme: 'light' });
+const authState = createSnapshot({ user: null, token: null });
+const cartState = createSnapshot({ items: [] });
+const uiState = createSnapshot({ theme: 'light' });
 
 // Subscribe to changes across states
 authState.subscribe((auth) => {
@@ -454,9 +462,9 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/stateit)
-- [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/stateit/CHANGELOG.md)
+- [NPM Package](https://www.npmjs.com/package/@vielzeug/snapit)
+- [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/snapit/CHANGELOG.md)
 
 ---
 
-> **Tip:** Stateit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for forms, i18n, HTTP clients, routing, and more.
+> **Tip:** Snapit is part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem, which includes utilities for forms, i18n, HTTP clients, routing, and more.
