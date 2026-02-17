@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/snapit
 
-This log was last generated on Tue, 17 Feb 2026 10:54:37 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Feb 2026 12:00:35 GMT and should not be manually modified.
+
+## 1.2.1
+Tue, 17 Feb 2026 12:00:35 GMT
+
+### Patches
+
+- renamed stateit to snapit
 
 ## 1.2.0
 Tue, 17 Feb 2026 10:54:37 GMT
@@ -17,7 +24,7 @@ Sun, 15 Feb 2026 21:52:44 GMT
 - code cleanup and improvements
 
 ## 1.1.2
-Thu, 12 Feb 2026 21:32:58 GMT
+Mon, 09 Dec 2024 22:33:28 GMT
 
 ### Patches
 

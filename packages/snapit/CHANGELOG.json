@@ -2,6 +2,20 @@
   "name": "@vielzeug/snapit",
   "entries": [
     {
+      "version": "1.2.1",
+      "tag": "@vielzeug/snapit_v1.2.1",
+      "date": "Tue, 17 Feb 2026 12:00:35 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "renamed stateit to snapit",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "839fdd28469bc1f0f35e02c1a19af1aaac4fdd91"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.0",
       "tag": "@vielzeug/snapit_v1.2.0",
       "date": "Tue, 17 Feb 2026 10:54:37 GMT",
