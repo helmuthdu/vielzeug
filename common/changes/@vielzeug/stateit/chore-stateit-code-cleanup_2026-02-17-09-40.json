@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/stateit",
+      "comment": "code cleanup",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/stateit"
+}

@@ -102,7 +102,7 @@ const LIBRARY_EXPORTS = {
   logit: ['Logit'],
   permit: ['Permit'],
   routeit: ['createRouter', 'Router'],
-  stateit: ['createStore', 'createTestStore', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
+  stateit: ['createState', 'createTestState', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
   toolkit: [],
   validit: ['v'],
   wireit: [

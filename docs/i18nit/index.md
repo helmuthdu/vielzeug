@@ -65,17 +65,17 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ### Comparison with Alternatives
 
-| Feature            | i18nit                                                   | i18next        | react-intl  |
-| ------------------ | -------------------------------------------------------- | -------------- | ----------- |
-| Bundle Size        | **<PackageInfo package="i18nit" type="size" />**         | ~13 KB         | ~19 KB      |
-| Dependencies       | **<PackageInfo package="i18nit" type="dependencies" />** | 2+             | 10+         |
-| TypeScript         | ✅ First-class                                           | ✅ Good        | ✅ Good     |
-| Framework          | Agnostic                                                 | Agnostic       | React only  |
-| Pluralization      | ✅ Built-in                                              | ✅ Via plugin  | ✅ Built-in |
-| Async Loading      | ✅ Built-in                                              | ✅ Built-in    | ⚠️ Manual   |
-| Path Interpolation | ✅ `{user.name}`                                         | ❌             | ❌          |
-| Nested Keys        | ✅ Yes                                                   | ✅ Yes         | ✅ Yes      |
-| HTML Escaping      | ✅ Built-in                                              | ⚠️ Manual      | ✅ Built-in |
+| Feature            | i18nit                                                   | i18next       | react-intl  |
+| ------------------ | -------------------------------------------------------- | ------------- | ----------- |
+| Bundle Size        | **<PackageInfo package="i18nit" type="size" />**         | ~13 KB        | ~19 KB      |
+| Dependencies       | **<PackageInfo package="i18nit" type="dependencies" />** | 2+            | 10+         |
+| TypeScript         | ✅ First-class                                           | ✅ Good       | ✅ Good     |
+| Framework          | Agnostic                                                 | Agnostic      | React only  |
+| Pluralization      | ✅ Built-in                                              | ✅ Via plugin | ✅ Built-in |
+| Async Loading      | ✅ Built-in                                              | ✅ Built-in   | ⚠️ Manual   |
+| Path Interpolation | ✅ `{user.name}`                                         | ❌            | ❌          |
+| Nested Keys        | ✅ Yes                                                   | ✅ Yes        | ✅ Yes      |
+| HTML Escaping      | ✅ Built-in                                              | ⚠️ Manual     | ✅ Built-in |
 
 ## When to Use i18nit
 

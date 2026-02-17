@@ -1,565 +1,856 @@
 # Stateit API Reference
 
-Complete API documentation for @vielzeug/stateit.
+Complete API documentation for stateit.
 
 ## Table of Contents
 
 [[toc]]
 
-## Factory Functions
+## Types
 
-### createStore()
-
-Creates a new store with the given initial state.
-
-#### Signature
+### Listener
 
 ```ts
-function createStore<T extends object>(initialState: T, options?: StoreOptions<T>): Store<T>;
+type Listener<T> = (state: T, prev: T) => void;
 ```
 
-#### Parameters
+Callback function that receives current and previous state.
 
-- `initialState: T` – Initial state object
-- `options?: StoreOptions<T>` – Optional configuration
+**Parameters:**
+
+- **state**: Current state after update
+- **prev**: Previous state before update
+
+**Example:**
 
 ```ts
-type StoreOptions<T> = {
-  name?: string; // Optional name for debugging
-  equals?: EqualityFn<T>; // Custom equality function
+const listener: Listener<{ count: number }> = (current, prev) => {
+  console.log(`Count changed from ${prev.count} to ${current.count}`);
 };
-
-type EqualityFn<T> = (a: T, b: T) => boolean;
-```
-
-#### Returns
-
-A new `Store<T>` instance
-
-#### Example
-
-```ts
-// Simple store
-const counterStore = createStore({ count: 0 });
-
-// Named store
-const userStore = createStore({ name: 'Alice', age: 30 }, { name: 'userStore' });
-
-// Custom equality
-const todoStore = createStore(
-  { todos: [], filter: 'all' },
-  {
-    equals: (a, b) => {
-      return a.todos === b.todos && a.filter === b.filter;
-    },
-  },
-);
-```
-
----
-
-### createTestStore()
-
-Creates a test store for isolated testing.
-
-#### Signature
-
-```ts
-function createTestStore<T extends object>(
-  baseStore?: Store<T>,
-  patch?: Partial<T>,
-): {
-  store: Store<T>;
-  dispose: () => void;
-};
-```
-
-#### Parameters
-
-- `baseStore?: Store<T>` – Optional base store to create child from
-- `patch?: Partial<T>` – Optional partial state for test store
-
-#### Returns
-
-Object with store instance and dispose function
-
-#### Example
-
-```ts
-const { store: testStore, dispose } = createTestStore(baseStore, { count: 42 });
-
-// Run tests
-expect(testStore.get().count).toBe(42);
-
-// Cleanup
-dispose();
-```
-
----
-
-### withMock()
-
-Temporarily overrides store state for the duration of a function.
-
-#### Signature
-
-```ts
-function withMock<T extends object, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>;
-```
-
-#### Parameters
-
-- `baseStore: Store<T>` – Base store to derive from
-- `patch: Partial<T>` – Temporary state override
-- `fn: () => R | Promise<R>` – Function to execute with overridden state
-
-#### Returns
-
-Promise resolving to function result
-
-#### Example
-
-```ts
-await withMock(store, { count: 77 }, async () => {
-  // Inside this scope, store appears to have count: 77
-  await testWithMockedState();
-});
-
-// Original state unchanged
-console.log(store.get().count); // Original value
-```
-
-## Store Class
-
-### Methods
-
-#### get()
-
-Gets the current state snapshot or a selected slice.
-
-##### Signature
-
-```ts
-get(): T;
-get<U>(selector: (state: T) => U): U;
-```
-
-##### Parameters
-
-- `selector?: (state: T) => U` – Optional function to select a slice of state
-
-##### Returns
-
-Current state object or selected value
-
-##### Example
-
-```ts
-// Get full state
-const state = store.get();
-console.log(state.count);
-
-// Get selected value
-const count = store.get((state) => state.count);
-
-// Get nested property
-const userName = store.get((state) => state.user.name);
-
-// Get computed value
-const isAdult = store.get((state) => state.age >= 18);
-```
-
----
-
-#### set()
-
-Updates state with partial merge, sync function, or async function.
-
-##### Signature
-
-```ts
-set(patch: Partial<T>): void;
-set(updater: (state: T) => T): void;
-set(updater: (state: T) => Promise<T>): Promise<void>;
-```
-
-##### Parameters
-
-- `patch: Partial<T>` – Partial state to merge (shallow)
-- `updater: (state: T) => T | Promise<T>` – Function that receives current state and returns new state
-
-##### Returns
-
-`void` for sync updates, `Promise<void>` for async updates
-
-##### Example
-
-```ts
-// Partial merge
-store.set({ count: 1 });
-
-// Sync function
-store.set((state) => ({
-  ...state,
-  count: state.count + 1,
-}));
-
-// Async function
-await store.set(async (state) => {
-  const data = await fetchData();
-  return { ...state, data };
-});
-```
-
----
-
-#### reset()
-
-Resets state to the initial value provided during construction.
-
-##### Signature
-
-```ts
-reset(): void;
-```
-
-##### Example
-
-```ts
-store.reset(); // Reverts to initial state
-```
-
----
-
-#### subscribe() – Full State
-
-Subscribes to all state changes.
-
-##### Signature
-
-```ts
-subscribe(listener: Subscriber<T>): Unsubscribe;
-```
-
-##### Parameters
-
-- `listener: Subscriber<T>` – Callback for state changes
-
-```ts
-type Subscriber<T> = (state: T, prev: T) => void;
-type Unsubscribe = () => void;
-```
-
-##### Returns
-
-Unsubscribe function
-
-##### Example
-
-```ts
-const unsubscribe = store.subscribe((state, prev) => {
-  console.log('State changed:', state);
-});
-
-// Unsubscribe
-unsubscribe();
-```
-
----
-
-#### subscribe() – Selective
-
-Subscribes to a selected slice of state.
-
-##### Signature
-
-```ts
-subscribe<U>(
-  selector: Selector<T, U>,
-  listener: Subscriber<U>,
-  options?: { equality?: EqualityFn<U> }
-): Unsubscribe;
-```
-
-##### Parameters
-
-- `selector: Selector<T, U>` – Function to select a slice of state
-- `listener: Subscriber<U>` – Callback for selected value changes
-- `options?: { equality?: EqualityFn<U> }` – Optional equality function
-
-```ts
-type Selector<T, U> = (state: T) => U;
-```
-
-##### Returns
-
-Unsubscribe function
-
-##### Example
-
-```ts
-// Subscribe to specific field
-const unsubscribe = store.subscribe(
-  (state) => state.count,
-  (count, prevCount) => {
-    console.log(`Count: ${prevCount} → ${count}`);
-  },
-);
-
-// With custom equality
-store.subscribe(
-  (state) => state.items,
-  (items) => {
-    console.log('Items changed:', items);
-  },
-  {
-    equality: (a, b) => a.length === b.length,
-  },
-);
-```
-
----
-
-#### createChild()
-
-Creates a child store initialized with current state and optional patch.
-
-##### Signature
-
-```ts
-createChild(patch?: Partial<T>): Store<T>;
-```
-
-##### Parameters
-
-- `patch?: Partial<T>` – Optional partial state to merge into child's initial state
-
-##### Returns
-
-New independent store instance
-
-##### Example
-
-```ts
-const childStore = store.createChild({ isDraft: true });
-
-childStore.set({ name: 'Bob' }); // Doesn't affect parent
-console.log(store.get().name); // Original value
-```
-
----
-
-#### runInScope()
-
-Executes a function with a scoped child store.
-
-##### Signature
-
-```ts
-runInScope<R>(
-  fn: (scopedStore: Store<T>) => R | Promise<R>,
-  patch?: Partial<T>
-): Promise<R>;
-```
-
-##### Parameters
-
-- `fn: (scopedStore: Store<T>) => R | Promise<R>` – Function to execute with scoped store
-- `patch?: Partial<T>` – Optional partial state for child store
-
-##### Returns
-
-Promise resolving to function result
-
-##### Example
-
-```ts
-await store.runInScope(
-  async (scopedStore) => {
-    scopedStore.set({ count: 999 });
-    console.log(scopedStore.get()); // Scoped changes
-    await doSomething();
-  },
-  { isDraft: true },
-);
-
-console.log(store.get()); // Parent unchanged
-```
-
-## Utility Functions
-
-### shallowEqual()
-
-Performs shallow equality check between two values.
-
-#### Signature
-
-```ts
-function shallowEqual(a: unknown, b: unknown): boolean;
-```
-
-#### Parameters
-
-- `a: unknown` – First value to compare
-- `b: unknown` – Second value to compare
-
-#### Returns
-
-True if values are shallowly equal
-
-#### Example
-
-```ts
-import { shallowEqual } from '@vielzeug/stateit';
-
-shallowEqual({ a: 1, b: 2 }, { a: 1, b: 2 }); // true
-shallowEqual({ a: 1 }, { a: 2 }); // false
-shallowEqual([1, 2, 3], [1, 2, 3]); // true
-```
-
----
-
-### shallowMerge()
-
-Performs shallow merge of a patch into state.
-
-#### Signature
-
-```ts
-function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
-```
-
-#### Parameters
-
-- `state: T` – Original state object
-- `patch: Partial<T>` – Partial state to merge
-
-#### Returns
-
-New state object with merged values
-
-#### Example
-
-```ts
-import { shallowMerge } from '@vielzeug/stateit';
-
-const state = { a: 1, b: 2 };
-const result = shallowMerge(state, { b: 3, c: 4 });
-// { a: 1, b: 3, c: 4 }
-```
-
-## Type Definitions
-
-### Store
-
-Main store class type.
-
-```ts
-class Store<T extends object> {
-  get(): T;
-  getName(): string | undefined;
-  replace(nextState: T): void;
-  set(patch: Partial<T>): void;
-  update(updater: (state: T) => T | Promise<T>): Promise<void>;
-  reset(): void;
-  subscribe(listener: Subscriber<T>): Unsubscribe;
-  subscribe<U>(selector: Selector<T, U>, listener: Subscriber<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe;
-  observe(observer: Subscriber<T>): Unsubscribe;
-  createChild(patch?: Partial<T>): Store<T>;
-  runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>;
-}
-```
-
----
-
-### Subscriber
-
-Callback type for state changes.
-
-```ts
-type Subscriber<T> = (state: T, prev: T) => void;
 ```
 
 ---
 
 ### Selector
 
-Function type for selecting state slices.
-
 ```ts
 type Selector<T, U> = (state: T) => U;
+```
+
+Function that selects a value from state.
+
+**Parameters:**
+
+- **state**: Current state
+
+**Returns:** Selected value of type `U`
+
+**Example:**
+
+```ts
+const selectCount: Selector<AppState, number> = (state) => state.count;
+const selectFullName: Selector<UserState, string> = (state) =>
+  `${state.firstName} ${state.lastName}`;
 ```
 
 ---
 
 ### Unsubscribe
 
-Function type for unsubscribing from state changes.
-
 ```ts
 type Unsubscribe = () => void;
+```
+
+Function to unsubscribe from state changes.
+
+**Example:**
+
+```ts
+const unsubscribe = state.subscribe(listener);
+// Later...
+unsubscribe();
 ```
 
 ---
 
 ### EqualityFn
 
-Function type for custom equality checks.
+```ts
+type EqualityFn<U> = (a: U, b: U) => boolean;
+```
+
+Function to check equality between two values.
+
+**Parameters:**
+
+- **a**: First value
+- **b**: Second value
+
+**Returns:** `true` if values are equal
+
+**Example:**
 
 ```ts
-type EqualityFn<T> = (a: T, b: T) => boolean;
+const arrayLengthEqual: EqualityFn<any[]> = (a, b) => a.length === b.length;
 ```
 
 ---
 
-### StoreOptions
-
-Configuration options for creating stores.
+### StateOptions
 
 ```ts
-type StoreOptions<T> = {
-  /** Optional name for debugging/logging */
+type StateOptions<T> = {
   name?: string;
-  /** Custom equality function (default: shallowEqual) */
   equals?: EqualityFn<T>;
 };
 ```
 
-## Behavior Notes
+Configuration options for creating state.
 
-### Subscription Timing
+**Properties:**
 
-- `subscribe()` is called **immediately** with the current state when you subscribe
-- `observe()` is **NOT** called immediately – only on subsequent changes
-- Both are called asynchronously (next microtask) when state changes
+- **name** (optional): Name for debugging
+- **equals** (optional): Custom equality function (defaults to `shallowEqual`)
 
-### Batched Updates
-
-State changes within the same synchronous tick are automatically batched:
+**Example:**
 
 ```ts
-store.set({ count: 1 });
-store.set({ count: 2 });
-store.set({ count: 3 });
-// Subscribers called once with final state (count: 3)
+const options: StateOptions<TodoState> = {
+  name: 'todoState',
+  equals: (a, b) => a.todos === b.todos && a.filter === b.filter,
+};
 ```
 
-### Equality Checks
+---
 
-- Default equality is `shallowEqual` (compares object properties)
-- Can be customized via `StoreOptions.equals` for the entire store
-- Can be customized per selector subscription via `options.equality`
-- Only triggers notifications if equality check returns `false`
+## Factory Function
 
-### Error Handling
+### createState()
 
-- Listener errors are swallowed to prevent breaking other listeners
-- State update errors propagate to the caller
-- Async update errors propagate via rejected Promise
+```ts
+function createState<T extends object>(
+  initialState: T,
+  options?: StateOptions<T>
+): State<T>;
+```
 
-### Memory Management
+Creates a new state instance.
 
-- Always unsubscribe when components unmount to avoid memory leaks
-- Child stores don't affect parent stores
-- Scoped stores are garbage collected after execution
-- Use `dispose()` from test helpers for cleanup
+**Type Parameters:**
+
+- **T**: State type (must extend object)
+
+**Parameters:**
+
+- **initialState**: Initial state value
+- **options** (optional): Configuration options
+
+**Returns:** `State<T>` instance
+
+**Examples:**
+
+```ts
+// Simple state
+const counter = createState({ count: 0 });
+
+// With name
+const user = createState({ name: 'Alice' }, { name: 'userState' });
+
+// With custom equality
+const todos = createState(
+  { items: [] },
+  {
+    equals: (a, b) => a.items.length === b.items.length,
+  }
+);
+```
+
+---
+
+## State Class
+
+### State\<T\>
+
+Main state management class.
+
+---
+
+### get()
+
+Get current state or selected value.
+
+#### Overload 1: Get Full State
+
+```ts
+get(): T;
+```
+
+**Returns:** Current state snapshot
+
+**Example:**
+
+```ts
+const current = state.get();
+console.log(current.count);
+```
+
+#### Overload 2: Get Selected Value
+
+```ts
+get<U>(selector: Selector<T, U>): U;
+```
+
+**Type Parameters:**
+
+- **U**: Selected value type
+
+**Parameters:**
+
+- **selector**: Function to select value from state
+
+**Returns:** Selected value
+
+**Example:**
+
+```ts
+const count = state.get((s) => s.count);
+const fullName = state.get((s) => `${s.firstName} ${s.lastName}`);
+```
+
+---
+
+### set()
+
+Update state with partial object or updater function.
+
+#### Overload 1: Partial Object
+
+```ts
+set(patch: Partial<T>): void;
+```
+
+**Parameters:**
+
+- **patch**: Partial state object to merge
+
+**Example:**
+
+```ts
+state.set({ count: 1 });
+state.set({ count: 2, name: 'Bob' });
+```
+
+#### Overload 2: Sync Updater
+
+```ts
+set(updater: (state: T) => T): void;
+```
+
+**Parameters:**
+
+- **updater**: Function that receives current state and returns new state
+
+**Example:**
+
+```ts
+state.set((current) => ({ ...current, count: current.count + 1 }));
+```
+
+#### Overload 3: Async Updater
+
+```ts
+set(updater: (state: T) => Promise<T>): Promise<void>;
+```
+
+**Parameters:**
+
+- **updater**: Async function that receives current state and returns new state
+
+**Returns:** Promise that resolves when update completes
+
+**Example:**
+
+```ts
+await state.set(async (current) => {
+  const data = await fetchData();
+  return { ...current, data };
+});
+```
+
+---
+
+### reset()
+
+```ts
+reset(): void;
+```
+
+Reset state to initial value.
+
+**Example:**
+
+```ts
+state.set({ count: 10 });
+state.reset();
+console.log(state.get().count); // 0 (initial value)
+```
+
+---
+
+### subscribe()
+
+Subscribe to state changes.
+
+#### Overload 1: Subscribe to All Changes
+
+```ts
+subscribe(listener: Listener<T>): Unsubscribe;
+```
+
+**Parameters:**
+
+- **listener**: Callback called when state changes
+
+**Returns:** Unsubscribe function
+
+**Example:**
+
+```ts
+const unsubscribe = state.subscribe((current, prev) => {
+  console.log('State changed:', current);
+});
+
+// Later...
+unsubscribe();
+```
+
+**Notes:**
+
+- Listener is called immediately with current state
+- Updates are batched asynchronously
+- Errors in listeners are swallowed to prevent breaking other subscribers
+
+#### Overload 2: Subscribe to Selected Value
+
+```ts
+subscribe<U>(
+  selector: Selector<T, U>,
+  listener: Listener<U>,
+  options?: { equality?: EqualityFn<U> }
+): Unsubscribe;
+```
+
+**Type Parameters:**
+
+- **U**: Selected value type
+
+**Parameters:**
+
+- **selector**: Function to select value from state
+- **listener**: Callback called when selected value changes
+- **options** (optional): Configuration
+  - **equality**: Custom equality function (defaults to `shallowEqual`)
+
+**Returns:** Unsubscribe function
+
+**Example:**
+
+```ts
+// Subscribe to count only
+state.subscribe(
+  (state) => state.count,
+  (count, prevCount) => {
+    console.log(`Count: ${prevCount} → ${count}`);
+  }
+);
+
+// With custom equality
+state.subscribe(
+  (state) => state.items,
+  (items) => console.log('Items changed'),
+  { equality: (a, b) => a.length === b.length }
+);
+```
+
+**Notes:**
+
+- Only called when selected value changes according to equality function
+- Default equality is `shallowEqual`
+- More efficient than subscribing to full state
+
+---
+
+### createChild()
+
+```ts
+createChild(patch?: Partial<T>): State<T>;
+```
+
+Create an independent child state.
+
+**Parameters:**
+
+- **patch** (optional): Partial state to override
+
+**Returns:** New `State<T>` instance
+
+**Example:**
+
+```ts
+const parent = createState({ count: 0, name: 'Parent' });
+const child = parent.createChild({ name: 'Child' });
+
+console.log(parent.get()); // { count: 0, name: 'Parent' }
+console.log(child.get());  // { count: 0, name: 'Child' }
+
+child.set({ count: 10 });
+console.log(parent.get().count); // 0 (unchanged)
+```
+
+**Notes:**
+
+- Child state is completely independent
+- Parent changes don't affect child
+- Child changes don't affect parent
+- Child uses same equality function as parent
+
+---
+
+### runInScope()
+
+```ts
+async runInScope<R>(
+  fn: (scopedState: State<T>) => R | Promise<R>,
+  patch?: Partial<T>
+): Promise<R>;
+```
+
+Execute function with a scoped state that doesn't affect original.
+
+**Type Parameters:**
+
+- **R**: Return type of function
+
+**Parameters:**
+
+- **fn**: Function to execute with scoped state
+- **patch** (optional): Partial state to override
+
+**Returns:** Promise resolving to function result
+
+**Example:**
+
+```ts
+const state = createState({ count: 0 });
+
+const result = await state.runInScope(
+  async (scopedState) => {
+    scopedState.set({ count: 999 });
+    await doSomething();
+    return 'completed';
+  },
+  { isTemporary: true }
+);
+
+console.log(state.get().count); // 0 (unchanged)
+console.log(result); // "completed"
+```
+
+**Notes:**
+
+- Scoped state starts with parent state + patch
+- Changes to scoped state don't affect original
+- Scoped state is garbage collected after function completes
+- Useful for testing or temporary operations
+
+---
+
+## Utility Functions
+
+### shallowEqual()
+
+```ts
+function shallowEqual(a: unknown, b: unknown): boolean;
+```
+
+Check shallow equality between two values.
+
+**Parameters:**
+
+- **a**: First value
+- **b**: Second value
+
+**Returns:** `true` if shallowly equal
+
+**Example:**
+
+```ts
+shallowEqual({ a: 1 }, { a: 1 }); // true
+shallowEqual({ a: 1 }, { a: 2 }); // false
+shallowEqual({ a: { b: 1 } }, { a: { b: 1 } }); // false (different references)
+```
+
+**Notes:**
+
+- Compares primitive values with `===`
+- For objects, compares keys and values shallowly
+- Arrays are compared element by element
+- `null` and `undefined` are compared with `===`
+
+---
+
+### shallowMerge()
+
+```ts
+function shallowMerge<T extends object>(state: T, patch: Partial<T>): T;
+```
+
+Shallow merge two objects or arrays.
+
+**Type Parameters:**
+
+- **T**: Object or array type
+
+**Parameters:**
+
+- **state**: Base state
+- **patch**: Partial state to merge
+
+**Returns:** New merged object/array
+
+**Example:**
+
+```ts
+const state = { count: 0, name: 'Alice' };
+const patch = { count: 1 };
+const merged = shallowMerge(state, patch);
+// { count: 1, name: 'Alice' }
+
+const arr = [1, 2, 3];
+const merged = shallowMerge(arr, { 0: 99 });
+// [99, 2, 3]
+```
+
+**Notes:**
+
+- Creates new reference (doesn't mutate originals)
+- Works with both objects and arrays
+- Uses `Object.assign` internally
+
+---
+
+## Testing Helpers
+
+### createTestState()
+
+```ts
+function createTestState<T extends object>(
+  baseState?: State<T>,
+  patch?: Partial<T>
+): {
+  state: State<T>;
+  dispose: () => void;
+};
+```
+
+Create isolated test state.
+
+**Type Parameters:**
+
+- **T**: State type
+
+**Parameters:**
+
+- **baseState** (optional): Base state to inherit from
+- **patch** (optional): Partial state to override
+
+**Returns:** Object with:
+
+- **state**: Test state instance
+- **dispose**: Cleanup function
+
+**Example:**
+
+```ts
+describe('Counter', () => {
+  it('increments count', () => {
+    const { state, dispose } = createTestState(null, { count: 0 });
+
+    state.set({ count: 1 });
+    expect(state.get().count).toBe(1);
+
+    dispose();
+  });
+});
+```
+
+**Notes:**
+
+- If `baseState` is provided, test state inherits its value
+- Test state is independent of base state
+- `dispose()` resets test state (for cleanup)
+
+---
+
+### withStateMock()
+
+```ts
+function withStateMock<T extends object, R>(
+  baseState: State<T>,
+  patch: Partial<T>,
+  fn: () => R | Promise<R>
+): Promise<R>;
+```
+
+Execute function with temporarily mocked state.
+
+**Type Parameters:**
+
+- **T**: State type
+- **R**: Return type
+
+**Parameters:**
+
+- **baseState**: State to mock
+- **patch**: Partial state override
+- **fn**: Function to execute
+
+**Returns:** Promise resolving to function result
+
+**Example:**
+
+```ts
+const appState = createState({ user: null });
+
+it('shows admin panel', async () => {
+  await withStateMock(
+    appState,
+    { user: { name: 'Admin', isAdmin: true } },
+    async () => {
+      const result = await renderAdminPanel();
+      expect(result).toContain('Admin Panel');
+    }
+  );
+
+  // Original state unchanged
+  expect(appState.get().user).toBe(null);
+});
+```
+
+**Notes:**
+
+- Uses `runInScope` internally
+- Original state is never modified
+- Useful for testing with different state scenarios
+
+---
+
+## TypeScript Support
+
+### Full Type Inference
+
+```ts
+const state = createState({ count: 0, name: 'Alice' });
+
+// Types are inferred automatically
+const current = state.get(); // Type: { count: number; name: string }
+const count = state.get((s) => s.count); // Type: number
+const fullName = state.get((s) => s.name.toUpperCase()); // Type: string
+
+// Type-safe updates
+state.set({ count: 1 }); // ✅
+state.set({ invalid: true }); // ❌ Type error
+
+// Type-safe selectors
+state.subscribe(
+  (s) => s.count, // Selector returns number
+  (count) => {
+    // count is typed as number
+    console.log(count.toFixed(2));
+  }
+);
+```
+
+### Generic Types
+
+```ts
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+const userState = createState<{ user: User | null }>({
+  user: null,
+});
+
+// Type guards work
+if (userState.get().user) {
+  console.log(userState.get().user.name); // Type: string
+}
+```
+
+### Strict Mode
+
+```ts
+// Enable strict null checks in tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "strictNullChecks": true
+  }
+}
+
+// Stateit respects strict mode
+const state = createState<{ value: string | null }>({ value: null });
+
+const value = state.get().value;
+// Type: string | null (not just string)
+```
+
+---
+
+## Error Handling
+
+### Swallowed Listener Errors
+
+Errors in listeners are caught and swallowed to prevent breaking other subscribers:
+
+```ts
+state.subscribe((current) => {
+  throw new Error('Oops!');
+});
+
+state.subscribe((current) => {
+  console.log('This still runs'); // ✅ Still called
+});
+
+state.set({ count: 1 }); // Doesn't throw
+```
+
+### Async Update Errors
+
+Async updater errors are propagated:
+
+```ts
+try {
+  await state.set(async (current) => {
+    throw new Error('Fetch failed');
+  });
+} catch (error) {
+  console.error(error); // Error is caught
+}
+```
+
+---
+
+## Performance Considerations
+
+### Batched Notifications
+
+Updates are automatically batched using microtasks:
+
+```ts
+state.set({ count: 1 });
+state.set({ count: 2 });
+state.set({ count: 3 });
+
+// Only one notification sent after all updates
+await Promise.resolve();
+```
+
+### Selective Subscriptions
+
+Use selectors to avoid unnecessary notifications:
+
+```ts
+// ❌ Bad - notified on every state change
+state.subscribe((state) => {
+  updateCountUI(state.count);
+});
+
+// ✅ Good - notified only when count changes
+state.subscribe(
+  (state) => state.count,
+  (count) => {
+    updateCountUI(count);
+  }
+);
+```
+
+### Custom Equality
+
+Use custom equality for expensive comparisons:
+
+```ts
+state.subscribe(
+  (state) => state.largeArray,
+  (array) => processArray(array),
+  {
+    equality: (a, b) => a.length === b.length, // Cheap comparison
+  }
+);
+```
+
+---
+
+## Migration Guide
+
+### From Zustand
+
+```ts
+// Zustand
+import create from 'zustand';
+
+const useStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+
+// Stateit
+import { createState } from '@vielzeug/stateit';
+
+const state = createState({ count: 0 });
+
+const increment = () => {
+  state.set((current) => ({ count: current.count + 1 }));
+};
+```
+
+### From Redux
+
+```ts
+// Redux
+const initialState = { count: 0 };
+
+function reducer(state = initialState, action) {
+  switch (action.type) {
+    case 'INCREMENT':
+      return { ...state, count: state.count + 1 };
+    default:
+      return state;
+  }
+}
+
+// Stateit
+const state = createState({ count: 0 });
+
+const increment = () => {
+  state.set((current) => ({ count: current.count + 1 }));
+};
+```
+
+### From Valtio
+
+```ts
+// Valtio
+import { proxy, useSnapshot } from 'valtio';
+
+const state = proxy({ count: 0 });
+
+// Stateit
+import { createState } from '@vielzeug/stateit';
+
+const state = createState({ count: 0 });
+```
+

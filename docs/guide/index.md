@@ -70,7 +70,7 @@ yarn add @vielzeug/toolkit
 
 ```typescript
 import { debounce, groupBy } from '@vielzeug/toolkit';
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 import { createHttpClient } from '@vielzeug/fetchit';
 
 // Debounce search input
@@ -79,9 +79,9 @@ const search = debounce((query: string) => {
 }, 300);
 
 // Reactive state management
-const store = createStore({ count: 0 });
-store.subscribe((state) => console.log(state.count));
-store.set((s) => ({ count: s.count + 1 }));
+const store = createState({ count: 0 });
+store.subscribe((data) => console.log(data.count));
+store.set((data) => ({ count: data.count + 1 }));
 
 // HTTP client with caching
 const http = createHttpClient({ baseUrl: '/api' });
@@ -147,9 +147,9 @@ const canDelete = permit.can(currentUser, 'posts', 'delete');
 ### Reactive State
 
 ```typescript
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 
-const store = createStore({ todos: [], filter: 'all' });
+const store = createState({ todos: [], filter: 'all' });
 
 // Subscribe to specific values
 store.subscribe(

@@ -16,31 +16,31 @@ State management libraries are often complex or framework-specific:
 
 ### The Solution
 
-Stateit provides a simple, reactive store API:
+Stateit provides a simple, reactive state API:
 
 ```typescript
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 
-const store = createStore({ count: 0, user: null });
+const state = createState({ count: 0, user: null });
 
 // Subscribe to changes
-store.subscribe((state, prev) => {
-  console.log('Count changed:', prev.count, '→', state.count);
+state.subscribe((curr, prev) => {
+  console.log('Count changed:', prev.count, '→', curr.count);
 });
 
 // Update state
-store.set({ count: 1 });
-store.set((state) => ({ count: state.count + 1 }));
+state.set({ count: 1 });
+state.set((data) => ({ count: data.count + 1 }));
 
 // Read state
-const current = store.get();
+const snapshot = state.get();
 ```
 
 ## ✨ Features
 
 - ✅ **Type-Safe** – Full TypeScript support with precise type inference
 - ✅ **Reactive Subscriptions** – Selective subscriptions with automatic change detection
-- ✅ **Scoped Stores** – Child stores and isolated execution contexts
+- ✅ **Scoped States** – Child states and isolated execution contexts
 - ✅ **Custom Equality** – Configurable equality checks for fine-grained control
 - ✅ **Async Support** – First-class support for async state updates
 - ✅ **Batched Updates** – Automatic notification batching for optimal performance
@@ -57,7 +57,7 @@ const current = store.get();
 | TypeScript              | ✅ Full    | ✅ Full            | ✅ Full            | ✅ Full            |
 | Selective Subscriptions | ✅         | ✅                 | ✅                 | ✅                 |
 | Async Updates           | ✅         | ✅                 | ✅                 | ✅                 |
-| Scoped Stores           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
+| Scoped States           | ✅         | ❌                 | ✅ (atoms)         | ❌                 |
 | Custom Equality         | ✅         | ✅                 | ✅                 | ❌                 |
 | Testing Helpers         | ✅         | ❌                 | ❌                 | ❌                 |
 | Dependencies            | **0**      | 1                  | 0                  | 1                  |
@@ -76,17 +76,17 @@ yarn add @vielzeug/stateit
 ## 🚀 Quick Start
 
 ```typescript
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 
-// Create a store
-const counter = createStore({ count: 0 });
+// Create a state
+const counter = createState({ count: 0 });
 
 // Read state
 console.log(counter.get().count); // 0
 
 // Subscribe to changes
-counter.subscribe((state, prev) => {
-  console.log(`Count changed from ${prev.count} to ${state.count}`);
+counter.subscribe((curr, prev) => {
+  console.log(`Count changed from ${prev.count} to ${curr.count}`);
 });
 
 // Update state – partial merge
@@ -107,20 +107,20 @@ await counter.set(async (state) => {
 
 ## 🎓 Core Concepts
 
-### Store Creation
+### State Creation
 
 ```typescript
-import { createStore } from '@vielzeug/stateit';
+import { createState } from '@vielzeug/stateit';
 
-// Simple store
-const userStore = createStore({
+// Simple state
+const userState = createState({
   name: 'Alice',
   age: 30,
   email: 'alice@example.com',
 });
 
-// Named store (useful for debugging)
-const appStore = createStore(
+// Named state (useful for debugging)
+const appState = createState(
   {
     theme: 'dark',
     language: 'en',
@@ -129,7 +129,7 @@ const appStore = createStore(
 );
 
 // Custom equality function
-const todoStore = createStore(
+const todoState = createState(
   { todos: [], filter: 'all' },
   {
     equals: (a, b) => {
@@ -144,29 +144,29 @@ const todoStore = createStore(
 
 ```typescript
 // Get current state snapshot
-const state = store.get();
+const snapshot = state.get();
 
 // Access properties
-console.log(state.name);
-console.log(state.age);
+console.log(snapshot.name);
+console.log(snapshot.age);
 
 // Select specific value without subscribing
-const name = store.get((state) => state.name);
+const name = state.get((data) => data.name);
 console.log(name); // 'Alice'
 
 // Select nested property
-const userStore = createStore({
+const userState = createState({
   user: { profile: { email: 'alice@example.com' } },
 });
-const email = userStore.get((state) => state.user.profile.email);
+const email = userState.get((data) => data.user.profile.email);
 
 // Select computed value
-const isAdult = store.get((state) => state.age >= 18);
+const isAdult = state.get((data) => data.age >= 18);
 
 // Select multiple fields
-const userInfo = store.get((state) => ({
-  name: state.name,
-  email: state.email,
+const userInfo = state.get((data) => ({
+  name: data.name,
+  email: data.email,
 }));
 ```
 
@@ -174,47 +174,47 @@ const userInfo = store.get((state) => ({
 
 ```typescript
 // Merge partial state (shallow merge)
-store.set({ age: 31 });
+state.set({ age: 31 });
 
 // Update with sync function
-store.set((state) => ({
-  ...state,
-  age: state.age + 1,
+state.set((data) => ({
+  ...data,
+  age: data.age + 1,
 }));
 
 // Update with async function (returns Promise)
-await store.set(async (state) => {
-  const user = await fetchUser(state.id);
-  return { ...state, ...user };
+await state.set(async (data) => {
+  const user = await fetchUser(data.id);
+  return { ...data, ...user };
 });
 
 // Reset to initial state
-store.reset();
+state.reset();
 ```
 
 ### Subscriptions
 
 ```typescript
 // Subscribe to all state changes
-const unsubscribe = store.subscribe((state, prevState) => {
-  console.log('State changed:', state);
-  console.log('Previous state:', prevState);
+const unsubscribe = state.subscribe((curr, prev) => {
+  console.log('State changed:', curr);
+  console.log('Previous state:', prev);
 });
 
 // Unsubscribe when done
 unsubscribe();
 
 // Subscribe to specific field
-store.subscribe(
-  (state) => state.count,
+state.subscribe(
+  (data) => data.count,
   (count, prevCount) => {
     console.log(`Count: ${prevCount} → ${count}`);
   },
 );
 
 // Subscribe with custom equality
-store.subscribe(
-  (state) => state.items,
+state.subscribe(
+  (data) => data.items,
   (items) => {
     console.log('Items changed:', items);
   },
@@ -224,27 +224,27 @@ store.subscribe(
 );
 ```
 
-### Scoped Stores
+### Scoped States
 
 ```typescript
-// Create independent child store
-const childStore = store.createChild({ isDraft: true });
+// Create independent child state
+const childState = state.createChild({ isDraft: true });
 
-childStore.set({ name: 'Modified' });
-console.log(childStore.get().name); // "Modified"
-console.log(store.get().name); // Original value (unchanged)
+childState.set({ name: 'Modified' });
+console.log(childState.get().name); // "Modified"
+console.log(state.get().name); // Original value (unchanged)
 
 // Run code in isolated scope
-await store.runInScope(
-  async (scopedStore) => {
-    scopedStore.set({ count: 999 });
-    console.log(scopedStore.get().count); // 999
+await state.runInScope(
+  async (scopedState) => {
+    scopedState.set({ count: 999 });
+    console.log(scopedState.get().count); // 999
     await doSomething();
   },
   { isTemporary: true },
 );
 
-console.log(store.get().count); // Original value (unchanged)
+console.log(state.get().count); // Original value (unchanged)
 ```
 
 ## Framework Integration
@@ -253,42 +253,42 @@ console.log(store.get().count); // Original value (unchanged)
 
 ```typescript
 import { useEffect, useSyncExternalStore } from 'react';
-import { createStore, type Store } from '@vielzeug/stateit';
+import { createState, type State } from '@vielzeug/stateit';
 
-// Create hook for store integration
-function useStore<T extends object>(store: Store<T>): T;
-function useStore<T extends object, U>(
-  store: Store<T>,
+// Create hook for state integration
+function useState<T extends object>(state: State<T>): T;
+function useState<T extends object, U>(
+  state: State<T>,
   selector: (state: T) => U
 ): U;
-function useStore<T extends object, U>(
-  store: Store<T>,
+function useState<T extends object, U>(
+  state: State<T>,
   selector?: (state: T) => U
 ) {
   return useSyncExternalStore(
     (callback) => {
       if (selector) {
-        return store.subscribe(selector, callback);
+        return state.subscribe(selector, callback);
       }
-      return store.subscribe(callback);
+      return state.subscribe(callback);
     },
-    () => (selector ? selector(store.get()) : store.get())
+    () => (selector ? selector(state.get()) : state.get())
   );
 }
 
-// Create stores
-const counterStore = createStore({ count: 0 });
-const userStore = createStore({ name: 'Alice', isLoggedIn: false });
+// Create states
+const counterState = createState({ count: 0 });
+const userState = createState({ name: 'Alice', isLoggedIn: false });
 
 // Use in components
 function Counter() {
   // Subscribe to specific field
-  const count = useStore(counterStore, (state) => state.count);
+  const count = useState(counterState, (data) => data.count);
 
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => counterStore.set({ count: count + 1 })}>
+      <button onClick={() => counterState.set({ count: count + 1 })}>
         Increment
       </button>
     </div>
@@ -297,7 +297,7 @@ function Counter() {
 
 function User() {
   // Subscribe to full state
-  const user = useStore(userStore);
+  const user = useState(userState);
 
   return <div>Welcome, {user.name}!</div>;
 }
@@ -307,28 +307,28 @@ function User() {
 
 ```typescript
 import { computed, onUnmounted } from 'vue';
-import { createStore, type Store } from '@vielzeug/stateit';
+import { createState, type State } from '@vielzeug/stateit';
 
-// Create composable for store integration
-function useStore<T extends object>(store: Store<T>) {
-  const state = computed(() => store.get());
+// Create composable for state integration
+function useState<T extends object>(state: State<T>) {
+  const reactive = computed(() => state.get());
 
-  const unsubscribe = store.subscribe(() => {
+  const unsubscribe = state.subscribe(() => {
     // Trigger reactivity
-    state.value = store.get();
+    reactive.value = state.get();
   });
 
   onUnmounted(() => {
     unsubscribe();
   });
 
-  return state;
+  return reactive;
 }
 
-function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U) {
-  const selected = computed(() => selector(store.get()));
+function useSelector<T extends object, U>(state: State<T>, selector: (state: T) => U) {
+  const selected = computed(() => selector(state.get()));
 
-  const unsubscribe = store.subscribe(selector, (value) => {
+  const unsubscribe = state.subscribe(selector, (value) => {
     selected.value = value;
   });
 
@@ -339,17 +339,17 @@ function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state
   return selected;
 }
 
-// Create store
-const counterStore = createStore({ count: 0 });
+// Create state
+const counterState = createState({ count: 0 });
 
 // Use in component
 export default {
   setup() {
-    const state = useStore(counterStore);
-    const count = useStoreSelector(counterStore, (s) => s.count);
+    const state = useState(counterState);
+    const count = useSelector(counterState, (s) => s.count);
 
     const increment = () => {
-      counterStore.set({ count: count.value + 1 });
+      counterState.set({ count: count.value + 1 });
     };
 
     return { state, count, increment };
@@ -360,21 +360,21 @@ export default {
 ### Svelte
 
 ```typescript
-import { readable } from 'svelte/store';
-import { createStore, type Store } from '@vielzeug/stateit';
+import { readable } from 'svelte/state';
+import { createState, type State } from '@vielzeug/stateit';
 
-// Create Svelte store from stateit store
-function toSvelteStore<T extends object>(store: Store<T>) {
-  return readable(store.get(), (set) => {
-    return store.subscribe(set);
+// Create Svelte state from stateit state
+function toState<T extends object>(state: State<T>) {
+  return readable(state.get(), (set) => {
+    return state.subscribe(set);
   });
 }
 
-// Create store
-const counterStore = createStore({ count: 0 });
+// Create state
+const counterState = createState({ count: 0 });
 
-// Convert to Svelte store
-const counter = toSvelteStore(counterStore);
+// Convert to Svelte state
+const counter = toState(counterState);
 
 // Use in component
 // In your .svelte file:
@@ -382,7 +382,7 @@ const counter = toSvelteStore(counterStore);
 //   $: count = $counter.count;
 //
 //   function increment() {
-//     counterStore.set({ count: $counter.count + 1 });
+//     counterState.set({ count: $counter.count + 1 });
 //   }
 // </script>
 ```
@@ -392,7 +392,7 @@ const counter = toSvelteStore(counterStore);
 ### Async State Updates
 
 ```typescript
-const dataStore = createStore({
+const dataState = createState({
   data: null,
   loading: false,
   error: null,
@@ -401,16 +401,16 @@ const dataStore = createStore({
 // Async fetch with loading state
 async function fetchData() {
   // Set loading
-  dataStore.set({ loading: true, error: null });
+  dataState.set({ loading: true, error: null });
 
   try {
-    await dataStore.set(async (state) => {
+    await dataState.set(async (curr) => {
       const response = await fetch('/api/data');
       const data = await response.json();
-      return { ...state, data, loading: false };
+      return { ...curr, data, loading: false };
     });
   } catch (error) {
-    dataStore.set({ error, loading: false });
+    dataState.set({ error, loading: false });
   }
 }
 ```
@@ -418,7 +418,7 @@ async function fetchData() {
 ### Computed Values
 
 ```typescript
-const cartStore = createStore({
+const cartState = createState({
   items: [
     { id: 1, price: 10, quantity: 2 },
     { id: 2, price: 20, quantity: 1 },
@@ -426,8 +426,8 @@ const cartStore = createStore({
 });
 
 // Subscribe to computed total
-cartStore.subscribe(
-  (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+cartState.subscribe(
+  (data) => data.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   (total) => {
     console.log('Cart total:', total);
   },
@@ -439,7 +439,7 @@ cartStore.subscribe(
 Use `get()` with a selector for one-time reads of computed values without subscribing:
 
 ```typescript
-const userStore = createStore({
+const userState = createState({
   firstName: 'Alice',
   lastName: 'Johnson',
   age: 30,
@@ -451,20 +451,20 @@ const userStore = createStore({
 
 // Get computed full name
 function getFullName() {
-  return userStore.get((state) => `${state.firstName} ${state.lastName}`);
+  return userState.get((data) => `${data.firstName} ${data.lastName}`);
 }
 
 // Get nested property
 function getCity() {
-  return userStore.get((state) => state.address.city);
+  return userState.get((data) => data.address.city);
 }
 
 // Get multiple derived values
 function getUserSummary() {
-  return userStore.get((state) => ({
-    name: `${state.firstName} ${state.lastName}`,
-    location: `${state.address.city}, ${state.address.country}`,
-    isAdult: state.age >= 18,
+  return userState.get((data) => ({
+    name: `${data.firstName} ${data.lastName}`,
+    location: `${data.address.city}, ${data.address.country}`,
+    isAdult: data.age >= 18,
   }));
 }
 
@@ -477,55 +477,55 @@ console.log(getUserSummary());
 ### Middleware Pattern
 
 ```typescript
-function withLogging<T extends object>(store: Store<T>) {
-  store.subscribe((state, prev) => {
+function withLogging<T extends object>(state: State<T>) {
+  state.subscribe((curr, prev) => {
     console.log('State updated:', {
       from: prev,
-      to: state,
+      to: curr,
       timestamp: new Date().toISOString(),
     });
   });
 
-  return store;
+  return state;
 }
 
-function withPersistence<T extends object>(store: Store<T>, key: string) {
+function withPersistence<T extends object>(state: State<T>, key: string) {
   // Load from localStorage
   const saved = localStorage.getItem(key);
   if (saved) {
-    store.set(JSON.parse(saved));
+    state.set(JSON.parse(saved));
   }
 
   // Save on changes
-  store.subscribe((state) => {
-    localStorage.setItem(key, JSON.stringify(state));
+  state.subscribe((curr) => {
+    localStorage.setItem(key, JSON.stringify(curr));
   });
 
-  return store;
+  return state;
 }
 
 // Usage
-const store = withLogging(withPersistence(createStore({ count: 0 }), 'counter-state'));
+const state = withLogging(withPersistence(createState({ count: 0 }), 'counter-state'));
 ```
 
-### Multiple Stores Composition
+### Multiple States Composition
 
 ```typescript
-const authStore = createStore({ user: null, token: null });
-const cartStore = createStore({ items: [] });
-const uiStore = createStore({ theme: 'light', sidebarOpen: false });
+const authState = createState({ user: null, token: null });
+const cartState = createState({ items: [] });
+const uiState = createState({ theme: 'light', sidebarOpen: false });
 
-// Subscribe to multiple stores
-function syncStores() {
-  authStore.subscribe((auth) => {
+// Subscribe to multiple states
+function syncStates() {
+  authState.subscribe((auth) => {
     if (!auth.user) {
       // Clear cart when user logs out
-      cartStore.set({ items: [] });
+      cartState.set({ items: [] });
     }
   });
 
-  uiStore.subscribe(
-    (state) => state.theme,
+  uiState.subscribe(
+    (data) => data.theme,
     (theme) => {
       document.body.className = theme;
     },
@@ -538,31 +538,31 @@ function syncStores() {
 ### Testing Helpers
 
 ```typescript
-import { createTestStore, withMock } from '@vielzeug/stateit';
+import { createTestState, withStateMock } from '@vielzeug/stateit';
 
 describe('Counter', () => {
   it('increments count', () => {
-    // Create isolated test store
-    const { store, dispose } = createTestStore(baseStore, { count: 0 });
+    // Create isolated test state
+    const { state, dispose } = createTestState(baseState, { count: 0 });
 
-    store.set({ count: 1 });
-    expect(store.get().count).toBe(1);
+    state.set({ count: 1 });
+    expect(state.get().count).toBe(1);
 
     // Cleanup
     dispose();
   });
 
   it('uses mocked state', async () => {
-    const store = createStore({ count: 0 });
+    const state = createState({ count: 0 });
 
-    await withMock(store, { count: 99 }, async () => {
+    await withStateMock(state, { count: 99 }, async () => {
       // State is temporarily overridden
-      // But this won't affect store directly since withMock uses runInScope
+      // But this won't affect state directly since withStateMock uses runInScope
       await testWithMockedState();
     });
 
     // Original state unchanged
-    expect(store.get().count).toBe(0);
+    expect(state.get().count).toBe(0);
   });
 });
 ```
@@ -573,13 +573,13 @@ describe('Counter', () => {
 import { vi } from 'vitest';
 
 it('notifies subscribers on change', async () => {
-  const store = createStore({ count: 0 });
+  const state = createState({ count: 0 });
   const listener = vi.fn();
 
-  store.subscribe(listener);
+  state.subscribe(listener);
   listener.mockClear();
 
-  store.set({ count: 1 });
+  state.set({ count: 1 });
   await Promise.resolve(); // Wait for batched notification
 
   expect(listener).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
@@ -588,16 +588,16 @@ it('notifies subscribers on change', async () => {
 
 ## 🎯 API Reference
 
-### `createStore<T>(initialState: T, options?: StoreOptions<T>): Store<T>`
+### `createState<T>(initialState: T, options?: StateOptions<T>): State<T>`
 
-Creates a new store instance.
+Creates a new state instance.
 
 **Options:**
 
 - `name?: string` – Optional name for debugging
 - `equals?: EqualityFn<T>` – Custom equality function
 
-### `Store<T>`
+### `State<T>`
 
 #### Read Methods
 
@@ -618,8 +618,8 @@ Creates a new store instance.
 
 #### Scoping Methods
 
-- `createChild(patch?: Partial<T>): Store<T>` – Create independent child store
-- `runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>` – Execute with scoped store
+- `createChild(patch?: Partial<T>): State<T>` – Create independent child state
+- `runInScope<R>(fn: (scopedState: State<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R>` – Execute with scoped state
 
 ### Utility Functions
 
@@ -628,21 +628,21 @@ Creates a new store instance.
 
 ### Testing Helpers
 
-- `createTestStore<T>(baseStore?: Store<T>, patch?: Partial<T>)` – Create test store
-- `withMock<T, R>(baseStore: Store<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>` – Temporary state override
+- `createTestState<T>(baseState?: State<T>, patch?: Partial<T>)` – Create test state
+- `withStateMock<T, R>(baseState: State<T>, patch: Partial<T>, fn: () => R | Promise<R>): Promise<R>` – Temporary state override
 
 ## TypeScript Support
 
 Fully typed with comprehensive type inference:
 
 ```typescript
-const store = createStore({ count: 0, name: 'test' });
+const state = createState({ count: 0, name: 'test' });
 
 // Type inferred: { count: number; name: string }
-const state = store.get();
+const current = state.get();
 
 // Type-safe selectors
-store.subscribe(
+state.subscribe(
   (state) => state.count, // Type: number
   (count) => {
     // count is typed as number
@@ -650,7 +650,7 @@ store.subscribe(
 );
 
 // Compile-time error for invalid keys
-store.set({ invalid: true }); // ❌ Type error
+state.set({ invalid: true }); // ❌ Type error
 ```
 
 ## FAQ
@@ -665,14 +665,14 @@ Use stateit when you need:
 - Fine-grained subscription control
 - Minimal bundle size impact
 
-### Can I use multiple stores?
+### Can I use multiple states?
 
-Yes! Create as many stores as needed:
+Yes! Create as many states as needed:
 
 ```typescript
-const authStore = createStore({ user: null });
-const themeStore = createStore({ mode: 'light' });
-const dataStore = createStore({ items: [] });
+const authStore = createState({ user: null });
+const themeStore = createState({ mode: 'light' });
+const dataStore = createState({ items: [] });
 ```
 
 ### How does batching work?
@@ -680,9 +680,9 @@ const dataStore = createStore({ items: [] });
 State changes within the same synchronous tick are automatically batched:
 
 ```typescript
-store.set({ count: 1 });
-store.set({ count: 2 });
-store.set({ count: 3 });
+state.set({ count: 1 });
+state.set({ count: 2 });
+state.set({ count: 3 });
 // Subscribers called once with final state
 ```
 
@@ -691,7 +691,7 @@ store.set({ count: 3 });
 While stateit doesn't have built-in DevTools support, you can implement it via observers:
 
 ```typescript
-store.subscribe((state, prev) => {
+state.subscribe((state, prev) => {
   window.__REDUX_DEVTOOLS_EXTENSION__?.send({
     type: 'STATE_UPDATE',
     payload: state,

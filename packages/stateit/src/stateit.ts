@@ -1,11 +1,11 @@
 /** -------------------- Core Types -------------------- **/
 
-export type Listener<T> = (state: T, prev: T) => void;
-export type Selector<T, U> = (state: T) => U;
+export type Listener<T> = (curr: T, prev: T) => void;
+export type Selector<T, U> = (data: T) => U;
 export type Unsubscribe = () => void;
 export type EqualityFn<U> = (a: U, b: U) => boolean;
 
-export type StoreOptions<T> = {
+export type StateOptions<T> = {
   name?: string;
   equals?: EqualityFn<T>;
 };
@@ -48,7 +48,7 @@ type Subscription<T, U> = {
 
 let nextId = 0;
 
-export class Store<T extends object> {
+export class State<T extends object> {
   private state: T;
   private readonly initialState: T;
   private readonly name?: string;
@@ -56,7 +56,7 @@ export class Store<T extends object> {
   private readonly equals: EqualityFn<T>;
   private scheduled = false;
 
-  constructor(initialState: T, options?: StoreOptions<T>) {
+  constructor(initialState: T, options?: StateOptions<T>) {
     this.state = initialState;
     this.initialState = initialState;
     this.name = options?.name;
@@ -74,8 +74,8 @@ export class Store<T extends object> {
   /** -------------------- Write State -------------------- **/
 
   set(patch: Partial<T>): void;
-  set(updater: (state: T) => T | Promise<T>): Promise<void>;
-  set(patchOrUpdater: Partial<T> | ((state: T) => T | Promise<T>)): void | Promise<void> {
+  set(updater: (data: T) => T | Promise<T>): Promise<void>;
+  set(patchOrUpdater: Partial<T> | ((data: T) => T | Promise<T>)): void | Promise<void> {
     const prevState = this.state;
 
     // Handle partial object merge
@@ -90,7 +90,7 @@ export class Store<T extends object> {
     // Handle updater function (sync or async)
     const result = patchOrUpdater(prevState);
 
-    // Check if result is a Promise (async updater)
+    // Check if a result is a Promise (async updater)
     if (result instanceof Promise) {
       return result.then((nextState) => {
         if (this.equals(prevState, nextState)) return;
@@ -147,7 +147,7 @@ export class Store<T extends object> {
 
     this.subscriptions.set(id, subscription as Subscription<T, unknown>);
 
-    // Call listener immediately with current value
+    // Call listener immediately with the current value
     try {
       listener(initialValue, initialValue);
     } catch {
@@ -161,20 +161,20 @@ export class Store<T extends object> {
 
   /** -------------------- Scoped Stores -------------------- **/
 
-  createChild(patch?: Partial<T>): Store<T> {
+  createChild(patch?: Partial<T>): State<T> {
     const childInitialState = patch ? shallowMerge(this.state, patch) : this.state;
     const childName = this.name ? `${this.name}.child` : undefined;
 
-    return new Store<T>(childInitialState, {
+    return new State<T>(childInitialState, {
       equals: this.equals,
       name: childName,
     });
   }
 
-  async runInScope<R>(fn: (scopedStore: Store<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R> {
+  async runInScope<R>(fn: (scopedState: State<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R> {
     const childStore = this.createChild(patch);
     try {
-      return await Promise.resolve(fn(childStore));
+      return fn(childStore);
     } finally {
       // Child store will be garbage collected
     }
@@ -219,26 +219,26 @@ export class Store<T extends object> {
 
 /** -------------------- Factory Function -------------------- **/
 
-export function createStore<T extends object>(initialState: T, options?: StoreOptions<T>): Store<T> {
-  return new Store<T>(initialState, options);
+export function createState<T extends object>(initialState: T, options?: StateOptions<T>): State<T> {
+  return new State<T>(initialState, options);
 }
 
 /** -------------------- Testing Helpers -------------------- **/
 
-export function createTestStore<T extends object>(baseStore?: Store<T>, patch?: Partial<T>) {
-  const root = baseStore ?? new Store<T>({} as T);
-  const testStore = root.createChild(patch);
+export function createTestState<T extends object>(baseState?: State<T>, patch?: Partial<T>) {
+  const root = baseState ?? new State<T>({} as T);
+  const testState = root.createChild(patch);
 
   return {
     dispose: () => {
-      testStore.reset();
+      testState.reset();
     },
-    store: testStore,
+    state: testState,
   };
 }
 
-export async function withMock<T extends object, R>(
-  baseStore: Store<T>,
+export async function withStateMock<T extends object, R>(
+  baseStore: State<T>,
   patch: Partial<T>,
   fn: () => R | Promise<R>,
 ): Promise<R> {
