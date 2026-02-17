@@ -104,6 +104,72 @@ defineElement('product-list', {
 });
 ```
 
+## Advanced Features
+
+Craftit provides powerful features for building complex web components with reactive state, lifecycle management, and form integration.
+
+### State Management
+
+Components can manage internal state that automatically triggers re-renders when changed:
+
+```ts
+defineElement('counter', {
+  state: { count: 0 },
+  template: (el) => html`
+    <div>
+      <p>Count: ${el.state.count}</p>
+      <button onclick="this.increment()">Increment</button>
+    </div>
+  `,
+  methods: {
+    increment() {
+      this.state.count++; // Automatic re-render
+    },
+  },
+});
+```
+
+### Shadow DOM & Styling
+
+Craftit supports both Shadow DOM (default) and Light DOM rendering:
+
+```ts
+defineElement('my-card', {
+  shadow: true, // Default: uses Shadow DOM
+  template: html`<div class="card">Content</div>`,
+  styles: [css`
+    .card {
+      border: 1px solid #ccc;
+      padding: 1rem;
+    }
+  `],
+});
+
+// Light DOM (no shadow)
+defineElement('no-shadow', {
+  shadow: false, // Renders in Light DOM
+  template: html`<div>No encapsulation</div>`,
+});
+```
+
+### Form-Associated Elements
+
+Build custom form controls that integrate with native forms:
+
+```ts
+defineElement('custom-input', {
+  formAssociated: true,
+  state: { value: '' },
+  template: (el) => html`<input value="${el.state.value}" />`,
+  onConnected(el) {
+    el.on('input', 'change', (e) => {
+      el.state.value = (e.target as HTMLInputElement).value;
+      el.setValue(el.state.value); // Update form value
+    });
+  },
+});
+```
+
 ## Reactive State
 
 ### Direct Mutation

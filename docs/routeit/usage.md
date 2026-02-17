@@ -135,6 +135,65 @@ router.get('/products/:category', ({ params, query }) => {
 // GET /products/electronics?sort=price&filter=new&filter=sale
 ```
 
+## Advanced Features
+
+Routeit provides sophisticated routing capabilities including middleware, nested routes, named routes, and programmatic navigation.
+
+### Middleware
+
+Execute code before route handlers for authentication, logging, or data loading:
+
+```ts
+import type { Middleware } from '@vielzeug/routeit';
+
+// Authentication middleware
+const requireAuth: Middleware = async (ctx, next) => {
+  if (!isAuthenticated()) {
+    router.navigate('/login');
+    return;
+  }
+  await next(); // Continue to handler
+};
+
+// Apply to specific route
+router.get('/dashboard', {
+  middleware: requireAuth,
+  handler: () => {
+    // Only accessible when authenticated
+  },
+});
+```
+
+### Route Context
+
+Access rich routing information in handlers:
+
+```ts
+router.get('/users/:id', ({ params, query, pathname, search }) => {
+  console.log('User ID:', params.id);
+  console.log('Query params:', query);
+  console.log('Full path:', pathname);
+  console.log('Query string:', search);
+});
+```
+
+### Named Routes
+
+Navigate by route name for maintainable routing:
+
+```ts
+router.route({
+  path: '/users/:id',
+  name: 'userDetail',
+  handler: ({ params }) => {
+    console.log('User:', params.id);
+  },
+});
+
+// Navigate by name
+router.navigateTo('userDetail', { id: '123' });
+```
+
 ## Navigation
 
 ### Programmatic Navigation

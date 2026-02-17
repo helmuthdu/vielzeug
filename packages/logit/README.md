@@ -96,7 +96,7 @@ Logit.setPrefix('MyApp');
 Logit.info('This message has a namespace'); // [MYAPP] This message has a namespace
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Log Levels
 

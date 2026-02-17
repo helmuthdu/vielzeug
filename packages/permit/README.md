@@ -113,7 +113,7 @@ Permit.check(user, 'posts', 'update', { authorId: '456' }); // false
 Permit.check(user, 'posts', 'delete'); // false
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Permission Actions
 

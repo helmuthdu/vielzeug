@@ -181,7 +181,7 @@ await db.clear('users');
 const count = await db.count('users');
 ```
 
-## 📚 Core Concepts
+## 🎓 Core Concepts
 
 ### Schema Definition
 

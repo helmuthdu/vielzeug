@@ -6,6 +6,10 @@ Complete guide to installing and using i18nit in your projects.
 This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
 :::
 
+## Table of Contents
+
+[[toc]]
+
 ## Installation
 
 ::: code-group
@@ -32,10 +36,6 @@ import { createI18n } from '@vielzeug/i18nit';
 // Optional: Import types
 import type { I18n, I18nConfig, Messages, TranslateOptions, MessageValue, PluralMessages } from '@vielzeug/i18nit';
 ```
-
-## Table of Contents
-
-[[toc]]
 
 ## Basic Usage
 
@@ -227,6 +227,50 @@ const i18n = createI18n({
 
 i18n.t('errors.404'); // "Page not found"
 ```
+
+## Advanced Features
+
+I18nit provides sophisticated internationalization features including pluralization, interpolation, async loading, and custom formatters.
+
+### Dynamic Language Switching
+
+Switch languages at runtime with automatic re-rendering:
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: { /* ... */ }, fr: { /* ... */ } },
+});
+
+// Switch language
+i18n.setLocale('fr');
+
+// Get current locale
+const current = i18n.getLocale(); // 'fr'
+```
+
+### Fallback Chains
+
+Define fallback locales for missing translations:
+
+```ts
+const i18n = createI18n({
+  locale: 'fr-CA',
+  fallbackLocale: ['fr', 'en'],
+  messages: {
+    'fr-CA': { greeting: 'Bonjour' },
+    'fr': { farewell: 'Au revoir' },
+    'en': { greeting: 'Hello', farewell: 'Goodbye' },
+  },
+});
+
+i18n.t('greeting'); // 'Bonjour' (from fr-CA)
+i18n.t('farewell'); // 'Au revoir' (falls back to fr)
+```
+
+### Message Formatting
+
+Use custom formatters for dates, numbers, and currencies.
 
 ## Pluralization
 
@@ -695,7 +739,7 @@ i18nit supports the following interpolation path formats:
 - `{user.name}` – Nested object property
 - `{user.profile.email}` – Deep nested property
 - `{items[0]}` – Array index (safe – returns empty if out of bounds)
-- `{items}` – Array join with default separator (`, `)
+- `{items}` – Array join with default separator (`,`)
 - `{items|and}` – Array join with natural "and" (e.g., "A, B and C")
 - `{items|or}` – Array join with natural "or" (e.g., "A, B or C")
 - `{items| – }` – Array join with custom separator
@@ -947,83 +991,6 @@ if (await i18n.hasAsync('greeting', 'es')) {
 await Promise.all([i18n.load('es'), i18n.load('fr'), i18n.load('de')]);
 
 console.log('All translations loaded');
-```
-
-## Message Functions
-
-### Basic Functions
-
-```ts
-const i18n = createI18n({
-  messages: {
-    en: {
-      dynamic: (vars) => {
-        const name = vars.name as string;
-        const time = new Date().getHours();
-        if (time < 12) return `Good morning, ${name}!`;
-        if (time < 18) return `Good afternoon, ${name}!`;
-        return `Good evening, ${name}!`;
-      },
-    },
-  },
-});
-
-i18n.t('dynamic', { name: 'Alice' });
-// "Good morning, Alice!" (depending on time)
-```
-
-### Using Helper Functions
-
-```ts
-const i18n = createI18n({
-  messages: {
-    en: {
-      price: (vars, helpers) => {
-        const amount = vars.amount as number;
-        return `Total: ${helpers.number(amount, { style: 'currency', currency: 'USD' })}`;
-      },
-      timestamp: (vars, helpers) => {
-        const date = vars.date as Date;
-        return `Posted ${helpers.date(date, { dateStyle: 'medium', timeStyle: 'short' })}`;
-      },
-    },
-  },
-});
-
-i18n.t('price', { amount: 99.99 });
-// "Total: $99.99"
-
-i18n.t('timestamp', { date: new Date() });
-// "Posted Feb 9, 2026, 2:30 PM"
-```
-
-### Complex Logic
-
-```ts
-const i18n = createI18n({
-  messages: {
-    en: {
-      scoreMessage: (vars, helpers) => {
-        const score = vars.score as number;
-        const maxScore = vars.maxScore as number;
-        const percentage = (score / maxScore) * 100;
-        const formattedScore = helpers.number(score);
-        const formattedMax = helpers.number(maxScore);
-
-        if (percentage >= 90) {
-          return `Excellent! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
-        }
-        if (percentage >= 70) {
-          return `Good job! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
-        }
-        return `Keep trying! ${formattedScore}/${formattedMax} (${percentage.toFixed(1)}%)`;
-      },
-    },
-  },
-});
-
-i18n.t('scoreMessage', { score: 95, maxScore: 100 });
-// "Excellent! 95/100 (95.0%)"
 ```
 
 ## Namespaces

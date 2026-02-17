@@ -20,15 +20,15 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ### Comparison with Alternatives
 
-| Feature                | Toolkit                                               | Lodash            | Ramda             | Native JS  |
-| ---------------------- | ----------------------------------------------------- | ----------------- | ----------------- | ---------- |
-| TypeScript Support     | ✅ First-class                                        | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
-| Tree-shakeable         | ✅ By default                                         | ⚠️ lodash-es only | ✅ Yes            | N/A        |
-| Bundle Size (min+gzip) | ~0.1-1KB per utility                                  | ~24KB (full)      | ~12KB (full)      | 0KB        |
-| Dependencies           | <PackageInfo package="toolkit" type="dependencies" /> | 0                 | 0                 | N/A        |
-| Learning Curve         | Low                                                   | Low               | High (FP focused) | Low        |
-| Async Support          | ✅ Built-in                                           | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
-| Isomorphic             | ✅ Browser + Node.js                                  | ✅ Yes            | ✅ Yes            | ✅ Yes     |
+| Feature                | Toolkit                                               | Lodash            | Ramda             | Native JS   |
+| ---------------------- | ----------------------------------------------------- | ----------------- | ----------------- | ----------- |
+| Dependencies           | <PackageInfo package="toolkit" type="dependencies" /> | 0                 | 0                 | N/A         |
+| Bundle Size (min+gzip) | ~0.1-1 KB per utility                                 | ~26 KB (full)     | ~16 KB (full)     | 0 KB        |
+| TypeScript             | ✅ First-class                                        | ⚠️ Via @types     | ⚠️ Via @types     | ⚠️ Limited  |
+| Async Support          | ✅ Built-in                                           | ⚠️ Limited        | ⚠️ Limited        | ⚠️ Manual   |
+| Isomorphic             | ✅ Yes                                                | ✅ Yes            | ✅ Yes            | ✅ Yes      |
+| Tree-shakeable         | ✅ By default                                         | ⚠️ lodash-es only | ✅ Yes            | N/A         |
+| Learning Curve         | Low                                                   | Low               | High (FP focused) | Low         |
 
 ## When to Use Toolkit
 
@@ -58,147 +58,29 @@ Modern JavaScript projects often require common data manipulation tasks—groupi
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/toolkit
-```
-
-```sh [npm]
-npm install @vielzeug/toolkit
-```
-
-```sh [yarn]
-yarn add @vielzeug/toolkit
-```
-
-:::
-
-### Basic Usage
-
-Import only what you need (tree-shaking friendly):
-
 ```ts
-import { chunk, group, isString } from '@vielzeug/toolkit';
+import { chunk, group, debounce } from '@vielzeug/toolkit';
 
-// Split an array into chunks
+// Split array into chunks
 const chunks = chunk([1, 2, 3, 4, 5], 2); // [[1, 2], [3, 4], [5]]
 
-// Group by a property
+// Group by property
 const users = [
   { id: 1, role: 'admin' },
   { id: 2, role: 'user' },
 ];
 const grouped = group(users, (u) => u.role); // { admin: [...], user: [...] }
+
+// Debounce function
+const search = debounce((query) => fetchResults(query), 300);
 ```
 
-Or import from specific modules:
+::: tip Next Steps
 
-```ts
-import { chunk } from '@vielzeug/toolkit/array';
-import { group } from '@vielzeug/toolkit/object';
-import { debounce } from '@vielzeug/toolkit/function';
-```
-
-### Real-World Example
-
-**Problem**: You're building an e-commerce API that needs to paginate products, group them by category, and handle search with debouncing.
-
-**Without Toolkit** (verbose, error-prone):
-
-```ts
-// Pagination – manual implementation
-function paginateProducts(products: Product[], page: number, size: number) {
-  const start = (page – 1) * size;
-  const end = start + size;
-  return products.slice(start, end);
-}
-
-// Grouping – verbose reduce logic
-function groupByCategory(products: Product[]) {
-  return products.reduce(
-    (acc, product) => {
-      const category = product.category;
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(product);
-      return acc;
-    },
-    {} as Record<string, Product[]>,
-  );
-}
-
-// Debounce – complex timing logic
-function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
-}
-```
-
-**With Toolkit** (clean, type-safe, one-liner):
-
-```ts
-import { chunk, group, debounce, retry, pool } from '@vielzeug/toolkit';
-
-// Pagination – elegant and clear
-const page1 = chunk(products, 20)[0]; // First page of 20 items
-
-// Grouping – type-safe with full inference
-const byCategory = group(products, (p) => p.category);
-// Type: Record<string, Product[]> – automatically inferred!
-
-// Debounce – maintains original function signature
-const searchProducts = debounce((query: string) => {
-  console.log(`Searching for: ${query}`);
-}, 300);
-
-// Async utilities – retry API calls with exponential backoff
-const data = await retry(() => fetch('/api/data').then((r) => r.json()), { times: 3, delay: 1000, backoff: 2 });
-
-// Rate limiting with promise pool
-const apiPool = pool(5); // Max 5 concurrent requests
-const results = await Promise.all(urls.map((url) => apiPool(() => fetch(url))));
-```
-
-### TypeScript Integration
-
-Toolkit provides excellent TypeScript support with **full type inference**:
-
-```ts
-import { pick, isString, map } from '@vielzeug/toolkit';
-
-const user = {
-  id: 1,
-  name: 'Alice',
-  email: 'alice@example.com',
-  role: 'admin',
-};
-
-// ✅ Type is automatically inferred as { name: string; email: string }
-const publicUser = pick(user, ['name', 'email']);
-
-// ✅ Type guard narrows unknown to string
-function processInput(input: unknown) {
-  if (isString(input)) {
-    // TypeScript knows input is string here
-    return input.toUpperCase();
-  }
-  return 'Invalid input';
-}
-
-// ✅ Async operations with proper type inference
-const ids = [1, 2, 3];
-const users = await map(ids, async (id) => {
-  const response = await fetch(`/api/users/${id}`);
-  return response.json(); // Type inferred from context
-});
-```
+- See [Usage Guide](./usage.md) for category-specific imports and patterns
+- Check [API Reference](./api.md) for complete utility list (100+ functions)
+- Browse [Examples](./examples.md) for real-world use cases
+  :::
 
 ## 🎓 Core Concepts
 
@@ -246,13 +128,6 @@ const processUsers = pipe(
   (users) => sort(users, (a, b) => a.name.localeCompare(b.name)),
 );
 ```
-
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Installation, importing, and best practices
-- **[API Reference](./api.md)**: Complete list of all available functions
-- **[Examples](./examples)**: Practical code examples
-- **[Interactive REPL](/repl)**: Try it in your browser
 
 ### 🧩 Utilities by Category
 
@@ -370,9 +245,12 @@ Check the [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/t
 
 ### Tree-shaking not working
 
-**Problem**: Your bundle includes more code than expected.
+::: danger Problem
+Your bundle includes more code than expected.
+:::
 
-**Solution**: Ensure your bundler supports ES modules and tree-shaking:
+::: tip Solution
+Ensure your bundler supports ES modules and tree-shaking:
 
 ```js
 // vite.config.js
@@ -395,11 +273,16 @@ module.exports = {
 };
 ```
 
+:::
+
 ### TypeScript errors with imports
 
-**Problem**: Getting module resolution errors.
+::: danger Problem
+Getting module resolution errors.
+:::
 
-**Solution**: Make sure your `tsconfig.json` has modern module resolution:
+::: tip Solution
+Make sure your `tsconfig.json` has modern module resolution:
 
 ```json
 {
@@ -411,11 +294,16 @@ module.exports = {
 }
 ```
 
+:::
+
 ### Type inference not working
 
-**Problem**: TypeScript doesn't infer types correctly.
+::: danger Problem
+TypeScript doesn't infer types correctly.
+:::
 
-**Solution**:
+::: tip Solution
+Follow these best practices:
 
 1. Ensure you're using TypeScript 5.0+
 2. Don't use type assertions that hide inference
@@ -429,11 +317,16 @@ const result = map(items, (x) => x.name) as string[];
 const result = map(items, (x) => x.name); // Type: string[]
 ```
 
+:::
+
 ### Utilities not available in older browsers
 
-**Problem**: Code breaks in older browsers (IE11, old Safari).
+::: danger Problem
+Code breaks in older browsers (IE11, old Safari).
+:::
 
-**Solution**: Toolkit targets modern JavaScript (ES2020+). For older browsers:
+::: tip Solution
+Toolkit targets modern JavaScript (ES2020+). For older browsers:
 
 1. Use a transpiler (Babel, SWC):
 
@@ -453,16 +346,23 @@ module.exports = {
 
 2. Or consider polyfills for specific features.
 
+:::
+
 ### Performance issues with large arrays
 
-**Problem**: Operations are slow on very large datasets (100k+ items).
+::: danger Problem
+Operations are slow on very large datasets (100k+ items).
+:::
 
-**Solution**:
+::: tip Solution
+Optimize for large datasets:
 
 - Use pagination (`chunk`) for rendering
 - Consider streaming/lazy evaluation for massive datasets
 - Profile with DevTools to identify bottlenecks
 - Some utilities have specific performance notes in their docs
+
+:::
 
 ## 🤝 Contributing
 

@@ -55,13 +55,34 @@ router.navigate('/users/123');
 
 ### Comparison with Alternatives
 
-| Feature            | Routeit                                               | React Router | Vue Router |
-| ------------------ | ----------------------------------------------------- | ------------ | ---------- |
-| Bundle Size        | **<PackageInfo package="routeit" type="size" />**     | ~11KB        | ~22KB      |
-| Dependencies       | <PackageInfo package="routeit" type="dependencies" /> | React        | Vue        |
-| TypeScript         | Native                                                | Good         | Good       |
-| Framework Agnostic | ✅                                                    | ❌           | ❌         |
-| Middleware System  | ✅                                                    | ❌           | ✅         |
+| Feature            | Routeit                                               | React Router | Vue Router  |
+| ------------------ | ----------------------------------------------------- | ------------ | ----------- |
+| Bundle Size        | **<PackageInfo package="routeit" type="size" />**     | ~65 KB       | ~42 KB      |
+| Dependencies       | <PackageInfo package="routeit" type="dependencies" /> | React        | Vue         |
+| TypeScript         | ✅ First-class                                        | ✅ Good      | ✅ Good     |
+| Framework          | Agnostic                                              | React only   | Vue only    |
+| Middleware System  | ✅ Built-in                                           | ❌           | ✅ Built-in |
+
+## When to Use Routeit
+
+**✅ Use Routeit when you:**
+
+- Need framework-agnostic routing across React, Vue, Svelte, or vanilla JS
+- Want a powerful middleware system for auth, logging, and request handling
+- Require minimal bundle size (<PackageInfo package="routeit" type="size" />)
+- Need type-safe route parameters and query strings
+- Want to integrate with @vielzeug/permit for permission-based routing
+- Build SPAs with nested routes and layouts
+- Need both hash and history mode support
+- Prefer zero dependencies for better security and maintainability
+
+**❌ Consider alternatives when you:**
+
+- Only use React and need deep React integration (use React Router)
+- Only use Vue and want Vue-specific optimizations (use Vue Router)
+- Need server-side rendering (SSR) with file-based routing
+- Build static sites without client-side navigation
+- Require framework-specific DevTools integration
 
 ## 🚀 Key Features
 
@@ -77,14 +98,6 @@ router.navigate('/users/123');
 
 ## 🏁 Quick Start
 
-Install the package:
-
-```bash
-pnpm add @vielzeug/routeit
-```
-
-Create a basic router:
-
 ```ts
 import { createRouter } from '@vielzeug/routeit';
 
@@ -94,22 +107,19 @@ router
   .get('/', () => {
     document.getElementById('app').innerHTML = '<h1>Home</h1>';
   })
-  .get('/about', () => {
-    document.getElementById('app').innerHTML = '<h1>About</h1>';
-  })
   .get('/users/:id', ({ params }) => {
     document.getElementById('app').innerHTML = `<h1>User ${params.id}</h1>`;
   })
   .start();
 ```
 
-## 📚 Documentation
+::: tip Next Steps
 
-- [Usage Guide](./usage.md) – Comprehensive usage guide
-- [API Reference](./api.md) – Complete API documentation
-- [Examples](./examples.md) – Real-world examples
+- See [Usage Guide](./usage.md) for middleware, nested routes, and query parameters
+- Check [Examples](./examples.md) for framework integrations
+  :::
 
-## 💡 Core Concepts
+## 🎓 Core Concepts
 
 ### Route Parameters
 
@@ -180,43 +190,106 @@ const url = router.urlFor('userDetail', { id: '123' }); // '/users/123'
 
 ## ❓ FAQ
 
-**Q: Can I use this with React/Vue/Svelte?**  
-A: Yes! Routeit is framework-agnostic. See the [Examples](./examples.md) for integration examples.
+### Can I use this with React/Vue/Svelte?
 
-**Q: How do I handle authentication?**  
-A: Use middleware! Check the [Usage Guide](./usage.md#middleware) for auth examples.
+Yes! Routeit is framework-agnostic. See the [Examples](./examples.md) for integration examples.
 
-**Q: Does it support nested routes?**  
-A: Yes, through the `children` property. See [Nested Routes](./usage.md#nested-routes).
+### How do I handle authentication?
 
-**Q: What about lazy loading?**  
-A: Use async middleware to load route modules dynamically. See [Examples](./examples.md).
+Use middleware! Check the [Usage Guide](./usage.md#middleware) for auth examples.
 
-**Q: Can I integrate with @vielzeug/permit?**  
-A: Absolutely! See the [Permission Integration](./usage.md#permission-integration) section.
+### Does it support nested routes?
+
+Yes, through the `children` property. See [Nested Routes](./usage.md#nested-routes).
+
+### What about lazy loading?
+
+Use async middleware to load route modules dynamically. See [Examples](./examples.md).
+
+### Can I integrate with @vielzeug/permit?
+
+Absolutely! See the [Permission Integration](./usage.md#permission-integration) section.
 
 ## 🐛 Troubleshooting
 
-**Routes not matching:**
+### Routes not matching
 
-- Check path syntax – use `:param` for parameters
+::: danger Problem
+Routes aren't being matched or triggered.
+:::
+
+::: tip Solution
+Check your path syntax and router setup:
+
+- Use `:param` for parameters (e.g., `/users/:id`)
 - Ensure router is started with `.start()`
 - Verify base path configuration
 
-**Middleware not executing:**
+:::
 
-- Make sure to call `await next()` to continue the chain
-- Check execution order (global → route → handler)
+### Middleware not executing
 
-**404 not working:**
+::: danger Problem
+Middleware functions not being called.
+:::
 
-- Provide a `notFound` handler in router options
-- Check if another route is matching first
+::: tip Solution
+Make sure to call `await next()` to continue the chain:
 
-**Hash mode not working:**
+```ts
+router.use(async (ctx, next) => {
+  console.log('Before');
+  await next(); // ✅ Must call next()
+  console.log('After');
+});
+```
 
-- Ensure `mode: 'hash'` is set in router options
-- Check URL format includes `#` (e.g., `#/about`)
+Check execution order: global → route → handler
+
+:::
+
+### 404 handler not working
+
+::: danger Problem
+404 handler not being triggered for unmatched routes.
+:::
+
+::: tip Solution
+Provide a `notFound` handler in router options:
+
+```ts
+const router = createRouter({
+  notFound: (ctx) => {
+    ctx.response = { status: 404, body: 'Not Found' };
+  },
+});
+```
+
+Check if another route is matching first.
+
+:::
+
+### Hash mode not working
+
+::: danger Problem
+Hash routing not functioning correctly.
+:::
+
+::: tip Solution
+Ensure `mode: 'hash'` is set and URLs include `#`:
+
+```ts
+const router = createRouter({
+  mode: 'hash', // ✅ Enable hash mode
+  routes: [
+    /* ... */
+  ],
+});
+
+// URL format: http://example.com/#/about
+```
+
+:::
 
 ## 🤝 Contributing
 

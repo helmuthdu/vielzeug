@@ -72,10 +72,10 @@ await form.submit(async (formData) => {
 
 | Feature                | Formit                                               | React Hook Form | Formik      | Native Forms |
 | ---------------------- | ---------------------------------------------------- | --------------- | ----------- | ------------ |
+| Bundle Size (gzip)     | **<PackageInfo package="formit" type="size" />**     | ~15 KB          | ~17 KB      | 0 KB         |
+| Dependencies           | <PackageInfo package="formit" type="dependencies" /> | 0               | 3+          | 0            |
 | Framework              | **Agnostic**                                         | React           | React       | Agnostic     |
 | TypeScript             | ✅ First-class                                       | ✅ First-class  | ✅ Good     | ❌           |
-| Bundle Size (gzip)     | **<PackageInfo package="formit" type="size" />**     | ~9 KB           | ~13 KB      | 0 KB         |
-| Dependencies           | <PackageInfo package="formit" type="dependencies" /> | 0               | 3+          | 0            |
 | Native FormData        | ✅ Built-in                                          | ⚠️ Optional     | ❌          | ✅ Manual    |
 | File Upload Support    | ✅ Native                                            | ✅ Yes          | ⚠️ Complex  | ✅ Manual    |
 | Nested Objects         | ✅ Auto-flat                                         | ✅ Yes          | ✅ Yes      | ❌           |
@@ -123,26 +123,6 @@ await form.submit(async (formData) => {
 - **Lightweight**: Only **~<PackageInfo package="formit" type="size" /> gzipped**, <PackageInfo package="formit" type="dependencies" /> dependencies
 
 ## 🏁 Quick Start
-
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/formit
-```
-
-```sh [npm]
-npm install @vielzeug/formit
-```
-
-```sh [yarn]
-yarn add @vielzeug/formit
-```
-
-:::
-
-### Basic Example
 
 ::: code-group
 
@@ -343,13 +323,6 @@ await form.validate({ fields: ['email', 'password'] }); // Specific fields
 {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
 ```
 
-## 📚 Documentation
-
-- **[Usage Guide](./usage.md)**: Detailed validation, file uploads, and framework integration
-- **[API Reference](./api.md)**: Complete documentation of all methods and types
-- **[Examples](./examples.md)**: Real-world patterns including multi-step forms and dynamic fields
-- **[Interactive REPL](/repl)**: Try Formit in your browser
-
 ## ❓ FAQ
 
 ### Is Formit production-ready?
@@ -381,7 +354,7 @@ Formit is framework-agnostic (~2.9 KB) while React Hook Form is React-specific (
 ### Form values not updating in UI
 
 ::: danger Problem
-Form state changes but component doesn't re-render.
+Form state changes, but the component doesn't re-render.
 :::
 
 ::: tip Solution

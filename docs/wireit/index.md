@@ -72,16 +72,16 @@ const service = container.get(UserService);
 
 ### Comparison with Alternatives
 
-| Feature          | Wireit                                               | InversifyJS | TSyringe |
-| ---------------- | ---------------------------------------------------- | ----------- | -------- |
-| Bundle Size      | **~<PackageInfo package="wireit" type="size" />**    | ~14KB       | ~7KB     |
-| Dependencies     | <PackageInfo package="wireit" type="dependencies" /> | 1           | 2        |
-| Decorators       | ❌                                                   | ✅          | ✅       |
-| Async Support    | ✅                                                   | ✅          | ❌       |
-| Scoped Lifetimes | ✅                                                   | ✅          | ✅       |
-| Testing Helpers  | ✅                                                   | ❌          | ❌       |
-| TypeScript First | ✅                                                   | ✅          | ✅       |
-| No Reflect-meta  | ✅                                                   | ❌          | ❌       |
+| Feature          | Wireit                                               | InversifyJS    | TSyringe    |
+| ---------------- | ---------------------------------------------------- | -------------- | ----------- |
+| Bundle Size      | **<PackageInfo package="wireit" type="size" />**     | ~17 KB         | ~6 KB       |
+| Dependencies     | <PackageInfo package="wireit" type="dependencies" /> | 1              | 2           |
+| TypeScript       | ✅ First-class                                       | ✅ First-class | ✅ Good     |
+| Async Support    | ✅ Yes                                               | ✅ Yes         | ❌          |
+| Decorators       | ❌                                                   | ✅ Required    | ✅ Required |
+| No Reflect-meta  | ✅ Yes                                               | ❌             | ❌          |
+| Scoped Lifetimes | ✅ Yes                                               | ✅ Yes         | ✅ Yes      |
+| Testing Helpers  | ✅ Built-in                                          | ❌             | ❌          |
 
 ## When to Use Wireit
 
@@ -112,26 +112,6 @@ const service = container.get(UserService);
 
 ## 🏁 Quick Start
 
-### Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/wireit
-```
-
-```sh [npm]
-npm install @vielzeug/wireit
-```
-
-```sh [yarn]
-yarn add @vielzeug/wireit
-```
-
-:::
-
-### Basic Example
-
 ```ts
 import { createContainer, createToken } from '@vielzeug/wireit';
 
@@ -139,19 +119,23 @@ import { createContainer, createToken } from '@vielzeug/wireit';
 const Database = createToken<DatabaseService>('Database');
 const UserService = createToken<UserService>('UserService');
 
-// 2. Create container
+// 2. Create container and register providers
 const container = createContainer();
-
-// 3. Register providers
 container.registerValue(Database, new PrismaDatabase()).register(UserService, {
   useClass: UserServiceImpl,
   deps: [Database],
 });
 
-// 4. Resolve and use
+// 3. Resolve and use
 const userService = container.get(UserService);
 await userService.createUser({ name: 'Alice' });
 ```
+
+::: tip Next Steps
+
+- See [Usage Guide](./usage.md) for lifetimes, async support, and testing
+- Check [Examples](./examples.md) for real-world patterns
+  :::
 
 ## 🎓 Core Concepts
 
@@ -188,40 +172,31 @@ Create parent/child containers for isolation and inheritance:
 - Children can override parent providers
 - Scoped execution with automatic cleanup
 
-## 📚 Documentation
-
-Explore comprehensive guides and references:
-
-- **[Usage Guide](./usage.md)** – Complete guide to dependency injection with Wireit
-- **[API Reference](./api.md)** – Detailed API documentation with all methods
-- **[Examples](./examples.md)** – Real-world examples and framework integrations
-- **[Interactive REPL](/repl)**: Try it in your browser
-
 ## ❓ FAQ
 
-### **Q: How does Wireit differ from InversifyJS?**
+### How does Wireit differ from InversifyJS?
 
-Wireit is smaller (~3KB vs ~14KB), doesn't require decorators, and provides testing utilities out of the box. InversifyJS offers more advanced features like multi-injection and contextual bindings.
+Wireit is smaller (<PackageInfo package="wireit" type="size" /> vs ~17KB), doesn't require decorators, and provides testing utilities out of the box. InversifyJS offers more advanced features like multi-injection and contextual bindings.
 
-### **Q: Can I use Wireit without TypeScript?**
+### Can I use Wireit without TypeScript?
 
 Yes, but you'll lose type safety. Wireit is designed for TypeScript-first projects to maximize type inference and developer experience.
 
-### **Q: How do I handle circular dependencies?**
+### How do I handle circular dependencies?
 
 Refactor your code to break the cycle. Use a shared dependency or create an interface both services depend on instead of depending on each other.
 
-### **Q: Can I use Wireit with Express/NestJS/Fastify?**
+### Can I use Wireit with Express/NestJS/Fastify?
 
 Yes! Wireit is framework-agnostic. See the [Examples](./examples) page for integration patterns with Express, NestJS, and Fastify.
 
-### **Q: What's the difference between singleton and scoped?**
+### What's the difference between singleton and scoped?
 
 - **Singleton**: One instance across the entire application
 - **Scoped**: One instance per scope (e.g., per HTTP request)
 - **Transient**: New instance every time
 
-### **Q: How do I test code that uses Wireit?**
+### How do I test code that uses Wireit?
 
 Use `createTestContainer()` for isolated tests and `withMock()` to temporarily replace dependencies:
 
@@ -234,9 +209,14 @@ await withMock(container, Database, mockDb, async () => {
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### No provider registered for token
 
-**"No provider registered for token"**
+::: danger Problem
+Getting "No provider registered for token" error.
+:::
+
+::: tip Solution
+Register the token before resolving:
 
 ```ts
 // ❌ Token not registered
@@ -247,7 +227,16 @@ container.register(Token, { useClass: Implementation });
 const service = container.get(Token);
 ```
 
-**"Circular dependency detected"**
+:::
+
+### Circular dependency detected
+
+::: danger Problem
+Circular dependency error when resolving services.
+:::
+
+::: tip Solution
+Refactor to break the cycle:
 
 ```ts
 // ❌ Service1 depends on Service2, Service2 depends on Service1
@@ -259,7 +248,16 @@ container.register(Service1, { useClass: S1, deps: [Shared] });
 container.register(Service2, { useClass: S2, deps: [Shared] });
 ```
 
-**"Provider is async, use getAsync()"**
+:::
+
+### Provider is async, use getAsync()
+
+::: danger Problem
+Error: "Provider is async, use getAsync()".
+:::
+
+::: tip Solution
+Use `getAsync()` for async providers:
 
 ```ts
 // ❌ Async provider with sync get
@@ -269,6 +267,8 @@ const db = container.get(DB); // Error!
 // ✅ Use getAsync
 const db = await container.getAsync(DB);
 ```
+
+:::
 
 ## 🤝 Contributing
 

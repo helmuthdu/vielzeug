@@ -46,6 +46,5 @@ const value = computed(() => {
 <style scoped>
 .package-info {
   font-weight: 500;
-  color: var(--vp-c-brand-1);
 }
 </style>

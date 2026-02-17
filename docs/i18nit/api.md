@@ -114,6 +114,7 @@ const messages: Messages = {
 ```
 
 Both structures can be accessed with dot notation:
+
 - `i18n.t('greeting')` → "Hello!"
 - `i18n.t('user.name')` → "User Name"
 - `i18n.t('user.profile.title')` → "Profile"
@@ -186,8 +187,8 @@ const i18n = createI18n({
     },
   },
   loaders: {
-    fr: loadLocale,  // Reusable loader receives 'fr'
-    de: loadLocale,  // Same loader receives 'de'
+    fr: loadLocale, // Reusable loader receives 'fr'
+    de: loadLocale, // Same loader receives 'de'
   },
   escape: false,
 });
@@ -803,7 +804,7 @@ const messages = {
   greeting: 'Hello!',
   welcome: 'Welcome to our app',
 };
-````
+```
 
 ---
 

@@ -27,7 +27,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@vielzeug/logit": "workspace:*",
     "@vielzeug/toolkit": "workspace:*"
   },
   "devDependencies": {
