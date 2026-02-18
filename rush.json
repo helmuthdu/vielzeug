@@ -13,6 +13,12 @@
   "pnpmVersion": "10.29.2",
   "projects": [
     {
+      "packageName": "@vielzeug/buildit",
+      "projectFolder": "packages/buildit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/deposit",
       "projectFolder": "packages/deposit",
       "shouldPublish": true,

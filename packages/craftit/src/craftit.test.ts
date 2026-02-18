@@ -26,6 +26,62 @@ describe('craftit', () => {
         const result = html`<div>${undefined} ${null} ${''}</div>`;
         expect(result).toBe('<div>  </div>');
       });
+
+      describe('boolean attributes', () => {
+        it('should include attribute when value is true', () => {
+          const disabled = true;
+          const result = html`<button ?disabled="${disabled}">Click</button>`;
+          expect(result).toBe('<button disabled>Click</button>');
+        });
+
+        it('should omit attribute when value is false', () => {
+          const disabled = false;
+          const result = html`<button ?disabled="${disabled}">Click</button>`;
+          expect(result).toBe('<button>Click</button>');
+        });
+
+        it('should include attribute when value is empty string', () => {
+          const disabled = '';
+          const result = html`<button ?disabled="${disabled}">Click</button>`;
+          expect(result).toBe('<button disabled>Click</button>');
+        });
+
+        it('should omit attribute when value is null or undefined', () => {
+          const disabled1 = null;
+          const disabled2 = undefined;
+          const result1 = html`<button ?disabled="${disabled1}">Click</button>`;
+          const result2 = html`<button ?disabled="${disabled2}">Click</button>`;
+          expect(result1).toBe('<button>Click</button>');
+          expect(result2).toBe('<button>Click</button>');
+        });
+
+        it('should handle multiple boolean attributes', () => {
+          const disabled = true;
+          const readonly = false;
+          const required = true;
+          const result = html`<input ?disabled="${disabled}" ?readonly="${readonly}" ?required="${required}" />`;
+          expect(result).toBe('<input disabled required />');
+        });
+
+        it('should handle boolean attributes with other attributes', () => {
+          const disabled = true;
+          const type = 'submit';
+          const result = html`<button type="${type}" ?disabled="${disabled}">Submit</button>`;
+          expect(result).toBe('<button type="submit" disabled>Submit</button>');
+        });
+
+        it('should handle boolean attributes with single quotes', () => {
+          const checked = true;
+          const result = html`<input type="checkbox" ?checked='${checked}' />`;
+          expect(result).toBe('<input type="checkbox" checked />');
+        });
+
+        it('should handle hyphenated attribute names', () => {
+          const busy = true;
+          const result = html`<div ?aria-busy="${busy}">Loading</div>`;
+          expect(result).toBe('<div aria-busy>Loading</div>');
+        });
+      });
     });
 
     describe('css', () => {
@@ -40,28 +96,6 @@ describe('craftit', () => {
       it('should handle empty values', () => {
         const result = css`color: ${undefined};`;
         expect(result).toBe('color: ;');
-      });
-
-      describe('css.var', () => {
-        it('should create var() reference', () => {
-          const result = css.var('primaryColor');
-          expect(result).toBe('var(--primary-color)');
-        });
-
-        it('should create var() with fallback', () => {
-          const result = css.var('fontSize', '14px');
-          expect(result).toBe('var(--font-size, 14px)');
-        });
-
-        it('should handle existing -- prefix', () => {
-          const result = css.var('--custom-color');
-          expect(result).toBe('var(--custom-color)');
-        });
-
-        it('should handle numeric fallback', () => {
-          const result = css.var('zIndex', 10);
-          expect(result).toBe('var(--z-index, 10)');
-        });
       });
     });
 
@@ -232,14 +266,14 @@ describe('craftit', () => {
         expect(styles).toContain('var(--text)');
       });
 
-      it('should allow fallback via css.var when needed', () => {
+      it('should work with external CSS variables', () => {
         const theme = css.theme({ primaryColor: '#3b82f6' });
 
         const styles = css`
           ${theme}
           .button {
             color: ${theme.primaryColor};
-            background: ${css.var('externalVar', '#fff')};
+            background: var(--external-var, #fff);
           }
         `;
 

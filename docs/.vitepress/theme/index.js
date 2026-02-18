@@ -3,7 +3,7 @@ import { Logit } from '../../../packages/logit/src';
 import Repl from './components/REPL.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
-
+import '@vielzeug/buildit';
 import './theme.css';
 
 export default {

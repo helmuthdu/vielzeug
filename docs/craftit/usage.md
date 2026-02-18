@@ -104,6 +104,52 @@ defineElement('product-list', {
 });
 ```
 
+### Boolean Attributes
+
+Craftit supports Lit-style boolean attributes using the `?` prefix. This provides a clean way to conditionally include HTML boolean attributes:
+
+```ts
+defineElement('custom-button', {
+  observedAttributes: ['disabled', 'loading'] as const,
+
+  template: (el) => html`
+    <button
+      ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
+      ?aria-busy="${el.hasAttribute('loading')}">
+      <slot></slot>
+    </button>
+  `,
+});
+
+// Usage:
+// <custom-button disabled>Can't Click</custom-button>  → <button disabled>
+// <custom-button>Click Me</custom-button>             → <button>
+```
+
+**How it works:**
+- `?attrName="${true}"` or `?attrName="${''}"` → attribute is included
+- `?attrName="${false}"`, `?attrName="${null}"`, or `?attrName="${undefined}"` → attribute is omitted
+
+**Common use cases:**
+
+```ts
+template: (el) => html`
+  <input
+    type="checkbox"
+    ?checked="${el.state.isChecked}"
+    ?required="${el.state.isRequired}"
+    ?readonly="${el.state.isReadonly}"
+    ?disabled="${el.state.isDisabled}" />
+
+  <button
+    type="submit"
+    ?disabled="${!el.state.isValid || el.state.isSubmitting}"
+    ?aria-busy="${el.state.isSubmitting}">
+    ${el.state.isSubmitting ? 'Submitting...' : 'Submit'}
+  </button>
+`;
+```
+
 ## Advanced Features
 
 Craftit provides powerful features for building complex web components with reactive state, lifecycle management, and form integration.
@@ -348,7 +394,7 @@ defineElement('app-component', {
 - ✅ **Autocomplete** – Type `theme.` and see all available variables
 - ✅ **Type-safe** – Typos caught at compile time
 - ✅ **Refactoring** – Rename variables safely across codebase
-- ✅ **No string matching** – No more `css.var('primryColor')` bugs!
+- ✅ **Direct CSS var references** – Clean, simple syntax
 
 #### Light/Dark Theme with Autocomplete
 
@@ -417,23 +463,6 @@ element.setAttribute('data-theme', 'light');
 element.removeAttribute('data-theme');
 ```
 
-#### Reference CSS Variables (Fallback)
-
-You can still use `css.var()` for external variables or when you need fallbacks:
-
-```ts
-styles: [
-  css`
-    .button {
-      /* For variables defined elsewhere */
-      color: ${css.var('externalColor')};
-
-      /* With fallback value */
-      padding: ${css.var('spacing', '0.5rem')};
-    }
-  `,
-];
-```
 
 #### Custom Selectors
 

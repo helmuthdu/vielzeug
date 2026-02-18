@@ -6,8 +6,9 @@
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-warning));
   --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-warning) 50%, var(--color-error) 50%);
-  --vp-home-hero-image-filter: blur(75px);
+  --vp-home-hero-image-filter: blur(var(--blur-3xl));
   --vp-custom-navbar-color: hsla(240, 4%, 93%, 0.97);
+  --size-0-25: 0.0625rem;
   --size-0-5: 0.125rem;
   --size-1: 0.25rem;
   --size-1-5: 0.375rem;
@@ -59,8 +60,8 @@
   --size-auto: auto;
   --size-none: none;
   --size-prose: 65ch;
-  --size-screen-width: 100vw;
-  --size-screen-height: 100vh;
+  --size-screen-width: 100dvw;
+  --size-screen-height: 100dvh;
   --size-screen-xs: 480px;
   --size-screen-sm: 640px;
   --size-screen-md: 768px;
@@ -84,12 +85,20 @@
   --border-2: 2px;
   --border-4: 4px;
   --border-8: 8px;
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
   --ring: 0 0 0 var(--border);
   --ring-2: 0 0 0 var(--border-2);
   --ring-4: 0 0 0 var(--border-4);
   --ring-8: 0 0 0 var(--border-8);
   --rounded: 0.25rem;
-  --rounded-sm: 0.125rem;
+  --rounded-xs: 0.125rem;
+  --rounded-sm: 0.25rem;
   --rounded-md: 0.375rem;
   --rounded-lg: 0.5rem;
   --rounded-xl: 0.75rem;
@@ -112,19 +121,21 @@
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
+  --line-spacing-xxs: 0.75rem;
   --line-spacing-xs: 1rem;
   --line-spacing-sm: 1.25rem;
   --line-spacing-md: 1.5rem;
-  --line-spacing-lg: 1.75rem;
+  --line-spacing-lg: 1.625rem;
   --line-spacing-xl: 1.75rem;
   --line-spacing-2xl: 2rem;
   --line-spacing-3xl: 2.25rem;
   --line-spacing-4xl: 2.5rem;
-  --line-spacing-5xl: 1;
-  --line-spacing-6xl: 1;
-  --line-spacing-7xl: 1;
-  --line-spacing-8xl: 1;
-  --line-spacing-9xl: 1;
+  --line-spacing-5xl: 3.5rem;
+  --line-spacing-6xl: 4rem;
+  --line-spacing-7xl: 5rem;
+  --line-spacing-8xl: 7rem;
+  --line-spacing-9xl: 9rem;
+  --text-xxs: 0.625rem;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
@@ -138,58 +149,109 @@
   --text-7xl: 4.5rem;
   --text-8xl: 6rem;
   --text-9xl: 8rem;
-  --color-contrast-50: hsla(240, 4%, 93%, 0.97);
-  --color-contrast-100: hsla(240, 4%, 90%, 0.97);
-  --color-contrast-200: hsla(240, 4%, 74%, 0.97);
-  --color-contrast-300: hsla(240, 4%, 57%, 0.97);
-  --color-contrast-400: hsla(240, 4%, 44%, 0.97);
-  --color-contrast-500: hsla(240, 4%, 34%, 0.97);
-  --color-contrast-600: hsla(240, 4%, 26%, 0.97);
-  --color-contrast-700: hsla(240, 4%, 20%, 0.97);
-  --color-contrast-800: hsla(240, 4%, 15%, 0.97);
-  --color-contrast-900: hsla(240, 4%, 12%, 0.97);
+  --color-contrast-50: hsl(240deg 4% 93% / 100%);
+  --color-contrast-100: hsl(240deg 4% 90% / 91%);
+  --color-contrast-200: hsl(240deg 4% 74% / 91%);
+  --color-contrast-300: hsl(240deg 4% 57% / 91%);
+  --color-contrast-400: hsl(240deg 4% 44% / 91%);
+  --color-contrast-500: hsl(240deg 4% 34% / 91%);
+  --color-contrast-600: hsl(240deg 4% 26% / 91%);
+  --color-contrast-700: hsl(240deg 4% 20% / 91%);
+  --color-contrast-800: hsl(240deg 4% 15% / 91%);
+  --color-contrast-900: hsl(240deg 4% 12% / 91%);
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
   --color-content-heading: var(--color-contrast-900);
   --color-content-body: var(--color-contrast-800);
   --color-content-secondary: var(--color-contrast-700);
-  --color-content-tertiary: var(--color-contrast-600);
+  --color-content-tertiary: var(--color-contrast-400);
   --color-content-disabled: var(--color-contrast-500);
-  --color-content-contrast: var(--color-contrast-50);
-  --color-primary-backdrop: hsla(206, 100%, 90%, 0.97);
-  --color-primary-focus: hsla(206, 100%, 51%, 0.97);
-  --color-primary: hsla(206, 100%, 44%, 0.97);
-  --color-primary-content: hsla(206, 100%, 26%, 0.97);
-  --color-primary-contrast: hsla(206, 100%, 97%, 0.97);
-  --color-success-backdrop: hsla(142, 71%, 90%, 0.97);
-  --color-success-focus: hsla(142, 71%, 51%, 0.97);
-  --color-success: hsla(142, 71%, 44%, 0.97);
-  --color-success-content: hsla(142, 71%, 26%, 0.97);
-  --color-success-contrast: hsla(142, 71%, 97%, 0.97);
-  --color-warning-backdrop: hsla(38, 92%, 97%, 0.97);
-  --color-warning-focus: hsla(38, 92%, 63%, 0.97);
-  --color-warning: hsla(38, 92%, 57%, 0.97);
-  --color-warning-content: hsla(38, 92%, 26%, 0.97);
-  --color-warning-contrast: hsla(38, 92%, 97%, 0.97);
-  --color-error-backdrop: hsla(350, 89%, 90%, 0.97);
-  --color-error-focus: hsla(350, 89%, 63%, 0.97);
-  --color-error: hsla(350, 89%, 57%, 0.97);
-  --color-error-content: hsla(350, 89%, 26%, 0.97);
-  --color-error-contrast: hsla(350, 89%, 97%, 0.97);
+  --color-content-contrast: var(--color-contrast-100);
+
+  /* Primary - Vibrant blue (good for all colorblind types) */
+  --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
+  --color-primary-focus: hsl(210deg 100% 55% / 91%);
+  --color-primary: hsl(210deg 100% 48% / 91%);
+  --color-primary-content: hsl(210deg 100% 15% / 91%);
+  --color-primary-contrast: hsl(210deg 100% 97% / 91%);
+
+  /* Success - Teal/cyan instead of pure green (better for red-green colorblindness) */
+  --color-success-backdrop: hsl(168deg 76% 88% / 83%);
+  --color-success-focus: hsl(168deg 76% 48% / 91%);
+  --color-success: hsl(168deg 76% 42% / 91%);
+  --color-success-content: hsl(168deg 76% 15% / 91%);
+  --color-success-contrast: hsl(168deg 76% 97% / 91%);
+
+  /* Warning - Amber/orange (distinct from error, works for all types) */
+  --color-warning-backdrop: hsl(38deg 100% 88% / 83%);
+  --color-warning-focus: hsl(38deg 100% 58% / 91%);
+  --color-warning: hsl(38deg 100% 52% / 91%);
+  --color-warning-content: hsl(38deg 100% 15% / 91%);
+  --color-warning-contrast: hsl(38deg 100% 94% / 91%);
+
+  /* Error - Magenta/vermillion instead of pure red (better for red-green colorblindness) */
+  --color-error-backdrop: hsl(340deg 82% 88% / 83%);
+  --color-error-focus: hsl(340deg 82% 58% / 91%);
+  --color-error: hsl(340deg 82% 52% / 91%);
+  --color-error-content: hsl(340deg 82% 15% / 91%);
+  --color-error-contrast: hsl(340deg 82% 94% / 91%);
+
+  /* Secondary - Blue-gray colors for light mode */
+  --color-secondary-base: hsl(220deg 16% 28% / 91%);
+  --color-secondary-contrast: hsl(220deg 16% 96% / 91%);
+  --color-secondary-focus: hsl(220deg 16% 35% / 91%);
+  --color-secondary-content: hsl(220deg 16% 22% / 91%);
+  --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-contrast-50: hsla(240, 4%, 9%, 0.97);
-    --color-contrast-100: hsla(240, 4%, 12%, 0.97);
-    --color-contrast-200: hsla(240, 4%, 15%, 0.97);
-    --color-contrast-300: hsla(240, 4%, 20%, 0.97);
-    --color-contrast-400: hsla(240, 4%, 26%, 0.97);
-    --color-contrast-500: hsla(240, 4%, 34%, 0.97);
-    --color-contrast-600: hsla(240, 4%, 44%, 0.97);
-    --color-contrast-700: hsla(240, 4%, 57%, 0.97);
-    --color-contrast-800: hsla(240, 4%, 74%, 0.97);
-    --color-contrast-900: hsla(240, 4%, 90%, 0.97);
+    /* Subtle warm-gray for dark mode - less blue tint, better neutral appearance */
+    --color-contrast-50: hsl(210deg 6% 10% / 100%);
+    --color-contrast-100: hsl(210deg 5% 14% / 91%);
+    --color-contrast-200: hsl(210deg 4% 18% / 91%);
+    --color-contrast-300: hsl(210deg 4% 24% / 91%);
+    --color-contrast-400: hsl(210deg 3% 32% / 91%);
+    --color-contrast-500: hsl(210deg 3% 42% / 91%);
+    --color-contrast-600: hsl(210deg 3% 54% / 91%);
+    --color-contrast-700: hsl(210deg 3% 66% / 91%);
+    --color-contrast-800: hsl(210deg 4% 78% / 91%);
+    --color-contrast-900: hsl(210deg 5% 92% / 91%);
+
+    /* Primary - Dark mode variations */
+    --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
+    --color-primary-focus: hsl(210deg 100% 65% / 91%);
+    --color-primary: hsl(210deg 100% 60% / 91%);
+    --color-primary-content: hsl(210deg 100% 80% / 91%);
+    --color-primary-contrast: hsl(210deg 100% 15% / 91%);
+
+    /* Secondary - Dark mode variations */
+    --color-secondary-base: hsl(220deg 16% 78% / 91%);
+    --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
+    --color-secondary-focus: hsl(220deg 16% 72% / 91%);
+    --color-secondary-content: hsl(220deg 16% 82% / 91%);
+    --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
+
+    /* Success - Dark mode variations */
+    --color-success-backdrop: hsl(168deg 40% 25% / 50%);
+    --color-success-focus: hsl(168deg 76% 55% / 91%);
+    --color-success: hsl(168deg 76% 50% / 91%);
+    --color-success-content: hsl(168deg 76% 70% / 91%);
+    --color-success-contrast: hsl(168deg 76% 15% / 91%);
+
+    /* Warning - Dark mode variations */
+    --color-warning-backdrop: hsl(38deg 50% 30% / 50%);
+    --color-warning-focus: hsl(38deg 100% 65% / 91%);
+    --color-warning: hsl(38deg 100% 60% / 91%);
+    --color-warning-content: hsl(38deg 100% 75% / 91%);
+    --color-warning-contrast: hsl(38deg 100% 20% / 91%);
+
+    /* Error - Dark mode variations */
+    --color-error-backdrop: hsl(340deg 50% 30% / 50%);
+    --color-error-focus: hsl(340deg 82% 65% / 91%);
+    --color-error: hsl(340deg 82% 60% / 91%);
+    --color-error-content: hsl(340deg 82% 75% / 91%);
+    --color-error-contrast: hsl(340deg 82% 15% / 91%);
   }
 }
 
@@ -228,6 +290,7 @@
   list-style: none !important;
   padding: 0 !important;
 }
+
 .grid-links li {
   margin: 0 !important;
 }
@@ -257,4 +320,14 @@
 /* Alternative: Use a wrapper selector if VPFeature is inside VPContent */
 .VPContent .VPFeature {
   border: 1px solid var(--vp-c-divider);
+}
+
+.demo-container {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 1.5rem;
+  background: var(--vp-c-bg-soft);
+  border-radius: 8px;
+  margin: 1rem 0;
 }

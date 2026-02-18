@@ -41,9 +41,9 @@ export type Template<T = HTMLElement, S extends object = object> =
 export type FormCallbacks<T = HTMLElement, S extends object = object> = {
   /** Invoked when parent form's disabled state changes */
   onFormDisabled?: (disabled: boolean, el: WebComponent<T, S>) => void;
-  /** Invoked when parent form is reset */
+  /** Invoked when a parent form is reset */
   onFormReset?: (el: WebComponent<T, S>) => void;
-  /** Invoked when browser restores form state (navigation/autocomplete) */
+  /** Invoked when the browser restores form state (navigation/autocomplete) */
   onFormStateRestore?: (
     state: string | File | FormData | null,
     mode: 'restore' | 'autocomplete',
@@ -184,21 +184,13 @@ const loadStylesheet = async (style: string | CSSStyleSheet): Promise<CSSStyleSh
 
 /**
  * Create reactive state proxy with automatic re-rendering
- *
- * Features:
- * - Nested objects proxied lazily on first access
- * - `null`, `undefined`, and DOM Nodes are NOT proxied
- * - Properties starting with `_` don't trigger re-renders (private convention)
- * - Uses reference equality for change detection
- *
  * @template S - State object type
  * @param initial - Initial state object (will be shallow-copied)
  * @param onChange - Callback invoked when state changes
  * @returns Reactive state proxy
- *
  * @example
  * const state = createReactiveState({ count: 0 }, () => render());
- * state.count++; // Triggers onChange callback
+ * state.count++; // Triggers onChange
  */
 const createReactiveState = <S extends object>(initial: S, onChange: () => void): S => {
   const internalState = { ...initial } as S;
@@ -593,32 +585,18 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
   }
 
   /**
-   * Add event listener with automatic cleanup
-   *
-   * Supports event delegation for dynamic elements:
-   * - If target is a string selector, uses delegation on shadow root
-   * - Events bubble up and handler is called when target matches selector
-   * - Works for elements added after registration
-   *
-   * @param target - CSS selector or EventTarget
+   * Add event listener with automatic cleanup and delegation support
+   * @param target - CSS selector (for delegation) or EventTarget
    * @param event - Event name
    * @param handler - Event handler function
    * @param options - Event listener options
-   *
    * @example
-   * // Direct element binding
-   * const button = component.find('button')!;
-   * component.on(button, 'click', () => console.log('clicked'));
+   * // Direct binding
+   * component.on(component.find('button')!, 'click', () => console.log('clicked'));
    *
-   * // Delegated binding (works for dynamic elements)
-   * component.on('button', 'click', (e) => {
-   *   console.log('Button clicked:', e.target);
-   * });
-   *
-   * // Delegated with event filtering
+   * // Delegated (works for dynamic elements)
    * component.on('.todo-item', 'click', (e) => {
-   *   const item = e.target as HTMLElement;
-   *   console.log('Todo clicked:', item.dataset.id);
+   *   console.log('Clicked:', (e.target as HTMLElement).dataset.id);
    * });
    */
   on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void {
@@ -963,25 +941,56 @@ export const element = <T = HTMLElement, S extends object = object>(
 /* ==================== Utilities Export ==================== */
 
 /**
- * HTML template string helper
+ * HTML template tag with boolean attribute support
  * @param strings - Template string array
  * @param values - Template values
  * @returns Interpolated HTML string
+ * @example
+ * html`<div>Hello, ${name}!</div>`
+ * // Boolean attributes (Lit-style)
+ * html`<button ?disabled="${isDisabled}">Click</button>`
  */
 export const html = (strings: TemplateStringsArray, ...values: unknown[]): string => {
-  return strings.reduce((result, str, i) => {
-    const value = values[i] ?? '';
-    return result + str + value;
-  }, '');
-};
+  let result = '';
+  let skipQuote = false;
 
-/**
- * CSS template string helper with CSS variable utilities
- * @param strings - Template string array
- * @param values - Template values
- * @returns Interpolated CSS string
- * @example css`.button { color: ${color}; }`
- */
+  for (let i = 0; i < strings.length; i++) {
+    let str = strings[i];
+
+    // Remove the leading quote if previous was a boolean attribute
+    if (skipQuote) {
+      str = str.replace(/^["']/, '');
+      skipQuote = false;
+    }
+
+    const boolAttrMatch = str.match(/\s+\?([a-z][-a-z0-9]*)\s*=\s*["']$/i);
+
+    if (boolAttrMatch && i < values.length) {
+      const shouldInclude = values[i] === true || values[i] === '';
+
+      // Add everything before ?attrName="
+      result += str.slice(0, -boolAttrMatch[0].length);
+
+      // Add attribute if truthy
+      if (shouldInclude) {
+        result += ` ${boolAttrMatch[1]}`;
+      }
+
+      // Mark to skip the quote in the next string
+      skipQuote = true;
+    } else {
+      // Normal interpolation
+      result += str;
+
+      // Add value for the current position
+      if (i < values.length) {
+        result += values[i] ?? '';
+      }
+    }
+  }
+
+  return result;
+};
 
 /** Type helper for theme variable proxy */
 type ThemeVars<T extends Record<string, string | number>> = {
@@ -997,133 +1006,56 @@ export const css = Object.assign(
   },
   {
     /**
-     * Create a typed theme with CSS variables and autocomplete
-     *
-     * Single theme mode:
-     * Returns a typed proxy with autocomplete for all theme properties
-     *
-     * Light/dark mode:
-     * Returns the same typed proxy - CSS handles which theme applies via media queries
-     * You reference variables the same way regardless of theme mode
-     *
-     * @param light - Theme variables (or light theme for dual-mode)
-     * @param dark - Optional dark theme variables
+     * Create typed theme with CSS variables and autocomplete
+     * @param light - Theme variables (or single theme if dark omitted)
+     * @param dark - Optional dark theme
      * @param options - Configuration options
-     * @param options.selector - CSS selector (default: ':host')
-     * @param options.attribute - Attribute for manual override (default: 'data-theme')
      * @returns Typed proxy with autocomplete
+     * @example
+     * const theme = css.theme({ primaryColor: '#3b82f6' });
+     * css`${theme} .button { color: ${theme.primaryColor}; }`
      *
      * @example
-     * // Single theme
-     * const theme = css.theme({
-     *   primaryColor: '#3b82f6',
-     *   spacing: '1rem',
-     * });
-     *
-     * css`
-     *   ${theme}
-     *   .button {
-     *     color: ${theme.primaryColor};  // Autocomplete!
-     *     padding: ${theme.spacing};
-     *   }
-     * `
-     *
-     * @example
-     * // Light/dark theme - same variable references!
-     * const theme = css.theme(
-     *   { bg: '#fff', text: '#000' },  // Light
-     *   { bg: '#000', text: '#fff' }   // Dark
-     * );
-     *
-     * css`
-     *   ${theme}
-     *   .card {
-     *     background: ${theme.bg};    // Autocomplete! CSS handles light/dark
-     *     color: ${theme.text};       // Same variable for both themes
-     *   }
-     * `
+     * const theme = css.theme({ bg: '#fff' }, { bg: '#000' });
+     * css`${theme} .card { background: ${theme.bg}; }`
      */
-    theme: (<T extends Record<string, string | number>>(
+    theme: <T extends Record<string, string | number>>(
       light: T,
       dark?: T,
       options?: { selector?: string; attribute?: string },
     ): ThemeVars<T> => {
       const selector = options?.selector ?? ':host';
-
-      // Build CSS variables string helper
-      const toVars = (obj: T): string => {
-        return Object.entries(obj)
-          .map(([key, value]) => {
+      const toVars = (obj: T) =>
+        Object.entries(obj)
+          .map(([key, val]) => {
             const cssVar = key.startsWith('--') ? key : `--${toKebab(key)}`;
-            return `${cssVar}: ${value};`;
+            return `${cssVar}: ${val};`;
           })
           .join(' ');
-      };
 
-      let cssRule: string;
+      const cssRule = dark
+        ? // Light/dark mode with media queries
+          [
+            `${selector} { ${toVars(light)} }`,
+            '@media (prefers-color-scheme: dark) {',
+            `  ${selector}:not([${options?.attribute ?? 'data-theme'}="light"]) { ${toVars(dark)} }`,
+            '}',
+            `${selector}[${options?.attribute ?? 'data-theme'}="dark"] { ${toVars(dark)} }`,
+            `${selector}[${options?.attribute ?? 'data-theme'}="light"] { ${toVars(light)} }`,
+          ].join('\n')
+        : // Single theme
+          `${selector} { ${toVars(light)} }`;
 
-      if (!dark) {
-        // Single theme mode
-        cssRule = `${selector} { ${toVars(light)} }`;
-      } else {
-        // Light/dark mode - generate media queries
-        const attr = options?.attribute ?? 'data-theme';
-        const lightVars = toVars(light);
-        const darkVars = toVars(dark);
-
-        cssRule = `
-${selector} { ${lightVars} }
-@media (prefers-color-scheme: dark) {
-  ${selector}:not([${attr}="light"]) { ${darkVars} }
-}
-${selector}[${attr}="dark"] { ${darkVars} }
-${selector}[${attr}="light"] { ${lightVars} }
-      `.trim();
-      }
-
-      // Create single typed proxy that references CSS variables
-      // The same variable names work for both light and dark themes
       return new Proxy({} as ThemeVars<T>, {
-        get(_target, prop) {
-          // Handle string coercion for template literals
-          if (prop === 'toString' || prop === Symbol.toPrimitive) {
-            return () => cssRule;
-          }
-
-          // Return var() reference for theme properties
+        get(_, prop) {
+          if (prop === 'toString' || prop === Symbol.toPrimitive) return () => cssRule;
           if (typeof prop === 'string' && prop in light) {
             const cssVar = prop.startsWith('--') ? prop : `--${toKebab(prop)}`;
             return `var(${cssVar})`;
           }
-
           return undefined;
         },
       });
-    }) as {
-      // Single theme overload
-      <T extends Record<string, string | number>>(
-        vars: T,
-        dark?: undefined,
-        options?: { selector?: string },
-      ): ThemeVars<T>;
-      // Light/dark theme overload - same return type!
-      <T extends Record<string, string | number>>(
-        light: T,
-        dark: T,
-        options?: { selector?: string; attribute?: string },
-      ): ThemeVars<T>;
-    },
-    /**
-     * Reference a CSS custom property with var()
-     * Automatically converts camelCase to --kebab-case
-     * @param name - Variable name (with or without --)
-     * @param fallback - Optional fallback value
-     * @returns var() function string
-     * @example css.var('primaryColor') // "var(--primary-color)"
-     */
-    var: (name: string, fallback?: string | number): string => {
-      const cssVar = name.startsWith('--') ? name : `--${toKebab(name)}`;
-      return fallback !== undefined ? `var(${cssVar}, ${fallback})` : `var(${cssVar})`;
     },
   },
 );
@@ -1147,7 +1079,9 @@ export const classMap = (classes: Record<string, boolean | undefined>): string =
  * @returns Semicolon-separated style string
  * @example styleMap({ color: 'red', display: undefined }) // 'color: red'
  */
-export const styleMap = (styles: Partial<CSSStyleDeclaration>): string => {
+export const styleMap = (
+  styles: Partial<CSSStyleDeclaration> | Record<string, string | number | undefined>,
+): string => {
   return Object.entries(styles)
     .filter(([, value]) => value != null)
     .map(([key, value]) => `${toKebab(key)}: ${value}`)

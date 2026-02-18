@@ -11,11 +11,12 @@ export default defineConfig({
   description: 'Documentation for the Vielzeug monorepo',
   head: [
     // Favicons
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon/favicon.svg' }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/favicon/favicon-96x96.png' }],
-    ['link', { rel: 'icon', type: 'image/x-icon', href: '/favicon/favicon.ico' }],
-    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/favicon/apple-touch-icon.png' }],
-    ['link', { rel: 'manifest', href: '/favicon/site.webmanifest' }],
+    ['link', { href: '/favicon/favicon.svg', rel: 'icon', type: 'image/svg+xml' }],
+    ['link', { href: '/favicon/favicon-96x96.png', rel: 'icon', sizes: '96x96', type: 'image/png' }],
+    ['link', { href: '/favicon/favicon.ico', rel: 'icon', type: 'image/x-icon' }],
+    ['link', { href: '/favicon/apple-touch-icon.png', rel: 'apple-touch-icon', sizes: '180x180' }],
+    ['link', { href: '/favicon/site.webmanifest', rel: 'manifest' }],
+    ['link', { href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded', rel: 'stylesheet' }],
     // Theme and mobile app configuration
     ['meta', { content: '#f6ac2c', name: 'theme-color' }],
     ['meta', { content: 'yes', name: 'apple-mobile-web-app-capable' }],
@@ -74,6 +75,7 @@ export default defineConfig({
         ],
         text: 'Packages',
       },
+      { link: '/buildit/', text: 'Components' },
       { link: '/repl', text: 'REPL' },
     ],
     packages: getPackagesData(),
@@ -81,6 +83,13 @@ export default defineConfig({
       provider: 'local',
     },
     sidebar: {
+      '/buildit/': [
+        { link: '/buildit/', text: 'Overview' },
+        {
+          items: [{ link: '/buildit/button', text: 'Button' }],
+          text: 'Base Components',
+        },
+      ],
       '/craftit/': [
         { link: '/craftit/', text: 'Overview' },
         {
@@ -581,6 +590,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
+        '@vielzeug/buildit': resolve(__dirname, '../../packages/buildit/src'),
         '@vielzeug/craftit': resolve(__dirname, '../../packages/craftit/src'),
         '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
         '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),

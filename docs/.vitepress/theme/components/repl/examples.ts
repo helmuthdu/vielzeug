@@ -82,6 +82,94 @@ document.getElementById('output').appendChild(el)
 console.log('✓ Component mounted successfully!')`,
       name: 'Basic Component - Simple Element',
     },
+    'boolean-attributes': {
+      code: `import { defineElement, html, css } from '@vielzeug/craftit'
+
+defineElement('submit-button', {
+  state: {
+    isSubmitting: false,
+    isValid: true
+  },
+  
+  template: (el) => html\`
+    <div style="padding: 1.5rem;">
+      <h3 style="margin-top: 0;">Boolean Attributes Demo</h3>
+      <p style="color: #64748b;">Toggle states to see ?disabled syntax in action</p>
+      
+      <div style="margin: 1rem 0;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <input type="checkbox" class="toggle-submitting" />
+          <span>Simulate submitting</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" class="toggle-valid" checked />
+          <span>Form is valid</span>
+        </label>
+      </div>
+      
+      <button 
+        class="submit-btn"
+        type="submit"
+        ?disabled="\${!el.state.isValid || el.state.isSubmitting}"
+        ?aria-busy="\${el.state.isSubmitting}"
+        style="padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer; transition: all 0.2s;">
+        \${el.state.isSubmitting ? '⏳ Submitting...' : '✓ Submit Form'}
+      </button>
+      
+      <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 6px; font-family: monospace; font-size: 0.875rem;">
+        <strong>Rendered HTML:</strong>
+        <pre style="margin: 0.5rem 0 0 0; white-space: pre-wrap;">&lt;button ?disabled="\${!el.state.isValid || el.state.isSubmitting}"&gt;</pre>
+        <pre style="margin: 0.5rem 0 0 0; color: #059669;">→ \${!el.state.isValid || el.state.isSubmitting ? '&lt;button disabled&gt;' : '&lt;button&gt;'}</pre>
+      </div>
+    </div>
+  \`,
+  
+  styles: [
+    css\`
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #94a3b8 !important;
+      }
+      
+      button:hover:not(:disabled) {
+        background: #2563eb;
+      }
+    \`
+  ],
+  
+  onConnected(el) {
+    el.on('.toggle-submitting', 'change', (e) => {
+      el.state.isSubmitting = (e.target as HTMLInputElement).checked
+    })
+    
+    el.on('.toggle-valid', 'change', (e) => {
+      el.state.isValid = (e.target as HTMLInputElement).checked
+    })
+    
+    el.on('.submit-btn', 'click', () => {
+      if (!el.state.isSubmitting && el.state.isValid) {
+        console.log('✓ Form submitted!')
+      }
+    })
+  }
+})
+
+const btn = document.createElement('submit-button')
+document.getElementById('output').appendChild(btn)
+
+console.log('✓ Boolean attribute demo created!')
+console.log('')
+console.log('💡 Boolean Attribute Syntax:')
+console.log('  ?disabled="\${condition}" → <button disabled> (when true)')
+console.log('  ?disabled="\${condition}" → <button> (when false)')
+console.log('')
+console.log('Benefits:')
+console.log('  • Clean, Lit-style syntax')
+console.log('  • Works with any boolean HTML attribute')
+console.log('  • Automatic attribute inclusion/omission')`,
+      name: 'Boolean Attributes - ?disabled Syntax',
+    },
     'counter-component': {
       code: `import { defineElement, html } from '@vielzeug/craftit'
 
@@ -2355,46 +2443,6 @@ async function fetchItems() {
 
 await fetchItems()`,
       name: 'Async State Updates',
-    },
-    'computed-values': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
-
-const cart = createSnapshot({
-  items: [
-    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
-    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
-  ],
-  taxRate: 0.1
-})
-
-// Subscribe to computed total
-cart.subscribe(
-  (state) => {
-    const subtotal = state.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    )
-    const tax = subtotal * state.taxRate
-    return subtotal + tax
-  },
-  (total) => {
-    console.log('Cart total: $' + total.toFixed(2))
-  }
-)
-
-// Initial total logged above
-
-// Update cart - add item
-cart.set((state) => ({
-  items: [
-    ...state.items,
-    { id: 3, name: 'Orange', price: 1.2, quantity: 4 }
-  ]
-}))
-
-// Update tax rate
-cart.set({ taxRate: 0.15 })`,
-      name: 'Computed Values',
     },
     'scoped-states': {
       code: `import { createSnapshot } from '@vielzeug/snapit'

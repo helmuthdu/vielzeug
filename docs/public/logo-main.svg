@@ -23,9 +23,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="19.369699"
-     inkscape:cx="15.023465"
-     inkscape:cy="34.409414"
+     inkscape:zoom="5.3250938"
+     inkscape:cx="29.013574"
+     inkscape:cy="59.247783"
      inkscape:window-width="1920"
      inkscape:window-height="1022"
      inkscape:window-x="0"
@@ -61,37 +61,39 @@
        ry="30.049232"
        transform="matrix(0.45194844,-0.89204406,0.96398452,0.26595836,0,0)" />
   </g>
+  <circle
+     style="fill:#e92063;fill-opacity:1;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.3457;paint-order:stroke fill markers"
+     id="path13-8"
+     cx="32"
+     cy="32"
+     r="5.1937551" />
   <g
-     id="g1"
-     transform="translate(23.414963,0.91460119)">
+     id="g10"
+     transform="translate(9.8796592,-13.07943)"
+     style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
     <ellipse
-       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse7"
+       style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse9"
        cx="17.38196"
        cy="33.16288"
        rx="1.9409472"
        ry="1.9135387"
        transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
     <ellipse
-       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse8"
+       style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse10"
        cx="17.38196"
        cy="33.162884"
        rx="1.5814766"
        ry="1.5591443"
        transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
   </g>
-  <circle
-     style="fill:#ed333b;fill-opacity:1;stroke:#c0bfbc;stroke-width:3;stroke-dasharray:none;stroke-opacity:0.3457;paint-order:stroke fill markers"
-     id="path13"
-     cx="32"
-     cy="32"
-     r="5.1937551" />
   <g
      id="g2"
-     transform="translate(0.96892857,-6.1829559)">
+     transform="translate(-8.9664983,-6.9671627)"
+     style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
     <ellipse
-       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
        id="ellipse1"
        cx="17.38196"
        cy="33.16288"
@@ -99,7 +101,7 @@
        ry="1.9135387"
        transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
     <ellipse
-       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
        id="ellipse2"
        cx="17.38196"
        cy="33.162884"
@@ -109,9 +111,10 @@
   </g>
   <g
      id="g4"
-     transform="translate(-14.123807,12.02724)">
+     transform="translate(-14.192883,11.958277)"
+     style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
     <ellipse
-       style="fill:#ffa348;fill-opacity:0.502451;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
        id="ellipse3"
        cx="17.38196"
        cy="33.16288"
@@ -119,7 +122,7 @@
        ry="1.9135387"
        transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
     <ellipse
-       style="fill:#e5a50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
        id="ellipse4"
        cx="17.38196"
        cy="33.162884"

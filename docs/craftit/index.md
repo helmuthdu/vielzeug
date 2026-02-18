@@ -114,7 +114,7 @@ defineElement('my-counter', {
 - **🎯 Event Delegation**: Built-in support for [dynamic element event handling](./usage.md#event-delegation).
 - **📝 Form Support**: Full [ElementInternals integration](./usage.md#form-associated-elements) for form participation.
 - **🎨 Shadow DOM**: Encapsulated [styles with CSSStyleSheet](./usage.md#styling) support.
-- **🎭 CSS Variables**: Built-in [theming with CSS variables](./usage.md#css-variables-custom-properties) (`css.var()`, `css.theme()`).
+- **🎭 CSS Variables**: Built-in [theming with CSS variables](./usage.md#css-variables-custom-properties) with `css.theme()`.
 - **🔍 Type-Safe**: Complete TypeScript support with [full type inference](./usage.md#type-safety).
 - **📦 Tiny Bundle**: Only **<PackageInfo package="craftit" type="size" /> gzipped** with zero dependencies.
 - **🧪 Testable**: Built-in [testing utilities](./usage.md#testing) (`attach`, `destroy`, `flush`).

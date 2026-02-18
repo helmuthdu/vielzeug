@@ -69,10 +69,10 @@ defineElement('my-counter', {
 - **🎯 Event Delegation** – Built-in support for dynamic element event handling
 - **📝 Form Support** – Full ElementInternals integration for form participation
 - **🎨 Shadow DOM** – Encapsulated styles with CSSStyleSheet support
-- **🎭 CSS Variables** – Built-in theming support with `css.var()` and `css.theme()`
+- **🎭 CSS Variables** – Built-in theming support with `css.theme()`
 - **🔍 Type-Safe** – Complete TypeScript support with full type inference
 - **📦 Tiny Bundle** – Only **~5 KB gzipped** with zero dependencies
-- **🧪 Testable** – Built-in testing utilities (`attach`, `destroy`, `flush`)
+- **🧪 Testable** – Comprehensive testing utilities via `@vielzeug/craftit/testing`
 - **🪝 Lifecycle Hooks** – Full control with `onConnected`, `onDisconnected`, `onUpdated`
 - **🌐 Framework Agnostic** – Use with React, Vue, Svelte, or vanilla JS
 
@@ -407,7 +407,58 @@ const unwatch = el.watch(
 );
 ```
 
-### Testing Utilities
+### Testing Components
+
+Craftit provides comprehensive testing utilities via `@vielzeug/craftit/testing`:
+
+```ts
+import { defineElement, html } from '@vielzeug/craftit';
+import { createFixture, queryShadow } from '@vielzeug/craftit/testing';
+
+// Define your component
+defineElement('my-button', {
+  state: { count: 0 },
+  template: (el) => html`
+    <button>Count: ${el.state.count}</button>
+  `,
+  onConnected(el) {
+    el.on('button', 'click', () => el.state.count++);
+  },
+});
+
+// Test it
+describe('my-button', () => {
+  it('should increment count on click', async () => {
+    const fixture = await createFixture('my-button');
+    const button = fixture.query<HTMLButtonElement>('button');
+    
+    expect(button?.textContent).toBe('Count: 0');
+    
+    button?.click();
+    await fixture.update();
+    
+    expect(button?.textContent).toBe('Count: 1');
+    
+    fixture.destroy();
+  });
+});
+```
+
+**Available utilities:**
+
+- `createFixture()` - Create component with lifecycle management
+- `createComponent()` - Create and attach component to DOM
+- `createTestContainer()` - Create test container with cleanup
+- `queryShadow()` - Query elements in shadow DOM
+- `waitForRender()` - Wait for component re-renders
+- `userEvent` - Simulate user interactions (click, keyboard, hover, etc.)
+- And more...
+
+**See [TESTING.md](./TESTING.md) for complete documentation.**
+
+### Basic Testing (attach/destroy)
+
+For simple tests, use the built-in helpers:
 
 ```ts
 import { attach, destroy } from '@vielzeug/craftit';

@@ -63,7 +63,7 @@ customElements.define('my-button', ButtonComponent);
 
 ### `html(strings, ...values)`
 
-Template string helper for HTML content.
+Template string helper for HTML content with boolean attribute support.
 
 **Parameters:**
 
@@ -78,6 +78,31 @@ Template string helper for HTML content.
 const name = 'Alice';
 const template = html`<div>Hello, ${name}!</div>`;
 // Result: '<div>Hello, Alice!</div>'
+```
+
+**Boolean Attributes:**
+
+Craftit supports Lit-style boolean attributes with the `?` prefix. When `true` or `''` (empty string), the attribute is included. When `false`, `null`, or `undefined`, it's omitted.
+
+```ts
+const disabled = true;
+const readonly = false;
+
+html`<button ?disabled="${disabled}" ?readonly="${readonly}">Click</button>`;
+// Result: '<button disabled>Click</button>'
+```
+
+This is particularly useful for attributes like `disabled`, `readonly`, `required`, `checked`, etc.
+
+```ts
+template: (el) => html`
+  <button
+    type="submit"
+    ?disabled="${el.hasAttribute('disabled')}"
+    ?aria-busy="${el.hasAttribute('loading')}">
+    Submit
+  </button>
+`;
 ```
 
 ---
@@ -109,24 +134,6 @@ const styles = css`
 
 **CSS Variable Helpers:**
 
-#### `css.var(name, fallback?)`
-
-Reference a CSS custom property with `var()`.
-
-**Parameters:**
-
-- `name: string` – Variable name (with or without `--` prefix)
-- `fallback?: string | number` – Optional fallback value
-
-**Returns:** `string` – CSS var() function string
-
-**Example:**
-
-```ts
-css.var('primaryColor'); // "var(--primary-color)"
-css.var('fontSize', '14px'); // "var(--font-size, 14px)"
-css.var('--custom-color'); // "var(--custom-color)"
-```
 
 #### `css.theme<T>(vars, selector?)`
 
@@ -176,7 +183,6 @@ const darkTheme = css.theme({ bgColor: '#000' }, '[data-theme="dark"]');
 - ✨ **Autocomplete** – Type `theme.` and see all available variables
 - 🔒 **Type-safe** – Typos caught at compile time
 - 🔄 **Refactoring** – Rename variables safely across codebase
-- 📦 **No string matching** – No more `css.var('primryColor')` bugs!
 
 **Complete Example:**
 
