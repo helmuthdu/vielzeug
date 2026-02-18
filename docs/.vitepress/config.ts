@@ -86,9 +86,32 @@ export default defineConfig({
       '/buildit/': [
         { link: '/buildit/', text: 'Overview' },
         {
-          items: [{ link: '/buildit/button', text: 'Button' }],
-          text: 'Base Components',
+          items: [
+            { link: '/buildit/usage#installation', text: 'Installation' },
+            { link: '/buildit/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/buildit/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/buildit/usage#theming', text: 'Theming' },
+            { link: '/buildit/usage#customization', text: 'Customization' },
+          ],
+          link: '/buildit/usage',
+          text: 'Usage Guide',
         },
+        {
+          items: [
+            { link: '/buildit/api#button-component', text: 'Button Component' },
+            { link: '/buildit/api#theme-variables', text: 'Theme Variables' },
+            { link: '/buildit/api#type-definitions', text: 'Type Definitions' },
+          ],
+          link: '/buildit/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/buildit/button', text: 'Button' },
+          ],
+          text: 'Components',
+        },
+        { link: '/buildit/examples', text: 'Examples' },
       ],
       '/craftit/': [
         { link: '/craftit/', text: 'Overview' },
