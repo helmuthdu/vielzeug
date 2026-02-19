@@ -535,7 +535,7 @@ createDebouncedButton('#submitBtn', 500);
 <bit-button 
   id="animatedBtn"
   style="
-    --btn-transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --button-transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   ">
   Hover me
 </bit-button>
@@ -587,18 +587,18 @@ createDebouncedButton('#submitBtn', 500);
 
 /* Apply to all buttons */
 bit-button {
-  --btn-font-weight: 600;
-  --btn-radius: 0.5rem;
-  --btn-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --button-font-weight: 600;
+  --button-radius: 0.5rem;
+  --button-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Specific variant customization */
 bit-button[variant="solid"] {
-  --btn-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --button-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 bit-button[variant="solid"]:hover {
-  --btn-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  --button-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 ```
 
@@ -697,9 +697,422 @@ test('button interaction', async ({ page }) => {
 });
 ```
 
+## Accordion Examples
+
+### FAQ Section
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FAQ - Frequently Asked Questions</title>
+    <style>
+      .faq-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      
+      h1 {
+        margin-bottom: 2rem;
+        color: #1f2937;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="faq-container">
+      <h1>Frequently Asked Questions</h1>
+      
+      <bit-accordion>
+        <bit-accordion-item expanded>
+          <span slot="header">What is Buildit?</span>
+          <p>Buildit is a modern, accessible UI component library built with web components. 
+          It provides framework-agnostic components that work with React, Vue, Svelte, or vanilla JavaScript.</p>
+        </bit-accordion-item>
+        
+        <bit-accordion-item>
+          <span slot="header">How do I install Buildit?</span>
+          <div>
+            <p>Install Buildit using your preferred package manager:</p>
+            <pre><code>npm install @vielzeug/buildit
+# or
+pnpm add @vielzeug/buildit
+# or
+yarn add @vielzeug/buildit</code></pre>
+          </div>
+        </bit-accordion-item>
+        
+        <bit-accordion-item>
+          <span slot="header">Is it accessible?</span>
+          <p>Yes! All Buildit components follow WCAG 2.1 Level AA guidelines. They include:</p>
+          <ul>
+            <li>Full keyboard navigation support</li>
+            <li>Screen reader compatibility</li>
+            <li>Proper ARIA attributes</li>
+            <li>Focus management</li>
+          </ul>
+        </bit-accordion-item>
+        
+        <bit-accordion-item>
+          <span slot="header">Can I customize the styling?</span>
+          <p>Absolutely! All components expose CSS custom properties for deep customization. 
+          You can also use standard CSS to style the components while maintaining their functionality.</p>
+        </bit-accordion-item>
+      </bit-accordion>
+    </div>
+
+    <script type="module">
+      import '@vielzeug/buildit/accordion';
+      import '@vielzeug/buildit/accordion-item';
+    </script>
+  </body>
+</html>
+```
+
+### Settings Panel with React
+
+```tsx
+import '@vielzeug/buildit/accordion';
+import '@vielzeug/buildit/accordion-item';
+import { useState } from 'react';
+
+interface Settings {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  smsAlerts: boolean;
+  profileVisibility: boolean;
+  showOnlineStatus: boolean;
+  theme: 'light' | 'dark' | 'auto';
+}
+
+function SettingsPanel() {
+  const [settings, setSettings] = useState<Settings>({
+    emailNotifications: true,
+    pushNotifications: false,
+    smsAlerts: true,
+    profileVisibility: true,
+    showOnlineStatus: false,
+    theme: 'auto'
+  });
+
+  const handleToggle = (key: keyof Settings) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: !prev[key as keyof typeof prev]
+    }));
+  };
+
+  const handleThemeChange = (theme: Settings['theme']) => {
+    setSettings(prev => ({ ...prev, theme }));
+  };
+
+  return (
+    <div className="settings-panel">
+      <h2>Settings</h2>
+      
+      <bit-accordion allow-multiple variant="bordered">
+        <bit-accordion-item expanded>
+          <span slot="header">🔔 Notifications</span>
+          <div className="settings-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.emailNotifications}
+                onChange={() => handleToggle('emailNotifications')}
+              />
+              Email notifications
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.pushNotifications}
+                onChange={() => handleToggle('pushNotifications')}
+              />
+              Push notifications
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.smsAlerts}
+                onChange={() => handleToggle('smsAlerts')}
+              />
+              SMS alerts
+            </label>
+          </div>
+        </bit-accordion-item>
+        
+        <bit-accordion-item>
+          <span slot="header">🔒 Privacy</span>
+          <div className="settings-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.profileVisibility}
+                onChange={() => handleToggle('profileVisibility')}
+              />
+              Profile visibility
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.showOnlineStatus}
+                onChange={() => handleToggle('showOnlineStatus')}
+              />
+              Show online status
+            </label>
+          </div>
+        </bit-accordion-item>
+        
+        <bit-accordion-item>
+          <span slot="header">🎨 Appearance</span>
+          <div className="settings-group">
+            <label>Theme</label>
+            <select
+              value={settings.theme}
+              onChange={(e) => handleThemeChange(e.target.value as Settings['theme'])}>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+        </bit-accordion-item>
+      </bit-accordion>
+    </div>
+  );
+}
+```
+
+### Product Features with Vue
+
+```vue
+<template>
+  <div class="product-features">
+    <h2>Features</h2>
+    
+    <bit-accordion variant="ghost" @change="handleChange">
+      <bit-accordion-item
+        v-for="feature in features"
+        :key="feature.id"
+        :expanded="expandedFeatures.includes(feature.id)">
+        <span slot="header">
+          <span class="feature-icon">{{ feature.icon }}</span>
+          {{ feature.title }}
+        </span>
+        
+        <div class="feature-content">
+          <p>{{ feature.description }}</p>
+          <ul>
+            <li v-for="benefit in feature.benefits" :key="benefit">
+              {{ benefit }}
+            </li>
+          </ul>
+          <bit-button
+            variant="outline"
+            size="sm"
+            @click="learnMore(feature.id)">
+            Learn More
+          </bit-button>
+        </div>
+      </bit-accordion-item>
+    </bit-accordion>
+  </div>
+</template>
+
+<script setup lang="ts">
+import '@vielzeug/buildit/accordion';
+import '@vielzeug/buildit/accordion-item';
+import '@vielzeug/buildit/button';
+import { ref } from 'vue';
+
+interface Feature {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  benefits: string[];
+}
+
+const features = ref<Feature[]>([
+  {
+    id: 'performance',
+    icon: '⚡',
+    title: 'Lightning Fast',
+    description: 'Built with performance in mind, our components are optimized for speed.',
+    benefits: [
+      'Minimal bundle size',
+      'Tree-shakeable imports',
+      'Zero runtime dependencies',
+      'Lazy loading support'
+    ]
+  },
+  {
+    id: 'accessible',
+    icon: '♿',
+    title: 'Fully Accessible',
+    description: 'WCAG 2.1 Level AA compliant components for everyone.',
+    benefits: [
+      'Keyboard navigation',
+      'Screen reader support',
+      'ARIA attributes',
+      'Focus management'
+    ]
+  },
+  {
+    id: 'customizable',
+    icon: '🎨',
+    title: 'Highly Customizable',
+    description: 'Customize every aspect with CSS custom properties.',
+    benefits: [
+      'CSS variables',
+      'Theme support',
+      'Dark mode ready',
+      'No styling conflicts'
+    ]
+  }
+]);
+
+const expandedFeatures = ref<string[]>(['performance']);
+
+const handleChange = (e: CustomEvent) => {
+  const items = e.detail.expandedItems as HTMLElement[];
+  expandedFeatures.value = items.map(item => 
+    item.querySelector('[slot="header"]')?.textContent?.trim() || ''
+  );
+};
+
+const learnMore = (featureId: string) => {
+  console.log('Learn more about:', featureId);
+};
+</script>
+
+<style scoped>
+.product-features {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.feature-icon {
+  font-size: 1.5em;
+  margin-right: 0.5rem;
+}
+
+.feature-content {
+  padding: 1rem 0;
+}
+
+.feature-content ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.feature-content li {
+  margin: 0.5rem 0;
+}
+</style>
+```
+
+### Documentation Navigation with Svelte
+
+```svelte
+<script lang="ts">
+  import '@vielzeug/buildit/accordion';
+  import '@vielzeug/buildit/accordion-item';
+  
+  interface DocSection {
+    title: string;
+    items: { title: string; href: string }[];
+  }
+  
+  const sections: DocSection[] = [
+    {
+      title: 'Getting Started',
+      items: [
+        { title: 'Installation', href: '#install' },
+        { title: 'Quick Start', href: '#quickstart' },
+        { title: 'Configuration', href: '#config' }
+      ]
+    },
+    {
+      title: 'Components',
+      items: [
+        { title: 'Button', href: '#button' },
+        { title: 'Accordion', href: '#accordion' },
+        { title: 'Input', href: '#input' }
+      ]
+    },
+    {
+      title: 'API Reference',
+      items: [
+        { title: 'Props', href: '#props' },
+        { title: 'Events', href: '#events' },
+        { title: 'Slots', href: '#slots' }
+      ]
+    }
+  ];
+  
+  let currentSection = 'Getting Started';
+  
+  function navigateTo(href: string) {
+    window.location.hash = href;
+  }
+</script>
+
+<nav class="doc-nav">
+  <bit-accordion allow-multiple size="sm">
+    {#each sections as section}
+      <bit-accordion-item expanded={section.title === currentSection}>
+        <span slot="header">{section.title}</span>
+        
+        <ul class="nav-links">
+          {#each section.items as item}
+            <li>
+              <a href={item.href} on:click={() => navigateTo(item.href)}>
+                {item.title}
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </bit-accordion-item>
+    {/each}
+  </bit-accordion>
+</nav>
+
+<style>
+  .doc-nav {
+    width: 250px;
+    position: sticky;
+    top: 2rem;
+  }
+  
+  .nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .nav-links li {
+    margin: 0.25rem 0;
+  }
+  
+  .nav-links a {
+    display: block;
+    padding: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+  }
+  
+  .nav-links a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+</style>
+```
+
 ## Next Steps
 
 - **[API Reference](./api.md)** – Complete API documentation
 - **[Usage Guide](./usage.md)** – Installation and usage
-- **[Button Component](./button.md)** – Detailed button documentation
+- **[Button Component](components/button.md)** – Detailed button documentation
+- **[Accordion Component](components/accordion.md)** – Detailed accordion documentation
 

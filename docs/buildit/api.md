@@ -7,7 +7,10 @@ Complete API documentation for all Buildit components and utilities.
 All components are available as modular imports:
 
 ```typescript
+import '@vielzeug/buildit/accordion';
+import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/button';
+import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/input';    // Coming soon
 import '@vielzeug/buildit/select';   // Coming soon
 import '@vielzeug/buildit/checkbox'; // Coming soon
@@ -52,38 +55,38 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `--btn-bg` | Background color | Variant-dependent |
-| `--btn-color` | Text color | Variant-dependent |
-| `--btn-hover-bg` | Hover background | Variant-dependent |
-| `--btn-active-bg` | Active/pressed background | Variant-dependent |
-| `--btn-base` | Base color from theme | Theme color |
-| `--btn-contrast` | Contrast color | Theme contrast |
-| `--btn-backdrop` | Backdrop color (subtle) | Theme backdrop |
-| `--btn-focus` | Focus state color | Theme focus |
+| `--button-bg` | Background color | Variant-dependent |
+| `--button-color` | Text color | Variant-dependent |
+| `--button-hover-bg` | Hover background | Variant-dependent |
+| `--button-active-bg` | Active/pressed background | Variant-dependent |
+| `--button-base` | Base color from theme | Theme color |
+| `--button-contrast` | Contrast color | Theme contrast |
+| `--button-backdrop` | Backdrop color (subtle) | Theme backdrop |
+| `--button-focus` | Focus state color | Theme focus |
 
 #### Borders & Spacing
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `--btn-border` | Border (width, style, color) | `1px solid transparent` |
-| `--btn-radius` | Border radius | `0.375rem` |
-| `--btn-padding` | Inner padding | Size-dependent |
-| `--btn-gap` | Gap between icon and text | `0.5rem` |
+| `--button-border` | Border (width, style, color) | `1px solid transparent` |
+| `--button-radius` | Border radius | `0.375rem` |
+| `--button-padding` | Inner padding | Size-dependent |
+| `--button-gap` | Gap between icon and text | `0.5rem` |
 
 #### Typography
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `--btn-font-size` | Font size | Size-dependent |
-| `--btn-font-weight` | Font weight | `500` |
-| `--btn-line-height` | Line height | `1.5` |
+| `--button-font-size` | Font size | Size-dependent |
+| `--button-font-weight` | Font weight | `500` |
+| `--button-line-height` | Line height | `1.5` |
 
 #### Effects
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `--btn-shadow` | Box shadow | None |
-| `--btn-transition` | Transition duration | `0.2s` |
+| `--button-shadow` | Box shadow | None |
+| `--button-transition` | Transition duration | `0.2s` |
 
 ### Examples
 
@@ -155,14 +158,149 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 ```html
 <bit-button
   style="
-    --btn-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --btn-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    --btn-color: white;
-    --btn-radius: 20px;
-    --btn-padding: 0.75rem 2rem;
+    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    --button-color: white;
+    --button-radius: 20px;
+    --button-padding: 0.75rem 2rem;
   ">
   Custom Gradient
 </bit-button>
+```
+
+## Accordion Component
+
+### Tag Names
+
+- `<bit-accordion>` - Container for accordion items
+- `<bit-accordion-item>` - Individual collapsible item
+
+### bit-accordion Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `allow-multiple` | `boolean` | `false` | Allow multiple items to be expanded simultaneously |
+| `variant` | `'solid' \| 'bordered' \| 'ghost'` | - | Visual style variant (propagated to children) |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size (propagated to children) |
+
+### bit-accordion-item Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `expanded` | `boolean` | `false` | Whether the item is expanded |
+| `disabled` | `boolean` | `false` | Disable the accordion item |
+| `variant` | `'solid' \| 'bordered' \| 'ghost'` | - | Visual style variant |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Item size |
+| `aria-label` | `string` | - | Accessible label for the toggle button |
+
+### Slots
+
+#### bit-accordion
+
+| Slot | Description |
+|------|-------------|
+| (default) | Accordion items (`bit-accordion-item` elements) |
+
+#### bit-accordion-item
+
+| Slot | Description |
+|------|-------------|
+| `header` | Content for the accordion header/trigger |
+| `icon` | Custom expand/collapse icon |
+| (default) | Content shown when expanded |
+
+### Events
+
+#### bit-accordion
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `change` | `{ expandedItems: HTMLElement[], originalEvent: Event }` | Emitted when any item's expanded state changes |
+
+#### bit-accordion-item
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `expand` | `{ originalEvent: Event }` | Emitted when item is expanded |
+| `collapse` | `{ originalEvent: Event }` | Emitted when item is collapsed |
+| `toggle` | `{ expanded: boolean, originalEvent: Event }` | Emitted when expanded state changes |
+
+### CSS Custom Properties
+
+#### bit-accordion
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--accordion-gap` | Gap between accordion items | `0.5rem` |
+
+#### bit-accordion-item
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--accordion-item-bg` | Background color | `transparent` |
+| `--accordion-item-color` | Text color | `var(--color-contrast)` |
+| `--accordion-item-border-color` | Border color | `var(--color-backdrop)` |
+| `--accordion-item-radius` | Border radius | `0.375rem` |
+| `--accordion-item-padding` | Content padding | Size-dependent |
+| `--accordion-item-header-padding` | Header padding | Size-dependent |
+| `--accordion-item-font-size` | Font size | Size-dependent |
+| `--accordion-item-transition` | Transition duration | `200ms ease-in-out` |
+
+### Examples
+
+#### Basic Accordion
+
+```html
+<bit-accordion>
+  <bit-accordion-item>
+    <span slot="header">Section 1</span>
+    <p>Content for section 1</p>
+  </bit-accordion-item>
+  <bit-accordion-item>
+    <span slot="header">Section 2</span>
+    <p>Content for section 2</p>
+  </bit-accordion-item>
+</bit-accordion>
+```
+
+#### Multiple Expand Mode
+
+```html
+<bit-accordion allow-multiple>
+  <bit-accordion-item expanded>
+    <span slot="header">Item 1</span>
+    <p>This item is expanded</p>
+  </bit-accordion-item>
+  <bit-accordion-item expanded>
+    <span slot="header">Item 2</span>
+    <p>This item is also expanded</p>
+  </bit-accordion-item>
+</bit-accordion>
+```
+
+#### With Variants and Sizes
+
+```html
+<bit-accordion variant="bordered" size="lg">
+  <bit-accordion-item>
+    <span slot="header">Large Bordered Item</span>
+    <p>Content with borders and large padding</p>
+  </bit-accordion-item>
+</bit-accordion>
+```
+
+#### Custom Icon
+
+```html
+<bit-accordion>
+  <bit-accordion-item>
+    <span slot="header">Custom Icon</span>
+    <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M9 18l6-6-6-6"/>
+    </svg>
+    <p>Content with custom chevron</p>
+  </bit-accordion-item>
+</bit-accordion>
 ```
 
 ## Theme Variables
@@ -297,11 +435,11 @@ Get and set custom properties:
 ```typescript
 // Get custom property value
 const button = document.querySelector('bit-button');
-const bgColor = getComputedStyle(button).getPropertyValue('--btn-bg');
+const bgColor = getComputedStyle(button).getPropertyValue('--button-bg');
 
 // Set custom property
-button.style.setProperty('--btn-bg', '#3b82f6');
-button.style.setProperty('--btn-color', 'white');
+button.style.setProperty('--button-bg', '#3b82f6');
+button.style.setProperty('--button-color', 'white');
 ```
 
 ## Type Definitions
@@ -438,5 +576,5 @@ const observer = new IntersectionObserver((entries) => {
 
 - **[Usage Guide](./usage.md)** – Installation and usage patterns
 - **[Examples](./examples.md)** – Real-world examples
-- **[Button Component](./button.md)** – Complete button documentation
+- **[Button Component](components/button.md)** – Complete button documentation
 

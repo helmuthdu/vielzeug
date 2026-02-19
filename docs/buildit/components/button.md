@@ -227,10 +227,10 @@ Customize appearance using CSS custom properties:
 
 <ClientOnly>
   <div class="demo-container">
-    <bit-button style="--btn-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --btn-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%); --btn-color: white; --btn-radius: 20px;">
+    <bit-button style="--button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%); --button-color: white; --button-radius: 20px;">
       Custom Gradient
     </bit-button>
-    <bit-button style="--btn-bg: #ff6b6b; --btn-color: white; --btn-padding: 0.75rem 2rem; --btn-font-weight: 700;">
+    <bit-button style="--button-bg: #ff6b6b; --button-color: white; --button-padding: 0.75rem 2rem; --button-font-weight: 700;">
       Custom Style
     </bit-button>
   </div>
@@ -239,10 +239,10 @@ Customize appearance using CSS custom properties:
 ```html
 <bit-button 
   style="
-    --btn-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --btn-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    --btn-color: white;
-    --btn-radius: 20px;
+    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    --button-color: white;
+    --button-radius: 20px;
   ">
   Custom Gradient
 </bit-button>
@@ -251,20 +251,20 @@ Customize appearance using CSS custom properties:
 ### Available CSS Custom Properties
 
 #### Colors & Backgrounds
-- `--btn-bg` - Background color
-- `--btn-color` - Text color
-- `--btn-hover-bg` - Hover background
-- `--btn-active-bg` - Active/pressed background
+- `--button-bg` - Background color
+- `--button-color` - Text color
+- `--button-hover-bg` - Hover background
+- `--button-active-bg` - Active/pressed background
 
 #### Borders & Spacing
-- `--btn-border` - Border (width, style, color)
-- `--btn-radius` - Border radius
-- `--btn-padding` - Inner padding
-- `--btn-gap` - Gap between icon and text
+- `--button-border` - Border (width, style, color)
+- `--button-radius` - Border radius
+- `--button-padding` - Inner padding
+- `--button-gap` - Gap between icon and text
 
 #### Typography
-- `--btn-font-size` - Font size
-- `--btn-font-weight` - Font weight
+- `--button-font-size` - Font size
+- `--button-font-weight` - Font weight
 
 ## API Reference
 

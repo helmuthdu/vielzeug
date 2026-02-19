@@ -5,27 +5,68 @@
   "files": [
     "dist"
   ],
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./dist/types.d.ts"
+      ]
+    }
+  },
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./accordion": {
+      "types": "./dist/accordion.d.ts",
+      "import": "./dist/accordion.js",
+      "require": "./dist/accordion.cjs"
+    },
+    "./accordion-item": {
+      "types": "./dist/accordion-item.d.ts",
+      "import": "./dist/accordion-item.js",
+      "require": "./dist/accordion-item.cjs"
+    },
     "./button": {
       "types": "./dist/button.d.ts",
       "import": "./dist/button.js",
       "require": "./dist/button.cjs"
-    }
+    },
+    "./button-group": {
+      "types": "./dist/button-group.d.ts",
+      "import": "./dist/button-group.js",
+      "require": "./dist/button-group.cjs"
+    },
+    "./checkbox": {
+      "types": "./dist/checkbox.d.ts",
+      "import": "./dist/checkbox.js",
+      "require": "./dist/checkbox.cjs"
+    },
+    "./radio": {
+      "types": "./dist/radio.d.ts",
+      "import": "./dist/radio.js",
+      "require": "./dist/radio.cjs"
+    },
+    "./types": "./dist/types.d.ts"
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && cp src/types.d.ts dist/types.d.ts",
     "preview": "vite preview",
     "test": "vitest"
   },
   "devDependencies": {
+    "@vielzeug/craftit": "workspace:*",
     "axe-core": "^4.11.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.18"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@vielzeug/craftit": "workspace:*"
   }
 }

@@ -325,7 +325,7 @@ describe('craftit', () => {
         template: (el) => html`<div>Count: ${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-state') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-state') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       expect(el.shadow.querySelector('div')?.textContent).toBe('Count: 0');
@@ -349,7 +349,7 @@ describe('craftit', () => {
         template: (el) => html`<div class="count">${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-update') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-update') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       expect(el.find('.count')?.textContent).toBe('0');
@@ -366,7 +366,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.name}</div>`,
       });
 
-      const el = document.createElement('test-set') as WebComponent<HTMLElement, { name: string; age: number }>;
+      const el = document.createElement('test-set') as WebComponent<HTMLElement, object, { name: string; age: number }>;
       await attach(el, container);
 
       await el.set({ name: 'Bob' });
@@ -381,7 +381,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-updater') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-updater') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       await el.set((state) => ({ count: state.count + 10 }));
@@ -395,7 +395,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.name}</div>`,
       });
 
-      const el = document.createElement('test-replace') as WebComponent<HTMLElement, { name?: string; age?: number }>;
+      const el = document.createElement('test-replace') as WebComponent<HTMLElement, object, { name?: string; age?: number }>;
       await attach(el, container);
 
       await el.set({ name: 'Bob' }, { replace: true });
@@ -412,7 +412,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-silent') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-silent') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       const initial = renderCount;
@@ -429,7 +429,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.user.name}</div>`,
       });
 
-      const el = document.createElement('test-nested') as WebComponent<HTMLElement, { user: { name: string } }>;
+      const el = document.createElement('test-nested') as WebComponent<HTMLElement, object, { user: { name: string } }>;
       await attach(el, container);
 
       el.state.user.name = 'Bob';
@@ -446,7 +446,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-watch') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-watch') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       const values: number[] = [];
@@ -467,7 +467,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-unwatch') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-unwatch') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       let callCount = 0;
@@ -552,7 +552,7 @@ describe('craftit', () => {
           html`${el.state.items.map((i) => `<button class="item" data-id="${i}">Item ${i}</button>`).join('')}`,
       });
 
-      const el = document.createElement('test-delegation') as WebComponent<HTMLElement, { items: number[] }>;
+      const el = document.createElement('test-delegation') as WebComponent<HTMLElement, object, { items: number[] }>;
       await attach(el, container);
 
       let clickedId = '';
@@ -573,7 +573,7 @@ describe('craftit', () => {
           html`${el.state.items.map((i) => `<button class="item" data-id="${i}">Item ${i}</button>`).join('')}`,
       });
 
-      const el = document.createElement('test-dynamic') as WebComponent<HTMLElement, { items: number[] }>;
+      const el = document.createElement('test-dynamic') as WebComponent<HTMLElement, object, { items: number[] }>;
       await attach(el, container);
 
       let clickedId = '';
@@ -691,7 +691,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-updated') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-updated') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       const initial = updateCount;
@@ -741,7 +741,7 @@ describe('craftit', () => {
         template: (el) => html`<input type="text" value="${el.state.value}" />`,
       });
 
-      const el = document.createElement('test-input') as WebComponent<HTMLElement, { value: string }>;
+      const el = document.createElement('test-input') as WebComponent<HTMLElement, object, { value: string }>;
       await attach(el, container);
 
       const input = el.find<HTMLInputElement>('input')!;
@@ -759,7 +759,7 @@ describe('craftit', () => {
         template: (el) => html`<input type="text" ${el.state.value ? `value="${el.state.value}"` : ''} />`,
       });
 
-      const el = document.createElement('test-input-clear') as WebComponent<HTMLElement, { value: string }>;
+      const el = document.createElement('test-input-clear') as WebComponent<HTMLElement, object, { value: string }>;
       await attach(el, container);
 
       el.state.value = '';
@@ -774,7 +774,7 @@ describe('craftit', () => {
         template: (el) => html`<input type="checkbox" ${el.state.checked ? 'checked' : ''} />`,
       });
 
-      const el = document.createElement('test-checkbox') as WebComponent<HTMLElement, { checked: boolean }>;
+      const el = document.createElement('test-checkbox') as WebComponent<HTMLElement, object, { checked: boolean }>;
       await attach(el, container);
 
       el.state.checked = true;
@@ -789,7 +789,7 @@ describe('craftit', () => {
         template: (el) => html`<textarea>${el.state.text}</textarea>`,
       });
 
-      const el = document.createElement('test-textarea') as WebComponent<HTMLElement, { text: string }>;
+      const el = document.createElement('test-textarea') as WebComponent<HTMLElement, object, { text: string }>;
       await attach(el, container);
 
       el.state.text = 'Updated';
@@ -804,7 +804,7 @@ describe('craftit', () => {
         template: (el) => html`<input type="text" ${el.state.disabled ? 'disabled' : ''} />`,
       });
 
-      const el = document.createElement('test-disabled') as WebComponent<HTMLElement, { disabled: boolean }>;
+      const el = document.createElement('test-disabled') as WebComponent<HTMLElement, object, { disabled: boolean }>;
       await attach(el, container);
 
       el.state.disabled = true;
@@ -899,7 +899,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-rapid') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-rapid') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       for (let i = 1; i <= 10; i++) {
@@ -919,7 +919,7 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.count}</div>`,
       });
 
-      const el = document.createElement('test-same') as WebComponent<HTMLElement, { count: number }>;
+      const el = document.createElement('test-same') as WebComponent<HTMLElement, object, { count: number }>;
       await attach(el, container);
 
       const initial = renderCount;

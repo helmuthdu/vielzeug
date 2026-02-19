@@ -103,43 +103,6 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 10%), 0 8px 10px -6px rgb(0 0 0 / 10%);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 25%);
   --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 5%);
-  --font-weight-thin: 100;
-  --font-weight-extralight: 200;
-  --font-weight-light: 300;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
-  --font-weight-black: 900;
-  --line-spacing-xxs: 0.75rem;
-  --line-spacing-xs: 1rem;
-  --line-spacing-sm: 1.25rem;
-  --line-spacing-md: 1.5rem;
-  --line-spacing-lg: 1.625rem;
-  --line-spacing-xl: 1.75rem;
-  --line-spacing-2xl: 2rem;
-  --line-spacing-3xl: 2.25rem;
-  --line-spacing-4xl: 2.5rem;
-  --line-spacing-5xl: 3.5rem;
-  --line-spacing-6xl: 4rem;
-  --line-spacing-7xl: 5rem;
-  --line-spacing-8xl: 7rem;
-  --line-spacing-9xl: 9rem;
-  --text-xxs: 0.625rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
-  --text-6xl: 3.75rem;
-  --text-7xl: 4.5rem;
-  --text-8xl: 6rem;
-  --text-9xl: 8rem;
   --color-contrast-50: hsl(240deg 4% 93% / 100%);
   --color-contrast-100: hsl(240deg 4% 90% / 91%);
   --color-contrast-200: hsl(240deg 4% 74% / 91%);
@@ -152,12 +115,6 @@
   --color-contrast-900: hsl(240deg 4% 12% / 91%);
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
-  --color-content-heading: var(--color-contrast-900);
-  --color-content-body: var(--color-contrast-800);
-  --color-content-secondary: var(--color-contrast-700);
-  --color-content-tertiary: var(--color-contrast-400);
-  --color-content-disabled: var(--color-contrast-500);
-  --color-content-contrast: var(--color-contrast-100);
 
   /* Primary - Vibrant blue (good for all colorblind types) */
   --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
@@ -193,6 +150,51 @@
   --color-secondary-focus: hsl(220deg 16% 35% / 91%);
   --color-secondary-content: hsl(220deg 16% 22% / 91%);
   --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
+
+  /* Typography */
+  --text-color-heading: var(--color-contrast-900);
+  --text-color-body: var(--color-contrast-800);
+  --text-color-secondary: var(--color-contrast-700);
+  --text-color-tertiary: var(--color-contrast-400);
+  --text-color-disabled: var(--color-contrast-500);
+  --text-color-contrast: var(--color-contrast-100);
+  --font-weight-thin: 100;
+  --font-weight-extralight: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+  --leading-xxs: 0.75rem;
+  --leading-xs: 1rem;
+  --leading-sm: 1.25rem;
+  --leading-md: 1.5rem;
+  --leading-lg: 1.625rem;
+  --leading-xl: 1.75rem;
+  --leading-2xl: 2rem;
+  --leading-3xl: 2.25rem;
+  --leading-4xl: 2.5rem;
+  --leading-5xl: 3.5rem;
+  --leading-6xl: 4rem;
+  --leading-7xl: 5rem;
+  --leading-8xl: 7rem;
+  --leading-9xl: 9rem;
+  --text-xxs: 0.625rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+  --text-8xl: 6rem;
+  --text-9xl: 8rem;
 }
 
 @media (prefers-color-scheme: dark) {

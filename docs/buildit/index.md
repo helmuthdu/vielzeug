@@ -144,9 +144,9 @@ Customize components using CSS custom properties:
 ```html
 <bit-button
   style="
-    --btn-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --btn-color: white;
-    --btn-radius: 20px;
+    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --button-color: white;
+    --button-radius: 20px;
   ">
   Custom Button
 </bit-button>
@@ -156,12 +156,20 @@ Customize components using CSS custom properties:
 
 ### Base Components
 
-- **[Button](./button.md)** – Versatile button with multiple variants and states
+- **[Button](./components/button.md)** – Versatile button with multiple variants and states
+- **[Button Group](./components/button-group.md)** – Group of related buttons
 - **Input** – Text input with validation (coming soon)
 - **Select** – Dropdown selection (coming soon)
 - **Checkbox** – Checkbox input (coming soon)
 - **Radio** – Radio button input (coming soon)
 - **Switch** – Toggle switch (coming soon)
+
+### Layout Components
+
+- **[Accordion](./components/accordion.md)** – Collapsible content sections
+- **Card** – Content container (coming soon)
+- **Grid** – Responsive grid layout (coming soon)
+- **Stack** – Vertical/horizontal stacking (coming soon)
 
 ### Form Components
 
@@ -182,11 +190,6 @@ Customize components using CSS custom properties:
 - **Breadcrumbs** – Navigation breadcrumbs (coming soon)
 - **Menu** – Dropdown menu (coming soon)
 
-### Layout Components
-
-- **Card** – Content container (coming soon)
-- **Grid** – Responsive grid layout (coming soon)
-- **Stack** – Vertical/horizontal stacking (coming soon)
 
 ## 🎨 Theming
 
@@ -318,7 +321,7 @@ import '@vielzeug/buildit/button';
 Web components use Shadow DOM, which encapsulates styles. Use CSS custom properties to customize:
 
 ```html
-<bit-button style="--btn-bg: blue;">Button</bit-button>
+<bit-button style="--button-bg: blue;">Button</bit-button>
 ```
 
 ### TypeScript errors

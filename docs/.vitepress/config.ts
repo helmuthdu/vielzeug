@@ -98,6 +98,7 @@ export default defineConfig({
         },
         {
           items: [
+            { link: '/buildit/api#accordion-component', text: 'Accordion Component' },
             { link: '/buildit/api#button-component', text: 'Button Component' },
             { link: '/buildit/api#theme-variables', text: 'Theme Variables' },
             { link: '/buildit/api#type-definitions', text: 'Type Definitions' },
@@ -107,7 +108,11 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/buildit/button', text: 'Button' },
+            { link: '/buildit/components/accordion', text: 'Accordion' },
+            { link: '/buildit/components/button', text: 'Button' },
+            { link: '/buildit/components/button-group', text: 'Button Group' },
+            { link: '/buildit/components/checkbox', text: 'Checkbox' },
+            { link: '/buildit/components/radio', text: 'Radio' },
           ],
           text: 'Components',
         },

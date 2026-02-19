@@ -9,8 +9,9 @@ export const getConfig = (
     entry?: LibraryEntry;
     name?: string;
     preserveModules?: boolean;
+    linkedDependencies?: string[];
   },
-): any => {
+) => {
   // This function returns a Vite configuration object for building a library.
   const entry = options?.entry || resolve(__dirname, 'src/index.ts');
   const name = options?.name || 'Vielzeug';
@@ -18,7 +19,8 @@ export const getConfig = (
 
   console.log(`|> Building library in ${__dirname}`);
 
-  return {
+  // biome-ignore lint/suspicious/noExplicitAny: -
+  const config: any = {
     build: {
       lib: {
         entry,
@@ -41,4 +43,19 @@ export const getConfig = (
     },
     plugins: [dts({ include: [resolve(__dirname, 'src')], insertTypesEntry: true, rollupTypes: true })],
   };
+
+  if (options?.linkedDependencies?.length){
+    console.log(`|> Adding linked dependencies: ${options.linkedDependencies.join(', ')}`);
+    config.optimizeDeps ||= {};
+    config.optimizeDeps.include ||= [];
+    config.build.commonjsOptions ||= {};
+    config.build.commonjsOptions.include ||= [];
+    for (const dep of options.linkedDependencies) {
+      config.optimizeDeps.include.push(dep);
+      config.build.commonjsOptions.include.push(dep);
+    }
+    config.build.commonjsOptions.include.push('node_modules');
+  }
+
+  return config;
 };

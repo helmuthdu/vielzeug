@@ -6,14 +6,13 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "types": ["vitest/globals"],
-
     /* Bundler mode */
+    "isolatedModules": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

@@ -11,7 +11,7 @@ export default defineConfig(
       index: resolve(__dirname, 'src/index.ts'),
       testing: resolve(__dirname, 'src/testing/index.ts'),
     },
-    name: 'Craftit',
+    name: 'craftit',
     preserveModules: false,
   }),
 );

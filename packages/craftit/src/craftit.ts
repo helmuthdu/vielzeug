@@ -7,124 +7,133 @@
 /**
  * Lifecycle hook function called with component instance
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type LifecycleHook<T = HTMLElement, S extends object = object> = (el: WebComponent<T, S>) => void;
+export type LifecycleHook<T = HTMLElement, P extends object = object, S extends object = object> = (
+  el: WebComponent<T, P, S>,
+) => void;
 
 /**
  * Callback invoked when an observed attribute changes
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type AttributeChangeHook<T = HTMLElement, S extends object = object> = (
+export type AttributeChangeHook<T = HTMLElement, P extends object = object, S extends object = object> = (
   name: string,
   oldValue: string | null,
   newValue: string | null,
-  el: WebComponent<T, S>,
+  el: WebComponent<T, P, S>,
 ) => void;
 
 /**
  * Component template - can be a string, DOM node, or function returning either
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type Template<T = HTMLElement, S extends object = object> =
+export type Template<T = HTMLElement, P extends object = object, S extends object = object> =
   | string
   | Node
-  | ((el: WebComponent<T, S>) => string | Node | DocumentFragment);
+  | ((el: WebComponent<T, P, S>) => string | Node | DocumentFragment);
 
 /**
  * Callbacks for form-associated custom elements
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type FormCallbacks<T = HTMLElement, S extends object = object> = {
+export type FormCallbacks<T = HTMLElement, P extends object = object, S extends object = object> = {
   /** Invoked when parent form's disabled state changes */
-  onFormDisabled?: (disabled: boolean, el: WebComponent<T, S>) => void;
+  onFormDisabled?: (disabled: boolean, el: WebComponent<T, P, S>) => void;
   /** Invoked when a parent form is reset */
-  onFormReset?: (el: WebComponent<T, S>) => void;
+  onFormReset?: (el: WebComponent<T, P, S>) => void;
   /** Invoked when the browser restores form state (navigation/autocomplete) */
   onFormStateRestore?: (
     state: string | File | FormData | null,
     mode: 'restore' | 'autocomplete',
-    el: WebComponent<T, S>,
+    el: WebComponent<T, P, S>,
   ) => void;
 };
 
 /**
  * Configuration options for creating a web component
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type ComponentOptions<T = HTMLElement, S extends object = object> = {
+export type ComponentOptions<T = HTMLElement, P extends object = object, S extends object = object> = {
   /** Template for rendering the component */
-  template: Template<T, S>;
+  template: Template<T, P, S>;
   /** Initial reactive state */
   state?: S;
   /** CSS styles (strings or CSSStyleSheet objects) */
   styles?: (string | CSSStyleSheet)[];
   /** Attributes to observe for changes */
-  observedAttributes?: readonly string[];
+  observedAttributes?: readonly (keyof P)[];
   /** Enable form association (allows component to participate in forms) */
   formAssociated?: boolean;
   /** Called when component is added to DOM */
-  onConnected?: LifecycleHook<T, S>;
+  onConnected?: LifecycleHook<T, P, S>;
   /** Called when component is removed from DOM */
-  onDisconnected?: LifecycleHook<T, S>;
+  onDisconnected?: LifecycleHook<T, P, S>;
   /** Called when an observed attribute changes */
-  onAttributeChanged?: AttributeChangeHook<T, S>;
+  onAttributeChanged?: AttributeChangeHook<T, P, S>;
   /** Called after each render completes */
-  onUpdated?: LifecycleHook<T, S>;
-} & FormCallbacks<T, S>;
+  onUpdated?: LifecycleHook<T, P, S>;
+} & FormCallbacks<T, P, S>;
 
 /**
  * Web component instance interface
  * @template T - Root element type (first child in shadow DOM)
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  */
-export type WebComponent<T = HTMLElement, S extends object = object> = HTMLElement & {
-  /** Reactive state object (changes trigger re-renders) */
-  readonly state: S;
-  /** Shadow DOM root */
-  readonly shadow: ShadowRoot;
-  /** First element in shadow DOM */
-  readonly root: T;
-  /** ElementInternals (only when formAssociated: true) */
-  readonly internals?: ElementInternals;
-  /** Form value (only when formAssociated: true) */
-  value?: string;
+export type WebComponent<T = HTMLElement, P extends object = object, S extends object = object> = HTMLElement &
+  P & {
+    /** Reactive state object (changes trigger re-renders) */
+    readonly state: S;
+    /** Shadow DOM root */
+    readonly shadow: ShadowRoot;
+    /** First element in shadow DOM */
+    readonly root: T;
+    /** ElementInternals (only when formAssociated: true) */
+    readonly internals?: ElementInternals;
+    /** Form value (only when formAssociated: true) */
+    value?: string;
 
-  /** Schedule a render in the next animation frame */
-  render(): void;
-  /** Wait for the pending render to complete */
-  flush(): Promise<void>;
-  /** Update state (merge, replace, or via function) */
-  set(
-    patch: Partial<S> | ((state: S) => S | Promise<S>),
-    options?: { replace?: boolean; silent?: boolean },
-  ): Promise<void>;
-  /** Watch a state slice and react to changes */
-  watch<U>(selector: (state: S) => U, callback: (value: U, prev: U) => void): () => void;
-  /** Find a single element in shadow DOM */
-  find<E extends Element = Element>(selector: string): E | null;
-  /** Find all matching elements in shadow DOM */
-  findAll<E extends Element = Element>(selector: string): E[];
-  /** Add event listener with automatic cleanup and delegation support */
-  on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void;
-  /** Dispatch custom event */
-  emit(name: string, detail?: unknown, options?: CustomEventInit): void;
-  /** Set timeout with automatic cleanup */
-  delay(callback: () => void, ms: number): number;
-  /** Clear scheduled timeout */
-  clear(id: number): void;
-  /** Form utilities (only when formAssociated: true) */
-  form?: {
-    /** Set form value */
-    value(value: string | File | FormData | null, state?: File | FormData | null): void;
-    /** Set a validation state */
-    valid(flags?: ValidityStateFlags, message?: string, anchor?: HTMLElement): void;
+    /** Schedule a render in the next animation frame */
+    render(): void;
+    /** Wait for the pending render to complete */
+    flush(): Promise<void>;
+    /** Update state (merge, replace, or via function) */
+    set(
+      patch: Partial<S> | ((state: S) => S | Promise<S>),
+      options?: { replace?: boolean; silent?: boolean },
+    ): Promise<void>;
+    /** Watch a state slice and react to changes */
+    watch<U>(selector: (state: S) => U, callback: (value: U, prev: U) => void): () => void;
+    /** Find a single element in shadow DOM */
+    find<E extends Element = Element>(selector: string): E | null;
+    /** Find all matching elements in shadow DOM */
+    findAll<E extends Element = Element>(selector: string): E[];
+    /** Add event listener with automatic cleanup and delegation support */
+    on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void;
+    /** Dispatch custom event */
+    emit(name: string, detail?: unknown, options?: CustomEventInit): void;
+    /** Set timeout with automatic cleanup */
+    delay(callback: () => void, ms: number): number;
+    /** Clear scheduled timeout */
+    clear(id: number): void;
+    /** Form utilities (only when formAssociated: true) */
+    form?: {
+      /** Set form value */
+      value(value: string | File | FormData | null, state?: File | FormData | null): void;
+      /** Set a validation state */
+      valid(flags?: ValidityStateFlags, message?: string, anchor?: HTMLElement): void;
+    };
   };
-};
 
 /* ==================== Utilities ==================== */
 
@@ -254,7 +263,7 @@ const createReactiveState = <S extends object>(initial: S, onChange: () => void)
 
 /* ==================== Component Base Class ==================== */
 
-class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElement implements WebComponent<T, S> {
+class BaseComponent<T = HTMLElement, P extends object = object, S extends object = object> extends HTMLElement {
   public readonly shadow: ShadowRoot;
   public readonly state: S;
   public value?: string;
@@ -263,7 +272,7 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
   #timeouts = new Set<number>();
   #renderScheduled = false;
   #renderSuppressed = false;
-  #options: ComponentOptions<T, S>;
+  #options: ComponentOptions<T, P, S>;
   #internals?: ElementInternals;
   #renderPromiseResolve?: () => void;
   #renderPromise?: Promise<void>;
@@ -273,7 +282,7 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
   >();
   #watcherId = 0;
 
-  constructor(options: ComponentOptions<T, S>) {
+  constructor(options: ComponentOptions<T, P, S>) {
     super();
 
     this.#options = options;
@@ -340,7 +349,8 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
     if (!attrs?.length) return;
 
     for (const attr of attrs) {
-      const prop = toCamel(attr);
+      const attrStr = String(attr);
+      const prop = toCamel(attrStr);
 
       if (prop in this) continue;
 
@@ -348,14 +358,14 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
         configurable: true,
         enumerable: true,
         get: () => {
-          const value = this.getAttribute(attr);
+          const value = this.getAttribute(attrStr);
           return value === '' ? true : value;
         },
         set: (value: any) => {
           if (value == null || value === false) {
-            this.removeAttribute(attr);
+            this.removeAttribute(attrStr);
           } else {
-            this.setAttribute(attr, value === true ? '' : String(value));
+            this.setAttribute(attrStr, value === true ? '' : String(value));
           }
         },
       });
@@ -387,11 +397,11 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
       this.performRender();
     }
 
-    this.#options.onConnected?.(this as WebComponent<T, S>);
+    this.#options.onConnected?.(this as unknown as WebComponent<T, P, S>);
   }
 
   disconnectedCallback(): void {
-    this.#options.onDisconnected?.(this as WebComponent<T, S>);
+    this.#options.onDisconnected?.(this as unknown as WebComponent<T, P, S>);
 
     this.#abortController.abort();
     for (const id of this.#timeouts) {
@@ -403,22 +413,22 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
 
-    this.#options.onAttributeChanged?.(name, oldValue, newValue, this as WebComponent<T, S>);
+    this.#options.onAttributeChanged?.(name, oldValue, newValue, this as unknown as WebComponent<T, P, S>);
     this.render();
   }
 
   /* ==================== Form Callbacks ==================== */
 
   formDisabledCallback(disabled: boolean): void {
-    this.#options.onFormDisabled?.(disabled, this as WebComponent<T, S>);
+    this.#options.onFormDisabled?.(disabled, this as unknown as WebComponent<T, P, S>);
   }
 
   formResetCallback(): void {
-    this.#options.onFormReset?.(this as WebComponent<T, S>);
+    this.#options.onFormReset?.(this as unknown as WebComponent<T, P, S>);
   }
 
   formStateRestoreCallback(state: string | File | FormData | null, mode: 'restore' | 'autocomplete'): void {
-    this.#options.onFormStateRestore?.(state, mode, this as WebComponent<T, S>);
+    this.#options.onFormStateRestore?.(state, mode, this as unknown as WebComponent<T, P, S>);
   }
 
   /* ==================== Public API ==================== */
@@ -685,7 +695,7 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
     try {
       let result: string | Node | DocumentFragment;
       if (typeof template === 'function') {
-        result = template(this as WebComponent<T, S>);
+        result = template(this as unknown as WebComponent<T, P, S>);
       } else {
         result = template;
       }
@@ -702,7 +712,7 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
 
       this.reconcile(this.shadow, nodes);
 
-      this.#options.onUpdated?.(this as WebComponent<T, S>);
+      this.#options.onUpdated?.(this as unknown as WebComponent<T, P, S>);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : '';
@@ -881,14 +891,15 @@ class BaseComponent<T = HTMLElement, S extends object = object> extends HTMLElem
 /**
  * Create a web component class
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  * @param options - Component configuration
  * @returns Custom element constructor
  */
-export const createComponent = <T = HTMLElement, S extends object = object>(
-  options: ComponentOptions<T, S>,
+export const createComponent = <T = HTMLElement, P extends object = object, S extends object = object>(
+  options: ComponentOptions<T, P, S>,
 ): CustomElementConstructor => {
-  class Component extends BaseComponent<T, S> {
+  class Component extends BaseComponent<T, P, S> {
     static formAssociated = options.formAssociated;
 
     static get observedAttributes() {
@@ -906,33 +917,44 @@ export const createComponent = <T = HTMLElement, S extends object = object>(
 /**
  * Define a custom element
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  * @param name - Element tag name (must contain hyphen)
  * @param options - Component configuration
+ * @example
+ * defineElement<HTMLDivElement, { variant: string; size: string }, { count: number }>(
+ *   'my-component',
+ *   {
+ *     observedAttributes: ['variant', 'size'],
+ *     state: { count: 0 },
+ *     template: (el) => html`<div>${el.variant} ${el.size}: ${el.state.count}</div>`
+ *   }
+ * );
  */
-export const defineElement = <T = HTMLElement, S extends object = object>(
+export const defineElement = <T = HTMLElement, P extends object = object, S extends object = object>(
   name: string,
-  options: ComponentOptions<T, S>,
+  options: ComponentOptions<T, P, S>,
 ): void => {
   if (customElements.get(name)) {
     console.warn(`[craftit] Element "${name}" already defined`);
     return;
   }
 
-  customElements.define(name, createComponent<T, S>(options));
+  customElements.define(name, createComponent<T, P, S>(options));
 };
 
 /**
  * Create and define an element in one call
  * @template T - Root element type
+ * @template P - Props object type (component attributes)
  * @template S - State object type
  * @param name - Element tag name (must contain hyphen)
  * @param options - Component configuration
  * @returns Custom element constructor
  */
-export const element = <T = HTMLElement, S extends object = object>(
+export const element = <T = HTMLElement, P extends object = object, S extends object = object>(
   name: string,
-  options: ComponentOptions<T, S>,
+  options: ComponentOptions<T, P, S>,
 ): CustomElementConstructor => {
   defineElement(name, options);
   return customElements.get(name)!;

@@ -4,4 +4,9 @@ import { defineConfig } from 'vite';
 import { getConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-export default defineConfig(getConfig(__dirname));
+export default defineConfig(
+  getConfig(__dirname, {
+    linkedDependencies: ['@vielzeug/toolkit'],
+    name: 'fetchit',
+  }),
+);

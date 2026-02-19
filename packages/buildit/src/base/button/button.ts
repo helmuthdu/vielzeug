@@ -18,44 +18,46 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @slot prefix - Content before the button text (e.g., icons)
  * @slot suffix - Content after the button text (e.g., icons, badges)
  *
- * @cssprop --btn-bg - Background color
- * @cssprop --btn-color - Text color
- * @cssprop --btn-hover-bg - Hover background
- * @cssprop --btn-active-bg - Active/pressed background
- * @cssprop --btn-border - Border (width, style, color)
- * @cssprop --btn-radius - Border radius
- * @cssprop --btn-padding - Inner padding
- * @cssprop --btn-gap - Gap between icon and text
- * @cssprop --btn-font-size - Font size
- * @cssprop --btn-font-weight - Font weight
+ * @cssprop --button-bg - Background color
+ * @cssprop --button-color - Text color
+ * @cssprop --button-hover-bg - Hover background
+ * @cssprop --button-active-bg - Active/pressed background
+ * @cssprop --button-border - Border (width, style, color)
+ * @cssprop --button-radius - Border radius
+ * @cssprop --button-padding - Inner padding
+ * @cssprop --button-gap - Gap between icon and text
+ * @cssprop --button-font-size - Font size
+ * @cssprop --button-font-weight - Font weight
  *
  * @fires click - Emitted when button is clicked (unless disabled/loading)
  */
 
 const styles = css`
   :host {
-    display: inline-block;
-    --btn-radius: var(--rounded-md);
-    --btn-font-weight: var(--font-weight-medium);
-    --btn-gap: var(--size-2);
+    display: inline-flex;
+    --button-radius: var(--rounded-md);
+    --button-font-weight: var(--font-weight-medium);
+    --button-gap: var(--size-2);
   }
 
   button {
     all: unset;
     box-sizing: border-box;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--btn-gap);
-    padding: var(--btn-padding);
+    gap: var(--button-gap);
+    padding: var(--button-padding);
+    width: 100%;
+    height: 100%;
     font-family: inherit;
-    font-size: var(--btn-font-size);
-    font-weight: var(--btn-font-weight);
+    font-size: var(--button-font-size);
+    font-weight: var(--button-font-weight);
     white-space: nowrap;
     user-select: none;
     cursor: pointer;
     transition: all 150ms ease-in-out;
-    border-radius: var(--btn-radius);
+    border-radius: var(--button-radius);
     position: relative;
   }
 
@@ -66,24 +68,24 @@ const styles = css`
 
   /* Sizes */
   :host([size='sm']) button {
-    --btn-padding: var(--size-1-5) var(--size-3);
-    --btn-font-size: var(--text-sm);
-    line-height: var(--line-spacing-sm);
+    --button-padding: var(--size-1-5) var(--size-3);
+    --button-font-size: var(--text-sm);
+    line-height: var(--leading-sm);
     height: var(--size-8);
   }
 
   :host(:not([size])) button,
   :host([size='md']) button {
-    --btn-padding: var(--size-2) var(--size-4);
-    --btn-font-size: var(--text-sm);
-    line-height: var(--line-spacing-md);
+    --button-padding: var(--size-2) var(--size-4);
+    --button-font-size: var(--text-sm);
+    line-height: var(--leading-md);
     height: var(--size-10);
   }
 
   :host([size='lg']) button {
-    --btn-padding: var(--size-2-5) var(--size-5);
-    --btn-font-size: var(--text-md);
-    line-height: var(--line-spacing-lg);
+    --button-padding: var(--size-2-5) var(--size-5);
+    --button-font-size: var(--text-md);
+    line-height: var(--leading-lg);
     height: var(--size-12);
   }
 
@@ -93,7 +95,7 @@ const styles = css`
   }
 
   :host([rounded]:not([icon-only])) button {
-    --btn-radius: 9999px;
+    --button-radius: var(--rounded-full);
   }
 
   :host([rounded][icon-only]) button {
@@ -106,143 +108,143 @@ const styles = css`
     display: flex;
   }
 
-  /* Colors - Set CSS variables for each color */
+  /* Colors */
   :host(:not([color])) button,
   :host([color='primary']) button {
-    --btn-base: var(--color-primary);
-    --btn-contrast: var(--color-primary-contrast);
-    --btn-focus: var(--color-primary-focus);
-    --btn-content: var(--color-primary-content);
-    --btn-backdrop: var(--color-primary-backdrop);
+    --button-base: var(--color-primary);
+    --button-contrast: var(--color-primary-contrast);
+    --button-focus: var(--color-primary-focus);
+    --button-content: var(--color-primary-content);
+    --button-backdrop: var(--color-primary-backdrop);
   }
 
   :host([color='secondary']) button {
-    --btn-base: var(--color-secondary-base);
-    --btn-contrast: var(--color-secondary-contrast);
-    --btn-focus: var(--color-secondary-focus);
-    --btn-content: var(--color-secondary-content);
-    --btn-backdrop: var(--color-secondary-backdrop);
+    --button-base: var(--color-secondary-base);
+    --button-contrast: var(--color-secondary-contrast);
+    --button-focus: var(--color-secondary-focus);
+    --button-content: var(--color-secondary-content);
+    --button-backdrop: var(--color-secondary-backdrop);
   }
 
   :host([color='success']) button {
-    --btn-base: var(--color-success);
-    --btn-contrast: var(--color-success-contrast);
-    --btn-focus: var(--color-success-focus);
-    --btn-content: var(--color-success-content);
-    --btn-backdrop: var(--color-success-backdrop);
+    --button-base: var(--color-success);
+    --button-contrast: var(--color-success-contrast);
+    --button-focus: var(--color-success-focus);
+    --button-content: var(--color-success-content);
+    --button-backdrop: var(--color-success-backdrop);
   }
 
   :host([color='warning']) button {
-    --btn-base: var(--color-warning);
-    --btn-contrast: var(--color-warning-contrast);
-    --btn-focus: var(--color-warning-focus);
-    --btn-content: var(--color-warning-content);
-    --btn-backdrop: var(--color-warning-backdrop);
+    --button-base: var(--color-warning);
+    --button-contrast: var(--color-warning-contrast);
+    --button-focus: var(--color-warning-focus);
+    --button-content: var(--color-warning-content);
+    --button-backdrop: var(--color-warning-backdrop);
   }
 
   :host([color='error']) button {
-    --btn-base: var(--color-error);
-    --btn-contrast: var(--color-error-contrast);
-    --btn-focus: var(--color-error-focus);
-    --btn-content: var(--color-error-content);
-    --btn-backdrop: var(--color-error-backdrop);
+    --button-base: var(--color-error);
+    --button-contrast: var(--color-error-contrast);
+    --button-focus: var(--color-error-focus);
+    --button-content: var(--color-error-content);
+    --button-backdrop: var(--color-error-backdrop);
   }
 
   /* Variants */
   :host(:not([variant])) button,
   :host([variant='solid']) button {
-    background: var(--btn-bg, var(--btn-base));
-    color: var(--btn-color, var(--btn-contrast));
-    border: var(--btn-border, var(--border, 1px) solid transparent);
+    background: var(--button-bg, var(--button-base));
+    color: var(--button-color, var(--button-contrast));
+    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host(:not([variant])) button:hover,
   :host([variant='solid']) button:hover {
-    background: var(--btn-hover-bg, var(--btn-focus));
+    background: var(--button-hover-bg, var(--button-focus));
   }
 
   :host(:not([variant])) button:active,
   :host([variant='solid']) button:active {
-    background: var(--btn-active-bg, var(--btn-content));
+    background: var(--button-active-bg, var(--button-content));
   }
 
   :host([variant='flat']) button {
-    background: var(--btn-bg, var(--btn-backdrop));
-    color: var(--btn-color, var(--btn-base));
-    border: var(--btn-border, var(--border, 1px) solid transparent);
+    background: var(--button-bg, var(--button-backdrop));
+    color: var(--button-color, var(--button-base));
+    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host([variant='flat']) button:hover {
-    background: var(--btn-hover-bg, var(--btn-focus));
-    color: var(--btn-contrast);
+    background: var(--button-hover-bg, var(--button-focus));
+    color: var(--button-contrast);
   }
 
   :host([variant='flat']) button:active {
-    background: var(--btn-active-bg, var(--btn-content));
-    color: var(--btn-contrast);
+    background: var(--button-active-bg, var(--button-content));
+    color: var(--button-contrast);
   }
 
   :host([variant='bordered']) button {
-    background: var(--btn-bg, var(--btn-backdrop));
-    color: var(--btn-color, var(--btn-base));
-    border: var(--btn-border, var(--border, 1px) solid var(--btn-base));
+    background: var(--button-bg, var(--button-backdrop));
+    color: var(--button-color, var(--button-base));
+    border: var(--button-border, var(--border, 1px) solid var(--button-base));
   }
 
   :host([variant='bordered']) button:hover {
-    background: var(--btn-hover-bg, var(--btn-focus));
-    color: var(--btn-contrast);
-    border-color: var(--btn-focus);
+    background: var(--button-hover-bg, var(--button-focus));
+    color: var(--button-contrast);
+    border-color: var(--button-focus);
   }
 
   :host([variant='bordered']) button:active {
-    background: var(--btn-active-bg, var(--btn-content));
-    color: var(--btn-contrast);
+    background: var(--button-active-bg, var(--button-content));
+    color: var(--button-contrast);
   }
 
   :host([variant='outline']) button {
-    background: var(--btn-bg, transparent);
-    color: var(--btn-color, var(--btn-base));
-    border: var(--btn-border, var(--border, 1px) solid var(--btn-base));
+    background: var(--button-bg, transparent);
+    color: var(--button-color, var(--button-base));
+    border: var(--button-border, var(--border, 1px) solid var(--button-base));
   }
 
   :host([variant='outline']) button:hover {
-    background: var(--btn-hover-bg, var(--btn-backdrop));
-    border-color: var(--btn-focus);
+    background: var(--button-hover-bg, var(--button-backdrop));
+    border-color: var(--button-focus);
   }
 
   :host([variant='outline']) button:active {
-    background: var(--btn-active-bg, var(--btn-base));
-    color: var(--btn-contrast);
+    background: var(--button-active-bg, var(--button-base));
+    color: var(--button-contrast);
   }
 
   :host([variant='ghost']) button {
-    background: var(--btn-bg, transparent);
-    color: var(--btn-color, var(--btn-base));
-    border: var(--btn-border, var(--border, 1px) solid transparent);
+    background: var(--button-bg, transparent);
+    color: var(--button-color, var(--button-base));
+    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host([variant='ghost']) button:hover {
-    background: var(--btn-hover-bg, var(--btn-backdrop));
+    background: var(--button-hover-bg, var(--button-backdrop));
   }
 
   :host([variant='ghost']) button:active {
-    background: var(--btn-active-bg, var(--btn-base));
-    color: var(--btn-contrast);
+    background: var(--button-active-bg, var(--button-base));
+    color: var(--button-contrast);
   }
 
   :host([variant='text']) button {
-    background: var(--btn-bg, transparent);
-    color: var(--btn-color, var(--btn-base));
-    border: var(--btn-border, var(--border, 1px) solid transparent);
+    background: var(--button-bg, transparent);
+    color: var(--button-color, var(--button-base));
+    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host([variant='text']) button:hover {
-    background: var(--btn-hover-bg, transparent);
-    color: var(--btn-focus);
+    background: var(--button-hover-bg, transparent);
+    color: var(--button-focus);
   }
 
   :host([variant='text']) button:active {
-    background: var(--btn-active-bg, transparent);
+    background: var(--button-active-bg, transparent);
     opacity: 0.7;
   }
 
@@ -262,7 +264,7 @@ const styles = css`
     position: absolute;
     width: 1em;
     height: 1em;
-    border: 2px solid currentColor;
+    border: var(--border-2) solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
@@ -275,8 +277,31 @@ const styles = css`
   }
 `;
 
-defineElement('bit-button', {
+export type ButtonProps = {
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+  loading?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+  'icon-only'?: boolean;
+  rounded?: boolean;
+};
+
+defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
   observedAttributes: ['variant', 'color', 'size', 'disabled', 'loading', 'type', 'icon-only', 'rounded'] as const,
+
+  onAttributeChanged(name, _oldValue, _newValue, el) {
+    const host = el as unknown as HTMLElement;
+
+    if (name === 'disabled' || name === 'loading') {
+      const isDisabled = host.hasAttribute('disabled') || host.hasAttribute('loading');
+      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+
+      const isBusy = host.hasAttribute('loading');
+      host.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+    }
+  },
 
   onConnected(el) {
     el.on('button', 'click', (e) => {
@@ -285,17 +310,19 @@ defineElement('bit-button', {
         e.stopPropagation();
         return;
       }
+
       el.emit('click', { originalEvent: e });
     });
   },
 
   styles: [styles],
+
   template: (el) => html`
     <button
       type="${el.getAttribute('type') || 'button'}"
       ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
-      aria-disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
-      aria-busy="${el.hasAttribute('loading')}">
+      aria-disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading') ? 'true' : 'false'}"
+      aria-busy="${el.hasAttribute('loading') ? 'true' : 'false'}">
       ${el.hasAttribute('loading') ? html`<span class="loader" aria-label="Loading"></span>` : ''}
       <slot name="prefix"></slot>
       <span class="content"><slot></slot></span>
@@ -304,6 +331,4 @@ defineElement('bit-button', {
   `,
 });
 
-// Export for module usage
 export default {};
-

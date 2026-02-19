@@ -47,6 +47,9 @@ Buildit uses modular imports for optimal tree-shaking. Import only the component
 ```typescript
 // Import specific components
 import '@vielzeug/buildit/button';
+import '@vielzeug/buildit/button-group';
+import '@vielzeug/buildit/accordion';
+import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/input';  // Coming soon
 import '@vielzeug/buildit/select'; // Coming soon
 ```
@@ -286,11 +289,11 @@ Every component exposes CSS custom properties for styling:
 ```html
 <bit-button
   style="
-    --btn-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --btn-color: white;
-    --btn-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    --btn-radius: 20px;
-    --btn-padding: 1rem 2rem;
+    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --button-color: white;
+    --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    --button-radius: 20px;
+    --button-padding: 1rem 2rem;
   ">
   Custom Styled Button
 </bit-button>
@@ -302,18 +305,18 @@ Apply styles globally using CSS:
 
 ```css
 bit-button {
-  --btn-font-weight: 600;
-  --btn-radius: 0.5rem;
+  --button-font-weight: 600;
+  --button-radius: 0.5rem;
 }
 
 /* Specific variant */
 bit-button[variant="solid"] {
-  --btn-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --button-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Specific color */
 bit-button[color="primary"] {
-  --btn-bg: #3b82f6;
+  --button-bg: #3b82f6;
 }
 ```
 
@@ -576,7 +579,7 @@ bit-button button {
 
 /* ✅ Works */
 bit-button {
-  --btn-bg: red;
+  --button-bg: red;
 }
 ```
 
@@ -596,5 +599,5 @@ Add DOM types to your tsconfig:
 
 - **[API Reference](./api.md)** – Detailed API documentation
 - **[Examples](./examples.md)** – Real-world usage examples
-- **[Button Component](./button.md)** – Complete button documentation
+- **[Button Component](components/button.md)** – Complete button documentation
 
