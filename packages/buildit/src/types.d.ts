@@ -10,6 +10,7 @@ import type {
   ButtonGroupProps,
   ButtonProps,
   CheckboxProps,
+  InputProps,
   RadioProps,
 } from './';
 
@@ -23,6 +24,7 @@ type BitAccordion = WebComponent<HTMLDivElement, AccordionProps>;
 type BitAccordionItem = WebComponent<HTMLDivElement, AccordionItemProps>;
 type BitCheckbox = WebComponent<HTMLDivElement, CheckboxProps>;
 type BitRadio = WebComponent<HTMLDivElement, RadioProps>;
+type BitInput = WebComponent<HTMLInputElement, InputProps>;
 
 // ============================================
 // Global HTML Element Tag Name Map
@@ -36,6 +38,7 @@ declare global {
     'bit-accordion-item': BitAccordionItem;
     'bit-checkbox': BitCheckbox;
     'bit-radio': BitRadio;
+    'bit-input': BitInput;
   }
 }
 

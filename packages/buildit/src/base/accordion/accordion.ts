@@ -5,13 +5,14 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  *
  * @element bit-accordion
  *
- * @attr {string} selection-mode - Selection mode: 'single' | 'multiple' (default)
+ * @attr {string} selection-mode - Selection mode: 'single' | 'multiple' (default: multiple)
  * @attr {string} variant - Visual variant for all items: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
  * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for bit-accordion-item elements
  *
- * @fires change - Emitted when selection changes (in single mode)
+ * @fires change - Emitted when selection changes in single mode.
+ *   detail: { expandedItem: HTMLElement | null }
  */
 
 const styles = css`
@@ -51,6 +52,20 @@ export type AccordionProps = {
 defineElement<HTMLElement, AccordionProps>('bit-accordion', {
   observedAttributes: ['selection-mode', 'size', 'variant'] as const,
 
+  onAttributeChanged(name, _oldValue, _newValue, el) {
+    if (name === 'variant' || name === 'size') {
+      const host = el as unknown as HTMLElement;
+      const variant = host.getAttribute('variant');
+      const size = host.getAttribute('size');
+      const items = host.querySelectorAll('bit-accordion-item');
+
+      items.forEach((item) => {
+        if (variant) item.setAttribute('variant', variant);
+        if (size) item.setAttribute('size', size);
+      });
+    }
+  },
+
   onConnected(el) {
     const host = el as unknown as HTMLElement;
 
@@ -68,6 +83,13 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
     // Initial sync
     syncItems();
 
+    // Sync when items are added/removed
+    const slot = host.shadowRoot?.querySelector('slot');
+    if (slot) {
+      slot.addEventListener('slotchange', syncItems);
+    }
+
+    // Single-selection behavior
     host.addEventListener('expand', (e) => {
       if (host.getAttribute('selection-mode') === 'single') {
         const expandedItem = e.target as HTMLElement;
@@ -79,29 +101,13 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
           }
         });
 
-        el.emit('change', { expandedItem }, { bubbles: true, composed: true });
+        el.emit('change', { expandedItem });
       }
     });
-
-    // Observe for new items and attribute changes to sync
-    const observer = new MutationObserver(syncItems);
-    observer.observe(host, {
-      attributeFilter: ['variant', 'size'],
-      attributes: true,
-      childList: true,
-    });
-
-    // Cleanup observer
-    (host as any)._observer = observer;
-  },
-
-  onDisconnected(el) {
-    if ((el as any)._observer) {
-      (el as any)._observer.disconnect();
-    }
   },
 
   styles: [styles],
+
   template: () => html`<slot></slot>`,
 });
 

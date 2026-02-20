@@ -23,6 +23,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @cssprop --checkbox-color - Checkmark color
  *
  * @fires change - Emitted when checked state changes
+ *   detail: { checked: boolean; value: string | null; originalEvent: Event }
  */
 
 const styles = css`
@@ -180,28 +181,38 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
 
   onAttributeChanged(el, name, _oldValue, newValue) {
     const host = el as unknown as HTMLElement;
+
     if (name === 'indeterminate') {
-      const input = host.shadowRoot?.querySelector('input');
+      const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
       if (input) {
         input.indeterminate = newValue !== null;
       }
       host.setAttribute('aria-checked', newValue !== null ? 'mixed' : host.hasAttribute('checked') ? 'true' : 'false');
     } else if (name === 'checked') {
-      const input = host.shadowRoot?.querySelector('input');
+      const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
       if (input) {
         input.checked = newValue !== null;
       }
       if (!host.hasAttribute('indeterminate')) {
         host.setAttribute('aria-checked', newValue !== null ? 'true' : 'false');
       }
+    } else if (name === 'disabled') {
+      const isDisabled = newValue !== null;
+      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+
+      // Optional: adjust tabindex when disabled/enabled
+      if (isDisabled) {
+        host.removeAttribute('tabindex');
+      } else if (!host.hasAttribute('tabindex')) {
+        host.setAttribute('tabindex', '0');
+      }
     }
   },
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
-    const input = host.shadowRoot?.querySelector('input');
+    const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
 
-    // Set initial state
     const isIndeterminate = host.hasAttribute('indeterminate');
     const isChecked = host.hasAttribute('checked');
     const isDisabled = host.hasAttribute('disabled');
@@ -215,11 +226,12 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
     host.setAttribute('role', 'checkbox');
     host.setAttribute('aria-checked', isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false');
     host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+
     if (!isDisabled && !host.hasAttribute('tabindex')) {
       host.setAttribute('tabindex', '0');
     }
 
-    // Handle keydown for accessibility
+    // Keyboard interaction
     host.addEventListener('keydown', (e: KeyboardEvent) => {
       if (host.hasAttribute('disabled')) return;
       if (e.key === ' ' || e.key === 'Enter') {
@@ -236,12 +248,16 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
           input.indeterminate = false;
         }
 
-        host.setAttribute('aria-checked', 'true');
-        el.emit('change', { checked: nextChecked, originalEvent: e, value: host.getAttribute('value') });
+        host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
+        el.emit('change', {
+          checked: nextChecked,
+          originalEvent: e,
+          value: host.getAttribute('value'),
+        });
       }
     });
 
-    // Handle host click to toggle
+    // Mouse / pointer interaction
     host.addEventListener('click', (e) => {
       if (host.hasAttribute('disabled')) return;
 
@@ -258,11 +274,16 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
       }
 
       host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
-      el.emit('change', { checked: nextChecked, originalEvent: e, value: host.getAttribute('value') });
+      el.emit('change', {
+        checked: nextChecked,
+        originalEvent: e,
+        value: host.getAttribute('value'),
+      });
     });
   },
 
   styles: [styles],
+
   template: (el) => html`
     <div class="checkbox-wrapper">
       <input
@@ -286,9 +307,8 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          version="1.1"
           xmlns="http://www.w3.org/2000/svg">
-          <path d="M 20,6 9,17 4,12" id="path1" />
+          <path d="M 20,6 9,17 4,12" />
         </svg>
         <svg
           height="24px"
@@ -301,7 +321,7 @@ defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
           stroke-linecap="round"
           stroke-linejoin="round"
           xmlns="http://www.w3.org/2000/svg">
-          <path d="M 5,12 H 19" id="path1" />
+          <path d="M 5,12 H 19" />
         </svg>
       </div>
     </div>

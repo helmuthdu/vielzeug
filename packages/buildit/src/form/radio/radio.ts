@@ -20,7 +20,8 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @cssprop --radio-checked-bg - Background color when checked
  * @cssprop --radio-color - Dot color
  *
- * @fires change - Emitted when checked state changes
+ * @fires change - Emitted when checked state changes.
+ *   detail: { checked: true; value: string | null; originalEvent: Event }
  */
 
 const styles = css`
@@ -157,20 +158,32 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
 
   onAttributeChanged(el, name, _oldValue, newValue) {
     const host = el as unknown as HTMLElement;
+
     if (name === 'checked') {
-      const input = host.shadowRoot?.querySelector('input');
+      const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+      const isChecked = newValue !== null;
+
       if (input) {
-        input.checked = newValue !== null;
+        input.checked = isChecked;
       }
-      host.setAttribute('aria-checked', newValue !== null ? 'true' : 'false');
+
+      host.setAttribute('aria-checked', isChecked ? 'true' : 'false');
+    } else if (name === 'disabled') {
+      const isDisabled = newValue !== null;
+      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+
+      if (isDisabled) {
+        host.removeAttribute('tabindex');
+      } else if (!host.hasAttribute('tabindex')) {
+        host.setAttribute('tabindex', '0');
+      }
     }
   },
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
-    const input = host.shadowRoot?.querySelector('input');
+    const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
 
-    // Set initial state
     const isChecked = host.hasAttribute('checked');
     const isDisabled = host.hasAttribute('disabled');
 
@@ -178,87 +191,91 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
       input.checked = isChecked;
     }
 
-    // Host is the interactive element
     host.setAttribute('role', 'radio');
     host.setAttribute('aria-checked', isChecked ? 'true' : 'false');
     host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+
     if (!isDisabled && !host.hasAttribute('tabindex')) {
       host.setAttribute('tabindex', '0');
     }
 
-    // Handle keydown for accessibility
+    const selectRadio = (target: HTMLElement, originalEvent: Event | KeyboardEvent) => {
+      const radioName = target.getAttribute('name');
+      if (!radioName) return;
+
+      const radios = Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
+        (r) => !r.hasAttribute('disabled'),
+      );
+
+      radios.forEach((radio) => {
+        const radioInput = (radio.shadowRoot?.querySelector('input') as HTMLInputElement | null) || null;
+        const isTarget = radio === target;
+
+        if (isTarget) {
+          radio.setAttribute('checked', '');
+          radio.setAttribute('aria-checked', 'true');
+          if (radioInput) radioInput.checked = true;
+
+          (radio as any).emit?.('change', {
+            checked: true,
+            originalEvent,
+            value: radio.getAttribute('value'),
+          });
+        } else {
+          if (radio.hasAttribute('checked')) {
+            radio.removeAttribute('checked');
+            radio.setAttribute('aria-checked', 'false');
+            if (radioInput) radioInput.checked = false;
+          }
+        }
+      });
+    };
+
+    // Keyboard interaction
     host.addEventListener('keydown', (e: KeyboardEvent) => {
       if (host.hasAttribute('disabled')) return;
 
       const radioName = host.getAttribute('name');
       if (!radioName) return;
 
-      const radios = Array.from(document.querySelectorAll(`bit-radio[name="${radioName}"]`)).filter(
+      const radios = Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
         (r) => !r.hasAttribute('disabled'),
       );
+
       const currentIndex = radios.indexOf(host);
+      if (currentIndex === -1) return;
 
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (!host.hasAttribute('checked')) {
-          host.setAttribute('checked', '');
-          if (input) input.checked = true;
-          host.setAttribute('aria-checked', 'true');
-          el.emit('change', { checked: true, originalEvent: e, value: host.getAttribute('value') });
+          selectRadio(host, e);
         }
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         e.preventDefault();
         const nextIndex = (currentIndex + 1) % radios.length;
-        const nextRadio = radios[nextIndex] as HTMLElement;
+        const nextRadio = radios[nextIndex];
         nextRadio.focus();
-        nextRadio.setAttribute('checked', '');
-        nextRadio.dispatchEvent(new CustomEvent('change', {
-          detail: { checked: true, value: nextRadio.getAttribute('value') },
-          bubbles: true,
-          composed: true,
-        }));
+        selectRadio(nextRadio, e);
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         e.preventDefault();
         const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
-        const prevRadio = radios[prevIndex] as HTMLElement;
+        const prevRadio = radios[prevIndex];
         prevRadio.focus();
-        prevRadio.setAttribute('checked', '');
-        prevRadio.dispatchEvent(new CustomEvent('change', {
-          detail: { checked: true, value: prevRadio.getAttribute('value') },
-          bubbles: true,
-          composed: true,
-        }));
+        selectRadio(prevRadio, e);
       }
     });
 
-    // Handle host click to select
+    // Click interaction
     host.addEventListener('click', (e) => {
       if (host.hasAttribute('disabled')) return;
-      if (host.hasAttribute('checked')) return; // Already checked, do nothing
+      if (host.hasAttribute('checked')) return; // Already checked
 
-      // Uncheck other radios in the same group
-      const radioName = host.getAttribute('name');
-      if (radioName) {
-        const radios = document.querySelectorAll(`bit-radio[name="${radioName}"]`);
-        radios.forEach((radio) => {
-          if (radio !== host) {
-            radio.removeAttribute('checked');
-          }
-        });
-      }
-
-      host.setAttribute('checked', '');
-
-      if (input) {
-        input.checked = true;
-      }
-
-      host.setAttribute('aria-checked', 'true');
-      el.emit('change', { checked: true, originalEvent: e, value: host.getAttribute('value') });
+      selectRadio(host, e);
     });
   },
 
   styles: [styles],
+
   template: (el) => html`
     <div class="radio-wrapper">
       <input
@@ -279,6 +296,3 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
 });
 
 export default {};
-
-
-

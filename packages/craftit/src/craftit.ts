@@ -701,8 +701,16 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
       }
 
       let nodes: Node[];
+      let propertyBindings: Array<{ selector: string; property: string; value: unknown }> = [];
+
       if (typeof result === 'string') {
         nodes = Array.from(parseHTML(result).childNodes);
+      } else if (result && typeof result === 'object' && '__html' in result) {
+        // HTMLResult object with property bindings
+        if (result.__propertyBindings) {
+          propertyBindings = result.__propertyBindings;
+        }
+        nodes = Array.from(parseHTML(result.__html).childNodes);
       } else if (result instanceof DocumentFragment) {
         const fragClone = result.cloneNode(true) as DocumentFragment;
         nodes = Array.from(fragClone.childNodes);
@@ -711,6 +719,11 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
       }
 
       this.reconcile(this.shadow, nodes);
+
+      // Apply property bindings after DOM is updated
+      if (propertyBindings.length > 0) {
+        this.applyPropertyBindings(propertyBindings);
+      }
 
       this.#options.onUpdated?.(this as unknown as WebComponent<T, P, S>);
     } catch (error) {
@@ -729,6 +742,21 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
           </button>
         </div>
       `;
+    }
+  }
+
+  /**
+   * Apply property bindings to elements in shadow DOM
+   */
+  private applyPropertyBindings(bindings: Array<{ selector: string; property: string; value: unknown }>): void {
+    for (const { selector, property, value } of bindings) {
+      const element = this.shadow.querySelector(selector);
+      if (element) {
+        // Set the property on the element
+        (element as any)[property] = value;
+        // Remove the data attribute marker
+        element.removeAttribute(selector.slice(1, -1)); // Remove [ and ]
+      }
     }
   }
 
@@ -962,30 +990,43 @@ export const element = <T = HTMLElement, P extends object = object, S extends ob
 
 /* ==================== Utilities Export ==================== */
 
+type HTMLResult = {
+  toString(): string;
+  __html: string;
+  __propertyBindings?: Array<{ selector: string; property: string; value: unknown }>;
+};
+
 /**
- * HTML template tag with boolean attribute support
+ * HTML template tag with boolean attribute and property binding support
  * @param strings - Template string array
  * @param values - Template values
- * @returns Interpolated HTML string
+ * @returns HTML result object (with toString for compatibility)
  * @example
  * html`<div>Hello, ${name}!</div>`
  * // Boolean attributes (Lit-style)
  * html`<button ?disabled="${isDisabled}">Click</button>`
+ * // Property binding (Lit-style)
+ * html`<input .value="${inputValue}" .indeterminate="${isIndeterminate}">`
  */
-export const html = (strings: TemplateStringsArray, ...values: unknown[]): string => {
+export const html = (strings: TemplateStringsArray, ...values: unknown[]): string | HTMLResult => {
   let result = '';
   let skipQuote = false;
+  const propertyBindings: Array<{ selector: string; property: string; value: unknown }> = [];
 
   for (let i = 0; i < strings.length; i++) {
     let str = strings[i];
 
-    // Remove the leading quote if previous was a boolean attribute
+    // Remove the leading quote if previous was a boolean attribute or property
     if (skipQuote) {
       str = str.replace(/^["']/, '');
       skipQuote = false;
     }
 
+    // Check for boolean attribute (?attr)
     const boolAttrMatch = str.match(/\s+\?([a-z][-a-z0-9]*)\s*=\s*["']$/i);
+
+    // Check for property binding (.property)
+    const propMatch = str.match(/\s+\.([a-z][-a-z0-9]*)\s*=\s*["']$/i);
 
     if (boolAttrMatch && i < values.length) {
       const shouldInclude = values[i] === true || values[i] === '';
@@ -1000,6 +1041,26 @@ export const html = (strings: TemplateStringsArray, ...values: unknown[]): strin
 
       // Mark to skip the quote in the next string
       skipQuote = true;
+    } else if (propMatch && i < values.length) {
+      const propertyName = propMatch[1];
+      const value = values[i];
+
+      // Add everything before .propertyName="
+      result += str.slice(0, -propMatch[0].length);
+
+      // Store property binding to be applied via data attribute
+      // We'll use a special data attribute to mark this for property setting
+      const bindingId = `__prop_${propertyBindings.length}`;
+      result += ` data-${bindingId}="${propertyName}"`;
+
+      propertyBindings.push({
+        property: propertyName,
+        selector: `[data-${bindingId}]`,
+        value: value,
+      });
+
+      // Mark to skip the quote in the next string
+      skipQuote = true;
     } else {
       // Normal interpolation
       result += str;
@@ -1009,6 +1070,17 @@ export const html = (strings: TemplateStringsArray, ...values: unknown[]): strin
         result += values[i] ?? '';
       }
     }
+  }
+
+  // Return result with property bindings if any exist
+  if (propertyBindings.length > 0) {
+    return {
+      __html: result,
+      __propertyBindings: propertyBindings,
+      toString() {
+        return this.__html;
+      },
+    };
   }
 
   return result;

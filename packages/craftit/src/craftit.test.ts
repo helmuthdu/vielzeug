@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import type { WebComponent } from './craftit';
 import { attach, classMap, css, defineElement, destroy, html, styleMap } from './craftit';
 
@@ -72,7 +73,7 @@ describe('craftit', () => {
 
         it('should handle boolean attributes with single quotes', () => {
           const checked = true;
-          const result = html`<input type="checkbox" ?checked='${checked}' />`;
+          const result = html`<input type="checkbox" ?checked="${checked}" />`;
           expect(result).toBe('<input type="checkbox" checked />');
         });
 
@@ -80,6 +81,53 @@ describe('craftit', () => {
           const busy = true;
           const result = html`<div ?aria-busy="${busy}">Loading</div>`;
           expect(result).toBe('<div aria-busy>Loading</div>');
+        });
+      });
+
+      describe('property binding', () => {
+        it('should create data attribute for property binding', () => {
+          const value = 'test value';
+          const result = html`<input .value="${value}" />`;
+          const htmlString = typeof result === 'string' ? result : result.__html;
+          expect(htmlString).toContain('data-__prop_0="value"');
+        });
+
+        it('should store property bindings metadata', () => {
+          const value = 'test value';
+          const result = html`<input .value="${value}" />`;
+          expect(typeof result).toBe('object');
+          expect((result as any).__propertyBindings).toBeDefined();
+          expect((result as any).__propertyBindings).toHaveLength(1);
+          expect((result as any).__propertyBindings[0]).toEqual({
+            property: 'value',
+            selector: '[data-__prop_0]',
+            value: 'test value',
+          });
+        });
+
+        it('should handle multiple property bindings', () => {
+          const value = 'hello';
+          const indeterminate = true;
+          const result = html`<input .value="${value}" .indeterminate="${indeterminate}" />`;
+          expect((result as any).__propertyBindings).toHaveLength(2);
+          expect((result as any).__propertyBindings[0].property).toBe('value');
+          expect((result as any).__propertyBindings[1].property).toBe('indeterminate');
+        });
+
+        it('should handle property binding with hyphenated names', () => {
+          const value = 'test';
+          const result = html`<input .my-prop="${value}" />`;
+          expect((result as any).__propertyBindings[0].property).toBe('my-prop');
+        });
+
+        it('should work with boolean attributes and properties together', () => {
+          const disabled = true;
+          const value = 'test';
+          const result = html`<input ?disabled="${disabled}" .value="${value}" />`;
+          const htmlString = typeof result === 'string' ? result : result.__html;
+          expect(htmlString).toContain('disabled');
+          expect(htmlString).toContain('data-__prop_0="value"');
+          expect((result as any).__propertyBindings).toHaveLength(1);
         });
       });
     });
@@ -94,7 +142,9 @@ describe('craftit', () => {
       });
 
       it('should handle empty values', () => {
-        const result = css`color: ${undefined};`;
+        const result = css`
+          color: ${undefined};
+        `;
         expect(result).toBe('color: ;');
       });
     });
@@ -125,7 +175,9 @@ describe('craftit', () => {
           const theme = css.theme({ bgColor: '#fff' });
           const styles = css`
             ${theme}
-            .card { background: ${theme.bgColor}; }
+            .card {
+              background: ${theme.bgColor};
+            }
           `;
 
           expect(styles).toContain(':host { --bg-color: #fff; }');
@@ -395,7 +447,11 @@ describe('craftit', () => {
         template: (el) => html`<div>${el.state.name}</div>`,
       });
 
-      const el = document.createElement('test-replace') as WebComponent<HTMLElement, object, { name?: string; age?: number }>;
+      const el = document.createElement('test-replace') as WebComponent<
+        HTMLElement,
+        object,
+        { name?: string; age?: number }
+      >;
       await attach(el, container);
 
       await el.set({ name: 'Bob' }, { replace: true });
@@ -928,6 +984,65 @@ describe('craftit', () => {
       await el.flush();
 
       expect(renderCount).toBe(initial);
+    });
+  });
+
+  describe('Property Binding Integration', () => {
+    it('should apply property bindings to elements', async () => {
+      defineElement('test-prop-binding', {
+        state: { indeterminate: false, value: 'initial' },
+        template: (el) => html`
+          <input type="text" .value="${el.state.value}" .indeterminate="${el.state.indeterminate}" />
+        `,
+      });
+
+      const el = document.createElement('test-prop-binding') as WebComponent<
+        HTMLElement,
+        object,
+        { value: string; indeterminate: boolean }
+      >;
+      await attach(el, container);
+
+      const input = el.find<HTMLInputElement>('input')!;
+
+      // Property should be set, not attribute
+      expect(input.value).toBe('initial');
+      expect(input.indeterminate).toBe(false);
+
+      // Data attribute marker should be removed
+      expect(input.hasAttribute('data-__prop_0')).toBe(false);
+      expect(input.hasAttribute('data-__prop_1')).toBe(false);
+
+      // Update state and verify properties update
+      el.state.value = 'updated';
+      el.state.indeterminate = true;
+      await el.flush();
+
+      expect(input.value).toBe('updated');
+      expect(input.indeterminate).toBe(true);
+    });
+
+    it('should work with both boolean attributes and property bindings', async () => {
+      defineElement('test-mixed-binding', {
+        state: { disabled: true, value: 'test' },
+        template: (el) => html` <input type="text" ?disabled="${el.state.disabled}" .value="${el.state.value}" /> `,
+      });
+
+      const el = document.createElement('test-mixed-binding') as WebComponent<
+        HTMLElement,
+        object,
+        { value: string; disabled: boolean }
+      >;
+      await attach(el, container);
+
+      const input = el.find<HTMLInputElement>('input')!;
+
+      // Boolean attribute should be set as an attribute
+      expect(input.hasAttribute('disabled')).toBe(true);
+
+      // Property should be set directly
+      expect(input.value).toBe('test');
+      expect(input.disabled).toBe(true);
     });
   });
 });

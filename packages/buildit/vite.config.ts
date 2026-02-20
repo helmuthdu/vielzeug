@@ -13,6 +13,7 @@ export default defineConfig(
       'button-group': resolve(__dirname, './src/base/button-group/button-group'),
       checkbox: resolve(__dirname, './src/form/checkbox/checkbox'),
       index: resolve(__dirname, './src/index'),
+      input: resolve(__dirname, './src/form/input/input'),
       radio: resolve(__dirname, './src/form/radio/radio'),
     },
     linkedDependencies: ['@vielzeug/craftit'],

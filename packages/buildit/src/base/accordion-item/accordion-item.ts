@@ -23,7 +23,9 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @cssprop --accordion-item-transition - Transition timing
  *
  * @fires expand - Emitted when the item is expanded
+ *   detail: { expanded: true; item: HTMLElement }
  * @fires collapse - Emitted when the item is collapsed
+ *   detail: { expanded: false; item: HTMLElement }
  */
 
 const styles = css`
@@ -140,6 +142,7 @@ const styles = css`
   }
 
   :host([variant='text']) summary:hover {
+    /* Intentionally no hover background for text variant */
   }
 
   /* Sizes */
@@ -204,7 +207,8 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
 
   onAttributeChanged(el, name, _oldValue, newValue) {
     if (name === 'expanded') {
-      const details = (el as unknown as HTMLElement).shadowRoot?.querySelector('details');
+      const host = el as unknown as HTMLElement;
+      const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
       if (details) {
         details.open = newValue !== null;
       }
@@ -213,60 +217,64 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
-    const details = host.shadowRoot?.querySelector('details');
+    const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
 
-    if (details) {
-      details.addEventListener('toggle', () => {
-        const isOpen = details.open;
-        if (isOpen) {
-          if (!host.hasAttribute('expanded')) {
-            host.setAttribute('expanded', '');
-            el.emit('expand', { bubbles: true, composed: true });
-          }
-        } else {
-          if (host.hasAttribute('expanded')) {
-            host.removeAttribute('expanded');
-            el.emit('collapse', { bubbles: true, composed: true });
-          }
-        }
-      });
+    if (!details) return;
 
-      // Initial sync
-      details.open = host.hasAttribute('expanded');
-    }
+    details.addEventListener('toggle', () => {
+      const isOpen = details.open;
+
+      if (isOpen && !host.hasAttribute('expanded')) {
+        host.setAttribute('expanded', '');
+        el.emit('expand', { expanded: true, item: host }, { bubbles: true, composed: true });
+      } else if (!isOpen && host.hasAttribute('expanded')) {
+        host.removeAttribute('expanded');
+        el.emit('collapse', { expanded: false, item: host }, { bubbles: true, composed: true });
+      }
+    });
+
+    // Initial sync from attribute to details
+    details.open = host.hasAttribute('expanded');
   },
 
   styles: [styles],
-  template: (el) => html`
-    <details ?open="${el.hasAttribute('expanded')}">
-      <summary>
-        <slot name="prefix"></slot>
-        <div class="header-content">
-          <span class="title">
-            <slot name="title"></slot>
-          </span>
-          <span class="subtitle">
-            <slot name="subtitle"></slot>
-          </span>
+
+  template: (el) => {
+    const isExpanded = el.hasAttribute('expanded');
+    const isDisabled = el.hasAttribute('disabled');
+    const titleId = 'accordion-item-title';
+
+    return html`
+      <details ?open="${isExpanded}">
+        <summary aria-expanded="${isExpanded ? 'true' : 'false'}" aria-disabled="${isDisabled ? 'true' : 'false'}">
+          <slot name="prefix"></slot>
+          <div class="header-content">
+            <span class="title" id="${titleId}">
+              <slot name="title"></slot>
+            </span>
+            <span class="subtitle">
+              <slot name="subtitle"></slot>
+            </span>
+          </div>
+          <slot name="suffix"></slot>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="chevron"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" />
+          </svg>
+        </summary>
+        <div class="content-wrapper" role="region" aria-labelledby="${titleId}">
+          <slot></slot>
         </div>
-        <slot name="suffix"></slot>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="chevron"
-          xmlns="http://www.w3.org/2000/svg">
-          <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" id="path1" />
-        </svg>
-      </summary>
-      <div class="content-wrapper">
-        <slot></slot>
-      </div>
-    </details>
-  `,
+      </details>
+    `;
+  },
 });
 
 export default {};

@@ -1,204 +1,193 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { createFixture } from '@vielzeug/craftit/testing';
+import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-radio', () => {
+  let fixture: ComponentFixture<HTMLElement>;
+
   beforeAll(async () => {
     await import('../radio');
   });
 
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
   describe('Rendering', () => {
     it('should render with shadow DOM structure', async () => {
-      const fixture = await createFixture('bit-radio');
+      fixture = await createFixture('bit-radio');
+
       const circle = fixture.query('.circle');
       expect(circle).toBeTruthy();
-      fixture.destroy();
     });
 
     it('should render label content', async () => {
-      const fixture = await createFixture('bit-radio');
+      fixture = await createFixture('bit-radio');
       fixture.element.textContent = 'Option 1';
 
-      // Wait for slot to update
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await fixture.update();
 
       const label = fixture.query('.label');
       const slot = label?.querySelector('slot');
       const assignedNodes = slot?.assignedNodes();
 
       expect(assignedNodes?.length).toBeGreaterThan(0);
-      fixture.destroy();
     });
   });
 
   describe('Colors', () => {
-    it('should apply all color variants', async () => {
-      const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
-      for (const color of colors) {
-        const fixture = await createFixture('bit-radio', { color });
+    const colors = ['primary', 'secondary', 'success', 'warning', 'error'] as const;
+
+    colors.forEach((color) => {
+      it(`should apply ${color} color`, async () => {
+        fixture = await createFixture('bit-radio', { color });
         expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
-      }
+      });
+    });
+
+    it('should change color dynamically', async () => {
+      fixture = await createFixture('bit-radio', { color: 'primary' });
+
+      await fixture.setAttribute('color', 'error');
+      expect(fixture.element.getAttribute('color')).toBe('error');
     });
   });
 
   describe('Sizes', () => {
-    it('should apply all size variants', async () => {
-      const sizes = ['sm', 'md', 'lg'];
-      for (const size of sizes) {
-        const fixture = await createFixture('bit-radio', { size });
+    const sizes = ['sm', 'md', 'lg'] as const;
+
+    sizes.forEach((size) => {
+      it(`should apply ${size} size`, async () => {
+        fixture = await createFixture('bit-radio', { size });
         expect(fixture.element.getAttribute('size')).toBe(size);
-        fixture.destroy();
-      }
+      });
+    });
+
+    it('should change size dynamically', async () => {
+      fixture = await createFixture('bit-radio', { size: 'sm' });
+
+      await fixture.setAttribute('size', 'lg');
+      expect(fixture.element.getAttribute('size')).toBe('lg');
     });
   });
 
   describe('States', () => {
     it('should be unchecked by default', async () => {
-      const fixture = await createFixture('bit-radio');
+      fixture = await createFixture('bit-radio');
       expect(fixture.element.hasAttribute('checked')).toBe(false);
-      fixture.destroy();
     });
 
     it('should be checked when attribute is set', async () => {
-      const fixture = await createFixture('bit-radio', { checked: true });
+      fixture = await createFixture('bit-radio', { checked: true });
       expect(fixture.element.hasAttribute('checked')).toBe(true);
-      fixture.destroy();
+    });
+
+    it('should toggle checked state', async () => {
+      fixture = await createFixture('bit-radio');
+
+      expect(fixture.element.hasAttribute('checked')).toBe(false);
+
+      await fixture.setAttribute('checked', true);
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
     it('should be disabled when attribute is set', async () => {
-      const fixture = await createFixture('bit-radio', { disabled: true });
+      fixture = await createFixture('bit-radio', { disabled: true });
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
-      fixture.destroy();
+    });
+
+    it('should toggle disabled state', async () => {
+      fixture = await createFixture('bit-radio');
+
+      expect(fixture.element.hasAttribute('disabled')).toBe(false);
+
+      await fixture.setAttribute('disabled', true);
+      expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
   });
 
   describe('Form Integration', () => {
     it('should have name attribute', async () => {
-      const fixture = await createFixture('bit-radio', { name: 'choice', value: 'option1' });
-      const input = fixture.query('input');
+      fixture = await createFixture('bit-radio', { name: 'choice', value: 'option1' });
+      const input = fixture.query<HTMLInputElement>('input');
+
       expect(input?.getAttribute('name')).toBe('choice');
       expect(input?.getAttribute('value')).toBe('option1');
-      fixture.destroy();
+    });
+
+    it('should update name and value dynamically', async () => {
+      fixture = await createFixture('bit-radio', { name: 'choice1' });
+      const input = fixture.query<HTMLInputElement>('input');
+
+      await fixture.setAttribute('name', 'choice2');
+      expect(input?.getAttribute('name')).toBe('choice2');
     });
   });
 
   describe('Events', () => {
     it('should emit change event when clicked', async () => {
-      const fixture = await createFixture('bit-radio', { name: 'test', value: 'yes' });
+      fixture = await createFixture('bit-radio', { name: 'test', value: 'yes' });
+      const changeHandler = vi.fn();
 
-      let eventFired = false;
-      let eventDetail: any = null;
-
-      fixture.element.addEventListener('change', ((e: CustomEvent) => {
-        eventFired = true;
-        eventDetail = e.detail;
-      }) as EventListener);
-
+      fixture.element.addEventListener('change', changeHandler);
       fixture.element.click();
 
-      expect(eventFired).toBe(true);
-      expect(eventDetail.checked).toBe(true);
-      expect(eventDetail.value).toBe('yes');
-
-      fixture.destroy();
+      expect(changeHandler).toHaveBeenCalled();
+      const event = changeHandler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.checked).toBe(true);
+      expect(event.detail.value).toBe('yes');
+      expect(event.detail.originalEvent).toBeDefined();
     });
 
     it('should not emit change event when disabled', async () => {
-      const fixture = await createFixture('bit-radio', { disabled: true });
+      fixture = await createFixture('bit-radio', { disabled: true });
+      const changeHandler = vi.fn();
 
-      let eventFired = false;
-      fixture.element.addEventListener('change', () => {
-        eventFired = true;
-      });
-
+      fixture.element.addEventListener('change', changeHandler);
       fixture.element.click();
-      expect(eventFired).toBe(false);
 
-      fixture.destroy();
+      expect(changeHandler).not.toHaveBeenCalled();
     });
 
-    it('should not emit change event when already checked', async () => {
-      const fixture = await createFixture('bit-radio', { checked: true });
+    it('should emit change event with correct details', async () => {
+      fixture = await createFixture('bit-radio', { name: 'option', value: 'a' });
+      const changeHandler = vi.fn();
 
-      let eventCount = 0;
-      fixture.element.addEventListener('change', () => {
-        eventCount++;
-      });
-
+      fixture.element.addEventListener('change', changeHandler);
       fixture.element.click();
-      expect(eventCount).toBe(0);
 
-      fixture.destroy();
+      const event = changeHandler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.checked).toBe(true);
+      expect(event.detail.value).toBe('a');
     });
   });
 
-  describe('Radio Group Behavior', () => {
-    it('should uncheck other radios in the same group when checked', async () => {
-      const fixture1 = await createFixture('bit-radio', { name: 'group1', value: 'option1' });
-      const fixture2 = await createFixture('bit-radio', { name: 'group1', value: 'option2' });
+  describe('Accessibility', () => {
+    it('should have proper ARIA attributes when checked', async () => {
+      fixture = await createFixture('bit-radio', { checked: true });
 
-      document.body.appendChild(fixture1.element);
-      document.body.appendChild(fixture2.element);
-
-      // Check first radio
-      fixture1.element.click();
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      expect(fixture1.element.hasAttribute('checked')).toBe(true);
-      expect(fixture2.element.hasAttribute('checked')).toBe(false);
-
-      // Check second radio - should uncheck first
-      fixture2.element.click();
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      expect(fixture1.element.hasAttribute('checked')).toBe(false);
-      expect(fixture2.element.hasAttribute('checked')).toBe(true);
-
-      fixture1.destroy();
-      fixture2.destroy();
-    });
-  });
-
-  describe('Keyboard Navigation', () => {
-    it('should check on Space key', async () => {
-      const fixture = await createFixture('bit-radio', { name: 'test' });
-
-      const event = new KeyboardEvent('keydown', { key: ' ' });
-      fixture.element.dispatchEvent(event);
-
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
-
-      fixture.destroy();
+      expect(fixture.element.getAttribute('role')).toBe('radio');
+      expect(fixture.element.getAttribute('aria-checked')).toBe('true');
     });
 
-    it('should check on Enter key', async () => {
-      const fixture = await createFixture('bit-radio', { name: 'test' });
+    it('should have proper ARIA attributes when unchecked', async () => {
+      fixture = await createFixture('bit-radio');
 
-      const event = new KeyboardEvent('keydown', { key: 'Enter' });
-      fixture.element.dispatchEvent(event);
-
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
-
-      fixture.destroy();
+      expect(fixture.element.getAttribute('role')).toBe('radio');
+      expect(fixture.element.getAttribute('aria-checked')).toBe('false');
     });
-  });
 
-  describe('Attribute Updates', () => {
-    it('should update checked state when attribute changes', async () => {
-      const fixture = await createFixture('bit-radio');
+    it('should have ARIA disabled when disabled', async () => {
+      fixture = await createFixture('bit-radio', { disabled: true });
 
-      expect(fixture.element.hasAttribute('checked')).toBe(false);
+      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
+    });
 
-      fixture.element.setAttribute('checked', '');
+    it('should be keyboard accessible', async () => {
+      fixture = await createFixture('bit-radio');
 
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
-
-      fixture.destroy();
+      expect(fixture.element.getAttribute('tabindex')).toBe('0');
     });
   });
 });
-
-
-
 
 

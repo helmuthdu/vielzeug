@@ -1091,132 +1091,450 @@ If using `ElementInternals`:
 
 ## 13. Testing
 
-### 13.1 Unit Tests [Required]
+### 13.1 Testing Pattern [Required]
 
-Example `component.test.ts`:
+All component tests must follow these established patterns for consistency, maintainability, and reliability.
+
+#### Best Practices
+
+**1. Centralized Fixture Management**
+
+Use a single fixture variable with `afterEach` cleanup instead of manual `destroy()` in every test.
 
 ```typescript
-import { createFixture } from '@vielzeug/craftit/testing';
+import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
 
 describe('bit-checkbox', () => {
+  let fixture: ComponentFixture<HTMLElement>;
+
   beforeAll(async () => {
     await import('../checkbox');
   });
 
+  afterEach(() => {
+    fixture?.destroy(); // ✅ Automatic cleanup
+  });
+
+  it('should render', async () => {
+    fixture = await createFixture('bit-checkbox');
+    // No manual destroy needed!
+  });
+});
+```
+
+**2. Type-Safe Queries**
+
+Use generic type parameters for type-safe DOM queries:
+
+```typescript
+// ✅ Good - Type-safe with optional chaining
+const input = fixture.query<HTMLInputElement>('input');
+expect(input?.value).toBe('test');
+
+// ❌ Bad - Type assertion, not safe
+const input = fixture.query('input') as HTMLInputElement;
+expect(input.value).toBe('test');
+```
+
+**3. Use fixture.setAttribute() for Updates**
+
+Instead of manual `setAttribute` + `setTimeout`, use the fixture helper:
+
+```typescript
+// ✅ Good - Handles async updates automatically
+await fixture.setAttribute('disabled', true);
+expect(input?.disabled).toBe(true);
+
+// ❌ Bad - Manual waiting, error-prone
+fixture.element.setAttribute('disabled', '');
+await new Promise(resolve => setTimeout(resolve, 10));
+```
+
+**4. Use fixture.setAttributes() for Multiple Changes**
+
+```typescript
+// ✅ Good - Single clean call
+await fixture.setAttributes({
+  type: 'email',
+  placeholder: 'Enter email',
+  required: true,
+  size: 'lg',
+});
+
+// ❌ Bad - Multiple manual calls
+fixture.element.setAttribute('type', 'email');
+fixture.element.setAttribute('placeholder', 'Enter email');
+fixture.element.setAttribute('required', '');
+fixture.element.setAttribute('size', 'lg');
+```
+
+**5. Array Iteration for Repetitive Tests (DRY)**
+
+```typescript
+// ✅ Good - DRY, maintainable
+const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text'] as const;
+
+variants.forEach((variant) => {
+  it(`should apply ${variant} variant`, async () => {
+    fixture = await createFixture('bit-input', { variant });
+    expect(fixture.element.getAttribute('variant')).toBe(variant);
+  });
+});
+
+// ❌ Bad - Repetitive, hard to maintain
+it('should apply solid variant', async () => {
+  fixture = await createFixture('bit-input', { variant: 'solid' });
+  expect(fixture.element.getAttribute('variant')).toBe('solid');
+});
+
+it('should apply flat variant', async () => {
+  fixture = await createFixture('bit-input', { variant: 'flat' });
+  expect(fixture.element.getAttribute('variant')).toBe('flat');
+});
+// ... 4 more repetitive tests
+```
+
+**6. Better Event Testing with vi.fn()**
+
+```typescript
+// ✅ Good - Clean, verifiable
+const changeHandler = vi.fn();
+fixture.element.addEventListener('change', changeHandler);
+
+input!.click();
+
+expect(changeHandler).toHaveBeenCalled();
+const event = changeHandler.mock.calls[0][0] as CustomEvent;
+expect(event.detail.checked).toBe(true);
+expect(event.detail.originalEvent).toBeDefined();
+
+// ❌ Bad - Manual state tracking
+let changed = false;
+let checkedValue = false;
+
+fixture.element.addEventListener('change', (e: any) => {
+  changed = true;
+  checkedValue = e.detail.checked;
+});
+
+input.click();
+expect(changed).toBe(true);
+expect(checkedValue).toBe(true);
+```
+
+### 13.2 Complete Test Example
+
+```typescript
+import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+describe('bit-input', () => {
+  let fixture: ComponentFixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('../input');
+  });
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
   describe('Rendering', () => {
     it('should render with correct structure', async () => {
-      const fixture = await createFixture('bit-checkbox');
-      const wrapper = fixture.query('.checkbox-wrapper');
+      fixture = await createFixture('bit-input');
+
+      const wrapper = fixture.query('.input-wrapper');
+      const field = fixture.query('.field');
+      const input = fixture.query('input');
+
       expect(wrapper).toBeTruthy();
-      fixture.destroy();
+      expect(field).toBeTruthy();
+      expect(input).toBeTruthy();
     });
   });
 
   describe('States', () => {
-    it('should handle checked state', async () => {
-      const fixture = await createFixture('bit-checkbox', { checked: true });
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
+    it('should handle disabled state', async () => {
+      fixture = await createFixture('bit-input', { disabled: true });
+      const input = fixture.query<HTMLInputElement>('input');
 
-      const input = fixture.query('input') as HTMLInputElement;
-      expect(input.checked).toBe(true);
-      fixture.destroy();
+      expect(fixture.element.hasAttribute('disabled')).toBe(true);
+      expect(input?.disabled).toBe(true);
     });
 
-    it('should handle indeterminate state', async () => {
-      const fixture = await createFixture('bit-checkbox', { indeterminate: true });
-      const input = fixture.query('input') as HTMLInputElement;
-      expect(input.indeterminate).toBe(true);
-      fixture.destroy();
+    it('should toggle disabled state', async () => {
+      fixture = await createFixture('bit-input');
+      const input = fixture.query<HTMLInputElement>('input');
+
+      expect(input?.disabled).toBe(false);
+
+      await fixture.setAttribute('disabled', true);
+      expect(input?.disabled).toBe(true);
+
+      await fixture.setAttribute('disabled', false);
+      expect(input?.disabled).toBe(false);
+    });
+  });
+
+  describe('Variants', () => {
+    const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text'] as const;
+
+    variants.forEach((variant) => {
+      it(`should apply ${variant} variant`, async () => {
+        fixture = await createFixture('bit-input', { variant });
+        expect(fixture.element.getAttribute('variant')).toBe(variant);
+      });
+    });
+
+    it('should change variant dynamically', async () => {
+      fixture = await createFixture('bit-input', { variant: 'solid' });
+
+      await fixture.setAttribute('variant', 'outline');
+      expect(fixture.element.getAttribute('variant')).toBe('outline');
     });
   });
 
   describe('Events', () => {
-    it('should emit change event with details', async () => {
-      const fixture = await createFixture('bit-checkbox');
-      const changeHandler = vi.fn();
+    it('should emit input event with details', async () => {
+      fixture = await createFixture('bit-input');
+      const input = fixture.query<HTMLInputElement>('input');
+      const inputHandler = vi.fn();
 
-      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.addEventListener('input', inputHandler);
 
-      const input = fixture.query('input') as HTMLInputElement;
-      input.click();
+      input!.value = 'test';
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
 
-      expect(changeHandler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          detail: expect.objectContaining({
-            checked: true,
-          }),
-        }),
-      );
-
-      fixture.destroy();
+      expect(inputHandler).toHaveBeenCalled();
+      const event = inputHandler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.value).toBe('test');
+      expect(event.detail.originalEvent).toBeDefined();
     });
   });
 
-  describe('Accessibility', () => {
-    it('should have proper ARIA attributes', async () => {
-      const fixture = await createFixture('bit-checkbox', {
-        checked: true,
-        disabled: true,
+  describe('Multiple Attributes', () => {
+    it('should handle multiple attributes simultaneously', async () => {
+      fixture = await createFixture('bit-input');
+
+      await fixture.setAttributes({
+        type: 'email',
+        placeholder: 'Enter email',
+        required: true,
+        size: 'lg',
       });
 
-      const input = fixture.query('input') as HTMLInputElement;
-      expect(input.getAttribute('aria-checked')).toBe('true');
-      expect(input.getAttribute('aria-disabled')).toBe('true');
-
-      fixture.destroy();
+      const input = fixture.query<HTMLInputElement>('input');
+      expect(input?.type).toBe('email');
+      expect(input?.placeholder).toBe('Enter email');
+      expect(input?.required).toBe(true);
+      expect(fixture.element.getAttribute('size')).toBe('lg');
     });
   });
 });
 ```
 
-### 13.2 Accessibility Tests [Recommended]
+### 13.3 Accessibility Tests [Recommended]
 
 ```typescript
 import axe from 'axe-core';
-import { createFixture } from '@vielzeug/craftit/testing';
+import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-describe('bit-button accessibility', () => {
+describe('bit-input accessibility', () => {
+  let fixture: ComponentFixture<HTMLElement>;
+
   beforeAll(async () => {
-    await import('../button');
+    await import('../input');
+  });
+
+  afterEach(() => {
+    fixture?.destroy();
   });
 
   it('should have no accessibility violations', async () => {
-    const fixture = await createFixture('bit-button');
-    fixture.element.textContent = 'Click me';
+    fixture = await createFixture('bit-input', {
+      placeholder: 'Enter text',
+      name: 'test-input',
+    });
 
     const results = await axe.run(fixture.element);
     expect(results.violations).toHaveLength(0);
-
-    fixture.destroy();
   });
 
   it('should be keyboard accessible', async () => {
-    const fixture = await createFixture('bit-button');
-    const button = fixture.query('button');
+    fixture = await createFixture('bit-input');
+    const input = fixture.query<HTMLInputElement>('input');
 
-    expect(button?.getAttribute('tabindex')).not.toBe('-1');
+    // Input should not have tabindex -1
+    expect(input?.tabIndex).not.toBe(-1);
+  });
 
-    fixture.destroy();
+  it('should not be focusable when disabled', async () => {
+    fixture = await createFixture('bit-input', { disabled: true });
+    const input = fixture.query<HTMLInputElement>('input');
+
+    expect(input?.disabled).toBe(true);
   });
 });
 ```
 
-### 13.3 Coverage Expectations [Required]
+### 13.4 Testing Utilities Reference
+
+The testing library provides these helpful utilities:
+
+**ComponentFixture Methods:**
+- `fixture.query<T>(selector)` - Query single element with type safety
+- `fixture.queryAll<T>(selector)` - Query all matching elements
+- `fixture.update()` - Wait for component re-render
+- `fixture.setAttribute(name, value)` - Set attribute and wait for update
+- `fixture.setAttributes(attrs)` - Set multiple attributes at once
+- `fixture.destroy()` - Clean up component and container
+
+**Standalone Utilities:**
+- `createFixture(tagName, attributes)` - Create test fixture
+- `waitForRender()` - Wait for component render
+- `waitForFrames(count)` - Wait for animation frames
+- `userEvent.click(element)` - Simulate user click
+- `userEvent.type(element, text)` - Simulate typing
+
+### 13.5 Coverage Requirements [Required]
 
 Tests must cover:
 
-- Rendering and DOM structure.
-- All variants, colors, sizes (where applicable).
-- All states (disabled, loading, checked, expanded, etc.).
-- Event emission (including `detail` shape).
-- Attribute updates via `onAttributeChanged`.
-- Keyboard interactions.
-- ARIA attributes.
-- Edge cases (empty content, invalid values, etc.).
+✅ **Rendering**
+- DOM structure and shadow DOM
+- Slot rendering
+- Initial state
 
-### 13.4 Visual Testing [Recommended]
+✅ **Attributes & Props**
+- Initial values
+- Dynamic updates via `setAttribute()`
+- Multiple simultaneous changes
+- Invalid/edge case values
 
-- Add stories/playgrounds (Storybook, Ladle, VitePress demos) to visually verify states and variants.
+✅ **States**
+- All boolean states (disabled, loading, checked, etc.)
+- State toggling
+- State combinations
+
+✅ **Variants, Colors, Sizes**
+- All options (use array iteration)
+- Dynamic changes
+- Default values
+
+✅ **Events**
+- Event emission
+- Event details (including `originalEvent`)
+- Event prevention when disabled
+- Multiple event types
+
+✅ **Accessibility**
+- ARIA attributes
+- Keyboard interactions
+- Focus management
+- Screen reader compatibility
+
+✅ **Form Integration**
+- Name and value attributes
+- Form submission
+- Validation states
+
+✅ **Edge Cases**
+- Empty values
+- Null/undefined handling
+- Invalid input
+- Rapid updates
+
+### 13.6 Test Organization Best Practices
+
+**File Structure:**
+```
+src/form/input/
+├── input.ts
+└── __tests__/
+    ├── input.test.ts        # Unit tests
+    └── input.a11y.test.ts   # Accessibility tests
+```
+
+**Test Structure:**
+```typescript
+describe('bit-component', () => {
+  // Setup
+  let fixture: ComponentFixture<HTMLElement>;
+  
+  beforeAll(async () => { /* import component */ });
+  afterEach(() => { /* cleanup */ });
+
+  // Organized test groups
+  describe('Rendering', () => { /* ... */ });
+  describe('States', () => { /* ... */ });
+  describe('Variants', () => { /* ... */ });
+  describe('Colors', () => { /* ... */ });
+  describe('Sizes', () => { /* ... */ });
+  describe('Events', () => { /* ... */ });
+  describe('Accessibility', () => { /* ... */ });
+  describe('Edge Cases', () => { /* ... */ });
+});
+```
+
+### 13.7 Common Test Patterns
+
+**Testing State Toggles:**
+```typescript
+it('should toggle disabled state', async () => {
+  fixture = await createFixture('bit-input');
+  const input = fixture.query<HTMLInputElement>('input');
+
+  expect(input?.disabled).toBe(false);
+
+  await fixture.setAttribute('disabled', true);
+  expect(input?.disabled).toBe(true);
+
+  await fixture.setAttribute('disabled', false);
+  expect(input?.disabled).toBe(false);
+});
+```
+
+**Testing Dynamic Attributes:**
+```typescript
+it('should update placeholder dynamically', async () => {
+  fixture = await createFixture('bit-input');
+  const input = fixture.query<HTMLInputElement>('input');
+
+  await fixture.setAttribute('placeholder', 'Enter username');
+  expect(input?.placeholder).toBe('Enter username');
+});
+```
+
+**Testing Event Details:**
+```typescript
+it('should emit change event with correct details', async () => {
+  fixture = await createFixture('bit-input', { value: 'initial' });
+  const changeHandler = vi.fn();
+
+  fixture.element.addEventListener('change', changeHandler);
+
+  // Trigger change
+  const input = fixture.query<HTMLInputElement>('input');
+  input!.value = 'updated';
+  input!.dispatchEvent(new Event('change', { bubbles: true }));
+
+  // Verify
+  const event = changeHandler.mock.calls[0][0] as CustomEvent;
+  expect(event.detail.value).toBe('updated');
+  expect(event.detail.originalEvent).toBeDefined();
+});
+```
+
+### 13.8 Visual Testing [Recommended]
+
+Add stories/playgrounds (Storybook, Ladle, VitePress demos) to visually verify:
+- All variants
+- All colors
+- All sizes
+- All states
+- Interactive behavior
+- Responsive design
 
 ---
 
