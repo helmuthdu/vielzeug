@@ -49,9 +49,9 @@ Buildit uses modular imports for optimal tree-shaking. Import only the component
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/accordion';
-import '@vielzeug/buildit/accordion-item';
-import '@vielzeug/buildit/input';  // Coming soon
-import '@vielzeug/buildit/select'; // Coming soon
+import '@vielzeug/buildit/checkbox';
+import '@vielzeug/buildit/radio';
+import '@vielzeug/buildit/input';
 ```
 
 ### Using Components

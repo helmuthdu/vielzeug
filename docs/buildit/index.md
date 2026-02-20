@@ -156,39 +156,29 @@ Customize components using CSS custom properties:
 
 ### Base Components
 
-- **[Button](./components/button.md)** – Versatile button with multiple variants and states
-- **[Button Group](./components/button-group.md)** – Group of related buttons
-- **Input** – Text input with validation (coming soon)
-- **Select** – Dropdown selection (coming soon)
-- **Checkbox** – Checkbox input (coming soon)
-- **Radio** – Radio button input (coming soon)
-- **Switch** – Toggle switch (coming soon)
-
-### Layout Components
-
-- **[Accordion](./components/accordion.md)** – Collapsible content sections
-- **Card** – Content container (coming soon)
-- **Grid** – Responsive grid layout (coming soon)
-- **Stack** – Vertical/horizontal stacking (coming soon)
+- **[Button](./components/button.md)** – Versatile button with multiple variants, colors, and states
+- **[Button Group](./components/button-group.md)** – Group and coordinate multiple related buttons
+- **[Accordion](./components/accordion.md)** – Collapsible content sections with single/multiple selection
+- **Accordion Item** – Individual accordion section (used within accordion)
 
 ### Form Components
 
-- **Form** – Form wrapper with validation (coming soon)
-- **Field** – Form field with label and error handling (coming soon)
-- **Textarea** – Multi-line text input (coming soon)
+- **[Checkbox](./components/checkbox.md)** – Checkbox input with indeterminate state support
+- **[Radio](./components/radio.md)** – Radio button input with keyboard navigation
+- **[Input](./components/input.md)** – Text input with multiple types and validation states
 
-### Feedback Components
+### Coming Soon
 
-- **Alert** – Notification messages (coming soon)
-- **Toast** – Temporary notifications (coming soon)
-- **Modal** – Dialog overlay (coming soon)
-- **Spinner** – Loading indicator (coming soon)
-
-### Navigation Components
-
-- **Tabs** – Tabbed navigation (coming soon)
-- **Breadcrumbs** – Navigation breadcrumbs (coming soon)
-- **Menu** – Dropdown menu (coming soon)
+- **Switch** – Toggle switch
+- **Select** – Dropdown selection
+- **Textarea** – Multi-line text input
+- **Form** – Form wrapper with validation
+- **Field** – Form field with label and error handling
+- **Card** – Content container
+- **Alert** – Notification messages
+- **Toast** – Temporary notifications
+- **Modal** – Dialog overlay
+- **Tabs** – Tabbed navigation
 
 
 ## 🎨 Theming
@@ -235,9 +225,12 @@ Buildit is designed to be lightweight with tree-shaking support:
 
 | Component | Size (gzipped) |
 |-----------|----------------|
-| Button    | ~6.8 KB        |
-| Input     | Coming soon    |
-| Select    | Coming soon    |
+| Button    | ~1.7 KB        |
+| Button Group | ~1.0 KB     |
+| Checkbox  | ~1.8 KB        |
+| Radio     | ~1.7 KB        |
+| Input     | ~1.5 KB        |
+| Accordion | ~1.6 KB        |
 
 Import only what you need to keep your bundle small!
 

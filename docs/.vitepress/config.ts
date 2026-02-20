@@ -112,6 +112,7 @@ export default defineConfig({
             { link: '/buildit/components/button', text: 'Button' },
             { link: '/buildit/components/button-group', text: 'Button Group' },
             { link: '/buildit/components/checkbox', text: 'Checkbox' },
+            { link: '/buildit/components/input', text: 'Input' },
             { link: '/buildit/components/radio', text: 'Radio' },
           ],
           text: 'Components',

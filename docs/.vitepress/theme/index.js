@@ -3,6 +3,7 @@ import { Logit } from '../../../packages/logit/src';
 import Repl from './components/REPL.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
+import ComponentPreview from './components/ComponentPreview.vue';
 import '@vielzeug/buildit';
 import '@vielzeug/buildit/styles/theme.css';
 
@@ -12,6 +13,7 @@ export default {
     app.component('REPL', Repl);
     app.component('PackageBadges', PackageBadges);
     app.component('PackageInfo', PackageInfo);
+    app.component('ComponentPreview', ComponentPreview);
 
     // Make Logit available on a window object
     if (typeof window !== 'undefined') {
