@@ -7,7 +7,7 @@
 
 The `some` utility checks if **at least one element** in an array satisfies a given condition. It stops iterating as soon as it finds a match, making it efficient for large datasets. Unlike the native `Array.prototype.some`, this version supports asynchronous predicates.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/some.ts

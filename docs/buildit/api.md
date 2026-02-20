@@ -1,7 +1,3 @@
-# API Reference
-
-Complete API documentation for all Buildit components and utilities.
-
 ## Component Import Paths
 
 All components are available as modular imports:
@@ -11,9 +7,9 @@ import '@vielzeug/buildit/accordion';
 import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
-import '@vielzeug/buildit/input';    // Coming soon
-import '@vielzeug/buildit/select';   // Coming soon
-import '@vielzeug/buildit/checkbox'; // Coming soon
+import '@vielzeug/buildit/checkbox';
+import '@vielzeug/buildit/input';
+import '@vielzeug/buildit/radio';
 ```
 
 ## Button Component
@@ -51,122 +47,7 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 
 ### CSS Custom Properties
 
-#### Colors & Backgrounds
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--button-bg` | Background color | Variant-dependent |
-| `--button-color` | Text color | Variant-dependent |
-| `--button-hover-bg` | Hover background | Variant-dependent |
-| `--button-active-bg` | Active/pressed background | Variant-dependent |
-| `--button-base` | Base color from theme | Theme color |
-| `--button-contrast` | Contrast color | Theme contrast |
-| `--button-backdrop` | Backdrop color (subtle) | Theme backdrop |
-| `--button-focus` | Focus state color | Theme focus |
-
-#### Borders & Spacing
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--button-border` | Border (width, style, color) | `1px solid transparent` |
-| `--button-radius` | Border radius | `0.375rem` |
-| `--button-padding` | Inner padding | Size-dependent |
-| `--button-gap` | Gap between icon and text | `0.5rem` |
-
-#### Typography
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--button-font-size` | Font size | Size-dependent |
-| `--button-font-weight` | Font weight | `500` |
-| `--button-line-height` | Line height | `1.5` |
-
-#### Effects
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--button-shadow` | Box shadow | None |
-| `--button-transition` | Transition duration | `0.2s` |
-
-### Examples
-
-#### Basic Button
-
-```html
-<bit-button>Click me</bit-button>
-```
-
-#### Variant Examples
-
-```html
-<bit-button variant="solid">Solid</bit-button>
-<bit-button variant="flat">Flat</bit-button>
-<bit-button variant="bordered">Bordered</bit-button>
-<bit-button variant="outline">Outline</bit-button>
-<bit-button variant="ghost">Ghost</bit-button>
-<bit-button variant="text">Text</bit-button>
-```
-
-#### Color Examples
-
-```html
-<bit-button color="primary">Primary</bit-button>
-<bit-button color="secondary">Secondary</bit-button>
-<bit-button color="success">Success</bit-button>
-<bit-button color="warning">Warning</bit-button>
-<bit-button color="error">Error</bit-button>
-```
-
-#### Size Examples
-
-```html
-<bit-button size="sm">Small</bit-button>
-<bit-button size="md">Medium</bit-button>
-<bit-button size="lg">Large</bit-button>
-```
-
-#### State Examples
-
-```html
-<bit-button disabled>Disabled</bit-button>
-<bit-button loading>Loading...</bit-button>
-```
-
-#### Icon Examples
-
-```html
-<!-- With prefix icon -->
-<bit-button>
-  <svg slot="prefix" width="16" height="16">...</svg>
-  Save
-</bit-button>
-
-<!-- With suffix icon -->
-<bit-button>
-  Next
-  <svg slot="suffix" width="16" height="16">...</svg>
-</bit-button>
-
-<!-- Icon only -->
-<bit-button icon-only aria-label="Settings">
-  <svg width="20" height="20">...</svg>
-</bit-button>
-```
-
-#### Custom Styling
-
-```html
-<bit-button
-  style="
-    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    --button-color: white;
-    --button-radius: 20px;
-    --button-padding: 0.75rem 2rem;
-  ">
-  Custom Gradient
-</bit-button>
-```
+Refer to the component source for a full list of overridable CSS variables.
 
 ## Accordion Component
 
@@ -179,8 +60,8 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `allow-multiple` | `boolean` | `false` | Allow multiple items to be expanded simultaneously |
-| `variant` | `'solid' \| 'bordered' \| 'ghost'` | - | Visual style variant (propagated to children) |
+| `selection-mode` | `'single' \| 'multiple'` | `'multiple'` | Selection mode |
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | - | Visual style variant (propagated to children) |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size (propagated to children) |
 
 ### bit-accordion-item Attributes
@@ -189,9 +70,8 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 |-----------|------|---------|-------------|
 | `expanded` | `boolean` | `false` | Whether the item is expanded |
 | `disabled` | `boolean` | `false` | Disable the accordion item |
-| `variant` | `'solid' \| 'bordered' \| 'ghost'` | - | Visual style variant |
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | - | Visual style variant |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Item size |
-| `aria-label` | `string` | - | Accessible label for the toggle button |
 
 ### Slots
 
@@ -205,8 +85,10 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 
 | Slot | Description |
 |------|-------------|
-| `header` | Content for the accordion header/trigger |
-| `icon` | Custom expand/collapse icon |
+| `title` | Title/summary content |
+| `subtitle` | Subtitle text shown below the title |
+| `prefix` | Content before the header content |
+| `suffix` | Content after the header content |
 | (default) | Content shown when expanded |
 
 ### Events
@@ -215,15 +97,38 @@ import '@vielzeug/buildit/checkbox'; // Coming soon
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `change` | `{ expandedItems: HTMLElement[], originalEvent: Event }` | Emitted when any item's expanded state changes |
+| `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
 #### bit-accordion-item
 
 | Event | Detail | Description |
 |-------|--------|-------------|
-| `expand` | `{ originalEvent: Event }` | Emitted when item is expanded |
-| `collapse` | `{ originalEvent: Event }` | Emitted when item is collapsed |
-| `toggle` | `{ expanded: boolean, originalEvent: Event }` | Emitted when expanded state changes |
+| `expand` | `{ expanded: true, item: HTMLElement }` | Emitted when item is expanded |
+| `collapse` | `{ expanded: false, item: HTMLElement }` | Emitted when item is collapsed |
+
+## Checkbox Component
+
+### Tag Name
+
+`<bit-checkbox>`
+
+### Attributes
+
+| Attribute       | Type                                                            | Default     | Description                   |
+| --------------- | --------------------------------------------------------------- | ----------- | ----------------------------- |
+| `checked`       | `boolean`                                                       | `false`     | Checkbox checked state        |
+| `disabled`      | `boolean`                                                       | `false`     | Disable the checkbox          |
+| `indeterminate` | `boolean`                                                       | `false`     | Show indeterminate state      |
+| `color`         | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                |
+| `size`          | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Checkbox size                 |
+| `name`          | `string`                                                        | -           | Form field name               |
+| `value`         | `string`                                                        | -           | Form field value when checked |
+
+### Events
+
+| Event    | Detail                                                              | Description                        |
+| -------- | ------------------------------------------------------------------- | ---------------------------------- |
+| `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
 
 ### CSS Custom Properties
 
@@ -315,17 +220,17 @@ Global theme variables that affect all components:
   --color-primary: #3b82f6;
   --color-primary-light: #60a5fa;
   --color-primary-dark: #2563eb;
-  
+
   /* Secondary colors */
   --color-secondary: #6b7280;
   --color-secondary-light: #9ca3af;
   --color-secondary-dark: #4b5563;
-  
+
   /* Semantic colors */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  
+
   /* Neutral colors */
   --color-canvas: #ffffff;
   --color-contrast: #1f2937;
@@ -337,15 +242,15 @@ Global theme variables that affect all components:
   --color-primary: #60a5fa;
   --color-primary-light: #93c5fd;
   --color-primary-dark: #3b82f6;
-  
+
   --color-secondary: #9ca3af;
   --color-secondary-light: #d1d5db;
   --color-secondary-dark: #6b7280;
-  
+
   --color-success: #34d399;
   --color-warning: #fbbf24;
   --color-error: #f87171;
-  
+
   --color-canvas: #111827;
   --color-contrast: #f9fafb;
   --color-backdrop: #1f2937;
@@ -577,4 +482,3 @@ const observer = new IntersectionObserver((entries) => {
 - **[Usage Guide](./usage.md)** – Installation and usage patterns
 - **[Examples](./examples.md)** – Real-world examples
 - **[Button Component](components/button.md)** – Complete button documentation
-

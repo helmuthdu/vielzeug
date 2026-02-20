@@ -7,7 +7,7 @@
 
 Adds two numbers with precision handling for financial calculations. Supports both regular numbers and bigint for exact precision.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/add.ts

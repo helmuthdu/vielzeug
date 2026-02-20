@@ -7,7 +7,7 @@
 
 The `aggregate` utility transforms an array of objects into a single object, where each key is determined by a selector. If multiple items result in the same key, the last one processed "wins."
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/aggregate.ts

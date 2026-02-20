@@ -7,7 +7,7 @@
 
 The `sort` utility provides a simple, functional way to sort arrays. Unlike the native `Array.prototype.sort()`, it returns a new array and allows sorting based on a selector function with an optional descending flag.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/sort.ts

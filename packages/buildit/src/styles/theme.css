@@ -129,58 +129,6 @@
   --text-shadow-md: 0px 1px 1px rgb(0 0 0 / 0.1), 0px 1px 2px rgb(0 0 0 / 0.1), 0px 2px 4px rgb(0 0 0 / 0.1);
   --text-shadow-lg: 0px 1px 2px rgb(0 0 0 / 0.1), 0px 3px 2px rgb(0 0 0 / 0.1), 0px 4px 8px rgb(0 0 0 / 0.1);
 
-  /* Background colors (50-400): Optimized for UI elements, cards, borders */
-  --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */
-  --color-contrast-100: hsl(240deg 5% 96% / 100%);  /* Cards, elevated surfaces */
-  --color-contrast-200: hsl(240deg 5% 93% / 100%);  /* Nested cards, hover states */
-  --color-contrast-300: hsl(240deg 5% 88% / 100%);  /* Borders, dividers */
-  --color-contrast-400: hsl(240deg 4% 80% / 100%);  /* Disabled backgrounds, subtle UI */
-
-  /* Text colors (500-900): Optimized for readability, WCAG AA/AAA compliant */
-  --color-contrast-500: hsl(240deg 4% 60% / 100%);  /* Tertiary text, placeholders - AA for large text */
-  --color-contrast-600: hsl(240deg 4% 46% / 100%);  /* Secondary text - AA compliant */
-  --color-contrast-700: hsl(240deg 4% 32% / 100%);  /* Body text - AAA compliant */
-  --color-contrast-800: hsl(240deg 4% 22% / 100%);  /* Headings - AAA compliant */
-  --color-contrast-900: hsl(240deg 4% 12% / 100%);  /* High contrast text - AAA compliant */
-
-  --color-canvas: var(--color-contrast-50);
-  --color-contrast: var(--color-contrast-900);
-
-  /* Primary - Vibrant blue (good for all colorblind types) */
-  --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
-  --color-primary-focus: hsl(210deg 100% 55% / 91%);
-  --color-primary: hsl(210deg 100% 48% / 91%);
-  --color-primary-content: hsl(210deg 100% 15% / 91%);
-  --color-primary-contrast: hsl(210deg 100% 97% / 91%);
-
-  /* Success - Teal/cyan instead of pure green (better for red-green colorblindness) */
-  --color-success-backdrop: hsl(168deg 76% 88% / 83%);
-  --color-success-focus: hsl(168deg 76% 48% / 91%);
-  --color-success: hsl(168deg 76% 42% / 91%);
-  --color-success-content: hsl(168deg 76% 15% / 91%);
-  --color-success-contrast: hsl(168deg 76% 97% / 91%);
-
-  /* Warning - Amber/orange (distinct from error, works for all types) */
-  --color-warning-backdrop: hsl(38deg 100% 88% / 83%);
-  --color-warning-focus: hsl(38deg 100% 58% / 91%);
-  --color-warning: hsl(38deg 100% 52% / 91%);
-  --color-warning-content: hsl(38deg 100% 15% / 91%);
-  --color-warning-contrast: hsl(38deg 100% 94% / 91%);
-
-  /* Error - Magenta/vermillion instead of pure red (better for red-green colorblindness) */
-  --color-error-backdrop: hsl(340deg 82% 88% / 83%);
-  --color-error-focus: hsl(340deg 82% 58% / 91%);
-  --color-error: hsl(340deg 82% 52% / 91%);
-  --color-error-content: hsl(340deg 82% 15% / 91%);
-  --color-error-contrast: hsl(340deg 82% 94% / 91%);
-
-  /* Secondary - Blue-gray colors for light mode */
-  --color-secondary-base: hsl(220deg 16% 28% / 91%);
-  --color-secondary-contrast: hsl(220deg 16% 96% / 91%);
-  --color-secondary-focus: hsl(220deg 16% 35% / 91%);
-  --color-secondary-content: hsl(220deg 16% 22% / 91%);
-  --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
-
   /* Typography */
   --text-color-heading: var(--color-contrast-900);
   --text-color-body: var(--color-contrast-800);
@@ -247,39 +195,39 @@
     --color-contrast: var(--color-contrast-900);
 
     /* Primary - Dark mode variations */
-    --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
-    --color-primary-focus: hsl(210deg 100% 65% / 91%);
     --color-primary: hsl(210deg 100% 60% / 91%);
+    --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
     --color-primary-content: hsl(210deg 100% 80% / 91%);
     --color-primary-contrast: hsl(210deg 100% 15% / 91%);
+    --color-primary-focus: hsl(210deg 100% 65% / 91%);
 
     /* Secondary - Dark mode variations */
-    --color-secondary-base: hsl(220deg 16% 78% / 91%);
+    --color-secondary: hsl(220deg 16% 78% / 91%);
+    --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
+    --color-secondary-content: hsl(220deg 16% 82% / 91%);
     --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
     --color-secondary-focus: hsl(220deg 16% 72% / 91%);
-    --color-secondary-content: hsl(220deg 16% 82% / 91%);
-    --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
 
     /* Success - Dark mode variations */
-    --color-success-backdrop: hsl(168deg 40% 25% / 50%);
-    --color-success-focus: hsl(168deg 76% 55% / 91%);
     --color-success: hsl(168deg 76% 50% / 91%);
+    --color-success-backdrop: hsl(168deg 40% 25% / 50%);
     --color-success-content: hsl(168deg 76% 70% / 91%);
     --color-success-contrast: hsl(168deg 76% 15% / 91%);
+    --color-success-focus: hsl(168deg 76% 55% / 91%);
 
     /* Warning - Dark mode variations */
-    --color-warning-backdrop: hsl(38deg 50% 30% / 50%);
-    --color-warning-focus: hsl(38deg 100% 65% / 91%);
     --color-warning: hsl(38deg 100% 60% / 91%);
+    --color-warning-backdrop: hsl(38deg 50% 30% / 50%);
     --color-warning-content: hsl(38deg 100% 75% / 91%);
     --color-warning-contrast: hsl(38deg 100% 20% / 91%);
+    --color-warning-focus: hsl(38deg 100% 65% / 91%);
 
     /* Error - Dark mode variations */
-    --color-error-backdrop: hsl(340deg 50% 30% / 50%);
-    --color-error-focus: hsl(340deg 82% 65% / 91%);
     --color-error: hsl(340deg 82% 60% / 91%);
+    --color-error-backdrop: hsl(340deg 50% 30% / 50%);
     --color-error-content: hsl(340deg 82% 75% / 91%);
     --color-error-contrast: hsl(340deg 82% 15% / 91%);
+    --color-error-focus: hsl(340deg 82% 65% / 91%);
   }
 }
 
@@ -303,43 +251,44 @@ html.dark {
   --color-contrast: var(--color-contrast-900);
 
   /* Primary - Dark mode variations */
-  --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
-  --color-primary-focus: hsl(210deg 100% 65% / 91%);
   --color-primary: hsl(210deg 100% 60% / 91%);
+  --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
   --color-primary-content: hsl(210deg 100% 80% / 91%);
   --color-primary-contrast: hsl(210deg 100% 15% / 91%);
+  --color-primary-focus: hsl(210deg 100% 65% / 91%);
 
   /* Secondary - Dark mode variations */
-  --color-secondary-base: hsl(220deg 16% 78% / 91%);
+  --color-secondary: hsl(220deg 16% 78% / 91%);
+  --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
+  --color-secondary-content: hsl(220deg 16% 82% / 91%);
   --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
   --color-secondary-focus: hsl(220deg 16% 72% / 91%);
-  --color-secondary-content: hsl(220deg 16% 82% / 91%);
-  --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
 
   /* Success - Dark mode variations */
-  --color-success-backdrop: hsl(168deg 40% 25% / 50%);
-  --color-success-focus: hsl(168deg 76% 55% / 91%);
   --color-success: hsl(168deg 76% 50% / 91%);
+  --color-success-backdrop: hsl(168deg 40% 25% / 50%);
   --color-success-content: hsl(168deg 76% 70% / 91%);
   --color-success-contrast: hsl(168deg 76% 15% / 91%);
+  --color-success-focus: hsl(168deg 76% 55% / 91%);
 
   /* Warning - Dark mode variations */
-  --color-warning-backdrop: hsl(38deg 50% 30% / 50%);
-  --color-warning-focus: hsl(38deg 100% 65% / 91%);
   --color-warning: hsl(38deg 100% 60% / 91%);
+  --color-warning-backdrop: hsl(38deg 50% 30% / 50%);
   --color-warning-content: hsl(38deg 100% 75% / 91%);
   --color-warning-contrast: hsl(38deg 100% 20% / 91%);
+  --color-warning-focus: hsl(38deg 100% 65% / 91%);
 
   /* Error - Dark mode variations */
-  --color-error-backdrop: hsl(340deg 50% 30% / 50%);
-  --color-error-focus: hsl(340deg 82% 65% / 91%);
   --color-error: hsl(340deg 82% 60% / 91%);
+  --color-error-backdrop: hsl(340deg 50% 30% / 50%);
   --color-error-content: hsl(340deg 82% 75% / 91%);
   --color-error-contrast: hsl(340deg 82% 15% / 91%);
+  --color-error-focus: hsl(340deg 82% 65% / 91%);
 }
 
 /* VitePress light theme (.light class on html element) */
 html:not(.dark) {
+
   /* Background colors (50-400): Optimized for UI elements, cards, borders */
   --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */
   --color-contrast-100: hsl(240deg 5% 96% / 100%);  /* Cards, elevated surfaces */
@@ -357,39 +306,44 @@ html:not(.dark) {
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
 
-  /* Primary - Light mode variations (same as :root defaults) */
-  --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
-  --color-primary-focus: hsl(210deg 100% 55% / 91%);
+  /* Primary - Vibrant blue (good for all colorblind types) */
   --color-primary: hsl(210deg 100% 48% / 91%);
+  --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
   --color-primary-content: hsl(210deg 100% 15% / 91%);
   --color-primary-contrast: hsl(210deg 100% 97% / 91%);
+  --color-primary-focus: hsl(210deg 100% 55% / 91%);
+  --color-primary-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent), var(--shadow-sm);
 
-  /* Secondary - Light mode variations */
-  --color-secondary-base: hsl(220deg 16% 28% / 91%);
+  /* Secondary - Blue-gray colors for light mode */
+  --color-secondary: hsl(220deg 16% 28% / 91%);
+  --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
+  --color-secondary-content: hsl(220deg 16% 22% / 91%);
   --color-secondary-contrast: hsl(220deg 16% 96% / 91%);
   --color-secondary-focus: hsl(220deg 16% 35% / 91%);
-  --color-secondary-content: hsl(220deg 16% 22% / 91%);
-  --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
+  --color-secondary-shadow: 0 0 0 2px color-mix(in srgb, var(--color-secondary) 20%, transparent), var(--shadow-sm);
 
-  /* Success - Light mode variations */
-  --color-success-backdrop: hsl(168deg 76% 88% / 83%);
-  --color-success-focus: hsl(168deg 76% 48% / 91%);
+  /* Success - Teal/cyan instead of pure green (better for red-green colorblindness) */
   --color-success: hsl(168deg 76% 42% / 91%);
+  --color-success-backdrop: hsl(168deg 76% 88% / 83%);
   --color-success-content: hsl(168deg 76% 15% / 91%);
   --color-success-contrast: hsl(168deg 76% 97% / 91%);
+  --color-success-focus: hsl(168deg 76% 48% / 91%);
+  --color-success-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success) 20%, transparent), var(--shadow-sm);
 
-  /* Warning - Light mode variations */
-  --color-warning-backdrop: hsl(38deg 100% 88% / 83%);
-  --color-warning-focus: hsl(38deg 100% 58% / 91%);
+  /* Warning - Amber/orange (distinct from error, works for all types) */
   --color-warning: hsl(38deg 100% 52% / 91%);
+  --color-warning-backdrop: hsl(38deg 100% 88% / 83%);
   --color-warning-content: hsl(38deg 100% 15% / 91%);
   --color-warning-contrast: hsl(38deg 100% 94% / 91%);
+  --color-warning-focus: hsl(38deg 100% 58% / 91%);
+  --color-warning-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 20%, transparent), var(--shadow-sm);
 
-  /* Error - Light mode variations */
-  --color-error-backdrop: hsl(340deg 82% 88% / 83%);
-  --color-error-focus: hsl(340deg 82% 58% / 91%);
+  /* Error - Magenta/vermillion instead of pure red (better for red-green colorblindness) */
   --color-error: hsl(340deg 82% 52% / 91%);
+  --color-error-backdrop: hsl(340deg 82% 88% / 83%);
   --color-error-content: hsl(340deg 82% 15% / 91%);
   --color-error-contrast: hsl(340deg 82% 94% / 91%);
+  --color-error-focus: hsl(340deg 82% 58% / 91%);
+  --color-error-shadow: 0 0 0 2px color-mix(in srgb, var(--color-error) 20%, transparent), var(--shadow-sm);
 }
 

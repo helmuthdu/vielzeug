@@ -7,7 +7,7 @@
 
 The `alternate` utility toggles an item's presence in an array. If the item exists (based on a value or a custom selector), it is removed. If it doesn't exist, it is added to the array using a specified strategy.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/alternate.ts

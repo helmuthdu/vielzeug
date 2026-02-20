@@ -23,6 +23,7 @@ Each section is tagged as:
 
 - ✅ `bit-checkbox` – Checkbox input with indeterminate state
 - ✅ `bit-radio` – Radio button input with keyboard navigation
+- ✅ `bit-input` – Text input with variants and slots
 
 ---
 
@@ -33,9 +34,9 @@ Each section is tagged as:
 All components must:
 
 - Use `bit-[component-name]` (singular, kebab-case) for element names.
-- Use per-component directories:  
+- Use per-component directories:
   `src/[category]/[component-name]/[component-name].ts`.
-- Define a props type: `[ComponentName]Props` and use it in  
+- Define a props type: `[ComponentName]Props` and use it in
   `defineElement<HTMLElement, [ComponentName]Props>(...)`.
 - Reflect public props to attributes when needed; boolean attributes use presence/absence, not `"true"`/`"false"`.
 - Use design tokens (colors, spacing, typography, shadows); avoid hard-coded values.
@@ -110,7 +111,7 @@ const styles = css`
 
 // -------------------- Props Type --------------------
 export type [ComponentName]Props = {
-  variant?: 'solid' | 'outline' | 'ghost';
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
@@ -151,6 +152,9 @@ export default {};
 - Enum/string attributes should fall back to safe defaults on invalid values.
 - Explicitly document which props are reflected as attributes and which are internal-only.
 
+> [!WARNING]
+> Never use `true` or `false` string values for boolean attributes. This is a common source of bugs as any non-null string (including `"false"`) evaluates to `true` in a boolean check.
+
 ---
 
 ## 4. Naming Conventions [Required]
@@ -183,14 +187,51 @@ All components must integrate with the unified design system.
 Standard visual variants for components:
 
 ```typescript
-type Variant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
-
-/* Usage */
-:host([variant='solid']) { /* styles */ }
-:host([variant='outline']) { /* styles */ }
+type Variant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
 ```
 
-### 5.3 Colors [Required]
+| Variant | Aesthetic | Key Tokens |
+|---------|-----------|------------|
+| `solid` | High emphasis, filled background | `--color-{name}`, `--color-{name}-contrast` |
+| `flat` | Medium emphasis, subtle filled background | `--color-{name}-backdrop`, `--color-{name}` |
+| `bordered` | Subtle filled background with prominent border | `--color-{name}-backdrop`, `--color-{name}` |
+| `outline` | Low emphasis, transparent background with border | `transparent`, `--color-{name}` |
+| `ghost` | Minimal emphasis, background appears on hover | `transparent`, `--color-{name}-backdrop` (hover) |
+| `text` | Cleanest look, often used for secondary actions | `transparent`, color changes on hover |
+| `glass` | Modern translucent effect with backdrop blur | `backdrop-filter`, `color-mix`, `--color-contrast` |
+| `frost` | Subtle "frozen" effect with higher transparency | `backdrop-filter`, `color-mix`, `--color-canvas` |
+
+### 5.3 Modern Effects (Glass & Frost) [Recommended]
+
+When implementing `glass` and `frost` variants, use the following patterns to ensure consistent quality across the library.
+
+**Glass Pattern**
+Uses the component's semantic color mixed with the contrast color for a vibrant translucent look.
+
+```css
+:host([variant='glass']) {
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
+  background: color-mix(in srgb, var(--component-base) 30%, var(--color-contrast) 10%);
+  border: var(--border) solid color-mix(in srgb, var(--component-focus) 30%, transparent);
+  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  color: color-mix(in srgb, var(--component-contrast) 90%, transparent);
+}
+```
+
+**Frost Pattern**
+Uses the system canvas color with a high transparency for a neutral, "frosted" appearance.
+
+```css
+:host([variant='frost']) {
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
+  border: var(--border) solid color-mix(in srgb, var(--component-contrast) 40%, transparent);
+  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  color: var(--component-content);
+}
+```
+
+### 5.4 Colors [Required]
 
 Semantic color palette with automatic light/dark mode support:
 
@@ -214,7 +255,7 @@ type Color = 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 - `--color-{name}-content` - Alternative content color
 - `--color-{name}-backdrop` - Subtle background/overlay
 
-### 5.4 Sizes [Required]
+### 5.5 Sizes [Required]
 
 ```typescript
 type Size = 'sm' | 'md' | 'lg';
@@ -239,7 +280,7 @@ type Size = 'sm' | 'md' | 'lg';
 }
 ```
 
-### 5.5 Typography [Required]
+### 5.6 Typography [Required]
 
 Use semantic typography tokens:
 
@@ -280,7 +321,7 @@ h1, h2, h3 {
 - `--text-color-disabled` - Disabled text
 - `--text-color-contrast` - Text on dark backgrounds
 
-### 5.6 Spacing & Grid [Required]
+### 5.7 Spacing & Grid [Required]
 
 Use the `--size-*` scale with 8px base rhythm (`1rem = 16px`).
 
@@ -312,7 +353,7 @@ Use the `--size-*` scale with 8px base rhythm (`1rem = 16px`).
 - Breakpoints: `--size-screen-xs` through `--size-screen-2xl`
 - Grid: `--grid-1` through `--grid-12`
 
-### 5.7 Border Radius [Required]
+### 5.8 Border Radius [Required]
 
 ```css
 :host {
@@ -331,7 +372,7 @@ Use the `--size-*` scale with 8px base rhythm (`1rem = 16px`).
 --rounded-full /* 9999px - circular */
 ```
 
-### 5.8 Elevation [Required]
+### 5.9 Elevation [Required]
 
 Use semantic shadow tokens for depth:
 
@@ -351,7 +392,7 @@ Use semantic shadow tokens for depth:
 --shadow-inner /* Inset shadow */
 ```
 
-### 5.9 Borders [Required]
+### 5.10 Borders [Required]
 
 ```css
 :host {
@@ -373,7 +414,7 @@ Use semantic shadow tokens for depth:
 --ring-8    /* 0 0 0 8px */
 ```
 
-### 5.10 Blur Effects [Optional]
+### 5.11 Blur Effects [Optional]
 
 ```css
 /* Backdrop blur for glass morphism */
@@ -541,7 +582,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-primary-backdrop` - Subtle background/overlay
 
 **Secondary** (Blue-gray for neutral actions)
-- `--color-secondary-base` - Base color
+- `--color-secondary` - Base color
 - `--color-secondary-contrast` - Contrast text
 - `--color-secondary-focus` - Focus state
 - `--color-secondary-content` - Content color
@@ -1461,7 +1502,7 @@ src/form/input/
 describe('bit-component', () => {
   // Setup
   let fixture: ComponentFixture<HTMLElement>;
-  
+
   beforeAll(async () => { /* import component */ });
   afterEach(() => { /* cleanup */ });
 
@@ -1582,130 +1623,70 @@ onConnected(el) {
 }
 ```
 
----
+## 15. Documentation [Required]
 
-## 15. Documentation
+Each component must have comprehensive documentation located at `/docs/buildit/components/bit-[component-name].md`. We use a standardized structure to ensure consistency and high quality across our library.
 
-Each component must have docs at `/docs/buildit/components/bit-[component-name].md`.
+### 15.1 Standard Structure
 
-### 15.1 Minimal Documentation [Required]
+Every component page must follow this exact section order:
 
-Must include:
+1. **Title & Overview**: Brief description of purpose and use cases.
+2. **Features**: Bulleted list of key technical capabilities (variants, sizes, a11y).
+3. **Source Code**: Show a collapsable detail of the source code with syntax highlighting.:
+    ```md
+    ::: details View Source Code
+    <<< @/../packages/buildit/**/component.ts
+    :::
+    ```
+4. **Basic Usage**: Minimal code snippet showing how to get started.
+5. **Visual Options**:
+    - **Variants**: Show all visual styles (`solid`, `flat`, etc.).
+    - **Colors**: Show semantic color options.
+    - **Sizes**: Show available dimensions.
+6. **Customization**: Examples of slots (icons, prefixes, suffixes) or complex layouts.
+7. **States**: Visual demonstration of `disabled`, `loading`, `checked`, etc.
+8. **API Reference**:
+    - **Attributes Table**: All supported attributes, types, and defaults.
+    - **Slots Table**: Description of all default and named slots.
+    - **Events Table**: Detailed `CustomEvent` names and their `detail` shapes.
+9. **CSS Custom Properties**: Table of exposed variables for fine-tuned styling.
+10. **Accessibility**: Detailed notes on keyboard support and ARIA implementation.
+11. **Best Practices**: "Do" and "Don't" guidelines for optimal usage.
 
-- Overview (1–2 sentences).
-- Basic usage (import + minimal HTML).
-- Attributes table (name, type, default, description).
-- Events table (name, detail, description).
-- Accessibility notes (role, ARIA attributes, keyboard behavior).
+> [!IMPORTANT]
+> Always use the `<ComponentPreview>` wrapper for code examples to ensure they render interactively in the documentation site.
 
-### 15.2 Full Documentation [Recommended]
+### 15.2 Code Example Patterns
 
-````markdown
----
-title: Component Name
-description: Brief description
----
+#### Complex Headers (Slots)
+For components like Accordions or Cards, use slots for content instead of attributes to allow for rich HTML (icons, tags).
 
-# Component Name
+```markdown
+<!-- ✅ Recommended: Slot-based patterns -->
+<bit-accordion-item>
+  <span slot="title">Settings</span>
+  <span slot="prefix" class="material-symbols-rounded">settings</span>
+  <p>Panel content...</p>
+</bit-accordion-item>
 
-Brief overview of what the component does.
-
-## Features
-
-✨ **Feature 1** – Description  
-✨ **Feature 2** – Description  
-✨ **Feature 3** – Description
-
-## Installation
-
-```bash
-pnpm add @vielzeug/buildit
+<!-- ❌ Avoid: Attribute-based complex content -->
+<bit-accordion-item title="Settings">
+  <p>Panel content...</p>
+</bit-accordion-item>
 ```
-````
 
-## Basic Usage
+#### Framework Examples
+Framework integration examples should be grouped using VitePress code groups and kept in the dedicated `frameworks.md` guide for better maintenance.
 
-```typescript
-import '@vielzeug/buildit/component';
-```
+### 15.3 Reference Documentation
 
-```html
-<bit-component>Content</bit-component>
-```
+Study these standardized implementations for guidance:
 
-## Variants
-
-<!-- Examples for all variants -->
-
-## Colors
-
-<!-- Examples for all colors -->
-
-## Sizes
-
-<!-- Examples for all sizes -->
-
-## States
-
-<!-- Disabled / loading / checked / expanded, etc. -->
-
-## API Reference
-
-### Attributes
-
-| Attribute  | Type                              | Default     | Description         |
-| ---------- | --------------------------------- | ----------- | ------------------- |
-| `variant`  | `'solid' \| 'outline' \| 'ghost'` | `'solid'`   | Visual style        |
-| `color`    | `'primary' \| 'secondary' \| ...` | `'primary'` | Color theme         |
-| `size`     | `'sm' \| 'md' \| 'lg'`            | `'md'`      | Component size      |
-| `disabled` | `boolean`                         | `false`     | Disable interaction |
-
-### Slots
-
-| Slot      | Description         |
-| --------- | ------------------- |
-| (default) | Main content        |
-| `prefix`  | Content before main |
-| `suffix`  | Content after main  |
-
-### Events
-
-| Event    | Detail                                | Description                |
-| -------- | ------------------------------------- | -------------------------- |
-| `change` | `{ checked: boolean, value: string }` | Emitted when state changes |
-| `click`  | `{ originalEvent: Event }`            | Emitted on click           |
-
-### CSS Custom Properties
-
-| Property              | Description      | Default                |
-| --------------------- | ---------------- | ---------------------- |
-| `--component-bg`      | Background color | `var(--color-primary)` |
-| `--component-padding` | Internal padding | `var(--size-2)`        |
-
-## Accessibility
-
-- Keyboard navigation behavior.
-- Screen reader considerations.
-- ARIA attributes used.
-- WCAG compliance notes.
-
-## Examples
-
-### With Framework X
-
-Examples for React, Vue, Svelte, grouped with VitePress extensions.
-
-### Advanced Usage
-
-Complex patterns and real-world examples.
-
-````
-
-**Reference:**
-
-- `/docs/buildit/components/bit-button.md`
-- `/docs/buildit/components/bit-checkbox.md`
-- `/docs/buildit/components/bit-accordion.md`
+- **[Button](file:///Users/saatkhel/Projects/vielzeug/docs/buildit/components/button.md)** - Perfect reference for variants/colors/sizes.
+- **[Accordion](file:///Users/saatkhel/Projects/vielzeug/docs/buildit/components/accordion.md)** - Best for complex slot usage and single/multiple modes.
+- **[Input](file:///Users/saatkhel/Projects/vielzeug/docs/buildit/components/input.md)** - Standard for form elements with prefix/suffix support.
+- **[Checkbox](file:///Users/saatkhel/Projects/vielzeug/docs/buildit/components/checkbox.md)** - Example of simple state-driven components.
 
 ---
 
@@ -2066,15 +2047,19 @@ The Buildit component library follows these core principles:
 
 ## 19. Reference Components
 
-Use these as templates:
+Use these battle-tested components as templates for new development. They represent our current best practices for various component types.
 
-| Component            | Best For             | Key Features                               |
-| -------------------- | -------------------- | ------------------------------------------ |
-| `bit-button`         | Interactive elements | Variants, loading state, slots             |
-| `bit-checkbox`       | Form inputs          | Checked/indeterminate states, ARIA         |
-| `bit-radio`          | Grouped inputs       | Keyboard navigation, group management      |
-| `bit-accordion-item` | Container components | Slots, expand/collapse, native `<details>` |
-| `bit-button-group`   | Composite components | Child management, variant propagation      |
+| Component | Category | Best For | Key Patterns |
+| :--- | :--- | :--- | :--- |
+| **`bit-button`** | Base | Interactive actions | Variants, loading states, slots |
+| **`bit-input`** | Form | Data entry | Prefixes/suffixes, validation states |
+| **`bit-checkbox`** | Form | Binary choice | Indeterminate state, ARIA checked |
+| **`bit-accordion`** | Base | Content density | Parent/child sync, slots, `<details>` |
+| **`bit-radio`** | Form | Selection sets | Group coordination, keyboard navigation |
+| **`bit-button-group`*** | Base | Layout containers | Property propagation to children |
+
+> [!TIP]
+> **`bit-accordion`** is the best example of how to handle synchronization between a container and its children using `MutationObserver`.
 
 ---
 
@@ -2087,7 +2072,7 @@ Use these as templates:
 
 ---
 
-**Note:** Please do not add report or summary files to the project. You can generate them and share them in discussion, but they should not be written to or committed into the repository. All important information should live in the existing documentation.
+**Note:** Please do not create/add report or summary files of the changes you made into the project. All important information should live in the existing documentation.
 
-**Last Updated:** February 20, 2026  
+**Last Updated:** February 20, 2026
 **Version:** 1.1.0

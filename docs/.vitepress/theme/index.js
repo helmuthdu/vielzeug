@@ -1,16 +1,18 @@
+import '@vielzeug/buildit/styles/theme.css';
 import DefaultTheme from 'vitepress/theme';
 import { Logit } from '../../../packages/logit/src';
-import Repl from './components/REPL.vue';
+import ComponentPreview from './components/ComponentPreview.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
-import ComponentPreview from './components/ComponentPreview.vue';
-import '@vielzeug/buildit';
-import '@vielzeug/buildit/styles/theme.css';
+import Repl from './components/REPL.vue';
 import './theme.css';
 
 export default {
   ...DefaultTheme,
   enhanceApp({ app }) {
+    if (typeof window !== 'undefined') {
+      import('@vielzeug/buildit');
+    }
     app.component('REPL', Repl);
     app.component('PackageBadges', PackageBadges);
     app.component('PackageInfo', PackageInfo);

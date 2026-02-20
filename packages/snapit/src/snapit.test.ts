@@ -628,9 +628,7 @@ describe('computed', () => {
   it('creates computed value from selector', () => {
     const state = createSnapshot({ items: [{ price: 10 }, { price: 20 }] });
 
-    const total = state.computed((s) =>
-      s.items.reduce((sum, item) => sum + item.price, 0)
-    );
+    const total = state.computed((s) => s.items.reduce((sum, item) => sum + item.price, 0));
 
     expect(total.get()).toBe(30);
   });
@@ -692,10 +690,7 @@ describe('computed', () => {
     const state = createSnapshot({ items: [1, 2, 3] });
 
     // Only notify when length changes
-    const items = state.computed(
-      (s) => s.items,
-      { equality: (a, b) => a.length === b.length }
-    );
+    const items = state.computed((s) => s.items, { equality: (a, b) => a.length === b.length });
 
     const listener = vi.fn();
     items.subscribe(listener);
@@ -786,7 +781,7 @@ describe('computed', () => {
 
 describe('transaction', () => {
   it('batches multiple updates into single notification', async () => {
-    const state = createSnapshot({ count: 0, name: 'Alice', age: 30 });
+    const state = createSnapshot({ age: 30, count: 0, name: 'Alice' });
     const listener = vi.fn();
 
     state.subscribe(listener);
@@ -801,10 +796,7 @@ describe('transaction', () => {
     // Should only notify once after transaction
     await Promise.resolve();
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith(
-      { count: 1, name: 'Bob', age: 31 },
-      { count: 0, name: 'Alice', age: 30 }
-    );
+    expect(listener).toHaveBeenCalledWith({ age: 31, count: 1, name: 'Bob' }, { age: 30, count: 0, name: 'Alice' });
   });
 
   it('does not notify during transaction', () => {
@@ -926,4 +918,3 @@ describe('transaction', () => {
     expect(countListener).toHaveBeenCalledWith(2, 0);
   });
 });
-

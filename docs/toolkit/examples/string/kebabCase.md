@@ -7,7 +7,7 @@
 
 The `kebabCase` utility transforms a string into `kebab-case` format (all lower case with words separated by dashes). It is perfect for generating CSS class names, URL slugs, or CLI flags.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/kebabCase.ts

@@ -2,7 +2,7 @@
 
 The `cache` utility creates a generic key-value cache with automatic garbage collection, metadata tracking, and observer support. It's designed to efficiently store temporary data with time-based expiration.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/cache.ts

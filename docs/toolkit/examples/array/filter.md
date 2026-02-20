@@ -7,7 +7,7 @@
 
 The `filter` utility creates a new array with all elements that pass the test implemented by the provided predicate function.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/filter.ts

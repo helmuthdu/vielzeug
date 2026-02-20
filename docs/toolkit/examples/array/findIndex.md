@@ -7,7 +7,7 @@
 
 The `findIndex` utility returns the index of the first element in an array that passes the provided test function. If no element matches, it returns `-1`.
 
-## Implementation
+## Source Code
 
 :::details View Source Code
 <<< @/../packages/toolkit/src/array/findIndex.ts

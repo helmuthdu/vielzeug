@@ -7,7 +7,7 @@
 
 The `isPositive` utility is a type guard that checks if a given number is strictly greater than zero.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isPositive.ts

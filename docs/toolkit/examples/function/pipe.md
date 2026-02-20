@@ -7,7 +7,7 @@
 
 The `pipe` utility performs functional composition from left to right. It takes multiple functions and returns a single function that passes its result from one call to the next, creating a processing pipeline.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/pipe.ts

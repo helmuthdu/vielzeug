@@ -7,7 +7,7 @@
 
 The `pascalCase` utility transforms a string into `PascalCase` format (every word capitalized, no separators). It is typically used for naming classes, components, or TypeScript types.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/pascalCase.ts

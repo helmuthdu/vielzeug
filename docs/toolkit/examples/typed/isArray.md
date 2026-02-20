@@ -7,7 +7,7 @@
 
 The `isArray` utility is a type guard that checks if a given value is an array. It provides reliable detection across different execution environments.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isArray.ts

@@ -9,29 +9,28 @@ A customizable checkbox component with multiple colors, sizes, and states. Built
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
 - 🎭 **States**: checked, unchecked, indeterminate, disabled
 - 🔧 **Customizable**: CSS custom properties for styling
-- 🌙 **Theme Support**: Works with light/dark mode
-- 📋 **Form Integration**: Native form support with name and value attributes
+
+## Source Code
+
+::: details View Source Code
+<<< @/../packages/buildit/src/form/checkbox/checkbox.ts
+:::
 
 ## Basic Usage
 
 ```html
-<!DOCTYPE html>
-<html>
-  <body>
-    <bit-checkbox>Accept terms and conditions</bit-checkbox>
-    <bit-checkbox checked>Subscribe to newsletter</bit-checkbox>
-    <bit-checkbox disabled>Disabled option</bit-checkbox>
+<bit-checkbox>Accept terms and conditions</bit-checkbox>
 
-    <script type="module">
-      import '@vielzeug/buildit/checkbox';
-    </script>
-  </body>
-</html>
+<script type="module">
+  import '@vielzeug/buildit/checkbox';
+</script>
 ```
 
-## Colors
+## Visual Options
 
-Five semantic colors for different contexts:
+### Colors
+
+Five semantic colors for different contexts.
 
 <ComponentPreview>
 
@@ -45,19 +44,11 @@ Five semantic colors for different contexts:
 
 </ComponentPreview>
 
-**Use cases:**
+### Sizes
 
-- **Primary**: Default selection, general purpose
-- **Secondary**: Alternative selections
-- **Success**: Confirmations, positive actions
-- **Warning**: Caution, important selections
-- **Error**: Destructive or critical selections
+Three sizes for different contexts.
 
-## Sizes
-
-Three sizes for different contexts:
-
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-checkbox checked size="sm">Small</bit-checkbox>
@@ -69,129 +60,30 @@ Three sizes for different contexts:
 
 ## States
 
-### Checked
+### Indeterminate
 
-Set the initial checked state:
+Useful for "select all" patterns where some items are selected.
 
 <ComponentPreview>
 
 ```html
-<bit-checkbox>Unchecked</bit-checkbox> <bit-checkbox checked>Checked</bit-checkbox>
-```
-
-</ComponentPreview>
-
-### Indeterminate
-
-Show an indeterminate state (useful for "select all" checkboxes):
-
-<ComponentPreview vertical>
-
-```html
-<bit-checkbox indeterminate>Indeterminate</bit-checkbox>
-<bit-checkbox checked indeterminate>Indeterminate (ignored when checked)</bit-checkbox>
-```
-
-</ComponentPreview>
-
-```html
 <bit-checkbox indeterminate>Indeterminate</bit-checkbox>
 ```
 
-::: tip Select All Pattern
-The indeterminate state is commonly used for "select all" checkboxes when some (but not all) items are selected. When clicked, it typically transitions to the checked state.
-:::
+</ComponentPreview>
 
 ### Disabled
 
-Prevent interaction and reduce opacity:
+Prevent interaction and reduce opacity for unavailable options.
 
 <ComponentPreview>
 
 ```html
 <bit-checkbox disabled>Disabled unchecked</bit-checkbox>
 <bit-checkbox checked disabled>Disabled checked</bit-checkbox>
-<bit-checkbox indeterminate disabled>Disabled indeterminate</bit-checkbox>
 ```
 
 </ComponentPreview>
-
-## Form Integration
-
-Checkboxes work seamlessly with native HTML forms:
-
-<ComponentPreview vertical>
-
-```html
-<form
-  style="display: flex; flex-direction: column; gap: 0.75rem;"
-  onsubmit="event.preventDefault(); alert('Form submitted!')">
-  <bit-checkbox name="newsletter" value="yes" checked>Subscribe to newsletter</bit-checkbox>
-  <bit-checkbox name="terms" value="accepted">I accept the terms and conditions</bit-checkbox>
-  <bit-checkbox name="marketing" value="yes">Receive marketing emails</bit-checkbox>
-  <bit-button type="submit" style="margin-top: 0.5rem; align-self: flex-start;">Submit</bit-button>
-</form>
-```
-
-</ComponentPreview>
-
-**Form attributes:**
-
-- `name` - Field name for form submission
-- `value` - Value when checked (defaults to empty string)
-- `checked` - Initial checked state
-
-## Custom Styling
-
-Customize appearance using CSS custom properties:
-
-<ComponentPreview>
-
-```html
-<bit-checkbox
-  checked
-  style="--checkbox-size: 2rem; --checkbox-radius: 50%; --checkbox-checked-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-  Custom Gradient
-</bit-checkbox>
-<bit-checkbox checked style="--checkbox-size: 1.75rem; --checkbox-checked-bg: #ff6b6b; --checkbox-radius: 0.25rem;">
-  Custom Color
-</bit-checkbox>
-```
-
-</ComponentPreview>
-
-### Available CSS Custom Properties
-
-#### Size & Shape
-
-- `--checkbox-size` - Size of the checkbox square
-- `--checkbox-radius` - Border radius
-- `--checkbox-font-size` - Label font size
-
-#### Colors
-
-- `--checkbox-bg` - Background color (unchecked)
-- `--checkbox-border-color` - Border color (unchecked)
-- `--checkbox-checked-bg` - Background color when checked
-- `--checkbox-color` - Checkmark color
-
-## Event Handling
-
-Listen to the `change` event to respond to checkbox state changes:
-
-```html
-<bit-checkbox id="myCheckbox">Enable feature</bit-checkbox>
-
-<script>
-  const checkbox = document.getElementById('myCheckbox');
-
-  checkbox.addEventListener('change', (event) => {
-    const { checked, value } = event.detail;
-    console.log('Checked:', checked);
-    console.log('Value:', value);
-  });
-</script>
-```
 
 ## API Reference
 
@@ -215,64 +107,36 @@ Listen to the `change` event to respond to checkbox state changes:
 
 ### Events
 
-| Event    | Detail                                                      | Description                        |
-| -------- | ----------------------------------------------------------- | ---------------------------------- |
-| `change` | `{ checked: boolean, value: string, originalEvent: Event }` | Emitted when checked state changes |
+| Event    | Detail                                                              | Description                        |
+| -------- | ------------------------------------------------------------------- | ---------------------------------- |
+| `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
+
+## CSS Custom Properties
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--checkbox-size` | Size of the square | Size-dependent |
+| `--checkbox-radius` | Border radius | `0.375rem` |
+| `--checkbox-checked-bg` | Background when checked | Color-dependent |
 
 ## Accessibility
 
-The checkbox component follows WAI-ARIA best practices:
+The checkbox component follows WAI-ARIA best practices.
 
 ✅ **Keyboard Navigation**
-
-- `Space` and `Enter` toggle the checkbox
-- `Tab` moves focus to/from the checkbox
+- `Space` and `Enter` toggle the checkbox.
+- `Tab` moves focus to/from the checkbox.
 
 ✅ **Screen Readers**
+- Announces checkbox role and label.
+- `aria-checked` reflects current state (true, false, mixed).
 
-- Announces checkbox role and label
-- `aria-checked` reflects current state (true, false, mixed)
-- `aria-disabled` when disabled
-- Proper focus management
-
-✅ **Focus Management**
-
-- Visible focus indicators
-- Focus is maintained after toggling
-- Disabled checkboxes cannot receive focus
-
-### Best Practices
+## Best Practices
 
 **Do:**
-
-- Use clear, concise labels
-- Group related checkboxes logically
-- Use indeterminate state for "select all" patterns
-- Provide sufficient touch targets (minimum 44×44px)
+- Use clear, concise labels.
+- Use indeterminate state for "select all" patterns.
 
 **Don't:**
-
-- Use checkboxes for mutually exclusive options (use radio buttons)
-- Rely solely on color to communicate state
-- Use checkbox without a label
-- Use disabled state to hide unavailable options (remove instead)
-
-## Browser Support
-
-Requires modern browsers with Web Components support:
-
-- Chrome 77+
-- Firefox 93+
-- Safari 16.4+
-- Edge 79+
-
-## Related Components
-
-- **Radio** - For mutually exclusive selections (coming soon)
-- **Switch** - For on/off toggles (coming soon)
-- **Checkbox Group** - Group related checkboxes (coming soon)
-
-## Source Code
-
-- [Checkbox Component](https://github.com/helmuthdu/vielzeug/tree/main/packages/buildit/src/form/checkbox)
-- [Tests](https://github.com/helmuthdu/vielzeug/tree/main/packages/buildit/src/form/checkbox/__tests__)
+- Use checkboxes for mutually exclusive options (use radio buttons).
+- Hide critical options using the disabled state.

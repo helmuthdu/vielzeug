@@ -7,7 +7,7 @@
 
 Checks if a value is a function.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isFunction.ts

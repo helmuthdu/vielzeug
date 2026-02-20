@@ -1,5 +1,5 @@
-import axe from 'axe-core';
 import { createFixture } from '@vielzeug/craftit/testing';
+import axe from 'axe-core';
 
 describe('bit-input accessibility', () => {
   beforeAll(async () => {
@@ -8,8 +8,8 @@ describe('bit-input accessibility', () => {
 
   it('should have no accessibility violations', async () => {
     const fixture = await createFixture('bit-input', {
-      placeholder: 'Enter text',
       name: 'test-input',
+      placeholder: 'Enter text',
     });
 
     const results = await axe.run(fixture.element);
@@ -20,10 +20,10 @@ describe('bit-input accessibility', () => {
 
   it('should have no violations with all states', async () => {
     const fixture = await createFixture('bit-input', {
-      value: 'Test value',
-      placeholder: 'Enter text',
       disabled: true,
+      placeholder: 'Enter text',
       required: true,
+      value: 'Test value',
     });
 
     const results = await axe.run(fixture.element);
@@ -56,8 +56,8 @@ describe('bit-input accessibility', () => {
 
     for (const type of types) {
       const fixture = await createFixture('bit-input', {
-        type,
         placeholder: `Enter ${type}`,
+        type,
       });
 
       const results = await axe.run(fixture.element);
@@ -67,4 +67,3 @@ describe('bit-input accessibility', () => {
     }
   });
 });
-

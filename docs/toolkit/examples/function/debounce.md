@@ -7,7 +7,7 @@
 
 The `debounce` utility creates a version of a function that delays its execution until a specified amount of time has passed since it was last called. This is ideal for handling rapid-fire events like window resizing, scrolling, or keystrokes.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/debounce.ts

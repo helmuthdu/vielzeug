@@ -7,7 +7,7 @@
 
 The `map` utility transforms an array by applying a callback function to each of its elements. It creates a new array with the results, leaving the original array unchanged.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/map.ts

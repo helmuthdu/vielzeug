@@ -7,7 +7,7 @@
 
 The `compact` utility creates a new array with all falsy values removed. This is particularly useful for cleaning up sparse arrays or removing optional values that weren't provided.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/compact.ts

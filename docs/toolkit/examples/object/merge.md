@@ -7,7 +7,7 @@
 
 The `merge` utility combines multiple objects into a single new object using a variety of configurable strategies.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/merge.ts

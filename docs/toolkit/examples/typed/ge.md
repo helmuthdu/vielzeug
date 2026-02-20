@@ -7,7 +7,7 @@
 
 The `ge` utility checks if the first value is greater than or equal to the second value. It works with any comparable types, including numbers, strings, and Dates.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/ge.ts

@@ -7,7 +7,7 @@
 
 The `parseJSON` utility provides a safe and robust way to parse JSON strings. It includes built-in error handling, support for default values, optional validation, and a customizable reviver function, ensuring that your application doesn't crash on malformed input.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/parseJSON.ts

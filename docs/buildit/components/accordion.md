@@ -8,97 +8,81 @@ A flexible accordion component for organizing collapsible content sections. Buil
 - 🔄 **Selection Modes**: Single or multiple expansion
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
-- 🎭 **States**: expanded, disabled
-- 🔧 **Customizable**: CSS custom properties for styling
-- 🌙 **Theme Support**: Works with light/dark mode
 - 🎯 **Flexible Content**: Support for icons, subtitles, and custom content
+
+## Source Code
+
+::: details View Source Code
+<<< @/../packages/buildit/src/base/accordion/accordion.ts
+:::
+
+::: details View Source Code (Accordion Item)
+<<< @/../packages/buildit/src/base/accordion-item/accordion-item.ts
+:::
 
 ## Basic Usage
 
 ```html
-<!DOCTYPE html>
-<html>
-  <body>
-    <bit-accordion>
-      <bit-accordion-item>
-        <span slot="title">First Section</span>
-        Content for the first section goes here.
-      </bit-accordion-item>
+<bit-accordion>
+  <bit-accordion-item>
+    <span slot="title">First Section</span>
+    Content for the first section goes here.
+  </bit-accordion-item>
+</bit-accordion>
 
-      <bit-accordion-item expanded>
-        <span slot="title">Second Section (Expanded)</span>
-        Content for the second section goes here.
-      </bit-accordion-item>
-
-      <bit-accordion-item>
-        <span slot="title">Third Section</span>
-        Content for the third section goes here.
-      </bit-accordion-item>
-    </bit-accordion>
-
-    <script type="module">
-      import '@vielzeug/buildit/accordion';
-      import '@vielzeug/buildit/accordion-item';
-    </script>
-  </body>
-</html>
+<script type="module">
+  import '@vielzeug/buildit/accordion';
+  import '@vielzeug/buildit/accordion-item';
+</script>
 ```
 
-## Selection Modes
+## Visual Options
 
-### Multiple Expansion (Default)
+### Selection Modes
 
-Allow multiple items to be expanded simultaneously:
+#### Multiple (Default)
+Allow multiple items to be expanded simultaneously.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion selection-mode="multiple">
+<bit-accordion variant="solid" selection-mode="multiple">
   <bit-accordion-item>
     <span slot="title">Section 1</span>
-    <p>Content for section 1. You can expand multiple sections at once.</p>
+    Content 1
   </bit-accordion-item>
   <bit-accordion-item>
     <span slot="title">Section 2</span>
-    <p>Content for section 2. Try opening all sections together.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <span slot="title">Section 3</span>
-    <p>Content for section 3. This is the default behavior.</p>
+    Content 2
   </bit-accordion-item>
 </bit-accordion>
 ```
 
 </ComponentPreview>
 
-### Single Expansion
-
-Only one item can be expanded at a time (accordion-style):
+#### Single
+Only one item can be expanded at a time.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion selection-mode="single">
-  <bit-accordion-item expanded>
+<bit-accordion variant="outline" selection-mode="single">
+  <bit-accordion-item>
     <span slot="title">Section 1</span>
-    <p>Content for section 1. Opening another section will close this one.</p>
+    Content 1
   </bit-accordion-item>
   <bit-accordion-item>
     <span slot="title">Section 2</span>
-    <p>Content for section 2. Only one section can be open at a time.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <span slot="title">Section 3</span>
-    <p>Content for section 3. This is classic accordion behavior.</p>
+    Content 2
   </bit-accordion-item>
 </bit-accordion>
 ```
 
 </ComponentPreview>
 
-## Variants
+### Variants
 
-The accordion supports six visual variants that can be applied to all items:
+Six visual variants applied to all items via the parent accordion.
 
 <ComponentPreview vertical>
 
@@ -106,126 +90,82 @@ The accordion supports six visual variants that can be applied to all items:
 <bit-accordion variant="solid">
   <bit-accordion-item>
     <span slot="title">Solid Variant</span>
-    <p>Filled background with no border.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion variant="flat">
   <bit-accordion-item>
     <span slot="title">Flat Variant</span>
-    <p>Subtle filled background.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion variant="bordered">
   <bit-accordion-item>
     <span slot="title">Bordered Variant</span>
-    <p>Background with visible border.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion variant="outline">
   <bit-accordion-item>
     <span slot="title">Outline Variant</span>
-    <p>Transparent background with border.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion variant="ghost">
   <bit-accordion-item>
     <span slot="title">Ghost Variant</span>
-    <p>Minimal styling, shows on hover.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion variant="text">
   <bit-accordion-item>
     <span slot="title">Text Variant</span>
-    <p>No background or border.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
 ```
 
 </ComponentPreview>
 
-**Use cases:**
+### Sizes
 
-- **Solid/Flat**: Prominent sections with clear separation
-- **Bordered/Outline**: Structured content with defined boundaries
-- **Ghost/Text**: Minimal styling for clean interfaces
-
-## Sizes
-
-Three sizes for different contexts:
+Three sizes for different contexts.
 
 <ComponentPreview vertical>
 
 ```html
 <bit-accordion size="sm">
   <bit-accordion-item>
-    <span slot="title">Small Size</span>
-    <p>Compact accordion for dense layouts.</p>
+    <span slot="title">Small size</span>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion size="md">
   <bit-accordion-item>
     <span slot="title">Medium Size</span>
-    <p>Default size for most use cases.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
-
 <bit-accordion size="lg">
   <bit-accordion-item>
-    <span slot="title">Large Size</span>
-    <p>Spacious accordion for emphasis.</p>
+    <span slot="title">Large size</span>
+    Content
   </bit-accordion-item>
 </bit-accordion>
 ```
 
 </ComponentPreview>
 
-## With Icons
+## Customization
 
-Add custom icons using prefix and suffix slots:
+### Icons & Subtitles
+
+Add icons or descriptive subtitles using slots.
 
 <ComponentPreview vertical>
 
 ```html
 <bit-accordion variant="bordered">
-  <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">folder</span>
-    <span slot="title">Files & Documents</span>
-    <p>View and manage your files and documents here.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">settings</span>
-    <span slot="title">Settings</span>
-    <span
-      slot="suffix"
-      style="background: var(--color-primary); color: white; padding: 0.125rem 0.5rem; border-radius: 12px; font-size: 0.75rem;"
-      >New</span
-    >
-    <p>Configure your application settings and preferences.</p>
-  </bit-accordion-item>
-  <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">help</span>
-    <span slot="title">Help & Support</span>
-    <p>Get help and support for common questions.</p>
-  </bit-accordion-item>
-</bit-accordion>
-```
-
-</ComponentPreview>
-
-## With Subtitles
-
-Add descriptive subtitles below titles for additional context:
-
-<ComponentPreview vertical>
-
-```html
-<bit-accordion variant="ghost">
   <bit-accordion-item>
     <span slot="prefix" class="material-symbols-rounded">cloud</span>
     <span slot="title">Cloud Storage</span>
@@ -251,88 +191,26 @@ Add descriptive subtitles below titles for additional context:
 
 ## States
 
-### Expanded
-
-Set initial expanded state with the `expanded` attribute:
-
-<ComponentPreview vertical>
-
-```html
-<bit-accordion>
-  <bit-accordion-item>
-    <span slot="title">Collapsed by Default</span>
-    <p>This section starts collapsed.</p>
-  </bit-accordion-item>
-  <bit-accordion-item expanded>
-    <span slot="title">Expanded by Default</span>
-    <p>This section starts expanded.</p>
-  </bit-accordion-item>
-</bit-accordion>
-```
-
-</ComponentPreview>
-
 ### Disabled
 
-Prevent interaction with the `disabled` attribute:
+Prevent interaction with specific items.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-accordion>
+<bit-accordion variant="text">
   <bit-accordion-item>
     <span slot="title">Normal Section</span>
-    <p>This section can be interacted with.</p>
+    Content
   </bit-accordion-item>
   <bit-accordion-item disabled>
     <span slot="title">Disabled Section</span>
-    <p>This section cannot be opened or closed.</p>
+    Content
   </bit-accordion-item>
 </bit-accordion>
 ```
 
 </ComponentPreview>
-
-## Custom Styling
-
-Customize appearance using CSS custom properties:
-
-<ComponentPreview vertical>
-
-```html
-<bit-accordion>
-  <bit-accordion-item
-    style="--accordion-item-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --accordion-item-radius: 16px;">
-    <span slot="title" style="color: white; font-weight: 600;">Custom Gradient</span>
-    <p style="color: white; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
-      Custom styled accordion with gradient background and rounded corners.
-    </p>
-  </bit-accordion-item>
-  <bit-accordion-item
-    style="--accordion-item-bg: #ff6b6b; --accordion-item-border-color: #c92a2a; --accordion-item-padding: 1.5rem;">
-    <span slot="title" style="color: white; font-weight: 600;">Custom Colors & Padding</span>
-    <p style="color: white;">Accordion with custom background, border, and padding.</p>
-  </bit-accordion-item>
-</bit-accordion>
-```
-
-</ComponentPreview>
-
-### Available CSS Custom Properties
-
-#### Colors & Backgrounds
-
-- `--accordion-item-bg` - Background color for the summary
-- `--accordion-item-border-color` - Border color
-
-#### Borders & Spacing
-
-- `--accordion-item-radius` - Border radius
-- `--accordion-item-padding` - Inner padding
-
-#### Effects
-
-- `--accordion-item-transition` - Transition timing for animations
 
 ## API Reference
 
@@ -341,26 +219,21 @@ Customize appearance using CSS custom properties:
 | Attribute        | Type                                                                | Default      | Description                                           |
 | ---------------- | ------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
 | `selection-mode` | `'single' \| 'multiple'`                                            | `'multiple'` | Whether multiple items can be expanded simultaneously |
-| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | -            | Visual variant applied to all items                   |
+| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'`    | Visual variant applied to all items                   |
 | `size`           | `'sm' \| 'md' \| 'lg'`                                              | `'md'`       | Size applied to all items                             |
 
 ### `bit-accordion-item` Attributes
 
-| Attribute  | Type                                                                | Default | Description                             |
-| ---------- | ------------------------------------------------------------------- | ------- | --------------------------------------- |
-| `expanded` | `boolean`                                                           | `false` | Whether the item is expanded            |
-| `disabled` | `boolean`                                                           | `false` | Disable the item (prevents toggling)    |
-| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | -       | Visual variant (usually set via parent) |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                              | `'md'`  | Size (usually set via parent)           |
+| Attribute  | Type                                                                | Default   | Description                             |
+| ---------- | ------------------------------------------------------------------- | --------- | --------------------------------------- |
+| `expanded` | `boolean`                                                           | `false`   | Whether the item is expanded            |
+| `disabled` | `boolean`                                                           | `false`   | Disable the item (prevents toggling)    |
+| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'` | Visual variant (usually set via parent) |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                              | `'md'`    | Size (usually set via parent)           |
 
-### `bit-accordion` Slots
+### Slots
 
-| Slot      | Description                            |
-| --------- | -------------------------------------- |
-| (default) | Slot for `bit-accordion-item` elements |
-
-### `bit-accordion-item` Slots
-
+#### `bit-accordion-item`
 | Slot       | Description                                            |
 | ---------- | ------------------------------------------------------ |
 | (default)  | Content shown when item is expanded                    |
@@ -371,84 +244,43 @@ Customize appearance using CSS custom properties:
 
 ### Events
 
-#### `bit-accordion` Events
+#### `bit-accordion`
+| Event    | Detail                               | Description                                       |
+| -------- | ------------------------------------ | ------------------------------------------------- |
+| `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
-| Event    | Detail                          | Description                                       |
-| -------- | ------------------------------- | ------------------------------------------------- |
-| `change` | `{ expandedItem: HTMLElement }` | Emitted when selection changes (single mode only) |
+#### `bit-accordion-item`
+| Event      | Detail                                        | Description                        |
+| ---------- | --------------------------------------------- | ---------------------------------- |
+| `expand`   | `{ expanded: true, item: HTMLElement }`       | Emitted when the item is expanded  |
+| `collapse` | `{ expanded: false, item: HTMLElement }`      | Emitted when the item is collapsed |
 
-#### `bit-accordion-item` Events
+## CSS Custom Properties
 
-| Event      | Detail | Description                        |
-| ---------- | ------ | ---------------------------------- |
-| `expand`   | -      | Emitted when the item is expanded  |
-| `collapse` | -      | Emitted when the item is collapsed |
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--accordion-item-bg` | Background color | `transparent` |
+| `--accordion-item-radius` | Border radius | `0.375rem` |
+| `--accordion-item-padding` | Inner padding | Size-dependent |
 
 ## Accessibility
 
-The accordion component follows WAI-ARIA Accordion Pattern best practices:
+The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
 ✅ **Native Semantics**
-
-- Built with native `<details>` and `<summary>` elements
-- Progressive enhancement - works without JavaScript
-- Automatic ARIA states via native elements
+- Built with native `<details>` and `<summary>` elements.
+- Progressive enhancement - works without JavaScript.
 
 ✅ **Keyboard Navigation**
+- `Enter` and `Space` toggle expansion.
+- `Tab` moves focus between accordion items.
 
-- `Enter` and `Space` toggle expansion
-- `Tab` moves focus between accordion items
-- Arrow keys navigate between items (native behavior)
-
-✅ **Screen Readers**
-
-- Announces expanded/collapsed state automatically
-- Summary content is announced as the trigger
-- Content is accessible when expanded
-
-✅ **Focus Management**
-
-- Visible focus indicators on summary
-- Focus is maintained after toggling
-- Disabled items cannot receive focus
-
-### Best Practices
+## Best Practices
 
 **Do:**
-
-- Use clear, descriptive titles in the `title` slot
-- Provide visual feedback for hover and focus states
-- Use a single mode for mutually exclusive content
-- Keep content concise and scannable
+- Use clear, descriptive titles.
+- Use `single` mode for mutually exclusive content.
 
 **Don't:**
-
-- Nest accordions deeply (max 1-2 levels)
-- Use accordions for navigation (consider tabs instead)
-- Hide critical information in a collapsed state
-- Use too many items (consider pagination)
-
-## Browser Support
-
-Requires modern browsers with Web Components support:
-
-- Chrome 77+
-- Firefox 93+
-- Safari 16.4+
-- Edge 79+
-
-::: tip Details/Summary Support
-The `<details>` element is supported in all modern browsers. The component enhances it with custom styling and behavior while maintaining native functionality.
-:::
-
-## Related Components
-
-- **Tabs** - Alternative for organizing content (coming soon)
-- **Collapse** - Single collapsible section (coming soon)
-- **Drawer** - Side panel for content (coming soon)
-
-## Source Code
-
-- [Accordion Component](https://github.com/helmuthdu/vielzeug/tree/main/packages/buildit/src/base/accordion)
-- [Accordion Item Component](https://github.com/helmuthdu/vielzeug/tree/main/packages/buildit/src/base/accordion-item)
-- [Tests](https://github.com/helmuthdu/vielzeug/tree/main/packages/buildit/src/base/accordion/__tests__)
+- Nest accordions deeply (max 1-2 levels).
+- Hide critical information in a collapsed state.

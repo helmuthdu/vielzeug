@@ -7,7 +7,7 @@
 
 The `isDefined` utility is a type guard that checks if a value is NOT `undefined` or `null`. It is essential for safely handling optional values and cleaning up data sets.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isDefined.ts

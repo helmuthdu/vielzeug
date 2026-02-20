@@ -7,7 +7,7 @@
 
 The `diff` utility compares two objects and returns an object containing only the properties that were changed or added in the second object. This is ideal for change tracking, auditing, and generating minimal data patches.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/diff.ts

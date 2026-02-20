@@ -7,7 +7,7 @@
 
 The `worker` utility simplifies the use of Web Workers by allowing you to run heavy computations in a background thread without creating separate files. It supports importing external dependencies and handles all the complex message-passing logic for you.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/worker.ts

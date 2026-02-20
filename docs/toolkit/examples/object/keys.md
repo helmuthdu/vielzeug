@@ -7,7 +7,7 @@
 
 The `keys` utility returns an array of an object's own enumerable property names. It is a type-safe wrapper around the native `Object.keys()`, providing better type inference for the resulting array.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/keys.ts

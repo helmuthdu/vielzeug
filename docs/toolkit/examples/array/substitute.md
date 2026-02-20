@@ -7,7 +7,7 @@
 
 The `substitute` utility replaces the first element in an array that satisfies a given predicate with a new value. It provides a clean, functional way to perform "find and replace" operations on arrays without mutating the original data.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/substitute.ts

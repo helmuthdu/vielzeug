@@ -7,7 +7,7 @@
 
 The `path` utility safely retrieves a nested value from an object using a dot-notation string or an array of keys. It prevents runtime errors when accessing properties of `undefined` or `null` objects and supports a customizable fallback value.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/path.ts

@@ -1,5 +1,5 @@
-import axe from 'axe-core';
 import { createFixture } from '@vielzeug/craftit/testing';
+import axe from 'axe-core';
 
 /**
  * Accessibility tests for bit-button-group component using axe-core
@@ -20,7 +20,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 3</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -36,7 +36,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Right</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -52,7 +52,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Bottom</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -68,7 +68,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button variant="bordered">Month</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -99,7 +99,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Grid</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -119,7 +119,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -142,12 +142,12 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 3</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
 
       // All buttons should be keyboard focusable
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         const innerButton = button.shadowRoot?.querySelector('button');
         expect(innerButton?.tabIndex).toBe(0);
       });
@@ -162,7 +162,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -185,7 +185,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Active</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -201,7 +201,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 3</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -218,7 +218,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Small 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -233,7 +233,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Large 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -253,7 +253,7 @@ describe('bit-button-group accessibility', () => {
           <bit-button>Button 2</bit-button>
         `;
 
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         const results = await axe.run(fixture.element);
 
@@ -278,7 +278,7 @@ describe('bit-button-group accessibility', () => {
         </bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element);
 
@@ -294,7 +294,7 @@ describe('bit-button-group accessibility', () => {
         </bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -316,7 +316,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -338,7 +338,7 @@ describe('bit-button-group accessibility', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const results = await axe.run(fixture.element, {
         runOnly: {
@@ -354,6 +354,3 @@ describe('bit-button-group accessibility', () => {
     });
   });
 });
-
-
-

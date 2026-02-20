@@ -7,7 +7,7 @@
 
 The `gt` utility checks if the first value is strictly greater than the second value. It works with any comparable types, including numbers, strings, and Dates.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/gt.ts

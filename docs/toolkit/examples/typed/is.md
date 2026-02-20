@@ -7,7 +7,7 @@
 
 The `is` utility is a highly flexible and unified type-checking engine. It acts as a single entry point for nearly all type guards and comparison helpers available in the toolkit, supporting a wide range of string-based predicates and constructor-based checks.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/is.ts

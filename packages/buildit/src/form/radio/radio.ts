@@ -77,7 +77,7 @@ const styles = css`
   }
 
   :host([color='secondary']) .circle {
-    --radio-base: var(--color-secondary-base);
+    --radio-base: var(--color-secondary);
     --radio-contrast: var(--color-secondary-contrast);
     --radio-focus: var(--color-secondary-focus);
   }
@@ -207,6 +207,7 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
         (r) => !r.hasAttribute('disabled'),
       );
 
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Radio group management requires coordination
       radios.forEach((radio) => {
         const radioInput = (radio.shadowRoot?.querySelector('input') as HTMLInputElement | null) || null;
         const isTarget = radio === target;
@@ -216,7 +217,10 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
           radio.setAttribute('aria-checked', 'true');
           if (radioInput) radioInput.checked = true;
 
-          (radio as any).emit?.('change', {
+          // Emit change event - radio is a WebComponent with an emit method
+          // biome-ignore lint/suspicious/noExplicitAny: -
+          const webComponent = radio as HTMLElement & { emit?: (event: string, detail: any) => void };
+          webComponent.emit?.('change', {
             checked: true,
             originalEvent,
             value: radio.getAttribute('value'),
@@ -232,6 +236,7 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
     };
 
     // Keyboard interaction
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling multiple arrow keys and radio group coordination
     host.addEventListener('keydown', (e: KeyboardEvent) => {
       if (host.hasAttribute('disabled')) return;
 

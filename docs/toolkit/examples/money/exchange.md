@@ -7,7 +7,7 @@
 
 Converts money from one currency to another using the provided exchange rate. Maintains precision by using bigint arithmetic.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/money/exchange.ts

@@ -2,11 +2,11 @@
 import { ref, computed, useSlots, onMounted } from 'vue';
 
 const props = defineProps<{
-  code?: string;
   title?: string;
   showCode?: boolean;
   vertical?: boolean;
   center?: boolean;
+  background?: string;
 }>();
 
 const slots = useSlots();
@@ -20,7 +20,7 @@ const toggleCode = () => {
 
 // Extract code from slot content
 onMounted(() => {
-  if (!props.code && slots.default) {
+  if (slots.default) {
     const slotContent = slots.default();
     if (slotContent && slotContent.length > 0) {
       // Find the VitePress processed code block
@@ -98,8 +98,7 @@ function extractText(children: any): string {
 }
 
 const displayCode = computed(() => {
-  const code = props.code || extractedCode.value;
-  return code.trim();
+  return extractedCode.value.trim();
 });
 </script>
 
@@ -114,7 +113,8 @@ const displayCode = computed(() => {
       :class="{
         vertical,
         center,
-      }">
+      }"
+      :style="background ? { backgroundImage: `url(${background})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
       <ClientOnly>
         <div class="preview-demo" v-html="displayCode"></div>
       </ClientOnly>
@@ -164,12 +164,6 @@ const displayCode = computed(() => {
       <div v-if="showCodeState" class="preview-code">
         <!-- Use VitePress's already-processed code block -->
         <component v-if="processedCodeBlock" :is="processedCodeBlock" />
-
-        <!-- Fallback for code prop -->
-        <div v-else-if="code" class="language-html">
-          <span class="lang">html</span>
-          <pre><code>{{ displayCode }}</code></pre>
-        </div>
       </div>
     </Transition>
   </div>

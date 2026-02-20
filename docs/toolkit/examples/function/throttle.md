@@ -7,7 +7,7 @@
 
 The `throttle` utility ensures that a function is called at most once in a specified time interval. It is perfect for limiting the execution rate of heavy handlers like scroll, mouse movement, or continuous API polling.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/throttle.ts

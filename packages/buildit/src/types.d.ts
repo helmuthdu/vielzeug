@@ -41,4 +41,3 @@ declare global {
     'bit-input': BitInput;
   }
 }
-

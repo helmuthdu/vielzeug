@@ -7,7 +7,7 @@
 
 The `search` utility performs a fuzzy search across an array of objects. It checks all string properties of each object and returns a filtered list of items that match the query based on a similarity threshold (tone).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/search.ts

@@ -1,4 +1,4 @@
-import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-radio', () => {
@@ -189,5 +189,3 @@ describe('bit-radio', () => {
     });
   });
 });
-
-

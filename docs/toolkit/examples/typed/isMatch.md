@@ -7,7 +7,7 @@
 
 The `isMatch` utility checks if an object contains a specific pattern of properties and values. It performs a partial comparison, meaning the checked object can have additional properties not present in the pattern.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isMatch.ts

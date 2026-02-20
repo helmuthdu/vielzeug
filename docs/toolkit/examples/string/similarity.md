@@ -7,7 +7,7 @@
 
 The `similarity` utility calculates a score between `0` and `1` representing how similar two strings are. A score of `1` means the strings are identical, while `0` means they have nothing in common.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/similarity.ts

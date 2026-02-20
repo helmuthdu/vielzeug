@@ -7,7 +7,7 @@
 
 Creates a reactive, server-side paginated list with automatic data fetching, caching, filtering, sorting, and searching. Perfect for handling large datasets with backend pagination.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/remoteList.ts

@@ -7,7 +7,7 @@
 
 The `seek` utility performs a deep fuzzy search within an object or array. It recursively scans all properties and values to determine if any of them match the search query based on a similarity threshold (tone).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/seek.ts

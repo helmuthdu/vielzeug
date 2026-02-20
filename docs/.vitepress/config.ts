@@ -19,8 +19,8 @@ export default defineConfig({
     ['link', { href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded', rel: 'stylesheet' }],
     // Theme and mobile app configuration
     ['meta', { content: '#f6ac2c', name: 'theme-color' }],
-    ['meta', { content: 'yes', name: 'apple-mobile-web-app-capable' }],
-    ['meta', { content: 'black', name: 'apple-mobile-web-app-status-bar-style' }],
+    ['meta', { content: 'yes', name: 'mobile-web-app-capable' }],
+    ['meta', { content: 'black', name: 'mobile-web-app-status-bar-style' }],
   ],
   ignoreDeadLinks: true,
   sitemap: {
@@ -87,37 +87,34 @@ export default defineConfig({
         { link: '/buildit/', text: 'Overview' },
         {
           items: [
-            { link: '/buildit/usage#installation', text: 'Installation' },
-            { link: '/buildit/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/buildit/usage#framework-integration', text: 'Framework Integration' },
-            { link: '/buildit/usage#theming', text: 'Theming' },
-            { link: '/buildit/usage#customization', text: 'Customization' },
+            { link: '/buildit/usage', text: 'Installation' },
+            { link: '/buildit/frameworks', text: 'Framework Integration' },
+            { link: '/buildit/theming', text: 'Theming' },
           ],
-          link: '/buildit/usage',
-          text: 'Usage Guide',
-        },
-        {
-          items: [
-            { link: '/buildit/api#accordion-component', text: 'Accordion Component' },
-            { link: '/buildit/api#button-component', text: 'Button Component' },
-            { link: '/buildit/api#theme-variables', text: 'Theme Variables' },
-            { link: '/buildit/api#type-definitions', text: 'Type Definitions' },
-          ],
-          link: '/buildit/api',
-          text: 'API Reference',
+          text: 'Getting Started',
         },
         {
           items: [
             { link: '/buildit/components/accordion', text: 'Accordion' },
             { link: '/buildit/components/button', text: 'Button' },
-            { link: '/buildit/components/button-group', text: 'Button Group' },
+          ],
+          text: 'Base Components',
+        },
+        {
+          items: [
             { link: '/buildit/components/checkbox', text: 'Checkbox' },
             { link: '/buildit/components/input', text: 'Input' },
             { link: '/buildit/components/radio', text: 'Radio' },
           ],
-          text: 'Components',
+          text: 'Form Components',
         },
-        { link: '/buildit/examples', text: 'Examples' },
+        {
+          items: [
+            { link: '/buildit/api', text: 'API Reference' },
+            { link: '/buildit/examples', text: 'Examples' },
+          ],
+          text: 'Reference',
+        },
       ],
       '/craftit/': [
         { link: '/craftit/', text: 'Overview' },

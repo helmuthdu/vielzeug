@@ -7,7 +7,7 @@
 
 The `chunk` utility splits an array or string into smaller pieces (chunks) of a specified size.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/chunk.ts

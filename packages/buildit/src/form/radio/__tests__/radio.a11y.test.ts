@@ -1,6 +1,6 @@
-import axe from 'axe-core';
-import { describe, it, expect, beforeAll } from 'vitest';
 import { createFixture } from '@vielzeug/craftit/testing';
+import axe from 'axe-core';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 describe('bit-radio accessibility', () => {
   beforeAll(async () => {
@@ -56,7 +56,7 @@ describe('bit-radio accessibility', () => {
   });
 
   it('should support arrow key navigation between radios', async () => {
-    const fixture1 = await createFixture('bit-radio', { name: 'group', value: 'option1', checked: true });
+    const fixture1 = await createFixture('bit-radio', { checked: true, name: 'group', value: 'option1' });
     const fixture2 = await createFixture('bit-radio', { name: 'group', value: 'option2' });
 
     fixture1.element.textContent = 'Option 1';
@@ -75,4 +75,3 @@ describe('bit-radio accessibility', () => {
     fixture2.destroy();
   });
 });
-

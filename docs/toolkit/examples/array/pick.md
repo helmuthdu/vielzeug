@@ -7,7 +7,7 @@
 
 The `pick` utility finds the first element in an array that satisfies a condition and then transforms it using a callback function. It is a more powerful version of `find` that includes a built-in transformation step and support for asynchronous operations.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/pick.ts

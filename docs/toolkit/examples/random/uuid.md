@@ -7,7 +7,7 @@
 
 The `uuid` utility generates a cryptographically strong Universally Unique Identifier (UUID) version 4, as specified in RFC 4122.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/random/uuid.ts

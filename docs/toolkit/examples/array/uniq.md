@@ -7,7 +7,7 @@
 
 The `uniq` utility creates a new array containing only unique values from the input array. It removes duplicates, preserving the first occurrence of each unique value.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/uniq.ts

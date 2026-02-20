@@ -7,7 +7,7 @@
 
 The `clone` utility creates a complete deep copy of an object or array. This ensures that any modifications made to the cloned version do not affect the original data structure, which is essential for maintaining immutability in complex applications.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/clone.ts

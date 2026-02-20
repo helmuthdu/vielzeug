@@ -113,7 +113,7 @@ const styles = css`
 // -------------------- Types --------------------
 export type ButtonGroupProps = {
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   orientation?: 'horizontal' | 'vertical';
   attached?: boolean;

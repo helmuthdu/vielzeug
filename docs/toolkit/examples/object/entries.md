@@ -7,7 +7,7 @@
 
 The `entries` utility returns an array of an object's own enumerable string-keyed property `[key, value]` pairs. It is a type-safe wrapper around the native `Object.entries()`, providing significantly better type inference for the resulting tuples.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/entries.ts

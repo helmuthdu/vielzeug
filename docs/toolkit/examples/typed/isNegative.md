@@ -7,7 +7,7 @@
 
 The `isNegative` utility is a type guard that checks if a given number is strictly less than zero.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isNegative.ts

@@ -7,7 +7,7 @@
 
 The `shift` utility rotates the elements of an array by a specified number of positions. Positive numbers rotate to the right, while negative numbers rotate to the left.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/shift.ts

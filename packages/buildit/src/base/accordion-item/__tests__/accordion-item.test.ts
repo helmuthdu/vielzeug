@@ -74,8 +74,8 @@ describe('bit-accordion-item', () => {
       let expanded = false;
       let collapsed = false;
 
-      fixture.element.addEventListener('expand', () => expanded = true);
-      fixture.element.addEventListener('collapse', () => collapsed = true);
+      fixture.element.addEventListener('expand', () => (expanded = true));
+      fixture.element.addEventListener('collapse', () => (collapsed = true));
 
       details!.open = true;
       details!.dispatchEvent(new Event('toggle'));

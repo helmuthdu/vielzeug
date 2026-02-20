@@ -7,7 +7,7 @@
 
 The `boil` utility reduces an array to a single "best" value based on a custom comparison function. It is a specialized version of a "winner-takes-all" reduction, ideal for finding maximums, minimums, or other extreme values based on complex logic.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/boil.ts

@@ -7,7 +7,7 @@
 
 The `isBoolean` utility is a type guard that checks if a given value is a boolean primitive (`true` or `false`).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isBoolean.ts

@@ -7,7 +7,7 @@
 
 Returns the median value of an array of numbers.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/median.ts

@@ -5,7 +5,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  *
  * @element bit-button
  *
- * @attr {string} variant - Button style variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
+ * @attr {string} variant - Button style variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
  * @attr {string} color - Button color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
  * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
  * @attr {boolean} disabled - Disable the button
@@ -116,14 +116,16 @@ const styles = css`
     --button-focus: var(--color-primary-focus);
     --button-content: var(--color-primary-content);
     --button-backdrop: var(--color-primary-backdrop);
+    --button-shadow: var(--color-primary-shadow);
   }
 
   :host([color='secondary']) button {
-    --button-base: var(--color-secondary-base);
+    --button-base: var(--color-secondary);
     --button-contrast: var(--color-secondary-contrast);
     --button-focus: var(--color-secondary-focus);
     --button-content: var(--color-secondary-content);
     --button-backdrop: var(--color-secondary-backdrop);
+    --button-shadow: var(--color-secondary-shadow);
   }
 
   :host([color='success']) button {
@@ -132,6 +134,7 @@ const styles = css`
     --button-focus: var(--color-success-focus);
     --button-content: var(--color-success-content);
     --button-backdrop: var(--color-success-backdrop);
+    --button-shadow: var(--color-success-shadow);
   }
 
   :host([color='warning']) button {
@@ -140,6 +143,7 @@ const styles = css`
     --button-focus: var(--color-warning-focus);
     --button-content: var(--color-warning-content);
     --button-backdrop: var(--color-warning-backdrop);
+    --button-shadow: var(--color-warning-shadow);
   }
 
   :host([color='error']) button {
@@ -148,6 +152,7 @@ const styles = css`
     --button-focus: var(--color-error-focus);
     --button-content: var(--color-error-content);
     --button-backdrop: var(--color-error-backdrop);
+    --button-shadow: var(--color-error-shadow);
   }
 
   /* Variants */
@@ -248,6 +253,43 @@ const styles = css`
     opacity: 0.7;
   }
 
+  :host([variant='glass']) button {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
+    background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
+    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 30%, transparent));
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
+    text-shadow: var(--text-shadow-xs);
+  }
+
+  :host([variant='glass']) button:hover {
+    background: color-mix(in srgb, var(--button-base) 40%, var(--color-contrast) 10%);
+    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+  }
+
+  :host([variant='glass']) button:active {
+    background: color-mix(in srgb, var(--button-base) 80%, transparent);
+    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+  }
+
+  :host([variant='frost']) button {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
+    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-contrast) 40%, transparent));
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    color: var(--button-color, var(--button-content));
+    text-shadow: var(--text-shadow-2xs);
+  }
+
+  :host([variant='frost']) button:hover {
+    background: color-mix(in srgb, var(--button-backdrop) 70%, transparent);
+    border-color: color-mix(in srgb, var(--button-base) 30%, transparent);
+  }
+
+  :host([variant='frost']) button:active {
+    background: color-mix(in srgb, var(--button-backdrop) 80%, transparent);
+  }
+
   /* States */
   :host([disabled]) button,
   :host([loading]) button {
@@ -278,7 +320,7 @@ const styles = css`
 `;
 
 export type ButtonProps = {
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
@@ -317,18 +359,20 @@ defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
 
   styles: [styles],
 
-  template: (el) => html`
-    <button
-      type="${el.getAttribute('type') || 'button'}"
-      ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
-      aria-disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading') ? 'true' : 'false'}"
-      aria-busy="${el.hasAttribute('loading') ? 'true' : 'false'}">
-      ${el.hasAttribute('loading') ? html`<span class="loader" aria-label="Loading"></span>` : ''}
-      <slot name="prefix"></slot>
-      <span class="content"><slot></slot></span>
-      <slot name="suffix"></slot>
-    </button>
-  `,
+  template: (el) => {
+    return html`
+      <button
+        type="${el.getAttribute('type') || 'button'}"
+        ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
+        aria-disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading') ? 'true' : 'false'}"
+        aria-busy="${el.hasAttribute('loading') ? 'true' : 'false'}">
+        ${el.hasAttribute('loading') ? html`<span class="loader" aria-label="Loading"></span>` : ''}
+        <slot name="prefix"></slot>
+        <span class="content"><slot></slot></span>
+        <slot name="suffix"></slot>
+      </button>
+    `;
+  },
 });
 
 export default {};

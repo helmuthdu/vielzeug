@@ -7,7 +7,7 @@
 
 The `typeOf` utility returns a lowercase string representing the precise type of a value. It provides more detailed and accurate results than the native `typeof` operator, correctly identifying arrays, `null`, and other built-in objects.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/typeOf.ts

@@ -91,11 +91,13 @@ const styles = css`
   }
 
   /* Variants */
+  :host(:not([variant])),
   :host([variant='solid']) {
     --accordion-item-bg: var(--color-contrast-100);
     --accordion-item-border-color: transparent;
   }
 
+  :host(:not([variant])) summary:hover,
   :host([variant='solid']) summary:hover {
     background: var(--color-contrast-200);
   }
@@ -217,6 +219,7 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
+
     const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
 
     if (!details) return;

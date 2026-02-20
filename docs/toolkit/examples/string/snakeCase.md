@@ -7,7 +7,7 @@
 
 The `snake_case` utility transforms a string into `snake_case` format (all lower case with words separated by underscores). It is commonly used for database column names, file naming conventions, or environment variables.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/snakeCase.ts

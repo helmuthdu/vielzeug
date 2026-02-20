@@ -7,7 +7,7 @@
 
 The `random` utility generates a pseudo-random integer between two specified values (inclusive). It simplifies common randomization tasks like picking a range, rolling dice, or generating random offsets.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/random/random.ts

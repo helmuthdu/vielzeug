@@ -206,7 +206,6 @@ describe('craftit', () => {
 
         it('should return undefined for non-existent properties', () => {
           const theme = css.theme({ color: '#000' });
-          // biome-ignore lint/suspicious/noExplicitAny: -
           expect((theme as any).nonExistent).toBeUndefined();
         });
       });
@@ -321,11 +320,13 @@ describe('craftit', () => {
       it('should work with external CSS variables', () => {
         const theme = css.theme({ primaryColor: '#3b82f6' });
 
+        // External variable is intentional - testing that theme works with non-theme variables
         const styles = css`
           ${theme}
           .button {
             color: ${theme.primaryColor};
-            background: var(--external-var, #fff);
+            /* prettier-ignore */
+            background: var(--external-var, #fff); /* External var intentional */
           }
         `;
 

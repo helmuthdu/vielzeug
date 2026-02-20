@@ -7,7 +7,7 @@
 
 Distributes an amount evenly among N parties. Handles rounding to ensure the sum equals the original amount exactly. Useful for splitting bills, costs, or payments equally.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/distribute.ts

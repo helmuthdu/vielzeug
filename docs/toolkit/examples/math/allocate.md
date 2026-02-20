@@ -7,7 +7,7 @@
 
 Distributes an amount proportionally according to given ratios. Handles rounding to ensure the sum equals the original amount exactly. Critical for financial operations like splitting payments to avoid rounding errors.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/allocate.ts

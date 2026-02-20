@@ -7,7 +7,7 @@
 
 The `select` utility is a high-performance combined transformation and filtering tool. It allows you to simultaneously map and filter an array in a single pass, and it provides built-in support for asynchronous operations.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/select.ts

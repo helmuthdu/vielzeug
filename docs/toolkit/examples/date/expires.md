@@ -7,7 +7,7 @@
 
 The `expires` utility determines the expiration status of a given date relative to the current time. It categorizes the date into states like `EXPIRED`, `SOON`, or `LATER`, making it ideal for subscription management, token validation, or deadline tracking.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/date/expires.ts

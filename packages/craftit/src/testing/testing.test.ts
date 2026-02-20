@@ -10,16 +10,16 @@ describe('craftit testing utilities examples', () => {
   beforeAll(() => {
     // Define a simple test component
     defineElement('test-counter', {
-      state: { count: 0 },
-      template: (el) => html`
-        <div class="count">${el.state.count}</div>
-        <button class="increment">+</button>
-      `,
       onConnected(el) {
         el.on('.increment', 'click', () => {
           el.state.count++;
         });
       },
+      state: { count: 0 },
+      template: (el) => html`
+        <div class="count">${el.state.count}</div>
+        <button class="increment">+</button>
+      `,
     });
   });
 
@@ -65,4 +65,3 @@ describe('craftit testing utilities examples', () => {
     fixture.destroy();
   });
 });
-

@@ -7,7 +7,7 @@
 
 The `memo` utility creates a memoized version of a function that caches its results based on the provided arguments. It is highly configurable, featuring support for Time-To-Live (TTL) expiration and a maximum cache size with LRU (Least Recently Used) eviction.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/memo.ts

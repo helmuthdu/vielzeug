@@ -7,7 +7,7 @@
 
 Returns the largest number in an array.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/max.ts

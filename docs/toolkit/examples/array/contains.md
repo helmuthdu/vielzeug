@@ -7,7 +7,7 @@
 
 The `contains` utility checks if a specific value exists within an array. Unlike the native `Array.prototype.includes()`, `contains` uses deep equality, making it suitable for finding objects and arrays within a list.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/contains.ts

@@ -7,7 +7,7 @@
 
 The `shuffle` utility creates a new array with the elements of the original array in a randomized order. It uses the efficient Fisher-Yates algorithm to ensure a truly uniform shuffle.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/random/shuffle.ts

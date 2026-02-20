@@ -35,9 +35,17 @@ const styles = css`
     border-bottom: 1px solid var(--color-contrast-200);
   }
 
-  :host([variant='ghost']) {
+  :host(:not([variant])),
+  :host([variant='solid']) {
     gap: 0;
     background: var(--color-contrast-100);
+    border-radius: var(--rounded-md);
+    padding: var(--size-2);
+  }
+
+  :host([variant='flat']) {
+    gap: 0;
+    background: var(--color-contrast-300);
     border-radius: var(--rounded-md);
     padding: var(--size-2);
   }

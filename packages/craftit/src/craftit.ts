@@ -28,7 +28,16 @@ export type AttributeChangeHook<T = HTMLElement, P extends object = object, S ex
 ) => void;
 
 /**
- * Component template - can be a string, DOM node, or function returning either
+ * HTML result object with property bindings support
+ */
+export type HTMLResult = {
+  toString(): string;
+  __html: string;
+  __propertyBindings?: Array<{ selector: string; property: string; value: unknown }>;
+};
+
+/**
+ * Component template - can be a string, DOM node, HTMLResult, or function returning either
  * @template T - Root element type
  * @template P - Props object type (component attributes)
  * @template S - State object type
@@ -36,7 +45,8 @@ export type AttributeChangeHook<T = HTMLElement, P extends object = object, S ex
 export type Template<T = HTMLElement, P extends object = object, S extends object = object> =
   | string
   | Node
-  | ((el: WebComponent<T, P, S>) => string | Node | DocumentFragment);
+  | HTMLResult
+  | ((el: WebComponent<T, P, S>) => string | Node | DocumentFragment | HTMLResult);
 
 /**
  * Callbacks for form-associated custom elements
@@ -689,11 +699,13 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
   /**
    * Perform rendering with error handling and node cloning
    */
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   private performRender(): void {
     const { template } = this.#options;
 
     try {
-      let result: string | Node | DocumentFragment;
+      let result: string | Node | DocumentFragment | HTMLResult;
       if (typeof template === 'function') {
         result = template(this as unknown as WebComponent<T, P, S>);
       } else {
@@ -707,10 +719,11 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
         nodes = Array.from(parseHTML(result).childNodes);
       } else if (result && typeof result === 'object' && '__html' in result) {
         // HTMLResult object with property bindings
-        if (result.__propertyBindings) {
-          propertyBindings = result.__propertyBindings;
+        const htmlResult = result as HTMLResult;
+        if (htmlResult.__propertyBindings) {
+          propertyBindings = htmlResult.__propertyBindings;
         }
-        nodes = Array.from(parseHTML(result.__html).childNodes);
+        nodes = Array.from(parseHTML(htmlResult.__html).childNodes);
       } else if (result instanceof DocumentFragment) {
         const fragClone = result.cloneNode(true) as DocumentFragment;
         nodes = Array.from(fragClone.childNodes);
@@ -990,12 +1003,6 @@ export const element = <T = HTMLElement, P extends object = object, S extends ob
 
 /* ==================== Utilities Export ==================== */
 
-type HTMLResult = {
-  toString(): string;
-  __html: string;
-  __propertyBindings?: Array<{ selector: string; property: string; value: unknown }>;
-};
-
 /**
  * HTML template tag with boolean attribute and property binding support
  * @param strings - Template string array
@@ -1008,6 +1015,7 @@ type HTMLResult = {
  * // Property binding (Lit-style)
  * html`<input .value="${inputValue}" .indeterminate="${isIndeterminate}">`
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Template processing requires complex pattern matching
 export const html = (strings: TemplateStringsArray, ...values: unknown[]): string | HTMLResult => {
   let result = '';
   let skipQuote = false;
@@ -1078,7 +1086,7 @@ export const html = (strings: TemplateStringsArray, ...values: unknown[]): strin
       __html: result,
       __propertyBindings: propertyBindings,
       toString() {
-        return this.__html;
+        return (this as any).__html;
       },
     };
   }

@@ -7,7 +7,7 @@
 
 The `proxy` utility creates an enhanced JavaScript Proxy for an object, allowing you to intercept and react to property access (`get`) and modifications (`set`). It features support for selective property watching and optional deep proxying for nested structures.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/proxy.ts

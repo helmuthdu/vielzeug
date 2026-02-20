@@ -4,34 +4,36 @@ A customizable text input component with multiple types, variants, and validatio
 
 ## Features
 
-- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
+- 🎨 **8 Variants**: solid, flat, bordered, outline, ghost, text, glass, frost
 - 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
 - 🔧 **Prefix/Suffix Slots**: Add icons or buttons before/after input
+- 🏷️ **Integrated Label**: Support for wide inset labels that span across slots
+- 💡 **Helper Text**: Add descriptive text or complex content below the input
 - 📝 **7 Input Types**: text, email, password, search, url, tel, number
-- 🌙 **Theme Support**: Works with light/dark mode
+
+## Source Code
+
+::: details View Source Code
+<<< @/../packages/buildit/src/form/input/input.ts
+:::
 
 ## Basic Usage
 
 ```html
-<!DOCTYPE html>
-<html>
-  <body>
-    <bit-input type="text" placeholder="Enter your name"></bit-input>
-    <bit-input type="email" placeholder="email@example.com" required></bit-input>
-    <bit-input type="password" placeholder="Password" disabled></bit-input>
+<bit-input type="text" placeholder="Enter your name"></bit-input>
 
-    <script type="module">
-      import '@vielzeug/buildit/input';
-    </script>
-  </body>
-</html>
+<script type="module">
+  import '@vielzeug/buildit/input';
+</script>
 ```
 
-## Variants
+## Visual Options
 
-The input comes with six visual variants:
+### Variants
+
+Six visual variants for different UI contexts and levels of emphasis.
 
 <ComponentPreview>
 
@@ -46,34 +48,61 @@ The input comes with six visual variants:
 
 </ComponentPreview>
 
-**Use cases:**
+### Glass & Frost Variants
 
-- **Solid**: Default input style with background
-- **Flat**: Subtle, low-emphasis inputs
-- **Bordered**: Clear field boundaries
-- **Outline**: Minimal with border focus
-- **Ghost**: Transparent, blends with background
-- **Text**: Ultra-minimal, inline-style input
+Modern effects with backdrop blur for elevated UI elements.
 
-## Colors
+::: tip Best Used With
+Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+:::
 
-Five semantic colors for different contexts:
-
-<ComponentPreview>
+<ComponentPreview center background="https://images.unsplash.com/photo-1770387795112-e2b476b15f71?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
 
 ```html
-<bit-input color="primary" placeholder="Primary"></bit-input>
-<bit-input color="secondary" placeholder="Secondary"></bit-input>
-<bit-input color="success" placeholder="Success"></bit-input>
-<bit-input color="warning" placeholder="Warning"></bit-input>
-<bit-input color="error" placeholder="Error"></bit-input>
+<bit-input variant="glass" color="primary" value="Primary"></bit-input>
+<bit-input variant="glass" color="secondary" value="Secondary"></bit-input>
+<bit-input variant="glass" color="error" value="Error"></bit-input>
+<bit-input variant="frost" color="primary" value="Primary"></bit-input>
+<bit-input variant="frost" color="secondary" value="Secondary"></bit-input>
+<bit-input variant="frost" color="error" value="Error"></bit-input>
 ```
 
 </ComponentPreview>
 
-## Sizes
+### Colors
 
-Three sizes for different contexts:
+Five semantic colors for different contexts and validation states.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input variant="flat" color="primary" placeholder="Primary"></bit-input>
+<bit-input variant="bordered" color="secondary" placeholder="Secondary"></bit-input>
+<bit-input variant="outline" color="success" placeholder="Success"></bit-input>
+<bit-input variant="ghost" color="warning" placeholder="Warning"></bit-input>
+<bit-input variant="text" color="error" placeholder="Error"></bit-input>
+```
+
+</ComponentPreview>
+
+### Input Types
+
+Different input types for various use cases.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input color="secondary" type="text" placeholder="Text input"></bit-input>
+<bit-input color="success" type="email" placeholder="email@example.com"></bit-input>
+<bit-input color="warning" type="password" placeholder="Password"></bit-input>
+<bit-input color="error" type="number" placeholder="123"></bit-input>
+```
+
+</ComponentPreview>
+
+### Sizes
+
+Three sizes for different contexts.
 
 <ComponentPreview vertical>
 
@@ -85,27 +114,11 @@ Three sizes for different contexts:
 
 </ComponentPreview>
 
-## Input Types
+## Customization
 
-Different input types for various use cases:
+### Prefix & Suffix
 
-<ComponentPreview vertical>
-
-```html
-<bit-input type="text" placeholder="Text input"></bit-input>
-<bit-input type="email" placeholder="email@example.com"></bit-input>
-<bit-input type="password" placeholder="Password"></bit-input>
-<bit-input type="search" placeholder="Search..."></bit-input>
-<bit-input type="url" placeholder="https://example.com"></bit-input>
-<bit-input type="tel" placeholder="+1 (555) 123-4567"></bit-input>
-<bit-input type="number" placeholder="123"></bit-input>
-```
-
-</ComponentPreview>
-
-## With Slots
-
-Add prefix or suffix content using slots:
+Add prefix or suffix content like icons or clear buttons using slots.
 
 <ComponentPreview vertical>
 
@@ -117,8 +130,87 @@ Add prefix or suffix content using slots:
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
 </bit-input>
-<bit-input placeholder="Enter email">
-  <span slot="prefix">📧</span>
+```
+
+</ComponentPreview>
+
+### Integrated Label
+
+Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input label="Full Name" placeholder="Jane Doe" value="Jane Doe"></bit-input>
+<bit-input label="Email Address" type="email" placeholder="you@example.com"></bit-input>
+<bit-input label="Phone Number" type="tel" value="+1 (555) 123-4567"></bit-input>
+```
+
+</ComponentPreview>
+
+### Label with Variants
+
+Labels work seamlessly with all variants and colors.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input variant="solid" label="Username" value="johndoe"></bit-input>
+<bit-input variant="flat" label="Company" placeholder="Enter company name"></bit-input>
+<bit-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></bit-input>
+<bit-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></bit-input>
+<bit-input variant="ghost" label="Country" value="Germany"></bit-input>
+<bit-input variant="text" label="Notes" placeholder="Add your notes here"></bit-input>
+```
+
+</ComponentPreview>
+
+### Label with Prefix/Suffix
+
+Combine labels with prefix and suffix slots for rich input fields.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input label="Search" placeholder="Type to search...">
+  <span slot="prefix">🔍</span>
+</bit-input>
+<bit-input label="Amount" value="1250">
+  <span slot="prefix">$</span>
+  <span slot="suffix">USD</span>
+</bit-input>
+<bit-input label="Website" type="url" value="example.com">
+  <span slot="prefix">🌐</span>
+</bit-input>
+```
+
+</ComponentPreview>
+
+### Label Placement
+
+Labels can be placed inside the input field (default) or above it.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input label="Inset Label" value="default behavior"></bit-input>
+<bit-input label="Outside Label" label-placement="outside" value="placed above"></bit-input>
+```
+
+</ComponentPreview>
+
+### Helper Text
+
+Provide additional context or validation messages below the input using the `helper` attribute or slot.
+
+<ComponentPreview vertical>
+
+```html
+<bit-input label="Password" type="password" helper="Must be at least 8 characters long"></bit-input>
+<bit-input label="Email Address">
+  <div slot="helper" style="color: var(--color-primary); font-weight: 500;">
+    💡 Verification link will be sent to this address
+  </div>
 </bit-input>
 ```
 
@@ -126,136 +218,15 @@ Add prefix or suffix content using slots:
 
 ## States
 
-### Disabled
+### Disabled & Readonly
 
-<ComponentPreview>
+Prevent interaction or modification of the input.
+
+<ComponentPreview vertical>
 
 ```html
 <bit-input disabled placeholder="Disabled input"></bit-input>
-```
-
-</ComponentPreview>
-
-### Readonly
-
-<ComponentPreview>
-
-```html
 <bit-input readonly value="Read-only value"></bit-input>
-```
-
-</ComponentPreview>
-
-### Required
-
-<ComponentPreview>
-
-```html
-<bit-input required placeholder="Required field"></bit-input>
-```
-
-</ComponentPreview>
-
-## Form Integration
-
-Inputs work seamlessly with native HTML forms:
-
-<ComponentPreview vertical>
-
-```html
-<form style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 300px;">
-  <bit-input type="email" name="email" placeholder="Email" required>
-    <span slot="prefix">📧</span>
-  </bit-input>
-  <bit-input type="password" name="password" placeholder="Password" required>
-    <span slot="prefix">🔒</span>
-  </bit-input>
-  <bit-button type="submit">Login</bit-button>
-</form>
-```
-
-</ComponentPreview>
-
-## Custom Styling
-
-Customize appearance using CSS custom properties:
-
-<ComponentPreview vertical>
-
-```html
-<bit-input
-  placeholder="Custom gradient"
-  style="--input-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --input-color: white; --input-radius: 20px;">
-</bit-input>
-<bit-input
-  placeholder="Custom colors"
-  style="--input-bg: #ffe4e6; --input-border-color: #fb7185; --input-color: #881337;">
-</bit-input>
-```
-
-</ComponentPreview>
-
-### Available CSS Custom Properties
-
-#### Colors & Backgrounds
-
-- `--input-bg` - Background color
-- `--input-color` - Text color
-- `--input-border-color` - Border color
-- `--input-focus-border-color` - Focus border color
-- `--input-placeholder-color` - Placeholder text color
-
-#### Borders & Spacing
-
-- `--input-radius` - Border radius
-- `--input-padding-x` - Horizontal padding
-- `--input-padding-y` - Vertical padding
-
-#### Typography
-
-- `--input-font-size` - Font size
-
-## Real-World Examples
-
-### Login Form
-
-<ComponentPreview vertical>
-
-```html
-<form style="max-width: 300px;">
-  <bit-input type="email" name="email" placeholder="Email" required variant="bordered">
-    <span slot="prefix">📧</span>
-  </bit-input>
-  <br /><br />
-  <bit-input type="password" name="password" placeholder="Password" required variant="bordered">
-    <span slot="prefix">🔒</span>
-  </bit-input>
-</form>
-```
-
-</ComponentPreview>
-
-### Search Bar
-
-<ComponentPreview>
-
-```html
-<bit-input type="search" placeholder="Search products..." variant="ghost" size="lg">
-  <span slot="prefix">🔍</span>
-</bit-input>
-```
-
-</ComponentPreview>
-
-### Price Input
-
-<ComponentPreview>
-
-```html
-<bit-input type="number" placeholder="0.00" variant="bordered">
-  <span slot="prefix">$</span>
-  <span slot="suffix">USD</span>
-</bit-input>
 ```
 
 </ComponentPreview>
@@ -269,12 +240,15 @@ Customize appearance using CSS custom properties:
 | `type`        | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type               |
 | `value`       | `string`                                                                    | `''`        | Current input value      |
 | `name`        | `string`                                                                    | `''`        | Form field name          |
-| `placeholder` | `string`                                                                    | `''`        | Placeholder text         |
-| `disabled`    | `boolean`                                                                   | `false`     | Disable the input        |
+| `placeholder`    | `string`                                                                    | `''`        | Placeholder text                |
+| `label`          | `string`                                                                    | `''`        | Label text                      |
+| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement                 |
+| `helper`         | `string`                                                                    | `''`        | Helper text below input         |
+| `disabled`       | `boolean`                                                                   | `false`     | Disable the input               |
 | `readonly`    | `boolean`                                                                   | `false`     | Make the input read-only |
 | `required`    | `boolean`                                                                   | `false`     | Mark field as required   |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant           |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`   | Visual variant           |
 | `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme              |
 
 ### Slots
@@ -283,6 +257,7 @@ Customize appearance using CSS custom properties:
 | -------- | -------------------------------------------------- |
 | `prefix` | Content before the input (e.g., icon)              |
 | `suffix` | Content after the input (e.g., clear button, unit) |
+| `helper` | Complex helper content below the input             |
 
 ### Events
 
@@ -291,150 +266,37 @@ Customize appearance using CSS custom properties:
 | `input`  | `{ value: string, originalEvent: Event }` | Emitted when the value changes (user input)     |
 | `change` | `{ value: string, originalEvent: Event }` | Emitted when value is committed (blur or Enter) |
 
-### CSS Custom Properties
+## CSS Custom Properties
 
-| Property                     | Description            | Default                      |
-| ---------------------------- | ---------------------- | ---------------------------- |
-| `--input-bg`                 | Background color       | `var(--color-contrast-50)`   |
-| `--input-color`              | Text color             | `var(--color-contrast-900)`  |
-| `--input-border-color`       | Border color           | `var(--color-contrast-300)`  |
-| `--input-focus-border-color` | Focus border color     | `var(--color-primary-focus)` |
-| `--input-placeholder-color`  | Placeholder text color | `var(--color-contrast-500)`  |
-| `--input-radius`             | Border radius          | `var(--rounded-md)`          |
-| `--input-padding-x`          | Horizontal padding     | `var(--size-3)`              |
-| `--input-padding-y`          | Vertical padding       | `var(--size-2)`              |
-| `--input-font-size`          | Font size              | `var(--text-sm)`             |
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--input-bg` | Background color | `var(--color-contrast-50)` |
+| `--input-radius` | Border radius | `var(--rounded-md)` |
+| `--input-font-size` | Font size | `var(--text-sm)` |
 
 ## Accessibility
 
-The input component follows WCAG 2.1 Level AA standards:
+The input component follows WCAG 2.1 Level AA standards.
 
-### Keyboard Navigation
+✅ **Keyboard Navigation**
+- `Tab` focuses the input.
+- Native input behavior (Enter to commit, etc.).
 
-- **Tab** – Focus the input
-- **Escape** – Clear focus
-- Native input keyboard behavior
+✅ **Screen Reader Support**
+- Proper ARIA states (disabled, required, readonly).
+- Associated labels via `aria-label` or `<label>`.
 
-### Screen Reader Support
+## Best Practices
 
-- Proper label association via `aria-label` or associated `<label>`
-- State announcements (disabled, required, readonly)
-- Error messages via `aria-describedby` (when used with form validation)
+**Do:**
+- Use the `label` attribute for integrated labels with a modern floating effect.
+- Use external `<label>` elements when the label needs to be positioned outside the input.
+- Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element.
+- Use the appropriate `type` for better mobile keyboards and validation.
+- Use semantic colors (`success`, `error`, `warning`) to indicate validation states.
+- Combine labels with prefix/suffix slots for enhanced UX (e.g., currency symbols, icons).
 
-### Focus Management
-
-- Visible focus indicator
-- Respects `prefers-reduced-motion`
-- Proper focus order in forms
-
-### Best Practices
-
-Always use a label with inputs:
-
-```html
-<label for="email-input">Email Address</label>
-<bit-input id="email-input" type="email" name="email" required> </bit-input>
-```
-
-Or use `aria-label` for standalone inputs:
-
-```html
-<bit-input type="search" aria-label="Search products" placeholder="Search..."> </bit-input>
-```
-
-## Framework Integration
-
-::: code-group
-
-```tsx [React]
-import '@vielzeug/buildit/input';
-
-function ContactForm() {
-  const [email, setEmail] = React.useState('');
-
-  return (
-    <bit-input
-      type="email"
-      value={email}
-      onInput={(e: any) => setEmail(e.detail.value)}
-      placeholder="Enter email"
-      required
-    />
-  );
-}
-```
-
-```vue [Vue]
-<template>
-  <bit-input type="email" :value="email" @input="handleInput" placeholder="Enter email" required />
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import '@vielzeug/buildit/input';
-
-const email = ref('');
-
-const handleInput = (e) => {
-  email.value = e.detail.value;
-};
-</script>
-```
-
-```svelte [Svelte]
-<script>
-  import '@vielzeug/buildit/input';
-
-  let email = '';
-
-  function handleInput(e) {
-    email = e.detail.value;
-  }
-</script>
-
-<bit-input
-  type="email"
-  value={email}
-  on:input={handleInput}
-  placeholder="Enter email"
-  required
-/>
-```
-
-:::
-
-## TypeScript
-
-Full TypeScript support with type definitions:
-
-```typescript
-import '@vielzeug/buildit/input';
-import type { InputProps } from '@vielzeug/buildit/types';
-
-const inputElement = document.querySelector('bit-input');
-
-// Type-safe event handling
-inputElement?.addEventListener(
-  'input',
-  (
-    e: CustomEvent<{
-      value: string;
-      originalEvent: Event;
-    }>,
-  ) => {
-    console.log('New value:', e.detail.value);
-  },
-);
-```
-
-## Related Components
-
-- **[Button](./button.md)** – Use in forms with submit buttons
-- **[Checkbox](./checkbox.md)** – For boolean form inputs
-- **[Radio](./radio.md)** – For exclusive selection inputs
-
-## See Also
-
-- [Form Validation Guide](../examples.md#form-validation)
-- [Input Patterns](../examples.md#input-patterns)
-- [API Reference](../api.md)
+**Don't:**
+- Use placeholder text as a label replacement (placeholders disappear on input).
+- Over-customize colors to the point of breaking contrast.
+- Use labels for inputs that should remain visually minimal (ghost, text variants).

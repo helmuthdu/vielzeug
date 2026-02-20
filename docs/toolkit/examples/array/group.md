@@ -7,7 +7,7 @@
 
 The `group` utility partitions an array into an object of collections, based on a provided key or selection function.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/group.ts

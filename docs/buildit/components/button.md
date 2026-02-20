@@ -1,39 +1,67 @@
 # Button Component
 
-A versatile button component with multiple variants, colors, sizes, and states. Built with accessibility in mind and fully customizable through CSS custom properties.
+A versatile button component with multiple variants, colors, sizes, and states. Includes both standalone buttons and button groups for organizing related actions. Built with accessibility in mind and fully customizable through CSS custom properties.
 
 ## Features
 
+**Button**
 - 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
 - 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
 - 🎭 **States**: loading, disabled
 - 🔧 **Customizable**: CSS custom properties for styling
-- 🌙 **Theme Support**: Works with light/dark mode
+
+**Button Group**
+- 🔄 **2 Orientations**: horizontal, vertical
+- 🔗 **Attached Mode**: Connect buttons with shared borders
+- 📐 **Full Width**: Buttons expand to fill container
+- 📏 **Attribute Propagation**: Automatically apply size, variant, and color to all children
+
+## Source Code
+
+::: details View Source Code
+<<< @/../packages/buildit/src/base/button/button.ts
+:::
+
+::: details View Source Code (Button Group)
+<<< @/../packages/buildit/src/base/button-group/button-group.ts
+:::
 
 ## Basic Usage
 
-```html
-<!DOCTYPE html>
-<html>
-  <body>
-    <bit-button>Click me</bit-button>
-    <bit-button variant="outline" color="secondary">Cancel</bit-button>
-    <bit-button loading>Processing...</bit-button>
+### Standalone Button
 
-    <script type="module">
-      import '@vielzeug/components/button';
-    </script>
-  </body>
-</html>
+```html
+<bit-button variant="solid" color="primary">Click me</bit-button>
+
+<script type="module">
+  import '@vielzeug/buildit/button';
+</script>
 ```
 
-## Variants
+### Button Group
 
-The button comes with six visual variants:
+```html
+<bit-button-group>
+  <bit-button>First</bit-button>
+  <bit-button>Second</bit-button>
+  <bit-button>Third</bit-button>
+</bit-button-group>
 
-<ComponentPreview>
+<script type="module">
+  import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/button-group';
+</script>
+```
+
+## Visual Options
+
+### Variants
+
+The button comes with eight visual variants to match different levels of emphasis.
+
+<ComponentPreview center>
 
 ```html
 <bit-button variant="solid">Solid</bit-button>
@@ -46,18 +74,37 @@ The button comes with six visual variants:
 
 </ComponentPreview>
 
-**Use cases:**
+### Glass & Frost Variants
 
-- **Solid**: Primary call-to-action buttons
-- **Flat/Bordered**: Secondary actions
-- **Outline**: Tertiary actions, alternative styling
-- **Ghost/Text**: Minimal emphasis, inline actions
+Modern effects with backdrop blur for elevated UI elements.
 
-## Colors
+::: tip Best Used With
+Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+:::
 
-Five semantic colors for different contexts:
+<ComponentPreview center background="https://images.unsplash.com/photo-1516919549054-e08258825f80?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
 
-<ComponentPreview>
+```html
+<bit-button variant="glass" color="primary">Primary</bit-button>
+<bit-button variant="glass" color="secondary">Secondary</bit-button>
+<bit-button variant="glass" color="success">Success</bit-button>
+<bit-button variant="glass" color="warning">Warning</bit-button>
+<bit-button variant="glass" color="error">Error</bit-button>
+<hr style="margin-block: 2rem;">
+<bit-button variant="frost" color="primary">Primary</bit-button>
+<bit-button variant="frost" color="secondary">Secondary</bit-button>
+<bit-button variant="frost" color="success">Success</bit-button>
+<bit-button variant="frost" color="warning">Warning</bit-button>
+<bit-button variant="frost" color="error">Error</bit-button>
+```
+
+</ComponentPreview>
+
+### Colors
+
+Five semantic colors for different contexts.
+
+<ComponentPreview center>
 
 ```html
 <bit-button color="primary">Primary</bit-button>
@@ -69,9 +116,9 @@ Five semantic colors for different contexts:
 
 </ComponentPreview>
 
-## Sizes
+### Sizes
 
-Three sizes for different contexts:
+Three sizes for different contexts.
 
 <ComponentPreview center>
 
@@ -83,11 +130,39 @@ Three sizes for different contexts:
 
 </ComponentPreview>
 
-## With Icons
+## States
 
-Add prefix or suffix icons using slots:
+### Loading
 
-<ComponentPreview>
+Show a loading spinner and prevent interaction during async operations.
+
+<ComponentPreview center>
+
+```html
+<bit-button loading>Loading...</bit-button>
+```
+
+</ComponentPreview>
+
+### Disabled
+
+Prevent interaction and reduce opacity for unavailable actions.
+
+<ComponentPreview center>
+
+```html
+<bit-button disabled>Disabled</bit-button>
+```
+
+</ComponentPreview>
+
+## Icons & Extras
+
+### With Icons
+
+Add prefix or suffix icons using slots.
+
+<ComponentPreview center>
 
 ```html
 <bit-button>
@@ -103,120 +178,106 @@ Add prefix or suffix icons using slots:
 
 </ComponentPreview>
 
-::: warning Accessibility
-Icon-only buttons **must** include an `aria-label` attribute for screen readers.
-:::
+### Rounded
 
-## States
+Fully rounded corners for a pill-shaped appearance.
 
-### Loading
-
-Show a loading spinner and prevent interaction:
-
-<ComponentPreview>
-
-```html
-<bit-button loading>Loading...</bit-button>
-```
-
-</ComponentPreview>
-
-### Disabled
-
-Prevent interaction and reduce opacity:
-
-<ComponentPreview>
-
-```html
-<bit-button disabled>Disabled</bit-button>
-```
-
-</ComponentPreview>
-
-## Rounded
-
-Fully rounded corners for a pill-shaped appearance:
-
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-button rounded>Rounded</bit-button>
-<bit-button rounded size="lg">Large Rounded</bit-button>
 <bit-button rounded icon-only aria-label="Check"> ✓ </bit-button>
 ```
 
 </ComponentPreview>
 
-## Form Integration
+## Button Groups
 
-Buttons work seamlessly with native HTML forms:
+### Orientation
 
-<ComponentPreview>
+Group buttons in horizontal or vertical layouts.
+
+#### Horizontal (Default)
+<ComponentPreview center>
 
 ```html
-<form style="display: flex; gap: 0.75rem;" onsubmit="event.preventDefault(); alert('Form submitted!')">
-  <bit-button type="submit">Submit</bit-button>
-  <bit-button type="reset" variant="outline" color="error">Reset</bit-button>
-  <bit-button type="button" variant="ghost" color="secondary">Cancel</bit-button>
-</form>
+<bit-button-group>
+  <bit-button>Left</bit-button>
+  <bit-button>Center</bit-button>
+  <bit-button>Right</bit-button>
+</bit-button-group>
 ```
 
 </ComponentPreview>
 
-**Button types:**
-
-- `type="submit"` - Submits the form
-- `type="reset"` - Resets form fields
-- `type="button"` - No default behavior (default outside forms)
-
-## Custom Styling
-
-Customize appearance using CSS custom properties:
-
-<ComponentPreview>
+#### Vertical
+<ComponentPreview center>
 
 ```html
-<bit-button
-  style="--button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --button-hover-bg: linear-gradient(135deg, #764ba2 0%, #667eea 100%); --button-color: white; --button-radius: 20px;">
-  Custom Gradient
-</bit-button>
-<bit-button
-  style="--button-bg: #ff6b6b; --button-color: white; --button-padding: 0.75rem 2rem; --button-font-weight: 700;">
-  Custom Style
-</bit-button>
+<bit-button-group orientation="vertical">
+  <bit-button>Top</bit-button>
+  <bit-button>Middle</bit-button>
+  <bit-button>Bottom</bit-button>
+</bit-button-group>
 ```
 
 </ComponentPreview>
 
-### Available CSS Custom Properties
+### Attached Mode
 
-#### Colors & Backgrounds
+Remove spacing and connect buttons with shared borders for segmented controls.
 
-- `--button-bg` - Background color
-- `--button-color` - Text color
-- `--button-hover-bg` - Hover background
-- `--button-active-bg` - Active/pressed background
+<ComponentPreview center>
 
-#### Borders & Spacing
+```html
+<bit-button-group attached>
+  <bit-button variant="bordered">Day</bit-button>
+  <bit-button variant="solid">Week</bit-button>
+  <bit-button variant="bordered">Month</bit-button>
+</bit-button-group>
+```
 
-- `--button-border` - Border (width, style, color)
-- `--button-radius` - Border radius
-- `--button-padding` - Inner padding
-- `--button-gap` - Gap between icon and text
+</ComponentPreview>
 
-#### Typography
+### Attribute Propagation
 
-- `--button-font-size` - Font size
-- `--button-font-weight` - Font weight
+Apply `size`, `variant`, or `color` to all child buttons automatically via the parent group.
+
+<ComponentPreview vertical>
+
+```html
+<bit-button-group variant="outline" size="sm" color="secondary">
+  <bit-button>Button 1</bit-button>
+  <bit-button>Button 2</bit-button>
+  <bit-button>Button 3</bit-button>
+</bit-button-group>
+```
+
+</ComponentPreview>
+
+### Full Width
+
+Buttons expand to fill the container equally.
+
+<ComponentPreview center>
+
+```html
+<bit-button-group full-width attached>
+  <bit-button variant="bordered">Option A</bit-button>
+  <bit-button variant="bordered">Option B</bit-button>
+</bit-button-group>
+```
+
+</ComponentPreview>
 
 ## API Reference
 
-### Attributes
+### `bit-button` Attributes
 
-| Attribute   | Type                                                                | Default     | Description                      |
-| ----------- | ------------------------------------------------------------------- | ----------- | -------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'`   | Visual style variant             |
-| `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`     | `'primary'` | Semantic color                   |
+| Attribute   | Type                                                                                          | Default     | Description                      |
+| ----------- | --------------------------------------------------------------------------------------------- | ----------- | -------------------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`   | Visual style variant             |
+| `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                               | `'primary'` | Semantic color                   |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                              | `'md'`      | Button size                      |
 | `type`      | `'button' \| 'submit' \| 'reset'`                                   | `'button'`  | Button type (for forms)          |
 | `disabled`  | `boolean`                                                           | `false`     | Disable the button               |
@@ -224,72 +285,100 @@ Customize appearance using CSS custom properties:
 | `icon-only` | `boolean`                                                           | `false`     | Icon-only mode (smaller padding) |
 | `rounded`   | `boolean`                                                           | `false`     | Fully rounded corners            |
 
+### `bit-button-group` Attributes
+
+| Attribute     | Type                                                                                          | Default        | Description                        |
+| ------------- | --------------------------------------------------------------------------------------------- | -------------- | ---------------------------------- |
+| `orientation` | `'horizontal' \| 'vertical'`                                                                  | `'horizontal'` | Group layout direction             |
+| `attached`    | `boolean`                                                                                     | `false`        | Remove spacing and connect buttons |
+| `full-width`  | `boolean`                                                                                     | `false`        | Buttons expand to fill container   |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                                        | -              | Apply size to all child buttons    |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | -              | Apply variant to all child buttons |
+| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                               | -              | Apply color to all child buttons   |
+
 ### Slots
 
+#### `bit-button`
 | Slot      | Description                        |
 | --------- | ---------------------------------- |
 | (default) | Button content (text, icons, etc.) |
 | `prefix`  | Content before the main content    |
 | `suffix`  | Content after the main content     |
 
+#### `bit-button-group`
+| Slot      | Description           |
+| --------- | --------------------- |
+| (default) | Child button elements |
+
 ### Events
 
+#### `bit-button`
 | Event   | Detail                          | Description                                              |
 | ------- | ------------------------------- | -------------------------------------------------------- |
 | `click` | `{ originalEvent: MouseEvent }` | Emitted when button is clicked (if not disabled/loading) |
 
+## CSS Custom Properties
+
+### `bit-button`
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--button-bg` | Background color | Variant-dependent |
+| `--button-color` | Text color | Variant-dependent |
+| `--button-radius` | Border radius | `0.375rem` |
+| `--button-padding` | Inner padding | Size-dependent |
+
+### `bit-button-group`
+| Property         | Description                                           | Default    |
+| ---------------- | ----------------------------------------------------- | ---------- |
+| `--group-gap`    | Spacing between buttons                               | `0.5rem`   |
+| `--group-radius` | Border radius for first/last buttons in attached mode | `0.375rem` |
+
 ## Accessibility
 
-The button component follows WAI-ARIA best practices:
+Both components follow WAI-ARIA best practices.
+
+### `bit-button`
 
 ✅ **Keyboard Navigation**
-
-- `Enter` and `Space` activate the button
-- `Tab` moves focus to/from the button
+- `Enter` and `Space` activate the button.
+- `Tab` moves focus to/from the button.
 
 ✅ **Screen Readers**
+- Announces button role and label.
+- `aria-disabled` when disabled.
+- `aria-busy` when loading.
+- Icon-only buttons require `aria-label`.
 
-- Announces button role and label
-- `aria-disabled` when disabled
-- `aria-busy` when loading
-- Icon-only buttons require `aria-label`
+### `bit-button-group`
 
-✅ **Focus Management**
+✅ **Semantic Structure**
+- Automatically includes `role="group"` on the container.
+- Use `aria-label` to provide context (e.g., "Text alignment").
 
-- Visible focus indicators
-- Focus is not trapped when disabled
+✅ **Keyboard Navigation**
+- `Tab` moves focus between buttons.
+- Standard button keyboard interaction is maintained.
 
-### Best Practices
+## Best Practices
+
+### `bit-button`
 
 **Do:**
-
-- Use semantic colors to communicate intent
-- Provide `aria-label` for icon-only buttons
-- Use loading state for async operations
-- Use appropriate `type` in forms
+- Use semantic colors to communicate intent.
+- Provide `aria-label` for icon-only buttons.
+- Use loading state for async operations.
 
 **Don't:**
+- Use multiple primary buttons in the same context.
+- Nest interactive elements inside buttons.
 
-- Use multiple primary buttons in the same context
-- Rely solely on color to communicate meaning
-- Use icon-only buttons without labels
-- Nest interactive elements inside buttons
+### `bit-button-group`
 
-## Browser Support
+**Do:**
+- Use `attached` mode for related segmented controls.
+- Use `full-width` for mobile-optimized layouts or primary actions.
+- Provide an `aria-label` when the group's purpose isn't clear from the content.
 
-Requires modern browsers with Web Components support:
-
-- Chrome 77+
-- Firefox 93+
-- Safari 16.4+
-- Edge 79+
-
-## Related Components
-
-- **Button Group** - Group multiple buttons together (coming soon)
-- **Split Button** - Button with a dropdown menu (coming soon)
-
-## Source Code
-
-- [Button Component](https://github.com/helmuthdu/vielzeug/tree/main/components/src/base/button)
-- [Tests](https://github.com/helmuthdu/vielzeug/tree/main/components/src/base/button/__tests__)
+**Don't:**
+- Mix too many variants or colors within a single group.
+- Use `vertical` orientation for more than 4-5 buttons if possible.

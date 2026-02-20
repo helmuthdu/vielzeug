@@ -80,7 +80,7 @@ const styles = css`
   }
 
   :host([color='secondary']) .box {
-    --checkbox-base: var(--color-secondary-base);
+    --checkbox-base: var(--color-secondary);
     --checkbox-contrast: var(--color-secondary-contrast);
     --checkbox-focus: var(--color-secondary-focus);
   }
@@ -179,6 +179,7 @@ export type CheckboxProps = {
 defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
   observedAttributes: ['checked', 'disabled', 'indeterminate', 'value', 'name', 'color', 'size'] as const,
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Attribute synchronization requires handling multiple states (checked, indeterminate, disabled) and their interactions
   onAttributeChanged(el, name, _oldValue, newValue) {
     const host = el as unknown as HTMLElement;
 

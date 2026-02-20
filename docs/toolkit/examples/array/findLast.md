@@ -7,7 +7,7 @@
 
 The `findLast` utility returns the last element in an array that passes the provided test function. Conceptually, it works like `find()` but searches backwards from the end of the array.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/findLast.ts

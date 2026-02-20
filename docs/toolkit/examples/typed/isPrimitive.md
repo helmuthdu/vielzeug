@@ -7,7 +7,7 @@
 
 Checks if a value is a primitive type (string, number, boolean, null, undefined, symbol, or bigint).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isPrimitive.ts

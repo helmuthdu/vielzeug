@@ -7,7 +7,7 @@
 
 The `isEmpty` utility checks if a given value is considered "empty". It supports a wide variety of data types, including strings, arrays, objects, Maps, and Sets.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isEmpty.ts

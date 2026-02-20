@@ -1,4 +1,4 @@
-import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('bit-button-group', () => {
@@ -121,7 +121,7 @@ describe('bit-button-group', () => {
       await fixture.update();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('size')).toBe('lg');
       });
     });
@@ -133,12 +133,12 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       await fixture.setAttribute('size', 'lg');
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('size')).toBe('lg');
       });
 
@@ -154,10 +154,10 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('variant')).toBe('outline');
       });
 
@@ -171,12 +171,12 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       await fixture.setAttribute('variant', 'ghost');
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('variant')).toBe('ghost');
       });
 
@@ -192,10 +192,10 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('color')).toBe('secondary');
       });
 
@@ -209,12 +209,12 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       await fixture.setAttribute('color', 'error');
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('color')).toBe('error');
       });
 
@@ -225,9 +225,9 @@ describe('bit-button-group', () => {
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
       const fixture = await createFixture('bit-button-group', {
-        orientation: 'vertical',
         attached: true,
         'full-width': true,
+        orientation: 'vertical',
       });
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
@@ -239,19 +239,19 @@ describe('bit-button-group', () => {
 
     it('should propagate all attributes to children', async () => {
       const fixture = await createFixture('bit-button-group', {
+        color: 'success',
         size: 'lg',
         variant: 'outline',
-        color: 'success',
       });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('size')).toBe('lg');
         expect(button.getAttribute('variant')).toBe('outline');
         expect(button.getAttribute('color')).toBe('success');
@@ -264,20 +264,20 @@ describe('bit-button-group', () => {
   describe('Dynamic Children', () => {
     it('should apply attributes to dynamically added buttons', async () => {
       const fixture = await createFixture('bit-button-group', { size: 'lg' });
-      fixture.element.innerHTML = `<bit-button>Button 1</bit-button>`;
+      fixture.element.innerHTML = '<bit-button>Button 1</bit-button>';
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Add another button
       const newButton = document.createElement('bit-button');
       newButton.textContent = 'Button 2';
       fixture.element.appendChild(newButton);
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       expect(buttons.length).toBe(2);
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('size')).toBe('lg');
       });
 
@@ -297,9 +297,9 @@ describe('bit-button-group', () => {
 
     it('should handle single button', async () => {
       const fixture = await createFixture('bit-button-group', { attached: true });
-      fixture.element.innerHTML = `<bit-button>Only Button</bit-button>`;
+      fixture.element.innerHTML = '<bit-button>Only Button</bit-button>';
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const button = fixture.element.querySelector('bit-button');
       expect(button).toBeTruthy();
@@ -314,11 +314,11 @@ describe('bit-button-group', () => {
         <bit-button>Button 2</bit-button>
       `;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Group size should override individual button sizes
       const buttons = fixture.element.querySelectorAll('bit-button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button.getAttribute('size')).toBe('lg');
       });
 
@@ -331,8 +331,8 @@ describe('bit-button-group', () => {
       const fixture = await createFixture('bit-button-group');
 
       await fixture.setAttributes({
-        orientation: 'vertical',
         attached: true,
+        orientation: 'vertical',
         size: 'lg',
       });
 
@@ -344,4 +344,3 @@ describe('bit-button-group', () => {
     });
   });
 });
-

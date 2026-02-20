@@ -7,7 +7,7 @@
 
 Removes all nullable and empty values from strings, arrays, or objects. This utility recursively processes data structures to eliminate null, undefined, empty strings, empty arrays, and empty objects.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/prune.ts

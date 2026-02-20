@@ -7,7 +7,7 @@
 
 The `find` utility returns the first element in an array that passes the provided test function. It also supports an optional default value to be returned if no match is found, providing a more ergonomic alternative to the native `Array.prototype.find()`.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/find.ts

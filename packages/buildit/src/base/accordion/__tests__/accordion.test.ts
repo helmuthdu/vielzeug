@@ -1,4 +1,4 @@
-import { createFixture, type ComponentFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 describe('bit-accordion', () => {

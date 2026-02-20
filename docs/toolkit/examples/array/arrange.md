@@ -7,7 +7,7 @@
 
 The `arrange` utility enables advanced multi-field sorting for arrays of objects. It allows you to specify multiple properties to sort by, each with its own independent sort direction (ascending or descending).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/arrange.ts

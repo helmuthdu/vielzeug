@@ -167,10 +167,7 @@ export class State<T extends object> {
 
   /** -------------------- Computed Values -------------------- **/
 
-  computed<U>(
-    selector: Selector<T, U>,
-    options?: { equality?: EqualityFn<U> },
-  ): Computed<U> {
+  computed<U>(selector: Selector<T, U>, options?: { equality?: EqualityFn<U> }): Computed<U> {
     let cachedValue = selector(this.state);
     let cachedState = this.state;
     const equality = (options?.equality ?? shallowEqual) as EqualityFn<U>;

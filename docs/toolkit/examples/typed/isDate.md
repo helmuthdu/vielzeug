@@ -7,7 +7,7 @@
 
 The `isDate` utility is a type guard that checks if a given value is a valid JavaScript `Date` object.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isDate.ts

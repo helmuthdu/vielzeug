@@ -7,7 +7,7 @@
 
 The `once` utility restricts a function so that it can only be executed a single time. Subsequent calls to the restricted function will return the result of the first invocation. It also includes a `reset` method to allow the function to be run again if needed.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/once.ts

@@ -7,7 +7,7 @@
 
 The `range` utility generates an array of numbers starting from a base value up to (but not including) an end value, using a specified step increment. It is highly versatile for creating numeric sequences, loops, or lookup tables.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/range.ts

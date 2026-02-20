@@ -7,7 +7,7 @@
 
 Calculates the sum of an array of numbers.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/sum.ts

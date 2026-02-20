@@ -7,7 +7,7 @@
 
 Returns the absolute value of a number. Supports both regular numbers and bigint.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/abs.ts

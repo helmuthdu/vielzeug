@@ -7,7 +7,7 @@
 
 The `lt` utility checks if the first value is strictly less than the second value. It works with any comparable types, including numbers, strings, and Dates.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/lt.ts

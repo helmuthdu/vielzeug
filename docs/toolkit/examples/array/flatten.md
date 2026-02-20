@@ -7,7 +7,7 @@
 
 The `flatten` utility recursively flattens nested arrays into a single-level array. It can handle arbitrarily deep nesting.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/flatten.ts

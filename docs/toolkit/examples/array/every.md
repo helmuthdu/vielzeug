@@ -7,7 +7,7 @@
 
 The `every` utility checks if all elements in an array pass the provided test function. It returns `true` only if the predicate returns truthy for every single element. It short-circuits and returns `false` as soon as a non-matching element is found.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/every.ts

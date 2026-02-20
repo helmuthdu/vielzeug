@@ -7,7 +7,7 @@
 
 The `values` utility returns an array of an object's own enumerable property values. It is a type-safe wrapper around the native `Object.values()`, providing better type inference for the elements in the resulting array.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/values.ts

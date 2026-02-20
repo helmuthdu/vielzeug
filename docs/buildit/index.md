@@ -54,152 +54,31 @@ import '@vielzeug/buildit/button';
 </bit-button>
 ```
 
-### With Different Frameworks
+## 📋 Available Components
 
-::: code-group
+### Base
+- **[Button](./components/button.md)** – Versatile button with multiple variants, colors, and states. Includes button groups for organizing related actions.
+- **[Accordion](./components/accordion.md)** – Collapsible content sections with single/multiple selection.
 
-```tsx [React]
-import '@vielzeug/buildit/button';
+### Forms
+- **[Checkbox](./components/checkbox.md)** – Checkbox input with indeterminate state support.
+- **[Radio](./components/radio.md)** – Radio button input with keyboard navigation.
+- **[Input](./components/input.md)** – Text input with multiple types and validation states.
 
-function App() {
-  return (
-    <bit-button variant="outline" color="secondary">
-      React Button
-    </bit-button>
-  );
-}
-```
+## 🎨 Theming & Customization
 
-```vue [Vue]
-<template>
-  <bit-button variant="ghost" color="success">
-    Vue Button
-  </bit-button>
-</template>
-
-<script setup>
-import '@vielzeug/buildit/button';
-</script>
-```
-
-```svelte [Svelte]
-<script>
-  import '@vielzeug/buildit/button';
-</script>
-
-<bit-button variant="text" color="primary">
-  Svelte Button
-</bit-button>
-```
-
-```html [Vanilla]
-<!DOCTYPE html>
-<html>
-  <body>
-    <bit-button>Vanilla Button</bit-button>
-
-    <script type="module">
-      import '@vielzeug/buildit/button';
-    </script>
-  </body>
-</html>
-```
-
-:::
-
-## 📖 Core Concepts
-
-### Web Components
-
-Buildit components are built using native Web Components standards, ensuring:
-
-- **Encapsulation** – Styles don't leak, preventing conflicts
-- **Reusability** – Use the same components across different projects and frameworks
-- **Standards-based** – Built on web platform APIs, future-proof
-- **No Virtual DOM** – Direct DOM manipulation for optimal performance
-
-### Design System
-
-All components follow a consistent design system with:
-
-- **Variants** – Different visual styles (solid, outline, ghost, etc.)
-- **Colors** – Semantic color palette (primary, secondary, success, warning, error)
-- **Sizes** – Multiple size options (sm, md, lg)
-- **States** – Interactive states (hover, active, disabled, loading)
-
-### Accessibility First
-
-Every component is built with accessibility in mind:
-
-- **Keyboard Navigation** – Full keyboard support
-- **Screen Readers** – Proper ARIA labels and roles
-- **Focus Management** – Visible focus indicators
-- **Color Contrast** – WCAG AA compliant contrast ratios
-- **Touch Targets** – Minimum 44x44px touch areas
-
-### Customization
-
-Customize components using CSS custom properties:
+Buildit supports automatic light/dark mode detection and full customization through CSS variables.
 
 ```html
-<bit-button
-  style="
-    --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --button-color: white;
-    --button-radius: 20px;
-  ">
-  Custom Button
-</bit-button>
-```
-
-## 🎯 Available Components
-
-### Base Components
-
-- **[Button](./components/button.md)** – Versatile button with multiple variants, colors, and states
-- **[Button Group](./components/button-group.md)** – Group and coordinate multiple related buttons
-- **[Accordion](./components/accordion.md)** – Collapsible content sections with single/multiple selection
-- **Accordion Item** – Individual accordion section (used within accordion)
-
-### Form Components
-
-- **[Checkbox](./components/checkbox.md)** – Checkbox input with indeterminate state support
-- **[Radio](./components/radio.md)** – Radio button input with keyboard navigation
-- **[Input](./components/input.md)** – Text input with multiple types and validation states
-
-### Coming Soon
-
-- **Switch** – Toggle switch
-- **Select** – Dropdown selection
-- **Textarea** – Multi-line text input
-- **Form** – Form wrapper with validation
-- **Field** – Form field with label and error handling
-- **Card** – Content container
-- **Alert** – Notification messages
-- **Toast** – Temporary notifications
-- **Modal** – Dialog overlay
-- **Tabs** – Tabbed navigation
-
-
-## 🎨 Theming
-
-Buildit supports automatic light/dark mode detection and manual theme control:
-
-```html
-<!-- Auto-detect system preference -->
-<html>
-  <body>
-    <bit-button>Auto Theme</bit-button>
-  </body>
-</html>
-
-<!-- Manual theme control -->
+<!-- Manual dark theme -->
 <html class="dark-theme">
-  <body>
-    <bit-button>Dark Theme</bit-button>
-  </body>
+  <bit-button style="--button-radius: 20px;">
+    Custom Button
+  </bit-button>
 </html>
 ```
+
+Check the **[Theming Guide](./theming.md)** for more details.
 
 Theme CSS variables can be customized globally:
 
@@ -343,4 +222,3 @@ MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 - [npm Package](https://www.npmjs.com/package/@vielzeug/buildit)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 - [Changelog](https://github.com/helmuthdu/vielzeug/blob/main/packages/buildit/CHANGELOG.md)
-

@@ -7,7 +7,7 @@
 
 The `compose` utility performs functional composition from right to left. It takes multiple functions and returns a single function that passes its result from one call to the previous one, following standard mathematical notation $f(g(x))$.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/compose.ts

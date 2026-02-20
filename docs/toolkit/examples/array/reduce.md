@@ -7,7 +7,7 @@
 
 The `reduce` utility reduces an array to a single value by executing a reducer function on each element, passing in the return value from the calculation on the preceding element.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/reduce.ts

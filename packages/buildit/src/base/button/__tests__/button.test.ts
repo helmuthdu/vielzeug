@@ -284,10 +284,10 @@ describe('bit-button', () => {
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
       const fixture = await createFixture('bit-button', {
-        variant: 'outline',
         color: 'secondary',
-        size: 'lg',
         rounded: true,
+        size: 'lg',
+        variant: 'outline',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
@@ -331,10 +331,10 @@ describe('bit-button', () => {
       const fixture = await createFixture('bit-button');
 
       await fixture.setAttributes({
-        variant: 'outline',
         color: 'error',
-        size: 'lg',
         disabled: true,
+        size: 'lg',
+        variant: 'outline',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
@@ -383,9 +383,9 @@ describe('bit-button', () => {
 
     it('should gracefully handle invalid attribute values', async () => {
       const fixture = await createFixture('bit-button', {
-        variant: 'invalid',
         color: 'invalid',
         size: 'invalid',
+        variant: 'invalid',
       });
       const innerButton = fixture.query('button');
 
@@ -428,7 +428,7 @@ describe('bit-button', () => {
 
       for (const variant of variants) {
         for (const color of colors) {
-          const fixture = await createFixture('bit-button', { variant, color });
+          const fixture = await createFixture('bit-button', { color, variant });
 
           expect(fixture.element.getAttribute('variant')).toBe(variant);
           expect(fixture.element.getAttribute('color')).toBe(color);
@@ -441,7 +441,6 @@ describe('bit-button', () => {
       }
     });
   });
-
 
   describe('Events', () => {
     it('should handle click events', async () => {
@@ -475,4 +474,3 @@ describe('bit-button', () => {
     });
   });
 });
-

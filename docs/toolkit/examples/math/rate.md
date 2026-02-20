@@ -7,7 +7,7 @@
 
 The `rate` utility calculates the percentage of a value relative to a total. It is a simple but essential tool for generating progress indicators, statistics, or normalized values.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/rate.ts

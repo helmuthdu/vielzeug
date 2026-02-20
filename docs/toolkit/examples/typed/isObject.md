@@ -7,7 +7,7 @@
 
 Checks if a value is a plain object.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isObject.ts
