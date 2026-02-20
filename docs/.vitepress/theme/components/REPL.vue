@@ -387,7 +387,7 @@ onMounted(() => {
   gap: 1.25rem;
   padding: 1.25rem;
   border-radius: 16px;
-  background: var(--vp-c-bg-alt);
+  background: var(--vp-c-bg-soft);
   border: 1px solid var(--vp-c-divider);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -426,7 +426,7 @@ onMounted(() => {
   height: 48px;
   min-width: 48px;
   border-radius: 12px;
-  background: var(--vp-c-bg-soft);
+  background: var(--color-contrast-50);
   padding: 8px;
   border: 1px solid var(--vp-c-divider);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);

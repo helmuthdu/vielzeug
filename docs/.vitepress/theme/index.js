@@ -6,6 +6,7 @@ import PackageInfo from './components/PackageInfo.vue';
 import ComponentPreview from './components/ComponentPreview.vue';
 import '@vielzeug/buildit';
 import '@vielzeug/buildit/styles/theme.css';
+import './theme.css';
 
 export default {
   ...DefaultTheme,

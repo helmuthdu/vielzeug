@@ -85,12 +85,14 @@ Set the initial checked state:
 
 Show an indeterminate state (useful for "select all" checkboxes):
 
-<ClientOnly>
-  <div class="demo-container">
-    <bit-checkbox indeterminate>Indeterminate</bit-checkbox>
-    <bit-checkbox checked indeterminate>Indeterminate (ignored when checked)</bit-checkbox>
-  </div>
-</ClientOnly>
+<ComponentPreview vertical>
+
+```html
+<bit-checkbox indeterminate>Indeterminate</bit-checkbox>
+<bit-checkbox checked indeterminate>Indeterminate (ignored when checked)</bit-checkbox>
+```
+
+</ComponentPreview>
 
 ```html
 <bit-checkbox indeterminate>Indeterminate</bit-checkbox>

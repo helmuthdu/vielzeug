@@ -59,6 +59,14 @@
   --size-screen-lg: 1024px;
   --size-screen-xl: 1280px;
   --size-screen-2xl: 1536px;
+
+  --perspective-dramatic: 100px;
+  --perspective-near: 300px;
+  --perspective-normal: 500px;
+  --perspective-midrange: 800px;
+  --perspective-distant: 1200px;
+  --aspect-video: 16 / 9;
+
   --grid-1: repeat(1, minmax(0, 1fr));
   --grid-2: repeat(2, minmax(0, 1fr));
   --grid-3: repeat(3, minmax(0, 1fr));
@@ -71,18 +79,12 @@
   --grid-10: repeat(10, minmax(0, 1fr));
   --grid-11: repeat(11, minmax(0, 1fr));
   --grid-12: repeat(12, minmax(0, 1fr));
+
   --border: 1px;
   --border-0: 0;
   --border-2: 2px;
   --border-4: 4px;
   --border-8: 8px;
-  --blur-xs: 4px;
-  --blur-sm: 8px;
-  --blur-md: 12px;
-  --blur-lg: 16px;
-  --blur-xl: 24px;
-  --blur-2xl: 40px;
-  --blur-3xl: 64px;
   --ring: 0 0 0 var(--border);
   --ring-2: 0 0 0 var(--border-2);
   --ring-4: 0 0 0 var(--border-4);
@@ -96,23 +98,51 @@
   --rounded-2xl: 1rem;
   --rounded-3xl: 1.5rem;
   --rounded-full: 9999px;
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 5%);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 10%), 0 8px 10px -6px rgb(0 0 0 / 10%);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 25%);
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 5%);
-  --color-contrast-50: hsl(240deg 4% 93% / 100%);
-  --color-contrast-100: hsl(240deg 4% 90% / 91%);
-  --color-contrast-200: hsl(240deg 4% 74% / 91%);
-  --color-contrast-300: hsl(240deg 4% 57% / 91%);
-  --color-contrast-400: hsl(240deg 4% 44% / 91%);
-  --color-contrast-500: hsl(240deg 4% 34% / 91%);
-  --color-contrast-600: hsl(240deg 4% 26% / 91%);
-  --color-contrast-700: hsl(240deg 4% 20% / 91%);
-  --color-contrast-800: hsl(240deg 4% 15% / 91%);
-  --color-contrast-900: hsl(240deg 4% 12% / 91%);
+
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+  --blur-2xl: 40px;
+  --blur-3xl: 64px;
+
+  --shadow-2xs: 0 1px rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --inset-shadow-2xs: inset 0 1px rgb(0 0 0 / 0.05);
+  --inset-shadow-xs: inset 0 1px 1px rgb(0 0 0 / 0.05);
+  --inset-shadow-sm: inset 0 2px 4px rgb(0 0 0 / 0.05);
+  --drop-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.05);
+  --drop-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.15);
+  --drop-shadow-md: 0 3px 3px rgb(0 0 0 / 0.12);
+  --drop-shadow-lg: 0 4px 4px rgb(0 0 0 / 0.15);
+  --drop-shadow-xl: 0 9px 7px rgb(0 0 0 / 0.1);
+  --drop-shadow-2xl: 0 25px 25px rgb(0 0 0 / 0.15);
+  --text-shadow-2xs: 0px 1px 0px rgb(0 0 0 / 0.15);
+  --text-shadow-xs: 0px 1px 1px rgb(0 0 0 / 0.2);
+  --text-shadow-sm: 0px 1px 0px rgb(0 0 0 / 0.075), 0px 1px 1px rgb(0 0 0 / 0.075), 0px 2px 2px rgb(0 0 0 / 0.075);
+  --text-shadow-md: 0px 1px 1px rgb(0 0 0 / 0.1), 0px 1px 2px rgb(0 0 0 / 0.1), 0px 2px 4px rgb(0 0 0 / 0.1);
+  --text-shadow-lg: 0px 1px 2px rgb(0 0 0 / 0.1), 0px 3px 2px rgb(0 0 0 / 0.1), 0px 4px 8px rgb(0 0 0 / 0.1);
+
+  /* Background colors (50-400): Optimized for UI elements, cards, borders */
+  --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */
+  --color-contrast-100: hsl(240deg 5% 96% / 100%);  /* Cards, elevated surfaces */
+  --color-contrast-200: hsl(240deg 5% 93% / 100%);  /* Nested cards, hover states */
+  --color-contrast-300: hsl(240deg 5% 88% / 100%);  /* Borders, dividers */
+  --color-contrast-400: hsl(240deg 4% 80% / 100%);  /* Disabled backgrounds, subtle UI */
+
+  /* Text colors (500-900): Optimized for readability, WCAG AA/AAA compliant */
+  --color-contrast-500: hsl(240deg 4% 60% / 100%);  /* Tertiary text, placeholders - AA for large text */
+  --color-contrast-600: hsl(240deg 4% 46% / 100%);  /* Secondary text - AA compliant */
+  --color-contrast-700: hsl(240deg 4% 32% / 100%);  /* Body text - AAA compliant */
+  --color-contrast-800: hsl(240deg 4% 22% / 100%);  /* Headings - AAA compliant */
+  --color-contrast-900: hsl(240deg 4% 12% / 100%);  /* High contrast text - AAA compliant */
+
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
 
@@ -155,7 +185,7 @@
   --text-color-heading: var(--color-contrast-900);
   --text-color-body: var(--color-contrast-800);
   --text-color-secondary: var(--color-contrast-700);
-  --text-color-tertiary: var(--color-contrast-400);
+  --text-color-tertiary: var(--color-contrast-600);
   --text-color-disabled: var(--color-contrast-500);
   --text-color-contrast: var(--color-contrast-100);
   --font-weight-thin: 100;
@@ -199,17 +229,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Subtle warm-gray for dark mode - less blue tint, better neutral appearance */
-    --color-contrast-50: hsl(210deg 6% 10% / 100%);
-    --color-contrast-100: hsl(210deg 5% 14% / 91%);
-    --color-contrast-200: hsl(210deg 4% 18% / 91%);
-    --color-contrast-300: hsl(210deg 4% 24% / 91%);
-    --color-contrast-400: hsl(210deg 3% 32% / 91%);
-    --color-contrast-500: hsl(210deg 3% 42% / 91%);
-    --color-contrast-600: hsl(210deg 3% 54% / 91%);
-    --color-contrast-700: hsl(210deg 3% 66% / 91%);
-    --color-contrast-800: hsl(210deg 4% 78% / 91%);
-    --color-contrast-900: hsl(210deg 5% 92% / 91%);
+    /* Background colors (50-400): Optimized for dark UI elements */
+    --color-contrast-50: hsl(210deg 6% 10% / 100%);   /* Canvas, page background */
+    --color-contrast-100: hsl(210deg 5% 14% / 100%);  /* Cards, elevated surfaces */
+    --color-contrast-200: hsl(210deg 5% 18% / 100%);  /* Nested cards, hover states */
+    --color-contrast-300: hsl(210deg 5% 24% / 100%);  /* Borders, dividers */
+    --color-contrast-400: hsl(210deg 4% 32% / 100%);  /* Disabled backgrounds, subtle UI */
+
+    /* Text colors (500-900): Optimized for dark mode readability, WCAG AA/AAA compliant */
+    --color-contrast-500: hsl(210deg 4% 52% / 100%);  /* Tertiary text, placeholders - AA for large text */
+    --color-contrast-600: hsl(210deg 3% 64% / 100%);  /* Secondary text - AA compliant */
+    --color-contrast-700: hsl(210deg 3% 76% / 100%);  /* Body text - AAA compliant */
+    --color-contrast-800: hsl(210deg 4% 86% / 100%);  /* Headings - AAA compliant */
+    --color-contrast-900: hsl(210deg 5% 94% / 100%);  /* High contrast text - AAA compliant */
+
+    --color-canvas: var(--color-contrast-50);
+    --color-contrast: var(--color-contrast-900);
 
     /* Primary - Dark mode variations */
     --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
@@ -248,19 +283,24 @@
   }
 }
 
-/* Manual dark theme override for Storybook */
-:root.dark-theme {
-  /* Subtle warm-gray for dark mode - less blue tint, better neutral appearance */
-  --color-contrast-50: hsl(210deg 6% 10% / 100%);
-  --color-contrast-100: hsl(210deg 5% 14% / 91%);
-  --color-contrast-200: hsl(210deg 4% 18% / 91%);
-  --color-contrast-300: hsl(210deg 4% 24% / 91%);
-  --color-contrast-400: hsl(210deg 3% 32% / 91%);
-  --color-contrast-500: hsl(210deg 3% 42% / 91%);
-  --color-contrast-600: hsl(210deg 3% 54% / 91%);
-  --color-contrast-700: hsl(210deg 3% 66% / 91%);
-  --color-contrast-800: hsl(210deg 4% 78% / 91%);
-  --color-contrast-900: hsl(210deg 5% 92% / 91%);
+/* VitePress dark theme (.dark class on html element) */
+html.dark {
+  /* Background colors (50-400): Optimized for dark UI elements */
+  --color-contrast-50: hsl(210deg 6% 10% / 100%);   /* Canvas, page background */
+  --color-contrast-100: hsl(210deg 5% 14% / 100%);  /* Cards, elevated surfaces */
+  --color-contrast-200: hsl(210deg 5% 18% / 100%);  /* Nested cards, hover states */
+  --color-contrast-300: hsl(210deg 5% 24% / 100%);  /* Borders, dividers */
+  --color-contrast-400: hsl(210deg 4% 32% / 100%);  /* Disabled backgrounds, subtle UI */
+
+  /* Text colors (500-900): Optimized for dark mode readability, WCAG AA/AAA compliant */
+  --color-contrast-500: hsl(210deg 4% 52% / 100%);  /* Tertiary text, placeholders - AA for large text */
+  --color-contrast-600: hsl(210deg 3% 64% / 100%);  /* Secondary text - AA compliant */
+  --color-contrast-700: hsl(210deg 3% 76% / 100%);  /* Body text - AAA compliant */
+  --color-contrast-800: hsl(210deg 4% 86% / 100%);  /* Headings - AAA compliant */
+  --color-contrast-900: hsl(210deg 5% 94% / 100%);  /* High contrast text - AAA compliant */
+
+  --color-canvas: var(--color-contrast-50);
+  --color-contrast: var(--color-contrast-900);
 
   /* Primary - Dark mode variations */
   --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
@@ -298,17 +338,24 @@
   --color-error-contrast: hsl(340deg 82% 15% / 91%);
 }
 
-:root.light-theme {
-  --color-contrast-50: hsl(240deg 4% 93% / 100%);
-  --color-contrast-100: hsl(240deg 4% 90% / 91%);
-  --color-contrast-200: hsl(240deg 4% 74% / 91%);
-  --color-contrast-300: hsl(240deg 4% 57% / 91%);
-  --color-contrast-400: hsl(240deg 4% 44% / 91%);
-  --color-contrast-500: hsl(240deg 4% 34% / 91%);
-  --color-contrast-600: hsl(240deg 4% 26% / 91%);
-  --color-contrast-700: hsl(240deg 4% 20% / 91%);
-  --color-contrast-800: hsl(240deg 4% 15% / 91%);
-  --color-contrast-900: hsl(240deg 4% 12% / 91%);
+/* VitePress light theme (.light class on html element) */
+html:not(.dark) {
+  /* Background colors (50-400): Optimized for UI elements, cards, borders */
+  --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */
+  --color-contrast-100: hsl(240deg 5% 96% / 100%);  /* Cards, elevated surfaces */
+  --color-contrast-200: hsl(240deg 5% 93% / 100%);  /* Nested cards, hover states */
+  --color-contrast-300: hsl(240deg 5% 88% / 100%);  /* Borders, dividers */
+  --color-contrast-400: hsl(240deg 4% 80% / 100%);  /* Disabled backgrounds, subtle UI */
+
+  /* Text colors (500-900): Optimized for readability, WCAG AA/AAA compliant */
+  --color-contrast-500: hsl(240deg 4% 60% / 100%);  /* Tertiary text, placeholders - AA for large text */
+  --color-contrast-600: hsl(240deg 4% 46% / 100%);  /* Secondary text - AA compliant */
+  --color-contrast-700: hsl(240deg 4% 32% / 100%);  /* Body text - AAA compliant */
+  --color-contrast-800: hsl(240deg 4% 22% / 100%);  /* Headings - AAA compliant */
+  --color-contrast-900: hsl(240deg 4% 12% / 100%);  /* High contrast text - AAA compliant */
+
+  --color-canvas: var(--color-contrast-50);
+  --color-contrast: var(--color-contrast-900);
 
   /* Primary - Light mode variations (same as :root defaults) */
   --color-primary-backdrop: hsl(210deg 100% 88% / 83%);

@@ -195,7 +195,7 @@ const displayCode = computed(() => {
 
 .preview-container {
   padding: 2rem;
-  background: var(--vp-c-bg-soft);
+  background: var(--color-canvas);
   min-height: 100px;
   display: flex;
   gap: 1rem;
