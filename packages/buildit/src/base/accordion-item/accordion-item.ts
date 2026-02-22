@@ -38,12 +38,6 @@ const styles = css`
     color: var(--accordion-item-body-color, var(--text-color-body));
     --accordion-details-radius: var(--rounded-md);
     --accordion-item-transition: var(--transition-normal);
-    /* Default size (medium) */
-    --accordion-item-details-padding: var(--size-3) var(--size-4);
-    --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-md);
-    --accordion-item-subtitle-size: var(--text-sm);
-    --accordion-item-body: var(--text-sm);
   }
 
   details {
@@ -188,7 +182,6 @@ const styles = css`
 
   :host([variant='glass']) summary:hover {
     background: color-mix(in srgb, var(--color-secondary-200) 60%, var(--color-secondary) 40%);
-    border-color: color-mix(in srgb, var(--color-secondary-700) 55%, transparent);
   }
 
   :host([variant='glass']) .content-wrapper,
@@ -207,8 +200,7 @@ const styles = css`
   }
 
   :host([variant='frost']) summary:hover {
-    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    border-color: color-mix(in srgb, var(--color-secondary-700) 30%, transparent);
+    background: color-mix(in srgb, var(--color-canvas) 20%, transparent);
   }
 
   /* ========================================
@@ -221,6 +213,15 @@ const styles = css`
     --accordion-item-title: var(--text-sm);
     --accordion-item-subtitle-size: var(--text-xs);
     --accordion-item-body: var(--text-xs);
+  }
+
+  :host(:not([size])),
+  :host([size='md']) {
+    --accordion-item-details-padding: var(--size-3) var(--size-4);
+    --accordion-item-summary-padding: var(--size-1) var(--size-5);
+    --accordion-item-title: var(--text-md);
+    --accordion-item-subtitle-size: var(--text-sm);
+    --accordion-item-body: var(--text-sm);
   }
 
   :host([size='lg']) {

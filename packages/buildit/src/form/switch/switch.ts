@@ -31,30 +31,35 @@ const styles = css`
      ======================================== */
 
   :host {
-    --switch-width: var(--size-10);
-    --switch-height: var(--size-5);
-    --switch-font-size: var(--text-sm);
-    --switch-thumb-padding: var(--size-0-5);
-    --switch-thumb-expansion: var(--size-1);
+    --_width: var(--switch-width, var(--size-10));
+    --_height: var(--switch-height, var(--size-5));
+    --_padding: var(--size-0-5);
+    --_thumb-size: calc(var(--_height) - var(--_padding) * 2);
+    --_track-bg: var(--switch-track-bg, var(--color-contrast-300));
+    --_thumb-bg: var(--switch-thumb-bg, white);
+    --_font-size: var(--switch-font-size, var(--text-sm));
+
     display: inline-flex;
     align-items: center;
     gap: var(--size-2-5);
+    min-height: var(--size-11);
     cursor: pointer;
     user-select: none;
-    min-height: var(--size-11);
     touch-action: manipulation;
-    transition: opacity var(--transition-fast);
   }
 
   :host([disabled]) {
     cursor: not-allowed;
     opacity: 0.5;
+    pointer-events: none;
   }
 
+  /* ========================================
+     Track & Thumb
+     ======================================== */
+
   .switch-wrapper {
-    position: relative;
     display: flex;
-    align-items: center;
     flex-shrink: 0;
   }
 
@@ -66,93 +71,91 @@ const styles = css`
 
   .switch-track {
     position: relative;
-    width: var(--switch-width);
-    height: var(--switch-height);
+    width: var(--_width);
+    height: var(--_height);
+    background: var(--_track-bg);
     border-radius: var(--rounded-full);
-    background: var(--color-contrast-300);
-    transition: background var(--transition-normal), box-shadow var(--transition-normal);
-    box-sizing: border-box;
-  }
-
-  :host([checked]) .switch-track {
-    background: var(--switch-background, var(--switch-base));
-  }
-
-  :host(:hover:not([checked]):not([disabled])) .switch-track {
-    background: var(--color-contrast-400);
-  }
-
-  :host([checked]:hover:not([disabled])) .switch-track {
-    filter: brightness(1.1);
+    transition:
+      background var(--transition-slower),
+      box-shadow var(--transition-normal);
+    will-change: background;
   }
 
   .switch-thumb {
     position: absolute;
-    top: 50%;
-    left: var(--switch-thumb-padding);
-    width: calc(var(--switch-height) - (var(--switch-thumb-padding) * 2));
-    height: calc(var(--switch-height) - (var(--switch-thumb-padding) * 2));
+    top: var(--_padding);
+    left: var(--_padding);
+    width: var(--_thumb-size);
+    height: var(--_thumb-size);
+    background: var(--_thumb-bg);
     border-radius: var(--rounded-full);
-    background: var(--switch-thumb-bg, white);
-    transition: transform var(--transition-spring), width var(--transition-fast);
     box-shadow: var(--shadow-sm);
-    transform: translateY(-50%);
-  }
-
-  :host(:active:not([disabled])) .switch-thumb {
-    width: calc(var(--switch-height) - (var(--switch-thumb-padding) * 2) + var(--switch-thumb-expansion));
+    transition:
+      transform var(--transition-spring),
+      box-shadow var(--transition-normal);
+    will-change: transform;
   }
 
   /* ========================================
      Color Themes
      ======================================== */
 
-  :host(:not([color])) .switch-track,
-  :host([color='primary']) .switch-track {
-    --switch-base: var(--color-primary);
-    --switch-contrast: var(--color-primary-contrast);
-    --switch-focus: var(--color-primary-focus);
+  :host(:not([color])),
+  :host([color='primary']) {
+    --_active-bg: var(--switch-bg, var(--color-primary));
+    --_focus-shadow: var(--color-primary-shadow);
   }
 
-  :host([color='secondary']) .switch-track {
-    --switch-base: var(--color-secondary);
-    --switch-contrast: var(--color-secondary-contrast);
-    --switch-focus: var(--color-secondary-focus);
+  :host([color='secondary']) {
+    --_active-bg: var(--switch-bg, var(--color-secondary));
+    --_focus-shadow: var(--color-secondary-shadow);
   }
 
-  :host([color='success']) .switch-track {
-    --switch-base: var(--color-success);
-    --switch-contrast: var(--color-success-contrast);
-    --switch-focus: var(--color-success-focus);
+  :host([color='success']) {
+    --_active-bg: var(--switch-bg, var(--color-success));
+    --_focus-shadow: var(--color-success-shadow);
   }
 
-  :host([color='warning']) .switch-track {
-    --switch-base: var(--color-warning);
-    --switch-contrast: var(--color-warning-contrast);
-    --switch-focus: var(--color-warning-focus);
+  :host([color='warning']) {
+    --_active-bg: var(--switch-bg, var(--color-warning));
+    --_focus-shadow: var(--color-warning-shadow);
   }
 
-  :host([color='error']) .switch-track {
-    --switch-base: var(--color-error);
-    --switch-contrast: var(--color-error-contrast);
-    --switch-focus: var(--color-error-focus);
+  :host([color='error']) {
+    --_active-bg: var(--switch-bg, var(--color-error));
+    --_focus-shadow: var(--color-error-shadow);
   }
 
   /* ========================================
-     States
+     Checked State
      ======================================== */
 
-  :host([checked]) .switch-thumb {
-    transform: translate(calc(var(--switch-width) - var(--switch-height)), -50%);
+  :host([checked]) .switch-track {
+    background: var(--_active-bg);
   }
 
-  :host([checked]:active:not([disabled])) .switch-thumb {
-    transform: translate(calc(var(--switch-width) - var(--switch-height) - var(--switch-thumb-expansion)), -50%);
+  :host([checked]) .switch-thumb {
+    transform: translateX(calc(var(--_width) - var(--_height)));
   }
+
+  /* ========================================
+     Hover & Active States
+     ======================================== */
+
+  :host(:hover:not([disabled]):not([checked])) .switch-track {
+    background: var(--color-contrast-400);
+  }
+
+  :host(:hover:not([disabled])[checked]) .switch-track {
+    filter: brightness(1.1);
+  }
+
+  /* ========================================
+     Focus State
+     ======================================== */
 
   input:focus-visible ~ .switch-track {
-    outline: none;
-    box-shadow: var(--switch-shadow, var(--color-primary-shadow));
+    box-shadow: var(--_focus-shadow);
   }
 
   /* ========================================
@@ -160,15 +163,15 @@ const styles = css`
      ======================================== */
 
   :host([size='sm']) {
-    --switch-width: var(--size-8);
-    --switch-height: var(--size-4);
-    --switch-font-size: var(--text-xs);
+    --_width: var(--size-8);
+    --_height: var(--size-4);
+    --_font-size: var(--text-xs);
   }
 
   :host([size='lg']) {
-    --switch-width: var(--size-12);
-    --switch-height: var(--size-6);
-    --switch-font-size: var(--text-md);
+    --_width: var(--size-12);
+    --_height: var(--size-6);
+    --_font-size: var(--text-md);
   }
 
   /* ========================================
@@ -176,7 +179,7 @@ const styles = css`
      ======================================== */
 
   .label {
-    font-size: var(--switch-font-size);
+    font-size: var(--_font-size);
     color: var(--color-contrast);
   }
 `;

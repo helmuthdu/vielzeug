@@ -11,7 +11,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {boolean} disabled - Disable the button
  * @attr {boolean} loading - Show loading state
  * @attr {boolean} icon-only - Button with only an icon (no text padding)
- * @attr {boolean} rounded - Fully rounded button (pill shape)
+ * @attr {string} rounded - Border radius: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '' (empty = 'full')
  * @attr {string} type - Button type: 'button' | 'submit' | 'reset'
  *
  * @slot - Default slot for button content
@@ -33,36 +33,45 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
-  :host {
-    --button-radius: var(--rounded-md);
-    --button-font-weight: var(--font-weight-medium);
-    --button-gap: var(--size-2);
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
 
+  :host {
+    --_radius: var(--button-radius, var(--rounded-md));
+    --_font-weight: var(--button-font-weight, var(--font-weight-medium));
+    --_gap: var(--button-gap, var(--size-2));
+    --_padding: var(--button-padding, var(--size-2) var(--size-4));
+    --_font-size: var(--button-font-size, var(--text-sm));
+    --_height: var(--size-10);
+    
     display: inline-flex;
   }
 
   button {
-    --button-padding: var(--size-2) var(--size-4);
-    --button-font-size: var(--text-sm);
-    align-items: center;
     all: unset;
-    border-radius: var(--button-radius);
-    box-sizing: border-box;
-    cursor: pointer;
     display: flex;
-    font-family: inherit;
-    font-size: var(--button-font-size);
-    font-weight: var(--button-font-weight);
-    gap: var(--button-gap);
-    height: var(--size-10);
+    align-items: center;
     justify-content: center;
-    line-height: var(--leading-md);
-    padding: var(--button-padding);
-    position: relative;
-    transition: all 150ms ease-in-out;
-    user-select: none;
-    white-space: nowrap;
+    gap: var(--_gap);
+    padding: var(--_padding);
+    height: var(--_height);
     width: 100%;
+    border-radius: var(--_radius);
+    font-size: var(--_font-size);
+    font-weight: var(--_font-weight);
+    line-height: var(--leading-md);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    box-sizing: border-box;
+    transition:
+      background var(--transition-normal),
+      border-color var(--transition-normal),
+      color var(--transition-normal),
+      opacity var(--transition-normal),
+      transform var(--transition-fast);
   }
 
   button:focus-visible {
@@ -71,21 +80,45 @@ const styles = css`
   }
 
   /* ========================================
+     Slotted Icons (Prefix/Suffix)
+     ======================================== */
+
+  ::slotted([slot='prefix']),
+  ::slotted([slot='suffix']) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  ::slotted(svg) {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+  }
+
+  /* ========================================
      Size Variants
      ======================================== */
 
+  :host([size='sm']) {
+    --_padding: var(--size-1-5) var(--size-3);
+    --_font-size: var(--text-sm);
+    --_height: var(--size-8);
+  }
+
   :host([size='sm']) button {
-    --button-padding: var(--size-1-5) var(--size-3);
-    --button-font-size: var(--text-sm);
     line-height: var(--leading-sm);
-    height: var(--size-8);
+  }
+
+  :host([size='lg']) {
+    --_padding: var(--size-2-5) var(--size-5);
+    --_font-size: var(--text-md);
+    --_height: var(--size-12);
   }
 
   :host([size='lg']) button {
-    --button-padding: var(--size-2-5) var(--size-5);
-    --button-font-size: var(--text-md);
     line-height: var(--leading-lg);
-    height: var(--size-12);
   }
 
   :host([icon-only]) button {
@@ -93,169 +126,216 @@ const styles = css`
     aspect-ratio: 1;
   }
 
-  :host([rounded]:not([icon-only])) button {
-    --button-radius: var(--rounded-full);
+  /* ========================================
+     Rounded Variant
+     ======================================== */
+
+  /* Default rounded for non-icon-only (no value or empty = full pill) */
+  :host([rounded]:not([icon-only]):not([rounded='sm']):not([rounded='md']):not([rounded='lg']):not([rounded='xl']):not([rounded='2xl']):not([rounded='3xl'])) {
+    --_radius: var(--rounded-full);
   }
 
+  /* Icon-only always uses perfect circle */
   :host([rounded][icon-only]) button {
     border-radius: 50%;
   }
 
+  /* Specific radius values from theme */
+  :host([rounded='sm']:not([icon-only])) {
+    --_radius: var(--rounded-sm);
+  }
+
+  :host([rounded='md']:not([icon-only])) {
+    --_radius: var(--rounded-md);
+  }
+
+  :host([rounded='lg']:not([icon-only])) {
+    --_radius: var(--rounded-lg);
+  }
+
+  :host([rounded='xl']:not([icon-only])) {
+    --_radius: var(--rounded-xl);
+  }
+
+  :host([rounded='2xl']:not([icon-only])) {
+    --_radius: var(--rounded-2xl);
+  }
+
+  :host([rounded='3xl']:not([icon-only])) {
+    --_radius: var(--rounded-3xl);
+  }
+
+  :host([rounded='full']:not([icon-only])) {
+    --_radius: var(--rounded-full);
+  }
+
   :host([icon-only]) .content {
+    display: flex;
     justify-content: center;
     align-items: center;
-    display: flex;
   }
 
   /* ========================================
      Color Themes
      ======================================== */
 
-  /* Default to primary */
-  button {
-    --button-base: var(--color-primary);
-    --button-contrast: var(--color-primary-contrast);
-    --button-focus: var(--color-primary-focus);
-    --button-content: var(--color-primary-content);
-    --button-backdrop: var(--color-primary-backdrop);
-    --button-shadow: var(--color-primary-shadow);
+  :host(:not([color])),
+  :host([color='primary']) {
+    --_base: var(--color-primary);
+    --_contrast: var(--color-primary-contrast);
+    --_focus: var(--color-primary-focus);
+    --_content: var(--color-primary-content);
+    --_backdrop: var(--color-primary-backdrop);
   }
 
-  :host([color='secondary']) button {
-    --button-base: var(--color-secondary);
-    --button-contrast: var(--color-secondary-contrast);
-    --button-focus: var(--color-secondary-focus);
-    --button-content: var(--color-secondary-content);
-    --button-backdrop: var(--color-secondary-backdrop);
-    --button-shadow: var(--color-secondary-shadow);
+  :host([color='secondary']) {
+    --_base: var(--color-secondary);
+    --_contrast: var(--color-secondary-contrast);
+    --_focus: var(--color-secondary-focus);
+    --_content: var(--color-secondary-content);
+    --_backdrop: var(--color-secondary-backdrop);
   }
 
-  :host([color='success']) button {
-    --button-base: var(--color-success);
-    --button-contrast: var(--color-success-contrast);
-    --button-focus: var(--color-success-focus);
-    --button-content: var(--color-success-content);
-    --button-backdrop: var(--color-success-backdrop);
-    --button-shadow: var(--color-success-shadow);
+  :host([color='success']) {
+    --_base: var(--color-success);
+    --_contrast: var(--color-success-contrast);
+    --_focus: var(--color-success-focus);
+    --_content: var(--color-success-content);
+    --_backdrop: var(--color-success-backdrop);
   }
 
-  :host([color='warning']) button {
-    --button-base: var(--color-warning);
-    --button-contrast: var(--color-warning-contrast);
-    --button-focus: var(--color-warning-focus);
-    --button-content: var(--color-warning-content);
-    --button-backdrop: var(--color-warning-backdrop);
-    --button-shadow: var(--color-warning-shadow);
+  :host([color='warning']) {
+    --_base: var(--color-warning);
+    --_contrast: var(--color-warning-contrast);
+    --_focus: var(--color-warning-focus);
+    --_content: var(--color-warning-content);
+    --_backdrop: var(--color-warning-backdrop);
   }
 
-  :host([color='error']) button {
-    --button-base: var(--color-error);
-    --button-contrast: var(--color-error-contrast);
-    --button-focus: var(--color-error-focus);
-    --button-content: var(--color-error-content);
-    --button-backdrop: var(--color-error-backdrop);
-    --button-shadow: var(--color-error-shadow);
+  :host([color='error']) {
+    --_base: var(--color-error);
+    --_contrast: var(--color-error-contrast);
+    --_focus: var(--color-error-focus);
+    --_content: var(--color-error-content);
+    --_backdrop: var(--color-error-backdrop);
   }
 
   /* ========================================
-     Visual Variants
+     Visual Variants - Solid (Default)
      ======================================== */
 
-  /* Solid variant (default) */
   button {
-    background: var(--button-bg, var(--button-base));
-    color: var(--button-color, var(--button-contrast));
-    border: var(--button-border, var(--border, 1px) solid transparent);
+    background: var(--button-bg, var(--_base));
+    color: var(--button-color, var(--_contrast));
+    border: var(--button-border, var(--border) solid transparent);
   }
 
   button:hover {
-    background: var(--button-hover-bg, var(--button-focus));
+    background: var(--button-hover-bg, var(--_focus));
   }
 
   button:active {
-    background: var(--button-active-bg, var(--button-content));
+    background: var(--button-active-bg, var(--_content));
   }
+
+  /* ========================================
+     Visual Variants - Flat
+     ======================================== */
 
   :host([variant='flat']) button {
-    background: var(--button-bg, var(--button-backdrop));
-    color: var(--button-color, var(--button-base));
-  }
-
-  :host([variant='flat']) button:hover,
-  :host([variant='flat']) button:active {
-    color: var(--button-contrast);
+    background: var(--button-bg, var(--_backdrop));
+    color: var(--button-color, var(--_base));
   }
 
   :host([variant='flat']) button:hover {
-    background: var(--button-hover-bg, var(--button-focus));
+    background: var(--button-hover-bg, var(--_focus));
+    color: var(--_contrast);
   }
 
   :host([variant='flat']) button:active {
-    background: var(--button-active-bg, var(--button-content));
+    background: var(--button-active-bg, var(--_content));
+    color: var(--_contrast);
   }
+
+  /* ========================================
+     Visual Variants - Bordered
+     ======================================== */
 
   :host([variant='bordered']) button {
-    background: var(--button-bg, var(--button-backdrop));
-    color: var(--button-color, var(--button-base));
-    border-color: var(--button-base);
-  }
-
-  :host([variant='bordered']) button:hover,
-  :host([variant='bordered']) button:active {
-    color: var(--button-contrast);
+    background: var(--button-bg, var(--_backdrop));
+    color: var(--button-color, var(--_base));
+    border-color: var(--_base);
   }
 
   :host([variant='bordered']) button:hover {
-    background: var(--button-hover-bg, var(--button-focus));
-    border-color: var(--button-focus);
+    background: var(--button-hover-bg, var(--_focus));
+    border-color: var(--_focus);
+    color: var(--_contrast);
   }
 
   :host([variant='bordered']) button:active {
-    background: var(--button-active-bg, var(--button-content));
+    background: var(--button-active-bg, var(--_content));
+    color: var(--_contrast);
   }
+
+  /* ========================================
+     Visual Variants - Outline
+     ======================================== */
 
   :host([variant='outline']) button {
     background: transparent;
-    color: var(--button-color, var(--button-base));
-    border-color: var(--button-base);
+    color: var(--button-color, var(--_base));
+    border-color: var(--_base);
   }
 
   :host([variant='outline']) button:hover {
-    background: var(--button-hover-bg, var(--button-backdrop));
-    border-color: var(--button-focus);
+    background: var(--button-hover-bg, var(--_backdrop));
+    border-color: var(--_focus);
   }
 
   :host([variant='outline']) button:active {
-    background: var(--button-active-bg, var(--button-base));
-    color: var(--button-contrast);
+    background: var(--button-active-bg, var(--_base));
+    color: var(--_contrast);
   }
+
+  /* ========================================
+     Visual Variants - Ghost
+     ======================================== */
 
   :host([variant='ghost']) button {
     background: transparent;
-    color: var(--button-color, var(--button-base));
+    color: var(--button-color, var(--_base));
   }
 
   :host([variant='ghost']) button:hover {
-    background: var(--button-hover-bg, var(--button-backdrop));
+    background: var(--button-hover-bg, var(--_backdrop));
   }
 
   :host([variant='ghost']) button:active {
-    background: var(--button-active-bg, var(--button-base));
-    color: var(--button-contrast);
+    background: var(--button-active-bg, var(--_base));
+    color: var(--_contrast);
   }
+
+  /* ========================================
+     Visual Variants - Text
+     ======================================== */
 
   :host([variant='text']) button {
     background: transparent;
-    color: var(--button-color, var(--button-base));
+    color: var(--button-color, var(--_base));
   }
 
   :host([variant='text']) button:hover {
-    color: var(--button-focus);
+    color: var(--_focus);
   }
 
   :host([variant='text']) button:active {
     opacity: 0.7;
   }
+
+  /* ========================================
+     Visual Variants - Glass & Frost
+     ======================================== */
 
   :host([variant='glass']) button,
   :host([variant='frost']) button {
@@ -264,38 +344,38 @@ const styles = css`
   }
 
   :host([variant='glass']) button {
-    background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
-    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
-    filter: brightness(1.05);
-    color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
+    background: color-mix(in srgb, var(--_base) 30%, var(--color-contrast) 10%);
+    border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
+    color: var(--button-color, color-mix(in srgb, var(--_contrast) 90%, transparent));
     text-shadow: var(--text-shadow-xs);
+    filter: brightness(1.05);
   }
 
   :host([variant='glass']) button:hover {
-    background: color-mix(in srgb, var(--button-backdrop) 60%, var(--button-base) 40%);
-    border-color: color-mix(in srgb, var(--button-focus) 55%, transparent);
+    background: color-mix(in srgb, var(--_backdrop) 60%, var(--_base) 40%);
+    border-color: color-mix(in srgb, var(--_focus) 55%, transparent);
   }
 
   :host([variant='glass']) button:active {
-    background: color-mix(in srgb, var(--button-backdrop) 50%, var(--button-base) 50%);
-    border-color: color-mix(in srgb, var(--button-focus) 65%, transparent);
+    background: color-mix(in srgb, var(--_backdrop) 50%, var(--_base) 50%);
+    border-color: color-mix(in srgb, var(--_focus) 65%, transparent);
   }
 
   :host([variant='frost']) button {
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
-    color: var(--button-color, var(--button-content));
+    color: var(--button-color, var(--_content));
     text-shadow: var(--text-shadow-2xs);
   }
 
   :host([variant='frost']) button:hover {
     background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    border-color: color-mix(in srgb, var(--button-focus) 30%, transparent);
+    border-color: color-mix(in srgb, var(--_focus) 30%, transparent);
   }
 
   :host([variant='frost']) button:active {
     background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+    border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
   }
 
   /* ========================================
@@ -341,7 +421,7 @@ export type ButtonProps = {
   loading?: boolean;
   type?: 'button' | 'submit' | 'reset';
   'icon-only'?: boolean;
-  rounded?: boolean;
+  rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '';
 };
 
 defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
@@ -368,6 +448,7 @@ defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
       }
 
       el.emit('click', { originalEvent: e });
+      e.stopPropagation();
     });
   },
 

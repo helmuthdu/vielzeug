@@ -90,7 +90,7 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 <bit-button variant="glass" color="success">Success</bit-button>
 <bit-button variant="glass" color="warning">Warning</bit-button>
 <bit-button variant="glass" color="error">Error</bit-button>
-<hr style="margin-block: 2rem;">
+<hr>
 <bit-button variant="frost" color="primary">Primary</bit-button>
 <bit-button variant="frost" color="secondary">Secondary</bit-button>
 <bit-button variant="frost" color="success">Success</bit-button>
@@ -178,15 +178,27 @@ Add prefix or suffix icons using slots.
 
 </ComponentPreview>
 
-### Rounded
+### Rounded (Custom Border Radius)
 
-Fully rounded corners for a pill-shaped appearance.
+Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
 
 <ComponentPreview center>
 
 ```html
-<bit-button rounded>Rounded</bit-button>
-<bit-button rounded icon-only aria-label="Check"> ✓ </bit-button>
+<!-- Default/Full: Pill shape (9999px) -->
+<bit-button rounded>Pill Shape</bit-button>
+
+<!-- Large: 0.5rem / 8px -->
+<bit-button rounded="lg">Large Radius</bit-button>
+
+<!-- Extra Large: 0.75rem / 12px -->
+<bit-button rounded="xl">XL Radius</bit-button>
+
+<!-- 2XL: 1rem / 16px -->
+<bit-button rounded="2xl">2XL Radius</bit-button>
+
+<!-- Icon-only always uses perfect circle -->
+<bit-button rounded icon-only aria-label="Check">✓</bit-button>
 ```
 
 </ComponentPreview>

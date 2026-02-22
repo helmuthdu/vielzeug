@@ -32,7 +32,7 @@ A customizable checkbox component with multiple colors, sizes, and states. Built
 
 Five semantic colors for different contexts.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-checkbox checked color="primary">Primary</bit-checkbox>

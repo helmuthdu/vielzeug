@@ -13,6 +13,7 @@ const slots = useSlots();
 const showCodeState = ref(props.showCode ?? false);
 const extractedCode = ref('');
 const processedCodeBlock = ref<any>(null);
+const buttonRef = ref<HTMLElement | null>(null);
 
 const toggleCode = () => {
   showCodeState.value = !showCodeState.value;
@@ -20,6 +21,12 @@ const toggleCode = () => {
 
 // Extract code from slot content
 onMounted(() => {
+  // Listen to the custom 'click' event from bit-button to avoid double-firing
+  // The button emits a custom event, so we use addEventListener instead of @click
+  if (buttonRef.value) {
+    buttonRef.value.addEventListener('click', toggleCode as EventListener);
+  }
+
   if (slots.default) {
     const slotContent = slots.default();
     if (slotContent && slotContent.length > 0) {
@@ -121,13 +128,15 @@ const displayCode = computed(() => {
     </div>
 
     <div class="preview-actions">
-      <button
-        @click="toggleCode"
-        class="preview-toggle"
+      <bit-button
+        ref="buttonRef"
+        variant="outline"
+        size="sm"
         :class="{ active: showCodeState }"
         :aria-expanded="showCodeState">
         <svg
           v-if="!showCodeState"
+          slot="prefix"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -135,11 +144,12 @@ const displayCode = computed(() => {
           stroke-linecap="round"
           stroke-linejoin="round"
           xmlns="http://www.w3.org/2000/svg">
-          <path d="M 16,18 22,12 16,6" id="path1" />
-          <path d="m 8,6 -6,6 6,6" id="path2" />
+          <path d="M 16,18 22,12 16,6" />
+          <path d="m 8,6 -6,6 6,6" />
         </svg>
         <svg
           v-else
+          slot="prefix"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -156,8 +166,8 @@ const displayCode = computed(() => {
           <path d="M 15,19 12,16 9,19" />
           <path d="M 15,5 12,8 9,5" />
         </svg>
-        <span class="button-text">{{ showCodeState ? 'Hide Code' : 'Show Code' }}</span>
-      </button>
+        {{ showCodeState ? 'Hide Code' : 'Show Code' }}
+      </bit-button>
     </div>
 
     <Transition name="slide">
@@ -218,46 +228,8 @@ const displayCode = computed(() => {
   justify-content: flex-end;
 }
 
-.preview-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
-  background: transparent;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  color: var(--vp-c-text-2);
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.25s ease;
-  white-space: nowrap;
-  line-height: 1;
-  min-width: 90px;
-  justify-content: center;
-}
-
-.preview-toggle:hover {
-  background: var(--vp-c-default-soft);
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
-}
-
-.preview-toggle.active {
-  background: var(--vp-c-brand-soft);
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
-}
-
-.preview-toggle svg {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-}
-
-.button-text {
-  flex-shrink: 0;
-  font-size: 0.875rem;
+.preview-actions bit-button {
+  --button-min-width: 120px;
 }
 
 .preview-code {

@@ -38,14 +38,14 @@ Radio buttons with the same `name` attribute form a group where only one can be 
 
 Five semantic colors for different contexts.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-radio checked name="color-1" color="primary">Primary</bit-radio>
-<bit-radio checked name="color-2" color="secondary">Secondary</bit-radio>
-<bit-radio checked name="color-3" color="success">Success</bit-radio>
-<bit-radio checked name="color-4" color="warning">Warning</bit-radio>
-<bit-radio checked name="color-5" color="error">Error</bit-radio>
+<bit-radio name="color" color="primary">Primary</bit-radio>
+<bit-radio name="color" color="secondary">Secondary</bit-radio>
+<bit-radio name="color" color="success">Success</bit-radio>
+<bit-radio name="color" color="warning">Warning</bit-radio>
+<bit-radio name="color" color="error">Error</bit-radio>
 ```
 
 </ComponentPreview>
@@ -54,12 +54,12 @@ Five semantic colors for different contexts.
 
 Three sizes for different contexts.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-radio checked name="size-sm" size="sm">Small</bit-radio>
-<bit-radio checked name="size-md" size="md">Medium</bit-radio>
-<bit-radio checked name="size-lg" size="lg">Large</bit-radio>
+<bit-radio name="size" size="sm">Small</bit-radio>
+<bit-radio name="size" size="md">Medium</bit-radio>
+<bit-radio name="size" size="lg">Large</bit-radio>
 ```
 
 
@@ -71,11 +71,11 @@ Three sizes for different contexts.
 
 Prevent interaction and reduce opacity for unavailable options.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-radio name="disabled-1" disabled>Disabled unchecked</bit-radio>
-<bit-radio name="disabled-2" checked disabled>Disabled checked</bit-radio>
+<bit-radio name="disabled" disabled>Disabled unchecked</bit-radio>
+<bit-radio name="disabled" checked disabled>Disabled checked</bit-radio>
 ```
 
 </ComponentPreview>

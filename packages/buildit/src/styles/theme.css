@@ -146,13 +146,6 @@
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
-
-  /* Modern Interactions */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: 150ms var(--ease-in-out);
-  --transition-normal: 250ms var(--ease-in-out);
-  --transition-spring: 400ms var(--ease-spring);
   --leading-xxs: 0.75rem;
   --leading-xs: 1rem;
   --leading-sm: 1.25rem;
@@ -181,6 +174,15 @@
   --text-7xl: 4.5rem;
   --text-8xl: 6rem;
   --text-9xl: 8rem;
+
+  /* Modern Interactions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms var(--ease-in-out);
+  --transition-normal: 250ms var(--ease-in-out);
+  --transition-slow: 400ms var(--ease-in-out);
+  --transition-slower: 500ms var(--ease-in-out);
+  --transition-spring: 400ms var(--ease-spring);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -208,6 +210,7 @@
     --color-primary-content: hsl(260deg 100% 95% / 100%);
     --color-primary-contrast: hsl(260deg 100% 10% / 100%);
     --color-primary-focus: hsl(260deg 100% 75% / 100%);
+    --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
     /* Secondary - Dark mode variations */
     --color-secondary: hsl(220deg 16% 78% / 91%);
@@ -215,6 +218,7 @@
     --color-secondary-content: hsl(220deg 16% 82% / 91%);
     --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
     --color-secondary-focus: hsl(220deg 16% 72% / 91%);
+    --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
 
     /* Success - Dark mode variations */
     --color-success: hsl(168deg 76% 50% / 91%);
@@ -222,6 +226,7 @@
     --color-success-content: hsl(168deg 76% 70% / 91%);
     --color-success-contrast: hsl(168deg 76% 15% / 91%);
     --color-success-focus: hsl(168deg 76% 55% / 91%);
+    --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
     /* Warning - Dark mode variations */
     --color-warning: hsl(38deg 100% 60% / 91%);
@@ -229,6 +234,7 @@
     --color-warning-content: hsl(38deg 100% 75% / 91%);
     --color-warning-contrast: hsl(38deg 100% 20% / 91%);
     --color-warning-focus: hsl(38deg 100% 65% / 91%);
+    --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
     /* Error - Dark mode variations */
     --color-error: hsl(340deg 82% 60% / 91%);
@@ -236,6 +242,7 @@
     --color-error-content: hsl(340deg 82% 75% / 91%);
     --color-error-contrast: hsl(340deg 82% 15% / 91%);
     --color-error-focus: hsl(340deg 82% 65% / 91%);
+    --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
   }
 }
 
@@ -264,6 +271,7 @@ html.dark {
   --color-primary-content: hsl(210deg 100% 80% / 91%);
   --color-primary-contrast: hsl(210deg 100% 15% / 91%);
   --color-primary-focus: hsl(210deg 100% 65% / 91%);
+  --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
   /* Secondary - Dark mode variations */
   --color-secondary: hsl(220deg 16% 78% / 91%);
@@ -271,6 +279,7 @@ html.dark {
   --color-secondary-content: hsl(220deg 16% 82% / 91%);
   --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
   --color-secondary-focus: hsl(220deg 16% 72% / 91%);
+  --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
 
   /* Success - Dark mode variations */
   --color-success: hsl(168deg 76% 50% / 91%);
@@ -278,6 +287,7 @@ html.dark {
   --color-success-content: hsl(168deg 76% 70% / 91%);
   --color-success-contrast: hsl(168deg 76% 15% / 91%);
   --color-success-focus: hsl(168deg 76% 55% / 91%);
+  --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
   /* Warning - Dark mode variations */
   --color-warning: hsl(38deg 100% 60% / 91%);
@@ -285,6 +295,7 @@ html.dark {
   --color-warning-content: hsl(38deg 100% 75% / 91%);
   --color-warning-contrast: hsl(38deg 100% 20% / 91%);
   --color-warning-focus: hsl(38deg 100% 65% / 91%);
+  --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
   /* Error - Dark mode variations */
   --color-error: hsl(340deg 82% 60% / 91%);
@@ -292,6 +303,7 @@ html.dark {
   --color-error-content: hsl(340deg 82% 75% / 91%);
   --color-error-contrast: hsl(340deg 82% 15% / 91%);
   --color-error-focus: hsl(340deg 82% 65% / 91%);
+  --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
 }
 
 /* VitePress light theme (.light class on html element) */
@@ -328,7 +340,7 @@ html:not(.dark) {
   --color-secondary-content: hsl(220deg 16% 22% / 91%);
   --color-secondary-contrast: hsl(220deg 16% 96% / 91%);
   --color-secondary-focus: hsl(220deg 16% 35% / 91%);
-  --color-secondary-shadow: 0 0 0 2px color-mix(in srgb, var(--color-secondary) 20%, transparent), var(--shadow-sm);
+  --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
 
   /* Success - Teal/cyan instead of pure green (better for red-green colorblindness) */
   --color-success: hsl(168deg 76% 42% / 91%);
@@ -336,7 +348,7 @@ html:not(.dark) {
   --color-success-content: hsl(168deg 76% 15% / 91%);
   --color-success-contrast: hsl(168deg 76% 97% / 91%);
   --color-success-focus: hsl(168deg 76% 48% / 91%);
-  --color-success-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success) 20%, transparent), var(--shadow-sm);
+  --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
   /* Warning - Amber/orange (distinct from error, works for all types) */
   --color-warning: hsl(38deg 100% 52% / 91%);
@@ -344,7 +356,7 @@ html:not(.dark) {
   --color-warning-content: hsl(38deg 100% 15% / 91%);
   --color-warning-contrast: hsl(38deg 100% 94% / 91%);
   --color-warning-focus: hsl(38deg 100% 58% / 91%);
-  --color-warning-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 20%, transparent), var(--shadow-sm);
+  --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
   /* Error - Magenta/vermillion instead of pure red (better for red-green colorblindness) */
   --color-error: hsl(340deg 82% 52% / 91%);
@@ -352,5 +364,5 @@ html:not(.dark) {
   --color-error-content: hsl(340deg 82% 15% / 91%);
   --color-error-contrast: hsl(340deg 82% 94% / 91%);
   --color-error-focus: hsl(340deg 82% 58% / 91%);
-  --color-error-shadow: 0 0 0 2px color-mix(in srgb, var(--color-error) 20%, transparent), var(--shadow-sm);
+  --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
 }

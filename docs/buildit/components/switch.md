@@ -33,7 +33,7 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 
 Five semantic colors for different contexts.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-switch checked color="primary">Primary</bit-switch>
@@ -93,7 +93,7 @@ Prevent interaction and reduce opacity for unavailable options.
 
 Switches work seamlessly with forms using name and value attributes.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <form id="settings-form">
@@ -124,7 +124,7 @@ Switches work seamlessly with forms using name and value attributes.
 
 Listen to change events for custom logic.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-switch id="feature-toggle">Enable feature</bit-switch>

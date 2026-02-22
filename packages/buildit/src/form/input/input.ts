@@ -18,6 +18,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
  * @attr {string} color - Color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} rounded - Border radius: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '' (empty = 'full')
  *
  * @slot prefix - Content before the input (e.g. icon)
  * @slot suffix - Content after the input (e.g. clear button, icon)
@@ -38,18 +39,21 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
-  /* Base styles and default color theme (primary) */
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
   :host {
+    --_radius: var(--input-radius, var(--rounded-md));
+    --_font-size: var(--input-font-size, var(--text-sm));
+    --_padding-x: var(--input-padding-x, var(--size-3));
+    --_padding-y: var(--input-padding-y, var(--size-1-5));
+    --_gap: var(--input-gap, var(--size-2));
+    --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
+    
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
-    --input-radius: var(--rounded-md);
-    --input-font-size: var(--text-sm);
-    --input-padding-x: var(--size-3);
-    --input-padding-y: var(--size-1-5);
-    --input-placeholder-color: var(--color-contrast-500);
-    --input-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --input-gap: var(--size-2);
   }
 
   :host([disabled]) {
@@ -71,34 +75,37 @@ const styles = css`
     align-items: stretch;
     justify-content: center;
     gap: 0;
-    border-radius: var(--input-radius);
+    border-radius: var(--_radius);
     border: var(--border) solid var(--input-border-color);
-    padding-inline: var(--input-padding-x);
-    padding-block: var(--input-padding-y);
+    padding-inline: var(--_padding-x);
+    padding-block: var(--_padding-y);
     box-sizing: border-box;
     box-shadow: var(--shadow-2xs);
     background: var(--input-bg, var(--color-contrast-100));
     transition:
-      background var(--input-transition),
-      border-color var(--input-transition),
-      box-shadow var(--input-transition),
-      transform var(--input-transition);
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
     min-height: var(--size-10);
   }
 
   .input-row {
     display: flex;
     align-items: center;
-    gap: var(--input-gap);
+    gap: var(--_gap);
     flex: 1;
   }
 
-  /* Label Styles - Common */
+  /* ========================================
+     Label Styles
+     ======================================== */
+
   .label-inset,
   .label-outside {
     font-weight: var(--font-medium);
     color: var(--color-contrast-500);
-    transition: color var(--input-transition);
+    transition: color var(--transition-fast);
     user-select: none;
   }
 
@@ -113,7 +120,10 @@ const styles = css`
     line-height: var(--leading-none);
   }
 
-  /* Helper Text Styles */
+  /* ========================================
+     Helper Text
+     ======================================== */
+
   .helper-text {
     font-size: var(--text-xs);
     color: var(--color-contrast-500);
@@ -121,43 +131,54 @@ const styles = css`
     padding-inline: 2px;
   }
 
+  /* ========================================
+     Slotted Prefix/Suffix Icons
+     ======================================== */
+
   ::slotted([slot='prefix']),
   ::slotted([slot='suffix']) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--color-contrast-500);
-    transition: color var(--input-transition);
+    transition: color var(--transition-fast);
     user-select: none;
     font-size: var(--size-4);
     opacity: 0.8;
   }
 
+  /* ========================================
+     Input Element
+     ======================================== */
+
   input {
     all: unset;
     flex: 1;
     font: inherit;
-    font-size: var(--input-font-size);
+    font-size: var(--_font-size);
     color: var(--input-content);
     min-width: 0;
     line-height: var(--leading-normal);
   }
 
   input::placeholder {
-    color: var(--input-placeholder-color);
-    transition: color var(--input-transition);
+    color: var(--_placeholder);
+    transition: color var(--transition-fast);
   }
 
   input:focus-visible {
     outline: none;
   }
 
-  /* Interaction States */
+  /* ========================================
+     Hover & Focus States
+     ======================================== */
+
   :host(:not([disabled])) .field:hover {
     border-color: var(--color-contrast-400);
   }
 
-  :host(:not([disabled])) .field:focus-within {
+  :host(:not([disabled]):not([variant='text'])) .field:focus-within {
     border-color: var(--input-focus);
     box-shadow: var(--input-shadow, var(--color-primary-shadow));
     background: var(--color-canvas);
@@ -180,17 +201,55 @@ const styles = css`
      ======================================== */
 
   :host([size='sm']) {
-    --input-font-size: var(--text-xs);
-    --input-padding-y: var(--size-1);
-    --input-padding-x: var(--size-2);
-    --input-gap: var(--size-1-5);
+    --_font-size: var(--text-xs);
+    --_padding-y: var(--size-1);
+    --_padding-x: var(--size-2);
+    --_gap: var(--size-1-5);
   }
 
   :host([size='lg']) {
-    --input-font-size: var(--text-md);
-    --input-padding-y: var(--size-2);
-    --input-padding-x: var(--size-3-5);
-    --input-gap: var(--size-2-5);
+    --_font-size: var(--text-md);
+    --_padding-y: var(--size-2);
+    --_padding-x: var(--size-3-5);
+    --_gap: var(--size-2-5);
+  }
+
+  /* ========================================
+     Rounded Variant
+     ======================================== */
+
+  /* Default rounded (no value or empty string = full) */
+  :host([rounded]:not([rounded='sm']):not([rounded='md']):not([rounded='lg']):not([rounded='xl']):not([rounded='2xl']):not([rounded='3xl'])) {
+    --_radius: var(--rounded-full);
+  }
+
+  /* Specific radius values from theme */
+  :host([rounded='sm']) {
+    --_radius: var(--rounded-sm);
+  }
+
+  :host([rounded='md']) {
+    --_radius: var(--rounded-md);
+  }
+
+  :host([rounded='lg']) {
+    --_radius: var(--rounded-lg);
+  }
+
+  :host([rounded='xl']) {
+    --_radius: var(--rounded-xl);
+  }
+
+  :host([rounded='2xl']) {
+    --_radius: var(--rounded-2xl);
+  }
+
+  :host([rounded='3xl']) {
+    --_radius: var(--rounded-3xl);
+  }
+
+  :host([rounded='full']) {
+    --_radius: var(--rounded-full);
   }
 
   /* ========================================
@@ -353,19 +412,20 @@ const styles = css`
 `;
 
 export type InputProps = {
-  type?: 'text' | 'email' | 'password' | 'search' | 'url' | 'tel' | 'number';
-  value?: string;
+  'label-placement'?: 'inset' | 'outside';
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  disabled?: boolean;
+  helper?: string;
+  label?: string;
   name?: string;
   placeholder?: string;
-  label?: string;
-  'label-placement'?: 'inset' | 'outside';
-  helper?: string;
-  disabled?: boolean;
   readonly?: boolean;
   required?: boolean;
+  rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '';
   size?: 'sm' | 'md' | 'lg';
+  type?: 'text' | 'email' | 'password' | 'search' | 'url' | 'tel' | 'number';
+  value?: string;
   variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 };
 
 defineElement<HTMLInputElement, InputProps>('bit-input', {
@@ -383,6 +443,7 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     'size',
     'variant',
     'color',
+    'rounded',
   ] as const,
 
   onAttributeChanged(name, _oldValue, newValue, el) {

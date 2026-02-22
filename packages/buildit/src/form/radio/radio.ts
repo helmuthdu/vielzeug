@@ -30,8 +30,11 @@ const styles = css`
      ======================================== */
 
   :host {
-    --radio-size: var(--size-5);
-    --radio-font-size: var(--text-sm);
+    --_size: var(--radio-size, var(--size-5));
+    --_font-size: var(--radio-font-size, var(--text-sm));
+    --_bg: var(--radio-bg, var(--color-contrast-200));
+    --_border: var(--radio-border-color, var(--color-contrast-300));
+    
     display: inline-flex;
     align-items: center;
     gap: var(--size-2);
@@ -42,15 +45,14 @@ const styles = css`
   :host([disabled]) {
     cursor: not-allowed;
     opacity: 0.5;
+    pointer-events: none;
   }
 
   .radio-wrapper {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--radio-size);
-    height: var(--radio-size);
+    display: block;
+    width: var(--_size);
+    height: var(--_size);
     flex-shrink: 0;
   }
 
@@ -59,66 +61,69 @@ const styles = css`
   }
 
   .circle {
-    width: 100%;
-    height: 100%;
-    border: var(--border-2) solid var(--radio-border-color, var(--color-contrast-low));
+    width: var(--_size);
+    height: var(--_size);
+    border: var(--border-2) solid var(--_border);
     border-radius: 50%;
-    background: var(--radio-bg, var(--color-contrast-200));
-    transition: all 150ms ease-in-out;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
+    background: var(--_bg);
+    transition:
+      background var(--transition-slower),
+      border-color var(--transition-slower),
+      box-shadow var(--transition-normal);
     position: relative;
+    box-sizing: border-box;
   }
 
   /* ========================================
      Color Themes
      ======================================== */
 
-  :host(:not([color])) .circle,
-  :host([color='primary']) .circle {
-    --radio-base: var(--color-primary);
-    --radio-contrast: var(--color-primary-contrast);
-    --radio-focus: var(--color-primary-focus);
+  :host(:not([color])),
+  :host([color='primary']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-primary));
+    --_dot-color: var(--radio-color, var(--color-primary-contrast));
+    --_focus-shadow: var(--color-primary-shadow);
   }
 
-  :host([color='secondary']) .circle {
-    --radio-base: var(--color-secondary);
-    --radio-contrast: var(--color-secondary-contrast);
-    --radio-focus: var(--color-secondary-focus);
+  :host([color='secondary']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-secondary));
+    --_dot-color: var(--radio-color, var(--color-secondary-contrast));
+    --_focus-shadow: var(--color-secondary-shadow);
   }
 
-  :host([color='success']) .circle {
-    --radio-base: var(--color-success);
-    --radio-contrast: var(--color-success-contrast);
-    --radio-focus: var(--color-success-focus);
+  :host([color='success']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-success));
+    --_dot-color: var(--radio-color, var(--color-success-contrast));
+    --_focus-shadow: var(--color-success-shadow);
   }
 
-  :host([color='warning']) .circle {
-    --radio-base: var(--color-warning);
-    --radio-contrast: var(--color-warning-contrast);
-    --radio-focus: var(--color-warning-focus);
+  :host([color='warning']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-warning));
+    --_dot-color: var(--radio-color, var(--color-warning-contrast));
+    --_focus-shadow: var(--color-warning-shadow);
   }
 
-  :host([color='error']) .circle {
-    --radio-base: var(--color-error);
-    --radio-contrast: var(--color-error-contrast);
-    --radio-focus: var(--color-error-focus);
+  :host([color='error']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-error));
+    --_dot-color: var(--radio-color, var(--color-error-contrast));
+    --_focus-shadow: var(--color-error-shadow);
   }
 
   /* ========================================
-     States
+     Checked State
      ======================================== */
 
   :host([checked]) .circle {
-    background: var(--radio-checked-bg, var(--radio-base));
-    border-color: var(--radio-checked-bg, var(--radio-base));
+    background: var(--_active-bg);
+    border-color: var(--_active-bg);
   }
 
+  /* ========================================
+     Focus State
+     ======================================== */
+
   input:focus-visible + .circle {
-    outline: var(--border-2) solid var(--radio-focus);
-    outline-offset: var(--border-2);
+    box-shadow: var(--_focus-shadow);
   }
 
   /* ========================================
@@ -126,18 +131,23 @@ const styles = css`
      ======================================== */
 
   .dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: 50%;
     height: 50%;
     border-radius: 50%;
-    background: var(--radio-color, var(--radio-contrast));
+    background: var(--_dot-color);
     opacity: 0;
-    transform: scale(0.5);
-    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translate(-50%, -50%) scale(0.5);
+    transition:
+      opacity var(--transition-spring),
+      transform var(--transition-spring);
   }
 
   :host([checked]) .dot {
     opacity: 1;
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 
   /* ========================================
@@ -145,13 +155,13 @@ const styles = css`
      ======================================== */
 
   :host([size='sm']) {
-    --radio-size: var(--size-4);
-    --radio-font-size: var(--text-xs);
+    --_size: var(--size-4);
+    --_font-size: var(--text-xs);
   }
 
   :host([size='lg']) {
-    --radio-size: var(--size-6);
-    --radio-font-size: var(--text-md);
+    --_size: var(--size-6);
+    --_font-size: var(--text-md);
   }
 
   /* ========================================
@@ -159,7 +169,7 @@ const styles = css`
      ======================================== */
 
   .label {
-    font-size: var(--radio-font-size);
+    font-size: var(--_font-size);
     color: var(--color-contrast);
   }
 `;

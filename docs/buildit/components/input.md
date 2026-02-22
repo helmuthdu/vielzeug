@@ -92,10 +92,10 @@ Different input types for various use cases.
 <ComponentPreview vertical>
 
 ```html
-<bit-input color="secondary" type="text" placeholder="Text input"></bit-input>
-<bit-input color="success" type="email" placeholder="email@example.com"></bit-input>
-<bit-input color="warning" type="password" placeholder="Password"></bit-input>
-<bit-input color="error" type="number" placeholder="123"></bit-input>
+<bit-input variant="bordered" color="secondary" type="text" placeholder="Text input"></bit-input>
+<bit-input variant="bordered" color="success" type="email" placeholder="email@example.com"></bit-input>
+<bit-input variant="bordered" color="warning" type="password" placeholder="Password"></bit-input>
+<bit-input variant="bordered" color="error" type="number" placeholder="123"></bit-input>
 ```
 
 </ComponentPreview>
@@ -107,9 +107,39 @@ Three sizes for different contexts.
 <ComponentPreview vertical>
 
 ```html
-<bit-input size="sm" placeholder="Small"></bit-input>
-<bit-input size="md" placeholder="Medium"></bit-input>
-<bit-input size="lg" placeholder="Large"></bit-input>
+<bit-input variant="flat" size="sm" placeholder="Small"></bit-input>
+<bit-input variant="flat" size="md" placeholder="Medium"></bit-input>
+<bit-input variant="flat" size="lg" placeholder="Large"></bit-input>
+```
+
+</ComponentPreview>
+
+### Rounded (Custom Border Radius)
+
+Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
+
+<ComponentPreview vertical>
+
+```html
+<!-- Default/Full: Pill shape (9999px) -->
+<bit-input rounded placeholder="Search..." variant="flat">
+  <span slot="prefix" class="material-symbols-rounded">search</span>
+</bit-input>
+
+<!-- Large: 0.5rem / 8px -->
+<bit-input rounded="lg" placeholder="Enter email" variant="bordered" label="Email"></bit-input>
+
+<!-- Extra Large: 0.75rem / 12px -->
+<bit-input rounded="xl" placeholder="Amount" variant="outline" size="lg">
+  <span slot="prefix">$</span>
+  <span slot="suffix">USD</span>
+</bit-input>
+
+<!-- 2XL: 1rem / 16px -->
+<bit-input rounded="2xl" placeholder="Full Name" variant="flat"></bit-input>
+
+<!-- 3XL: 1.5rem / 24px -->
+<bit-input rounded="3xl" placeholder="Website" variant="ghost"></bit-input>
 ```
 
 </ComponentPreview>
@@ -124,7 +154,7 @@ Add prefix or suffix content like icons or clear buttons using slots.
 
 ```html
 <bit-input placeholder="Search...">
-  <span slot="prefix">🔍</span>
+  <span slot="prefix" class="material-symbols-rounded">search</span>
 </bit-input>
 <bit-input placeholder="Enter amount">
   <span slot="prefix">$</span>
@@ -173,14 +203,14 @@ Combine labels with prefix and suffix slots for rich input fields.
 
 ```html
 <bit-input label="Search" placeholder="Type to search...">
-  <span slot="prefix">🔍</span>
+  <span slot="prefix" class="material-symbols-rounded">search</span>
 </bit-input>
 <bit-input label="Amount" value="1250">
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
 </bit-input>
 <bit-input label="Website" type="url" value="example.com">
-  <span slot="prefix">🌐</span>
+  <span slot="prefix" class="material-symbols-rounded">language</span>
 </bit-input>
 ```
 
@@ -209,7 +239,8 @@ Provide additional context or validation messages below the input using the `hel
 <bit-input label="Password" type="password" helper="Must be at least 8 characters long"></bit-input>
 <bit-input label="Email Address">
   <div slot="helper" style="color: var(--color-primary); font-weight: 500;">
-    💡 Verification link will be sent to this address
+    <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">lightbulb</span>
+    Verification link will be sent to this address
   </div>
 </bit-input>
 ```
