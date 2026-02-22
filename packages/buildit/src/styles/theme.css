@@ -107,13 +107,13 @@
   --blur-2xl: 40px;
   --blur-3xl: 64px;
 
-  --shadow-2xs: 0 1px rgb(0 0 0 / 0.05);
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+  --shadow-2xl: 0 35px 60px -15px rgb(0 0 0 / 0.3);
   --inset-shadow-2xs: inset 0 1px rgb(0 0 0 / 0.05);
   --inset-shadow-xs: inset 0 1px 1px rgb(0 0 0 / 0.05);
   --inset-shadow-sm: inset 0 2px 4px rgb(0 0 0 / 0.05);
@@ -132,10 +132,11 @@
   /* Typography */
   --text-color-heading: var(--color-contrast-900);
   --text-color-body: var(--color-contrast-800);
-  --text-color-secondary: var(--color-contrast-700);
-  --text-color-tertiary: var(--color-contrast-600);
-  --text-color-disabled: var(--color-contrast-500);
+  --text-color-secondary: var(--color-contrast-600);
+  --text-color-tertiary: var(--color-contrast-500);
+  --text-color-disabled: var(--color-contrast-400);
   --text-color-contrast: var(--color-contrast-100);
+  --font-family-sans: "Inter Variable", "Plus Jakarta Sans Variable", system-ui, -apple-system, sans-serif;
   --font-weight-thin: 100;
   --font-weight-extralight: 200;
   --font-weight-light: 300;
@@ -145,6 +146,13 @@
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
+
+  /* Modern Interactions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms var(--ease-in-out);
+  --transition-normal: 250ms var(--ease-in-out);
+  --transition-spring: 400ms var(--ease-spring);
   --leading-xxs: 0.75rem;
   --leading-xs: 1rem;
   --leading-sm: 1.25rem;
@@ -194,12 +202,12 @@
     --color-canvas: var(--color-contrast-50);
     --color-contrast: var(--color-contrast-900);
 
-    /* Primary - Dark mode variations */
-    --color-primary: hsl(210deg 100% 60% / 91%);
-    --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
-    --color-primary-content: hsl(210deg 100% 80% / 91%);
-    --color-primary-contrast: hsl(210deg 100% 15% / 91%);
-    --color-primary-focus: hsl(210deg 100% 65% / 91%);
+    /* Primary - Electric Violet */
+    --color-primary: hsl(260deg 100% 70% / 100%);
+    --color-primary-backdrop: hsl(260deg 100% 30% / 40%);
+    --color-primary-content: hsl(260deg 100% 95% / 100%);
+    --color-primary-contrast: hsl(260deg 100% 10% / 100%);
+    --color-primary-focus: hsl(260deg 100% 75% / 100%);
 
     /* Secondary - Dark mode variations */
     --color-secondary: hsl(220deg 16% 78% / 91%);
@@ -306,13 +314,13 @@ html:not(.dark) {
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
 
-  /* Primary - Vibrant blue (good for all colorblind types) */
-  --color-primary: hsl(210deg 100% 48% / 91%);
-  --color-primary-backdrop: hsl(210deg 100% 88% / 83%);
-  --color-primary-content: hsl(210deg 100% 15% / 91%);
-  --color-primary-contrast: hsl(210deg 100% 97% / 91%);
-  --color-primary-focus: hsl(210deg 100% 55% / 91%);
-  --color-primary-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent), var(--shadow-sm);
+  /* Primary - Electric Violet */
+  --color-primary: hsl(260deg 100% 65% / 100%);
+  --color-primary-backdrop: hsl(260deg 100% 92% / 100%);
+  --color-primary-content: hsl(260deg 100% 15% / 100%);
+  --color-primary-contrast: hsl(260deg 100% 98% / 100%);
+  --color-primary-focus: hsl(260deg 100% 70% / 100%);
+  --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
   /* Secondary - Blue-gray colors for light mode */
   --color-secondary: hsl(220deg 16% 28% / 91%);
@@ -346,4 +354,3 @@ html:not(.dark) {
   --color-error-focus: hsl(340deg 82% 58% / 91%);
   --color-error-shadow: 0 0 0 2px color-mix(in srgb, var(--color-error) 20%, transparent), var(--shadow-sm);
 }
-

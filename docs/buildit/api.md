@@ -10,6 +10,7 @@ import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/checkbox';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/radio';
+import '@vielzeug/buildit/switch';
 ```
 
 ## Button Component
@@ -129,6 +130,46 @@ Refer to the component source for a full list of overridable CSS variables.
 | Event    | Detail                                                              | Description                        |
 | -------- | ------------------------------------------------------------------- | ---------------------------------- |
 | `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
+
+## Switch Component
+
+### Tag Name
+
+`<bit-switch>`
+
+### Attributes
+
+| Attribute  | Type                                                            | Default     | Description                |
+| ---------- | --------------------------------------------------------------- | ----------- | -------------------------- |
+| `checked`  | `boolean`                                                       | `false`     | Switch checked state       |
+| `disabled` | `boolean`                                                       | `false`     | Disable the switch         |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color             |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size                |
+| `name`     | `string`                                                        | -           | Form field name            |
+| `value`    | `string`                                                        | -           | Form field value when on   |
+
+### Slots
+
+| Slot      | Description         |
+| --------- | ------------------- |
+| (default) | Switch label content |
+
+### Events
+
+| Event    | Detail                                                              | Description                        |
+| -------- | ------------------------------------------------------------------- | ---------------------------------- |
+| `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
+
+### CSS Custom Properties
+
+| Property             | Description                  | Default            |
+| -------------------- | ---------------------------- | ------------------ |
+| `--switch-width`     | Width of the switch track    | Size-dependent     |
+| `--switch-height`    | Height of the switch track   | Size-dependent     |
+| `--switch-bg`        | Background when checked      | Color-dependent    |
+| `--switch-track-bg`  | Background of unchecked track| `--color-contrast-300` |
+| `--switch-thumb-bg`  | Background of the thumb      | `white`            |
+| `--switch-font-size` | Font size of the label       | Size-dependent     |
 
 ### CSS Custom Properties
 

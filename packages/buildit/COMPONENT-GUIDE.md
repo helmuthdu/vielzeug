@@ -24,6 +24,7 @@ Each section is tagged as:
 - ✅ `bit-checkbox` – Checkbox input with indeterminate state
 - ✅ `bit-radio` – Radio button input with keyboard navigation
 - ✅ `bit-input` – Text input with variants and slots
+- ✅ `bit-switch` – Toggle switch with color and size variants
 
 ---
 

@@ -37,7 +37,7 @@ const styles = css`
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
     --accordion-details-radius: var(--rounded-md);
-    --accordion-item-transition: 200ms ease-in-out;
+    --accordion-item-transition: var(--transition-normal);
     /* Default size (medium) */
     --accordion-item-details-padding: var(--size-3) var(--size-4);
     --accordion-item-summary-padding: var(--size-1) var(--size-5);
@@ -211,7 +211,6 @@ const styles = css`
     border-color: color-mix(in srgb, var(--color-secondary-700) 30%, transparent);
   }
 
-
   /* ========================================
      Size Variants
      ======================================== */
@@ -223,7 +222,6 @@ const styles = css`
     --accordion-item-subtitle-size: var(--text-xs);
     --accordion-item-body: var(--text-xs);
   }
-
 
   :host([size='lg']) {
     --accordion-item-details-padding: var(--size-4) var(--size-4);
@@ -247,8 +245,8 @@ const styles = css`
      ======================================== */
 
   .chevron {
-    width: 1em;
-    height: 1em;
+    width: var(--size-5);
+    height: var(--size-5);
     transition: transform var(--accordion-item-transition);
     margin-left: auto;
   }

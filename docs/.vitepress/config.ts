@@ -105,6 +105,7 @@ export default defineConfig({
             { link: '/buildit/components/checkbox', text: 'Checkbox' },
             { link: '/buildit/components/input', text: 'Input' },
             { link: '/buildit/components/radio', text: 'Radio' },
+            { link: '/buildit/components/switch', text: 'Switch' },
           ],
           text: 'Form Components',
         },

@@ -159,8 +159,9 @@ const styles = css`
 
   :host(:not([disabled])) .field:focus-within {
     border-color: var(--input-focus);
-    box-shadow: var(--input-shadow, var(--shadow-sm));
+    box-shadow: var(--input-shadow, var(--color-primary-shadow));
     background: var(--color-canvas);
+    transform: translateY(-1px);
   }
 
   :host(:not([disabled]):not([variant='glass'])) .field:focus-within .label-inset,
@@ -195,7 +196,7 @@ const styles = css`
   /* ========================================
      Color Themes
      ======================================== */
-  
+
   :host(:not([color])),
   :host([color='primary']) {
     --input-base: var(--color-primary);
@@ -298,8 +299,8 @@ const styles = css`
 
   :host([variant='glass']) .field,
   :host([variant='frost']) .field {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    backdrop-filter: blur(var(--blur-md)) saturate(190%);
+    box-shadow: var(--shadow-md), inset 0 0 0 1px rgb(255 255 255 / 0.1);
   }
 
   :host([variant='glass']) .field {
