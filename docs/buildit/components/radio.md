@@ -62,6 +62,7 @@ Three sizes for different contexts.
 <bit-radio checked name="size-lg" size="lg">Large</bit-radio>
 ```
 
+
 </ComponentPreview>
 
 ## States

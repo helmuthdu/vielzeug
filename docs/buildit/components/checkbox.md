@@ -56,6 +56,7 @@ Three sizes for different contexts.
 <bit-checkbox checked size="lg">Large</bit-checkbox>
 ```
 
+
 </ComponentPreview>
 
 ## States
@@ -64,7 +65,7 @@ Three sizes for different contexts.
 
 Useful for "select all" patterns where some items are selected.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-checkbox indeterminate>Indeterminate</bit-checkbox>
@@ -76,7 +77,7 @@ Useful for "select all" patterns where some items are selected.
 
 Prevent interaction and reduce opacity for unavailable options.
 
-<ComponentPreview>
+<ComponentPreview center>
 
 ```html
 <bit-checkbox disabled>Disabled unchecked</bit-checkbox>
