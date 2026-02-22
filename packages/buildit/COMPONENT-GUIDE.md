@@ -174,280 +174,263 @@ export default {};
 
 ## 5. Design System Integration
 
-All components must integrate with the unified design system.
+All components integrate with the unified design system using CSS custom properties and design tokens.
 
-### 5.1 Platform Strategy [Required]
+### 5.1 Core Principles [Required]
 
-- Prefer brand-first components over platform-native lookalikes.
-- Behavior and appearance should be unified across platforms (iOS, Android, web) where possible.
-- The theme automatically adapts to light/dark mode via `prefers-color-scheme`.
+- Use design tokens exclusively—avoid hardcoded values
+- Set default color theme (primary) in base selector
+- Structure CSS with clear section headers
+- Support automatic light/dark mode via `prefers-color-scheme`
 
-### 5.2 Variants [Required]
+### 5.2 CSS Organization Pattern [Required]
 
-Standard visual variants for components:
+Follow this structure for all components:
+
+```css
+/* ========================================
+   Base Styles & Defaults
+   ======================================== */
+
+:host {
+  display: inline-flex;
+  /* Default size (medium) */
+  --component-size: var(--size-5);
+  --component-font-size: var(--text-sm);
+}
+
+.element {
+  /* Layout properties */
+  width: 100%;
+  /* Default color (primary) */
+  --component-base: var(--color-primary);
+  --component-contrast: var(--color-primary-contrast);
+  --component-focus: var(--color-primary-focus);
+}
+
+/* ========================================
+   Color Themes
+   ======================================== */
+
+:host([color='secondary']) .element {
+  --component-base: var(--color-secondary);
+  --component-contrast: var(--color-secondary-contrast);
+  --component-focus: var(--color-secondary-focus);
+}
+
+/* ========================================
+   States
+   ======================================== */
+
+:host([checked]) .element { }
+
+/* ========================================
+   Size Variants
+   ======================================== */
+
+:host([size='sm']) { }
+```
+
+### 5.3 Color System [Required]
+
+Semantic colors with 5 variants each:
+
+```typescript
+type Color = 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+```
+
+**Per-color tokens:**
+- `--color-{name}` - Base color for backgrounds
+- `--color-{name}-contrast` - High contrast text on base
+- `--color-{name}-focus` - Hover/focus states
+- `--color-{name}-content` - Alternative text color
+- `--color-{name}-backdrop` - Subtle background/overlay
+
+**Implementation:**
+
+```css
+/* Set default in base element */
+.box {
+  --checkbox-base: var(--color-primary);
+  --checkbox-contrast: var(--color-primary-contrast);
+  --checkbox-focus: var(--color-primary-focus);
+}
+
+/* Override per color */
+:host([color='success']) .box {
+  --checkbox-base: var(--color-success);
+  --checkbox-contrast: var(--color-success-contrast);
+  --checkbox-focus: var(--color-success-focus);
+}
+```
+
+### 5.4 Visual Variants [Required]
+
+Standard variants for interactive components:
 
 ```typescript
 type Variant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
 ```
 
-| Variant | Aesthetic | Key Tokens |
-|---------|-----------|------------|
-| `solid` | High emphasis, filled background | `--color-{name}`, `--color-{name}-contrast` |
-| `flat` | Medium emphasis, subtle filled background | `--color-{name}-backdrop`, `--color-{name}` |
-| `bordered` | Subtle filled background with prominent border | `--color-{name}-backdrop`, `--color-{name}` |
-| `outline` | Low emphasis, transparent background with border | `transparent`, `--color-{name}` |
-| `ghost` | Minimal emphasis, background appears on hover | `transparent`, `--color-{name}-backdrop` (hover) |
-| `text` | Cleanest look, often used for secondary actions | `transparent`, color changes on hover |
-| `glass` | Modern translucent effect with backdrop blur | `backdrop-filter`, `color-mix`, `--color-contrast` |
-| `frost` | Subtle "frozen" effect with higher transparency | `backdrop-filter`, `color-mix`, `--color-canvas` |
+| Variant | Use Case | Key Pattern |
+|---------|----------|-------------|
+| `solid` | Default, high emphasis | `var(--component-base)` background |
+| `flat` | Medium emphasis | `var(--component-backdrop)` background |
+| `bordered` | Defined boundaries | `var(--component-backdrop)` + `var(--component-base)` border |
+| `outline` | Low emphasis | `transparent` + `var(--component-base)` border |
+| `ghost` | Minimal | `transparent`, hover shows background |
+| `text` | Minimal | `transparent`, no background |
+| `glass` | Modern translucent | `backdrop-filter`, `color-mix`, vibrant |
+| `frost` | Subtle translucent | `backdrop-filter`, `color-mix`, neutral |
 
-### 5.3 Modern Effects (Glass & Frost) [Recommended]
-
-When implementing `glass` and `frost` variants, use the following patterns to ensure consistent quality across the library.
-
-#### Glass Variant
-
-The **glass** variant creates a modern, vibrant translucent effect by blending the component's semantic color with the global contrast color. It uses backdrop blur, color saturation, and brightness adjustments for a glassy, elevated appearance.
-
-**Key characteristics:**
-- Vibrant, color-tinted transparency
-- Works best over colorful backgrounds or images
-- Uses semantic color tokens for theming
-- Includes text shadows for better legibility
-
-**Implementation pattern for buttons:**
+**Implementation:**
 
 ```css
+/* Solid (default) - no explicit rule needed if set in base */
+button {
+  background: var(--button-bg, var(--button-base));
+}
+
+/* Flat */
+:host([variant='flat']) button {
+  background: var(--button-bg, var(--button-backdrop));
+  color: var(--button-base);
+}
+
+/* Glass - consolidate shared effects */
+:host([variant='glass']) button,
+:host([variant='frost']) button {
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+}
+
 :host([variant='glass']) button {
   background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
-  border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 40%, transparent));
-  backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-  color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
-  text-shadow: var(--text-shadow-xs);
+  filter: brightness(1.05);
 }
 
-:host([variant='glass']) button:hover {
-  background: color-mix(in srgb, var(--button-backdrop) 60%, var(--button-base) 40%);
-  border-color: color-mix(in srgb, var(--button-focus) 55%, transparent);
-}
-
-:host([variant='glass']) button:active {
-  background: color-mix(in srgb, var(--button-backdrop) 50%, var(--button-base) 50%);
-  border-color: color-mix(in srgb, var(--button-focus) 65%, transparent);
-}
-```
-
-**Implementation pattern for inputs:**
-
-```css
-:host([variant='glass']) {
-  --input-bg: color-mix(in srgb, var(--input-base) 30%, var(--color-contrast) 10%);
-  --input-border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
-}
-
-:host([variant='glass']) .field {
-  backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
-  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-}
-
-:host([variant='glass']:not([disabled])) .field:hover {
-  background: color-mix(in srgb, var(--input-backdrop) 60%, var(--input-base) 40%);
-  border-color: color-mix(in srgb, var(--input-focus) 50%, transparent);
-}
-
-:host([variant='glass']:not([disabled])) .field:focus-within {
-  background: color-mix(in srgb, var(--input-backdrop) 50%, var(--input-base) 50%);
-  border-color: color-mix(in srgb, var(--input-focus) 60%, transparent);
-}
-
-/* Text styling for glass */
-:host([variant='glass']) input {
-  color: var(--text-color-contrast);
-  text-shadow: var(--text-shadow-xs);
-}
-
-:host([variant='glass']) .label-inset {
-  color: color-mix(in srgb, var(--text-color-contrast) 80%, transparent);
-}
-```
-
-#### Frost Variant
-
-The **frost** variant creates a subtle, neutral "frosted glass" effect by using the system canvas color with high transparency. It provides a clean, minimal aesthetic that works across different backgrounds without color bias.
-
-**Key characteristics:**
-- Neutral, subtle transparency
-- Color-agnostic (uses canvas color, not semantic colors)
-- Works well over any background
-- Lighter text shadows for subtlety
-
-**Implementation pattern for buttons:**
-
-```css
 :host([variant='frost']) button {
   background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-  border: var(--button-border, var(--border) solid color-mix(in srgb, var(--color-contrast-400) 40%, transparent));
-  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-  color: var(--button-color, var(--button-content));
-  text-shadow: var(--text-shadow-2xs);
-}
-
-:host([variant='frost']) button:hover {
-  background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-  border-color: color-mix(in srgb, var(--button-focus) 30%, transparent);
-}
-
-:host([variant='frost']) button:active {
-  background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-  border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
 }
 ```
 
-**Implementation pattern for inputs:**
-
-```css
-:host([variant='frost']) {
-  --input-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-  --input-border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
-}
-
-:host([variant='frost']) .field {
-  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-}
-
-:host([variant='frost']:not([disabled])) .field:hover {
-  background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-  border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
-}
-
-:host([variant='frost']:not([disabled])) .field:focus-within {
-  background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-  border-color: color-mix(in srgb, var(--input-focus) 40%, transparent);
-}
-
-/* Text styling for frost */
-:host([variant='frost']) input {
-  color: var(--input-content);
-  text-shadow: var(--text-shadow-2xs);
-}
-```
-
-#### Design Token Reference for Glass & Frost
-
-When implementing glass and frost variants, use these token patterns:
-
-**For Glass:**
-- Background: Mix `--{component}-base` (30%) + `--color-contrast` (10%)
-- Border: Mix `--{component}-focus` (30-65% depending on state) + `transparent`
-- Backdrop: `blur(var(--blur-lg)) saturate(180%) brightness(1.05-1.1)`
-- Text: `--text-color-contrast` or `color-mix` with `--{component}-contrast` (90%)
-- Text shadow: `var(--text-shadow-xs)` or `var(--text-shadow-2xs)`
-
-**For Frost:**
-- Background: Mix `--color-canvas` (55-70% depending on state) + `transparent`
-- Border: Mix `--color-contrast-400` or `--{component}-focus` (30-40%) + `transparent`
-- Backdrop: `blur(var(--blur-lg)) saturate(180%)`
-- Text: `--{component}-content` or semantic text color
-- Text shadow: `var(--text-shadow-2xs)`
-
-**Best practices:**
-- Always test glass/frost variants over diverse backgrounds (solid colors, gradients, images)
-- Ensure sufficient contrast for text legibility (WCAG AA minimum)
-- Use hover and focus states with adjusted opacity/border for interactivity
-- Apply text shadows for improved readability over complex backgrounds
-- Consider disabling blur effects on low-end devices for performance
-
-### 5.4 Colors [Required]
-
-Semantic color palette with automatic light/dark mode support:
-
-```typescript
-type Color = 'primary' | 'secondary' | 'success' | 'warning' | 'error';
-
-/* Usage - each color has 5 variants */
-:host([color='primary']) {
-  --component-bg: var(--color-primary);
-  --component-text: var(--color-primary-contrast);
-  --component-focus: var(--color-primary-focus);
-  --component-content: var(--color-primary-content);
-  --component-backdrop: var(--color-primary-backdrop);
-}
-```
-
-**Available color tokens per semantic color:**
-- `--color-{name}` - Base color
-- `--color-{name}-contrast` - High contrast text/foreground
-- `--color-{name}-focus` - Focus/hover state
-- `--color-{name}-content` - Alternative content color
-- `--color-{name}-backdrop` - Subtle background/overlay
-
-### 5.5 Sizes [Required]
+### 5.5 Size System [Required]
 
 ```typescript
 type Size = 'sm' | 'md' | 'lg';
-
-/* Usage with spacing tokens */
-:host([size='sm']) {
-  --component-padding: var(--size-1-5) var(--size-3);
-  --component-font-size: var(--text-sm);
-  height: var(--size-8);
-}
-
-:host([size='md']) {
-  --component-padding: var(--size-2) var(--size-4);
-  --component-font-size: var(--text-sm);
-  height: var(--size-10);
-}
-
-:host([size='lg']) {
-  --component-padding: var(--size-2-5) var(--size-5);
-  --component-font-size: var(--text-md);
-  height: var(--size-12);
-}
 ```
 
-### 5.6 Typography [Required]
+**Set defaults in base, override per size:**
 
-Use semantic typography tokens:
-
-```typescript
-type TextSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
-type Weight = 'thin' | 'extralight' | 'light' | 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold' | 'black';
-type Leading = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
-
-/* Usage */
-:host([size='md']) {
-  font-size: var(--text-md);
+```css
+button {
+  /* Default size (medium) */
+  --button-padding: var(--size-2) var(--size-4);
+  --button-font-size: var(--text-sm);
+  height: var(--size-10);
   line-height: var(--leading-md);
 }
 
-:host([weight='bold']) {
-  font-weight: var(--font-weight-bold);
+:host([size='sm']) button {
+  --button-padding: var(--size-1-5) var(--size-3);
+  height: var(--size-8);
+  line-height: var(--leading-sm);
 }
 
-/* Semantic text colors (auto-adapt to theme) */
-:host {
-  color: var(--text-color-body);
-}
-
-h1, h2, h3 {
-  color: var(--text-color-heading);
-}
-
-.secondary-text {
-  color: var(--text-color-secondary);
+:host([size='lg']) button {
+  --button-padding: var(--size-2-5) var(--size-5);
+  --button-font-size: var(--text-md);
+  height: var(--size-12);
+  line-height: var(--leading-lg);
 }
 ```
 
-**Text color tokens:**
-- `--text-color-heading` - Headings (highest contrast)
-- `--text-color-body` - Body text
-- `--text-color-secondary` - Secondary text
-- `--text-color-tertiary` - Tertiary/muted text
-- `--text-color-disabled` - Disabled text
+### 5.6 Design Token Reference
+
+**Spacing Scale** (use exclusively, no arbitrary values):
+```css
+--size-1 (4px), --size-2 (8px), --size-3 (12px), --size-4 (16px)
+--size-5 (20px), --size-6 (24px), --size-8 (32px), --size-10 (40px)
+--size-12 (48px), --size-16 (64px) /* ... up to --size-96 */
+```
+
+**Typography:**
+```css
+/* Font sizes */
+--text-xs (12px), --text-sm (14px), --text-md (16px), --text-lg (18px)
+--text-xl (20px), --text-2xl (24px) /* ... up to --text-9xl */
+
+/* Font weights */
+--font-weight-normal (400), --font-weight-medium (500)
+--font-weight-semibold (600), --font-weight-bold (700)
+
+/* Line heights */
+--leading-sm, --leading-md, --leading-lg
+
+/* Semantic text colors (auto-adapt to theme) */
+--text-color-heading, --text-color-body, --text-color-secondary
+```
+
+**Effects:**
+```css
+/* Border radius */
+--rounded-sm (4px), --rounded-md (6px), --rounded-lg (8px)
+--rounded-xl (12px), --rounded-full (9999px)
+
+/* Shadows */
+--shadow-sm, --shadow-md, --shadow-lg, --shadow-xl
+--inset-shadow-xs, --inset-shadow-sm
+
+/* Blur */
+--blur-sm (8px), --blur-md (12px), --blur-lg (16px), --blur-xl (24px)
+
+/* Text shadows */
+--text-shadow-xs, --text-shadow-sm, --text-shadow-md
+```
+
+**Borders:**
+```css
+--border (1px), --border-2 (2px), --border-4 (4px)
+```
+
+### 5.7 Best Practices
+
+**✅ Do:**
+```css
+/* Use design tokens */
+padding: var(--size-2) var(--size-4);
+font-size: var(--text-sm);
+border-radius: var(--rounded-md);
+box-shadow: var(--shadow-sm);
+
+/* Set defaults in base selector */
+button {
+  --button-base: var(--color-primary);
+  /* ... */
+}
+
+/* Consolidate identical rules */
+:host([variant='glass']) button,
+:host([variant='frost']) button {
+  backdrop-filter: blur(var(--blur-lg));
+}
+```
+
+**❌ Don't:**
+```css
+/* Hardcoded values */
+padding: 0.5rem 1rem;
+font-size: 14px;
+border-radius: 6px;
+
+/* Duplicate color defaults */
+:host(:not([color])) button,
+:host([color='primary']) button { }
+
+/* Repeat identical properties */
+:host([variant='glass']) { backdrop-filter: blur(16px); }
+:host([variant='frost']) { backdrop-filter: blur(16px); }
+```
 - `--text-color-contrast` - Text on dark backgrounds
 
 ### 5.7 Spacing & Grid [Required]

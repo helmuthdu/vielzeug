@@ -38,6 +38,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
+  /* Base styles and default color theme (primary) */
   :host {
     display: inline-flex;
     flex-direction: column;
@@ -76,7 +77,7 @@ const styles = css`
     padding-block: var(--input-padding-y);
     box-sizing: border-box;
     box-shadow: var(--shadow-2xs);
-    background: var(--input-bg, transparent);
+    background: var(--input-bg, var(--color-contrast-100));
     transition:
       background var(--input-transition),
       border-color var(--input-transition),
@@ -92,30 +93,24 @@ const styles = css`
     flex: 1;
   }
 
-  /* Inset Label Styles */
-  :host([label]:not([label-placement='outside'])) .field {
-    padding-block: var(--size-2);
-    min-height: var(--size-12);
+  /* Label Styles - Common */
+  .label-inset,
+  .label-outside {
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-500);
+    transition: color var(--input-transition);
+    user-select: none;
   }
 
   .label-inset {
     font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    color: var(--color-contrast-500);
     line-height: var(--leading-tight);
-    transition: color var(--input-transition);
-    user-select: none;
     margin-bottom: 2px;
   }
 
-  /* Outside Label Styles */
   .label-outside {
     font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    color: var(--color-contrast-500);
     line-height: var(--leading-none);
-    transition: color var(--input-transition);
-    user-select: none;
   }
 
   /* Helper Text Styles */
@@ -179,7 +174,10 @@ const styles = css`
     opacity: 1;
   }
 
-  /* Size variants */
+  /* ========================================
+     Size Variants
+     ======================================== */
+
   :host([size='sm']) {
     --input-font-size: var(--text-xs);
     --input-padding-y: var(--size-1);
@@ -194,7 +192,10 @@ const styles = css`
     --input-gap: var(--size-2-5);
   }
 
-  /* Color themes */
+  /* ========================================
+     Color Themes
+     ======================================== */
+  
   :host(:not([color])),
   :host([color='primary']) {
     --input-base: var(--color-primary);
@@ -246,11 +247,9 @@ const styles = css`
     --input-shadow: var(--color-error-shadow);
   }
 
-  /* Variants */
-  :host([variant='solid']),
-  :host(:not([variant])) {
-    --input-bg: var(--color-contrast-100);
-  }
+  /* ========================================
+     Visual Variants
+     ======================================== */
 
   :host([variant='flat']) {
     --input-bg: color-mix(in srgb, var(--input-backdrop) 8%, var(--color-contrast-100));
@@ -265,7 +264,6 @@ const styles = css`
 
   :host([variant='outline']) {
     --input-bg: transparent;
-    --input-border-color: var(--color-contrast-300);
   }
 
   :host([variant='ghost']) {
@@ -273,12 +271,12 @@ const styles = css`
     --input-border-color: transparent;
   }
 
-  :host([variant='ghost']:not([disabled])) .field:hover {
-    background: var(--color-contrast-100);
-  }
-
   :host([variant='ghost']) .field {
     box-shadow: none;
+  }
+
+  :host([variant='ghost']:not([disabled])) .field:hover {
+    background: var(--color-contrast-100);
   }
 
   :host([variant='text']) .field {
@@ -290,10 +288,7 @@ const styles = css`
   }
 
   :host([variant='text']:not([disabled])) .field:focus-within {
-    border-color: transparent;
     border-bottom: var(--border-2) solid var(--input-focus);
-    background: transparent;
-    box-shadow: none;
   }
 
   :host([variant='glass']) {
@@ -301,9 +296,14 @@ const styles = css`
     --input-border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
   }
 
-  :host([variant='glass']) .field {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
+  :host([variant='glass']) .field,
+  :host([variant='frost']) .field {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  }
+
+  :host([variant='glass']) .field {
+    filter: brightness(1.1);
   }
 
   :host([variant='glass']:not([disabled])) .field:hover {
@@ -333,11 +333,6 @@ const styles = css`
   :host([variant='frost']) {
     --input-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     --input-border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
-  }
-
-  :host([variant='frost']) .field {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 
   :host([variant='frost']:not([disabled])) .field:hover {

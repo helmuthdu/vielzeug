@@ -7,7 +7,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  *
  * @attr {boolean} expanded - Whether the item is expanded (synced with details[open])
  * @attr {boolean} disabled - Whether the item is disabled
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for the accordion body content
@@ -29,10 +29,21 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
   :host {
     display: block;
+    color: var(--accordion-item-body-color, var(--text-color-body));
     --accordion-details-radius: var(--rounded-md);
     --accordion-item-transition: 200ms ease-in-out;
+    /* Default size (medium) */
+    --accordion-item-details-padding: var(--size-3) var(--size-4);
+    --accordion-item-summary-padding: var(--size-1) var(--size-5);
+    --accordion-item-title: var(--text-md);
+    --accordion-item-subtitle-size: var(--text-sm);
+    --accordion-item-body: var(--text-sm);
   }
 
   details {
@@ -71,13 +82,14 @@ const styles = css`
   }
 
   .subtitle {
-    font-size: var(--accordion-item-subtitle);
-    color: var(--color-contrast-700);
+    font-size: var(--accordion-item-subtitle-size);
+    color: var(--accordion-item-subtitle-color, var(--text-color-secondary));
     line-height: var(--leading-md);
   }
 
   .title {
     font-weight: var(--font-weight-medium);
+    color: var(--accordion-item-title-color, var(--text-color-heading));
   }
 
   .content-wrapper {
@@ -90,14 +102,17 @@ const styles = css`
     border-radius: var(--accordion-summary-radius);
   }
 
-  /* Variants */
-  :host(:not([variant])),
+  /* ========================================
+     Visual Variants
+     ======================================== */
+
+  :host,
   :host([variant='solid']) {
     --accordion-item-bg: var(--color-contrast-100);
     --accordion-item-border-color: transparent;
   }
 
-  :host(:not([variant])) summary:hover,
+  :host summary:hover,
   :host([variant='solid']) summary:hover {
     background: var(--color-contrast-200);
   }
@@ -143,43 +158,94 @@ const styles = css`
     --accordion-item-border-color: transparent;
   }
 
-  :host([variant='text']) summary:hover {
-    /* Intentionally no hover background for text variant */
+  :host([variant='glass']) {
+    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    --accordion-item-border-color: color-mix(in srgb, var(--color-secondary-700) 40%, transparent);
+    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
+    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
+    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
   }
 
-  /* Sizes */
+  :host([variant='glass']) details,
+  :host([variant='frost']) details {
+    border-radius: inherit;
+  }
+
+  :host([variant='glass']) summary,
+  :host([variant='frost']) summary {
+    border-radius: inherit;
+  }
+
+  :host([variant='glass']) summary {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    text-shadow: var(--text-shadow-xs);
+  }
+
+  :host([variant='frost']) summary {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    text-shadow: var(--text-shadow-2xs);
+  }
+
+  :host([variant='glass']) summary:hover {
+    background: color-mix(in srgb, var(--color-secondary-200) 60%, var(--color-secondary) 40%);
+    border-color: color-mix(in srgb, var(--color-secondary-700) 55%, transparent);
+  }
+
+  :host([variant='glass']) .content-wrapper,
+  :host([variant='frost']) .content-wrapper {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    border-radius: 0;
+  }
+
+  :host([variant='glass']) .content-wrapper {
+    filter: brightness(1.05);
+  }
+
+  :host([variant='frost']) {
+    --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    --accordion-item-border-color: transparent;
+  }
+
+  :host([variant='frost']) summary:hover {
+    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+    border-color: color-mix(in srgb, var(--color-secondary-700) 30%, transparent);
+  }
+
+
+  /* ========================================
+     Size Variants
+     ======================================== */
+
   :host([size='sm']) {
     --accordion-item-details-padding: var(--size-2) var(--size-4);
     --accordion-item-summary-padding: var(--size-1) var(--size-5);
     --accordion-item-title: var(--text-sm);
-    --accordion-item-subtitle: var(--text-xs);
+    --accordion-item-subtitle-size: var(--text-xs);
     --accordion-item-body: var(--text-xs);
   }
 
-  :host(:not([size])),
-  :host([size='md']) {
-    --accordion-item-details-padding: var(--size-3) var(--size-4);
-    --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-md);
-    --accordion-item-subtitle: var(--text-sm);
-    --accordion-item-body: var(--text-sm);
-  }
 
   :host([size='lg']) {
     --accordion-item-details-padding: var(--size-4) var(--size-4);
     --accordion-item-summary-padding: var(--size-1) var(--size-5);
     --accordion-item-title: var(--text-lg);
-    --accordion-item-subtitle: var(--text-md);
+    --accordion-item-subtitle-size: var(--text-md);
     --accordion-item-body: var(--text-md);
   }
 
-  /* States */
+  /* ========================================
+     States
+     ======================================== */
+
   :host([disabled]) {
     opacity: 0.6;
     pointer-events: none;
   }
 
-  /* Chevron animation */
+  /* ========================================
+     Chevron Animation
+     ======================================== */
+
   .chevron {
     width: 1em;
     height: 1em;
@@ -191,6 +257,7 @@ const styles = css`
     transform: rotate(-90deg);
   }
 
+  /* Expanded state - adjust border radius */
   :host([expanded]) {
     --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
     --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
@@ -201,7 +268,7 @@ export type AccordionItemProps = {
   expanded?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
 };
 
 defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {

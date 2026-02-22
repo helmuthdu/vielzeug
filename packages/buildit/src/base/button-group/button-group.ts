@@ -27,25 +27,34 @@ import { css, defineElement, html } from '@vielzeug/craftit';
 
 // -------------------- Styles --------------------
 const styles = css`
+  /* ========================================
+     Base Styles
+     ======================================== */
+
   :host {
     display: inline-flex;
     --group-gap: var(--size-2);
     --group-radius: var(--rounded-md);
   }
 
-  /* Horizontal orientation (default) */
   .button-group {
     display: flex;
     flex-direction: row;
     gap: var(--group-gap);
   }
 
-  /* Vertical orientation */
+  /* ========================================
+     Orientation
+     ======================================== */
+
   :host([orientation='vertical']) .button-group {
     flex-direction: column;
   }
 
-  /* Full width */
+  /* ========================================
+     Full Width
+     ======================================== */
+
   :host([full-width]) {
     display: flex;
     width: 100%;
@@ -59,12 +68,22 @@ const styles = css`
     flex: 1;
   }
 
-  /* Attached mode - no gap, connected buttons */
+  /* ========================================
+     Attached Mode
+     ======================================== */
+
   :host([attached]) .button-group {
     gap: 0;
   }
 
-  /* Horizontal attached - remove inner borders and radius */
+  /* Ensure attached buttons have proper z-index on hover/focus */
+  :host([attached]) ::slotted(bit-button:hover),
+  :host([attached]) ::slotted(bit-button:focus-within) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Horizontal attached - remove inner borders and round corners */
   :host([attached]:not([orientation='vertical'])) ::slotted(bit-button) {
     --button-radius: 0;
     margin-left: calc(-1 * var(--border));
@@ -83,7 +102,7 @@ const styles = css`
     --button-radius: var(--group-radius);
   }
 
-  /* Vertical attached - remove inner borders and radius */
+  /* Vertical attached - remove inner borders and round corners */
   :host([attached][orientation='vertical']) ::slotted(bit-button) {
     --button-radius: 0;
     margin-top: calc(-1 * var(--border));
@@ -100,13 +119,6 @@ const styles = css`
 
   :host([attached][orientation='vertical']) ::slotted(bit-button:only-child) {
     --button-radius: var(--group-radius);
-  }
-
-  /* Ensure attached buttons have proper z-index on hover/focus */
-  :host([attached]) ::slotted(bit-button:hover),
-  :host([attached]) ::slotted(bit-button:focus-within) {
-    position: relative;
-    z-index: 1;
   }
 `;
 

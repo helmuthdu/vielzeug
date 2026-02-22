@@ -61,7 +61,7 @@ Refer to the component source for a full list of overridable CSS variables.
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `selection-mode` | `'single' \| 'multiple'` | `'multiple'` | Selection mode |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | - | Visual style variant (propagated to children) |
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | - | Visual style variant (propagated to children) |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size (propagated to children) |
 
 ### bit-accordion-item Attributes
@@ -70,7 +70,7 @@ Refer to the component source for a full list of overridable CSS variables.
 |-----------|------|---------|-------------|
 | `expanded` | `boolean` | `false` | Whether the item is expanded |
 | `disabled` | `boolean` | `false` | Disable the accordion item |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | - | Visual style variant |
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | - | Visual style variant |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Item size |
 
 ### Slots

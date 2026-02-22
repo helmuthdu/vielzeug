@@ -82,7 +82,7 @@ Only one item can be expanded at a time.
 
 ### Variants
 
-Six visual variants applied to all items via the parent accordion.
+Eight visual variants applied to all items via the parent accordion.
 
 <ComponentPreview vertical>
 
@@ -120,6 +120,61 @@ Six visual variants applied to all items via the parent accordion.
 <bit-accordion variant="text">
   <bit-accordion-item>
     <span slot="title">Text Variant</span>
+    Content
+  </bit-accordion-item>
+</bit-accordion>
+```
+
+</ComponentPreview>
+
+### Glass & Frost Variants
+
+Modern effects with backdrop blur for elevated UI elements.
+
+::: tip Best Used With
+Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+:::
+
+<ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
+
+```html
+<bit-accordion variant="glass">
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">favorite</span>
+    <span slot="title">Item 1</span>
+    <span slot="subtitle">Subitem 1</span>
+    Content
+  </bit-accordion-item>
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">help</span>
+    <span slot="title">Item 2</span>
+    <span slot="subtitle">Subitem 2</span>
+    Content
+  </bit-accordion-item>
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">bookmark</span>
+    <span slot="title">Item 3</span>
+    <span slot="subtitle">Subitem 3</span>
+    Content
+  </bit-accordion-item>
+</bit-accordion>
+<bit-accordion variant="frost">
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">favorite</span>
+    <span slot="title">Item 1</span>
+    <span slot="subtitle">Subitem 1</span>
+    Content
+  </bit-accordion-item>
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">help</span>
+    <span slot="title">Item 2</span>
+    <span slot="subtitle">Subitem 2</span>
+    Content
+  </bit-accordion-item>
+  <bit-accordion-item>
+    <span slot="prefix" class="material-symbols-rounded">bookmark</span>
+    <span slot="title">Item 3</span>
+    <span slot="subtitle">Subitem 3</span>
     Content
   </bit-accordion-item>
 </bit-accordion>

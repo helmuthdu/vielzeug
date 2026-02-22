@@ -25,14 +25,18 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
   :host {
+    --radio-size: var(--size-5);
+    --radio-font-size: var(--text-sm);
     display: inline-flex;
     align-items: center;
     gap: var(--size-2);
     cursor: pointer;
     user-select: none;
-    --radio-size: var(--size-5);
-    --radio-font-size: var(--text-sm);
   }
 
   :host([disabled]) {
@@ -68,7 +72,10 @@ const styles = css`
     position: relative;
   }
 
-  /* Colors */
+  /* ========================================
+     Color Themes
+     ======================================== */
+
   :host(:not([color])) .circle,
   :host([color='primary']) .circle {
     --radio-base: var(--color-primary);
@@ -100,7 +107,10 @@ const styles = css`
     --radio-focus: var(--color-error-focus);
   }
 
-  /* States */
+  /* ========================================
+     States
+     ======================================== */
+
   :host([checked]) .circle {
     background: var(--radio-checked-bg, var(--radio-base));
     border-color: var(--radio-checked-bg, var(--radio-base));
@@ -111,7 +121,10 @@ const styles = css`
     outline-offset: var(--border-2);
   }
 
-  /* Inner dot */
+  /* ========================================
+     Inner Dot
+     ======================================== */
+
   .dot {
     width: 50%;
     height: 50%;
@@ -127,7 +140,10 @@ const styles = css`
     transform: scale(1);
   }
 
-  /* Sizes */
+  /* ========================================
+     Size Variants
+     ======================================== */
+
   :host([size='sm']) {
     --radio-size: var(--size-4);
     --radio-font-size: var(--text-xs);
@@ -137,6 +153,10 @@ const styles = css`
     --radio-size: var(--size-6);
     --radio-font-size: var(--text-md);
   }
+
+  /* ========================================
+     Label
+     ======================================== */
 
   .label {
     font-size: var(--radio-font-size);

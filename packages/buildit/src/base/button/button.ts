@@ -34,31 +34,35 @@ import { css, defineElement, html } from '@vielzeug/craftit';
 
 const styles = css`
   :host {
-    display: inline-flex;
     --button-radius: var(--rounded-md);
     --button-font-weight: var(--font-weight-medium);
     --button-gap: var(--size-2);
+
+    display: inline-flex;
   }
 
   button {
-    all: unset;
-    box-sizing: border-box;
-    display: flex;
+    --button-padding: var(--size-2) var(--size-4);
+    --button-font-size: var(--text-sm);
     align-items: center;
-    justify-content: center;
-    gap: var(--button-gap);
-    padding: var(--button-padding);
-    width: 100%;
-    height: 100%;
+    all: unset;
+    border-radius: var(--button-radius);
+    box-sizing: border-box;
+    cursor: pointer;
+    display: flex;
     font-family: inherit;
     font-size: var(--button-font-size);
     font-weight: var(--button-font-weight);
-    white-space: nowrap;
-    user-select: none;
-    cursor: pointer;
-    transition: all 150ms ease-in-out;
-    border-radius: var(--button-radius);
+    gap: var(--button-gap);
+    height: var(--size-10);
+    justify-content: center;
+    line-height: var(--leading-md);
+    padding: var(--button-padding);
     position: relative;
+    transition: all 150ms ease-in-out;
+    user-select: none;
+    white-space: nowrap;
+    width: 100%;
   }
 
   button:focus-visible {
@@ -66,20 +70,15 @@ const styles = css`
     outline-offset: var(--border-2);
   }
 
-  /* Sizes */
+  /* ========================================
+     Size Variants
+     ======================================== */
+
   :host([size='sm']) button {
     --button-padding: var(--size-1-5) var(--size-3);
     --button-font-size: var(--text-sm);
     line-height: var(--leading-sm);
     height: var(--size-8);
-  }
-
-  :host(:not([size])) button,
-  :host([size='md']) button {
-    --button-padding: var(--size-2) var(--size-4);
-    --button-font-size: var(--text-sm);
-    line-height: var(--leading-md);
-    height: var(--size-10);
   }
 
   :host([size='lg']) button {
@@ -108,9 +107,12 @@ const styles = css`
     display: flex;
   }
 
-  /* Colors */
-  :host(:not([color])) button,
-  :host([color='primary']) button {
+  /* ========================================
+     Color Themes
+     ======================================== */
+
+  /* Default to primary */
+  button {
     --button-base: var(--color-primary);
     --button-contrast: var(--color-primary-contrast);
     --button-focus: var(--color-primary-focus);
@@ -155,61 +157,67 @@ const styles = css`
     --button-shadow: var(--color-error-shadow);
   }
 
-  /* Variants */
-  :host(:not([variant])) button,
-  :host([variant='solid']) button {
+  /* ========================================
+     Visual Variants
+     ======================================== */
+
+  /* Solid variant (default) */
+  button {
     background: var(--button-bg, var(--button-base));
     color: var(--button-color, var(--button-contrast));
     border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
-  :host(:not([variant])) button:hover,
-  :host([variant='solid']) button:hover {
+  button:hover {
     background: var(--button-hover-bg, var(--button-focus));
   }
 
-  :host(:not([variant])) button:active,
-  :host([variant='solid']) button:active {
+  button:active {
     background: var(--button-active-bg, var(--button-content));
   }
 
   :host([variant='flat']) button {
     background: var(--button-bg, var(--button-backdrop));
     color: var(--button-color, var(--button-base));
-    border: var(--button-border, var(--border, 1px) solid transparent);
+  }
+
+  :host([variant='flat']) button:hover,
+  :host([variant='flat']) button:active {
+    color: var(--button-contrast);
   }
 
   :host([variant='flat']) button:hover {
     background: var(--button-hover-bg, var(--button-focus));
-    color: var(--button-contrast);
   }
 
   :host([variant='flat']) button:active {
     background: var(--button-active-bg, var(--button-content));
-    color: var(--button-contrast);
   }
 
   :host([variant='bordered']) button {
     background: var(--button-bg, var(--button-backdrop));
     color: var(--button-color, var(--button-base));
-    border: var(--button-border, var(--border, 1px) solid var(--button-base));
+    border-color: var(--button-base);
+  }
+
+  :host([variant='bordered']) button:hover,
+  :host([variant='bordered']) button:active {
+    color: var(--button-contrast);
   }
 
   :host([variant='bordered']) button:hover {
     background: var(--button-hover-bg, var(--button-focus));
-    color: var(--button-contrast);
     border-color: var(--button-focus);
   }
 
   :host([variant='bordered']) button:active {
     background: var(--button-active-bg, var(--button-content));
-    color: var(--button-contrast);
   }
 
   :host([variant='outline']) button {
-    background: var(--button-bg, transparent);
+    background: transparent;
     color: var(--button-color, var(--button-base));
-    border: var(--button-border, var(--border, 1px) solid var(--button-base));
+    border-color: var(--button-base);
   }
 
   :host([variant='outline']) button:hover {
@@ -223,9 +231,8 @@ const styles = css`
   }
 
   :host([variant='ghost']) button {
-    background: var(--button-bg, transparent);
+    background: transparent;
     color: var(--button-color, var(--button-base));
-    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host([variant='ghost']) button:hover {
@@ -238,26 +245,28 @@ const styles = css`
   }
 
   :host([variant='text']) button {
-    background: var(--button-bg, transparent);
+    background: transparent;
     color: var(--button-color, var(--button-base));
-    border: var(--button-border, var(--border, 1px) solid transparent);
   }
 
   :host([variant='text']) button:hover {
-    background: var(--button-hover-bg, transparent);
     color: var(--button-focus);
   }
 
   :host([variant='text']) button:active {
-    background: var(--button-active-bg, transparent);
     opacity: 0.7;
+  }
+
+  :host([variant='glass']) button,
+  :host([variant='frost']) button {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 
   :host([variant='glass']) button {
     background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
-    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 40%, transparent));
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+    filter: brightness(1.05);
     color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
     text-shadow: var(--text-shadow-xs);
   }
@@ -274,24 +283,25 @@ const styles = css`
 
   :host([variant='frost']) button {
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--color-contrast-400) 40%, transparent));
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
     color: var(--button-color, var(--button-content));
     text-shadow: var(--text-shadow-2xs);
   }
-  
+
   :host([variant='frost']) button:hover {
     background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
     border-color: color-mix(in srgb, var(--button-focus) 30%, transparent);
   }
-  
+
   :host([variant='frost']) button:active {
     background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
     border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
   }
 
-  /* States */
+  /* ========================================
+     States
+     ======================================== */
+
   :host([disabled]) button,
   :host([loading]) button {
     opacity: 0.5;
@@ -302,7 +312,10 @@ const styles = css`
     visibility: hidden;
   }
 
-  /* Loading spinner */
+  /* ========================================
+     Loading Spinner
+     ======================================== */
+
   .loader {
     position: absolute;
     width: 1em;

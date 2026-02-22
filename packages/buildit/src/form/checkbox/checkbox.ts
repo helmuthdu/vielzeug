@@ -27,15 +27,19 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 const styles = css`
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
   :host {
+    --checkbox-size: var(--size-5);
+    --checkbox-radius: var(--rounded-md);
+    --checkbox-font-size: var(--text-sm);
     display: inline-flex;
     align-items: center;
     gap: var(--size-2);
     cursor: pointer;
     user-select: none;
-    --checkbox-size: var(--size-5);
-    --checkbox-radius: var(--rounded-md);
-    --checkbox-font-size: var(--text-sm);
   }
 
   :host([disabled]) {
@@ -71,7 +75,9 @@ const styles = css`
     position: relative;
   }
 
-  /* Colors */
+  /* ========================================
+     Color Themes
+     ======================================== */
   :host(:not([color])) .box,
   :host([color='primary']) .box {
     --checkbox-base: var(--color-primary);
@@ -103,12 +109,11 @@ const styles = css`
     --checkbox-focus: var(--color-error-focus);
   }
 
-  /* States */
-  :host([checked]) .box {
-    background: var(--checkbox-checked-bg, var(--checkbox-base));
-    border-color: var(--checkbox-checked-bg, var(--checkbox-base));
-  }
+  /* ========================================
+     States
+     ======================================== */
 
+  :host([checked]) .box,
   :host([indeterminate]) .box {
     background: var(--checkbox-checked-bg, var(--checkbox-base));
     border-color: var(--checkbox-checked-bg, var(--checkbox-base));
@@ -119,7 +124,10 @@ const styles = css`
     outline-offset: var(--border-2);
   }
 
-  /* Checkmark and Dash icons */
+  /* ========================================
+     Checkmark & Dash Icons
+     ======================================== */
+
   .dash,
   .checkmark {
     position: absolute;
@@ -149,7 +157,10 @@ const styles = css`
     transform: scale(1);
   }
 
-  /* Sizes */
+  /* ========================================
+     Size Variants
+     ======================================== */
+
   :host([size='sm']) {
     --checkbox-size: var(--size-4);
     --checkbox-font-size: var(--text-xs);
@@ -159,6 +170,10 @@ const styles = css`
     --checkbox-size: var(--size-6);
     --checkbox-font-size: var(--text-md);
   }
+
+  /* ========================================
+     Label
+     ======================================== */
 
   .label {
     font-size: var(--checkbox-font-size);

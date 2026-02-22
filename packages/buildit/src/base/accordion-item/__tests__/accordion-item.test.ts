@@ -67,6 +67,26 @@ describe('bit-accordion-item', () => {
     });
   });
 
+  describe('Variants', () => {
+    it('should apply variant attribute', async () => {
+      const fixture = await createFixture('bit-accordion-item', { variant: 'solid' });
+      expect(fixture.element.getAttribute('variant')).toBe('solid');
+      fixture.destroy();
+    });
+
+    it('should support glass variant', async () => {
+      const fixture = await createFixture('bit-accordion-item', { variant: 'glass' });
+      expect(fixture.element.getAttribute('variant')).toBe('glass');
+      fixture.destroy();
+    });
+
+    it('should support frost variant', async () => {
+      const fixture = await createFixture('bit-accordion-item', { variant: 'frost' });
+      expect(fixture.element.getAttribute('variant')).toBe('frost');
+      fixture.destroy();
+    });
+  });
+
   describe('Events', () => {
     it('should emit expand/collapse events', async () => {
       const fixture = await createFixture('bit-accordion-item');

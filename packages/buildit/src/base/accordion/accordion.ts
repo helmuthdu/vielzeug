@@ -6,7 +6,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @element bit-accordion
  *
  * @attr {string} selection-mode - Selection mode: 'single' | 'multiple' (default: multiple)
- * @attr {string} variant - Visual variant for all items: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
+ * @attr {string} variant - Visual variant for all items: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
  * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for bit-accordion-item elements
@@ -27,6 +27,11 @@ const styles = css`
     width: 100%;
   }
 
+  /* ========================================
+     Visual Variants
+     ======================================== */
+
+  /* Text variant - borderless with dividers */
   :host([variant='text']) {
     gap: 0;
   }
@@ -35,26 +40,66 @@ const styles = css`
     border-bottom: 1px solid var(--color-contrast-200);
   }
 
-  :host(:not([variant])),
-  :host([variant='solid']) {
+  /* Contained variants - grouped appearance */
+  :host([variant='solid']),
+  :host([variant='flat']),
+  :host([variant='glass']),
+  :host([variant='frost']) {
     gap: 0;
-    background: var(--color-contrast-100);
     border-radius: var(--rounded-md);
     padding: var(--size-2);
   }
 
+  /* Solid variant (default) */
+  :host([variant='solid']) {
+    background: var(--color-contrast-100);
+  }
+
+  /* Flat variant */
   :host([variant='flat']) {
-    gap: 0;
     background: var(--color-contrast-300);
+  }
+
+  /* Glass variant - translucent with blur */
+  :host([variant='glass']) {
+    background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  }
+
+  /* Frost variant - canvas-based transparency */
+  :host([variant='frost']) {
+    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  }
+
+  /* Nested item border radius for glass and frost variants */
+  :host([variant='glass']) ::slotted(bit-accordion-item),
+  :host([variant='frost']) ::slotted(bit-accordion-item) {
+    border-radius: 0;
+  }
+
+  :host([variant='glass']) ::slotted(bit-accordion-item:first-child),
+  :host([variant='frost']) ::slotted(bit-accordion-item:first-child) {
+    border-radius: var(--rounded-md) var(--rounded-md) 0 0;
+  }
+
+  :host([variant='glass']) ::slotted(bit-accordion-item:last-child),
+  :host([variant='frost']) ::slotted(bit-accordion-item:last-child) {
+    border-radius: 0 0 var(--rounded-md) var(--rounded-md);
+  }
+
+  :host([variant='glass']) ::slotted(bit-accordion-item:only-child),
+  :host([variant='frost']) ::slotted(bit-accordion-item:only-child) {
     border-radius: var(--rounded-md);
-    padding: var(--size-2);
   }
 `;
 
 export type AccordionProps = {
   'selection-mode'?: 'single' | 'multiple';
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text';
+  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
 };
 
 defineElement<HTMLElement, AccordionProps>('bit-accordion', {

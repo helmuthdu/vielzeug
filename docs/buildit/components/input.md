@@ -156,10 +156,10 @@ Labels work seamlessly with all variants and colors.
 
 ```html
 <bit-input variant="solid" label="Username" value="johndoe"></bit-input>
-<bit-input variant="flat" label="Company" placeholder="Enter company name"></bit-input>
+<bit-input variant="flat" color="secondary" label="Company" placeholder="Enter company name"></bit-input>
 <bit-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></bit-input>
 <bit-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></bit-input>
-<bit-input variant="ghost" label="Country" value="Germany"></bit-input>
+<bit-input variant="ghost" label="Country" color="error" value="Germany"></bit-input>
 <bit-input variant="text" label="Notes" placeholder="Add your notes here"></bit-input>
 ```
 

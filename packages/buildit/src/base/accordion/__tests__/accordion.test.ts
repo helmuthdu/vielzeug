@@ -67,6 +67,19 @@ describe('bit-accordion', () => {
       await fixture.setAttribute('variant', 'bordered');
       expect(item1.getAttribute('variant')).toBe('bordered');
     });
+
+    it('should support glass and frost variants', async () => {
+      fixture = await createFixture('bit-accordion', { variant: 'glass' });
+
+      const item1 = document.createElement('bit-accordion-item');
+      fixture.element.appendChild(item1);
+
+      await fixture.update();
+      expect(item1.getAttribute('variant')).toBe('glass');
+
+      await fixture.setAttribute('variant', 'frost');
+      expect(item1.getAttribute('variant')).toBe('frost');
+    });
   });
 
   describe('Coordination', () => {
