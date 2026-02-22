@@ -260,6 +260,7 @@ const styles = css`
   :host([variant='bordered']) {
     --input-bg: var(--input-backdrop);
     --input-border-color: var(--input-focus);
+    --input-placeholder-color: color-mix(in srgb, var(--input-content) 45%, transparent);
   }
 
   :host([variant='outline']) {
@@ -309,6 +310,7 @@ const styles = css`
     background: color-mix(in srgb, var(--input-backdrop) 60%, var(--input-base) 40%);
     border-color: color-mix(in srgb, var(--input-focus) 50%, transparent);
   }
+
   :host([variant='glass']:not([disabled])) .field:focus-within {
     background: color-mix(in srgb, var(--input-backdrop) 50%, var(--input-base) 50%);
     border-color: color-mix(in srgb, var(--input-focus) 60%, transparent);
@@ -318,17 +320,18 @@ const styles = css`
     color: var(--text-color-contrast);
     text-shadow: var(--text-shadow-xs);
   }
+
   :host([variant='glass']) .label-inset {
     color: color-mix(in srgb, var(--text-color-contrast) 80%, transparent);
   }
 
-  :host([variant='frost']) input {
-    color: var(--input-color, var(--input-content));
-    text-shadow: var(--text-shadow-2xs);
+  :host([variant='glass']) ::slotted([slot='prefix']),
+  :host([variant='glass']) ::slotted([slot='suffix']) {
+    color: color-mix(in srgb, var(--text-color-contrast) 75%, transparent);
   }
 
   :host([variant='frost']) {
-    --input-bg: color-mix(in srgb, var(--color-contrast-50) 60%, /* or var(--color-canvas) */ transparent);
+    --input-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     --input-border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
   }
 
@@ -339,9 +342,17 @@ const styles = css`
 
   :host([variant='frost']:not([disabled])) .field:hover {
     background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+    border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
   }
+
   :host([variant='frost']:not([disabled])) .field:focus-within {
     background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+    border-color: color-mix(in srgb, var(--input-focus) 40%, transparent);
+  }
+
+  :host([variant='frost']) input {
+    color: var(--input-content);
+    text-shadow: var(--text-shadow-2xs);
   }
 `;
 
@@ -383,7 +394,6 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
     if (!input) return;
 
-    // Update input properties based on attribute changes
     switch (name) {
       case 'value':
         input.value = newValue ?? '';
@@ -418,12 +428,10 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
     if (!input) return;
 
-    // Sync initial state
     if (host.hasAttribute('disabled')) {
       input.disabled = true;
     }
 
-    // Handle input event
     input.addEventListener('input', (e: Event) => {
       const target = e.target as HTMLInputElement;
       host.setAttribute('value', target.value);
@@ -434,7 +442,6 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
       });
     });
 
-    // Handle change event
     input.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLInputElement;
       host.setAttribute('value', target.value);

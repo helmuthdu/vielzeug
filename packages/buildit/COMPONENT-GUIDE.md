@@ -205,31 +205,160 @@ type Variant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'g
 
 When implementing `glass` and `frost` variants, use the following patterns to ensure consistent quality across the library.
 
-**Glass Pattern**
-Uses the component's semantic color mixed with the contrast color for a vibrant translucent look.
+#### Glass Variant
+
+The **glass** variant creates a modern, vibrant translucent effect by blending the component's semantic color with the global contrast color. It uses backdrop blur, color saturation, and brightness adjustments for a glassy, elevated appearance.
+
+**Key characteristics:**
+- Vibrant, color-tinted transparency
+- Works best over colorful backgrounds or images
+- Uses semantic color tokens for theming
+- Includes text shadows for better legibility
+
+**Implementation pattern for buttons:**
+
+```css
+:host([variant='glass']) button {
+  background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
+  border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 40%, transparent));
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
+  text-shadow: var(--text-shadow-xs);
+}
+
+:host([variant='glass']) button:hover {
+  background: color-mix(in srgb, var(--button-backdrop) 60%, var(--button-base) 40%);
+  border-color: color-mix(in srgb, var(--button-focus) 55%, transparent);
+}
+
+:host([variant='glass']) button:active {
+  background: color-mix(in srgb, var(--button-backdrop) 50%, var(--button-base) 50%);
+  border-color: color-mix(in srgb, var(--button-focus) 65%, transparent);
+}
+```
+
+**Implementation pattern for inputs:**
 
 ```css
 :host([variant='glass']) {
+  --input-bg: color-mix(in srgb, var(--input-base) 30%, var(--color-contrast) 10%);
+  --input-border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
+}
+
+:host([variant='glass']) .field {
   backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
-  background: color-mix(in srgb, var(--component-base) 30%, var(--color-contrast) 10%);
-  border: var(--border) solid color-mix(in srgb, var(--component-focus) 30%, transparent);
   box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-  color: color-mix(in srgb, var(--component-contrast) 90%, transparent);
+}
+
+:host([variant='glass']:not([disabled])) .field:hover {
+  background: color-mix(in srgb, var(--input-backdrop) 60%, var(--input-base) 40%);
+  border-color: color-mix(in srgb, var(--input-focus) 50%, transparent);
+}
+
+:host([variant='glass']:not([disabled])) .field:focus-within {
+  background: color-mix(in srgb, var(--input-backdrop) 50%, var(--input-base) 50%);
+  border-color: color-mix(in srgb, var(--input-focus) 60%, transparent);
+}
+
+/* Text styling for glass */
+:host([variant='glass']) input {
+  color: var(--text-color-contrast);
+  text-shadow: var(--text-shadow-xs);
+}
+
+:host([variant='glass']) .label-inset {
+  color: color-mix(in srgb, var(--text-color-contrast) 80%, transparent);
 }
 ```
 
-**Frost Pattern**
-Uses the system canvas color with a high transparency for a neutral, "frosted" appearance.
+#### Frost Variant
+
+The **frost** variant creates a subtle, neutral "frosted glass" effect by using the system canvas color with high transparency. It provides a clean, minimal aesthetic that works across different backgrounds without color bias.
+
+**Key characteristics:**
+- Neutral, subtle transparency
+- Color-agnostic (uses canvas color, not semantic colors)
+- Works well over any background
+- Lighter text shadows for subtlety
+
+**Implementation pattern for buttons:**
+
+```css
+:host([variant='frost']) button {
+  background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+  border: var(--button-border, var(--border) solid color-mix(in srgb, var(--color-contrast-400) 40%, transparent));
+  backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  color: var(--button-color, var(--button-content));
+  text-shadow: var(--text-shadow-2xs);
+}
+
+:host([variant='frost']) button:hover {
+  background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+  border-color: color-mix(in srgb, var(--button-focus) 30%, transparent);
+}
+
+:host([variant='frost']) button:active {
+  background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+  border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+}
+```
+
+**Implementation pattern for inputs:**
 
 ```css
 :host([variant='frost']) {
+  --input-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+  --input-border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
+}
+
+:host([variant='frost']) .field {
   backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
-  border: var(--border) solid color-mix(in srgb, var(--component-contrast) 40%, transparent);
   box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-  color: var(--component-content);
+}
+
+:host([variant='frost']:not([disabled])) .field:hover {
+  background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+  border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
+}
+
+:host([variant='frost']:not([disabled])) .field:focus-within {
+  background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+  border-color: color-mix(in srgb, var(--input-focus) 40%, transparent);
+}
+
+/* Text styling for frost */
+:host([variant='frost']) input {
+  color: var(--input-content);
+  text-shadow: var(--text-shadow-2xs);
 }
 ```
+
+#### Design Token Reference for Glass & Frost
+
+When implementing glass and frost variants, use these token patterns:
+
+**For Glass:**
+- Background: Mix `--{component}-base` (30%) + `--color-contrast` (10%)
+- Border: Mix `--{component}-focus` (30-65% depending on state) + `transparent`
+- Backdrop: `blur(var(--blur-lg)) saturate(180%) brightness(1.05-1.1)`
+- Text: `--text-color-contrast` or `color-mix` with `--{component}-contrast` (90%)
+- Text shadow: `var(--text-shadow-xs)` or `var(--text-shadow-2xs)`
+
+**For Frost:**
+- Background: Mix `--color-canvas` (55-70% depending on state) + `transparent`
+- Border: Mix `--color-contrast-400` or `--{component}-focus` (30-40%) + `transparent`
+- Backdrop: `blur(var(--blur-lg)) saturate(180%)`
+- Text: `--{component}-content` or semantic text color
+- Text shadow: `var(--text-shadow-2xs)`
+
+**Best practices:**
+- Always test glass/frost variants over diverse backgrounds (solid colors, gradients, images)
+- Ensure sufficient contrast for text legibility (WCAG AA minimum)
+- Use hover and focus states with adjusted opacity/border for interactivity
+- Apply text shadows for improved readability over complex backgrounds
+- Consider disabling blur effects on low-end devices for performance
 
 ### 5.4 Colors [Required]
 

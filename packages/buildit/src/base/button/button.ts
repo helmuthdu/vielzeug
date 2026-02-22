@@ -254,40 +254,41 @@ const styles = css`
   }
 
   :host([variant='glass']) button {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.1);
     background: color-mix(in srgb, var(--button-base) 30%, var(--color-contrast) 10%);
-    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 30%, transparent));
+    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-focus) 40%, transparent));
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     color: var(--button-color, color-mix(in srgb, var(--button-contrast) 90%, transparent));
     text-shadow: var(--text-shadow-xs);
   }
 
   :host([variant='glass']) button:hover {
-    background: color-mix(in srgb, var(--button-base) 40%, var(--color-contrast) 10%);
-    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+    background: color-mix(in srgb, var(--button-backdrop) 60%, var(--button-base) 40%);
+    border-color: color-mix(in srgb, var(--button-focus) 55%, transparent);
   }
 
   :host([variant='glass']) button:active {
-    background: color-mix(in srgb, var(--button-base) 80%, transparent);
-    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
+    background: color-mix(in srgb, var(--button-backdrop) 50%, var(--button-base) 50%);
+    border-color: color-mix(in srgb, var(--button-focus) 65%, transparent);
   }
 
   :host([variant='frost']) button {
+    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--color-contrast-400) 40%, transparent));
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
-    border: var(--button-border, var(--border) solid color-mix(in srgb, var(--button-contrast) 40%, transparent));
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     color: var(--button-color, var(--button-content));
     text-shadow: var(--text-shadow-2xs);
   }
-
+  
   :host([variant='frost']) button:hover {
-    background: color-mix(in srgb, var(--button-backdrop) 70%, transparent);
-    border-color: color-mix(in srgb, var(--button-base) 30%, transparent);
+    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+    border-color: color-mix(in srgb, var(--button-focus) 30%, transparent);
   }
-
+  
   :host([variant='frost']) button:active {
-    background: color-mix(in srgb, var(--button-backdrop) 80%, transparent);
+    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+    border-color: color-mix(in srgb, var(--button-focus) 40%, transparent);
   }
 
   /* States */
