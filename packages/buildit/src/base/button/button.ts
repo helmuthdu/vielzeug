@@ -39,7 +39,7 @@ const styles = css`
 
   :host {
     --_radius: var(--button-radius, var(--rounded-md));
-    --_font-weight: var(--button-font-weight, var(--font-weight-medium));
+    --_font-weight: var(--button-font-weight, var(--font-medium));
     --_gap: var(--button-gap, var(--size-2));
     --_padding: var(--button-padding, var(--size-2) var(--size-4));
     --_font-size: var(--button-font-size, var(--text-sm));
@@ -60,7 +60,7 @@ const styles = css`
     border-radius: var(--_radius);
     font-size: var(--_font-size);
     font-weight: var(--_font-weight);
-    line-height: var(--leading-md);
+    line-height: var(--leading-normal);
     white-space: nowrap;
     cursor: pointer;
     user-select: none;
@@ -108,17 +108,17 @@ const styles = css`
   }
 
   :host([size='sm']) button {
-    line-height: var(--leading-sm);
+    line-height: var(--leading-tight);
   }
 
   :host([size='lg']) {
     --_padding: var(--size-2-5) var(--size-5);
-    --_font-size: var(--text-md);
+    --_font-size: var(--text-base);
     --_height: var(--size-12);
   }
 
   :host([size='lg']) button {
-    line-height: var(--leading-lg);
+    line-height: var(--leading-relaxed);
   }
 
   :host([icon-only]) button {

@@ -1,58 +1,72 @@
 :root {
-  --size-0-25: 0.0625rem;
-  --size-0-5: 0.125rem;
-  --size-1: 0.25rem;
-  --size-1-5: 0.375rem;
-  --size-2: 0.5rem;
-  --size-2-5: 0.625rem;
-  --size-3: 0.75rem;
-  --size-3-5: 0.875rem;
-  --size-4: 1rem;
-  --size-5: 1.25rem;
-  --size-6: 1.5rem;
-  --size-7: 1.75rem;
-  --size-8: 2rem;
-  --size-9: 2.25rem;
-  --size-10: 2.5rem;
-  --size-11: 2.75rem;
-  --size-12: 3rem;
-  --size-14: 3.5rem;
-  --size-16: 4rem;
-  --size-20: 5rem;
-  --size-24: 6rem;
-  --size-28: 7rem;
-  --size-32: 8rem;
-  --size-36: 9rem;
-  --size-40: 10rem;
-  --size-44: 11rem;
-  --size-48: 12rem;
-  --size-52: 13rem;
-  --size-56: 14rem;
-  --size-60: 15rem;
-  --size-64: 16rem;
-  --size-72: 18rem;
-  --size-80: 20rem;
-  --size-96: 24rem;
-  --size-xs: 20rem; /* 320px */
-  --size-sm: 24rem; /* 384px */
-  --size-md: 28rem; /* 448px */
-  --size-lg: 32rem; /* 512px */
-  --size-xl: 36rem; /* 576px */
-  --size-2xl: 42rem; /* 672px */
-  --size-3xl: 48rem; /* 768px */
-  --size-4xl: 56rem; /* 896px */
-  --size-5xl: 64rem; /* 1024px */
-  --size-6xl: 72rem; /* 1152px */
-  --size-7xl: 80rem; /* 1280px */
+  /* ========================================
+     Spacing Scale
+     Based on 0.25rem (4px) increments
+     ======================================== */
+  --size-0: 0;
+  --size-px: 1px;
+  --size-0-5: 0.125rem;  /* 2px */
+  --size-1: 0.25rem;     /* 4px */
+  --size-1-5: 0.375rem;  /* 6px */
+  --size-2: 0.5rem;      /* 8px */
+  --size-2-5: 0.625rem;  /* 10px */
+  --size-3: 0.75rem;     /* 12px */
+  --size-3-5: 0.875rem;  /* 14px */
+  --size-4: 1rem;        /* 16px */
+  --size-5: 1.25rem;     /* 20px */
+  --size-6: 1.5rem;      /* 24px */
+  --size-7: 1.75rem;     /* 28px */
+  --size-8: 2rem;        /* 32px */
+  --size-9: 2.25rem;     /* 36px */
+  --size-10: 2.5rem;     /* 40px */
+  --size-11: 2.75rem;    /* 44px */
+  --size-12: 3rem;       /* 48px */
+  --size-14: 3.5rem;     /* 56px */
+  --size-16: 4rem;       /* 64px */
+  --size-20: 5rem;       /* 80px */
+  --size-24: 6rem;       /* 96px */
+  --size-28: 7rem;       /* 112px */
+  --size-32: 8rem;       /* 128px */
+  --size-36: 9rem;       /* 144px */
+  --size-40: 10rem;      /* 160px */
+  --size-44: 11rem;      /* 176px */
+  --size-48: 12rem;      /* 192px */
+  --size-52: 13rem;      /* 208px */
+  --size-56: 14rem;      /* 224px */
+  --size-60: 15rem;      /* 240px */
+  --size-64: 16rem;      /* 256px */
+  --size-72: 18rem;      /* 288px */
+  --size-80: 20rem;      /* 320px */
+  --size-96: 24rem;      /* 384px */
+
+  /* Container Sizes */
+  --size-xs: 20rem;      /* 320px */
+  --size-sm: 24rem;      /* 384px */
+  --size-md: 28rem;      /* 448px */
+  --size-lg: 32rem;      /* 512px */
+  --size-xl: 36rem;      /* 576px */
+  --size-2xl: 42rem;     /* 672px */
+  --size-3xl: 48rem;     /* 768px */
+  --size-4xl: 56rem;     /* 896px */
+  --size-5xl: 64rem;     /* 1024px */
+  --size-6xl: 72rem;     /* 1152px */
+  --size-7xl: 80rem;     /* 1280px */
+
+  /* Special Sizes */
   --size-full: 100%;
   --size-fit: fit-content;
   --size-min: min-content;
   --size-max: max-content;
   --size-auto: auto;
   --size-none: none;
-  --size-prose: 65ch;
+  --size-prose: 65ch;    /* Optimal reading width */
+
+  /* Viewport Units */
   --size-screen-width: 100dvw;
   --size-screen-height: 100dvh;
+
+  /* Breakpoints */
+  /* Breakpoints */
   --size-screen-xs: 480px;
   --size-screen-sm: 640px;
   --size-screen-md: 768px;
@@ -60,13 +74,28 @@
   --size-screen-xl: 1280px;
   --size-screen-2xl: 1536px;
 
+  /* ========================================
+     3D Perspective (for transforms)
+     ======================================== */
   --perspective-dramatic: 100px;
   --perspective-near: 300px;
   --perspective-normal: 500px;
   --perspective-midrange: 800px;
   --perspective-distant: 1200px;
-  --aspect-video: 16 / 9;
 
+  /* ========================================
+     Aspect Ratios
+     ======================================== */
+  --aspect-square: 1 / 1;
+  --aspect-video: 16 / 9;
+  --aspect-wide: 21 / 9;
+  --aspect-ultrawide: 32 / 9;
+  --aspect-portrait: 3 / 4;
+  --aspect-photo: 4 / 3;
+
+  /* ========================================
+     Grid Template Columns
+     ======================================== */
   --grid-1: repeat(1, minmax(0, 1fr));
   --grid-2: repeat(2, minmax(0, 1fr));
   --grid-3: repeat(3, minmax(0, 1fr));
@@ -80,110 +109,189 @@
   --grid-11: repeat(11, minmax(0, 1fr));
   --grid-12: repeat(12, minmax(0, 1fr));
 
-  --border: 1px;
+  /* ========================================
+     Border Widths
+     ======================================== */
   --border-0: 0;
+  --border: 1px;
   --border-2: 2px;
   --border-4: 4px;
   --border-8: 8px;
+
+  /* Ring Utilities (for focus states) */
+  --ring-0: 0 0 0 0;
   --ring: 0 0 0 var(--border);
   --ring-2: 0 0 0 var(--border-2);
   --ring-4: 0 0 0 var(--border-4);
   --ring-8: 0 0 0 var(--border-8);
-  --rounded: 0.25rem;
-  --rounded-xs: 0.125rem;
-  --rounded-sm: 0.25rem;
-  --rounded-md: 0.375rem;
-  --rounded-lg: 0.5rem;
-  --rounded-xl: 0.75rem;
-  --rounded-2xl: 1rem;
-  --rounded-3xl: 1.5rem;
-  --rounded-full: 9999px;
 
+  /* ========================================
+     Border Radius
+     Optimized for accessibility - minimum 4px for touch targets
+     ======================================== */
+  --rounded-none: 0;
+  --rounded-xs: 0.125rem;   /* 2px - minimal */
+  --rounded-sm: 0.25rem;    /* 4px - small */
+  --rounded: 0.25rem;       /* 4px - default */
+  --rounded-md: 0.375rem;   /* 6px - medium */
+  --rounded-lg: 0.5rem;     /* 8px - large */
+  --rounded-xl: 0.75rem;    /* 12px - extra large */
+  --rounded-2xl: 1rem;      /* 16px - 2x extra large */
+  --rounded-3xl: 1.5rem;    /* 24px - 3x extra large */
+  --rounded-full: 9999px;   /* Full circle/pill */
+
+  /* ========================================
+     Blur Effects
+     ======================================== */
+  --blur-none: 0;
   --blur-xs: 4px;
   --blur-sm: 8px;
   --blur-md: 12px;
+  --blur: 12px;
   --blur-lg: 16px;
   --blur-xl: 24px;
   --blur-2xl: 40px;
   --blur-3xl: 64px;
 
+  /* ========================================
+     Box Shadows
+     Optimized for depth perception and accessibility
+     ======================================== */
+  --shadow-none: 0 0 transparent;
   --shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-xs: 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 2px 4px rgb(0 0 0 / 0.05);
   --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.15);
   --shadow-2xl: 0 35px 60px -15px rgb(0 0 0 / 0.3);
+
+  /* Inset Shadows */
+  --inset-shadow-none: inset 0 0 transparent;
   --inset-shadow-2xs: inset 0 1px rgb(0 0 0 / 0.05);
   --inset-shadow-xs: inset 0 1px 1px rgb(0 0 0 / 0.05);
   --inset-shadow-sm: inset 0 2px 4px rgb(0 0 0 / 0.05);
+  --inset-shadow: inset 0 2px 4px rgb(0 0 0 / 0.06);
+
+  /* Drop Shadows (for filters) */
+  --drop-shadow-none: 0 0 transparent;
   --drop-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.05);
   --drop-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.15);
+  --drop-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 1px 1px rgb(0 0 0 / 0.06);
   --drop-shadow-md: 0 3px 3px rgb(0 0 0 / 0.12);
   --drop-shadow-lg: 0 4px 4px rgb(0 0 0 / 0.15);
   --drop-shadow-xl: 0 9px 7px rgb(0 0 0 / 0.1);
   --drop-shadow-2xl: 0 25px 25px rgb(0 0 0 / 0.15);
-  --text-shadow-2xs: 0px 1px 0px rgb(0 0 0 / 0.15);
-  --text-shadow-xs: 0px 1px 1px rgb(0 0 0 / 0.2);
-  --text-shadow-sm: 0px 1px 0px rgb(0 0 0 / 0.075), 0px 1px 1px rgb(0 0 0 / 0.075), 0px 2px 2px rgb(0 0 0 / 0.075);
-  --text-shadow-md: 0px 1px 1px rgb(0 0 0 / 0.1), 0px 1px 2px rgb(0 0 0 / 0.1), 0px 2px 4px rgb(0 0 0 / 0.1);
-  --text-shadow-lg: 0px 1px 2px rgb(0 0 0 / 0.1), 0px 3px 2px rgb(0 0 0 / 0.1), 0px 4px 8px rgb(0 0 0 / 0.1);
 
-  /* Typography */
+  /* Text Shadows (for readability) */
+  --text-shadow-none: 0 0 transparent;
+  --text-shadow-2xs: 0 1px 0 rgb(0 0 0 / 0.15);
+  --text-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.2);
+  --text-shadow-sm: 0 1px 0 rgb(0 0 0 / 0.075), 0 1px 1px rgb(0 0 0 / 0.075), 0 2px 2px rgb(0 0 0 / 0.075);
+  --text-shadow: 0 1px 1px rgb(0 0 0 / 0.1), 0 2px 2px rgb(0 0 0 / 0.1);
+  --text-shadow-md: 0 1px 1px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.1), 0 2px 4px rgb(0 0 0 / 0.1);
+  --text-shadow-lg: 0 1px 2px rgb(0 0 0 / 0.1), 0 3px 2px rgb(0 0 0 / 0.1), 0 4px 8px rgb(0 0 0 / 0.1);
+
+  /* ========================================
+     Typography
+     Optimized for WCAG AAA readability
+     ======================================== */
+
+  /* Font Family */
+  --font-sans: "Inter Variable", "Plus Jakarta Sans Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Font Weights (Accessibility: minimum 400 for body text) */
+  --font-thin: 100;
+  --font-extralight: 200;
+  --font-light: 300;
+  --font-normal: 400;        /* Minimum for body text */
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+  --font-black: 900;
+
+  /* Line Heights (Optimized for readability - WCAG recommends 1.5 for body text) */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;        /* Optimal for body text (WCAG) */
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* Absolute Line Heights */
+  --leading-3: 0.75rem;    /* 12px */
+  --leading-4: 1rem;       /* 16px */
+  --leading-5: 1.25rem;    /* 20px */
+  --leading-6: 1.5rem;     /* 24px */
+  --leading-7: 1.75rem;    /* 28px */
+  --leading-8: 2rem;       /* 32px */
+  --leading-9: 2.25rem;    /* 36px */
+  --leading-10: 2.5rem;    /* 40px */
+
+  /* Font Sizes
+     Minimum 16px for body text (accessibility) */
+  --text-xs: 0.75rem;      /* 12px - small labels only */
+  --text-sm: 0.875rem;     /* 14px - secondary text */
+  --text-base: 1rem;       /* 16px - body text (minimum) */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  --text-6xl: 3.75rem;     /* 60px */
+  --text-7xl: 4.5rem;      /* 72px */
+  --text-8xl: 6rem;        /* 96px */
+  --text-9xl: 8rem;        /* 128px */
+
+  /* Semantic Text Colors (for accessibility)
+     These adapt to light/dark mode automatically */
   --text-color-heading: var(--color-contrast-900);
   --text-color-body: var(--color-contrast-800);
   --text-color-secondary: var(--color-contrast-600);
   --text-color-tertiary: var(--color-contrast-500);
   --text-color-disabled: var(--color-contrast-400);
   --text-color-contrast: var(--color-contrast-100);
-  --font-family-sans: "Inter Variable", "Plus Jakarta Sans Variable", system-ui, -apple-system, sans-serif;
-  --font-weight-thin: 100;
-  --font-weight-extralight: 200;
-  --font-weight-light: 300;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
-  --font-weight-black: 900;
-  --leading-xxs: 0.75rem;
-  --leading-xs: 1rem;
-  --leading-sm: 1.25rem;
-  --leading-md: 1.5rem;
-  --leading-lg: 1.625rem;
-  --leading-xl: 1.75rem;
-  --leading-2xl: 2rem;
-  --leading-3xl: 2.25rem;
-  --leading-4xl: 2.5rem;
-  --leading-5xl: 3.5rem;
-  --leading-6xl: 4rem;
-  --leading-7xl: 5rem;
-  --leading-8xl: 7rem;
-  --leading-9xl: 9rem;
-  --text-xxs: 0.625rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
-  --text-6xl: 3.75rem;
-  --text-7xl: 4.5rem;
-  --text-8xl: 6rem;
-  --text-9xl: 8rem;
 
-  /* Modern Interactions */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* ========================================
+     Transitions & Animations
+     Optimized for smooth, accessible motion
+     ======================================== */
+
+  /* Easing Functions */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* Bouncy */
+
+  /* Duration (respects prefers-reduced-motion) */
+  --duration-75: 75ms;
+  --duration-100: 100ms;
+  --duration-150: 150ms;
+  --duration-200: 200ms;
+  --duration-300: 300ms;
+  --duration-500: 500ms;
+  --duration-700: 700ms;
+  --duration-1000: 1000ms;
+
+  /* Combined Transitions (most commonly used) */
+  --transition-none: none;
   --transition-fast: 150ms var(--ease-in-out);
-  --transition-normal: 250ms var(--ease-in-out);
-  --transition-slow: 400ms var(--ease-in-out);
+  --transition-normal: 200ms var(--ease-in-out);
+  --transition-slow: 300ms var(--ease-in-out);
   --transition-slower: 500ms var(--ease-in-out);
-  --transition-spring: 400ms var(--ease-spring);
+  --transition-spring: 300ms var(--ease-spring);
+  --transition-all: all 150ms var(--ease-in-out);
 }
+
+/* ========================================
+   Dark Mode (prefers-color-scheme)
+   ======================================== */
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -266,11 +374,11 @@ html.dark {
   --color-contrast: var(--color-contrast-900);
 
   /* Primary - Dark mode variations */
-  --color-primary: hsl(210deg 100% 60% / 91%);
-  --color-primary-backdrop: hsl(210deg 50% 25% / 50%);
-  --color-primary-content: hsl(210deg 100% 80% / 91%);
-  --color-primary-contrast: hsl(210deg 100% 15% / 91%);
-  --color-primary-focus: hsl(210deg 100% 65% / 91%);
+  --color-primary: hsl(260deg 100% 70% / 100%);
+  --color-primary-backdrop: hsl(260deg 100% 30% / 40%);
+  --color-primary-content: hsl(260deg 100% 95% / 100%);
+  --color-primary-contrast: hsl(260deg 100% 10% / 100%);
+  --color-primary-focus: hsl(260deg 100% 75% / 100%);
   --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
   /* Secondary - Dark mode variations */

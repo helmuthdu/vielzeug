@@ -116,9 +116,28 @@ describe('bit-button', () => {
       const clickHandler = vi.fn();
 
       fixture.element.addEventListener('click', clickHandler);
-      innerButton?.click();
+
+      // Dispatch click event directly to test preventDefault/stopPropagation
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      innerButton?.dispatchEvent(clickEvent);
 
       expect(clickHandler).not.toHaveBeenCalled();
+      expect(clickEvent.defaultPrevented).toBe(true);
+      fixture.destroy();
+    });
+
+    it('should prevent default and stop propagation when disabled', async () => {
+      const fixture = await createFixture('bit-button', { disabled: true });
+      const innerButton = fixture.query<HTMLButtonElement>('button');
+
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
+      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
+
+      innerButton?.dispatchEvent(clickEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      expect(stopPropagationSpy).toHaveBeenCalled();
       fixture.destroy();
     });
 
@@ -129,6 +148,24 @@ describe('bit-button', () => {
       const innerButton = fixture.query('button');
 
       expect(innerButton?.hasAttribute('disabled')).toBe(false);
+      expect(innerButton?.getAttribute('aria-disabled')).toBe('false');
+      fixture.destroy();
+    });
+
+    it('should update aria-disabled when disabled changes', async () => {
+      const fixture = await createFixture('bit-button');
+      const innerButton = fixture.query('button');
+
+      expect(innerButton?.getAttribute('aria-disabled')).toBe('false');
+
+      await fixture.setAttribute('disabled', true);
+      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
+      expect(innerButton?.getAttribute('aria-disabled')).toBe('true');
+
+      fixture.element.removeAttribute('disabled');
+      await fixture.update();
+      expect(fixture.element.getAttribute('aria-disabled')).toBe('false');
+
       fixture.destroy();
     });
   });
@@ -154,9 +191,28 @@ describe('bit-button', () => {
       const clickHandler = vi.fn();
 
       fixture.element.addEventListener('click', clickHandler);
-      innerButton?.click();
+
+      // Dispatch click event directly to test preventDefault/stopPropagation
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      innerButton?.dispatchEvent(clickEvent);
 
       expect(clickHandler).not.toHaveBeenCalled();
+      expect(clickEvent.defaultPrevented).toBe(true);
+      fixture.destroy();
+    });
+
+    it('should prevent default and stop propagation when loading', async () => {
+      const fixture = await createFixture('bit-button', { loading: true });
+      const innerButton = fixture.query<HTMLButtonElement>('button');
+
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
+      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
+
+      innerButton?.dispatchEvent(clickEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      expect(stopPropagationSpy).toHaveBeenCalled();
       fixture.destroy();
     });
 
@@ -167,6 +223,23 @@ describe('bit-button', () => {
       const loader = fixture.query('.loader');
 
       expect(loader).toBeFalsy();
+      fixture.destroy();
+    });
+
+    it('should update aria-busy when loading changes', async () => {
+      const fixture = await createFixture('bit-button');
+      const innerButton = fixture.query('button');
+
+      expect(innerButton?.getAttribute('aria-busy')).toBe('false');
+
+      await fixture.setAttribute('loading', true);
+      expect(fixture.element.getAttribute('aria-busy')).toBe('true');
+      expect(innerButton?.getAttribute('aria-busy')).toBe('true');
+
+      fixture.element.removeAttribute('loading');
+      await fixture.update();
+      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+
       fixture.destroy();
     });
   });
@@ -222,19 +295,39 @@ describe('bit-button', () => {
   });
 
   describe('Rounded Mode', () => {
-    it('should apply rounded attribute', async () => {
-      const fixture = await createFixture('bit-button', { rounded: true });
+    it('should apply rounded attribute as boolean (default full)', async () => {
+      const fixture = await createFixture('bit-button', { rounded: '' });
 
       expect(fixture.element.hasAttribute('rounded')).toBe(true);
+      expect(fixture.element.getAttribute('rounded')).toBe('');
       fixture.destroy();
     });
 
-    it('should toggle rounded mode', async () => {
-      const fixture = await createFixture('bit-button', { rounded: true });
+    it('should apply rounded with specific theme values', async () => {
+      const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
 
-      await fixture.setAttribute('rounded', false);
+      for (const value of values) {
+        const fixture = await createFixture('bit-button', { rounded: value });
+        expect(fixture.element.getAttribute('rounded')).toBe(value);
+        fixture.destroy();
+      }
+    });
+
+    it('should toggle rounded mode', async () => {
+      const fixture = await createFixture('bit-button', { rounded: '' });
+
+      await fixture.element.removeAttribute('rounded');
 
       expect(fixture.element.hasAttribute('rounded')).toBe(false);
+      fixture.destroy();
+    });
+
+    it('should update rounded value dynamically', async () => {
+      const fixture = await createFixture('bit-button', { rounded: 'lg' });
+
+      await fixture.setAttribute('rounded', 'xl');
+
+      expect(fixture.element.getAttribute('rounded')).toBe('xl');
       fixture.destroy();
     });
   });
@@ -262,19 +355,36 @@ describe('bit-button', () => {
       fixture.destroy();
     });
 
+    it('should stop propagation on normal clicks', async () => {
+      const fixture = await createFixture('bit-button');
+      const innerButton = fixture.query<HTMLButtonElement>('button');
+
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
+
+      innerButton?.dispatchEvent(clickEvent);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      fixture.destroy();
+    });
+
     it('should not emit when disabled or loading', async () => {
       const clickHandler = vi.fn();
 
       // Test disabled
       const disabledFixture = await createFixture('bit-button', { disabled: true });
       disabledFixture.element.addEventListener('click', clickHandler);
-      disabledFixture.query<HTMLButtonElement>('button')?.click();
+      const disabledButton = disabledFixture.query<HTMLButtonElement>('button');
+      const disabledEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      disabledButton?.dispatchEvent(disabledEvent);
       disabledFixture.destroy();
 
       // Test loading
       const loadingFixture = await createFixture('bit-button', { loading: true });
       loadingFixture.element.addEventListener('click', clickHandler);
-      loadingFixture.query<HTMLButtonElement>('button')?.click();
+      const loadingButton = loadingFixture.query<HTMLButtonElement>('button');
+      const loadingEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      loadingButton?.dispatchEvent(loadingEvent);
       loadingFixture.destroy();
 
       expect(clickHandler).not.toHaveBeenCalled();

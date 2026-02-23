@@ -78,11 +78,11 @@ const styles = css`
   .subtitle {
     font-size: var(--accordion-item-subtitle-size);
     color: var(--accordion-item-subtitle-color, var(--text-color-secondary));
-    line-height: var(--leading-md);
+    line-height: var(--leading-normal);
   }
 
   .title {
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-medium);
     color: var(--accordion-item-title-color, var(--text-color-heading));
   }
 
@@ -219,7 +219,7 @@ const styles = css`
   :host([size='md']) {
     --accordion-item-details-padding: var(--size-3) var(--size-4);
     --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-md);
+    --accordion-item-title: var(--text-base);
     --accordion-item-subtitle-size: var(--text-sm);
     --accordion-item-body: var(--text-sm);
   }
@@ -228,8 +228,8 @@ const styles = css`
     --accordion-item-details-padding: var(--size-4) var(--size-4);
     --accordion-item-summary-padding: var(--size-1) var(--size-5);
     --accordion-item-title: var(--text-lg);
-    --accordion-item-subtitle-size: var(--text-md);
-    --accordion-item-body: var(--text-md);
+    --accordion-item-subtitle-size: var(--text-base);
+    --accordion-item-body: var(--text-base);
   }
 
   /* ========================================

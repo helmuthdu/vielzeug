@@ -102,20 +102,25 @@ const styles = css`
      ======================================== */
 
   .label-inset,
-  .label-outside {
+  .label-outside,
+  label.label-inset,
+  label.label-outside {
     font-weight: var(--font-medium);
     color: var(--color-contrast-500);
     transition: color var(--transition-fast);
     user-select: none;
+    cursor: pointer;
   }
 
-  .label-inset {
+  .label-inset,
+  label.label-inset {
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
     margin-bottom: 2px;
   }
 
-  .label-outside {
+  .label-outside,
+  label.label-outside {
     font-size: var(--text-sm);
     line-height: var(--leading-none);
   }
@@ -208,7 +213,7 @@ const styles = css`
   }
 
   :host([size='lg']) {
-    --_font-size: var(--text-md);
+    --_font-size: var(--text-base);
     --_padding-y: var(--size-2);
     --_padding-x: var(--size-3-5);
     --_gap: var(--size-2-5);
@@ -518,19 +523,32 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     const labelText = el.getAttribute('label');
     const labelPlacement = el.getAttribute('label-placement') || 'inset';
     const helperText = el.getAttribute('helper');
+    const name = el.getAttribute('name') || '';
+
+    // Generate IDs for accessibility
+    const inputId = name ? `input-${name}` : `input-${Math.random().toString(36).substr(2, 9)}`;
+    const labelId = labelText ? `label-${inputId}` : '';
+    const helperId = helperText ? `helper-${inputId}` : '';
 
     return html`
       <div class="input-wrapper">
-        ${labelText && labelPlacement === 'outside' ? html`<div class="label-outside">${labelText}</div>` : ''}
+        ${labelText && labelPlacement === 'outside'
+        ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
+        : ''}
         <div class="field">
-          ${labelText && labelPlacement === 'inset' ? html`<div class="label-inset">${labelText}</div>` : ''}
+          ${labelText && labelPlacement === 'inset'
+          ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
+          : ''}
           <div class="input-row">
             <slot name="prefix"></slot>
             <input
+              id="${inputId}"
               type="${safeType}"
-              name="${el.getAttribute('name') || ''}"
+              name="${name}"
               value="${el.getAttribute('value') || ''}"
               placeholder="${el.getAttribute('placeholder') || ''}"
+              aria-labelledby="${labelId || ''}"
+              aria-describedby="${helperId || ''}"
               ?disabled="${el.hasAttribute('disabled')}"
               ?readonly="${el.hasAttribute('readonly')}"
               ?required="${el.hasAttribute('required')}" />
@@ -539,7 +557,7 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
         </div>
         ${helperText || el.querySelector('[slot="helper"]')
         ? html`
-              <div class="helper-text">
+              <div class="helper-text" id="${helperId}">
                 <slot name="helper">${helperText}</slot>
               </div>
             `

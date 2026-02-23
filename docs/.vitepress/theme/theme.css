@@ -1,15 +1,15 @@
 :root {
-  --vp-c-brand-lighter: var(--color-warning-backdrop);
-  --vp-c-brand-1: var(--color-warning);
-  --vp-c-brand-2: var(--color-warning-focus);
-  --vp-c-brand-3: var(--color-warning);
+  --vp-c-brand-lighter: var(--color-primary-backdrop);
+  --vp-c-brand-1: var(--color-primary);
+  --vp-c-brand-2: var(--color-primary-focus);
+  --vp-c-brand-3: var(--color-primary);
   --vp-c-bg: var(--color-contrast-50);
   --vp-c-bg-alt: var(--color-contrast-100);
   --vp-c-bg-soft: var(--color-contrast-100);
   --vp-c-bg-elv: var(--color-contrast-200);
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-warning));
-  --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-warning) 50%, var(--color-error) 50%);
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-primary));
+  --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-primary) 50%, var(--color-error) 50%);
   --vp-home-hero-image-filter: blur(75px);
   --vp-custom-navbar-color: hsla(240, 4%, 93%, 0.97);
 }

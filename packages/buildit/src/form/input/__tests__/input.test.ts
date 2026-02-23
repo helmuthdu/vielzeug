@@ -267,6 +267,41 @@ describe('bit-input', () => {
     });
   });
 
+  describe('Rounded Mode', () => {
+    it('should apply rounded attribute as boolean (default full)', async () => {
+      fixture = await createFixture('bit-input', { rounded: '' });
+
+      expect(fixture.element.hasAttribute('rounded')).toBe(true);
+      expect(fixture.element.getAttribute('rounded')).toBe('');
+    });
+
+    it('should apply rounded with specific theme values', async () => {
+      const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
+
+      for (const value of values) {
+        fixture = await createFixture('bit-input', { rounded: value });
+        expect(fixture.element.getAttribute('rounded')).toBe(value);
+        fixture.destroy();
+      }
+    });
+
+    it('should update rounded value dynamically', async () => {
+      fixture = await createFixture('bit-input', { rounded: 'lg' });
+
+      await fixture.setAttribute('rounded', 'xl');
+
+      expect(fixture.element.getAttribute('rounded')).toBe('xl');
+    });
+
+    it('should remove rounded attribute', async () => {
+      fixture = await createFixture('bit-input', { rounded: '' });
+
+      await fixture.element.removeAttribute('rounded');
+
+      expect(fixture.element.hasAttribute('rounded')).toBe(false);
+    });
+  });
+
   describe('Events', () => {
     it('should emit input event with details', async () => {
       fixture = await createFixture('bit-input');

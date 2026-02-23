@@ -391,4 +391,67 @@ describe('bit-button accessibility', () => {
       fixture.destroy();
     });
   });
+
+  describe('SVG Icons in Slots', () => {
+    it('should have no violations with SVG in prefix slot', async () => {
+      const fixture = await createFixture('bit-button');
+      fixture.element.innerHTML = `
+        <svg slot="prefix" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Button Text
+      `;
+
+      const results = await axe.run(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+      fixture.destroy();
+    });
+
+    it('should have no violations with SVG in suffix slot', async () => {
+      const fixture = await createFixture('bit-button');
+      fixture.element.innerHTML = `
+        Button Text
+        <svg slot="suffix" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M9 5l7 7-7 7"/>
+        </svg>
+      `;
+
+      const results = await axe.run(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+      fixture.destroy();
+    });
+
+    // Note: icon-only buttons with aria-label are already covered in the test
+    // "should have aria-label for icon-only buttons" above
+  });
+
+  describe('Rounded Attribute Accessibility', () => {
+    it('should have no violations with rounded (default full)', async () => {
+      const fixture = await createFixture('bit-button', { rounded: '' });
+      fixture.element.textContent = 'Rounded Button';
+
+      const results = await axe.run(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+      fixture.destroy();
+    });
+
+    it('should have no violations with rounded theme values', async () => {
+      const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
+
+      for (const value of values) {
+        const fixture = await createFixture('bit-button', { rounded: value });
+        fixture.element.textContent = `Rounded ${value}`;
+
+        const results = await axe.run(fixture.element);
+
+        expect(results.violations, `rounded="${value}" should have no violations`).toHaveLength(0);
+        fixture.destroy();
+      }
+    });
+  });
 });
+
+

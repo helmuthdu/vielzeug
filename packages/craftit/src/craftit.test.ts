@@ -142,9 +142,7 @@ describe('craftit', () => {
       });
 
       it('should handle empty values', () => {
-        const result = css`
-          color: ${undefined};
-        `;
+        const result = css`color: ${undefined};`;
         expect(result).toBe('color: ;');
       });
     });

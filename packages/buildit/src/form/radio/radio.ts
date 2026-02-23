@@ -161,7 +161,7 @@ const styles = css`
 
   :host([size='lg']) {
     --_size: var(--size-6);
-    --_font-size: var(--text-md);
+    --_font-size: var(--text-base);
   }
 
   /* ========================================

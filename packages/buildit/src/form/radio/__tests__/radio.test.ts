@@ -161,6 +161,48 @@ describe('bit-radio', () => {
     });
   });
 
+  describe('Colors', () => {
+    const colors = ['primary', 'secondary', 'success', 'warning', 'error'] as const;
+
+    colors.forEach((color) => {
+      it(`should apply ${color} color`, async () => {
+        fixture = await createFixture('bit-radio', { color });
+
+        expect(fixture.element.getAttribute('color')).toBe(color);
+      });
+    });
+
+    it('should change color dynamically', async () => {
+      fixture = await createFixture('bit-radio', { color: 'primary' });
+
+      expect(fixture.element.getAttribute('color')).toBe('primary');
+
+      await fixture.setAttribute('color', 'error');
+      expect(fixture.element.getAttribute('color')).toBe('error');
+    });
+  });
+
+  describe('Sizes', () => {
+    const sizes = ['sm', 'md', 'lg'] as const;
+
+    sizes.forEach((size) => {
+      it(`should apply ${size} size`, async () => {
+        fixture = await createFixture('bit-radio', { size });
+
+        expect(fixture.element.getAttribute('size')).toBe(size);
+      });
+    });
+
+    it('should change size dynamically', async () => {
+      fixture = await createFixture('bit-radio', { size: 'sm' });
+
+      expect(fixture.element.getAttribute('size')).toBe('sm');
+
+      await fixture.setAttribute('size', 'lg');
+      expect(fixture.element.getAttribute('size')).toBe('lg');
+    });
+  });
+
   describe('Accessibility', () => {
     it('should have proper ARIA attributes when checked', async () => {
       fixture = await createFixture('bit-radio', { checked: true });

@@ -329,20 +329,20 @@ button {
   --button-padding: var(--size-2) var(--size-4);
   --button-font-size: var(--text-sm);
   height: var(--size-10);
-  line-height: var(--leading-md);
+  line-height: var(--leading-normal);
 }
 
 :host([size='sm']) button {
   --button-padding: var(--size-1-5) var(--size-3);
   height: var(--size-8);
-  line-height: var(--leading-sm);
+  line-height: var(--leading-tight);
 }
 
 :host([size='lg']) button {
   --button-padding: var(--size-2-5) var(--size-5);
-  --button-font-size: var(--text-md);
+  --button-font-size: var(--text-base);
   height: var(--size-12);
-  line-height: var(--leading-lg);
+  line-height: var(--leading-relaxed);
 }
 ```
 
@@ -358,15 +358,15 @@ button {
 **Typography:**
 ```css
 /* Font sizes */
---text-xs (12px), --text-sm (14px), --text-md (16px), --text-lg (18px)
+--text-xs (12px), --text-sm (14px), --text-base (16px), --text-lg (18px)
 --text-xl (20px), --text-2xl (24px) /* ... up to --text-9xl */
 
 /* Font weights */
---font-weight-normal (400), --font-weight-medium (500)
---font-weight-semibold (600), --font-weight-bold (700)
+--font-normal (400), --font-medium (500)
+--font-semibold (600), --font-bold (700)
 
 /* Line heights */
---leading-sm, --leading-md, --leading-lg
+--leading-tight, --leading-normal, --leading-relaxed
 
 /* Semantic text colors (auto-adapt to theme) */
 --text-color-heading, --text-color-body, --text-color-secondary
@@ -827,10 +827,9 @@ Semantic text colors that automatically adapt to theme:
 
 **Font sizes:**
 ```css
---text-xxs   /* 0.625rem - 10px */
 --text-xs    /* 0.75rem - 12px */
 --text-sm    /* 0.875rem - 14px */
---text-md    /* 1rem - 16px - BASE */
+--text-base    /* 1rem - 16px - BASE */
 --text-lg    /* 1.125rem - 18px */
 --text-xl    /* 1.25rem - 20px */
 --text-2xl   /* 1.5rem - 24px */
@@ -845,33 +844,27 @@ Semantic text colors that automatically adapt to theme:
 
 **Font weights:**
 ```css
---font-weight-thin        /* 100 */
---font-weight-extralight  /* 200 */
---font-weight-light       /* 300 */
---font-weight-normal      /* 400 */
---font-weight-medium      /* 500 */
---font-weight-semibold    /* 600 */
---font-weight-bold        /* 700 */
---font-weight-extrabold   /* 800 */
---font-weight-black       /* 900 */
+--font-thin        /* 100 */
+--font-extralight  /* 200 */
+--font-light       /* 300 */
+--font-normal      /* 400 */
+--font-medium      /* 500 */
+--font-semibold    /* 600 */
+--font-bold        /* 700 */
+--font-extrabold   /* 800 */
+--font-black       /* 900 */
 ```
 
 **Line heights (leading):**
 ```css
---leading-xxs   /* 0.75rem */
---leading-xs    /* 1rem */
---leading-sm    /* 1.25rem */
---leading-md    /* 1.5rem */
---leading-lg    /* 1.625rem */
---leading-xl    /* 1.75rem */
---leading-2xl   /* 2rem */
---leading-3xl   /* 2.25rem */
---leading-4xl   /* 2.5rem */
---leading-5xl   /* 3.5rem */
---leading-6xl   /* 4rem */
---leading-7xl   /* 5rem */
---leading-8xl   /* 7rem */
---leading-9xl   /* 9rem */
+/* Line Heights
+   Optimized for readability - WCAG recommends 1.5 for body text */
+--leading-none: 1;
+--leading-tight: 1.25;
+--leading-snug: 1.375;
+--leading-normal: 1.5;        /* Optimal for body text (WCAG) */
+--leading-relaxed: 1.625;
+--leading-loose: 2;
 ```
 
 #### 8.2.6 Borders
@@ -961,7 +954,7 @@ background: var(--color-contrast-100);
 :host {
   padding: var(--size-2) var(--size-4);      /* Vertical, horizontal */
   font-size: var(--text-sm);
-  line-height: var(--leading-sm);
+  line-height: var(--leading-tight);
   border-radius: var(--rounded-md);
   box-shadow: var(--shadow-sm);
 }
@@ -1689,6 +1682,8 @@ Add stories/playgrounds (Storybook, Ladle, VitePress demos) to visually verify:
 - All states
 - Interactive behavior
 - Responsive design
+
+**Note**: The tests should be simple, non-redundant, non-trivial but ensure the maximum coverage while also covering all the edge cases.
 
 ---
 

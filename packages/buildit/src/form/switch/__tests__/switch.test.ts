@@ -13,41 +13,29 @@ describe('bit-switch', () => {
   });
 
   describe('Rendering', () => {
-    it('should render with shadow DOM structure', async () => {
+    it('should render with required shadow DOM elements', async () => {
       fixture = await createFixture('bit-switch');
 
-      const input = fixture.query('input[type="checkbox"]');
-      const track = fixture.query('.switch-track');
-      const thumb = fixture.query('.switch-thumb');
-
-      expect(input).toBeTruthy();
-      expect(track).toBeTruthy();
-      expect(thumb).toBeTruthy();
-    });
-
-    it('should render label content', async () => {
-      fixture = await createFixture('bit-switch');
-      fixture.element.textContent = 'Enable notifications';
-
-      const slot = fixture.query('slot');
-      expect(slot).toBeTruthy();
+      expect(fixture.query('input[type="checkbox"]')).toBeTruthy();
+      expect(fixture.query('.switch-track')).toBeTruthy();
+      expect(fixture.query('.switch-thumb')).toBeTruthy();
+      expect(fixture.query('slot')).toBeTruthy();
     });
   });
 
-  describe('States', () => {
-    it('should reflect checked attribute', async () => {
+  describe('Checked State', () => {
+    it('should sync checked attribute with internal input', async () => {
       fixture = await createFixture('bit-switch', { checked: true });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.checked).toBe(true);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
+      expect(fixture.element.getAttribute('aria-checked')).toBe('true');
     });
 
-    it('should toggle checked state', async () => {
+    it('should toggle checked state dynamically', async () => {
       fixture = await createFixture('bit-switch');
       const input = fixture.query<HTMLInputElement>('input');
-
-      expect(input?.checked).toBe(false);
 
       await fixture.setAttribute('checked', true);
       expect(input?.checked).toBe(true);
@@ -56,68 +44,31 @@ describe('bit-switch', () => {
       expect(input?.checked).toBe(false);
     });
 
-    it('should reflect disabled attribute', async () => {
+    it('should toggle on click', async () => {
+      fixture = await createFixture('bit-switch');
+
+      expect(fixture.element.hasAttribute('checked')).toBe(false);
+
+      fixture.element.click();
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
+
+      fixture.element.click();
+      expect(fixture.element.hasAttribute('checked')).toBe(false);
+    });
+  });
+
+  describe('Disabled State', () => {
+    it('should sync disabled attribute with internal input', async () => {
       fixture = await createFixture('bit-switch', { disabled: true });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.disabled).toBe(true);
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
+      expect(fixture.element.hasAttribute('tabindex')).toBe(false);
+      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
     });
 
-    it('should toggle disabled state', async () => {
-      fixture = await createFixture('bit-switch');
-      const input = fixture.query<HTMLInputElement>('input');
-
-      expect(input?.disabled).toBe(false);
-
-      await fixture.setAttribute('disabled', true);
-      expect(input?.disabled).toBe(true);
-    });
-
-    it('should handle unchecked and checked states', async () => {
-      // Test unchecked
-      fixture = await createFixture('bit-switch');
-      const input1 = fixture.query<HTMLInputElement>('input');
-      expect(input1?.checked).toBe(false);
-      expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
-
-      // Test checked
-      fixture = await createFixture('bit-switch', { checked: true });
-      const input2 = fixture.query<HTMLInputElement>('input');
-      expect(input2?.checked).toBe(true);
-      expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-    });
-  });
-
-  describe('Events', () => {
-    it('should emit change event when clicked', async () => {
-      fixture = await createFixture('bit-switch');
-      const changeHandler = vi.fn();
-
-      fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
-
-      expect(changeHandler).toHaveBeenCalled();
-      const event = changeHandler.mock.calls[0][0] as CustomEvent;
-      expect(event.detail.checked).toBe(true);
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
-    });
-
-    it('should emit change event with correct details', async () => {
-      fixture = await createFixture('bit-switch', { value: 'notifications' });
-      const changeHandler = vi.fn();
-
-      fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
-
-      const event = changeHandler.mock.calls[0][0] as CustomEvent;
-      expect(event.detail.checked).toBe(true);
-      expect(event.detail.value).toBe('notifications');
-      expect(event.detail.originalEvent).toBeDefined();
-    });
-
-    it('should not emit change event when disabled', async () => {
+    it('should prevent events when disabled', async () => {
       fixture = await createFixture('bit-switch', { disabled: true });
       const changeHandler = vi.fn();
 
@@ -127,39 +78,86 @@ describe('bit-switch', () => {
       expect(changeHandler).not.toHaveBeenCalled();
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
+  });
 
-    it('should toggle on keyboard space/enter', async () => {
-      fixture = await createFixture('bit-switch');
+  describe('Events', () => {
+    it('should emit change event with complete details', async () => {
+      fixture = await createFixture('bit-switch', { value: 'notifications' });
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
+      fixture.element.click();
 
-      // Space key
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
-      expect(changeHandler).toHaveBeenCalled();
-
-      changeHandler.mockClear();
-
-      // Enter key
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-      expect(changeHandler).toHaveBeenCalled();
+      expect(changeHandler).toHaveBeenCalledTimes(1);
+      const event = changeHandler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.checked).toBe(true);
+      expect(event.detail.value).toBe('notifications');
+      expect(event.detail.originalEvent).toBeDefined();
     });
 
-    it('should toggle checked state on click', async () => {
+    it('should respond to keyboard events', async () => {
       fixture = await createFixture('bit-switch');
+      const changeHandler = vi.fn();
+      fixture.element.addEventListener('change', changeHandler);
 
-      expect(fixture.element.hasAttribute('checked')).toBe(false);
+      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      fixture.element.click();
-      expect(fixture.element.hasAttribute('checked')).toBe(true);
+      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(changeHandler).toHaveBeenCalledTimes(2);
+    });
+  });
 
-      fixture.element.click();
-      expect(fixture.element.hasAttribute('checked')).toBe(false);
+  describe('Form Integration', () => {
+    it('should set name and value on internal input', async () => {
+      fixture = await createFixture('bit-switch', { name: 'notifications', value: 'enabled' });
+      const input = fixture.query<HTMLInputElement>('input');
+
+      expect(input?.name).toBe('notifications');
+      expect(input?.value).toBe('enabled');
+    });
+  });
+
+  describe('Colors', () => {
+    const colors = ['primary', 'secondary', 'success', 'warning', 'error'] as const;
+
+    it('should apply and update color attribute', async () => {
+      fixture = await createFixture('bit-switch', { color: 'primary' });
+      expect(fixture.element.getAttribute('color')).toBe('primary');
+
+      await fixture.setAttribute('color', 'success');
+      expect(fixture.element.getAttribute('color')).toBe('success');
+    });
+
+    colors.forEach((color) => {
+      it(`should apply ${color} color`, async () => {
+        fixture = await createFixture('bit-switch', { color });
+        expect(fixture.element.getAttribute('color')).toBe(color);
+      });
+    });
+  });
+
+  describe('Sizes', () => {
+    const sizes = ['sm', 'md', 'lg'] as const;
+
+    it('should apply and update size attribute', async () => {
+      fixture = await createFixture('bit-switch', { size: 'sm' });
+      expect(fixture.element.getAttribute('size')).toBe('sm');
+
+      await fixture.setAttribute('size', 'lg');
+      expect(fixture.element.getAttribute('size')).toBe('lg');
+    });
+
+    sizes.forEach((size) => {
+      it(`should apply ${size} size`, async () => {
+        fixture = await createFixture('bit-switch', { size });
+        expect(fixture.element.getAttribute('size')).toBe(size);
+      });
     });
   });
 
   describe('Accessibility', () => {
-    it('should have proper ARIA attributes', async () => {
+    it('should have proper ARIA role and attributes', async () => {
       fixture = await createFixture('bit-switch', { checked: true, disabled: true });
 
       expect(fixture.element.getAttribute('role')).toBe('switch');
@@ -167,21 +165,13 @@ describe('bit-switch', () => {
       expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
     });
 
-    it('should be keyboard accessible when not disabled', async () => {
+    it('should be keyboard accessible when enabled', async () => {
       fixture = await createFixture('bit-switch');
-
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
     });
 
-    it('should not have tabindex when disabled', async () => {
-      fixture = await createFixture('bit-switch', { disabled: true });
-
-      expect(fixture.element.hasAttribute('tabindex')).toBe(false);
-    });
-
-    it('should update aria-checked on state change', async () => {
+    it('should update aria-checked on interaction', async () => {
       fixture = await createFixture('bit-switch');
-
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
 
       fixture.element.click();
@@ -192,40 +182,39 @@ describe('bit-switch', () => {
     });
   });
 
-  describe('Attributes', () => {
-    it('should handle name attribute', async () => {
-      fixture = await createFixture('bit-switch', { name: 'notifications' });
-      const input = fixture.query<HTMLInputElement>('input');
+  describe('Edge Cases', () => {
+    it('should handle rapid toggling', async () => {
+      fixture = await createFixture('bit-switch');
 
-      expect(input?.name).toBe('notifications');
-    });
-
-    it('should handle value attribute', async () => {
-      fixture = await createFixture('bit-switch', { value: 'on' });
-      const input = fixture.query<HTMLInputElement>('input');
-
-      expect(input?.value).toBe('on');
-    });
-
-    it('should support color variants', async () => {
-      const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
-
-      for (const color of colors) {
-        fixture = await createFixture('bit-switch', { color });
-        expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
+      for (let i = 0; i < 5; i++) {
+        fixture.element.click();
       }
+
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
-    it('should support size variants', async () => {
-      const sizes = ['sm', 'md', 'lg'];
+    it('should handle checked and disabled simultaneously', async () => {
+      fixture = await createFixture('bit-switch', { checked: true, disabled: true });
+      const changeHandler = vi.fn();
 
-      for (const size of sizes) {
-        fixture = await createFixture('bit-switch', { size });
-        expect(fixture.element.getAttribute('size')).toBe(size);
-        fixture.destroy();
-      }
+      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.click();
+
+      expect(changeHandler).not.toHaveBeenCalled();
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
+    });
+
+    it('should handle missing value attribute', async () => {
+      fixture = await createFixture('bit-switch');
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.click();
+
+      const event = changeHandler.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.value).toBeNull();
     });
   });
 });
+
 
