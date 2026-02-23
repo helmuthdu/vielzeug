@@ -50,7 +50,7 @@ const styles = css`
     --_padding-y: var(--input-padding-y, var(--size-1-5));
     --_gap: var(--input-gap, var(--size-2));
     --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
-    
+
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
@@ -80,7 +80,7 @@ const styles = css`
     padding-inline: var(--_padding-x);
     padding-block: var(--_padding-y);
     box-sizing: border-box;
-    box-shadow: var(--shadow-2xs);
+    box-shadow: var(--_shadown, var(--shadow-2xs));
     background: var(--input-bg, var(--color-contrast-100));
     transition:
       background var(--transition-fast),
@@ -224,7 +224,11 @@ const styles = css`
      ======================================== */
 
   /* Default rounded (no value or empty string = full) */
-  :host([rounded]:not([rounded='sm']):not([rounded='md']):not([rounded='lg']):not([rounded='xl']):not([rounded='2xl']):not([rounded='3xl'])) {
+  :host(
+    [rounded]:not([rounded='sm']):not([rounded='md']):not([rounded='lg']):not([rounded='xl']):not([rounded='2xl']):not(
+        [rounded='3xl']
+      )
+  ) {
     --_radius: var(--rounded-full);
   }
 
@@ -319,6 +323,7 @@ const styles = css`
   :host([variant='flat']) {
     --input-bg: color-mix(in srgb, var(--input-backdrop) 8%, var(--color-contrast-100));
     --input-border-color: transparent;
+    --_shadown: var(--inset-shadow-2xs);
   }
 
   :host([variant='bordered']) {
@@ -364,7 +369,9 @@ const styles = css`
   :host([variant='glass']) .field,
   :host([variant='frost']) .field {
     backdrop-filter: blur(var(--blur-md)) saturate(190%);
-    box-shadow: var(--shadow-md), inset 0 0 0 1px rgb(255 255 255 / 0.1);
+    box-shadow:
+      var(--shadow-md),
+      inset 0 0 0 1px rgb(255 255 255 / 0.1);
   }
 
   :host([variant='glass']) .field {
@@ -487,14 +494,15 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
-    const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+    const input = el.query('input') as HTMLInputElement | undefined;
     if (!input) return;
 
     if (host.hasAttribute('disabled')) {
       input.disabled = true;
     }
 
-    input.addEventListener('input', (e: Event) => {
+    // Use el.on() for direct element binding with automatic cleanup
+    el.on(input, 'input', (e) => {
       const target = e.target as HTMLInputElement;
       host.setAttribute('value', target.value);
 
@@ -504,7 +512,7 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
       });
     });
 
-    input.addEventListener('change', (e: Event) => {
+    el.on(input, 'change', (e) => {
       const target = e.target as HTMLInputElement;
       host.setAttribute('value', target.value);
 

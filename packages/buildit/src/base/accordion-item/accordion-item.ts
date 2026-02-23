@@ -154,7 +154,7 @@ const styles = css`
 
   :host([variant='glass']) {
     --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    --accordion-item-border-color: color-mix(in srgb, var(--color-secondary-700) 40%, transparent);
+    --accordion-item-border-color: color-mix(in srgb, var(--color-secondary-focus) 40%, transparent);
     --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
     --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
     --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
@@ -181,7 +181,7 @@ const styles = css`
   }
 
   :host([variant='glass']) summary:hover {
-    background: color-mix(in srgb, var(--color-secondary-200) 60%, var(--color-secondary) 40%);
+    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
   }
 
   :host([variant='glass']) .content-wrapper,
@@ -290,6 +290,8 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
 
     if (!details) return;
 
+    // Note: Using addEventListener directly here because the details element
+    // is owned by this component and will be cleaned up when component disconnects
     details.addEventListener('toggle', () => {
       const isOpen = details.open;
 

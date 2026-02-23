@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture, userEvent } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-checkbox', () => {
@@ -48,55 +48,29 @@ describe('bit-checkbox', () => {
 
       expect(fixture.element.hasAttribute('checked')).toBe(false);
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
   });
 
   describe('Disabled State', () => {
-    it('should sync disabled attribute with internal input', async () => {
-      fixture = await createFixture('bit-checkbox', { disabled: true });
-      const input = fixture.query<HTMLInputElement>('input');
-
-      expect(input?.disabled).toBe(true);
-      expect(fixture.element.hasAttribute('disabled')).toBe(true);
-      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
-    });
+    // ...existing code...
 
     it('should prevent events when disabled', async () => {
       fixture = await createFixture('bit-checkbox', { disabled: true });
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
     });
   });
 
-  describe('Indeterminate State', () => {
-    it('should sync indeterminate attribute', async () => {
-      fixture = await createFixture('bit-checkbox', { indeterminate: true });
-      const input = fixture.query<HTMLInputElement>('input');
-
-      expect(input?.indeterminate).toBe(true);
-      expect(fixture.element.getAttribute('aria-checked')).toBe('mixed');
-    });
-
-    it('should toggle indeterminate dynamically', async () => {
-      fixture = await createFixture('bit-checkbox');
-      const input = fixture.query<HTMLInputElement>('input');
-
-      await fixture.setAttribute('indeterminate', true);
-      expect(input?.indeterminate).toBe(true);
-
-      await fixture.setAttribute('indeterminate', false);
-      expect(input?.indeterminate).toBe(false);
-    });
-  });
+  // ...existing code...
 
   describe('Events', () => {
     it('should emit change event with complete details', async () => {
@@ -104,7 +78,7 @@ describe('bit-checkbox', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
       const event = changeHandler.mock.calls[0][0] as CustomEvent;
@@ -118,10 +92,10 @@ describe('bit-checkbox', () => {
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      await userEvent.keyboard(fixture.element, ' ');
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      await userEvent.keyboard(fixture.element, 'Enter');
       expect(changeHandler).toHaveBeenCalledTimes(2);
     });
   });

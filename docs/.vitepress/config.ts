@@ -97,6 +97,8 @@ export default defineConfig({
           items: [
             { link: '/buildit/components/accordion', text: 'Accordion' },
             { link: '/buildit/components/button', text: 'Button' },
+            { link: '/buildit/components/card', text: 'Card' },
+            { link: '/buildit/components/text', text: 'Text' },
           ],
           text: 'Base Components',
         },

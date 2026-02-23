@@ -40,6 +40,11 @@
       "import": "./dist/button-group.js",
       "require": "./dist/button-group.cjs"
     },
+    "./card": {
+      "types": "./dist/card.d.ts",
+      "import": "./dist/card.js",
+      "require": "./dist/card.cjs"
+    },
     "./checkbox": {
       "types": "./dist/checkbox.d.ts",
       "import": "./dist/checkbox.js",
@@ -54,6 +59,11 @@
       "types": "./dist/input.d.ts",
       "import": "./dist/input.js",
       "require": "./dist/input.cjs"
+    },
+    "./text": {
+      "types": "./dist/text.d.ts",
+      "import": "./dist/text.js",
+      "require": "./dist/text.cjs"
     },
     "./types": "./dist/types.d.ts"
   },

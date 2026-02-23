@@ -9,22 +9,26 @@ import type {
   AccordionProps,
   ButtonGroupProps,
   ButtonProps,
+  CardProps,
   CheckboxProps,
   InputProps,
   RadioProps,
+  TextProps
 } from './';
 
 // ============================================
 // Component Type Definitions
 // ============================================
 
-type BitButton = WebComponent<HTMLButtonElement, ButtonProps>;
-type BitButtonGroup = WebComponent<HTMLDivElement, ButtonGroupProps>;
 type BitAccordion = WebComponent<HTMLDivElement, AccordionProps>;
 type BitAccordionItem = WebComponent<HTMLDivElement, AccordionItemProps>;
+type BitButton = WebComponent<HTMLButtonElement, ButtonProps>;
+type BitButtonGroup = WebComponent<HTMLDivElement, ButtonGroupProps>;
+type BitCard = WebComponent<HTMLDivElement, CardProps>;
 type BitCheckbox = WebComponent<HTMLDivElement, CheckboxProps>;
-type BitRadio = WebComponent<HTMLDivElement, RadioProps>;
 type BitInput = WebComponent<HTMLInputElement, InputProps>;
+type BitRadio = WebComponent<HTMLDivElement, RadioProps>;
+type BitText = WebComponent<HTMLDivElement, TextProps>;
 
 // ============================================
 // Global HTML Element Tag Name Map
@@ -32,12 +36,14 @@ type BitInput = WebComponent<HTMLInputElement, InputProps>;
 
 declare global {
   interface HTMLElementTagNameMap {
-    'bit-button': BitButton;
-    'bit-button-group': BitButtonGroup;
     'bit-accordion': BitAccordion;
     'bit-accordion-item': BitAccordionItem;
+    'bit-button': BitButton;
+    'bit-button-group': BitButtonGroup;
+    'bit-card': BitCard;
     'bit-checkbox': BitCheckbox;
-    'bit-radio': BitRadio;
     'bit-input': BitInput;
+    'bit-radio': BitRadio;
+    'bit-text': BitText;
   }
 }

@@ -265,9 +265,8 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
       });
     };
 
-    // Keyboard interaction
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling multiple arrow keys and radio group coordination
-    host.addEventListener('keydown', (e: KeyboardEvent) => {
+    el.on('keydown', (keyEvent) => {
       if (host.hasAttribute('disabled')) return;
 
       const radioName = host.getAttribute('name');
@@ -280,28 +279,28 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
       const currentIndex = radios.indexOf(host);
       if (currentIndex === -1) return;
 
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
+      if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
+        keyEvent.preventDefault();
         if (!host.hasAttribute('checked')) {
-          selectRadio(host, e);
+          selectRadio(host, keyEvent);
         }
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        e.preventDefault();
+      } else if (keyEvent.key === 'ArrowDown' || keyEvent.key === 'ArrowRight') {
+        keyEvent.preventDefault();
         const nextIndex = (currentIndex + 1) % radios.length;
         const nextRadio = radios[nextIndex];
         nextRadio.focus();
-        selectRadio(nextRadio, e);
-      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        e.preventDefault();
+        selectRadio(nextRadio, keyEvent);
+      } else if (keyEvent.key === 'ArrowUp' || keyEvent.key === 'ArrowLeft') {
+        keyEvent.preventDefault();
         const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
         const prevRadio = radios[prevIndex];
         prevRadio.focus();
-        selectRadio(prevRadio, e);
+        selectRadio(prevRadio, keyEvent);
       }
     });
 
-    // Click interaction
-    host.addEventListener('click', (e) => {
+    // Click interaction (2 params = host element)
+    el.on('click', (e) => {
       if (host.hasAttribute('disabled')) return;
       if (host.hasAttribute('checked')) return; // Already checked
 

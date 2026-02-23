@@ -166,16 +166,51 @@ defineElement('click-counter', {
   `,
 
   onConnected(el) {
-    el.on('.increment', 'click', () => {
+    // Type-safe event delegation
+    el.on('.increment', 'click', (e, target) => {
       el.state.count++;
     });
 
-    el.on('.decrement', 'click', () => {
+    el.on('.decrement', 'click', (e, target) => {
       el.state.count--;
     });
 
-    el.on('.reset', 'click', () => {
+    el.on('.reset', 'click', (e, target) => {
       el.state.count = 0;
+    });
+  },
+});
+```
+
+### With Batch Updates
+
+```ts
+defineElement('user-profile', {
+  state: {
+    name: '',
+    email: '',
+    age: 0,
+  },
+
+  template: (el) => html`
+    <form>
+      <input class="name" placeholder="Name" />
+      <input class="email" placeholder="Email" />
+      <input class="age" type="number" placeholder="Age" />
+      <button type="submit">Save</button>
+    </form>
+  `,
+
+  onConnected(el) {
+    el.on('form', 'submit', (e) => {
+      e.preventDefault();
+
+      // Batch multiple state updates into single render
+      el.batch((state) => {
+        state.name = el.query<HTMLInputElement>('.name')!.value;
+        state.email = el.query<HTMLInputElement>('.email')!.value;
+        state.age = +el.query<HTMLInputElement>('.age')!.value;
+      });
     });
   },
 });
@@ -192,10 +227,13 @@ defineElement('custom-input', {
   formAssociated: true,
 
   onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const input = e.currentTarget as HTMLInputElement;
-      el.state.value = input.value;
-      el.form?.value(input.value);
+    // Direct element binding with el.on()
+    const input = el.queryRequired<HTMLInputElement>('input');
+    
+    el.on(input, 'input', (e) => {
+      const target = e.target as HTMLInputElement;
+      el.state.value = target.value;
+      el.form?.value(target.value);
     });
   },
 });
@@ -236,6 +274,12 @@ defineElement('todo-list', {
 });
 ```
 
+**💡 State vs Signals:**
+- **State** (default) - Full component re-render on change. Use for most cases.
+- **Signals** (optional) - Surgical DOM updates only. Use for high-frequency updates (60+ FPS).
+
+See [STATE-VS-SIGNALS.md](./STATE-VS-SIGNALS.md) for detailed comparison and when to use each.
+
 ### Event Delegation
 
 Handle events on dynamic elements:
@@ -268,6 +312,488 @@ defineElement('todo-list', {
   },
 });
 ```
+
+### Template Helpers
+
+Craftit provides powerful template helpers with minimal boilerplate:
+
+#### `html.repeat()` - List Rendering
+
+Simple list rendering - no wrapping function needed:
+
+```ts
+defineElement('user-list', {
+  state: {
+    users: [
+      { id: 1, name: 'Alice', role: 'Admin' },
+      { id: 2, name: 'Bob', role: 'User' },
+    ],
+  },
+
+  template: (el) => html`
+    <ul>
+      ${html.repeat(el.state.users, (user, index) => html`
+        <li>${index + 1}. ${user.name} (${user.role})</li>
+      `)}
+    </ul>
+  `,
+});
+```
+
+With key function for efficient updates:
+
+```ts
+${html.repeat(
+  el.state.users,
+  (user) => user.id, // Key function
+  (user) => html`<li>${user.name}</li>`
+)}
+```
+
+#### `html.when()` - Conditional Rendering
+
+**No wrapping functions needed!** Just pass values directly:
+
+```ts
+template: (el) => html`
+  <div>
+    ${html.when(
+      el.state.isAdmin,
+      html`<button class="delete">Delete</button>`,
+      html`<span class="label">View Only</span>`
+    )}
+  </div>
+`
+```
+
+Still supports functions for lazy evaluation when needed:
+
+```ts
+${html.when(
+  expensive.check(),
+  () => html`<button>Delete</button>` // Only called if true
+)}
+```
+
+#### `html.classes()` - Conditional Classes
+
+Multiple syntaxes for maximum flexibility:
+
+```ts
+template: (el) => html`
+  <!-- Object syntax (conditional) -->
+  <div class="${html.classes({
+    'btn': true,
+    'btn-primary': el.state.isPrimary,
+    'btn-disabled': el.state.isDisabled,
+  })}">Button</div>
+
+  <!-- Array syntax (mix static + conditional) -->
+  <div class="${html.classes([
+    'btn',
+    'btn-primary',
+    el.state.isActive && 'active',
+    { loading: el.state.isLoading, disabled: el.state.isDisabled }
+  ])}">Button</div>
+
+  <!-- Static classes (no helper needed) -->
+  <div class="btn btn-primary active">Button</div>
+`
+```
+
+#### `html.styles()` - Dynamic Styles
+
+Object syntax with camelCase support:
+
+```ts
+template: (el) => html`
+  <div style="${html.styles({
+    backgroundColor: el.state.bgColor,
+    fontSize: `${el.state.size}px`,
+    display: el.state.visible ? 'block' : undefined, // Auto-filtered
+  })}">
+    Styled content
+  </div>
+
+  <!-- Static styles (no helper needed) -->
+  <div style="color: red; font-size: 16px">Content</div>
+`
+```
+
+#### `html.until()` - Async Content
+
+Load async content with automatic loading states:
+
+```ts
+defineElement('user-profile', {
+  state: {
+    userId: '123'
+  },
+
+  template: (el) => html`
+    <div class="profile">
+      ${html.until(
+        // Promise that resolves to content
+        fetch(`/api/users/${el.state.userId}`)
+          .then(res => res.json())
+          .then(user => html`
+            <div class="user-card">
+              <h3>${user.name}</h3>
+              <p>${user.email}</p>
+            </div>
+          `),
+        // Loading fallback (shown immediately)
+        html`<div class="loading">⏳ Loading user...</div>`
+      )}
+    </div>
+  `,
+});
+```
+
+**How it works:**
+1. Returns fallback content immediately
+2. Wraps it in a placeholder with unique ID
+3. When promise resolves, replaces placeholder with actual content
+4. Handles errors gracefully
+
+**Multiple async sections:**
+
+```ts
+template: (el) => html`
+  <div>
+    <section>
+      ${html.until(fetchPosts(), html`<div>Loading posts...</div>`)}
+    </section>
+    <section>
+      ${html.until(fetchComments(), html`<div>Loading comments...</div>`)}
+    </section>
+  </div>
+`
+```
+
+#### Complete Example
+
+```ts
+defineElement('todo-item', {
+  state: {
+    items: [
+      { id: 1, text: 'Learn Craftit', done: false },
+      { id: 2, text: 'Build app', done: true },
+    ],
+    theme: 'dark',
+  },
+
+  template: (el) => html`
+    <ul class="${html.classes(['todo-list', `theme-${el.state.theme}`])}">
+      ${html.repeat(
+        el.state.items,
+        (item) => item.id,
+        (item) => html`
+          <li class="${html.classes({
+            'todo-item': true,
+            'done': item.done,
+          })}">
+            ${item.text}
+            ${html.when(item.done, html`<span>✓</span>`)}
+          </li>
+        `
+      )}
+    </ul>
+  `,
+});
+```
+
+### Computed Properties
+
+Derive values from state with automatic caching:
+
+```ts
+defineElement('shopping-cart', {
+  state: {
+    items: [
+      { price: 10, quantity: 2 },
+      { price: 20, quantity: 1 }
+    ]
+  },
+
+  computed: {
+    subtotal: (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    tax: (state) => {
+      const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      return subtotal * 0.1;
+    },
+    total: (state) => {
+      const subtotal = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      return subtotal * 1.1;
+    }
+  },
+
+  template: (el) => html`
+    <div>
+      <p>Subtotal: $${el.computed.subtotal.toFixed(2)}</p>
+      <p>Tax: $${el.computed.tax.toFixed(2)}</p>
+      <p>Total: $${el.computed.total.toFixed(2)}</p>
+    </div>
+  `
+});
+```
+
+**Benefits:**
+- ✅ **Auto-cached** - Only recompute when state changes
+- ✅ **Clean templates** - No complex logic in templates
+- ✅ **DRY** - Reuse computed values across template
+- ✅ **Type-safe** - Full TypeScript support
+
+### Actions
+
+Define reusable methods bound to your component:
+
+```ts
+defineElement('counter', {
+  state: { count: 0 },
+
+  actions: {
+    increment(el) {
+      el.state.count++;
+    },
+    decrement(el) {
+      el.state.count--;
+    },
+    add(el, amount: number) {
+      el.state.count += amount;
+    },
+    reset(el) {
+      el.state.count = 0;
+    }
+  },
+
+  template: (el) => html`
+    <div>
+      <p>Count: ${el.state.count}</p>
+      <button class="inc">+</button>
+      <button class="dec">-</button>
+      <button class="reset">Reset</button>
+    </div>
+  `,
+
+  onConnected(el) {
+    el.on('.inc', 'click', () => el.actions.increment());
+    el.on('.dec', 'click', () => el.actions.decrement());
+    el.on('.reset', 'click', () => el.actions.reset());
+  }
+});
+```
+
+**Benefits:**
+- ✅ **Organized** - All logic in one place
+- ✅ **Reusable** - Call actions from anywhere
+- ✅ **Testable** - Easy to test action logic
+- ✅ **Clean** - No inline arrow functions
+
+### Refs (Element References)
+
+Direct access to elements without querySelector:
+
+```ts
+defineElement('search-form', {
+  state: { query: '' },
+
+  actions: {
+    search(el) {
+      const input = el.refs.searchInput as HTMLInputElement;
+      el.state.query = input.value;
+      // Perform search...
+    },
+    clear(el) {
+      const input = el.refs.searchInput as HTMLInputElement;
+      input.value = '';
+      input.focus(); // Direct DOM access!
+    }
+  },
+
+  template: () => html`
+    <input ref="searchInput" type="text" />
+    <button class="search">Search</button>
+    <button class="clear">Clear</button>
+  `,
+
+  onConnected(el) {
+    el.on('.search', 'click', () => el.actions.search());
+    el.on('.clear', 'click', () => el.actions.clear());
+  }
+});
+```
+
+**How it works:**
+1. Add `ref="name"` attribute to any element
+2. Access via `el.refs.name`
+3. Automatically updated after each render
+4. Type-safe with proper casting
+
+**Before (verbose):**
+```ts
+const input = el.query<HTMLInputElement>('input');
+if (input) {
+  input.focus();
+}
+```
+
+**After (clean):**
+```ts
+(el.refs.searchInput as HTMLInputElement).focus();
+```
+
+### Portal (Render Elsewhere)
+
+Render content outside the component (e.g., modals, tooltips):
+
+```ts
+defineElement('modal-demo', {
+  state: { showModal: false },
+
+  template: (el) => html`
+    <button class="open">Open Modal</button>
+    
+    ${html.when(el.state.showModal, html`
+      ${html.portal(html`
+        <div class="modal-backdrop">
+          <div class="modal-content">
+            <h3>Modal Title</h3>
+            <p>This is rendered in document.body!</p>
+            <button class="close">Close</button>
+          </div>
+        </div>
+      `, document.body)}
+    `)}
+  `,
+
+  onConnected(el) {
+    el.on('.open', 'click', () => el.state.showModal = true);
+    // Close button works from portaled content
+    document.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).classList.contains('close')) {
+        el.state.showModal = false;
+      }
+    });
+  }
+});
+```
+
+**Common use cases:**
+- 🎭 Modals → `html.portal(content, document.body)`
+- 💬 Tooltips → `html.portal(content, '#tooltip-root')`
+- 📢 Notifications → `html.portal(content, '#notification-root')`
+- 🎨 Overlays → `html.portal(content, '#overlay-container')`
+
+**Benefits:**
+- ✅ **No z-index issues** - Render at document root
+- ✅ **Flexible positioning** - Escape shadow DOM boundaries
+- ✅ **Clean markup** - No wrapper divs needed
+
+### Context (Provide/Inject)
+
+Share data across component tree without prop drilling:
+
+**Provider Component:**
+```ts
+defineElement('theme-provider', {
+  provide: {
+    theme: {
+      mode: 'dark',
+      primary: '#3b82f6',
+      spacing: '1rem'
+    },
+    apiUrl: 'https://api.example.com'
+  },
+
+  template: () => html`
+    <div class="app">
+      <slot></slot>
+    </div>
+  `
+});
+```
+
+**Consumer Component:**
+```ts
+defineElement('themed-button', {
+  inject: ['theme'],
+
+  template: (el) => html`
+    <button style="
+      background: ${el.context.theme.primary};
+      padding: ${el.context.theme.spacing};
+    ">
+      Themed Button
+    </button>
+  `
+});
+```
+
+**Usage:**
+```html
+<theme-provider>
+  <div>
+    <themed-button></themed-button>
+    <!-- Button automatically gets theme from provider -->
+  </div>
+</theme-provider>
+```
+
+**Features:**
+- ✅ **No prop drilling** - Skip intermediate components
+- ✅ **Multi-level** - Works across any depth
+- ✅ **Type-safe** - Full TypeScript support
+- ✅ **Shadow DOM aware** - Traverses shadow boundaries
+- ✅ **Nearest wins** - Uses closest provider in tree
+
+**Advanced Example:**
+```ts
+// API Provider
+defineElement('api-provider', {
+  provide: {
+    api: {
+      baseUrl: 'https://api.example.com',
+      async fetch(endpoint: string) {
+        return fetch(`${this.baseUrl}${endpoint}`);
+      }
+    }
+  },
+  template: () => html`<slot></slot>`
+});
+
+// Data Consumer
+defineElement('user-list', {
+  state: { users: [], loading: true },
+  inject: ['api'],
+
+  async onConnected(el) {
+    const response = await el.context.api.fetch('/users');
+    el.state.users = await response.json();
+    el.state.loading = false;
+  },
+
+  template: (el) => html`
+    ${html.when(el.state.loading,
+      html`<div>Loading...</div>`,
+      html`
+        <ul>
+          ${html.repeat(el.state.users, user => html`
+            <li>${user.name}</li>
+          `)}
+        </ul>
+      `
+    )}
+  `
+});
+```
+
+**Common Patterns:**
+- 🎨 Theme systems
+- 🌐 API clients
+- 👤 User authentication
+- 🌍 i18n translations
+- ⚙️ App configuration
 
 ### CSS Variables & Theming
 
@@ -310,7 +836,76 @@ defineElement('themed-button', {
 - ✅ **Autocomplete** – Type `theme.` and see all variables
 - ✅ **Type-safe** – Typos caught at compile time
 - ✅ **Refactoring** – Rename properties safely
-- ✅ **Single import** – Just `import { css }`
+
+### Typed Event Handling
+
+**Single unified method with TypeScript overloads:**
+
+```ts
+defineElement('my-component', {
+  template: html`
+    <button class="save">Save</button>
+    <input class="email" type="email" />
+  `,
+
+  onConnected(el) {
+    // Host element events - 2 params
+    el.on('click', (e) => {
+      // e is MouseEvent
+      console.log('Host clicked at', e.clientX, e.clientY);
+    });
+
+    // Shadow DOM delegation - 3 params with selector string
+    el.on('button', 'click', (e, target) => {
+      // e is MouseEvent, target is the matched button
+      console.log('Button clicked:', target.textContent);
+    });
+
+    // Direct element binding - 3 params with element
+    const input = el.query<HTMLInputElement>('.email');
+    if (input) {
+      el.on(input, 'input', (e) => {
+        // e is Event, automatically typed
+        console.log('Input changed');
+      });
+    }
+
+    // Query shortcuts
+    const btn = el.query<HTMLButtonElement>('.save');         // undefined if not found
+    const inputs = el.queryAll<HTMLInputElement>('input');    // always returns array
+    const required = el.queryRequired<HTMLInputElement>('.email'); // throws if not found
+  },
+});
+```
+
+### Batch State Updates
+
+Optimize rendering with batch updates:
+
+```ts
+defineElement('todo-list', {
+  state: {
+    todos: [],
+    filter: 'all',
+    sortBy: 'date',
+  },
+
+  onConnected(el) {
+    // Without batch - renders 3 times!
+    el.state.todos = newTodos;
+    el.state.filter = 'active';
+    el.state.sortBy = 'priority';
+
+    // With batch - renders only once!
+    el.batch((state) => {
+      state.todos = newTodos;
+      state.filter = 'active';
+      state.sortBy = 'priority';
+    });
+  },
+});
+```
+
 
 ### Lifecycle Hooks
 

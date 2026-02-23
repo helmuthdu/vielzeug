@@ -72,12 +72,37 @@ export type FormCallbacks<T = HTMLElement, P extends object = object, S extends 
  * @template T - Root element type
  * @template P - Props object type (component attributes)
  * @template S - State object type
+ * @template C - Computed properties type
+ * @template A - Actions type
+ * @template R - Refs type
  */
-export type ComponentOptions<T = HTMLElement, P extends object = object, S extends object = object> = {
+export type ComponentOptions<
+  T = HTMLElement,
+  P extends object = object,
+  S extends object = object,
+  C extends Record<string, (state: S) => unknown> = Record<string, (state: S) => unknown>,
+  A extends Record<string, (el: WebComponent<T, P, S>, ...args: any[]) => unknown> = Record<
+    string,
+    (el: WebComponent<T, P, S>, ...args: any[]) => unknown
+  >,
+  R extends readonly string[] = readonly string[],
+> = {
   /** Template for rendering the component */
   template: Template<T, P, S>;
-  /** Initial reactive state */
+  /** Initial reactive state (triggers full re-render) */
   state?: S;
+  /** Fine-grained reactive signals (updates only specific DOM nodes) */
+  signals?: Record<string, unknown>;
+  /** Computed properties (cached, reactive) */
+  computed?: C;
+  /** Action methods (bound to component instance) */
+  actions?: A;
+  /** Element refs (declared elements to track) */
+  refs?: R;
+  /** Context to provide to child components */
+  provide?: Record<string, unknown>;
+  /** Context keys to inject from parent components */
+  inject?: readonly string[];
   /** CSS styles (strings or CSSStyleSheet objects) */
   styles?: (string | CSSStyleSheet)[];
   /** Attributes to observe for changes */
@@ -104,6 +129,16 @@ export type WebComponent<T = HTMLElement, P extends object = object, S extends o
   P & {
     /** Reactive state object (changes trigger re-renders) */
     readonly state: S;
+    /** Fine-grained reactive signals (direct DOM updates) */
+    readonly signals: Record<string, unknown>;
+    /** Computed properties (cached, reactive) */
+    readonly computed: Record<string, unknown>;
+    /** Action methods */
+    readonly actions: Record<string, (...args: any[]) => unknown>;
+    /** Element references */
+    readonly refs: Record<string, HTMLElement>;
+    /** Injected context from parent components */
+    readonly context: Record<string, unknown>;
     /** Shadow DOM root */
     readonly shadow: ShadowRoot;
     /** First element in shadow DOM */
@@ -124,12 +159,40 @@ export type WebComponent<T = HTMLElement, P extends object = object, S extends o
     ): Promise<void>;
     /** Watch a state slice and react to changes */
     watch<U>(selector: (state: S) => U, callback: (value: U, prev: U) => void): () => void;
-    /** Find a single element in shadow DOM */
-    find<E extends Element = Element>(selector: string): E | null;
-    /** Find all matching elements in shadow DOM */
-    findAll<E extends Element = Element>(selector: string): E[];
-    /** Add event listener with automatic cleanup and delegation support */
-    on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void;
+    /** Batch multiple state updates into a single render */
+    batch(updater: (state: S) => void): void;
+    /** Query single element in shadow DOM (returns undefined instead of null) */
+    query<E extends Element = Element>(selector: string): E | undefined;
+    /** Query all elements in shadow DOM */
+    queryAll<E extends Element = Element>(selector: string): E[];
+    /** Query element in shadow DOM, throws if not found */
+    queryRequired<E extends Element = Element>(selector: string): E;
+    /** Add event listener with automatic cleanup and type safety (supports host, delegation, and direct binding) */
+    on<K extends keyof HTMLElementEventMap>(
+      event: K,
+      handler: (e: HTMLElementEventMap[K]) => void,
+      options?: AddEventListenerOptions,
+    ): () => void;
+    on(event: string, handler: (e: Event) => void, options?: AddEventListenerOptions): () => void;
+    on<K extends keyof HTMLElementEventMap>(
+      selector: string,
+      event: K,
+      handler: (e: HTMLElementEventMap[K], target: HTMLElement) => void,
+      options?: AddEventListenerOptions,
+    ): () => void;
+    on(
+      selector: string,
+      event: string,
+      handler: (e: Event, target: HTMLElement) => void,
+      options?: AddEventListenerOptions,
+    ): () => void;
+    on<K extends keyof HTMLElementEventMap>(
+      element: EventTarget,
+      event: K,
+      handler: (e: HTMLElementEventMap[K]) => void,
+      options?: AddEventListenerOptions,
+    ): () => void;
+    on(element: EventTarget, event: string, handler: (e: Event) => void, options?: AddEventListenerOptions): () => void;
     /** Dispatch custom event */
     emit(name: string, detail?: unknown, options?: CustomEventInit): void;
     /** Set timeout with automatic cleanup */
@@ -202,6 +265,52 @@ const loadStylesheet = async (style: string | CSSStyleSheet): Promise<CSSStyleSh
 };
 
 /**
+ * Signal class for fine-grained reactivity
+ * Updates only specific DOM nodes instead of re-rendering entire component
+ */
+class Signal<T = unknown> {
+  #value: T;
+  #subscribers = new Set<{ node: Text | Element; type: 'text' | 'attr'; attr?: string }>();
+
+  constructor(initialValue: T) {
+    this.#value = initialValue;
+  }
+
+  get(subscriber?: { node: Text | Element; type: 'text' | 'attr'; attr?: string }): T {
+    if (subscriber) {
+      this.#subscribers.add(subscriber);
+    }
+    return this.#value;
+  }
+
+  set(newValue: T): void {
+    if (this.#value === newValue) return;
+
+    this.#value = newValue;
+
+    for (const subscriber of this.#subscribers) {
+      if (subscriber.type === 'text' && subscriber.node instanceof Text) {
+        subscriber.node.textContent = String(newValue);
+      } else if (subscriber.type === 'attr' && subscriber.node instanceof Element && subscriber.attr) {
+        subscriber.node.setAttribute(subscriber.attr, String(newValue));
+      }
+    }
+  }
+
+  clearSubscribers(): void {
+    this.#subscribers.clear();
+  }
+
+  peek(): T {
+    return this.#value;
+  }
+
+  update(fn: (current: T) => T): void {
+    this.set(fn(this.#value));
+  }
+}
+
+/**
  * Create reactive state proxy with automatic re-rendering
  * @template S - State object type
  * @param initial - Initial state object (will be shallow-copied)
@@ -213,8 +322,28 @@ const loadStylesheet = async (style: string | CSSStyleSheet): Promise<CSSStyleSh
  */
 const createReactiveState = <S extends object>(initial: S, onChange: () => void): S => {
   const internalState = { ...initial } as S;
-
   const proxyCache = new WeakMap<object, object>();
+
+  // Shared proxy handler for both root and nested objects
+  const createProxyHandler = () => ({
+    get(target: any, prop: string | symbol) {
+      const value = Reflect.get(target, prop);
+      return createNestedProxy(value);
+    },
+    set(target: any, prop: string | symbol, value: unknown) {
+      const oldValue = Reflect.get(target, prop);
+      if (oldValue === value) return true;
+
+      const result = Reflect.set(target, prop, value);
+
+      // Trigger onChange for non-private properties
+      if (typeof prop === 'string' && !prop.startsWith('_')) {
+        onChange();
+      }
+
+      return result;
+    },
+  });
 
   const createNestedProxy = <T>(obj: T): T => {
     if (obj == null || typeof obj !== 'object' || obj instanceof Node) {
@@ -222,53 +351,14 @@ const createReactiveState = <S extends object>(initial: S, onChange: () => void)
     }
 
     const cached = proxyCache.get(obj as object);
-    if (cached) {
-      return cached as T;
-    }
+    if (cached) return cached as T;
 
-    const proxy = new Proxy(obj as object, {
-      get(target, prop) {
-        const value = Reflect.get(target, prop);
-        return createNestedProxy(value);
-      },
-      set(target, prop, value) {
-        const oldValue = Reflect.get(target, prop);
-
-        if (oldValue === value) return true;
-
-        const result = Reflect.set(target, prop, value);
-
-        if (typeof prop === 'string' && !prop.startsWith('_')) {
-          onChange();
-        }
-
-        return result;
-      },
-    }) as T;
-
+    const proxy = new Proxy(obj as object, createProxyHandler()) as T;
     proxyCache.set(obj as object, proxy as object);
     return proxy;
   };
 
-  return new Proxy(internalState, {
-    get(target, prop) {
-      const value = Reflect.get(target, prop);
-      return createNestedProxy(value);
-    },
-    set(target, prop, value) {
-      const oldValue = Reflect.get(target, prop);
-
-      if (oldValue === value) return true;
-
-      const result = Reflect.set(target, prop, value);
-
-      if (typeof prop === 'string' && !prop.startsWith('_')) {
-        onChange();
-      }
-
-      return result;
-    },
-  }) as S;
+  return new Proxy(internalState, createProxyHandler()) as S;
 };
 
 /* ==================== Component Base Class ==================== */
@@ -276,6 +366,11 @@ const createReactiveState = <S extends object>(initial: S, onChange: () => void)
 class BaseComponent<T = HTMLElement, P extends object = object, S extends object = object> extends HTMLElement {
   public readonly shadow: ShadowRoot;
   public readonly state: S;
+  public readonly signals: Record<string, unknown>;
+  public readonly computed: Record<string, unknown>;
+  public readonly actions: Record<string, (...args: any[]) => unknown>;
+  public readonly refs: Record<string, HTMLElement>;
+  public readonly context: Record<string, unknown>;
   public value?: string;
 
   #abortController = new AbortController();
@@ -291,6 +386,10 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     { selector: (state: S) => unknown; callback: (value: unknown, prev: unknown) => void; lastValue: unknown }
   >();
   #watcherId = 0;
+  #computedCache = new Map<string, { value: unknown; dependencies: unknown[] }>();
+  #refsCache = new Map<string, HTMLElement>();
+  #providedContext = new Map<string, unknown>();
+  #signalsMap = new Map<string, Signal>();
 
   constructor(options: ComponentOptions<T, P, S>) {
     super();
@@ -298,9 +397,32 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     this.#options = options;
     this.shadow = this.attachShadow({ mode: 'open' });
     this.state = createReactiveState((options.state || {}) as S, () => {
+      this.#computedCache.clear(); // Clear computed cache on state change
       this.render();
       this.notifyWatchers();
     });
+
+    // Initialize signals
+    this.signals = this.createSignalsProxy();
+
+    // Initialize computed properties
+    this.computed = this.createComputedProxy();
+
+    // Initialize actions
+    this.actions = this.createActionsProxy();
+
+    // Initialize refs
+    this.refs = this.createRefsProxy();
+
+    // Initialize context (inject from parents)
+    this.context = this.createContextProxy();
+
+    // Store provided context
+    if (options.provide) {
+      for (const [key, value] of Object.entries(options.provide)) {
+        this.#providedContext.set(key, value);
+      }
+    }
 
     if (options.formAssociated && 'attachInternals' in this) {
       this.#internals = this.attachInternals();
@@ -328,11 +450,8 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
        * @example component.form.valid({ valueMissing: true }, 'Required')
        */
       valid: (flags?: ValidityStateFlags, message?: string, anchor?: HTMLElement) => {
-        if (!flags || Object.keys(flags).length === 0) {
-          this.#internals!.setValidity({});
-        } else {
-          this.#internals!.setValidity(flags, message, anchor);
-        }
+        const isValid = !flags || Object.keys(flags).length === 0;
+        this.#internals!.setValidity(isValid ? {} : flags!, message, anchor);
       },
       /**
        * Set form value and sync with ElementInternals
@@ -372,14 +491,144 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
           return value === '' ? true : value;
         },
         set: (value: any) => {
-          if (value == null || value === false) {
-            this.removeAttribute(attrStr);
-          } else {
-            this.setAttribute(attrStr, value === true ? '' : String(value));
-          }
+          (value == null || value === false)
+            ? this.removeAttribute(attrStr)
+            : this.setAttribute(attrStr, value === true ? '' : String(value));
         },
       });
     }
+  }
+
+  private createSignalsProxy(): Record<string, unknown> {
+    const signals = this.#options.signals || {};
+
+    // Create Signal instances for each initial signal value
+    for (const [key, value] of Object.entries(signals)) {
+      this.#signalsMap.set(key, new Signal(value));
+    }
+
+    return new Proxy(
+      {},
+      {
+        get: (_target, prop: string) => {
+          const signal = this.#signalsMap.get(prop);
+          return signal?.peek();
+        },
+        set: (_target, prop: string, value: unknown) => {
+          // Get existing or create new signal
+          let signal = this.#signalsMap.get(prop);
+          if (!signal) {
+            signal = new Signal(value);
+            this.#signalsMap.set(prop, signal);
+          } else {
+            signal.set(value);
+          }
+          return true;
+        },
+      },
+    );
+  }
+
+  private createComputedProxy(): Record<string, unknown> {
+    const computed = this.#options.computed || {};
+
+    return new Proxy(
+      {},
+      {
+        get: (_target, prop: string) => {
+          if (!(prop in computed)) return undefined;
+
+          // Check cache
+          if (this.#computedCache.has(prop)) {
+            return this.#computedCache.get(prop)!.value;
+          }
+
+          // Compute value
+          const computeFn = computed[prop];
+          const value = computeFn(this.state);
+
+          // Cache it
+          this.#computedCache.set(prop, { dependencies: [], value });
+
+          return value;
+        },
+      },
+    );
+  }
+
+  private createActionsProxy(): Record<string, (...args: any[]) => unknown> {
+    const actions = this.#options.actions || {};
+
+    return new Proxy(
+      {},
+      {
+        get: (_target, prop: string) => {
+          if (!(prop in actions)) return undefined;
+
+          // Bind action to component instance
+          return (...args: any[]) => {
+            return actions[prop](this as unknown as WebComponent<T, P, S>, ...args);
+          };
+        },
+      },
+    );
+  }
+
+  private createRefsProxy(): Record<string, HTMLElement> {
+    return new Proxy(
+      {},
+      {
+        get: (_target, prop: string) => {
+          // Check if a cached element is still in DOM
+          const cached = this.#refsCache.get(prop);
+          if (cached && this.shadow.contains(cached)) {
+            return cached;
+          }
+
+          // Clear stale cache and query for an element
+          this.#refsCache.delete(prop);
+          const element = this.shadow.querySelector(`[ref="${prop}"]`) as HTMLElement;
+
+          if (element) {
+            this.#refsCache.set(prop, element);
+            return element;
+          }
+
+          return undefined;
+        },
+      },
+    );
+  }
+
+  private createContextProxy(): Record<string, unknown> {
+    const inject = this.#options.inject || [];
+
+    // Helper to traverse up the component tree
+    const findProviderValue = (key: string): unknown => {
+      let current: HTMLElement | null = this.parentElement;
+
+      while (current) {
+        if (current instanceof BaseComponent) {
+          const value = current.#providedContext.get(key);
+          if (value !== undefined) return value;
+        }
+
+        // Move to parent, traversing shadow DOM boundaries
+        current = current.parentElement || ((current.getRootNode() as ShadowRoot).host as HTMLElement) || null;
+      }
+
+      return undefined;
+    };
+
+    return new Proxy(
+      {},
+      {
+        get: (_target, prop: string) => {
+          // Only allow access to injected keys
+          return inject.includes(prop) ? findProviderValue(prop) : undefined;
+        },
+      },
+    );
   }
 
   private notifyWatchers(): void {
@@ -508,55 +757,66 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     patchOrUpdater: Partial<S> | ((state: S) => S | Promise<S>),
     options?: { replace?: boolean; silent?: boolean },
   ): Promise<void> {
+    const shouldRender = !options?.silent;
+
+    // Handle updater function
     if (typeof patchOrUpdater === 'function') {
       const newState = await Promise.resolve(patchOrUpdater(this.state));
+      this.replaceState(newState);
 
-      this.#renderSuppressed = true;
-
-      for (const key of Object.keys(this.state)) {
-        delete (this.state as any)[key];
-      }
-
-      Object.assign(this.state, newState);
-      this.#renderSuppressed = false;
-
-      if (!options?.silent) {
+      if (shouldRender) {
         this.render();
         await this.flush();
       }
       return;
     }
 
-    const patch = patchOrUpdater;
+    // Handle state patch or replacement
+    this.#renderSuppressed = !shouldRender;
 
     if (options?.replace) {
-      this.#renderSuppressed = true;
-
-      for (const key of Object.keys(this.state)) {
-        delete (this.state as any)[key];
-      }
-      Object.assign(this.state, patch);
-
-      this.#renderSuppressed = false;
-
-      if (!options.silent) {
-        this.render();
-      }
+      this.replaceState(patchOrUpdater);
     } else {
-      if (options?.silent) {
-        this.#renderSuppressed = true;
-        Object.assign(this.state, patch);
-        this.#renderSuppressed = false;
-      } else {
-        Object.assign(this.state, patch);
-      }
+      Object.assign(this.state, patchOrUpdater);
+    }
+
+    this.#renderSuppressed = false;
+  }
+
+  /**
+   * Replace entire state object
+   */
+  private replaceState(newState: Partial<S>): void {
+    for (const key of Object.keys(this.state)) {
+      delete (this.state as any)[key];
+    }
+    Object.assign(this.state, newState);
+  }
+
+  /**
+   * Batch multiple state updates into a single render
+   * @param updater - Function that performs multiple state updates
+   * @example
+   * el.batch((state) => {
+   *   state.count = 10;
+   *   state.name = 'Alice';
+   *   state.items.push(newItem);
+   * }); // Only renders once at the end
+   */
+  batch(updater: (state: S) => void): void {
+    this.#renderSuppressed = true;
+    try {
+      updater(this.state);
+    } finally {
+      this.#renderSuppressed = false;
+      this.render();
     }
   }
 
   /**
-   * Watch a state slice and react to changes
-   * @param selector - Function to select a slice of state
-   * @param callback - Function called when selected value changes
+   * Watch a state slice for changes
+   * @param selector - Function to select state slice
+   * @param callback - Callback when value changes
    * @returns Unsubscribe function
    * @example
    * const unwatch = component.watch(
@@ -585,71 +845,129 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
   }
 
   /**
-   * Find single element in shadow DOM
+   * Query single element in shadow DOM
    * @param selector - CSS selector
-   * @returns First matching element or null
-   * @example component.find<HTMLInputElement>('input[name="email"]')
+   * @returns Found element or undefined
+   * @example const button = el.query<HTMLButtonElement>('button')
    */
-  find<E extends Element = Element>(selector: string): E | null {
-    return this.shadow.querySelector<E>(selector);
+  query<E extends Element = Element>(selector: string): E | undefined {
+    return this.shadow.querySelector<E>(selector) ?? undefined;
   }
 
   /**
-   * Find all matching elements in shadow DOM
+   * Query all elements in shadow DOM
    * @param selector - CSS selector
    * @returns Array of matching elements
-   * @example component.findAll<HTMLButtonElement>('button')
+   * @example const buttons = el.queryAll<HTMLButtonElement>('button')
    */
-  findAll<E extends Element = Element>(selector: string): E[] {
+  queryAll<E extends Element = Element>(selector: string): E[] {
     return Array.from(this.shadow.querySelectorAll<E>(selector));
   }
 
   /**
-   * Add event listener with automatic cleanup and delegation support
-   * @param target - CSS selector (for delegation) or EventTarget
-   * @param event - Event name
-   * @param handler - Event handler function
-   * @param options - Event listener options
-   * @example
-   * // Direct binding
-   * component.on(component.find('button')!, 'click', () => console.log('clicked'));
-   *
-   * // Delegated (works for dynamic elements)
-   * component.on('.todo-item', 'click', (e) => {
-   *   console.log('Clicked:', (e.target as HTMLElement).dataset.id);
-   * });
+   * Query element in shadow DOM, throws if not found
+   * @param selector - CSS selector
+   * @returns Found element
+   * @throws Error if element not found
+   * @example const input = el.queryRequired<HTMLInputElement>('input')
    */
-  on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void {
-    if (typeof target === 'string') {
-      const selector = target;
-
-      const delegatedHandler = (e: Event) => {
-        const targetElement = e.target as Element;
-
-        if (!targetElement?.matches) return;
-
-        const matchedElement = targetElement.matches(selector) ? targetElement : targetElement.closest(selector);
-
-        if (matchedElement && this.shadow.contains(matchedElement)) {
-          Object.defineProperty(e, 'currentTarget', {
-            configurable: true,
-            value: matchedElement,
-          });
-
-          handler.call(matchedElement, e);
-        }
-      };
-
-      this.shadow.addEventListener(event, delegatedHandler, {
-        ...options,
-        signal: this.#abortController.signal,
-      });
-    } else {
-      target.addEventListener(event, handler, {
-        ...options,
-        signal: this.#abortController.signal,
-      });
+  queryRequired<E extends Element = Element>(selector: string): E {
+    const element = this.shadow.querySelector<E>(selector);
+    if (!element) {
+      throw new Error(`Required element not found: ${selector}`);
     }
+    return element;
+  }
+
+  /**
+   * Add event listener with automatic cleanup and type safety
+   *
+   * Supports three usage patterns:
+   * - 2 params: Host element event
+   * - 3 params (string): Shadow DOM delegation
+   * - 3 params (EventTarget): Direct element binding
+   *
+   * @example
+   * // Host element event
+   * el.on('click', (e) => console.log(e.clientX));
+   *
+   * // Shadow DOM delegation
+   * el.on('button', 'click', (e, target) => console.log(target.textContent));
+   *
+   * // Direct element binding
+   * const input = el.query('input');
+   * el.on(input, 'input', (e) => console.log('changed'));
+   */
+  on<K extends keyof HTMLElementEventMap>(
+    event: K,
+    handler: (e: HTMLElementEventMap[K]) => void,
+    options?: AddEventListenerOptions,
+  ): () => void;
+  on(event: string, handler: (e: Event) => void, options?: AddEventListenerOptions): () => void;
+  on<K extends keyof HTMLElementEventMap>(
+    selector: string,
+    event: K,
+    handler: (e: HTMLElementEventMap[K], target: HTMLElement) => void,
+    options?: AddEventListenerOptions,
+  ): () => void;
+  on(
+    selector: string,
+    event: string,
+    handler: (e: Event, target: HTMLElement) => void,
+    options?: AddEventListenerOptions,
+  ): () => void;
+  on<K extends keyof HTMLElementEventMap>(
+    element: EventTarget,
+    event: K,
+    handler: (e: HTMLElementEventMap[K]) => void,
+    options?: AddEventListenerOptions,
+  ): () => void;
+  on(element: EventTarget, event: string, handler: (e: Event) => void, options?: AddEventListenerOptions): () => void;
+  on<K extends keyof HTMLElementEventMap>(
+    selectorOrEventOrElement: string | EventTarget,
+    eventOrHandler: K | ((e: HTMLElementEventMap[K]) => void),
+    handlerOrOptions?: ((e: HTMLElementEventMap[K], target: HTMLElement) => void) | AddEventListenerOptions,
+    options?: AddEventListenerOptions,
+  ): () => void {
+    const signal = this.#abortController.signal;
+
+    // Case 1: Host element event (2 params: event, handler)
+    if (typeof eventOrHandler === 'function') {
+      const event = selectorOrEventOrElement as string;
+      const handler = eventOrHandler as EventListener;
+      const opts = handlerOrOptions as AddEventListenerOptions | undefined;
+
+      this.addEventListener(event, handler, { ...opts, signal });
+      return () => this.removeEventListener(event, handler);
+    }
+
+    const event = eventOrHandler as string;
+
+    // Case 2: Direct element binding (3 params: element, event, handler)
+    if (typeof selectorOrEventOrElement !== 'string') {
+      const element = selectorOrEventOrElement;
+      const handler = handlerOrOptions as EventListener;
+
+      element.addEventListener(event, handler, { ...options, signal });
+      return () => element.removeEventListener(event, handler);
+    }
+
+    // Case 3: Shadow DOM delegation (3 params: selector, event, handler)
+    const selector = selectorOrEventOrElement;
+    const handler = handlerOrOptions as (e: Event, target: HTMLElement) => void;
+
+    const delegatedHandler = (e: Event) => {
+      const target = e.target as Element;
+      if (!target?.matches) return;
+
+      const matched = target.matches(selector) ? target : target.closest(selector);
+      if (matched && this.shadow.contains(matched)) {
+        handler(e, matched as HTMLElement);
+      }
+    };
+
+    this.shadow.addEventListener(event, delegatedHandler, { ...options, signal });
+    return () => this.shadow.removeEventListener(event, delegatedHandler);
   }
 
   /**
@@ -733,6 +1051,9 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
 
       this.reconcile(this.shadow, nodes);
 
+      // Clear refs cache after DOM update
+      this.#refsCache.clear();
+
       // Apply property bindings after DOM is updated
       if (propertyBindings.length > 0) {
         this.applyPropertyBindings(propertyBindings);
@@ -787,35 +1108,35 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
       const oldNode = oldNodes[i];
       const newNode = newNodes[i];
 
-      if (!oldNode && newNode) {
+      // Add new node
+      if (!oldNode) {
         parent.appendChild(newNode);
         continue;
       }
 
-      if (oldNode && !newNode) {
+      // Remove old node
+      if (!newNode) {
         parent.removeChild(oldNode);
         continue;
       }
 
-      if (oldNode && newNode) {
-        if (oldNode.nodeType !== newNode.nodeType) {
+      // Replace if node types differ
+      if (oldNode.nodeType !== newNode.nodeType) {
+        parent.replaceChild(newNode, oldNode);
+        continue;
+      }
+
+      // Update text nodes
+      if (oldNode.nodeType === Node.TEXT_NODE && oldNode.textContent !== newNode.textContent) {
+        oldNode.textContent = newNode.textContent;
+        continue;
+      }
+
+      // Update elements
+      if (oldNode instanceof Element && newNode instanceof Element) {
+        if (oldNode.tagName !== newNode.tagName) {
           parent.replaceChild(newNode, oldNode);
-          continue;
-        }
-
-        if (oldNode.nodeType === Node.TEXT_NODE) {
-          if (oldNode.textContent !== newNode.textContent) {
-            oldNode.textContent = newNode.textContent;
-          }
-          continue;
-        }
-
-        if (oldNode instanceof Element && newNode instanceof Element) {
-          if (oldNode.tagName !== newNode.tagName) {
-            parent.replaceChild(newNode, oldNode);
-            continue;
-          }
-
+        } else {
           this.updateElement(oldNode, newNode);
         }
       }
@@ -826,6 +1147,7 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
    * Update element attributes and children
    */
   private updateElement(oldEl: Element, newEl: Element): void {
+    // Update attributes
     const oldAttrs = Array.from(oldEl.attributes);
     const newAttrs = Array.from(newEl.attributes);
 
@@ -841,6 +1163,7 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
       }
     }
 
+    // Update form elements specifically
     if (oldEl instanceof HTMLInputElement) {
       this.updateInputElement(oldEl, newEl as HTMLInputElement);
     } else if (oldEl instanceof HTMLTextAreaElement) {
@@ -849,72 +1172,48 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
       this.updateSelectElement(oldEl, newEl as HTMLSelectElement);
     }
 
+    // Recursively update children
     this.reconcile(oldEl, Array.from(newEl.childNodes));
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form element syncing requires handling multiple input types
+  /**
+   * Helper to sync common form element states (disabled, readonly)
+   */
+  private syncFormElementState(oldEl: HTMLInputElement | HTMLTextAreaElement, newEl: Element): void {
+    const disabled = newEl.hasAttribute('disabled');
+    const readonly = newEl.hasAttribute('readonly');
+
+    if (oldEl.disabled !== disabled) oldEl.disabled = disabled;
+    if ('readOnly' in oldEl && oldEl.readOnly !== readonly) oldEl.readOnly = readonly;
+  }
+
   private updateInputElement(oldEl: HTMLInputElement, newEl: Element): void {
     if (oldEl.type === 'checkbox' || oldEl.type === 'radio') {
       const checked = newEl.hasAttribute('checked');
-      if (oldEl.checked !== checked) {
-        oldEl.checked = checked;
-      }
-    } else if (oldEl.type === 'file') {
-      // File inputs are read-only, skip value sync
-      return;
-    } else {
-      // For text, email, password, number, etc.
-      // Sync from attribute if present, otherwise clear
+      if (oldEl.checked !== checked) oldEl.checked = checked;
+    } else if (oldEl.type !== 'file') {
+      // For text-based inputs (skip file inputs which are read-only)
       if (newEl.hasAttribute('value')) {
         const newValue = newEl.getAttribute('value') || '';
-        if (oldEl.value !== newValue) {
-          oldEl.value = newValue;
-        }
-      } else if (oldEl.value !== '') {
-        // Clear value if no value attribute in the new template
+        if (oldEl.value !== newValue) oldEl.value = newValue;
+      } else if (oldEl.value) {
         oldEl.value = '';
       }
     }
 
-    // Sync disabled state
-    const disabled = newEl.hasAttribute('disabled');
-    if (oldEl.disabled !== disabled) {
-      oldEl.disabled = disabled;
-    }
-
-    // Sync readonly state
-    const readonly = newEl.hasAttribute('readonly');
-    if (oldEl.readOnly !== readonly) {
-      oldEl.readOnly = readonly;
-    }
+    this.syncFormElementState(oldEl, newEl);
   }
 
   private updateTextAreaElement(oldEl: HTMLTextAreaElement, newEl: Element): void {
-    // For textarea, value comes from textContent, not attribute
     const newValue = newEl.textContent || '';
-    if (oldEl.value !== newValue) {
-      oldEl.value = newValue;
-    }
+    if (oldEl.value !== newValue) oldEl.value = newValue;
 
-    // Sync disabled state
-    const disabled = newEl.hasAttribute('disabled');
-    if (oldEl.disabled !== disabled) {
-      oldEl.disabled = disabled;
-    }
-
-    // Sync readonly state
-    const readonly = newEl.hasAttribute('readonly');
-    if (oldEl.readOnly !== readonly) {
-      oldEl.readOnly = readonly;
-    }
+    this.syncFormElementState(oldEl, newEl);
   }
 
   private updateSelectElement(oldEl: HTMLSelectElement, newEl: Element): void {
-    // Sync disabled state
     const disabled = newEl.hasAttribute('disabled');
-    if (oldEl.disabled !== disabled) {
-      oldEl.disabled = disabled;
-    }
+    if (oldEl.disabled !== disabled) oldEl.disabled = disabled;
 
     // Select value is synced via reconciling child options
     // After options are reconciled, sync the selected value
@@ -1004,95 +1303,306 @@ export const element = <T = HTMLElement, P extends object = object, S extends ob
 /* ==================== Utilities Export ==================== */
 
 /**
+ * Process boolean attribute syntax (?attr="${value}")
+ */
+const processBooleanAttribute = (
+  str: string,
+  value: unknown,
+  match: RegExpMatchArray,
+): { result: string; skipQuote: boolean } => {
+  const shouldInclude = value === true || value === '';
+  const result = str.slice(0, -match[0].length) + (shouldInclude ? ` ${match[1]}` : '');
+  return { result, skipQuote: true };
+};
+
+/**
+ * Process property binding syntax (.prop="${value}")
+ */
+const processPropertyBinding = (
+  str: string,
+  value: unknown,
+  match: RegExpMatchArray,
+  bindingIndex: number,
+): { result: string; binding: { selector: string; property: string; value: unknown }; skipQuote: boolean } => {
+  const propertyName = match[1];
+  const bindingId = `__prop_${bindingIndex}`;
+  const result = `${str.slice(0, -match[0].length)} data-${bindingId}="${propertyName}"`;
+
+  return {
+    binding: { property: propertyName, selector: `[data-${bindingId}]`, value },
+    result,
+    skipQuote: true,
+  };
+};
+
+/**
  * HTML template tag with boolean attribute and property binding support
  * @param strings - Template string array
  * @param values - Template values
  * @returns HTML result object (with toString for compatibility)
  * @example
  * html`<div>Hello, ${name}!</div>`
- * // Boolean attributes (Lit-style)
+ * // Boolean attributes
  * html`<button ?disabled="${isDisabled}">Click</button>`
- * // Property binding (Lit-style)
- * html`<input .value="${inputValue}" .indeterminate="${isIndeterminate}">`
+ * // Property binding
+ * html`<input .value="${inputValue}">`
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Template processing requires complex pattern matching
-export const html = (strings: TemplateStringsArray, ...values: unknown[]): string | HTMLResult => {
-  let result = '';
-  let skipQuote = false;
-  const propertyBindings: Array<{ selector: string; property: string; value: unknown }> = [];
+export const html = Object.assign(
+  (strings: TemplateStringsArray, ...values: unknown[]): string | HTMLResult => {
+    let result = '';
+    let skipQuote = false;
+    const propertyBindings: Array<{ selector: string; property: string; value: unknown }> = [];
 
-  for (let i = 0; i < strings.length; i++) {
-    let str = strings[i];
-
-    // Remove the leading quote if previous was a boolean attribute or property
-    if (skipQuote) {
-      str = str.replace(/^["']/, '');
+    for (let i = 0; i < strings.length; i++) {
+      const str = skipQuote ? strings[i].replace(/^["']/, '') : strings[i];
       skipQuote = false;
-    }
 
-    // Check for boolean attribute (?attr)
-    const boolAttrMatch = str.match(/\s+\?([a-z][-a-z0-9]*)\s*=\s*["']$/i);
-
-    // Check for property binding (.property)
-    const propMatch = str.match(/\s+\.([a-z][-a-z0-9]*)\s*=\s*["']$/i);
-
-    if (boolAttrMatch && i < values.length) {
-      const shouldInclude = values[i] === true || values[i] === '';
-
-      // Add everything before ?attrName="
-      result += str.slice(0, -boolAttrMatch[0].length);
-
-      // Add attribute if truthy
-      if (shouldInclude) {
-        result += ` ${boolAttrMatch[1]}`;
+      // Skip processing if this is the last string
+      if (i >= values.length) {
+        result += str;
+        continue;
       }
 
-      // Mark to skip the quote in the next string
-      skipQuote = true;
-    } else if (propMatch && i < values.length) {
-      const propertyName = propMatch[1];
-      const value = values[i];
+      // Check for special syntax patterns
+      const boolAttrMatch = str.match(/\s+\?([a-z][-a-z0-9]*)\s*=\s*["']$/i);
+      const propMatch = str.match(/\s+\.([a-z][-a-z0-9]*)\s*=\s*["']$/i);
 
-      // Add everything before .propertyName="
-      result += str.slice(0, -propMatch[0].length);
-
-      // Store property binding to be applied via data attribute
-      // We'll use a special data attribute to mark this for property setting
-      const bindingId = `__prop_${propertyBindings.length}`;
-      result += ` data-${bindingId}="${propertyName}"`;
-
-      propertyBindings.push({
-        property: propertyName,
-        selector: `[data-${bindingId}]`,
-        value: value,
-      });
-
-      // Mark to skip the quote in the next string
-      skipQuote = true;
-    } else {
-      // Normal interpolation
-      result += str;
-
-      // Add value for the current position
-      if (i < values.length) {
-        result += values[i] ?? '';
+      if (boolAttrMatch) {
+        const processed = processBooleanAttribute(str, values[i], boolAttrMatch);
+        result += processed.result;
+        skipQuote = processed.skipQuote;
+      } else if (propMatch) {
+        const processed = processPropertyBinding(str, values[i], propMatch, propertyBindings.length);
+        result += processed.result;
+        propertyBindings.push(processed.binding);
+        skipQuote = processed.skipQuote;
+      } else {
+        // Normal interpolation
+        result += str + (values[i] ?? '');
       }
     }
-  }
 
-  // Return result with property bindings if any exist
-  if (propertyBindings.length > 0) {
-    return {
-      __html: result.trim(),
-      __propertyBindings: propertyBindings,
-      toString() {
-        return (this as any).__html;
-      },
-    };
-  }
+    // Return with property bindings if any exist
+    return propertyBindings.length > 0
+      ? ({
+          __html: result.trim(),
+          __propertyBindings: propertyBindings,
+          toString() {
+            return (this as HTMLResult).__html;
+          },
+        } as HTMLResult)
+      : result.trim();
+  },
+  {
+    /**
+     * Conditional class helper - supports object or array
+     * @param classes - Object or array of classes
+     * @returns Space-separated class string
+     * @example
+     * html.classes({ active: true, disabled: false }) // 'active'
+     * html.classes(['btn', isActive && 'active', 'primary']) // 'btn active primary'
+     * html.classes(['btn', { active: isActive, disabled: isDisabled }])
+     */
+    classes: (
+      classes:
+        | Record<string, boolean | undefined>
+        | (string | false | undefined | null | Record<string, boolean | undefined>)[],
+    ): string => {
+      // Array support
+      if (Array.isArray(classes)) {
+        return classes
+          .map((item) => {
+            if (!item) return '';
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object') {
+              // Nested object support
+              return Object.entries(item)
+                .filter(([, value]) => value)
+                .map(([key]) => key)
+                .join(' ');
+            }
+            return '';
+          })
+          .filter(Boolean)
+          .join(' ');
+      }
 
-  return result.trim();
-};
+      // Object support
+      return Object.entries(classes)
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+        .join(' ');
+    },
+
+    /**
+     * Portal - render content in a different part of the DOM
+     * @param content - Content to render
+     * @param target - Target element or selector to render into
+     * @returns Empty string (content is rendered elsewhere)
+     * @example
+     * // Render modal in document.body
+     * html.portal(
+     *   html`<div class="modal">Modal content</div>`,
+     *   document.body
+     * )
+     *
+     * // Render in selector
+     * html.portal(
+     *   html`<div class="tooltip">Tooltip</div>`,
+     *   '#tooltip-container'
+     * )
+     */
+    portal: (content: string | HTMLResult, target: HTMLElement | string): string => {
+      const contentStr = typeof content === 'string' ? content : content.toString();
+      const id = `portal-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create portal content
+      const createPortal = () => {
+        const targetEl = typeof target === 'string' ? document.querySelector(target) : target;
+
+        if (!targetEl) {
+          console.warn('html.portal() target not found:', target);
+          return;
+        }
+
+        const container = document.createElement('div');
+        container.setAttribute('data-portal-id', id);
+        container.innerHTML = contentStr;
+        targetEl.appendChild(container);
+
+        return () => container.remove();
+      };
+
+      // Schedule portal creation
+      const schedule = document.readyState === 'loading'
+        ? () => document.addEventListener('DOMContentLoaded', createPortal, { once: true })
+        : () => queueMicrotask(createPortal);
+
+      schedule();
+
+      return `<span data-portal-placeholder="${id}" style="display:none;"></span>`;
+    },
+    /**
+     * Repeat items with optional key function for efficient updates
+     * @param items - Array of items to repeat
+     * @param keyFnOrTemplate - Key function or template (if no key needed)
+     * @param template - Template function (only if key function provided)
+     * @returns HTML string
+     * @example
+     * html.repeat(users, (user, i) => html`<li>${i}. ${user.name}</li>`)
+     * html.repeat(users, user => user.id, (user, i) => html`<li>${user.name}</li>`)
+     */
+    repeat: <T>(
+      items: T[],
+      keyFnOrTemplate: ((item: T) => string | number) | ((item: T, index: number) => string | HTMLResult),
+      template?: (item: T, index: number) => string | HTMLResult,
+    ): string => {
+      const hasKey = typeof template === 'function';
+      const templateFn = hasKey ? template : (keyFnOrTemplate as (item: T, index: number) => string | HTMLResult);
+
+      return items
+        .map((item, index) => {
+          const result = templateFn(item, index);
+          return typeof result === 'string' ? result : result.toString();
+        })
+        .join('');
+    },
+
+    /**
+     * Conditional style helper - converts an object to inline styles
+     * @param styles - Object mapping CSS properties to values
+     * @returns Semicolon-separated style string
+     * @example
+     * html.styles({ color: 'red', display: isVisible ? 'block' : undefined })
+     * html.styles({ backgroundColor: 'blue', fontSize: '16px' })
+     */
+    styles: (styles: Partial<CSSStyleDeclaration> | Record<string, string | number | undefined | null>): string => {
+      return Object.entries(styles)
+        .filter(([, value]) => value != null)
+        .map(([key, value]) => `${toKebab(key)}: ${value}`)
+        .join('; ');
+    },
+
+    /**
+     * Async content with loading fallback
+     * @param promise - Promise that resolves to HTML content
+     * @param fallback - Fallback content to show while loading
+     * @returns HTML with placeholder that will be replaced when promise resolves
+     * @example
+     * html.until(
+     *   fetchUser().then(user => html`<div>${user.name}</div>`),
+     *   html`<div>Loading...</div>`
+     * )
+     */
+    until: (promise: Promise<string | HTMLResult>, fallback: string | HTMLResult): string => {
+      const fallbackStr = typeof fallback === 'string' ? fallback : fallback.toString();
+      const id = `until-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Wrap fallback in a container with unique data attribute
+      const placeholder = `<span data-until-id="${id}">${fallbackStr}</span>`;
+
+      // Resolve promise and update the placeholder
+      promise
+        .then((result) => {
+          const resultStr = typeof result === 'string' ? result : result.toString();
+
+          // Find all elements with this ID (could be in multiple shadow roots)
+          const updateElements = () => {
+            document.querySelectorAll(`[data-until-id="${id}"]`).forEach((element) => {
+              // Replace with the resolved content
+              const temp = document.createElement('template');
+              temp.innerHTML = resultStr;
+              element.replaceWith(...Array.from(temp.content.childNodes));
+            });
+          };
+
+          // Update immediately if DOM is ready, otherwise wait
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateElements, { once: true });
+          } else {
+            // Use microtask to ensure DOM is updated
+            queueMicrotask(updateElements);
+          }
+        })
+        .catch((error) => {
+          console.error('html.until() promise rejected:', error);
+          // Optionally update with error state
+          document.querySelectorAll(`[data-until-id="${id}"]`).forEach((element) => {
+            element.textContent = 'Error loading content';
+          });
+        });
+
+      return placeholder;
+    },
+
+    /**
+     * Conditional rendering helper - supports both functions and direct values
+     * @param condition - Condition to evaluate
+     * @param truthyValue - Value/function to render when truthy
+     * @param falsyValue - Optional value/function to render when falsy
+     * @returns HTML string
+     * @example
+     * html.when(isAdmin, html`<button>Delete</button>`, html`<span>View</span>`)
+     * html.when(isAdmin, () => html`<button>Delete</button>`)
+     */
+    when: (
+      condition: unknown,
+      truthyValue: string | HTMLResult | (() => string | HTMLResult),
+      falsyValue?: string | HTMLResult | (() => string | HTMLResult),
+    ): string => {
+      const resolveValue = (value: string | HTMLResult | (() => string | HTMLResult)): string => {
+        const result = typeof value === 'function' ? value() : value;
+        return typeof result === 'string' ? result : result.toString();
+      };
+
+      return condition
+        ? resolveValue(truthyValue)
+        : falsyValue !== undefined
+          ? resolveValue(falsyValue)
+          : '';
+    },
+  },
+);
 
 /** Type helper for theme variable proxy */
 type ThemeVars<T extends Record<string, string | number>> = {
@@ -1101,10 +1611,12 @@ type ThemeVars<T extends Record<string, string | number>> = {
 
 export const css = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): string => {
-    return strings.reduce((result, str, i) => {
-      const value = values[i] ?? '';
-      return result + str + value;
-    }, '').trim();
+    return strings
+      .reduce((result, str, i) => {
+        const value = values[i] ?? '';
+        return result + str + value;
+      }, '')
+      .trim();
   },
   {
     /**
@@ -1161,67 +1673,3 @@ export const css = Object.assign(
     },
   },
 );
-
-/**
- * Conditional class helper
- * @param classes - Object mapping class names to boolean conditions
- * @returns Space-separated class string
- * @example classMap({ active: true, disabled: false }) // 'active'
- */
-export const classMap = (classes: Record<string, boolean | undefined>): string => {
-  return Object.entries(classes)
-    .filter(([, value]) => value)
-    .map(([key]) => key)
-    .join(' ');
-};
-
-/**
- * Conditional style helper
- * @param styles - Object mapping CSS properties to values
- * @returns Semicolon-separated style string
- * @example styleMap({ color: 'red', display: undefined }) // 'color: red'
- */
-export const styleMap = (
-  styles: Partial<CSSStyleDeclaration> | Record<string, string | number | undefined>,
-): string => {
-  return Object.entries(styles)
-    .filter(([, value]) => value != null)
-    .map(([key, value]) => `${toKebab(key)}: ${value}`)
-    .join('; ');
-};
-
-/* ==================== Testing Utilities ==================== */
-
-/**
- * Attach/mount a component to the DOM and wait for first render
- * @param element - The element to attach
- * @param container - Optional container (defaults to document.body)
- * @returns Promise that resolves when component is mounted and rendered
- * @example
- * const el = document.createElement('my-component');
- * await attach(el);
- * // Component is now in DOM and rendered
- */
-export async function attach<T extends HTMLElement>(element: T, container: HTMLElement = document.body): Promise<T> {
-  container.appendChild(element);
-
-  if ('flush' in element && typeof element.flush === 'function') {
-    await element.flush();
-  } else {
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-  }
-
-  return element;
-}
-
-/**
- * Remove a component from the DOM with cleanup
- * @param element - The element to destroy
- * @example
- * const el = await attach(document.createElement('my-component'));
- * // ... test code ...
- * destroy(el); // Clean removal
- */
-export function destroy(element: HTMLElement): void {
-  element.remove();
-}

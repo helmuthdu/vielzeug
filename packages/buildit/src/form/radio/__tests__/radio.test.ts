@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture, userEvent } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-radio', () => {
@@ -129,7 +129,7 @@ describe('bit-radio', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).toHaveBeenCalled();
       const event = changeHandler.mock.calls[0][0] as CustomEvent;
@@ -143,7 +143,7 @@ describe('bit-radio', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
     });

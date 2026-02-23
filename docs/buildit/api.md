@@ -7,10 +7,12 @@ import '@vielzeug/buildit/accordion';
 import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
+import '@vielzeug/buildit/card';
 import '@vielzeug/buildit/checkbox';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/radio';
 import '@vielzeug/buildit/switch';
+import '@vielzeug/buildit/text';
 ```
 
 ## Button Component
@@ -49,6 +51,49 @@ import '@vielzeug/buildit/switch';
 ### CSS Custom Properties
 
 Refer to the component source for a full list of overridable CSS variables.
+
+## Card Component
+
+### Tag Name
+
+`<bit-card>`
+
+### Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'` | Visual style variant |
+| `padding` | `'none' \| 'sm' \| 'md' \| 'lg'` | `'md'` | Internal padding size |
+| `hoverable` | `boolean` | `false` | Enable hover effect with lift animation |
+| `clickable` | `boolean` | `false` | Make card clickable and emit click events |
+
+### Slots
+
+| Slot | Description |
+|------|-------------|
+| (default) | Main content area of the card |
+| `header` | Header section at the top of the card |
+| `footer` | Footer section at the bottom of the card |
+
+### Events
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `click` | `{ originalEvent: Event }` | Emitted when clickable card is clicked |
+
+### CSS Custom Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `--card-bg` | `var(--color-contrast-50)` | Background color |
+| `--card-color` | `var(--color-contrast-900)` | Text color |
+| `--card-border` | `var(--border)` | Border width |
+| `--card-border-color` | `var(--color-contrast-200)` | Border color |
+| `--card-radius` | `var(--rounded-lg)` | Border radius |
+| `--card-padding` | `var(--size-4)` | Internal padding |
+| `--card-shadow` | `var(--shadow-sm)` | Box shadow |
+| `--card-hover-shadow` | `var(--shadow-md)` | Hover state shadow |
+| `--card-gap` | `var(--size-3)` | Gap between sections |
 
 ## Accordion Component
 
@@ -106,6 +151,72 @@ Refer to the component source for a full list of overridable CSS variables.
 |-------|--------|-------------|
 | `expand` | `{ expanded: true, item: HTMLElement }` | Emitted when item is expanded |
 | `collapse` | `{ expanded: false, item: HTMLElement }` | Emitted when item is collapsed |
+
+## Text Component
+
+### Tag Name
+
+`<bit-text>`
+
+### Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `variant` | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'` | `'body'` | Text variant style |
+| `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'` | - | Text size (13 options from 12px to 128px) |
+| `weight` | `'normal' \| 'medium' \| 'semibold' \| 'bold'` | - | Font weight |
+| `color` | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | - | Text color |
+| `align` | `'left' \| 'center' \| 'right' \| 'justify'` | - | Text alignment |
+| `truncate` | `boolean` | `false` | Enable single-line truncation with ellipsis |
+| `italic` | `boolean` | `false` | Apply italic font style |
+| `as` | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'` | - | Semantic HTML tag to render |
+
+### Slots
+
+| Slot | Description |
+|------|-------------|
+| (default) | Text content |
+
+### CSS Custom Properties
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `--text-size` | Font size | `var(--text-base)` |
+| `--text-weight` | Font weight | `var(--font-normal)` |
+| `--text-color` | Text color | `var(--text-color-body)` |
+| `--text-line-height` | Line height | `var(--leading-normal)` |
+| `--text-letter-spacing` | Letter spacing | `normal` |
+
+### Usage Examples
+
+#### Basic Text
+
+```html
+<bit-text>Regular paragraph text</bit-text>
+```
+
+#### Heading Variants
+
+```html
+<bit-text variant="heading" size="3xl" as="h1">Page Title</bit-text>
+<bit-text variant="heading" size="2xl" as="h2">Section Title</bit-text>
+```
+
+#### Colored Text
+
+```html
+<bit-text color="primary">Primary colored text</bit-text>
+<bit-text color="error" weight="medium">Error message</bit-text>
+<bit-text color="muted" size="sm">Secondary information</bit-text>
+```
+
+#### Truncated Text
+
+```html
+<bit-text truncate style="max-width: 200px;">
+  This long text will be truncated with ellipsis...
+</bit-text>
+```
 
 ## Checkbox Component
 

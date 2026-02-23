@@ -136,14 +136,14 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
     // Initial sync
     syncItems();
 
-    // Sync when items are added/removed
+    // Update items when slotted children change
     const slot = host.shadowRoot?.querySelector('slot');
     if (slot) {
       slot.addEventListener('slotchange', syncItems);
     }
 
-    // Single-selection behavior
-    host.addEventListener('expand', (e) => {
+    // Single-selection behavior (2 params = host element)
+    el.on('expand', (e) => {
       if (host.getAttribute('selection-mode') === 'single') {
         const expandedItem = e.target as HTMLElement;
         const items = host.querySelectorAll('bit-accordion-item');

@@ -237,11 +237,10 @@ defineElement<HTMLElement, SwitchProps>('bit-switch', {
       host.setAttribute('tabindex', '0');
     }
 
-    // Keyboard interaction
-    host.addEventListener('keydown', (e: KeyboardEvent) => {
+    el.on('keydown', (keyEvent) => {
       if (host.hasAttribute('disabled')) return;
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
+      if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
+        keyEvent.preventDefault();
         const nextChecked = !host.hasAttribute('checked');
 
         if (nextChecked) host.setAttribute('checked', '');
@@ -254,14 +253,14 @@ defineElement<HTMLElement, SwitchProps>('bit-switch', {
         host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
         el.emit('change', {
           checked: nextChecked,
-          originalEvent: e,
+          originalEvent: keyEvent,
           value: host.getAttribute('value'),
         });
       }
     });
 
-    // Mouse / pointer interaction
-    host.addEventListener('click', (e) => {
+    // Mouse / pointer interaction (2 params = host element)
+    el.on('click', (e) => {
       if (host.hasAttribute('disabled')) return;
 
       const nextChecked = !host.hasAttribute('checked');

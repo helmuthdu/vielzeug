@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture, userEvent } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-input', () => {
@@ -310,12 +310,11 @@ describe('bit-input', () => {
       const inputHandler = vi.fn();
       fixture.element.addEventListener('input', inputHandler);
 
-      input!.value = 'test';
-      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await userEvent.type(input!, 'a');
 
       expect(inputHandler).toHaveBeenCalled();
       const event = inputHandler.mock.calls[0][0] as CustomEvent;
-      expect(event.detail.value).toBe('test');
+      expect(event.detail.value).toBe('a');
       expect(event.detail.originalEvent).toBeDefined();
     });
 

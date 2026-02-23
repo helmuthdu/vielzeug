@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture, userEvent } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-switch', () => {
@@ -49,10 +49,10 @@ describe('bit-switch', () => {
 
       expect(fixture.element.hasAttribute('checked')).toBe(false);
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
   });
@@ -73,7 +73,7 @@ describe('bit-switch', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
       expect(fixture.element.hasAttribute('checked')).toBe(false);
@@ -86,7 +86,7 @@ describe('bit-switch', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
       const event = changeHandler.mock.calls[0][0] as CustomEvent;
@@ -100,10 +100,10 @@ describe('bit-switch', () => {
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+      await userEvent.keyboard(fixture.element, ' ');
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      await userEvent.keyboard(fixture.element, 'Enter');
       expect(changeHandler).toHaveBeenCalledTimes(2);
     });
   });
@@ -174,10 +174,10 @@ describe('bit-switch', () => {
       fixture = await createFixture('bit-switch');
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
 
-      fixture.element.click();
+      await userEvent.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
     });
   });
@@ -187,7 +187,7 @@ describe('bit-switch', () => {
       fixture = await createFixture('bit-switch');
 
       for (let i = 0; i < 5; i++) {
-        fixture.element.click();
+        await userEvent.click(fixture.element);
       }
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
@@ -198,7 +198,7 @@ describe('bit-switch', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
       expect(fixture.element.hasAttribute('checked')).toBe(true);
@@ -209,7 +209,7 @@ describe('bit-switch', () => {
       const changeHandler = vi.fn();
 
       fixture.element.addEventListener('change', changeHandler);
-      fixture.element.click();
+      await userEvent.click(fixture.element);
 
       const event = changeHandler.mock.calls[0][0] as CustomEvent;
       expect(event.detail.value).toBeNull();

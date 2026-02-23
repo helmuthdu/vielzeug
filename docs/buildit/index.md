@@ -58,7 +58,9 @@ import '@vielzeug/buildit/button';
 
 ### Base
 - **[Button](./components/button.md)** – Versatile button with multiple variants, colors, and states. Includes button groups for organizing related actions.
+- **[Card](./components/card.md)** – Versatile card container with multiple variants, interactive states, and flexible content layout.
 - **[Accordion](./components/accordion.md)** – Collapsible content sections with single/multiple selection.
+- **[Text](./components/text.md)** – Typography component with semantic variants for consistent text styling.
 
 ### Forms
 - **[Checkbox](./components/checkbox.md)** – Checkbox input with indeterminate state support.

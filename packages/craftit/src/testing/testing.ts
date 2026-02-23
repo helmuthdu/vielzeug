@@ -5,8 +5,6 @@
  * @module craftit/testing
  */
 
-import { attach, destroy } from '../craftit';
-
 /**
  * Create a test container and automatically clean it up
  * @returns Container element and cleanup function
@@ -28,6 +26,40 @@ export function createTestContainer(): {
     cleanup: () => container.remove(),
     container,
   };
+}
+
+/**
+ * Attach/mount a component to the DOM and wait for first render
+ * @param element - The element to attach
+ * @param container - Optional container (defaults to document.body)
+ * @returns Promise that resolves when component is mounted and rendered
+ * @example
+ * const el = document.createElement('my-component');
+ * await attach(el);
+ * // Component is now in DOM and rendered
+ */
+export async function attach<T extends HTMLElement>(element: T, container: HTMLElement = document.body): Promise<T> {
+  container.appendChild(element);
+
+  if ('flush' in element && typeof element.flush === 'function') {
+    await element.flush();
+  } else {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+
+  return element;
+}
+
+/**
+ * Remove a component from the DOM with cleanup
+ * @param element - The element to destroy
+ * @example
+ * const el = await attach(document.createElement('my-component'));
+ * // ... test code ...
+ * destroy(el); // Clean removal
+ */
+export function destroy(element: HTMLElement): void {
+  element.remove();
 }
 
 /**
