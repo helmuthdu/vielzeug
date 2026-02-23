@@ -151,7 +151,7 @@ describe('craftit', () => {
       describe('single theme', () => {
         it('should create theme object with typed properties', () => {
           const theme = css.theme({
-            primaryColor: '#3b82f6',
+            primaryColo r: '#3b82f6',
             textColor: '#1f2937',
           });
 

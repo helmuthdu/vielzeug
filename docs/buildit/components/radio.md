@@ -41,7 +41,7 @@ Five semantic colors for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-radio name="color" color="primary">Primary</bit-radio>
+<bit-radio checked name="color" color="primary">Primary</bit-radio>
 <bit-radio name="color" color="secondary">Secondary</bit-radio>
 <bit-radio name="color" color="success">Success</bit-radio>
 <bit-radio name="color" color="warning">Warning</bit-radio>
@@ -57,7 +57,7 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-radio name="size" size="sm">Small</bit-radio>
+<bit-radio checked name="size" size="sm">Small</bit-radio>
 <bit-radio name="size" size="md">Medium</bit-radio>
 <bit-radio name="size" size="lg">Large</bit-radio>
 ```

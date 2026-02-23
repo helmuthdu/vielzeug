@@ -92,54 +92,181 @@ src/form/checkbox/
 import { css, defineElement, html } from '@vielzeug/craftit';
 
 /**
- * Component JSDoc header
+ * bit-[component-name] - Component description
  *
  * @element bit-[component-name]
  *
- * @attr {type} attribute-name - Description
+ * @attr {boolean} checked - Checked state
+ * @attr {boolean} disabled - Disabled state
+ * @attr {string} color - Color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * ... all attributes documented
  *
  * @slot - Default slot description
  * @slot slot-name - Named slot description
  *
- * @fires event-name - Event description with detail type
+ * @cssprop --component-size - Size of the component
+ * @cssprop --component-bg - Background color
+ * @cssprop --component-checked-bg - Background when checked
+ * @cssprop --component-color - Icon/text color
+ *
+ * @fires change - Emitted when state changes
+ *   detail: { checked: boolean, value: string | null, originalEvent: Event }
  */
 
 // -------------------- Styles --------------------
 const styles = css`
-  /* Component styles */
+  /* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
+  :host {
+    /* Internal variables with public CSS custom property fallbacks */
+    --_size: var(--component-size, var(--size-5));
+    --_font-size: var(--component-font-size, var(--text-sm));
+    --_bg: var(--component-bg, var(--color-contrast-200));
+    --_border: var(--component-border-color, var(--color-contrast-300));
+    
+    /* Layout */
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  :host([disabled]) {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ========================================
+     Color Themes
+     ======================================== */
+
+  :host(:not([color])),
+  :host([color='primary']) {
+    --_active-bg: var(--component-checked-bg, var(--color-primary));
+    --_icon-color: var(--component-color, var(--color-primary-contrast));
+    --_focus-shadow: var(--color-primary-shadow);
+  }
+
+  :host([color='secondary']) {
+    --_active-bg: var(--component-checked-bg, var(--color-secondary));
+    --_icon-color: var(--component-color, var(--color-secondary-contrast));
+    --_focus-shadow: var(--color-secondary-shadow);
+  }
+
+  /* ... other color variants */
+
+  /* ========================================
+     States
+     ======================================== */
+
+  :host([checked]) .element {
+    background: var(--_active-bg);
+    border-color: var(--_active-bg);
+  }
+
+  /* ========================================
+     Focus State
+     ======================================== */
+
+  input:focus-visible + .element {
+    box-shadow: var(--_focus-shadow);
+  }
+
+  /* ========================================
+     Size Variants
+     ======================================== */
+
+  :host([size='sm']) {
+    --_size: var(--size-4);
+    --_font-size: var(--text-xs);
+  }
+
+  :host([size='lg']) {
+    --_size: var(--size-6);
+    --_font-size: var(--text-base);
+  }
+
+  /* ========================================
+     Elements
+     ======================================== */
+
+  .element {
+    width: var(--_size);
+    height: var(--_size);
+    font-size: var(--_font-size);
+    background: var(--_bg);
+    border: var(--border-2) solid var(--_border);
+    transition: all var(--transition-normal);
+  }
 `;
 
 // -------------------- Props Type --------------------
 export type [ComponentName]Props = {
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
+  checked?: boolean;
+  disabled?: boolean;
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  // ... component-specific props
+  value?: string;
+  name?: string;
 };
 
 // -------------------- Component Definition --------------------
-// Host type is usually HTMLElement (the custom element itself).
 defineElement<HTMLElement, [ComponentName]Props>('bit-[component-name]', {
-  // Attribute reflection rules:
-  // - Boolean attributes: presence/absence => true/false
-  // - String/enum attributes: attribute value => prop value
-  observedAttributes: ['variant', 'color', 'size', 'disabled'] as const,
+  observedAttributes: ['checked', 'disabled', 'color', 'size', 'value', 'name'] as const,
+
+  onAttributeChanged(el, name, _oldValue, newValue) {
+    const host = el as unknown as HTMLElement;
+
+    if (name === 'checked') {
+      const isChecked = newValue !== null;
+      host.setAttribute('aria-checked', isChecked ? 'true' : 'false');
+    } else if (name === 'disabled') {
+      const isDisabled = newValue !== null;
+      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    }
+  },
+
+  onConnected(el) {
+    const host = el as unknown as HTMLElement;
+
+    // Initial ARIA setup
+    host.setAttribute('role', 'checkbox'); // or appropriate role
+    host.setAttribute('aria-checked', host.hasAttribute('checked') ? 'true' : 'false');
+    host.setAttribute('aria-disabled', host.hasAttribute('disabled') ? 'true' : 'false');
+
+    // Event handlers
+    host.addEventListener('click', (e) => {
+      if (host.hasAttribute('disabled')) return;
+
+      const isChecked = !host.hasAttribute('checked');
+      
+      if (isChecked) {
+        host.setAttribute('checked', '');
+      } else {
+        host.removeAttribute('checked');
+      }
+
+      el.emit('change', {
+        checked: isChecked,
+        value: host.getAttribute('value'),
+        originalEvent: e,
+      });
+    });
+  },
 
   styles: [styles],
 
   template: (el) => html`
-    <!-- Component template -->
+    <div class="element">
+      <!-- Component structure -->
+    </div>
+    <span class="label"><slot></slot></span>
   `,
-
-  onConnected(el) {
-    // Event handlers, initial state sync
-  },
-
-  onAttributeChanged(el, name, oldValue, newValue) {
-    // Keep internal state and ARIA in sync with attribute changes
-  },
 });
 
 export default {};
@@ -186,7 +313,7 @@ All components integrate with the unified design system using CSS custom propert
 
 ### 5.2 CSS Organization Pattern [Required]
 
-Follow this structure for all components:
+Follow this structure for all components. Use internal variables (`--_*`) to simplify theming and avoid repetition.
 
 ```css
 /* ========================================
@@ -194,42 +321,98 @@ Follow this structure for all components:
    ======================================== */
 
 :host {
+  /* Internal variables with CSS custom property fallbacks */
+  --_size: var(--component-size, var(--size-5));
+  --_font-size: var(--component-font-size, var(--text-sm));
+  --_bg: var(--component-bg, var(--color-contrast-200));
+  --_border: var(--component-border-color, var(--color-contrast-300));
+  
+  /* Layout */
   display: inline-flex;
-  /* Default size (medium) */
-  --component-size: var(--size-5);
-  --component-font-size: var(--text-sm);
-}
-
-.element {
-  /* Layout properties */
-  width: 100%;
-  /* Default color (primary) */
-  --component-base: var(--color-primary);
-  --component-contrast: var(--color-primary-contrast);
-  --component-focus: var(--color-primary-focus);
+  align-items: center;
+  gap: var(--size-2);
+  cursor: pointer;
 }
 
 /* ========================================
    Color Themes
    ======================================== */
 
-:host([color='secondary']) .element {
-  --component-base: var(--color-secondary);
-  --component-contrast: var(--color-secondary-contrast);
-  --component-focus: var(--color-secondary-focus);
+:host(:not([color])),
+:host([color='primary']) {
+  --_active-bg: var(--component-checked-bg, var(--color-primary));
+  --_icon-color: var(--component-color, var(--color-primary-contrast));
+  --_focus-shadow: var(--color-primary-shadow);
+}
+
+:host([color='secondary']) {
+  --_active-bg: var(--component-checked-bg, var(--color-secondary));
+  --_icon-color: var(--component-color, var(--color-secondary-contrast));
+  --_focus-shadow: var(--color-secondary-shadow);
+}
+
+:host([color='success']) {
+  --_active-bg: var(--component-checked-bg, var(--color-success));
+  --_icon-color: var(--component-color, var(--color-success-contrast));
+  --_focus-shadow: var(--color-success-shadow);
+}
+
+:host([color='warning']) {
+  --_active-bg: var(--component-checked-bg, var(--color-warning));
+  --_icon-color: var(--component-color, var(--color-warning-contrast));
+  --_focus-shadow: var(--color-warning-shadow);
+}
+
+:host([color='error']) {
+  --_active-bg: var(--component-checked-bg, var(--color-error));
+  --_icon-color: var(--component-color, var(--color-error-contrast));
+  --_focus-shadow: var(--color-error-shadow);
 }
 
 /* ========================================
    States
    ======================================== */
 
-:host([checked]) .element { }
+:host([checked]) .element {
+  background: var(--_active-bg);
+  border-color: var(--_active-bg);
+}
+
+:host([disabled]) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ========================================
+   Focus State
+   ======================================== */
+
+input:focus-visible + .element {
+  box-shadow: var(--_focus-shadow);
+}
 
 /* ========================================
    Size Variants
    ======================================== */
 
-:host([size='sm']) { }
+:host([size='sm']) {
+  --_size: var(--size-4);
+  --_font-size: var(--text-xs);
+}
+
+:host([size='lg']) {
+  --_size: var(--size-6);
+  --_font-size: var(--text-base);
+}
+```
+
+**Key Pattern:**
+- Use `--_*` prefix for internal variables (not exposed to users)
+- Provide CSS custom properties (e.g., `--component-size`) for user customization
+- Internal variables read from custom properties with sensible defaults
+- Set color defaults in `:host(:not([color]))` selector combined with `primary`
+- Group all colors in one section, sizes in another for easy maintenance
 ```
 
 ### 5.3 Color System [Required]
@@ -243,27 +426,45 @@ type Color = 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 **Per-color tokens:**
 - `--color-{name}` - Base color for backgrounds
 - `--color-{name}-contrast` - High contrast text on base
-- `--color-{name}-focus` - Hover/focus states
+- `--color-{name}-focus` - Hover/focus states (lighter/darker)
 - `--color-{name}-content` - Alternative text color
 - `--color-{name}-backdrop` - Subtle background/overlay
+- `--color-{name}-shadow` - Focus ring/shadow color
 
-**Implementation:**
+**Implementation using internal variables:**
 
 ```css
-/* Set default in base element */
-.box {
-  --checkbox-base: var(--color-primary);
-  --checkbox-contrast: var(--color-primary-contrast);
-  --checkbox-focus: var(--color-primary-focus);
+/* Set defaults for primary color (combined with :not([color])) */
+:host(:not([color])),
+:host([color='primary']) {
+  --_active-bg: var(--component-checked-bg, var(--color-primary));
+  --_icon-color: var(--component-color, var(--color-primary-contrast));
+  --_focus-shadow: var(--color-primary-shadow);
 }
 
-/* Override per color */
-:host([color='success']) .box {
-  --checkbox-base: var(--color-success);
-  --checkbox-contrast: var(--color-success-contrast);
-  --checkbox-focus: var(--color-success-focus);
+/* Override for each color variant */
+:host([color='success']) {
+  --_active-bg: var(--component-checked-bg, var(--color-success));
+  --_icon-color: var(--component-color, var(--color-success-contrast));
+  --_focus-shadow: var(--color-success-shadow);
+}
+
+/* Apply internal variables in elements */
+.element {
+  background: var(--_active-bg);
+  color: var(--_icon-color);
+}
+
+.element:focus-visible {
+  box-shadow: var(--_focus-shadow);
 }
 ```
+
+**Benefits:**
+- Single source of truth for each color state
+- Easy to override via CSS custom properties
+- No repetition across element selectors
+- Consistent pattern across all components
 
 ### 5.4 Visual Variants [Required]
 
@@ -321,26 +522,55 @@ button {
 type Size = 'sm' | 'md' | 'lg';
 ```
 
-**Set defaults in base, override per size:**
+**Use internal variables for sizing with custom property fallbacks:**
+
+```css
+:host {
+  /* Default size (medium) - set in base */
+  --_size: var(--component-size, var(--size-5));
+  --_font-size: var(--component-font-size, var(--text-sm));
+}
+
+:host([size='sm']) {
+  --_size: var(--size-4);
+  --_font-size: var(--text-xs);
+}
+
+:host([size='lg']) {
+  --_size: var(--size-6);
+  --_font-size: var(--text-base);
+}
+
+/* Apply internal variables */
+.element {
+  width: var(--_size);
+  height: var(--_size);
+  font-size: var(--_font-size);
+}
+```
+
+**For button-like components with padding:**
 
 ```css
 button {
   /* Default size (medium) */
-  --button-padding: var(--size-2) var(--size-4);
-  --button-font-size: var(--text-sm);
+  --_padding: var(--button-padding, var(--size-2) var(--size-4));
+  --_font-size: var(--button-font-size, var(--text-sm));
   height: var(--size-10);
+  padding: var(--_padding);
+  font-size: var(--_font-size);
   line-height: var(--leading-normal);
 }
 
 :host([size='sm']) button {
-  --button-padding: var(--size-1-5) var(--size-3);
+  --_padding: var(--size-1-5) var(--size-3);
   height: var(--size-8);
   line-height: var(--leading-tight);
 }
 
 :host([size='lg']) button {
-  --button-padding: var(--size-2-5) var(--size-5);
-  --button-font-size: var(--text-base);
+  --_padding: var(--size-2-5) var(--size-5);
+  --_font-size: var(--text-base);
   height: var(--size-12);
   line-height: var(--leading-relaxed);
 }
@@ -398,19 +628,25 @@ button {
 
 **✅ Do:**
 ```css
+/* Use internal variables with CSS custom property fallbacks */
+:host {
+  --_size: var(--component-size, var(--size-5));
+  --_bg: var(--component-bg, var(--color-contrast-200));
+}
+
 /* Use design tokens */
 padding: var(--size-2) var(--size-4);
 font-size: var(--text-sm);
 border-radius: var(--rounded-md);
 box-shadow: var(--shadow-sm);
 
-/* Set defaults in base selector */
-button {
-  --button-base: var(--color-primary);
-  /* ... */
+/* Combine default color with :not([color]) selector */
+:host(:not([color])),
+:host([color='primary']) {
+  --_active-bg: var(--color-primary);
 }
 
-/* Consolidate identical rules */
+/* Group identical properties */
 :host([variant='glass']) button,
 :host([variant='frost']) button {
   backdrop-filter: blur(var(--blur-lg));
@@ -424,13 +660,35 @@ padding: 0.5rem 1rem;
 font-size: 14px;
 border-radius: 6px;
 
-/* Duplicate color defaults */
-:host(:not([color])) button,
-:host([color='primary']) button { }
+/* Expose internal variables to users */
+.element {
+  width: var(--_size); /* Internal only */
+}
 
 /* Repeat identical properties */
 :host([variant='glass']) { backdrop-filter: blur(16px); }
 :host([variant='frost']) { backdrop-filter: blur(16px); }
+
+/* Set colors in element selectors */
+.element {
+  --component-base: var(--color-primary); /* Set in :host instead */
+}
+```
+
+**Internal vs Public Variables:**
+- `--_*` prefix = Internal only (implementation detail)
+- `--component-*` prefix = Public API (user can customize)
+
+```css
+:host {
+  /* Public API - users can override */
+  --component-size: var(--size-5);
+  --component-bg: var(--color-contrast-200);
+  
+  /* Internal - reads from public API with fallback */
+  --_size: var(--component-size, var(--size-5));
+  --_bg: var(--component-bg, var(--color-contrast-200));
+}
 ```
 - `--text-color-contrast` - Text on dark backgrounds
 
@@ -619,38 +877,81 @@ onAttributeChanged(el, name, _oldValue, newValue) {
 
 ### 7.1 Pattern [Required]
 
-Expose CSS variables for theming:
+Expose CSS custom properties for user customization, use internal variables for implementation:
 
 ```css
 :host {
-  /* Colors & Backgrounds */
-  --component-bg: /* default */;
-  --component-color: /* default */;
-  --component-hover-bg: /* default */;
-  --component-active-bg: /* default */;
-
-  /* Borders & Spacing */
-  --component-border: /* default */;
-  --component-radius: /* default */;
-  --component-padding: /* default */;
-  --component-gap: /* default */;
-
-  /* Typography */
-  --component-font-size: /* default */;
-  --component-font-weight: /* default */;
-  --component-line-height: /* default */;
-
-  /* Effects */
-  --component-shadow: /* default */;
-  --component-transition: /* default */;
+  /* Public API - users can override these */
+  --component-size: var(--size-5);
+  --component-bg: var(--color-contrast-200);
+  --component-border-color: var(--color-contrast-300);
+  --component-font-size: var(--text-sm);
+  --component-checked-bg: /* set per color variant */;
+  --component-color: /* set per color variant */;
+  
+  /* Internal variables - read from public API with defaults */
+  --_size: var(--component-size, var(--size-5));
+  --_bg: var(--component-bg, var(--color-contrast-200));
+  --_border: var(--component-border-color, var(--color-contrast-300));
+  --_font-size: var(--component-font-size, var(--text-sm));
 }
+
+/* Color-specific variables set per color */
+:host(:not([color])),
+:host([color='primary']) {
+  --_active-bg: var(--component-checked-bg, var(--color-primary));
+  --_icon-color: var(--component-color, var(--color-primary-contrast));
+  --_focus-shadow: var(--color-primary-shadow);
+}
+
+/* Apply internal variables in elements */
+.element {
+  width: var(--_size);
+  height: var(--_size);
+  background: var(--_bg);
+  border-color: var(--_border);
+  font-size: var(--_font-size);
+}
+```
+
+**Document public custom properties in JSDoc:**
+
+```typescript
+/**
+ * @cssprop --component-size - Size of the component
+ * @cssprop --component-bg - Background color
+ * @cssprop --component-border-color - Border color
+ * @cssprop --component-checked-bg - Background when checked
+ * @cssprop --component-color - Icon/text color
+ */
 ```
 
 ### 7.2 Naming [Required]
 
-- Prefix with component: `--button-*`, `--checkbox-*`, `--select-*`.
-- Use clear suffixes: `-bg`, `-color`, `-hover-bg`, `-border`, `-padding`, etc.
-- Reference theme tokens: e.g. `var(--color-primary)`, `var(--size-4)`, `var(--text-sm)`.
+**Public properties (exposed to users):**
+- Prefix with component: `--button-*`, `--checkbox-*`, `--radio-*`
+- Use clear suffixes: `-size`, `-bg`, `-color`, `-border-color`, `-checked-bg`, etc.
+- Reference theme tokens as defaults: `var(--color-primary)`, `var(--size-5)`
+
+**Internal variables (implementation only):**
+- Prefix with `--_`: `--_size`, `--_bg`, `--_active-bg`, `--_icon-color`
+- Read from public properties with fallbacks
+- Never expose in documentation
+
+**Examples:**
+```css
+/* ✅ Good - Clear naming, public/internal separation */
+:host {
+  --checkbox-size: var(--size-5);           /* Public */
+  --_size: var(--checkbox-size, var(--size-5)); /* Internal */
+}
+
+/* ❌ Bad - No separation, unclear naming */
+:host {
+  --size: var(--size-5);
+  --cb-s: var(--size-5);
+}
+```
 
 ---
 
@@ -685,7 +986,7 @@ Always use design tokens; avoid hard-coded values.
 
 #### 8.2.1 Semantic Colors
 
-Each semantic color has 5 variants for different use cases:
+Each semantic color has 6 variants for different use cases:
 
 **Primary** (Vibrant blue - accessible for all colorblind types)
 - `--color-primary` - Base color for backgrounds
@@ -693,6 +994,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-primary-focus` - Hover/focus states
 - `--color-primary-content` - Alternative text color
 - `--color-primary-backdrop` - Subtle background/overlay
+- `--color-primary-shadow` - Focus ring/shadow (e.g., `0 0 0 3px rgba(...)`)
 
 **Secondary** (Blue-gray for neutral actions)
 - `--color-secondary` - Base color
@@ -700,6 +1002,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-secondary-focus` - Focus state
 - `--color-secondary-content` - Content color
 - `--color-secondary-backdrop` - Background
+- `--color-secondary-shadow` - Focus ring/shadow
 
 **Success** (Teal/cyan - better for red-green colorblindness)
 - `--color-success` - Base
@@ -707,6 +1010,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-success-focus` - Focus
 - `--color-success-content` - Content
 - `--color-success-backdrop` - Backdrop
+- `--color-success-shadow` - Focus ring/shadow
 
 **Warning** (Amber/orange - distinct from error)
 - `--color-warning` - Base
@@ -714,6 +1018,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-warning-focus` - Focus
 - `--color-warning-content` - Content
 - `--color-warning-backdrop` - Backdrop
+- `--color-warning-shadow` - Focus ring/shadow
 
 **Error** (Magenta/vermillion - better for colorblindness)
 - `--color-error` - Base
@@ -721,6 +1026,7 @@ Each semantic color has 5 variants for different use cases:
 - `--color-error-focus` - Focus
 - `--color-error-content` - Content
 - `--color-error-backdrop` - Backdrop
+- `--color-error-shadow` - Focus ring/shadow
 
 #### 8.2.2 Neutral Colors
 

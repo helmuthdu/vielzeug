@@ -1083,7 +1083,7 @@ export const html = (strings: TemplateStringsArray, ...values: unknown[]): strin
   // Return result with property bindings if any exist
   if (propertyBindings.length > 0) {
     return {
-      __html: result,
+      __html: result.trim(),
       __propertyBindings: propertyBindings,
       toString() {
         return (this as any).__html;
@@ -1091,7 +1091,7 @@ export const html = (strings: TemplateStringsArray, ...values: unknown[]): strin
     };
   }
 
-  return result;
+  return result.trim();
 };
 
 /** Type helper for theme variable proxy */
@@ -1104,7 +1104,7 @@ export const css = Object.assign(
     return strings.reduce((result, str, i) => {
       const value = values[i] ?? '';
       return result + str + value;
-    }, '');
+    }, '').trim();
   },
   {
     /**
