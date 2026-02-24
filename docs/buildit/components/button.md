@@ -203,6 +203,19 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 </ComponentPreview>
 
+### Full Width
+
+Button expands to fill the full width of its container.
+
+<ComponentPreview center vertical>
+
+```html
+<bit-button fullwidth>Full Width Button</bit-button>
+<bit-button fullwidth variant="bordered" color="success">Full Width Bordered</bit-button>
+```
+
+</ComponentPreview>
+
 ## Button Groups
 
 ### Orientation
@@ -274,7 +287,7 @@ Buttons expand to fill the container equally.
 <ComponentPreview center>
 
 ```html
-<bit-button-group full-width attached>
+<bit-button-group fullwidth attached>
   <bit-button variant="bordered">Option A</bit-button>
   <bit-button variant="bordered">Option B</bit-button>
 </bit-button-group>
@@ -295,6 +308,7 @@ Buttons expand to fill the container equally.
 | `disabled`  | `boolean`                                                           | `false`     | Disable the button               |
 | `loading`   | `boolean`                                                           | `false`     | Show loading state               |
 | `icon-only` | `boolean`                                                           | `false`     | Icon-only mode (smaller padding) |
+| `fullwidth`| `boolean`                                                           | `false`     | Button takes full width of container |
 | `rounded`   | `boolean`                                                           | `false`     | Fully rounded corners            |
 
 ### `bit-button-group` Attributes
@@ -303,7 +317,7 @@ Buttons expand to fill the container equally.
 | ------------- | --------------------------------------------------------------------------------------------- | -------------- | ---------------------------------- |
 | `orientation` | `'horizontal' \| 'vertical'`                                                                  | `'horizontal'` | Group layout direction             |
 | `attached`    | `boolean`                                                                                     | `false`        | Remove spacing and connect buttons |
-| `full-width`  | `boolean`                                                                                     | `false`        | Buttons expand to fill container   |
+| `fullwidth`  | `boolean`                                                                                     | `false`        | Buttons expand to fill container   |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                                        | -              | Apply size to all child buttons    |
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | -              | Apply variant to all child buttons |
 | `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                               | -              | Apply color to all child buttons   |
@@ -388,7 +402,7 @@ Both components follow WAI-ARIA best practices.
 
 **Do:**
 - Use `attached` mode for related segmented controls.
-- Use `full-width` for mobile-optimized layouts or primary actions.
+- Use `fullwidth` for mobile-optimized layouts or primary actions.
 - Provide an `aria-label` when the group's purpose isn't clear from the content.
 
 **Don't:**

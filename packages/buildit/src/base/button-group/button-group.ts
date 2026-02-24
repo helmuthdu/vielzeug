@@ -10,7 +10,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {string} variant - Button variant for all children
  * @attr {string} color - Button color for all children
  * @attr {boolean} attached - Remove spacing between buttons
- * @attr {boolean} full-width - Buttons take full width
+ * @attr {boolean} fullwidth - Buttons take full width
  *
  * @slot - Button elements to group
  *
@@ -55,16 +55,16 @@ const styles = css`
      Full Width
      ======================================== */
 
-  :host([full-width]) {
+  :host([fullwidth]) {
     display: flex;
     width: 100%;
   }
 
-  :host([full-width]) .button-group {
+  :host([fullwidth]) .button-group {
     width: 100%;
   }
 
-  :host([full-width]) ::slotted(bit-button) {
+  :host([fullwidth]) ::slotted(bit-button) {
     flex: 1;
   }
 
@@ -129,12 +129,12 @@ export type ButtonGroupProps = {
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
   orientation?: 'horizontal' | 'vertical';
   attached?: boolean;
-  'full-width'?: boolean;
+  'fullwidth'?: boolean;
 };
 
 // -------------------- Component Definition --------------------
 defineElement<HTMLDivElement, ButtonGroupProps>('bit-button-group', {
-  observedAttributes: ['size', 'variant', 'color', 'orientation', 'attached', 'full-width'] as const,
+  observedAttributes: ['size', 'variant', 'color', 'orientation', 'attached', 'fullwidth'] as const,
 
   onAttributeChanged(name, _oldValue, _newValue, el) {
     if (name === 'size' || name === 'variant' || name === 'color') {

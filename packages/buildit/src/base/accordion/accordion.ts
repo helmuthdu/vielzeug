@@ -45,32 +45,36 @@ const styles = css`
   :host([variant='flat']),
   :host([variant='glass']),
   :host([variant='frost']) {
-    gap: 0;
     border-radius: var(--rounded-md);
+    gap: 0;
     padding: var(--size-2);
   }
 
   /* Solid variant (default) */
   :host([variant='solid']) {
-    background: var(--color-contrast-100);
+    background: var(--color-contrast-50);
+    border: var(--border) solid var(--color-contrast-200);
+    box-shadow: var(--shadow-xs);
   }
 
   /* Flat variant */
   :host([variant='flat']) {
-    background: var(--color-contrast-300);
+    background: var(--color-contrast-100);
+    border: var(--border) solid var(--color-contrast-200);
+    box-shadow: var(--inset-shadow-xs);
   }
 
   /* Glass variant - translucent with blur */
   :host([variant='glass']) {
-    background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 
   /* Frost variant - canvas-based transparency */
   :host([variant='frost']) {
-    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 

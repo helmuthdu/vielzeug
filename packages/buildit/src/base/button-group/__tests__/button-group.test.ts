@@ -83,24 +83,24 @@ describe('bit-button-group', () => {
   });
 
   describe('Full Width', () => {
-    it('should not be full-width by default', async () => {
+    it('should not be fullwidth by default', async () => {
       fixture = await createFixture('bit-button-group');
 
-      expect(fixture.element.hasAttribute('full-width')).toBe(false);
+      expect(fixture.element.hasAttribute('fullwidth')).toBe(false);
     });
 
-    it('should apply full-width mode', async () => {
-      fixture = await createFixture('bit-button-group', { 'full-width': true });
+    it('should apply fullwidth mode', async () => {
+      fixture = await createFixture('bit-button-group', { 'fullwidth': true });
 
-      expect(fixture.element.hasAttribute('full-width')).toBe(true);
+      expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
-    it('should toggle full-width mode', async () => {
-      fixture = await createFixture('bit-button-group', { 'full-width': true });
+    it('should toggle fullwidth mode', async () => {
+      fixture = await createFixture('bit-button-group', { 'fullwidth': true });
 
-      await fixture.setAttribute('full-width', false);
+      await fixture.setAttribute('fullwidth', false);
 
-      expect(fixture.element.hasAttribute('full-width')).toBe(false);
+      expect(fixture.element.hasAttribute('fullwidth')).toBe(false);
     });
   });
 
@@ -255,13 +255,13 @@ describe('bit-button-group', () => {
     it('should handle multiple attributes together', async () => {
       fixture = await createFixture('bit-button-group', {
         attached: true,
-        'full-width': true,
+        'fullwidth': true,
         orientation: 'vertical',
       });
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
       expect(fixture.element.hasAttribute('attached')).toBe(true);
-      expect(fixture.element.hasAttribute('full-width')).toBe(true);
+      expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('should propagate all attributes to children', async () => {

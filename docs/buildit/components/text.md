@@ -37,7 +37,7 @@ A versatile typography component with semantic variants for consistent text styl
 
 Normal paragraph text with standard line height. The default variant for general content.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text>
@@ -52,7 +52,7 @@ Normal paragraph text with standard line height. The default variant for general
 
 Emphasized text for headings with tighter line height and semibold weight by default.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text variant="heading" size="3xl">Main Heading</bit-text>
@@ -67,7 +67,7 @@ Emphasized text for headings with tighter line height and semibold weight by def
 
 Medium weight text for form labels and UI labels.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text variant="label">Email Address</bit-text>
@@ -81,7 +81,7 @@ Medium weight text for form labels and UI labels.
 
 Smaller, secondary text for additional context or metadata.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text variant="caption" color="muted">
@@ -101,7 +101,7 @@ Smaller, secondary text for additional context or metadata.
 
 Uppercase text with letter spacing, ideal for categories or eyebrow text.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text variant="overline" size="xs">Featured</bit-text>
@@ -115,7 +115,7 @@ Uppercase text with letter spacing, ideal for categories or eyebrow text.
 
 Monospace text for inline code snippets.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text variant="code">npm install @vielzeug/buildit</bit-text>
@@ -129,7 +129,7 @@ Monospace text for inline code snippets.
 
 Choose from 13 size options to match your design hierarchy.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text size="xs">Extra small text (12px)</bit-text>
@@ -155,7 +155,7 @@ Sizes continue up to `9xl` (128px) for hero text and large displays.
 
 Use semantic colors to convey meaning and maintain consistency.
 
-<ComponentPreview center>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text color="primary">Primary colored text</bit-text>
@@ -171,7 +171,7 @@ Use semantic colors to convey meaning and maintain consistency.
 
 Automatic text colors that adapt to your theme.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text color="heading">Heading color (highest contrast)</bit-text>
@@ -186,7 +186,7 @@ Automatic text colors that adapt to your theme.
 
 Four weight options for emphasis control.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text weight="normal">Normal weight (400)</bit-text>
@@ -201,19 +201,23 @@ Four weight options for emphasis control.
 
 Control text alignment for layout purposes.
 
-<ComponentPreview>
+::: info Display Change
+When using the `align` attribute, the text component automatically changes from `display: inline` to `display: block` to enable text alignment. This is similar to how `truncate` works.
+:::
+
+<ComponentPreview center vertical>
 
 ```html
-<div style="border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="left">Left aligned text</bit-text>
 </div>
-<div style="border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="center">Centered text</bit-text>
 </div>
-<div style="border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="right">Right aligned text</bit-text>
 </div>
-<div style="border: 1px solid var(--color-contrast-200); padding: 1rem;">
+<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem;">
   <bit-text align="justify">
     Justified text distributes words evenly across the line width.
     This is useful for formal documents or newspaper-style layouts.
@@ -229,7 +233,7 @@ Control text alignment for layout purposes.
 
 Enable single-line truncation with ellipsis for overflow text.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <div style="max-width: 300px;">
@@ -249,7 +253,7 @@ Set a `max-width` or width constraint on the container for truncation to work ef
 
 Apply italic styling to text.
 
-<ComponentPreview center>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text italic>Italic text</bit-text>
@@ -263,7 +267,7 @@ Apply italic styling to text.
 
 Control the underlying HTML element for proper semantic structure.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <!-- Block-level elements -->
@@ -286,7 +290,7 @@ Control the underlying HTML element for proper semantic structure.
 
 Combine multiple text components for rich layouts.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <div style="border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); padding: var(--size-4);">
@@ -310,7 +314,7 @@ Combine multiple text components for rich layouts.
 
 Label with helper text pattern.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <div>
@@ -320,7 +324,7 @@ Label with helper text pattern.
   <bit-text variant="caption" color="muted" size="xs" style="display: block; margin-bottom: var(--size-2);">
     We'll never share your email with anyone else
   </bit-text>
-  <input type="email" placeholder="you@example.com" style="width: 100%; padding: var(--size-2); border: 1px solid var(--color-contrast-300); border-radius: var(--rounded-md);" />
+  <bit-input type="email" placeholder="you@example.com" />
 </div>
 ```
 
@@ -330,7 +334,7 @@ Label with helper text pattern.
 
 Use semantic colors for feedback.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <bit-text color="success" weight="medium" style="display: block; margin-bottom: var(--size-2);">
@@ -350,7 +354,7 @@ Use semantic colors for feedback.
 
 Show file information with truncation.
 
-<ComponentPreview>
+<ComponentPreview center vertical>
 
 ```html
 <div style="max-width: 250px; padding: var(--size-3); border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-md);">

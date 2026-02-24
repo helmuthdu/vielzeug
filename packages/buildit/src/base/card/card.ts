@@ -58,7 +58,9 @@ const styles = css`
     transition:
       box-shadow var(--transition-normal),
       transform var(--transition-normal),
-      border-color var(--transition-normal);
+      border-color var(--transition-normal),
+      background var(--transition-normal);
+    will-change: box-shadow, transform;
   }
 
   /* ========================================
@@ -78,28 +80,45 @@ const styles = css`
     border: var(--_border) solid var(--_border-color);
   }
 
+  :host(:not([variant])[hoverable]:hover) .card,
+  :host(:not([variant])[clickable]:hover) .card,
+  :host([variant='solid'][hoverable]:hover) .card,
+  :host([variant='solid'][clickable]:hover) .card {
+    box-shadow: var(--shadow-xl);
+  }
+
   /* Flat */
   :host([variant='flat']) {
     --_bg: var(--card-bg, var(--color-contrast-100));
-    --_border-color: transparent;
+    --_border-color: var(--color-contrast-200);
     --_shadow: var(--inset-shadow-2xs);
   }
 
   :host([variant='flat']) .card {
     box-shadow: var(--_shadow);
-    border: none;
+    border: 1px solid var(--_border-color);
+  }
+
+  :host([variant='flat'][hoverable]:hover) .card,
+  :host([variant='flat'][clickable]:hover) .card {
+    box-shadow: var(--inset-shadow-2xs), var(--shadow-xl);
   }
 
   /* Bordered */
   :host([variant='bordered']) {
     --_bg: var(--card-bg, var(--color-contrast-100));
     --_border-color: var(--card-border-color, var(--color-contrast-300));
-    --_shadow: none;
+    --_shadow: var(--inset-shadow-2xs), var(--shadow-md);
   }
 
   :host([variant='bordered']) .card {
     box-shadow: var(--_shadow);
     border: var(--_border) solid var(--_border-color);
+  }
+
+  :host([variant='bordered'][hoverable]:hover) .card,
+  :host([variant='bordered'][clickable]:hover) .card {
+    box-shadow: var(--shadow-xl);
   }
 
   /* Outline */
@@ -114,6 +133,11 @@ const styles = css`
     border: var(--_border) solid var(--_border-color);
   }
 
+  :host([variant='outline'][hoverable]:hover) .card,
+  :host([variant='outline'][clickable]:hover) .card {
+    box-shadow: var(--shadow-xl);
+  }
+
   /* Ghost */
   :host([variant='ghost']) {
     --_bg: transparent;
@@ -123,11 +147,17 @@ const styles = css`
 
   :host([variant='ghost']) .card {
     box-shadow: none;
-    border: none;
+    border: var(--_border) solid var(--_border-color);
   }
 
-  :host([variant='ghost']) .card:hover {
+  :host([variant='ghost']:hover) .card {
     --_bg: var(--color-contrast-100);
+    --_border-color: var(--color-contrast-300);
+  }
+
+  :host([variant='ghost'][hoverable]:hover) .card,
+  :host([variant='ghost'][clickable]:hover) .card {
+    --_shadown: var(--shadow-xl);
   }
 
   /* Text */
@@ -157,10 +187,22 @@ const styles = css`
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     border: var(--_border) solid var(--_border-color);
     text-shadow: var(--text-shadow-xs);
+    transition:
+      backdrop-filter var(--transition-slow),
+      box-shadow var(--transition-normal),
+      transform var(--transition-normal),
+      background var(--transition-normal),
+      border-color var(--transition-normal);
   }
 
   :host([variant='glass']) .card:hover {
     --_bg: color-mix(in srgb, var(--color-secondary) 60%, var(--color-contrast) 20%);
+    backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
+    box-shadow: var(--shadow-xl), var(--inset-shadow-sm);
+  }
+
+  :host([variant='glass'][clickable]) .card:hover {
+    box-shadow: var(--shadow-2xl), var(--inset-shadow-sm);
   }
 
   :host([variant='frost']) {
@@ -174,10 +216,22 @@ const styles = css`
     box-shadow: var(--shadow-md);
     border: var(--_border) solid var(--_border-color);
     text-shadow: var(--text-shadow-2xs);
+    transition:
+      backdrop-filter var(--transition-slow),
+      box-shadow var(--transition-normal),
+      transform var(--transition-normal),
+      background var(--transition-normal),
+      border-color var(--transition-normal);
   }
 
   :host([variant='frost']) .card:hover {
     --_bg: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
+    box-shadow: var(--shadow-xl);
+  }
+
+  :host([variant='frost'][clickable]) .card:hover {
+    box-shadow: var(--shadow-2xl);
   }
 
   /* ========================================
@@ -209,13 +263,14 @@ const styles = css`
     transition:
       box-shadow var(--transition-normal),
       transform var(--transition-normal),
-      border-color var(--transition-normal);
+      border-color var(--transition-normal),
+      background var(--transition-normal);
   }
 
   :host([hoverable]:hover) .card,
   :host([clickable]:hover) .card {
-    --_shadow: var(--shadow-xl);
-    transform: translateY(calc(-1 * var(--size-1)));
+    box-shadow: var(--_hover-shadow);
+    transform: translateY(calc(-1 * var(--size-1))) scale(1.01);
   }
 
   :host([clickable]) .card {
@@ -223,8 +278,11 @@ const styles = css`
   }
 
   :host([clickable]:active) .card {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.99);
     box-shadow: var(--_shadow);
+    transition:
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
   }
 
   /* ========================================

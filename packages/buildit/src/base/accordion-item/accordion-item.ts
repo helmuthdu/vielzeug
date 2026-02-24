@@ -102,27 +102,28 @@ const styles = css`
 
   :host,
   :host([variant='solid']) {
-    --accordion-item-bg: var(--color-contrast-100);
+    --accordion-item-bg: var(--color-contrast-50);
     --accordion-item-border-color: transparent;
   }
 
   :host summary:hover,
   :host([variant='solid']) summary:hover {
-    background: var(--color-contrast-200);
+    --accordion-item-bg: var(--color-contrast-200);
   }
 
   :host([variant='flat']) {
-    --accordion-item-bg: var(--color-contrast-300);
-    --accordion-item-border-color: transparent;
+    --accordion-item-bg: var(--color-contrast-100);
   }
 
   :host([variant='flat']) summary:hover {
-    background: var(--color-contrast-400);
+    --accordion-item-bg: var(--color-contrast-200);
   }
 
   :host([variant='bordered']) {
     --accordion-item-bg: var(--color-contrast-100);
-    --accordion-item-border-color: var(--color-contrast-400);
+    --accordion-item-border-color: var(--color-contrast-300);
+
+    box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
   }
 
   :host([variant='bordered']) summary:hover {
@@ -131,7 +132,7 @@ const styles = css`
 
   :host([variant='outline']) {
     --accordion-item-bg: transparent;
-    --accordion-item-border-color: var(--color-contrast-400);
+    --accordion-item-border-color: var(--color-contrast-300);
   }
 
   :host([variant='outline']) summary:hover {
@@ -152,9 +153,13 @@ const styles = css`
     --accordion-item-border-color: transparent;
   }
 
+  :host([variant='text']) summary:hover {
+    background: transparent;
+  }
+
   :host([variant='glass']) {
     --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    --accordion-item-border-color: color-mix(in srgb, var(--color-secondary-focus) 40%, transparent);
+    --accordion-item-border-color: transparent;
     --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
     --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
     --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);

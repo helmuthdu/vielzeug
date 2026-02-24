@@ -30,8 +30,8 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @cssprop --input-focus - Focus border color
  * @cssprop --input-placeholder-color - Placeholder color
  * @cssprop --input-radius - Border radius
- * @cssprop --input-padding-x - Horizontal padding
- * @cssprop --input-padding-y - Vertical padding
+ * @cssprop --input-padding - Inner padding (vertical horizontal)
+ * @cssprop --input-gap - Gap between prefix/suffix and input
  * @cssprop --input-font-size - Font size
  *
  * @fires input - Emitted when the value changes (user input)
@@ -44,16 +44,15 @@ const styles = css`
      ======================================== */
 
   :host {
-    --_radius: var(--input-radius, var(--rounded-md));
     --_font-size: var(--input-font-size, var(--text-sm));
-    --_padding-x: var(--input-padding-x, var(--size-3));
-    --_padding-y: var(--input-padding-y, var(--size-1-5));
     --_gap: var(--input-gap, var(--size-2));
+    --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
     --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
+    --_radius: var(--input-radius, var(--rounded-md));
 
+    align-items: stretch;
     display: inline-flex;
     flex-direction: column;
-    align-items: stretch;
   }
 
   :host([disabled]) {
@@ -70,24 +69,24 @@ const styles = css`
   }
 
   .field {
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
-    justify-content: center;
-    gap: 0;
+    background: var(--input-bg, var(--color-contrast-100));
     border-radius: var(--_radius);
     border: var(--border) solid var(--input-border-color);
-    padding-inline: var(--_padding-x);
-    padding-block: var(--_padding-y);
-    box-sizing: border-box;
     box-shadow: var(--_shadown, var(--shadow-2xs));
-    background: var(--input-bg, var(--color-contrast-100));
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    justify-content: center;
+    min-height: var(--size-10);
+    padding: var(--_padding);
     transition:
       background var(--transition-fast),
+      backdrop-filter var(--transition-slow),
       border-color var(--transition-fast),
       box-shadow var(--transition-fast),
       transform var(--transition-fast);
-    min-height: var(--size-10);
   }
 
   .input-row {
@@ -105,11 +104,11 @@ const styles = css`
   .label-outside,
   label.label-inset,
   label.label-outside {
-    font-weight: var(--font-medium);
     color: var(--color-contrast-500);
+    cursor: pointer;
+    font-weight: var(--font-medium);
     transition: color var(--transition-fast);
     user-select: none;
-    cursor: pointer;
   }
 
   .label-inset,
@@ -130,8 +129,8 @@ const styles = css`
      ======================================== */
 
   .helper-text {
-    font-size: var(--text-xs);
     color: var(--color-contrast-500);
+    font-size: var(--text-xs);
     line-height: var(--leading-tight);
     padding-inline: 2px;
   }
@@ -142,14 +141,14 @@ const styles = css`
 
   ::slotted([slot='prefix']),
   ::slotted([slot='suffix']) {
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
     color: var(--color-contrast-500);
+    display: inline-flex;
+    font-size: var(--size-4);
+    justify-content: center;
+    opacity: 0.8;
     transition: color var(--transition-fast);
     user-select: none;
-    font-size: var(--size-4);
-    opacity: 0.8;
   }
 
   /* ========================================
@@ -158,12 +157,12 @@ const styles = css`
 
   input {
     all: unset;
+    color: var(--input-content);
     flex: 1;
     font: inherit;
     font-size: var(--_font-size);
-    color: var(--input-content);
-    min-width: 0;
     line-height: var(--leading-normal);
+    min-width: 0;
   }
 
   input::placeholder {
@@ -179,14 +178,14 @@ const styles = css`
      Hover & Focus States
      ======================================== */
 
-  :host(:not([disabled])) .field:hover {
+  :host(:not([disabled]):not([variant='bordered'])) .field:hover {
     border-color: var(--color-contrast-400);
   }
 
   :host(:not([disabled]):not([variant='text'])) .field:focus-within {
+    background: var(--color-canvas);
     border-color: var(--input-focus);
     box-shadow: var(--input-shadow, var(--color-primary-shadow));
-    background: var(--color-canvas);
     transform: translateY(-1px);
   }
 
@@ -207,16 +206,14 @@ const styles = css`
 
   :host([size='sm']) {
     --_font-size: var(--text-xs);
-    --_padding-y: var(--size-1);
-    --_padding-x: var(--size-2);
     --_gap: var(--size-1-5);
+    --_padding: var(--size-1) var(--size-2);
   }
 
   :host([size='lg']) {
     --_font-size: var(--text-base);
-    --_padding-y: var(--size-2);
-    --_padding-x: var(--size-3-5);
     --_gap: var(--size-2-5);
+    --_padding: var(--size-2) var(--size-3-5);
   }
 
   /* ========================================
@@ -268,50 +265,50 @@ const styles = css`
   :host(:not([color])),
   :host([color='primary']) {
     --input-base: var(--color-primary);
-    --input-content: var(--color-primary-content);
-    --input-contrast: var(--color-primary-contrast);
     --input-backdrop: var(--color-primary-backdrop);
     --input-border-color: var(--color-contrast-300);
+    --input-content: var(--color-primary-content);
+    --input-contrast: var(--color-primary-contrast);
     --input-focus: var(--color-primary-focus);
     --input-shadow: var(--color-primary-shadow);
   }
 
   :host([color='secondary']) {
     --input-base: var(--color-secondary);
-    --input-content: var(--color-secondary-content);
-    --input-contrast: var(--color-secondary-contrast);
     --input-backdrop: var(--color-secondary-backdrop);
     --input-border-color: var(--color-contrast-300);
+    --input-content: var(--color-secondary-content);
+    --input-contrast: var(--color-secondary-contrast);
     --input-focus: var(--color-secondary-focus);
     --input-shadow: var(--color-secondary-shadow);
   }
 
   :host([color='success']) {
     --input-base: var(--color-success);
-    --input-content: var(--color-success-content);
-    --input-contrast: var(--color-success-contrast);
     --input-backdrop: var(--color-success-backdrop);
     --input-border-color: var(--color-contrast-300);
+    --input-content: var(--color-success-content);
+    --input-contrast: var(--color-success-contrast);
     --input-focus: var(--color-success-focus);
     --input-shadow: var(--color-success-shadow);
   }
 
   :host([color='warning']) {
     --input-base: var(--color-warning);
-    --input-content: var(--color-warning-content);
-    --input-contrast: var(--color-warning-contrast);
     --input-backdrop: var(--color-warning-backdrop);
     --input-border-color: var(--color-contrast-300);
+    --input-content: var(--color-warning-content);
+    --input-contrast: var(--color-warning-contrast);
     --input-focus: var(--color-warning-focus);
     --input-shadow: var(--color-warning-shadow);
   }
 
   :host([color='error']) {
     --input-base: var(--color-error);
-    --input-content: var(--color-error-content);
-    --input-contrast: var(--color-error-contrast);
     --input-backdrop: var(--color-error-backdrop);
     --input-border-color: var(--color-contrast-300);
+    --input-content: var(--color-error-content);
+    --input-contrast: var(--color-error-contrast);
     --input-focus: var(--color-error-focus);
     --input-shadow: var(--color-error-shadow);
   }
@@ -320,22 +317,39 @@ const styles = css`
      Visual Variants
      ======================================== */
 
-  :host([variant='flat']) {
-    --input-bg: color-mix(in srgb, var(--input-backdrop) 8%, var(--color-contrast-100));
-    --input-border-color: transparent;
-    --_shadown: var(--inset-shadow-2xs);
+  /* Solid (Default) */
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_shadown: var(--shadow-2xs);
+    --input-bg: var(--color-contrast-50);
+    --input-border-color: var(--color-contrast-300);
   }
 
+  /* Flat */
+  :host([variant='flat']) {
+    --_shadown: var(--inset-shadow-xs);
+    --input-bg: color-mix(in srgb, var(--input-backdrop) 8%, var(--color-contrast-100));
+    --input-border-color: var(--color-contrast-200);
+  }
+
+  /* Bordered */
   :host([variant='bordered']) {
     --input-bg: var(--input-backdrop);
-    --input-border-color: var(--input-focus);
+    --input-border-color: color-mix(in srgb, var(--input-focus) 70%, transparent);
     --input-placeholder-color: color-mix(in srgb, var(--input-content) 45%, transparent);
   }
 
+  :host([variant='bordered']:not([disabled])) .field:hover {
+    --input-border-color: var(--input-focus);
+  }
+
+  /* Outline */
   :host([variant='outline']) {
+    --_shadown: none;
     --input-bg: transparent;
   }
 
+  /* Ghost */
   :host([variant='ghost']) {
     --input-bg: transparent;
     --input-border-color: transparent;
@@ -349,6 +363,7 @@ const styles = css`
     background: var(--color-contrast-100);
   }
 
+  /* Text */
   :host([variant='text']) .field {
     background: transparent;
     border: none;
@@ -361,6 +376,7 @@ const styles = css`
     border-bottom: var(--border-2) solid var(--input-focus);
   }
 
+  /* Glass */
   :host([variant='glass']) {
     --input-bg: color-mix(in srgb, var(--input-base) 30%, var(--color-contrast) 10%);
     --input-border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
@@ -369,6 +385,7 @@ const styles = css`
   :host([variant='glass']) .field,
   :host([variant='frost']) .field {
     backdrop-filter: blur(var(--blur-md)) saturate(190%);
+    -webkit-backdrop-filter: blur(var(--blur-md)) saturate(190%);
     box-shadow:
       var(--shadow-md),
       inset 0 0 0 1px rgb(255 255 255 / 0.1);
@@ -379,11 +396,15 @@ const styles = css`
   }
 
   :host([variant='glass']:not([disabled])) .field:hover {
+    backdrop-filter: blur(var(--blur-lg)) saturate(200%);
+    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(200%);
     background: color-mix(in srgb, var(--input-backdrop) 60%, var(--input-base) 40%);
     border-color: color-mix(in srgb, var(--input-focus) 50%, transparent);
   }
 
   :host([variant='glass']:not([disabled])) .field:focus-within {
+    backdrop-filter: blur(var(--blur-xl)) saturate(210%);
+    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(210%);
     background: color-mix(in srgb, var(--input-backdrop) 50%, var(--input-base) 50%);
     border-color: color-mix(in srgb, var(--input-focus) 60%, transparent);
   }
@@ -408,11 +429,15 @@ const styles = css`
   }
 
   :host([variant='frost']:not([disabled])) .field:hover {
+    backdrop-filter: blur(var(--blur-lg)) saturate(200%);
+    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(200%);
     background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
     border-color: color-mix(in srgb, var(--input-focus) 30%, transparent);
   }
 
   :host([variant='frost']:not([disabled])) .field:focus-within {
+    backdrop-filter: blur(var(--blur-xl)) saturate(210%);
+    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(210%);
     background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
     border-color: color-mix(in srgb, var(--input-focus) 40%, transparent);
   }

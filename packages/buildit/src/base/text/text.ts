@@ -216,6 +216,10 @@ const styles = css`
      Alignment
      ======================================== */
 
+  :host([align]) {
+    display: block;
+  }
+
   :host([align='left']) {
     text-align: left;
   }

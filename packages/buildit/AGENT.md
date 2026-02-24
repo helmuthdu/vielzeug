@@ -197,9 +197,167 @@ All semantic colors provide 6 variants. Use the appropriate one:
   --_backdrop: var(--color-primary-backdrop);   /* Subtle background */
   --_shadow: var(--color-primary-shadow);       /* Focus ring/shadow */
 }
+**Available colors**: `primary`, `secondary`, `success`, `warning`, `error`
+
+### 2.4 Visual Variants Pattern [REQUIRED]
+
+**All visual components should support 8 standard variants:**
+
+1. **solid** - Default, elevated with shadow
+2. **flat** - Subtle background, no elevation
+3. **bordered** - Visible border with background
+4. **outline** - Transparent with border only
+5. **ghost** - Transparent, minimal styling
+6. **text** - Text-only, no background
+7. **glass** - Glassmorphism with backdrop blur
+8. **frost** - Frosted glass effect
+
+**Implementation Pattern:**
+
+```css
+/* ========================================
+   Visual Variants
+   ======================================== */
+
+/* Solid (Default) */
+:host(:not([variant])),
+:host([variant='solid']) {
+  --_bg: var(--component-bg, var(--color-contrast-100));
+  --_border-color: var(--color-contrast-300);
+  --_shadow: var(--shadow-sm);
+}
+
+/* Flat */
+:host([variant='flat']) {
+  --_bg: color-mix(in srgb, var(--_backdrop) 8%, var(--color-contrast-100));
+  --_border-color: transparent;
+  --_shadow: var(--inset-shadow-2xs);
+}
+
+/* Bordered */
+:host([variant='bordered']) {
+  --_bg: var(--_backdrop);
+  --_border-color: color-mix(in srgb, var(--_focus) 70%, transparent);
+  --_shadow: var(--inset-shadow-xs), var(--shadow-xs);
+}
+
+/* Outline */
+:host([variant='outline']) {
+  --_bg: transparent;
+  --_border-color: var(--_base);
+  --_shadow: var(--shadow-none);
+}
+
+/* Ghost */
+:host([variant='ghost']) {
+  --_bg: transparent;
+  --_border-color: transparent;
+  --_shadow: var(--shadow-none);
+}
+
+/* Text */
+:host([variant='text']) {
+  --_bg: transparent;
+  --_border-color: transparent;
+  --_shadow: var(--shadow-none);
+}
+
+/* Glass & Frost - Premium Effects */
+:host([variant='glass']) {
+  --_bg: color-mix(in srgb, var(--_base) 30%, var(--color-contrast) 10%);
+  --_border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
+}
+
+:host([variant='glass']) .element,
+:host([variant='frost']) .element {
+  backdrop-filter: blur(var(--blur-md)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(190%);
+  box-shadow: var(--shadow-md), inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  transition:
+    background var(--transition-fast),
+    backdrop-filter var(--duration-300) var(--ease-in-out),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Increase blur on hover for glass/frost */
+:host([variant='glass']:not([disabled])) .element:hover,
+:host([variant='frost']:not([disabled])) .element:hover {
+  backdrop-filter: blur(var(--blur-lg)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(200%);
+}
+
+:host([variant='frost']) {
+  --_bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+  --_border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
+}
 ```
 
-**Available colors**: `primary`, `secondary`, `success`, `warning`, `error`
+**Key Patterns:**
+- ✅ Define all variants using CSS custom properties only
+- ✅ Use `color-mix()` for transparency and blending
+- ✅ Include `-webkit-backdrop-filter` for Safari support
+- ✅ Add transitions for backdrop-filter (300ms recommended)
+- ✅ Progressively enhance blur on interactions (md → lg → xl)
+- ✅ Alphabetically sort properties within each variant
+- ✅ Keep all state variables (`--_bg`, `--_border-color`, etc.) defined upfront
+
+**Backdrop Blur Tokens:**
+- `--blur-sm` (4px)
+- `--blur-md` (12px)
+- `--blur-lg` (16px)
+- `--blur-xl` (24px)
+- `--blur-2xl` (40px)
+
+### 2.5 CSS Property Organization [BEST PRACTICE]
+
+**Alphabetically sort CSS properties for consistency and maintainability:**
+
+```css
+/* ✅ CORRECT - Alphabetically sorted */
+.element {
+  align-items: center;
+  background: var(--_bg);
+  border: var(--border) solid var(--_border-color);
+  border-radius: var(--_radius);
+  box-shadow: var(--_shadow);
+  box-sizing: border-box;
+  color: var(--_color);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--_font-size);
+  font-weight: var(--_font-weight);
+  gap: var(--_gap);
+  height: var(--_height);
+  justify-content: center;
+  padding: var(--_padding);
+  position: relative;
+  transition: all var(--transition-normal);
+  user-select: none;
+  width: 100%;
+}
+
+/* ✅ CORRECT - Separate CSS variables from regular properties */
+:host {
+  /* Variables first, alphabetically sorted */
+  --_font-size: var(--text-sm);
+  --_gap: var(--size-2);
+  --_padding: var(--size-2) var(--size-4);
+  --_radius: var(--rounded-md);
+  
+  /* Then regular CSS properties, alphabetically sorted */
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+```
+
+**Benefits:**
+- ✅ Easier to scan and find properties
+- ✅ Prevents duplicate properties
+- ✅ Consistent across the codebase
+- ✅ Reduces merge conflicts
+- ✅ Professional code quality
 
 ---
 
@@ -378,73 +536,172 @@ el.emit('change', {
 
 **Use the unified `el.on()` method with TypeScript overloads for all event handling.**
 
+The `el.on()` method has been simplified with three overloaded signatures:
+
 ```typescript
-// ✅ BEST - Host element events (2 params)
+// Signature 1: Host element events (2 params - event type, handler)
+el.on<K extends keyof HTMLElementEventMap>(
+  type: K,
+  handler: (e: HTMLElementEventMap[K]) => void
+): () => void
+
+// Signature 2: Element + event (3 params - element, event, handler)  
+el.on<E extends Element, K extends keyof HTMLElementEventMap>(
+  element: E,
+  type: K,
+  handler: (e: HTMLElementEventMap[K], target: E) => void
+): () => void
+
+// Signature 3: Selector delegation (3 params - selector, event, handler)
+el.on<K extends keyof HTMLElementEventMap>(
+  selector: string,
+  type: K,
+  handler: (e: HTMLElementEventMap[K], target: Element) => void
+): () => void
+```
+
+**Usage Examples:**
+
+```typescript
+// ✅ Host element events (when only 2 params)
 el.on('click', (e) => {
   // e is automatically typed as MouseEvent
   console.log('Clicked at:', e.clientX, e.clientY);
   el.emit('card-clicked', { x: e.clientX, y: e.clientY });
 });
 
-// ✅ BEST - Shadow DOM delegation (3 params)
+el.on('keydown', (e) => {
+  // e is automatically typed as KeyboardEvent
+  if (e.key === 'Enter') {
+    el.emit('submit');
+  }
+});
+
+// ✅ Direct element binding (3 params, first is Element)
+const input = el.query('input');
+if (input) {
+  el.on(input, 'input', (e, target) => {
+    // e is Event, target is the input element
+    console.log('Input changed:', target.value);
+  });
+}
+
+// ✅ Selector delegation (3 params, first is string selector)
 el.on('button', 'click', (e, target) => {
   // e is MouseEvent, target is the matched button
   console.log('Button clicked:', target.textContent);
   el.emit('action', { button: target.textContent });
+  e.stopPropagation(); // Prevent event from bubbling to host
 });
 
-// ✅ BEST - Direct element binding (3 params)
-const input = el.query('input');
-if (input) {
-  el.on(input, 'input', (e) => {
-    // e is Event, automatically typed
-    console.log('Input changed');
-  });
-}
+// ✅ Multiple delegated listeners
+el.on('.card-header', 'click', (e, target) => {
+  el.emit('header-click', { target });
+});
 
-// ✅ GOOD - Query shortcuts (cleaner than find())
-const button = el.query<HTMLButtonElement>('button'); // undefined if not found
-const buttons = el.queryAll<HTMLButtonElement>('button'); // Always returns array
-const input = el.queryRequired<HTMLInputElement>('input'); // Throws if not found
+el.on('.card-footer button', 'click', (e, target) => {
+  el.emit('footer-action', { button: target });
+});
+```
+
+**Query Helper Methods:**
+
+```typescript
+// ✅ Query shortcuts (better ergonomics than querySelector)
+const button = el.query<HTMLButtonElement>('button'); // undefined if not found (not null!)
+const buttons = el.queryAll<HTMLButtonElement>('button'); // Always returns array (never null)
+const input = el.queryRequired<HTMLInputElement>('input'); // Throws if not found (fails fast)
 ```
 
 **Benefits:**
-- ✅ Full TypeScript inference for event types
-- ✅ Single method for all event scenarios (host, delegation, direct)
-- ✅ Automatic cleanup via AbortSignal
-- ✅ Returns cleanup function for manual control
-- ✅ Undefined instead of null (better ergonomics)
+- ✅ **Simplified API**: Only 3 overloads (2-param for host, 3-param for element/selector)
+- ✅ **Smart detection**: Automatically determines if first param is Element or selector string
+- ✅ **Full TypeScript inference**: Event types automatically typed (MouseEvent, KeyboardEvent, etc.)
+- ✅ **Single method**: All event scenarios (host, delegation, direct element)
+- ✅ **Automatic cleanup**: Uses AbortSignal internally
+- ✅ **Returns cleanup function**: For manual control if needed
+- ✅ **Better ergonomics**: `undefined` instead of `null`, array instead of NodeList
 
-### 3.8 Event Handling Anti-Patterns [CRITICAL]
-
-**Never listen for and emit events with the same name on the same element:**
+**Event Handling Best Practices:**
 
 ```typescript
-// ❌ WRONG - Creates infinite loop!
-el.on('click', (e) => {
-  el.emit('click', { originalEvent: e }); // Triggers listener again!
-});
-
-// ✅ CORRECT - Transform event name
-el.on('click', (e) => {
-  el.emit('change', { originalEvent: e }); // Different name = no loop
-});
-
-// ✅ CORRECT - Use event delegation on internal element
+// ✅ CORRECT - Stop propagation when delegating to prevent bubbling
 el.on('button', 'click', (e) => {
-  el.emit('click', { originalEvent: e }); // Internal button ≠ host
-  e.stopPropagation(); // Stop internal event
+  if (el.hasAttribute('disabled')) return;
+  el.emit('click', { originalEvent: e });
+  e.stopPropagation(); // Prevent event from reaching host
 });
 
-// ✅ CORRECT - For visual-only states, don't intercept at all
-// Just use CSS: :host([clickable]) { cursor: pointer; }
-// Let native events bubble naturally
+// ✅ CORRECT - Transform event names to avoid conflicts
+el.on('click', (e) => {
+  el.emit('change', { originalEvent: e }); // Different name
+});
+
+// ✅ CORRECT - Check disabled state in handlers
+el.on('click', (e) => {
+  if (el.hasAttribute('disabled') || el.hasAttribute('loading')) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  // Handle event...
+});
 ```
 
 **Event transformation patterns:**
 - `click` → `change` (form controls)
 - `toggle` → `expand`/`collapse` (accordions)
 - `input` → re-emit `input` (from internal to host, different elements)
+
+### 3.8 Template Helpers [NEW]
+
+**Craftit now provides enhanced template helpers for common patterns:**
+
+```typescript
+// ✅ html.repeat - Iterate over arrays
+template: (el) => html`
+  <ul>
+    ${html.repeat(
+      items,
+      (item) => item.id, // Key function
+      (item) => html`<li>${item.name}</li>` // Template function
+    )}
+  </ul>
+`;
+
+// ✅ html.when - Conditional rendering
+template: (el) => html`
+  ${html.when(
+    condition,
+    () => html`<div>Shown when true</div>`,
+    () => html`<div>Shown when false</div>` // Optional else
+  )}
+`;
+
+// ✅ html.classes - Dynamic classes (replaces classMap)
+template: (el) => html`
+  <div class="${html.classes({
+    active: isActive,
+    disabled: isDisabled,
+    'has-error': hasError,
+  })}"></div>
+`;
+
+// ✅ html.styles - Dynamic styles (replaces styleMap)
+template: (el) => html`
+  <div style="${html.styles({
+    color: textColor,
+    display: isVisible ? 'block' : 'none',
+    '--custom-prop': customValue,
+  })}"></div>
+`;
+```
+
+**Benefits:**
+- ✅ Cleaner syntax without external imports
+- ✅ All helpers under `html` namespace
+- ✅ Better performance with optimized rendering
+- ✅ Consistent API across all helpers
 
 ### 3.9 State Management Best Practices [RECOMMENDED]
 
@@ -854,24 +1111,32 @@ input:focus-visible + .element {
 
 ### 7.1 Checklist for New Components
 
-- [ ] File structure: `src/[category]/[component-name]/[component-name].ts`
-- [ ] Naming: `bit-[component-name]`, `[ComponentName]Props`
-- [ ] Boolean attributes use presence/absence (`newValue !== null`)
-- [ ] All values from design tokens (no hardcoding)
-- [ ] Internal variables pattern (`--_*`) with public API (`--component-*`)
-- [ ] CSS sections clearly labeled
-- [ ] All 5 color variants (primary, secondary, success, warning, error)
-- [ ] All 3 size variants (sm, md, lg)
-- [ ] ARIA attributes (role, aria-checked, aria-disabled)
-- [ ] Keyboard support (Space, Enter keys)
-- [ ] Disabled state prevents interaction
-- [ ] Events include `originalEvent` in detail
-- [ ] Hidden input for form integration (if form control)
-- [ ] JSDoc with `@element`, `@attr`, `@slot`, `@cssprop`, `@fires`
-- [ ] Unit tests (100% coverage goal)
-- [ ] Accessibility tests (axe-core)
-- [ ] Build integration (vite.config.ts, package.json, types.d.ts)
-- [ ] Documentation (component docs, API docs, navigation)
+- [ ] **Naming**: `bit-[component-name]`, `[ComponentName]Props` (singular, kebab-case)
+- [ ] **File structure**: `src/[category]/[component-name]/[component-name].ts`
+- [ ] **Boolean attributes**: Use presence/absence (`newValue !== null`), never string values
+- [ ] **Design tokens only**: No hardcoded values, use theme tokens
+- [ ] **Internal variables**: Pattern (`--_*`) with public API (`--component-*`)
+- [ ] **CSS sections**: Clearly labeled with headers
+- [ ] **CSS properties**: Alphabetically sorted within sections
+- [ ] **Visual variants**: All 8 variants (solid, flat, bordered, outline, ghost, text, glass, frost)
+- [ ] **Glass/Frost**: Include `-webkit-backdrop-filter` and transitions
+- [ ] **Color variants**: All 5 colors (primary, secondary, success, warning, error)
+- [ ] **Size variants**: All 3 sizes (sm, md, lg)
+- [ ] **Full-width support**: If applicable (buttons, inputs, cards)
+- [ ] **ARIA attributes**: role, aria-checked/aria-disabled, aria-label when needed
+- [ ] **Keyboard support**: Space/Enter keys for interaction
+- [ ] **Disabled state**: Prevents interaction, manages tabindex
+- [ ] **Event handling**: Use new `el.on()` API with proper overloads
+- [ ] **Event details**: Include `originalEvent` in emitted events
+- [ ] **Event delegation**: Use `e.stopPropagation()` to prevent bubbling
+- [ ] **Template helpers**: Use `html.repeat`, `html.when`, `html.classes`, `html.styles`
+- [ ] **Query methods**: Use `el.query()`, `el.queryAll()`, `el.queryRequired()`
+- [ ] **Hidden input**: For form integration (if form control)
+- [ ] **JSDoc complete**: `@element`, `@attr`, `@slot`, `@cssprop`, `@fires`
+- [ ] **Unit tests**: 100% coverage goal, use `userEvent` helpers
+- [ ] **Accessibility tests**: axe-core WCAG 2.1 Level AA compliance
+- [ ] **Build integration**: vite.config.ts, package.json, types.d.ts
+- [ ] **Documentation**: Component docs with all variants and examples
 
 ### 7.2 Common Mistakes to Avoid
 
@@ -896,12 +1161,86 @@ input:focus-visible + .element {
 ❌ **DON'T**: Forget to prevent disabled interaction  
 ✅ **DO**: Check `hasAttribute('disabled')` in event handlers
 
+❌ **DON'T**: Use `"true"`/`"false"` string values for boolean attributes  
+✅ **DO**: Use presence/absence (`newValue !== null`)
+
+❌ **DON'T**: Hardcode colors, sizes, spacing  
+✅ **DO**: Use design tokens (`--color-primary`, `--size-4`, etc.)
+
+❌ **DON'T**: Mix public and internal CSS variables  
+✅ **DO**: Separate `--component-*` (public) from `--_*` (internal)
+
+❌ **DON'T**: Forget to sync attributes with ARIA  
+✅ **DO**: Update `aria-checked`, `aria-disabled` in `onAttributeChanged`
+
+❌ **DON'T**: Make interactive elements non-keyboard accessible  
+✅ **DO**: Add `tabindex="0"` and handle Space/Enter keys
+
+❌ **DON'T**: Emit events without `originalEvent`  
+✅ **DO**: Include `originalEvent` in event detail
+
+❌ **DON'T**: Forget to prevent disabled interaction  
+✅ **DO**: Check `hasAttribute('disabled')` in event handlers
+
+❌ **DON'T**: Forget `-webkit-backdrop-filter` for glass/frost  
+✅ **DO**: Include both `backdrop-filter` and `-webkit-backdrop-filter`
+
+❌ **DON'T**: Use old query methods returning null  
+✅ **DO**: Use new `query()` (undefined), `queryAll()` (array), `queryRequired()` (throws)
+
+❌ **DON'T**: Mix event listener approaches  
+✅ **DO**: Use unified `el.on()` API consistently
+
+❌ **DON'T**: Leave properties unsorted  
+✅ **DO**: Alphabetically sort all CSS properties
+
+❌ **DON'T**: Import `classMap` or `styleMap` separately  
+✅ **DO**: Use `html.classes()` and `html.styles()` helpers
+
+❌ **DON'T**: Forget `stopPropagation()` in delegated event handlers  
+✅ **DO**: Call `e.stopPropagation()` to prevent event bubbling to host
+
+❌ **DON'T**: Use separate `--_padding-x` and `--_padding-y`  
+✅ **DO**: Use single `--_padding` with CSS shorthand (vertical horizontal)
+
 ---
 
-## 8. Example: Complete Checkbox Component
+## 8. Example: Gold Standard Components
 
-See `src/form/checkbox/checkbox.ts` and `src/form/switch/switch.ts` as gold standard implementations that follow all these patterns.
+**See these components as reference implementations that follow all current patterns:**
+
+1. **`src/base/button/button.ts`** - Complete component with:
+   - ✅ All 8 visual variants (including glass/frost with backdrop blur)
+   - ✅ Full-width support
+   - ✅ New event handling API (`el.on()`)
+   - ✅ Alphabetically sorted CSS
+   - ✅ Comprehensive state management
+   - ✅ Loading and disabled states
+   - ✅ Icon slots and rounded corners
+
+2. **`src/form/input/input.ts`** - Advanced form component with:
+   - ✅ All 8 visual variants with glass/frost
+   - ✅ Label placement (inset/outside)
+   - ✅ Prefix/suffix slots
+   - ✅ Helper text
+   - ✅ Multiple input types
+
+3. **`src/form/checkbox/checkbox.ts` & `src/form/switch/switch.ts`** - Form controls with:
+   - ✅ Proper ARIA implementation
+   - ✅ Keyboard navigation
+   - ✅ State synchronization
+   - ✅ Event handling patterns
+
+**Study these components to understand:**
+- How to structure CSS with sections
+- How to implement all visual variants consistently
+- How to use the new event API
+- How to handle keyboard interactions
+- How to integrate with forms
+- How to write comprehensive JSDoc
 
 > [!NOTE]
 > **Important:** The project is a greenfield project. All existing code is considered legacy and should be refactored as needed.
 > Please do not create/add report or summary files of the changes you made into the project. All important information should live in the existing documentation.
+
+---

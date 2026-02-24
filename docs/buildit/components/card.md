@@ -46,33 +46,33 @@ The card comes with eight visual variants to match different UI needs, matching 
 
 ```html
 <bit-card variant="solid">
-  <h4 slot="header">Solid Card</h4>
-  <p>Default variant with shadow elevation.</p>
+  <h4 slot="header" style="margin: 0;">Solid Card</h4>
+  <p style="margin: 0;">Default variant with shadow elevation.</p>
 </bit-card>
 
 <bit-card variant="flat">
-  <h4 slot="header">Flat Card</h4>
-  <p>Flat background, no shadow.</p>
+  <h4 slot="header" style="margin: 0;">Flat Card</h4>
+  <p style="margin: 0;">Flat background, no shadow.</p>
 </bit-card>
 
 <bit-card variant="bordered">
-  <h4 slot="header">Bordered Card</h4>
-  <p>Border with background.</p>
+  <h4 slot="header" style="margin: 0;">Bordered Card</h4>
+  <p style="margin: 0;">Border with background.</p>
 </bit-card>
 
 <bit-card variant="outline">
-  <h4 slot="header">Outline Card</h4>
-  <p>Transparent background with border.</p>
+  <h4 slot="header" style="margin: 0;">Outline Card</h4>
+  <p style="margin: 0;">Transparent background with border.</p>
 </bit-card>
 
 <bit-card variant="ghost">
-  <h4 slot="header">Ghost Card</h4>
-  <p>Transparent, shows hover effect.</p>
+  <h4 slot="header" style="margin: 0;">Ghost Card</h4>
+  <p style="margin: 0;">Transparent, shows hover effect.</p>
 </bit-card>
 
 <bit-card variant="text">
-  <h4 slot="header">Text Card</h4>
-  <p>Minimal, transparent design.</p>
+  <h4 slot="header" style="margin: 0;">Text Card</h4>
+  <p style="margin: 0;">Minimal, transparent design.</p>
 </bit-card>
 ```
 
@@ -90,16 +90,16 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 
 ```html
 <bit-card variant="glass" padding="lg">
-  <h3 slot="header">Glass Card</h3>
-  <p>Beautiful translucent effect with backdrop blur.</p>
+  <h3 slot="header" style="margin: 0;">Glass Card</h3>
+  <p style="margin: 0;">Beautiful translucent effect with backdrop blur.</p>
   <div slot="footer">
     <bit-button variant="glass" size="sm" color="secondary">Learn More</bit-button>
   </div>
 </bit-card>
 
 <bit-card variant="frost" padding="lg">
-  <h3 slot="header">Frost Card</h3>
-  <p>Elegant frosted glass effect with transparency.</p>
+  <h3 slot="header" style="margin: 0;">Frost Card</h3>
+  <p style="margin: 0;">Elegant frosted glass effect with transparency.</p>
   <div slot="footer">
     <bit-button variant="frost" size="sm">Learn More</bit-button>
   </div>
@@ -210,7 +210,7 @@ Make the entire card clickable with appropriate cursor and active states.
 <ComponentPreview center>
 
 ```html
-<bit-card hoverable clickable padding="none" style="max-width: 280px">
+<bit-card variant="outline" hoverable clickable padding="none" style="max-width: 280px">
   <div style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📦
   </div>
@@ -237,7 +237,7 @@ Make the entire card clickable with appropriate cursor and active states.
 <ComponentPreview center>
 
 ```html
-<bit-card color="success" variant="outlined" padding="lg" style="max-width: 400px">
+<bit-card color="success" variant="outline" padding="lg" style="max-width: 400px">
   <div style="display: flex; align-items: start; gap: var(--size-3)">
     <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-success); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
       ✓
