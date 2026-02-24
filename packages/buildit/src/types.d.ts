@@ -13,6 +13,8 @@ import type {
   CheckboxProps,
   InputProps,
   RadioProps,
+  SliderProps,
+  SwitchProps,
   TextProps
 } from './';
 
@@ -28,6 +30,8 @@ type BitCard = WebComponent<HTMLDivElement, CardProps>;
 type BitCheckbox = WebComponent<HTMLDivElement, CheckboxProps>;
 type BitInput = WebComponent<HTMLInputElement, InputProps>;
 type BitRadio = WebComponent<HTMLDivElement, RadioProps>;
+type BitSlider = WebComponent<HTMLDivElement, SliderProps>;
+type BitSwitch = WebComponent<HTMLDivElement, SwitchProps>;
 type BitText = WebComponent<HTMLDivElement, TextProps>;
 
 // ============================================
@@ -44,6 +48,8 @@ declare global {
     'bit-checkbox': BitCheckbox;
     'bit-input': BitInput;
     'bit-radio': BitRadio;
+    'bit-slider': BitSlider;
+    'bit-switch': BitSwitch;
     'bit-text': BitText;
   }
 }

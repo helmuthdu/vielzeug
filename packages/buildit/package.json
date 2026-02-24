@@ -60,6 +60,16 @@
       "import": "./dist/input.js",
       "require": "./dist/input.cjs"
     },
+    "./slider": {
+      "types": "./dist/slider.d.ts",
+      "import": "./dist/slider.js",
+      "require": "./dist/slider.cjs"
+    },
+    "./switch": {
+      "types": "./dist/switch.d.ts",
+      "import": "./dist/switch.js",
+      "require": "./dist/switch.cjs"
+    },
     "./text": {
       "types": "./dist/text.d.ts",
       "import": "./dist/text.js",

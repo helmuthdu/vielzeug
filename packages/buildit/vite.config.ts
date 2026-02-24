@@ -16,6 +16,8 @@ export default defineConfig(
       index: resolve(__dirname, './src/index'),
       input: resolve(__dirname, './src/form/input/input'),
       radio: resolve(__dirname, './src/form/radio/radio'),
+      slider: resolve(__dirname, './src/form/slider/slider'),
+      switch: resolve(__dirname, './src/form/switch/switch'),
       text: resolve(__dirname, './src/base/text/text'),
     },
     linkedDependencies: ['@vielzeug/craftit'],
