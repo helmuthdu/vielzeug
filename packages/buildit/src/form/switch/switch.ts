@@ -9,7 +9,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {boolean} disabled - Disable the switch
  * @attr {string} value - Switch value
  * @attr {string} name - Form field name
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Switch size: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for switch label
@@ -97,33 +97,42 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes
+     Color Themes (Default: Neutral)
      ======================================== */
 
-  :host(:not([color])),
+  :host(:not([color])) {
+    --_active-bg: var(--switch-bg, var(--color-neutral));
+    --_focus-shadow: var(--color-neutral-focus-shadow);
+  }
+
   :host([color='primary']) {
     --_active-bg: var(--switch-bg, var(--color-primary));
-    --_focus-shadow: var(--color-primary-shadow);
+    --_focus-shadow: var(--color-primary-focus-shadow);
   }
 
   :host([color='secondary']) {
     --_active-bg: var(--switch-bg, var(--color-secondary));
-    --_focus-shadow: var(--color-secondary-shadow);
+    --_focus-shadow: var(--color-secondary-focus-shadow);
+  }
+
+  :host([color='info']) {
+    --_active-bg: var(--switch-bg, var(--color-info));
+    --_focus-shadow: var(--color-info-focus-shadow);
   }
 
   :host([color='success']) {
     --_active-bg: var(--switch-bg, var(--color-success));
-    --_focus-shadow: var(--color-success-shadow);
+    --_focus-shadow: var(--color-success-focus-shadow);
   }
 
   :host([color='warning']) {
     --_active-bg: var(--switch-bg, var(--color-warning));
-    --_focus-shadow: var(--color-warning-shadow);
+    --_focus-shadow: var(--color-warning-focus-shadow);
   }
 
   :host([color='error']) {
     --_active-bg: var(--switch-bg, var(--color-error));
-    --_focus-shadow: var(--color-error-shadow);
+    --_focus-shadow: var(--color-error-focus-shadow);
   }
 
   /* ========================================
@@ -189,7 +198,7 @@ export type SwitchProps = {
   disabled?: boolean;
   value?: string;
   name?: string;
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
 };
 
@@ -237,30 +246,8 @@ defineElement<HTMLElement, SwitchProps>('bit-switch', {
       host.setAttribute('tabindex', '0');
     }
 
-    el.on('keydown', (keyEvent) => {
-      if (host.hasAttribute('disabled')) return;
-      if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
-        keyEvent.preventDefault();
-        const nextChecked = !host.hasAttribute('checked');
-
-        if (nextChecked) host.setAttribute('checked', '');
-        else host.removeAttribute('checked');
-
-        if (input) {
-          input.checked = nextChecked;
-        }
-
-        host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
-        el.emit('change', {
-          checked: nextChecked,
-          originalEvent: keyEvent,
-          value: host.getAttribute('value'),
-        });
-      }
-    });
-
-    // Mouse / pointer interaction (2 params = host element)
-    el.on('click', (e) => {
+    // Helper to toggle switch state
+    const toggleSwitch = (originalEvent: Event) => {
       if (host.hasAttribute('disabled')) return;
 
       const nextChecked = !host.hasAttribute('checked');
@@ -275,9 +262,20 @@ defineElement<HTMLElement, SwitchProps>('bit-switch', {
       host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
       el.emit('change', {
         checked: nextChecked,
-        originalEvent: e,
+        originalEvent,
         value: host.getAttribute('value'),
       });
+    };
+
+    el.on('keydown', (keyEvent) => {
+      if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
+        keyEvent.preventDefault();
+        toggleSwitch(keyEvent);
+      }
+    });
+
+    el.on('click', (e) => {
+      toggleSwitch(e);
     });
   },
 
@@ -289,8 +287,8 @@ defineElement<HTMLElement, SwitchProps>('bit-switch', {
         type="checkbox"
         ?checked="${el.hasAttribute('checked')}"
         ?disabled="${el.hasAttribute('disabled')}"
-        name="${el.getAttribute('name') || ''}"
-        value="${el.getAttribute('value') || ''}"
+        name="${el.getAttribute('name')}"
+        value="${el.getAttribute('value')}"
         aria-hidden="true"
         tabindex="-1" />
       <div class="switch-track">

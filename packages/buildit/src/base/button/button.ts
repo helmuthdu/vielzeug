@@ -5,13 +5,14 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  *
  * @element bit-button
  *
- * @attr {string} variant - Button style variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
- * @attr {string} color - Button color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} variant - Button style variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost'
+ * @attr {string} color - Button color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
  * @attr {boolean} disabled - Disable the button
  * @attr {boolean} loading - Show loading state
  * @attr {boolean} icon-only - Button with only an icon (no text padding)
  * @attr {boolean} fullwidth - Button takes full width of its container
+ * @attr {boolean} rainbow - Animated rainbow border with glow effect
  * @attr {string} rounded - Border radius: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '' (empty = 'full')
  * @attr {string} type - Button type: 'button' | 'submit' | 'reset'
  *
@@ -120,8 +121,8 @@ const styles = css`
   }
 
   ::slotted(svg) {
-    width: 1em;
-    height: 1em;
+    max-width: calc(--_height / 2);
+    max-height: calc(--_height / 2);
     flex-shrink: 0;
   }
 
@@ -154,6 +155,9 @@ const styles = css`
   :host([icon-only]) button {
     padding: 0;
     aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   /* ========================================
@@ -173,21 +177,6 @@ const styles = css`
      Rounded Variant
      ======================================== */
 
-  /* Default rounded for non-icon-only (no value or empty = full pill) */
-  :host(
-    [rounded]:not([icon-only]):not([rounded='sm']):not([rounded='md']):not([rounded='lg']):not([rounded='xl']):not(
-        [rounded='2xl']
-      ):not([rounded='3xl'])
-  ) {
-    --_radius: var(--rounded-full);
-  }
-
-  /* Icon-only always uses perfect circle */
-  :host([rounded][icon-only]) button {
-    border-radius: 50%;
-  }
-
-  /* Specific radius values from theme */
   :host([rounded='sm']:not([icon-only])) {
     --_radius: var(--rounded-sm);
   }
@@ -212,28 +201,40 @@ const styles = css`
     --_radius: var(--rounded-3xl);
   }
 
-  :host([rounded='full']:not([icon-only])) {
+  :host([rounded='full']:not([icon-only])),
+  :host([rounded='']:not([icon-only])) {
     --_radius: var(--rounded-full);
   }
 
-  :host([icon-only]) .content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  /* Icon-only always uses perfect circle */
+  :host([rounded][icon-only]) button {
+    border-radius: 50%;
   }
 
   /* ========================================
-     Color Themes
+     Color Themes (Default: Neutral)
      ======================================== */
 
-  :host(:not([color])),
+  :host(:not([color])) {
+    --_base: var(--color-neutral);
+    --_backdrop: var(--color-neutral-backdrop);
+    --_content: var(--color-neutral-content);
+    --_contrast: var(--color-neutral-contrast);
+    --_focus: var(--color-neutral-focus);
+    --_border: var(--color-neutral-border);
+    --_shadow: var(--color-neutral-focus-shadow);
+    --_halo: var(--halo-shadow-neutral);
+  }
+
   :host([color='primary']) {
     --_base: var(--color-primary);
     --_backdrop: var(--color-primary-backdrop);
     --_content: var(--color-primary-content);
     --_contrast: var(--color-primary-contrast);
     --_focus: var(--color-primary-focus);
-    --_shadow: var(--color-primary-shadow);
+    --_border: var(--color-primary-border);
+    --_shadow: var(--color-primary-focus-shadow);
+    --_halo: var(--halo-shadow-primary);
   }
 
   :host([color='secondary']) {
@@ -242,7 +243,20 @@ const styles = css`
     --_content: var(--color-secondary-content);
     --_contrast: var(--color-secondary-contrast);
     --_focus: var(--color-secondary-focus);
-    --_shadow: var(--color-secondary-shadow);
+    --_border: var(--color-secondary-border);
+    --_shadow: var(--color-secondary-focus-shadow);
+    --_halo: var(--halo-shadow-secondary);
+  }
+
+  :host([color='info']) {
+    --_base: var(--color-info);
+    --_backdrop: var(--color-info-backdrop);
+    --_content: var(--color-info-content);
+    --_contrast: var(--color-info-contrast);
+    --_focus: var(--color-info-focus);
+    --_border: var(--color-info-border);
+    --_shadow: var(--color-info-focus-shadow);
+    --_halo: var(--halo-shadow-info);
   }
 
   :host([color='success']) {
@@ -251,7 +265,9 @@ const styles = css`
     --_content: var(--color-success-content);
     --_contrast: var(--color-success-contrast);
     --_focus: var(--color-success-focus);
-    --_shadow: var(--color-success-shadow);
+    --_border: var(--color-success-border);
+    --_shadow: var(--color-success-focus-shadow);
+    --_halo: var(--halo-shadow-success);
   }
 
   :host([color='warning']) {
@@ -260,7 +276,9 @@ const styles = css`
     --_content: var(--color-warning-content);
     --_contrast: var(--color-warning-contrast);
     --_focus: var(--color-warning-focus);
-    --_shadow: var(--color-warning-shadow);
+    --_border: var(--color-warning-border);
+    --_shadow: var(--color-warning-focus-shadow);
+    --_halo: var(--halo-shadow-warning);
   }
 
   :host([color='error']) {
@@ -269,7 +287,9 @@ const styles = css`
     --_content: var(--color-error-content);
     --_contrast: var(--color-error-contrast);
     --_focus: var(--color-error-focus);
-    --_shadow: var(--color-error-shadow);
+    --_border: var(--color-error-border);
+    --_shadow: var(--color-error-focus-shadow);
+    --_halo: var(--halo-shadow-error);
   }
 
   /* ========================================
@@ -279,7 +299,7 @@ const styles = css`
   /* Solid (Default) */
   :host(:not([variant])),
   :host([variant='solid']) {
-    --_border-color: var(--color-contrast-200);
+    --_border-color: var(--_base);
     --_shadow: var(--shadow-2xs);
     --button-active-bg: var(--_content);
     --button-active-shadow: var(--inset-shadow-2xs);
@@ -308,7 +328,7 @@ const styles = css`
 
   /* Bordered */
   :host([variant='bordered']) {
-    --_border-color: color-mix(in srgb, var(--_focus) 70%, transparent);
+    --_border-color: var(--_border);
     --_shadow: var(--inset-shadow-xs), var(--shadow-xs);
     --button-active-bg: var(--_content);
     --button-active-shadow: var(--inset-shadow-sm);
@@ -322,6 +342,7 @@ const styles = css`
   :host([variant='bordered']) button:hover,
   :host([variant='bordered']) button:active {
     color: var(--_contrast);
+    background-color: var(--_focus);
   }
 
   /* Outline */
@@ -376,54 +397,114 @@ const styles = css`
     color: var(--_content);
   }
 
-  /* Glass & Frost */
-  :host([variant='glass']) button,
+  /* Frost - Smart backdrop blur variant */
   :host([variant='frost']) button {
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    box-shadow: var(--_halo);
   }
 
-  :host([variant='glass']) {
+  /* Neutral: canvas-based frost */
+  :host([variant='frost']:not([color])) {
+    --_border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
+    --button-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    --button-color: var(--color-contrast);
+  }
+
+  :host([variant='frost']:not([color])) button {
+    text-shadow: var(--text-shadow-2xs);
+  }
+
+  :host([variant='frost']:not([color])) button:hover {
+    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
+    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
+    border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
+  }
+
+  :host([variant='frost']:not([color])) button:active {
+    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+    border-color: color-mix(in srgb, var(--color-contrast-500) 40%, transparent);
+  }
+
+  /* Frost with color: frosted glass effect */
+  :host([variant='frost'][color]) {
     --_border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
     --button-bg: color-mix(in srgb, var(--_base) 30%, var(--color-contrast) 10%);
     --button-color: color-mix(in srgb, var(--_contrast) 90%, transparent);
   }
 
-  :host([variant='glass']) button {
+  :host([variant='frost'][color]) button {
+    box-shadow: var(--_halo);
     text-shadow: var(--text-shadow-xs);
     filter: brightness(1.05);
   }
 
-  :host([variant='glass']) button:hover {
+  :host([variant='frost'][color]) button:hover {
     backdrop-filter: blur(var(--blur-xl)) saturate(200%);
     background: color-mix(in srgb, var(--_backdrop) 60%, var(--_base) 40%);
     border-color: color-mix(in srgb, var(--_focus) 55%, transparent);
   }
 
-  :host([variant='glass']) button:active {
+  :host([variant='frost'][color]) button:active {
     background: color-mix(in srgb, var(--_backdrop) 50%, var(--_base) 50%);
     border-color: color-mix(in srgb, var(--_focus) 65%, transparent);
   }
 
-  :host([variant='frost']) {
-    --_border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
-    --button-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    --button-color: var(--_content);
+  /* ========================================
+     Rainbow Border Effect
+     ======================================== */
+
+  :host([rainbow]) button {
+    position: relative;
+    border: solid var(--border-2) transparent;
+    overflow: visible;
   }
 
-  :host([variant='frost']) button {
-    text-shadow: var(--text-shadow-2xs);
+  /* Rainbow border and glow layers */
+  :host([rainbow]) button::before,
+  :host([rainbow]) button::after {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--border-2));
+    border: inherit;
+    border-radius: inherit;
+    /* Reserve no-clip space for glow */
+    box-shadow: 0 0 calc(3 * var(--blur-lg)) rgba(0 0 0 / 0.001);
+    background: conic-gradient(
+        from var(--rainbow-angle),
+        #f94144,
+        #f3722c,
+        #f8961e,
+        #f9844a,
+        #f9c74f,
+        #90be6d,
+        #43aa8b,
+        #4d908e,
+        #277da1,
+        #577590,
+        #f94144
+      )
+      border-box;
+    /* Make everything inside padding-box transparent
+       by subtracting padding-box from no-clip box */
+    -webkit-mask:
+      conic-gradient(red 0 0) no-clip subtract,
+      conic-gradient(red 0 0) padding-box;
+    mask:
+      conic-gradient(red 0 0) no-clip subtract,
+      conic-gradient(red 0 0) padding-box;
+    pointer-events: none;
+    animation: rainbow-rotate 4s linear infinite;
   }
 
-  :host([variant='frost']) button:hover {
-    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
-    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    border-color: color-mix(in srgb, var(--_focus) 30%, transparent);
+  /* Turn one pseudo layer into glow halo */
+  :host([rainbow]) button::after {
+    filter: blur(var(--blur-lg));
   }
 
-  :host([variant='frost']) button:active {
-    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-    border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
+  @keyframes rainbow-rotate {
+    to {
+      --rainbow-angle: 1turn;
+    }
   }
 
   /* ========================================
@@ -463,34 +544,37 @@ const styles = css`
 
 export type ButtonProps = {
   variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
+  rainbow?: boolean;
   type?: 'button' | 'submit' | 'reset';
   'icon-only'?: boolean;
   'fullwidth'?: boolean;
   rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '';
 };
 
+const isDisabledOrLoading = (el: HTMLElement): boolean => {
+  return el.hasAttribute('disabled') || el.hasAttribute('loading');
+};
+
 defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
-  observedAttributes: ['variant', 'color', 'size', 'disabled', 'loading', 'type', 'icon-only', 'fullwidth', 'rounded'] as const,
+  observedAttributes: ['variant', 'color', 'size', 'disabled', 'loading', 'rainbow', 'type', 'icon-only', 'fullwidth', 'rounded'] as const,
 
   onAttributeChanged(name, _oldValue, _newValue, el) {
     const host = el as unknown as HTMLElement;
 
     if (name === 'disabled' || name === 'loading') {
-      const isDisabled = host.hasAttribute('disabled') || host.hasAttribute('loading');
-      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-
-      const isBusy = host.hasAttribute('loading');
-      host.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+      const disabled = isDisabledOrLoading(host);
+      host.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      host.setAttribute('aria-busy', host.hasAttribute('loading') ? 'true' : 'false');
     }
   },
 
   onConnected(el) {
     el.on('button', 'click', (e) => {
-      if (el.hasAttribute('disabled') || el.hasAttribute('loading')) {
+      if (isDisabledOrLoading(el)) {
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -504,13 +588,16 @@ defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
   styles: [styles],
 
   template: (el) => {
+    const disabled = isDisabledOrLoading(el);
+    const loading = el.hasAttribute('loading');
+
     return html`
       <button
         type="${el.getAttribute('type') || 'button'}"
-        ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
-        aria-disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading') ? 'true' : 'false'}"
-        aria-busy="${el.hasAttribute('loading') ? 'true' : 'false'}">
-        ${el.hasAttribute('loading') ? html`<span class="loader" aria-label="Loading"></span>` : ''}
+        ?disabled="${disabled}"
+        aria-disabled="${disabled ? 'true' : 'false'}"
+        aria-busy="${loading ? 'true' : 'false'}">
+        ${loading ? html`<span class="loader" aria-label="Loading"></span>` : ''}
         <slot name="prefix"></slot>
         <span class="content"><slot></slot></span>
         <slot name="suffix"></slot>

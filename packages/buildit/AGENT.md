@@ -59,7 +59,8 @@ background: #3b82f6;
 }
 
 /* ========================================
-   Color Themes (5: primary, secondary, success, warning, error)
+   Color Themes (6: primary, secondary, info, success, warning, error)
+   Default: neutral (when no color attribute is set)
    ======================================== */
 :host([color='primary']) {
   --_base: var(--color-primary);
@@ -68,15 +69,18 @@ background: #3b82f6;
 }
 
 /* ========================================
-   Visual Variants (8: solid, flat, bordered, outline, ghost, text, glass, frost)
+   Visual Variants
+   Button: 6 variants (solid, flat, bordered, outline, ghost, text)
+   Box/Card: 1 variant (frost) - default has no variant attribute
    ======================================== */
 :host([variant='solid']) {
   --_bg: var(--_base);
   --_shadow: var(--shadow-sm);
 }
 
-/* Glass/Frost - Backdrop blur */
-:host([variant='glass']) .element {
+/* Frost - Backdrop blur with smart color adaptation */
+/* Neutral: canvas-based frost */
+:host([variant='frost']:not([color])) .element {
   backdrop-filter: blur(var(--blur-md)) saturate(190%);
   -webkit-backdrop-filter: blur(var(--blur-md)) saturate(190%);
 }
@@ -285,7 +289,7 @@ declare global {
 ## 7. Examples
 
 **Gold Standard Components:**
-- `src/base/button/button.ts` - All 8 variants, full-width, events
+- `src/base/button/button.ts` - All 8 variants, fullwidth, events
 - `src/form/input/input.ts` - Advanced form, slots, variants
 - `src/form/checkbox/checkbox.ts` - ARIA, keyboard, state sync
 
@@ -295,7 +299,7 @@ declare global {
 
 **Full-Width:**
 ```css
-:host([full-width]) {
+:host([fullwidth]) {
   display: flex;
   width: 100%;
 }

@@ -6,7 +6,7 @@ A versatile button component with multiple variants, colors, sizes, and states. 
 
 **Button**
 - 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
-- 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
+- 🌈 **6 Semantic Colors**: primary, secondary, info, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
 - 🎭 **States**: loading, disabled
@@ -74,25 +74,23 @@ The button comes with eight visual variants to match different levels of emphasi
 
 </ComponentPreview>
 
-### Glass & Frost Variants
+### Frost Variant
 
-Modern effects with backdrop blur for elevated UI elements.
+Modern frost effect with backdrop blur that adapts based on color:
+- **Without color**: Subtle canvas-based frost overlay
+- **With color**: Frosted glass effect with colored tint
 
 ::: tip Best Used With
-Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
 <ComponentPreview center background="https://images.unsplash.com/photo-1516919549054-e08258825f80?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
 
 ```html
-<bit-button variant="glass" color="primary">Primary</bit-button>
-<bit-button variant="glass" color="secondary">Secondary</bit-button>
-<bit-button variant="glass" color="success">Success</bit-button>
-<bit-button variant="glass" color="warning">Warning</bit-button>
-<bit-button variant="glass" color="error">Error</bit-button>
-<hr>
+<bit-button variant="frost">Frost</bit-button>
 <bit-button variant="frost" color="primary">Primary</bit-button>
 <bit-button variant="frost" color="secondary">Secondary</bit-button>
+<bit-button variant="frost" color="info">Info</bit-button>
 <bit-button variant="frost" color="success">Success</bit-button>
 <bit-button variant="frost" color="warning">Warning</bit-button>
 <bit-button variant="frost" color="error">Error</bit-button>
@@ -100,18 +98,32 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 
 </ComponentPreview>
 
-### Colors
+### Rainbow Border
 
-Five semantic colors for different contexts.
+Animated rainbow border effect perfect for highlighting call-to-action buttons or special features.
 
 <ComponentPreview center>
 
 ```html
-<bit-button color="primary">Primary</bit-button>
-<bit-button color="secondary">Secondary</bit-button>
-<bit-button color="success">Success</bit-button>
-<bit-button color="warning">Warning</bit-button>
-<bit-button color="error">Error</bit-button>
+<bit-button rainbow variant="frost">Frost + Rainbow</bit-button>
+```
+
+</ComponentPreview>
+
+### Colors
+
+Six semantic colors for different contexts.
+
+<ComponentPreview center>
+
+```html
+<bit-button variant="solid">Default</bit-button>
+<bit-button variant="solid" color="primary">Primary</bit-button>
+<bit-button variant="solid" color="secondary">Secondary</bit-button>
+<bit-button variant="solid" color="info">Info</bit-button>
+<bit-button variant="solid" color="success">Success</bit-button>
+<bit-button variant="solid" color="warning">Warning</bit-button>
+<bit-button variant="solid" color="error">Error</bit-button>
 ```
 
 </ComponentPreview>
@@ -307,6 +319,7 @@ Buttons expand to fill the container equally.
 | `type`      | `'button' \| 'submit' \| 'reset'`                                   | `'button'`  | Button type (for forms)          |
 | `disabled`  | `boolean`                                                           | `false`     | Disable the button               |
 | `loading`   | `boolean`                                                           | `false`     | Show loading state               |
+| `rainbow`   | `boolean`                                                           | `false`     | Animated rainbow border effect   |
 | `icon-only` | `boolean`                                                           | `false`     | Icon-only mode (smaller padding) |
 | `fullwidth`| `boolean`                                                           | `false`     | Button takes full width of container |
 | `rounded`   | `boolean`                                                           | `false`     | Fully rounded corners            |

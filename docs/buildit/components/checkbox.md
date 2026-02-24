@@ -30,13 +30,15 @@ A customizable checkbox component with multiple colors, sizes, and states. Built
 
 ### Colors
 
-Five semantic colors for different contexts.
+Six semantic colors for different contexts. Defaults to neutral when no color is specified.
 
 <ComponentPreview center>
 
 ```html
+<bit-checkbox checked>Default</bit-checkbox>
 <bit-checkbox checked color="primary">Primary</bit-checkbox>
 <bit-checkbox checked color="secondary">Secondary</bit-checkbox>
+<bit-checkbox checked color="info">Info</bit-checkbox>
 <bit-checkbox checked color="success">Success</bit-checkbox>
 <bit-checkbox checked color="warning">Warning</bit-checkbox>
 <bit-checkbox checked color="error">Error</bit-checkbox>

@@ -66,6 +66,15 @@
   }
 }
 
+@keyframes progress-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .animate-fade-in-up {
   animation: fade-in-up var(--transition-normal) forwards;
 }

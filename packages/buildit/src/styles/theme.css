@@ -312,21 +312,90 @@
     --color-canvas: var(--color-contrast-50);
     --color-contrast: var(--color-contrast-900);
 
-    /* Primary - Electric Violet */
+    /* Neutral Halo - Dark Mode */
+    --halo-shadow-neutral:
+      inset 0 1px 1px rgb(0 0 0 / 0.15),
+      0 0 var(--size-1) rgba(0, 0, 0, 0.2) inset,
+      0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.4),
+      0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.25);
+
+    /* Primary Halo - Dark Mode */
+    --halo-shadow-primary:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.2);
+
+    /* Secondary Halo - Dark Mode */
+    --halo-shadow-secondary:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.2);
+
+    /* Info Halo - Dark Mode */
+    --halo-shadow-info:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.2);
+
+    /* Success Halo - Dark Mode */
+    --halo-shadow-success:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.2);
+
+    /* Warning Halo - Dark Mode */
+    --halo-shadow-warning:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.2);
+
+    /* Error Halo - Dark Mode */
+    --halo-shadow-error:
+      inset 0 1px 1px rgb(255 255 255 / 0.03),
+      0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+      0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.2);
+
+    /* Neutral - Dark mode variations */
+    --color-neutral: hsl(210deg 2% 68% / 91%);
+    --color-neutral-backdrop: hsl(210deg 4% 16% / 60%);
+    --color-neutral-content: hsl(210deg 3% 80% / 91%);
+    --color-neutral-contrast: hsl(210deg 5% 12% / 91%);
+    --color-neutral-focus: hsl(210deg 2% 62% / 91%);
+    --color-neutral-border: hsl(210deg 5% 26% / 75%);
+    --color-neutral-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-neutral) 15%, transparent), var(--shadow-sm);
+
+    /* Primary - Dark mode variations */
     --color-primary: hsl(260deg 100% 70% / 100%);
     --color-primary-backdrop: hsl(260deg 100% 30% / 40%);
     --color-primary-content: hsl(260deg 100% 95% / 100%);
     --color-primary-contrast: hsl(260deg 100% 10% / 100%);
     --color-primary-focus: hsl(260deg 100% 75% / 100%);
-    --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
+    --color-primary-border: hsl(260deg 100% 75% / 60%);
+    --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
     /* Secondary - Dark mode variations */
-    --color-secondary: hsl(220deg 16% 78% / 91%);
-    --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
-    --color-secondary-content: hsl(220deg 16% 82% / 91%);
-    --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
-    --color-secondary-focus: hsl(220deg 16% 72% / 91%);
-    --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+    --color-secondary: hsl(215deg 28% 70% / 91%);
+    --color-secondary-backdrop: hsl(215deg 28% 30% / 60%);
+    --color-secondary-content: hsl(215deg 28% 85% / 91%);
+    --color-secondary-contrast: hsl(215deg 28% 15% / 91%);
+    --color-secondary-focus: hsl(215deg 28% 62% / 91%);
+    --color-secondary-border: hsl(215deg 28% 62% / 60%);
+    --color-secondary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+
+    /* Info - Dark mode variations */
+    --color-info: hsl(200deg 90% 60% / 91%);
+    --color-info-backdrop: hsl(200deg 50% 30% / 50%);
+    --color-info-content: hsl(200deg 90% 75% / 91%);
+    --color-info-contrast: hsl(200deg 90% 15% / 91%);
+    --color-info-focus: hsl(200deg 90% 65% / 91%);
+    --color-info-border: hsl(200deg 90% 65% / 60%);
+    --color-info-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 15%, transparent), var(--shadow-sm);
 
     /* Success - Dark mode variations */
     --color-success: hsl(168deg 76% 50% / 91%);
@@ -334,7 +403,8 @@
     --color-success-content: hsl(168deg 76% 70% / 91%);
     --color-success-contrast: hsl(168deg 76% 15% / 91%);
     --color-success-focus: hsl(168deg 76% 55% / 91%);
-    --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
+    --color-success-border: hsl(168deg 76% 55% / 60%);
+    --color-success-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
     /* Warning - Dark mode variations */
     --color-warning: hsl(38deg 100% 60% / 91%);
@@ -342,7 +412,8 @@
     --color-warning-content: hsl(38deg 100% 75% / 91%);
     --color-warning-contrast: hsl(38deg 100% 20% / 91%);
     --color-warning-focus: hsl(38deg 100% 65% / 91%);
-    --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
+    --color-warning-border: hsl(38deg 100% 65% / 60%);
+    --color-warning-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
     /* Error - Dark mode variations */
     --color-error: hsl(340deg 82% 60% / 91%);
@@ -350,7 +421,8 @@
     --color-error-content: hsl(340deg 82% 75% / 91%);
     --color-error-contrast: hsl(340deg 82% 15% / 91%);
     --color-error-focus: hsl(340deg 82% 65% / 91%);
-    --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
+    --color-error-border: hsl(340deg 82% 65% / 60%);
+    --color-error-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
   }
 }
 
@@ -373,21 +445,90 @@ html.dark {
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
 
+  /* Neutral Halo - Dark Mode */
+  --halo-shadow-neutral:
+    inset 0 1px 1px rgb(0 0 0 / 0.15),
+    0 0 var(--size-1) rgba(0, 0, 0, 0.2) inset,
+    0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.4),
+    0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.25);
+
+  /* Primary Halo - Dark Mode */
+  --halo-shadow-primary:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.2);
+
+  /* Secondary Halo - Dark Mode */
+  --halo-shadow-secondary:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.2);
+
+  /* Info Halo - Dark Mode */
+  --halo-shadow-info:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.2);
+
+  /* Success Halo - Dark Mode */
+  --halo-shadow-success:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.2);
+
+  /* Warning Halo - Dark Mode */
+  --halo-shadow-warning:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.2);
+
+  /* Error Halo - Dark Mode */
+  --halo-shadow-error:
+    inset 0 1px 1px rgb(255 255 255 / 0.03),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
+    0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.2);
+
+  /* Neutral - Dark mode variations  */
+  --color-neutral: hsl(210deg 3% 76% / 91%);
+  --color-neutral-backdrop: hsl(210deg 5% 24% / 60%);
+  --color-neutral-content: hsl(210deg 4% 86% / 91%);
+  --color-neutral-contrast: hsl(210deg 6% 10% / 91%);
+  --color-neutral-focus: hsl(210deg 3% 70% / 91%);
+  --color-neutral-border: hsl(210deg 5% 26% / 75%);
+  --color-neutral-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-neutral) 15%, transparent), var(--shadow-sm);
+
   /* Primary - Dark mode variations */
   --color-primary: hsl(260deg 100% 70% / 100%);
   --color-primary-backdrop: hsl(260deg 100% 30% / 40%);
   --color-primary-content: hsl(260deg 100% 95% / 100%);
   --color-primary-contrast: hsl(260deg 100% 10% / 100%);
   --color-primary-focus: hsl(260deg 100% 75% / 100%);
-  --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
+  --color-primary-border: hsl(260deg 100% 75% / 60%);
+  --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
   /* Secondary - Dark mode variations */
-  --color-secondary: hsl(220deg 16% 78% / 91%);
-  --color-secondary-backdrop: hsl(220deg 16% 25% / 60%);
-  --color-secondary-content: hsl(220deg 16% 82% / 91%);
-  --color-secondary-contrast: hsl(220deg 16% 15% / 91%);
-  --color-secondary-focus: hsl(220deg 16% 72% / 91%);
-  --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+  --color-secondary: hsl(215deg 28% 70% / 91%);
+  --color-secondary-backdrop: hsl(215deg 28% 30% / 60%);
+  --color-secondary-content: hsl(215deg 28% 85% / 91%);
+  --color-secondary-contrast: hsl(215deg 28% 15% / 91%);
+  --color-secondary-focus: hsl(215deg 28% 62% / 91%);
+  --color-secondary-border: hsl(215deg 28% 62% / 60%);
+  --color-secondary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+
+  /* Info - Dark mode variations */
+  --color-info: hsl(200deg 90% 60% / 91%);
+  --color-info-backdrop: hsl(200deg 50% 30% / 50%);
+  --color-info-content: hsl(200deg 90% 75% / 91%);
+  --color-info-contrast: hsl(200deg 90% 15% / 91%);
+  --color-info-focus: hsl(200deg 90% 65% / 91%);
+  --color-info-border: hsl(200deg 90% 65% / 60%);
+  --color-info-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 15%, transparent), var(--shadow-sm);
 
   /* Success - Dark mode variations */
   --color-success: hsl(168deg 76% 50% / 91%);
@@ -395,7 +536,8 @@ html.dark {
   --color-success-content: hsl(168deg 76% 70% / 91%);
   --color-success-contrast: hsl(168deg 76% 15% / 91%);
   --color-success-focus: hsl(168deg 76% 55% / 91%);
-  --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
+  --color-success-border: hsl(168deg 76% 55% / 60%);
+  --color-success-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
   /* Warning - Dark mode variations */
   --color-warning: hsl(38deg 100% 60% / 91%);
@@ -403,7 +545,8 @@ html.dark {
   --color-warning-content: hsl(38deg 100% 75% / 91%);
   --color-warning-contrast: hsl(38deg 100% 20% / 91%);
   --color-warning-focus: hsl(38deg 100% 65% / 91%);
-  --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
+  --color-warning-border: hsl(38deg 100% 65% / 60%);
+  --color-warning-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
   /* Error - Dark mode variations */
   --color-error: hsl(340deg 82% 60% / 91%);
@@ -411,11 +554,60 @@ html.dark {
   --color-error-content: hsl(340deg 82% 75% / 91%);
   --color-error-contrast: hsl(340deg 82% 15% / 91%);
   --color-error-focus: hsl(340deg 82% 65% / 91%);
-  --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
+  --color-error-border: hsl(340deg 82% 65% / 60%);
+  --color-error-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
 }
 
 /* VitePress light theme (.light class on html element) */
 html:not(.dark) {
+  /* Neutral Halo */
+  --halo-shadow-neutral:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(240deg 3% 65% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(240deg 3% 65% / 0.15);
+
+  /* Primary Halo */
+  --halo-shadow-primary:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(260deg 100% 65% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(260deg 100% 65% / 0.15);
+
+  /* Secondary Halo */
+  --halo-shadow-secondary:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(215deg 28% 40% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(215deg 28% 40% / 0.15);
+
+  /* Info Halo */
+  --halo-shadow-info:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(200deg 90% 50% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(200deg 90% 50% / 0.15);
+
+  /* Success Halo */
+  --halo-shadow-success:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(168deg 76% 42% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(168deg 76% 42% / 0.15);
+
+  /* Warning Halo */
+  --halo-shadow-warning:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(38deg 100% 52% / 0.25),
+    0 var(--size-1) var(--size-3) hsl(38deg 100% 52% / 0.15);
+
+  /* Error Halo */
+  --halo-shadow-error:
+    inset 0 1px 1px rgb(0 0 0 / 0.05),
+    0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
+    0 var(--size-2) var(--size-6) hsl(340deg 82% 52% / 0.2),
+    0 var(--size-1) var(--size-3) hsl(340deg 82% 52% / 0.12);
 
   /* Background colors (50-400): Optimized for UI elements, cards, borders */
   --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */
@@ -434,43 +626,66 @@ html:not(.dark) {
   --color-canvas: var(--color-contrast-50);
   --color-contrast: var(--color-contrast-900);
 
-  /* Primary - Electric Violet */
+  /* Neutral - True Gray */
+  --color-neutral: hsl(240deg 3% 42% / 91%);
+  --color-neutral-backdrop: hsl(240deg 4% 94% / 83%);
+  --color-neutral-content: hsl(240deg 3% 28% / 91%);
+  --color-neutral-contrast: hsl(240deg 4% 98% / 91%);
+  --color-neutral-focus: hsl(240deg 3% 48% / 91%);
+  --color-neutral-border: hsl(240deg 4% 85% / 75%);
+  --color-neutral-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-neutral) 15%, transparent), var(--shadow-sm);
+
+  /* Primary - Electric-Violet */
   --color-primary: hsl(260deg 100% 65% / 100%);
   --color-primary-backdrop: hsl(260deg 100% 92% / 100%);
   --color-primary-content: hsl(260deg 100% 15% / 100%);
   --color-primary-contrast: hsl(260deg 100% 98% / 100%);
   --color-primary-focus: hsl(260deg 100% 70% / 100%);
-  --color-primary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
+  --color-primary-border: hsl(260deg 100% 70% / 60%);
+  --color-primary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent), var(--shadow-sm);
 
-  /* Secondary - Blue-gray colors for light mode */
-  --color-secondary: hsl(220deg 16% 28% / 91%);
-  --color-secondary-backdrop: hsl(220deg 16% 85% / 83%);
-  --color-secondary-content: hsl(220deg 16% 22% / 91%);
-  --color-secondary-contrast: hsl(220deg 16% 96% / 91%);
-  --color-secondary-focus: hsl(220deg 16% 35% / 91%);
-  --color-secondary-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+  /* Secondary - Blue-Gray */
+  --color-secondary: hsl(215deg 28% 40% / 91%);
+  --color-secondary-backdrop: hsl(215deg 28% 90% / 83%);
+  --color-secondary-content: hsl(215deg 28% 20% / 91%);
+  --color-secondary-contrast: hsl(215deg 28% 98% / 91%);
+  --color-secondary-focus: hsl(215deg 28% 48% / 91%);
+  --color-secondary-border: hsl(215deg 28% 48% / 60%);
+  --color-secondary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
 
-  /* Success - Teal/cyan instead of pure green (better for red-green colorblindness) */
+  /* Info - Cyan-Blue */
+  --color-info: hsl(200deg 90% 50% / 91%);
+  --color-info-backdrop: hsl(200deg 90% 90% / 83%);
+  --color-info-content: hsl(200deg 90% 15% / 91%);
+  --color-info-contrast: hsl(200deg 90% 96% / 91%);
+  --color-info-focus: hsl(200deg 90% 56% / 91%);
+  --color-info-border: hsl(200deg 90% 56% / 60%);
+  --color-info-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 15%, transparent), var(--shadow-sm);
+
+  /* Success - Teal/Cyan */
   --color-success: hsl(168deg 76% 42% / 91%);
   --color-success-backdrop: hsl(168deg 76% 88% / 83%);
   --color-success-content: hsl(168deg 76% 15% / 91%);
   --color-success-contrast: hsl(168deg 76% 97% / 91%);
   --color-success-focus: hsl(168deg 76% 48% / 91%);
-  --color-success-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
+  --color-success-border: hsl(168deg 76% 48% / 60%);
+  --color-success-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 15%, transparent), var(--shadow-sm);
 
-  /* Warning - Amber/orange (distinct from error, works for all types) */
+  /* Warning - Amber/Orange */
   --color-warning: hsl(38deg 100% 52% / 91%);
   --color-warning-backdrop: hsl(38deg 100% 88% / 83%);
   --color-warning-content: hsl(38deg 100% 15% / 91%);
   --color-warning-contrast: hsl(38deg 100% 94% / 91%);
   --color-warning-focus: hsl(38deg 100% 58% / 91%);
-  --color-warning-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
+  --color-warning-border: hsl(38deg 100% 58% / 60%);
+  --color-warning-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent), var(--shadow-sm);
 
-  /* Error - Magenta/vermillion instead of pure red (better for red-green colorblindness) */
+  /* Error - Magenta/Vermillion */
   --color-error: hsl(340deg 82% 52% / 91%);
   --color-error-backdrop: hsl(340deg 82% 88% / 83%);
   --color-error-content: hsl(340deg 82% 15% / 91%);
   --color-error-contrast: hsl(340deg 82% 94% / 91%);
   --color-error-focus: hsl(340deg 82% 58% / 91%);
-  --color-error-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
+  --color-error-border: hsl(340deg 82% 58% / 60%);
+  --color-error-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 15%, transparent), var(--shadow-sm);
 }

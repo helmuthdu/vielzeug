@@ -36,13 +36,15 @@ Radio buttons with the same `name` attribute form a group where only one can be 
 
 ### Colors
 
-Five semantic colors for different contexts.
+Six semantic colors for different contexts. Defaults to neutral when no color is specified.
 
 <ComponentPreview center>
 
 ```html
-<bit-radio checked name="color" color="primary">Primary</bit-radio>
+<bit-radio checked name="color">Default</bit-radio>
+<bit-radio name="color" color="primary">Primary</bit-radio>
 <bit-radio name="color" color="secondary">Secondary</bit-radio>
+<bit-radio name="color" color="info">Info</bit-radio>
 <bit-radio name="color" color="success">Success</bit-radio>
 <bit-radio name="color" color="warning">Warning</bit-radio>
 <bit-radio name="color" color="error">Error</bit-radio>

@@ -98,10 +98,6 @@ const styles = css`
     --button-radius: 0 var(--group-radius) var(--group-radius) 0;
   }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:only-child) {
-    --button-radius: var(--group-radius);
-  }
-
   /* Vertical attached - remove inner borders and round corners */
   :host([attached][orientation='vertical']) ::slotted(bit-button) {
     --button-radius: 0;
@@ -116,17 +112,13 @@ const styles = css`
   :host([attached][orientation='vertical']) ::slotted(bit-button:last-child) {
     --button-radius: 0 0 var(--group-radius) var(--group-radius);
   }
-
-  :host([attached][orientation='vertical']) ::slotted(bit-button:only-child) {
-    --button-radius: var(--group-radius);
-  }
 `;
 
 // -------------------- Types --------------------
 export type ButtonGroupProps = {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
   orientation?: 'horizontal' | 'vertical';
   attached?: boolean;
   'fullwidth'?: boolean;
@@ -139,23 +131,16 @@ defineElement<HTMLDivElement, ButtonGroupProps>('bit-button-group', {
   onAttributeChanged(name, _oldValue, _newValue, el) {
     if (name === 'size' || name === 'variant' || name === 'color') {
       const host = el as unknown as HTMLElement;
-
-      const size = host.getAttribute('size');
-      const variant = host.getAttribute('variant');
-      const color = host.getAttribute('color');
-
-      const buttons = host.querySelectorAll('bit-button');
-      buttons.forEach((button) => {
-        if (size) button.setAttribute('size', size);
-        if (variant) button.setAttribute('variant', variant);
-        if (color) button.setAttribute('color', color);
-      });
+      // Reuse the applyToChildren logic stored on the element
+      const applyFn = (host as any).__applyToChildren;
+      if (applyFn) applyFn();
     }
   },
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
 
+    // Helper to apply attributes to child buttons
     const applyToChildren = () => {
       const size = host.getAttribute('size');
       const variant = host.getAttribute('variant');
@@ -168,6 +153,9 @@ defineElement<HTMLDivElement, ButtonGroupProps>('bit-button-group', {
         if (color) button.setAttribute('color', color);
       });
     };
+
+    // Store for use in onAttributeChanged
+    (host as any).__applyToChildren = applyToChildren;
 
     // Initial propagation to existing children
     applyToChildren();

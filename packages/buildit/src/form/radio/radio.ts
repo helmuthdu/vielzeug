@@ -9,7 +9,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {boolean} disabled - Disable the radio button
  * @attr {string} value - Radio button value
  * @attr {string} name - Form field name (required for grouping)
- * @attr {string} color - Radio button color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} color - Radio button color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Radio button size: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for radio button label
@@ -75,38 +75,49 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes
+     Color Themes (Default: Neutral)
      ======================================== */
 
-  :host(:not([color])),
+  :host(:not([color])) {
+    --_active-bg: var(--radio-checked-bg, var(--color-neutral));
+    --_dot-color: var(--radio-color, var(--color-neutral-contrast));
+    --_focus-shadow: var(--color-neutral-focus-shadow);
+  }
+
   :host([color='primary']) {
     --_active-bg: var(--radio-checked-bg, var(--color-primary));
     --_dot-color: var(--radio-color, var(--color-primary-contrast));
-    --_focus-shadow: var(--color-primary-shadow);
+    --_focus-shadow: var(--color-primary-focus-shadow);
   }
 
   :host([color='secondary']) {
     --_active-bg: var(--radio-checked-bg, var(--color-secondary));
     --_dot-color: var(--radio-color, var(--color-secondary-contrast));
-    --_focus-shadow: var(--color-secondary-shadow);
+    --_focus-shadow: var(--color-secondary-focus-shadow);
+  }
+
+  :host([color='info']) {
+    --_active-bg: var(--radio-checked-bg, var(--color-info));
+    --_dot-color: var(--radio-color, var(--color-info-contrast));
+    --_focus-shadow: var(--color-info-focus-shadow);
   }
 
   :host([color='success']) {
     --_active-bg: var(--radio-checked-bg, var(--color-success));
     --_dot-color: var(--radio-color, var(--color-success-contrast));
-    --_focus-shadow: var(--color-success-shadow);
+    --_focus-shadow: var(--color-success-focus-shadow);
   }
 
   :host([color='warning']) {
     --_active-bg: var(--radio-checked-bg, var(--color-warning));
     --_dot-color: var(--radio-color, var(--color-warning-contrast));
-    --_focus-shadow: var(--color-warning-shadow);
+    --_focus-shadow: var(--color-warning-focus-shadow);
   }
 
   :host([color='error']) {
     --_active-bg: var(--radio-checked-bg, var(--color-error));
     --_dot-color: var(--radio-color, var(--color-error-contrast));
-    --_focus-shadow: var(--color-error-shadow);
+    --_focus-shadow: var(--color-error-focus-shadow);
   }
 
   /* ========================================
@@ -179,7 +190,7 @@ export type RadioProps = {
   disabled?: boolean;
   value?: string;
   name?: string;
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
 };
 
@@ -229,13 +240,18 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
       host.setAttribute('tabindex', '0');
     }
 
-    const selectRadio = (target: HTMLElement, originalEvent: Event | KeyboardEvent) => {
-      const radioName = target.getAttribute('name');
-      if (!radioName) return;
-
-      const radios = Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
+    // Helper to get all enabled radios in the same group
+    const getRadioGroup = (): HTMLElement[] => {
+      const radioName = host.getAttribute('name');
+      if (!radioName) return [];
+      return Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
         (r) => !r.hasAttribute('disabled'),
       );
+    };
+
+    const selectRadio = (target: HTMLElement, originalEvent: Event | KeyboardEvent) => {
+      const radios = getRadioGroup();
+      if (radios.length === 0) return;
 
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Radio group management requires coordination
       radios.forEach((radio) => {
@@ -269,12 +285,8 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
     el.on('keydown', (keyEvent) => {
       if (host.hasAttribute('disabled')) return;
 
-      const radioName = host.getAttribute('name');
-      if (!radioName) return;
-
-      const radios = Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
-        (r) => !r.hasAttribute('disabled'),
-      );
+      const radios = getRadioGroup();
+      if (radios.length === 0) return;
 
       const currentIndex = radios.indexOf(host);
       if (currentIndex === -1) return;
@@ -316,8 +328,8 @@ defineElement<HTMLInputElement, RadioProps>('bit-radio', {
         type="radio"
         ?checked="${el.hasAttribute('checked')}"
         ?disabled="${el.hasAttribute('disabled')}"
-        name="${el.getAttribute('name') || ''}"
-        value="${el.getAttribute('value') || ''}"
+        name="${el.getAttribute('name')}"
+        value="${el.getAttribute('value')}"
         style="display: none;"
         aria-hidden="true"
         tabindex="-1" />

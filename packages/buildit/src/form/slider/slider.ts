@@ -11,7 +11,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {number} value - Current value
  * @attr {boolean} disabled - Disable the slider
  * @attr {string} name - Form field name
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+ * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Slider size: 'sm' | 'md' | 'lg'
  *
  * @slot - Default slot for slider label
@@ -19,12 +19,9 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @cssprop --slider-track-height - Height of the slider track
  * @cssprop --slider-thumb-size - Size of the slider thumb
  * @cssprop --slider-track-bg - Background color of the track
- * @cssprop --slider-fill-bg - Background color of the filled portion
  * @cssprop --slider-thumb-bg - Background color of the thumb
  *
  * @fires change - Emitted when value changes
- *   detail: { value: number; originalEvent: Event }
- * @fires input - Emitted continuously during drag
  *   detail: { value: number; originalEvent: Event }
  */
 
@@ -37,10 +34,10 @@ const styles = css`
     --_track-height: var(--slider-track-height, var(--size-1-5));
     --_thumb-size: var(--slider-thumb-size, var(--size-5));
     --_track-bg: var(--slider-track-bg, var(--color-contrast-300));
-    --_fill-bg: var(--slider-fill-bg, var(--color-primary));
+    --_fill-bg: var(--slider-fill-bg, var(--color-neutral));
     --_thumb-bg: var(--slider-thumb-bg, var(--color-contrast-100));
     --_font-size: var(--text-sm);
-    --_shadow: var(--color-primary-shadow);
+    --_shadow: var(--color-neutral-focus-shadow);
 
     align-items: center;
     cursor: pointer;
@@ -88,6 +85,12 @@ const styles = css`
     position: absolute;
     top: 0;
     width: var(--_progress, 0%);
+    transition: width var(--transition-normal);
+  }
+
+  /* Disable transitions during dragging for responsive feel */
+  :host([data-dragging]) .slider-fill {
+    transition: none;
   }
 
   .slider-thumb {
@@ -100,38 +103,57 @@ const styles = css`
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    transition: box-shadow var(--transition-normal), transform var(--transition-fast);
+    transition: 
+      box-shadow var(--transition-normal), 
+      transform var(--transition-fast),
+      left var(--transition-normal);
     width: var(--_thumb-size);
     z-index: 1;
+  }
+
+  /* Disable transitions during dragging for responsive feel */
+  :host([data-dragging]) .slider-thumb {
+    transition: box-shadow var(--transition-normal), transform var(--transition-fast);
   }
 
   :host(:focus-visible) .slider-thumb,
   :host(:active) .slider-thumb {
     box-shadow: var(--_shadow);
+    transform: translate(-50%, -50%) scale(1.1);
   }
 
   /* ========================================
-     Color Themes
+     Color Themes (Default: Neutral)
      ======================================== */
+
+  :host([color='primary']) {
+    --_fill-bg: var(--color-primary);
+    --_shadow: var(--color-primary-focus-shadow);
+  }
 
   :host([color='secondary']) {
     --_fill-bg: var(--color-secondary);
-    --_shadow: var(--color-secondary-shadow);
+    --_shadow: var(--color-secondary-focus-shadow);
+  }
+
+  :host([color='info']) {
+    --_fill-bg: var(--color-info);
+    --_shadow: var(--color-info-focus-shadow);
   }
 
   :host([color='success']) {
     --_fill-bg: var(--color-success);
-    --_shadow: var(--color-success-shadow);
+    --_shadow: var(--color-success-focus-shadow);
   }
 
   :host([color='warning']) {
     --_fill-bg: var(--color-warning);
-    --_shadow: var(--color-warning-shadow);
+    --_shadow: var(--color-warning-focus-shadow);
   }
 
   :host([color='error']) {
     --_fill-bg: var(--color-error);
-    --_shadow: var(--color-error-shadow);
+    --_shadow: var(--color-error-focus-shadow);
   }
 
   /* ========================================
@@ -174,7 +196,7 @@ export type SliderProps = {
   value?: number;
   disabled?: boolean;
   name?: string;
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md' | 'lg';
 };
 
@@ -208,14 +230,26 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
     const val = Number(host.getAttribute('value') || 0);
     const isDisabled = host.hasAttribute('disabled');
 
+    // Helper to calculate progress percentage
+    const calculateProgress = (value: number, min: number, max: number): number => {
+      return ((value - min) / (max - min)) * 100;
+    };
+
+    // Helper to update UI (progress bar and ARIA)
+    const updateUI = (value: number) => {
+      const min = Number(host.getAttribute('min') || 0);
+      const max = Number(host.getAttribute('max') || 100);
+      const progress = calculateProgress(value, min, max);
+      host.style.setProperty('--_progress', `${progress}%`);
+      host.setAttribute('aria-valuenow', value.toString());
+    };
+
     // Set initial progress
-    const progress = ((val - min) / (max - min)) * 100;
-    host.style.setProperty('--_progress', `${progress}%`);
+    updateUI(val);
 
     host.setAttribute('role', 'slider');
     host.setAttribute('aria-valuemin', min.toString());
     host.setAttribute('aria-valuemax', max.toString());
-    host.setAttribute('aria-valuenow', val.toString());
     host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
 
     if (!isDisabled) {
@@ -242,12 +276,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
 
       if (Number(host.getAttribute('value')) !== newValue) {
         host.setAttribute('value', newValue.toString());
-
-        // Update UI directly since onAttributeChanged doesn't fire for programmatic changes
-        const progress = ((newValue - min) / (max - min)) * 100;
-        host.style.setProperty('--_progress', `${progress}%`);
-        host.setAttribute('aria-valuenow', newValue.toString());
-
+        updateUI(newValue);
         el.emit('change', { value: newValue, originalEvent: new CustomEvent('change') });
       }
     };
@@ -267,6 +296,10 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
     el.on('.slider-container', 'pointermove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
+      // Set the dragging state on the first move to disable transitions
+      if (!host.hasAttribute('data-dragging')) {
+        host.setAttribute('data-dragging', '');
+      }
       updateValue(e.clientX);
     });
 
@@ -274,6 +307,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
       if (!isDragging) return;
       e.preventDefault();
       isDragging = false;
+      host.removeAttribute('data-dragging');
       const target = e.target as Element;
       target.releasePointerCapture(e.pointerId);
     });
@@ -309,12 +343,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
       e.preventDefault();
       if (newValue !== val) {
         host.setAttribute('value', newValue.toString());
-
-        // Update UI directly since onAttributeChanged doesn't fire for programmatic changes
-        const progress = ((newValue - min) / (max - min)) * 100;
-        host.style.setProperty('--_progress', `${progress}%`);
-        host.setAttribute('aria-valuenow', newValue.toString());
-
+        updateUI(newValue);
         el.emit('change', { value: newValue, originalEvent: e });
       }
     });
@@ -331,7 +360,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
         step="${el.getAttribute('step') || '1'}"
         .value="${el.getAttribute('value') || '0'}"
         ?disabled="${el.hasAttribute('disabled')}"
-        name="${el.getAttribute('name') || ''}"
+        name="${el.getAttribute('name')}"
         aria-hidden="true"
         tabindex="-1" />
       <div class="slider-track">

@@ -8,7 +8,7 @@ Buildit provides a comprehensive set of design tokens organized into categories:
 
 - **Sizing Scale**: Spacing, dimensions, and layout utilities
 - **Contrast Scale**: Background colors (50-400) and text colors (500-900)
-- **Semantic Colors**: Primary, secondary, success, warning, and error
+- **Semantic Colors**: Primary, secondary, info, success, warning, and error (defaults to neutral)
 - **Typography**: Font sizes, weights, and line heights
 - **Shadows & Effects**: Elevation and visual depth
 - **Border Radii**: Consistent corner rounding
@@ -137,11 +137,11 @@ Components use scoped CSS variables with descriptive names:
 --button-padding
 
 /* Input variables */
---input-bg
---input-color
---input-border-color
---input-placeholder-color
---input-radius
+--_theme-bg
+--_theme-color
+--_theme-border-color
+--_theme-placeholder-color
+--_theme-radius
 
 /* Checkbox variables */
 --checkbox-size

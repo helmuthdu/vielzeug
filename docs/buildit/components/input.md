@@ -48,39 +48,44 @@ Six visual variants for different UI contexts and levels of emphasis.
 
 </ComponentPreview>
 
-### Glass & Frost Variants
+### Frost Variant
 
-Modern effects with backdrop blur for elevated UI elements.
+Modern frost effect with backdrop blur that adapts based on color:
+- **Without color**: Subtle canvas-based frost overlay
+- **With color**: Frosted glass effect with colored tint
 
 ::: tip Best Used With
-Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
 <ComponentPreview center background="https://images.unsplash.com/photo-1770387795112-e2b476b15f71?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
 
 ```html
-<bit-input variant="glass" color="primary" value="Primary"></bit-input>
-<bit-input variant="glass" color="secondary" value="Secondary"></bit-input>
-<bit-input variant="glass" color="error" value="Error"></bit-input>
-<bit-input variant="frost" color="primary" value="Primary"></bit-input>
-<bit-input variant="frost" color="secondary" value="Secondary"></bit-input>
-<bit-input variant="frost" color="error" value="Error"></bit-input>
+<bit-input variant="frost" placeholder="Frost" value="Frost"></bit-input>
+<bit-input variant="frost" color="primary" placeholder="Primary" value="Primary"></bit-input>
+<bit-input variant="frost" color="secondary" placeholder="Secondary" value="Secondary"></bit-input>
+<bit-input variant="frost" color="info" placeholder="Info" value="Info"></bit-input>
+<bit-input variant="frost" color="success" placeholder="Success" value="Success"></bit-input>
+<bit-input variant="frost" color="warning" placeholder="Warning" value="Warning"></bit-input>
+<bit-input variant="frost" color="error" placeholder="Error" value="Error"></bit-input>
 ```
 
 </ComponentPreview>
 
 ### Colors
 
-Five semantic colors for different contexts and validation states.
+Six semantic colors for different contexts and validation states. Defaults to neutral when no color is specified.
 
 <ComponentPreview vertical>
 
 ```html
+<bit-input variant="flat" placeholder="Default"></bit-input>
 <bit-input variant="flat" color="primary" placeholder="Primary"></bit-input>
-<bit-input variant="bordered" color="secondary" placeholder="Secondary"></bit-input>
-<bit-input variant="outline" color="success" placeholder="Success"></bit-input>
-<bit-input variant="ghost" color="warning" placeholder="Warning"></bit-input>
-<bit-input variant="text" color="error" placeholder="Error"></bit-input>
+<bit-input variant="flat" color="secondary" placeholder="Secondary"></bit-input>
+<bit-input variant="flat" color="info" placeholder="Info"></bit-input>
+<bit-input variant="flat" color="success" placeholder="Success"></bit-input>
+<bit-input variant="flat" color="warning" placeholder="Warning"></bit-input>
+<bit-input variant="flat" color="error" placeholder="Error"></bit-input>
 ```
 
 </ComponentPreview>
@@ -136,7 +141,7 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 </bit-input>
 
 <!-- 2XL: 1rem / 16px -->
-<bit-input rounded="2xl" placeholder="Full Name" variant="flat"></bit-input>
+<bit-input rounded="2xl" placeholder="Full Name" variant="flat" color="error"></bit-input>
 
 <!-- 3XL: 1.5rem / 24px -->
 <bit-input rounded="3xl" placeholder="Website" variant="ghost"></bit-input>
@@ -301,9 +306,9 @@ Prevent interaction or modification of the input.
 
 | Property | Description | Default |
 |----------|-------------|---------|
-| `--input-bg` | Background color | `var(--color-contrast-50)` |
-| `--input-radius` | Border radius | `var(--rounded-md)` |
-| `--input-font-size` | Font size | `var(--text-sm)` |
+| `--_theme-bg` | Background color | `var(--color-contrast-50)` |
+| `--_theme-radius` | Border radius | `var(--rounded-md)` |
+| `--_theme-font-size` | Font size | `var(--text-sm)` |
 
 ## Accessibility
 

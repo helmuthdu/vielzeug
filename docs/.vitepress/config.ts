@@ -115,6 +115,13 @@ export default defineConfig({
         },
         {
           items: [
+            { link: '/buildit/components/box', text: 'Box' },
+            { link: '/buildit/components/grid', text: 'Grid' },
+          ],
+          text: 'Layout Components',
+        },
+        {
+          items: [
             { link: '/buildit/api', text: 'API Reference' },
             { link: '/buildit/examples', text: 'Examples' },
           ],

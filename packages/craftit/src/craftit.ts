@@ -510,11 +510,13 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     return new Proxy(
       {},
       {
-        get: (_target, prop: string) => {
+        get: (_target, prop: string | symbol) => {
+          if (typeof prop === 'symbol') return undefined;
           const signal = this.#signalsMap.get(prop);
           return signal?.peek();
         },
-        set: (_target, prop: string, value: unknown) => {
+        set: (_target, prop: string | symbol, value: unknown) => {
+          if (typeof prop === 'symbol') return false;
           // Get existing or create new signal
           let signal = this.#signalsMap.get(prop);
           if (!signal) {
@@ -535,7 +537,8 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     return new Proxy(
       {},
       {
-        get: (_target, prop: string) => {
+        get: (_target, prop: string | symbol) => {
+          if (typeof prop === 'symbol') return undefined;
           if (!(prop in computed)) return undefined;
 
           // Check cache
@@ -562,7 +565,8 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     return new Proxy(
       {},
       {
-        get: (_target, prop: string) => {
+        get: (_target, prop: string | symbol) => {
+          if (typeof prop === 'symbol') return undefined;
           if (!(prop in actions)) return undefined;
 
           // Bind action to component instance
@@ -578,7 +582,12 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     return new Proxy(
       {},
       {
-        get: (_target, prop: string) => {
+        get: (_target, prop: string | symbol) => {
+          // Ignore symbol properties (like Symbol.toStringTag, Symbol.iterator, etc.)
+          if (typeof prop === 'symbol') {
+            return undefined;
+          }
+
           // Check if a cached element is still in DOM
           const cached = this.#refsCache.get(prop);
           if (cached && this.shadow.contains(cached)) {
@@ -623,7 +632,8 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
     return new Proxy(
       {},
       {
-        get: (_target, prop: string) => {
+        get: (_target, prop: string | symbol) => {
+          if (typeof prop === 'symbol') return undefined;
           // Only allow access to injected keys
           return inject.includes(prop) ? findProviderValue(prop) : undefined;
         },

@@ -64,38 +64,37 @@ const styles = css`
     box-shadow: var(--inset-shadow-xs);
   }
 
+  /* Glass & Frost - Shared styles */
+  :host([variant='glass']),
+  :host([variant='frost']) {
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+  }
+
   /* Glass variant - translucent with blur */
   :host([variant='glass']) {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
     background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 
   /* Frost variant - canvas-based transparency */
   :host([variant='frost']) {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
   }
 
   /* Nested item border radius for glass and frost variants */
-  :host([variant='glass']) ::slotted(bit-accordion-item),
-  :host([variant='frost']) ::slotted(bit-accordion-item) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item) {
     border-radius: 0;
   }
 
-  :host([variant='glass']) ::slotted(bit-accordion-item:first-child),
-  :host([variant='frost']) ::slotted(bit-accordion-item:first-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:first-child) {
     border-radius: var(--rounded-md) var(--rounded-md) 0 0;
   }
 
-  :host([variant='glass']) ::slotted(bit-accordion-item:last-child),
-  :host([variant='frost']) ::slotted(bit-accordion-item:last-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:last-child) {
     border-radius: 0 0 var(--rounded-md) var(--rounded-md);
   }
 
-  :host([variant='glass']) ::slotted(bit-accordion-item:only-child),
-  :host([variant='frost']) ::slotted(bit-accordion-item:only-child) {
+  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:only-child) {
     border-radius: var(--rounded-md);
   }
 `;
@@ -112,20 +111,16 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
   onAttributeChanged(name, _oldValue, _newValue, el) {
     if (name === 'variant' || name === 'size') {
       const host = el as unknown as HTMLElement;
-      const variant = host.getAttribute('variant');
-      const size = host.getAttribute('size');
-      const items = host.querySelectorAll('bit-accordion-item');
-
-      items.forEach((item) => {
-        if (variant) item.setAttribute('variant', variant);
-        if (size) item.setAttribute('size', size);
-      });
+      // Reuse the syncItems function stored on the element
+      const syncFn = (host as any).__syncItems;
+      if (syncFn) syncFn();
     }
   },
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
 
+    // Helper to sync attributes to child items
     const syncItems = () => {
       const variant = host.getAttribute('variant');
       const size = host.getAttribute('size');
@@ -136,6 +131,9 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
         if (size) item.setAttribute('size', size);
       });
     };
+
+    // Store for use in onAttributeChanged
+    (host as any).__syncItems = syncItems;
 
     // Initial sync
     syncItems();

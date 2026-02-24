@@ -23,15 +23,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="2.6871211"
-     inkscape:cx="141.78743"
-     inkscape:cy="132.66987"
+     inkscape:zoom="5.2908316"
+     inkscape:cx="69.45978"
+     inkscape:cy="170.20009"
      inkscape:window-width="1920"
      inkscape:window-height="1022"
      inkscape:window-x="0"
      inkscape:window-y="359"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g2" />
+     inkscape:current-layer="g1" />
   <g
      id="g17">
     <g
@@ -40,9 +40,9 @@
       <g
          id="g2"
          transform="matrix(0.25535277,0,0,0.25535277,62.078695,17.40181)"
-         style="stroke-width:2.93711;stroke-dasharray:none">
+         style="stroke-width:2.93711;stroke-dasharray:none;stroke:#ffffff;fill:none">
         <ellipse
-           style="fill:none;fill-opacity:0.0980392;stroke:#f6f5f4;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039"
+           style="fill:none;fill-opacity:0.0980392;stroke:#ffffff;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039;opacity:0.8"
            id="ellipse2"
            cx="-32.107433"
            cy="31.997715"
@@ -50,7 +50,7 @@
            ry="10.98608"
            transform="rotate(-90)" />
         <ellipse
-           style="fill:none;fill-opacity:0.0980392;stroke:#f6f5f4;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039"
+           style="fill:none;fill-opacity:0.0980392;stroke:#ffffff;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039;opacity:0.8"
            id="ellipse11"
            cx="-35.609558"
            cy="-7.1701312"
@@ -58,7 +58,7 @@
            ry="10.98608"
            transform="rotate(-150)" />
         <ellipse
-           style="fill:none;fill-opacity:0.0980392;stroke:#f6f5f4;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039"
+           style="fill:none;fill-opacity:0.0980392;stroke:#ffffff;stroke-width:2.93711;stroke-dasharray:none;stroke-opacity:0.698039;opacity:0.8"
            id="ellipse12"
            cx="19.816069"
            cy="39.170128"
@@ -74,10 +74,10 @@
          r="1.2984388" />
       <g
          id="g10"
-         transform="matrix(0.25,0,0,0.25,61.57567,13.696154)"
-         style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
+         transform="matrix(0.25,0,0,0.25,67.131837,13.058119)"
+         style="opacity:0.849576;fill:#f6f5f4;fill-opacity:1">
         <ellipse
-           style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse9"
            cx="17.38196"
            cy="33.16288"
@@ -85,7 +85,7 @@
            ry="1.9135387"
            transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
         <ellipse
-           style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse10"
            cx="17.38196"
            cy="33.162884"
@@ -95,10 +95,10 @@
       </g>
       <g
          id="g3"
-         transform="matrix(0.25,0,0,0.25,58.940721,18.345776)"
-         style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
+         transform="matrix(0.25,0,0,0.25,57.234996,16.861889)"
+         style="opacity:0.849576;fill:#f6f5f4;fill-opacity:1">
         <ellipse
-           style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse1"
            cx="17.38196"
            cy="33.16288"
@@ -106,7 +106,7 @@
            ry="1.9135387"
            transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
         <ellipse
-           style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse3"
            cx="17.38196"
            cy="33.162884"
@@ -116,10 +116,10 @@
       </g>
       <g
          id="g5"
-         transform="matrix(0.25,0,0,0.25,60.718327,21.465163)"
-         style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
+         transform="matrix(0.25,0,0,0.25,61.353331,24.148509)"
+         style="opacity:0.849576;fill:#f6f5f4;fill-opacity:1">
         <ellipse
-           style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse4"
            cx="17.38196"
            cy="33.16288"
@@ -127,7 +127,7 @@
            ry="1.9135387"
            transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
         <ellipse
-           style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+           style="fill:#f6f5f4;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            id="ellipse5"
            cx="17.38196"
            cy="33.162884"

@@ -31,13 +31,15 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 
 ### Colors
 
-Five semantic colors for different contexts.
+Six semantic colors for different contexts. Defaults to neutral when no color is specified.
 
 <ComponentPreview center>
 
 ```html
+<bit-switch checked>Default</bit-switch>
 <bit-switch checked color="primary">Primary</bit-switch>
 <bit-switch checked color="secondary">Secondary</bit-switch>
+<bit-switch checked color="info">Info</bit-switch>
 <bit-switch checked color="success">Success</bit-switch>
 <bit-switch checked color="warning">Warning</bit-switch>
 <bit-switch checked color="error">Error</bit-switch>

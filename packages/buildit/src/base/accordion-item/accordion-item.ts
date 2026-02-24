@@ -157,14 +157,7 @@ const styles = css`
     background: transparent;
   }
 
-  :host([variant='glass']) {
-    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    --accordion-item-border-color: transparent;
-    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
-    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
-    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
-  }
-
+  /* Glass & Frost - Shared Styles */
   :host([variant='glass']) details,
   :host([variant='frost']) details {
     border-radius: inherit;
@@ -173,20 +166,7 @@ const styles = css`
   :host([variant='glass']) summary,
   :host([variant='frost']) summary {
     border-radius: inherit;
-  }
-
-  :host([variant='glass']) summary {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-    text-shadow: var(--text-shadow-xs);
-  }
-
-  :host([variant='frost']) summary {
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    text-shadow: var(--text-shadow-2xs);
-  }
-
-  :host([variant='glass']) summary:hover {
-    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
   }
 
   :host([variant='glass']) .content-wrapper,
@@ -195,13 +175,35 @@ const styles = css`
     border-radius: 0;
   }
 
+  /* Glass */
+  :host([variant='glass']) {
+    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    --accordion-item-border-color: transparent;
+    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
+    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
+    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
+  }
+
+  :host([variant='glass']) summary {
+    text-shadow: var(--text-shadow-xs);
+  }
+
+  :host([variant='glass']) summary:hover {
+    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+  }
+
   :host([variant='glass']) .content-wrapper {
     filter: brightness(1.05);
   }
 
+  /* Frost */
   :host([variant='frost']) {
     --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
     --accordion-item-border-color: transparent;
+  }
+
+  :host([variant='frost']) summary {
+    text-shadow: var(--text-shadow-2xs);
   }
 
   :host([variant='frost']) summary:hover {
@@ -290,13 +292,9 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
 
   onConnected(el) {
     const host = el as unknown as HTMLElement;
-
     const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
-
     if (!details) return;
 
-    // Note: Using addEventListener directly here because the details element
-    // is owned by this component and will be cleaned up when component disconnects
     details.addEventListener('toggle', () => {
       const isOpen = details.open;
 
@@ -309,7 +307,7 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
       }
     });
 
-    // Initial sync from attribute to details
+    // Initial sync
     details.open = host.hasAttribute('expanded');
   },
 

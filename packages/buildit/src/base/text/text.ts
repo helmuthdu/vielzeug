@@ -8,7 +8,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
  * @attr {string} size - Text size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
  * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
- * @attr {string} color - Text color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled'
+ * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
  * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
  * @attr {boolean} truncate - Enable single-line text truncation with ellipsis
  * @attr {boolean} italic - Italic text style
@@ -32,11 +32,11 @@ const styles = css`
     /* Internal variables with CSS custom property fallbacks */
     --_size: var(--text-size, var(--text-base));
     --_weight: var(--text-weight, var(--font-normal));
-    --_color: var(--text-color, var(--text-color-body));
+    --_color: var(--text-color, inherit);
     --_line-height: var(--text-line-height, var(--leading-normal));
     --_letter-spacing: var(--text-letter-spacing, normal);
     
-    display: inline;
+    display: block;
     font-size: var(--_size);
     font-weight: var(--_weight);
     color: var(--_color);
@@ -52,12 +52,7 @@ const styles = css`
      Variant Styles
      ======================================== */
 
-  /* Body (default) */
-  :host(:not([variant])),
-  :host([variant='body']) {
-    --_color: var(--text-color, var(--text-color-body));
-    --_line-height: var(--text-line-height, var(--leading-normal));
-  }
+  /* Body (default) - uses base defaults */
 
   /* Heading */
   :host([variant='heading']) {
@@ -70,14 +65,12 @@ const styles = css`
   :host([variant='label']) {
     --_weight: var(--text-weight, var(--font-medium));
     --_color: var(--text-color, var(--text-color-heading));
-    --_line-height: var(--text-line-height, var(--leading-normal));
   }
 
   /* Caption */
   :host([variant='caption']) {
     --_size: var(--text-size, var(--text-sm));
     --_color: var(--text-color, var(--text-color-secondary));
-    --_line-height: var(--text-line-height, var(--leading-normal));
   }
 
   /* Overline */
@@ -91,150 +84,61 @@ const styles = css`
   /* Code */
   :host([variant='code']) {
     --_size: var(--text-size, var(--text-sm));
-    --_color: var(--text-color, var(--text-color-body));
     font-family: var(--font-mono, 'Monaco', 'Menlo', 'Ubuntu Mono', monospace);
-    --_line-height: var(--text-line-height, var(--leading-normal));
   }
 
   /* ========================================
      Size Variants
      ======================================== */
 
-  :host([size='xs']) {
-    --_size: var(--text-xs);
-  }
-
-  :host([size='sm']) {
-    --_size: var(--text-sm);
-  }
-
-  :host([size='md']) {
-    --_size: var(--text-base);
-  }
-
-  :host([size='lg']) {
-    --_size: var(--text-lg);
-  }
-
-  :host([size='xl']) {
-    --_size: var(--text-xl);
-  }
-
-  :host([size='2xl']) {
-    --_size: var(--text-2xl);
-  }
-
-  :host([size='3xl']) {
-    --_size: var(--text-3xl);
-  }
-
-  :host([size='4xl']) {
-    --_size: var(--text-4xl);
-  }
-
-  :host([size='5xl']) {
-    --_size: var(--text-5xl);
-  }
-
-  :host([size='6xl']) {
-    --_size: var(--text-6xl);
-  }
-
-  :host([size='7xl']) {
-    --_size: var(--text-7xl);
-  }
-
-  :host([size='8xl']) {
-    --_size: var(--text-8xl);
-  }
-
-  :host([size='9xl']) {
-    --_size: var(--text-9xl);
-  }
+  :host([size='xs']) { --_size: var(--text-xs); }
+  :host([size='sm']) { --_size: var(--text-sm); }
+  :host([size='md']) { --_size: var(--text-base); }
+  :host([size='lg']) { --_size: var(--text-lg); }
+  :host([size='xl']) { --_size: var(--text-xl); }
+  :host([size='2xl']) { --_size: var(--text-2xl); }
+  :host([size='3xl']) { --_size: var(--text-3xl); }
+  :host([size='4xl']) { --_size: var(--text-4xl); }
+  :host([size='5xl']) { --_size: var(--text-5xl); }
+  :host([size='6xl']) { --_size: var(--text-6xl); }
+  :host([size='7xl']) { --_size: var(--text-7xl); }
+  :host([size='8xl']) { --_size: var(--text-8xl); }
+  :host([size='9xl']) { --_size: var(--text-9xl); }
 
   /* ========================================
      Weight Variants
      ======================================== */
 
-  :host([weight='normal']) {
-    --_weight: var(--font-normal);
-  }
-
-  :host([weight='medium']) {
-    --_weight: var(--font-medium);
-  }
-
-  :host([weight='semibold']) {
-    --_weight: var(--font-semibold);
-  }
-
-  :host([weight='bold']) {
-    --_weight: var(--font-bold);
-  }
+  :host([weight='normal']) { --_weight: var(--font-normal); }
+  :host([weight='medium']) { --_weight: var(--font-medium); }
+  :host([weight='semibold']) { --_weight: var(--font-semibold); }
+  :host([weight='bold']) { --_weight: var(--font-bold); }
 
   /* ========================================
      Color Variants
      ======================================== */
 
-  :host([color='primary']) {
-    --_color: var(--color-primary);
-  }
-
-  :host([color='secondary']) {
-    --_color: var(--color-secondary);
-  }
-
-  :host([color='success']) {
-    --_color: var(--color-success);
-  }
-
-  :host([color='warning']) {
-    --_color: var(--color-warning);
-  }
-
-  :host([color='error']) {
-    --_color: var(--color-error);
-  }
-
-  :host([color='heading']) {
-    --_color: var(--text-color-heading);
-  }
-
-  :host([color='body']) {
-    --_color: var(--text-color-body);
-  }
-
-  :host([color='muted']) {
-    --_color: var(--text-color-secondary);
-  }
-
-  :host([color='disabled']) {
-    --_color: var(--text-color-disabled);
-  }
+  :host([color='primary']) { --_color: var(--color-primary); }
+  :host([color='secondary']) { --_color: var(--color-secondary); }
+  :host([color='info']) { --_color: var(--color-info); }
+  :host([color='success']) { --_color: var(--color-success); }
+  :host([color='warning']) { --_color: var(--color-warning); }
+  :host([color='error']) { --_color: var(--color-error); }
+  :host([color='heading']) { --_color: var(--text-color-heading); }
+  :host([color='body']) { --_color: var(--text-color-body); }
+  :host([color='muted']) { --_color: var(--text-color-secondary); }
+  :host([color='disabled']) { --_color: var(--text-color-disabled); }
+  :host([color='contrast']) { --_color: var(--text-color-contrast); }
 
   /* ========================================
      Alignment
      ======================================== */
 
-  :host([align]) {
-    display: block;
-  }
-
-  :host([align='left']) {
-    text-align: left;
-  }
-
-  :host([align='center']) {
-    text-align: center;
-  }
-
-  :host([align='right']) {
-    text-align: right;
-  }
-
-  :host([align='justify']) {
-    text-align: justify;
-  }
+  :host([align]) { display: block; }
+  :host([align='left']) { text-align: left; }
+  :host([align='center']) { text-align: center; }
+  :host([align='right']) { text-align: right; }
+  :host([align='justify']) { text-align: justify; }
 
   /* ========================================
      Truncate
@@ -261,12 +165,7 @@ const styles = css`
 
   :host([as='p']),
   :host([as='div']),
-  :host([as='h1']),
-  :host([as='h2']),
-  :host([as='h3']),
-  :host([as='h4']),
-  :host([as='h5']),
-  :host([as='h6']) {
+  :host(:is([as='h1'], [as='h2'], [as='h3'], [as='h4'], [as='h5'], [as='h6'])) {
     display: block;
   }
 `;
@@ -275,7 +174,7 @@ export type TextProps = {
   variant?: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled';
+  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast';
   align?: 'left' | 'center' | 'right' | 'justify';
   truncate?: boolean;
   italic?: boolean;

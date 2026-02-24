@@ -33,13 +33,15 @@ A simple, efficient range slider component for selecting numeric values. Built w
 
 ### Colors
 
-Five semantic colors for different contexts.
+Six semantic colors for different contexts. Defaults to neutral when no color is specified.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="50" color="primary">Primary</bit-slider>
-<bit-slider value="60" color="secondary">Secondary</bit-slider>
+<bit-slider value="35">Default</bit-slider>
+<bit-slider value="40" color="primary">Primary</bit-slider>
+<bit-slider value="50" color="secondary">Secondary</bit-slider>
+<bit-slider value="60" color="info">Info</bit-slider>
 <bit-slider value="70" color="success">Success</bit-slider>
 <bit-slider value="80" color="warning">Warning</bit-slider>
 <bit-slider value="90" color="error">Error</bit-slider>
