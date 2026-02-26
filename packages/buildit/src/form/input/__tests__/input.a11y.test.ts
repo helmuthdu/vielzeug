@@ -131,7 +131,7 @@ describe('bit-input accessibility', () => {
 
   describe('Variants and Colors', () => {
     it('should have no violations for all variants', async () => {
-      const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'glass', 'frost'];
+      const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'];
 
       for (const variant of variants) {
         const fixture = await createFixture('bit-input', {

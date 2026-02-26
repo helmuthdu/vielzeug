@@ -4,7 +4,7 @@ A customizable text input component with multiple types, variants, and validatio
 
 ## Features
 
-- 🎨 **8 Variants**: solid, flat, bordered, outline, ghost, text, glass, frost
+- 🎨 **7 Variants**: solid, flat, bordered, outline, ghost, text, frost
 - 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
@@ -58,7 +58,7 @@ Modern frost effect with backdrop blur that adapts based on color:
 Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
-<ComponentPreview center background="https://images.unsplash.com/photo-1770387795112-e2b476b15f71?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
+<ComponentPreview center>
 
 ```html
 <bit-input variant="frost" placeholder="Frost" value="Frost"></bit-input>
@@ -76,16 +76,18 @@ Frost variant works best when placed over colorful backgrounds or images to show
 
 Six semantic colors for different contexts and validation states. Defaults to neutral when no color is specified.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-input variant="flat" placeholder="Default"></bit-input>
-<bit-input variant="flat" color="primary" placeholder="Primary"></bit-input>
-<bit-input variant="flat" color="secondary" placeholder="Secondary"></bit-input>
-<bit-input variant="flat" color="info" placeholder="Info"></bit-input>
-<bit-input variant="flat" color="success" placeholder="Success"></bit-input>
-<bit-input variant="flat" color="warning" placeholder="Warning"></bit-input>
-<bit-input variant="flat" color="error" placeholder="Error"></bit-input>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <bit-input variant="flat" placeholder="Default"></bit-input>
+  <bit-input variant="flat" color="primary" placeholder="Primary"></bit-input>
+  <bit-input variant="flat" color="secondary" placeholder="Secondary"></bit-input>
+  <bit-input variant="flat" color="info" placeholder="Info"></bit-input>
+  <bit-input variant="flat" color="success" placeholder="Success"></bit-input>
+  <bit-input variant="flat" color="warning" placeholder="Warning"></bit-input>
+  <bit-input variant="flat" color="error" placeholder="Error"></bit-input>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -94,13 +96,15 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 
 Different input types for various use cases.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-input variant="bordered" color="secondary" type="text" placeholder="Text input"></bit-input>
-<bit-input variant="bordered" color="success" type="email" placeholder="email@example.com"></bit-input>
-<bit-input variant="bordered" color="warning" type="password" placeholder="Password"></bit-input>
-<bit-input variant="bordered" color="error" type="number" placeholder="123"></bit-input>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <bit-input variant="bordered" color="secondary" type="text" placeholder="Text input"></bit-input>
+  <bit-input variant="bordered" color="success" type="email" placeholder="email@example.com"></bit-input>
+  <bit-input variant="bordered" color="warning" type="password" placeholder="Password"></bit-input>
+  <bit-input variant="bordered" color="error" type="number" placeholder="123"></bit-input>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -109,7 +113,7 @@ Different input types for various use cases.
 
 Three sizes for different contexts.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input variant="flat" size="sm" placeholder="Small"></bit-input>
@@ -123,7 +127,7 @@ Three sizes for different contexts.
 
 Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <!-- Default/Full: Pill shape (9999px) -->
@@ -155,7 +159,7 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 Add prefix or suffix content like icons or clear buttons using slots.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input placeholder="Search...">
@@ -173,12 +177,14 @@ Add prefix or suffix content like icons or clear buttons using slots.
 
 Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-input label="Full Name" placeholder="Jane Doe" value="Jane Doe"></bit-input>
-<bit-input label="Email Address" type="email" placeholder="you@example.com"></bit-input>
-<bit-input label="Phone Number" type="tel" value="+1 (555) 123-4567"></bit-input>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <bit-input label="Full Name" placeholder="Jane Doe" value="Jane Doe"></bit-input>
+  <bit-input label="Email Address" type="email" placeholder="you@example.com"></bit-input>
+  <bit-input label="Phone Number" type="tel" value="+1 (555) 123-4567"></bit-input>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -187,15 +193,17 @@ Use the `label` attribute to render an inset label inside the input field, creat
 
 Labels work seamlessly with all variants and colors.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
-<bit-input variant="solid" label="Username" value="johndoe"></bit-input>
-<bit-input variant="flat" color="secondary" label="Company" placeholder="Enter company name"></bit-input>
-<bit-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></bit-input>
-<bit-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></bit-input>
-<bit-input variant="ghost" label="Country" color="error" value="Germany"></bit-input>
-<bit-input variant="text" label="Notes" placeholder="Add your notes here"></bit-input>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
+  <bit-input variant="solid" label="Username" value="johndoe"></bit-input>
+  <bit-input variant="flat" color="secondary" label="Company" placeholder="Enter company name"></bit-input>
+  <bit-input variant="bordered" color="success" label="Verified Email" value="user@company.com"></bit-input>
+  <bit-input variant="outline" color="warning" label="Pending Review" value="Awaiting approval"></bit-input>
+  <bit-input variant="ghost" label="Country" color="error" value="Germany"></bit-input>
+  <bit-input variant="text" label="Notes" placeholder="Add your notes here"></bit-input>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -204,7 +212,7 @@ Labels work seamlessly with all variants and colors.
 
 Combine labels with prefix and suffix slots for rich input fields.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input label="Search" placeholder="Type to search...">
@@ -225,7 +233,7 @@ Combine labels with prefix and suffix slots for rich input fields.
 
 Labels can be placed inside the input field (default) or above it.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input label="Inset Label" value="default behavior"></bit-input>
@@ -238,7 +246,7 @@ Labels can be placed inside the input field (default) or above it.
 
 Provide additional context or validation messages below the input using the `helper` attribute or slot.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input label="Password" type="password" helper="Must be at least 8 characters long"></bit-input>
@@ -258,7 +266,7 @@ Provide additional context or validation messages below the input using the `hel
 
 Prevent interaction or modification of the input.
 
-<ComponentPreview vertical>
+<ComponentPreview center>
 
 ```html
 <bit-input disabled placeholder="Disabled input"></bit-input>
@@ -284,7 +292,7 @@ Prevent interaction or modification of the input.
 | `readonly`    | `boolean`                                                                   | `false`     | Make the input read-only |
 | `required`    | `boolean`                                                                   | `false`     | Mark field as required   |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`   | Visual variant           |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual variant           |
 | `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme              |
 
 ### Slots

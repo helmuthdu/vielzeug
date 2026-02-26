@@ -1,37 +1,24 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import {
+  colorThemeMixin,
+  disabledLoadingMixin,
+  frostVariantMixin,
+  rainbowEffectMixin,
+  registerRainbowProperty,
+  roundedVariantMixin,
+} from '../../styles';
+import type { ButtonType, ClickEventDetail, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+
+// Register CSS property for rainbow animation
+registerRainbowProperty();
 
 /**
- * bit-button - A customizable button component
+ * # bit-button
+ *
+ * A customizable button component with multiple variants, sizes, and states.
+ * Supports icons, loading states, and special effects like frost and rainbow.
  *
  * @element bit-button
- *
- * @attr {string} variant - Button style variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost'
- * @attr {string} color - Button color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
- * @attr {boolean} disabled - Disable the button
- * @attr {boolean} loading - Show loading state
- * @attr {boolean} icon-only - Button with only an icon (no text padding)
- * @attr {boolean} fullwidth - Button takes full width of its container
- * @attr {boolean} rainbow - Animated rainbow border with glow effect
- * @attr {string} rounded - Border radius: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '' (empty = 'full')
- * @attr {string} type - Button type: 'button' | 'submit' | 'reset'
- *
- * @slot - Default slot for button content
- * @slot prefix - Content before the button text (e.g., icons)
- * @slot suffix - Content after the button text (e.g., icons, badges)
- *
- * @cssprop --button-bg - Background color
- * @cssprop --button-color - Text color
- * @cssprop --button-hover-bg - Hover background
- * @cssprop --button-active-bg - Active/pressed background
- * @cssprop --button-border - Border (width, style, color)
- * @cssprop --button-radius - Border radius
- * @cssprop --button-padding - Inner padding
- * @cssprop --button-gap - Gap between icon and text
- * @cssprop --button-font-size - Font size
- * @cssprop --button-font-weight - Font weight
- *
- * @fires click - Emitted when button is clicked (unless disabled/loading)
  */
 
 const styles = css`
@@ -40,16 +27,13 @@ const styles = css`
      ======================================== */
 
   :host {
-    --_radius: var(--button-radius, var(--rounded-md));
-    --_font-size: var(--button-font-size, var(--text-sm));
-    --_font-weight: var(--button-font-weight, var(--font-medium));
-    --_padding: var(--button-padding, var(--size-2) var(--size-4));
-    --_gap: var(--button-gap, var(--size-2));
-    --_height: var(--button-height, var(--size-10));
-    --_shadow: var(--button-shadow, var(--shadow-2xs));
-    --_border-width: var(--button-border-width, var(--border));
+    --_bg: var(--button-bg, var(--color-contrast-50));
+    --_color: var(--button-color, var(--color-contrast-900));
+    --_border: var(--button-border, var(--border));
     --_border-color: var(--button-border-color, var(--color-contrast-200));
-
+    --_radius: var(--button-radius, var(--rounded-md));
+    --_padding: var(--button-padding, var(--size-2) var(--size-4));
+    --_shadow: var(--button-shadow, var(--shadow-2xs));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -62,27 +46,30 @@ const styles = css`
   }
 
   button {
-    align-items: center;
     all: unset;
-    background: var(--button-bg);
-    border-radius: var(--_radius);
-    border: var(--_border-width) solid var(--_border-color);
-    box-shadow: var(--_shadow);
     box-sizing: border-box;
-    color: var(--button-color);
-    cursor: pointer;
-    display: flex;
-    font-size: var(--_font-size);
-    font-weight: var(--_font-weight);
-    gap: var(--_gap);
-    height: var(--_height);
-    justify-content: center;
-    line-height: var(--leading-normal);
-    padding: var(--_padding);
     position: relative;
-    user-select: none;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
+    height: var(--size-10);
+    padding: var(--_padding);
+    gap: var(--size-2);
+
+    background: var(--_bg);
+    color: var(--_color);
+    border: var(--_border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--_shadow);
+
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-normal);
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+
     transition:
       background var(--transition-normal),
       border-color var(--transition-normal),
@@ -90,17 +77,6 @@ const styles = css`
       color var(--transition-normal),
       opacity var(--transition-normal),
       transform var(--transition-fast);
-  }
-
-  button:hover {
-    background: var(--button-hover-bg);
-    border-color: var(--button-hover-border-color, var(--_border-color));
-    box-shadow: var(--button-hover-shadow);
-  }
-
-  button:active {
-    background: var(--button-active-bg);
-    box-shadow: var(--button-active-shadow);
   }
 
   button:focus-visible {
@@ -121,8 +97,8 @@ const styles = css`
   }
 
   ::slotted(svg) {
-    max-width: calc(--_height / 2);
-    max-height: calc(--_height / 2);
+    width: var(--size-5);
+    height: var(--size-5);
     flex-shrink: 0;
   }
 
@@ -130,34 +106,35 @@ const styles = css`
      Size Variants
      ======================================== */
 
-  :host([size='sm']) {
-    --_padding: var(--size-1-5) var(--size-3);
-    --_font-size: var(--text-sm);
-    --_height: var(--size-8);
-    --_gap: var(--size-1-5);
-  }
-
   :host([size='sm']) button {
+    height: var(--size-8);
+    padding: var(--size-1-5) var(--size-3);
+    gap: var(--size-1-5);
+    font-size: var(--text-sm);
     line-height: var(--leading-tight);
   }
 
-  :host([size='lg']) {
-    --_padding: var(--size-2-5) var(--size-5);
-    --_font-size: var(--text-base);
-    --_height: var(--size-12);
-    --_gap: var(--size-2-5);
+  :host([size='sm']) ::slotted(svg) {
+    width: var(--size-4);
+    height: var(--size-4);
   }
 
   :host([size='lg']) button {
+    height: var(--size-12);
+    padding: var(--size-2-5) var(--size-5);
+    gap: var(--size-2-5);
+    font-size: var(--text-base);
     line-height: var(--leading-relaxed);
+  }
+
+  :host([size='lg']) ::slotted(svg) {
+    width: var(--size-6);
+    height: var(--size-6);
   }
 
   :host([icon-only]) button {
     padding: 0;
     aspect-ratio: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
   }
 
   /* ========================================
@@ -169,42 +146,11 @@ const styles = css`
     width: 100%;
   }
 
-  :host([fullwidth]) button {
-    width: 100%;
-  }
-
   /* ========================================
-     Rounded Variant
+     Rounded Variant (Shared Mixin)
      ======================================== */
 
-  :host([rounded='sm']:not([icon-only])) {
-    --_radius: var(--rounded-sm);
-  }
-
-  :host([rounded='md']:not([icon-only])) {
-    --_radius: var(--rounded-md);
-  }
-
-  :host([rounded='lg']:not([icon-only])) {
-    --_radius: var(--rounded-lg);
-  }
-
-  :host([rounded='xl']:not([icon-only])) {
-    --_radius: var(--rounded-xl);
-  }
-
-  :host([rounded='2xl']:not([icon-only])) {
-    --_radius: var(--rounded-2xl);
-  }
-
-  :host([rounded='3xl']:not([icon-only])) {
-    --_radius: var(--rounded-3xl);
-  }
-
-  :host([rounded='full']:not([icon-only])),
-  :host([rounded='']:not([icon-only])) {
-    --_radius: var(--rounded-full);
-  }
+  ${roundedVariantMixin()}
 
   /* Icon-only always uses perfect circle */
   :host([rounded][icon-only]) button {
@@ -212,310 +158,162 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host(:not([color])) {
-    --_base: var(--color-neutral);
-    --_backdrop: var(--color-neutral-backdrop);
-    --_content: var(--color-neutral-content);
-    --_contrast: var(--color-neutral-contrast);
-    --_focus: var(--color-neutral-focus);
-    --_border: var(--color-neutral-border);
-    --_shadow: var(--color-neutral-focus-shadow);
-    --_halo: var(--halo-shadow-neutral);
-  }
-
-  :host([color='primary']) {
-    --_base: var(--color-primary);
-    --_backdrop: var(--color-primary-backdrop);
-    --_content: var(--color-primary-content);
-    --_contrast: var(--color-primary-contrast);
-    --_focus: var(--color-primary-focus);
-    --_border: var(--color-primary-border);
-    --_shadow: var(--color-primary-focus-shadow);
-    --_halo: var(--halo-shadow-primary);
-  }
-
-  :host([color='secondary']) {
-    --_base: var(--color-secondary);
-    --_backdrop: var(--color-secondary-backdrop);
-    --_content: var(--color-secondary-content);
-    --_contrast: var(--color-secondary-contrast);
-    --_focus: var(--color-secondary-focus);
-    --_border: var(--color-secondary-border);
-    --_shadow: var(--color-secondary-focus-shadow);
-    --_halo: var(--halo-shadow-secondary);
-  }
-
-  :host([color='info']) {
-    --_base: var(--color-info);
-    --_backdrop: var(--color-info-backdrop);
-    --_content: var(--color-info-content);
-    --_contrast: var(--color-info-contrast);
-    --_focus: var(--color-info-focus);
-    --_border: var(--color-info-border);
-    --_shadow: var(--color-info-focus-shadow);
-    --_halo: var(--halo-shadow-info);
-  }
-
-  :host([color='success']) {
-    --_base: var(--color-success);
-    --_backdrop: var(--color-success-backdrop);
-    --_content: var(--color-success-content);
-    --_contrast: var(--color-success-contrast);
-    --_focus: var(--color-success-focus);
-    --_border: var(--color-success-border);
-    --_shadow: var(--color-success-focus-shadow);
-    --_halo: var(--halo-shadow-success);
-  }
-
-  :host([color='warning']) {
-    --_base: var(--color-warning);
-    --_backdrop: var(--color-warning-backdrop);
-    --_content: var(--color-warning-content);
-    --_contrast: var(--color-warning-contrast);
-    --_focus: var(--color-warning-focus);
-    --_border: var(--color-warning-border);
-    --_shadow: var(--color-warning-focus-shadow);
-    --_halo: var(--halo-shadow-warning);
-  }
-
-  :host([color='error']) {
-    --_base: var(--color-error);
-    --_backdrop: var(--color-error-backdrop);
-    --_content: var(--color-error-content);
-    --_contrast: var(--color-error-contrast);
-    --_focus: var(--color-error-focus);
-    --_border: var(--color-error-border);
-    --_shadow: var(--color-error-focus-shadow);
-    --_halo: var(--halo-shadow-error);
-  }
+  ${colorThemeMixin()}
 
   /* ========================================
      Visual Variants
      ======================================== */
 
-  /* Solid (Default) */
-  :host(:not([variant])),
-  :host([variant='solid']) {
-    --_border-color: var(--_base);
-    --_shadow: var(--shadow-2xs);
-    --button-active-bg: var(--_content);
-    --button-active-shadow: var(--inset-shadow-2xs);
-    --button-bg: var(--_base);
-    --button-color: var(--_contrast);
-    --button-hover-bg: var(--_focus);
-    --button-hover-shadow: var(--shadow-xs);
+  /* Solid (Default) - Full theme color background */
+  :host(:not([variant])) button,
+  :host([variant='solid']) button {
+    background: var(--_theme-base);
+    color: var(--_theme-contrast);
+    border-color: var(--_theme-base);
+    box-shadow: var(--shadow-2xs);
   }
 
-  /* Flat */
-  :host([variant='flat']) {
-    --_border-color: color-mix(in srgb, var(--_focus) 20%, transparent);
-    --_shadow: var(--inset-shadow-2xs);
-    --button-active-bg: var(--_content);
-    --button-active-shadow: var(--inset-shadow-sm);
-    --button-bg: color-mix(in srgb, var(--_backdrop) 8%, var(--color-contrast-100));
-    --button-color: var(--_base);
-    --button-hover-bg: var(--_focus);
-    --button-hover-shadow: var(--inset-shadow-xs), var(--shadow-xs);
+  :host(:not([variant])) button:hover,
+  :host([variant='solid']) button:hover {
+    background: var(--_theme-focus);
+    box-shadow: var(--shadow-xs);
   }
 
-  :host([variant='flat']) button:hover,
+  :host(:not([variant])) button:active,
+  :host([variant='solid']) button:active {
+    background: var(--_theme-content);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Flat - Subtle background with theme color text */
+  :host([variant='flat']) button {
+    background: color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100));
+    color: var(--_theme-base);
+    border-color: color-mix(in srgb, var(--_theme-focus) 20%, transparent);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) button:hover {
+    background: var(--_theme-focus);
+    color: var(--_theme-contrast);
+    box-shadow: var(--inset-shadow-xs), var(--shadow-xs);
+  }
+
   :host([variant='flat']) button:active {
-    color: var(--_contrast);
+    background: var(--_theme-content);
+    color: var(--_theme-contrast);
+    box-shadow: var(--inset-shadow-sm);
   }
 
-  /* Bordered */
-  :host([variant='bordered']) {
-    --_border-color: var(--_border);
-    --_shadow: var(--inset-shadow-xs), var(--shadow-xs);
-    --button-active-bg: var(--_content);
-    --button-active-shadow: var(--inset-shadow-sm);
-    --button-bg: var(--_backdrop);
-    --button-color: var(--_base);
-    --button-hover-bg: var(--_focus);
-    --button-hover-border-color: var(--_focus);
-    --button-hover-shadow: var(--inset-shadow-xs), var(--shadow-sm);
+  /* Bordered - Outlined with filled background */
+  :host([variant='bordered']) button {
+    background: var(--_theme-backdrop);
+    color: var(--_theme-base);
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-xs), var(--shadow-xs);
   }
 
-  :host([variant='bordered']) button:hover,
+  :host([variant='bordered']) button:hover {
+    background: var(--_theme-focus);
+    color: var(--_theme-contrast);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--inset-shadow-xs), var(--shadow-sm);
+  }
+
   :host([variant='bordered']) button:active {
-    color: var(--_contrast);
-    background-color: var(--_focus);
+    background: var(--_theme-content);
+    color: var(--_theme-contrast);
+    box-shadow: var(--inset-shadow-sm);
   }
 
-  /* Outline */
-  :host([variant='outline']) {
-    --_border-color: var(--_base);
-    --_shadow: var(--shadow-none);
-    --button-active-bg: var(--_base);
-    --button-active-shadow: var(--inset-shadow-2xs);
-    --button-bg: transparent;
-    --button-color: var(--_base);
-    --button-hover-bg: var(--_backdrop);
-    --button-hover-border-color: var(--_focus);
-    --button-hover-shadow: var(--shadow-xs);
+  /* Outline - Transparent with colored border */
+  :host([variant='outline']) button {
+    background: transparent;
+    color: var(--_theme-base);
+    border-color: var(--_theme-base);
+    box-shadow: var(--shadow-none);
+  }
+
+  :host([variant='outline']) button:hover {
+    background: var(--_theme-backdrop);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--shadow-xs);
   }
 
   :host([variant='outline']) button:active {
-    color: var(--_contrast);
+    background: var(--_theme-base);
+    color: var(--_theme-contrast);
+    box-shadow: var(--inset-shadow-2xs);
   }
 
-  /* Ghost */
-  :host([variant='ghost']) {
-    --_border-color: transparent;
-    --_border-width: var(--border-0);
-    --_shadow: var(--shadow-none);
-    --button-active-bg: var(--_base);
-    --button-active-shadow: var(--inset-shadow-2xs);
-    --button-bg: transparent;
-    --button-color: var(--_base);
-    --button-hover-bg: var(--_backdrop);
-    --button-hover-shadow: var(--shadow-xs);
+  /* Ghost - Transparent until interaction */
+  :host([variant='ghost']) button {
+    background: transparent;
+    color: var(--_theme-base);
+    border-color: transparent;
+    border-width: 0;
+    box-shadow: var(--shadow-none);
+  }
+
+  :host([variant='ghost']) button:hover {
+    background: var(--_theme-backdrop);
+    box-shadow: var(--shadow-xs);
   }
 
   :host([variant='ghost']) button:active {
-    color: var(--_contrast);
+    background: var(--_theme-base);
+    color: var(--_theme-contrast);
+    box-shadow: var(--inset-shadow-2xs);
   }
 
-  /* Text */
-  :host([variant='text']) {
-    --_border-color: transparent;
-    --_border-width: var(--border-0);
-    --_shadow: var(--shadow-none);
-    --button-bg: transparent;
-    --button-color: var(--_base);
-    --button-hover-bg: transparent;
+  /* Text - Minimal styling, color on hover */
+  :host([variant='text']) button {
+    background: transparent;
+    color: var(--_theme-base);
+    border-color: transparent;
+    border-width: 0;
+    box-shadow: var(--shadow-none);
   }
 
   :host([variant='text']) button:hover {
-    color: var(--_focus);
+    color: var(--_theme-focus);
   }
 
   :host([variant='text']) button:active {
-    color: var(--_content);
+    color: var(--_theme-content);
   }
 
-  /* Frost - Smart backdrop blur variant */
-  :host([variant='frost']) button {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--_halo);
-  }
+  /* ========================================
+     Frost Variant (Shared Mixin)
+     ======================================== */
 
-  /* Neutral: canvas-based frost */
-  :host([variant='frost']:not([color])) {
-    --_border-color: color-mix(in srgb, var(--color-contrast-400) 40%, transparent);
-    --button-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    --button-color: var(--color-contrast);
-  }
+  ${frostVariantMixin('button')}
 
-  :host([variant='frost']:not([color])) button {
-    text-shadow: var(--text-shadow-2xs);
-  }
-
-  :host([variant='frost']:not([color])) button:hover {
-    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
-    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
-  }
-
+  /* Additional button-specific frost active states */
   :host([variant='frost']:not([color])) button:active {
     background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
     border-color: color-mix(in srgb, var(--color-contrast-500) 40%, transparent);
   }
 
-  /* Frost with color: frosted glass effect */
-  :host([variant='frost'][color]) {
-    --_border-color: color-mix(in srgb, var(--_focus) 40%, transparent);
-    --button-bg: color-mix(in srgb, var(--_base) 30%, var(--color-contrast) 10%);
-    --button-color: color-mix(in srgb, var(--_contrast) 90%, transparent);
-  }
-
-  :host([variant='frost'][color]) button {
-    box-shadow: var(--_halo);
-    text-shadow: var(--text-shadow-xs);
-    filter: brightness(1.05);
-  }
-
-  :host([variant='frost'][color]) button:hover {
-    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
-    background: color-mix(in srgb, var(--_backdrop) 60%, var(--_base) 40%);
-    border-color: color-mix(in srgb, var(--_focus) 55%, transparent);
-  }
-
   :host([variant='frost'][color]) button:active {
-    background: color-mix(in srgb, var(--_backdrop) 50%, var(--_base) 50%);
-    border-color: color-mix(in srgb, var(--_focus) 65%, transparent);
+    background: color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%);
+    border-color: color-mix(in srgb, var(--_theme-focus) 65%, transparent);
   }
 
   /* ========================================
-     Rainbow Border Effect
+     Rainbow Border Effect (Shared Mixin)
      ======================================== */
 
-  :host([rainbow]) button {
-    position: relative;
-    border: solid var(--border-2) transparent;
-    overflow: visible;
-  }
-
-  /* Rainbow border and glow layers */
-  :host([rainbow]) button::before,
-  :host([rainbow]) button::after {
-    content: '';
-    position: absolute;
-    inset: calc(-1 * var(--border-2));
-    border: inherit;
-    border-radius: inherit;
-    /* Reserve no-clip space for glow */
-    box-shadow: 0 0 calc(3 * var(--blur-lg)) rgba(0 0 0 / 0.001);
-    background: conic-gradient(
-        from var(--rainbow-angle),
-        #f94144,
-        #f3722c,
-        #f8961e,
-        #f9844a,
-        #f9c74f,
-        #90be6d,
-        #43aa8b,
-        #4d908e,
-        #277da1,
-        #577590,
-        #f94144
-      )
-      border-box;
-    /* Make everything inside padding-box transparent
-       by subtracting padding-box from no-clip box */
-    -webkit-mask:
-      conic-gradient(red 0 0) no-clip subtract,
-      conic-gradient(red 0 0) padding-box;
-    mask:
-      conic-gradient(red 0 0) no-clip subtract,
-      conic-gradient(red 0 0) padding-box;
-    pointer-events: none;
-    animation: rainbow-rotate 4s linear infinite;
-  }
-
-  /* Turn one pseudo layer into glow halo */
-  :host([rainbow]) button::after {
-    filter: blur(var(--blur-lg));
-  }
-
-  @keyframes rainbow-rotate {
-    to {
-      --rainbow-angle: 1turn;
-    }
-  }
+  ${rainbowEffectMixin('button')}
 
   /* ========================================
-     States
+     States (Shared Mixin)
      ======================================== */
 
-  :host([disabled]) button,
-  :host([loading]) button {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  ${disabledLoadingMixin('button')}
 
   :host([loading]) .content {
     visibility: hidden;
@@ -542,25 +340,105 @@ const styles = css`
   }
 `;
 
+/**
+ * Button Component Properties
+ *
+ * A customizable button with multiple visual variants, theme colors, and special effects.
+ *
+ * ## Slots
+ * - **default**: Button content (text, icons, etc.)
+ * - **prefix**: Content before the button text (e.g., icons)
+ * - **suffix**: Content after the button text (e.g., icons, badges)
+ *
+ * ## Events
+ * - **click**: Emitted when button is clicked (unless disabled/loading)
+ *
+ * ## CSS Custom Properties
+ * - `--button-bg`: Background color
+ * - `--button-color`: Text color
+ * - `--button-hover-bg`: Hover background
+ * - `--button-active-bg`: Active/pressed background
+ * - `--button-border`: Border (width, style, color)
+ * - `--button-radius`: Border radius
+ * - `--button-padding`: Inner padding
+ * - `--button-gap`: Gap between icon and text
+ * - `--button-font-size`: Font size
+ * - `--button-font-weight`: Font weight
+ *
+ * @example
+ * ```html
+ * <!-- Basic usage -->
+ * <bit-button variant="solid" color="primary">
+ *   Click me
+ * </bit-button>
+ *
+ * <!-- With icon -->
+ * <bit-button color="secondary">
+ *   <svg slot="prefix">...</svg>
+ *   Save
+ * </bit-button>
+ *
+ * <!-- Loading state -->
+ * <bit-button loading color="success">
+ *   Processing...
+ * </bit-button>
+ *
+ * <!-- Icon-only -->
+ * <bit-button icon-only color="primary">
+ *   <svg slot="prefix">...</svg>
+ * </bit-button>
+ *
+ * <!-- Frost variant with rainbow effect -->
+ * <bit-button variant="frost" rainbow color="primary">
+ *   Special Button
+ * </bit-button>
+ * ```
+ */
 export type ButtonProps = {
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  size?: 'sm' | 'md' | 'lg';
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass'>;
+  /** Theme color */
+  color?: ThemeColor;
+  /** Button size */
+  size?: ComponentSize;
+  /** Disable button interaction */
   disabled?: boolean;
+  /** Show loading state with spinner */
   loading?: boolean;
+  /** Enable animated rainbow border effect */
   rainbow?: boolean;
-  type?: 'button' | 'submit' | 'reset';
+  /** HTML button type attribute */
+  type?: ButtonType;
+  /** Icon-only mode (square aspect ratio, no padding) */
   'icon-only'?: boolean;
-  'fullwidth'?: boolean;
-  rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '';
+  /** Full width button (100% of container) */
+  fullwidth?: boolean;
+  /** Border radius size */
+  rounded?: RoundedSize;
 };
+
+/**
+ * Button Click Event Detail
+ */
+export type ButtonClickEvent = ClickEventDetail;
 
 const isDisabledOrLoading = (el: HTMLElement): boolean => {
   return el.hasAttribute('disabled') || el.hasAttribute('loading');
 };
 
 defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
-  observedAttributes: ['variant', 'color', 'size', 'disabled', 'loading', 'rainbow', 'type', 'icon-only', 'fullwidth', 'rounded'] as const,
+  observedAttributes: [
+    'variant',
+    'color',
+    'size',
+    'disabled',
+    'loading',
+    'rainbow',
+    'type',
+    'icon-only',
+    'fullwidth',
+    'rounded',
+  ] as const,
 
   onAttributeChanged(name, _oldValue, _newValue, el) {
     const host = el as unknown as HTMLElement;

@@ -316,50 +316,50 @@
     --halo-shadow-neutral:
       inset 0 1px 1px rgb(0 0 0 / 0.15),
       0 0 var(--size-1) rgba(0, 0, 0, 0.2) inset,
-      0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.4),
-      0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.25);
+      0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.3),
+      0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.18);
 
     /* Primary Halo - Dark Mode */
     --halo-shadow-primary:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.1);
 
     /* Secondary Halo - Dark Mode */
     --halo-shadow-secondary:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.1);
 
     /* Info Halo - Dark Mode */
     --halo-shadow-info:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.1);
 
     /* Success Halo - Dark Mode */
     --halo-shadow-success:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.1);
 
     /* Warning Halo - Dark Mode */
     --halo-shadow-warning:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.1);
 
     /* Error Halo - Dark Mode */
     --halo-shadow-error:
       inset 0 1px 1px rgb(255 255 255 / 0.03),
       0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-      0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.3),
-      0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.2);
+      0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.18),
+      0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.1);
 
     /* Neutral - Dark mode variations */
     --color-neutral: hsl(210deg 2% 68% / 91%);
@@ -449,50 +449,50 @@ html.dark {
   --halo-shadow-neutral:
     inset 0 1px 1px rgb(0 0 0 / 0.15),
     0 0 var(--size-1) rgba(0, 0, 0, 0.2) inset,
-    0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.4),
-    0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.25);
+    0 var(--size-2) var(--size-6) hsl(210deg 8% 20% / 0.3),
+    0 var(--size-1) var(--size-3) hsl(210deg 8% 20% / 0.18);
 
   /* Primary Halo - Dark Mode */
   --halo-shadow-primary:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(260deg 100% 70% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(260deg 100% 70% / 0.1);
 
   /* Secondary Halo - Dark Mode */
   --halo-shadow-secondary:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(215deg 28% 70% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(215deg 28% 70% / 0.1);
 
   /* Info Halo - Dark Mode */
   --halo-shadow-info:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(200deg 90% 60% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(200deg 90% 60% / 0.1);
 
   /* Success Halo - Dark Mode */
   --halo-shadow-success:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(168deg 76% 50% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(168deg 76% 50% / 0.1);
 
   /* Warning Halo - Dark Mode */
   --halo-shadow-warning:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(38deg 100% 60% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(38deg 100% 60% / 0.1);
 
   /* Error Halo - Dark Mode */
   --halo-shadow-error:
     inset 0 1px 1px rgb(255 255 255 / 0.03),
     0 0 var(--size-1) rgba(255, 255, 255, 0.12) inset,
-    0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.3),
-    0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.2);
+    0 var(--size-2) var(--size-6) hsl(340deg 82% 60% / 0.18),
+    0 var(--size-1) var(--size-3) hsl(340deg 82% 60% / 0.1);
 
   /* Neutral - Dark mode variations  */
   --color-neutral: hsl(210deg 3% 76% / 91%);
@@ -564,50 +564,50 @@ html:not(.dark) {
   --halo-shadow-neutral:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(240deg 3% 65% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(240deg 3% 65% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(240deg 3% 65% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(240deg 3% 65% / 0.08);
 
   /* Primary Halo */
   --halo-shadow-primary:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(260deg 100% 65% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(260deg 100% 65% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(260deg 100% 65% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(260deg 100% 65% / 0.08);
 
   /* Secondary Halo */
   --halo-shadow-secondary:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(215deg 28% 40% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(215deg 28% 40% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(215deg 28% 40% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(215deg 28% 40% / 0.08);
 
   /* Info Halo */
   --halo-shadow-info:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(200deg 90% 50% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(200deg 90% 50% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(200deg 90% 50% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(200deg 90% 50% / 0.08);
 
   /* Success Halo */
   --halo-shadow-success:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(168deg 76% 42% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(168deg 76% 42% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(168deg 76% 42% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(168deg 76% 42% / 0.08);
 
   /* Warning Halo */
   --halo-shadow-warning:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(38deg 100% 52% / 0.25),
-    0 var(--size-1) var(--size-3) hsl(38deg 100% 52% / 0.15);
+    0 var(--size-2) var(--size-6) hsl(38deg 100% 52% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(38deg 100% 52% / 0.08);
 
   /* Error Halo */
   --halo-shadow-error:
     inset 0 1px 1px rgb(0 0 0 / 0.05),
     0 0 var(--size-1) rgba(255, 255, 255, 0.1) inset,
-    0 var(--size-2) var(--size-6) hsl(340deg 82% 52% / 0.2),
-    0 var(--size-1) var(--size-3) hsl(340deg 82% 52% / 0.12);
+    0 var(--size-2) var(--size-6) hsl(340deg 82% 52% / 0.15),
+    0 var(--size-1) var(--size-3) hsl(340deg 82% 52% / 0.08);
 
   /* Background colors (50-400): Optimized for UI elements, cards, borders */
   --color-contrast-50: hsl(240deg 5% 98% / 100%);   /* Canvas, page background */

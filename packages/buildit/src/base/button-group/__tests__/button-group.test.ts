@@ -186,7 +186,7 @@ describe('bit-button-group', () => {
     });
 
     it('should support all variant types', async () => {
-      const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'glass', 'frost'] as const;
+      const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
       for (const variant of variants) {
         fixture = await createFixture('bit-button-group', { variant });

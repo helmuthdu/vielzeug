@@ -1,28 +1,17 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import { colorThemeMixin, disabledStateMixin } from '../../styles';
+import type {
+  ThemeColor,
+  ComponentSize,
+  SliderChangeEventDetail,
+} from '../../types';
 
 /**
- * bit-slider - A range slider component
+ * # bit-slider
+ *
+ * A range slider component for selecting numeric values.
  *
  * @element bit-slider
- *
- * @attr {number} min - Minimum value (default: 0)
- * @attr {number} max - Maximum value (default: 100)
- * @attr {number} step - Step increment (default: 1)
- * @attr {number} value - Current value
- * @attr {boolean} disabled - Disable the slider
- * @attr {string} name - Form field name
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} size - Slider size: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for slider label
- *
- * @cssprop --slider-track-height - Height of the slider track
- * @cssprop --slider-thumb-size - Size of the slider thumb
- * @cssprop --slider-track-bg - Background color of the track
- * @cssprop --slider-thumb-bg - Background color of the thumb
- *
- * @fires change - Emitted when value changes
- *   detail: { value: number; originalEvent: Event }
  */
 
 const styles = css`
@@ -50,11 +39,11 @@ const styles = css`
     width: 100%;
   }
 
-  :host([disabled]) {
-    cursor: not-allowed;
-    opacity: 0.5;
-    pointer-events: none;
-  }
+  /* ========================================
+     States (Shared Mixin)
+     ======================================== */
+
+  ${disabledStateMixin()}
 
   /* ========================================
      Track, Fill & Thumb
@@ -123,37 +112,15 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host([color='primary']) {
-    --_fill-bg: var(--color-primary);
-    --_shadow: var(--color-primary-focus-shadow);
-  }
+  ${colorThemeMixin()}
 
-  :host([color='secondary']) {
-    --_fill-bg: var(--color-secondary);
-    --_shadow: var(--color-secondary-focus-shadow);
-  }
-
-  :host([color='info']) {
-    --_fill-bg: var(--color-info);
-    --_shadow: var(--color-info-focus-shadow);
-  }
-
-  :host([color='success']) {
-    --_fill-bg: var(--color-success);
-    --_shadow: var(--color-success-focus-shadow);
-  }
-
-  :host([color='warning']) {
-    --_fill-bg: var(--color-warning);
-    --_shadow: var(--color-warning-focus-shadow);
-  }
-
-  :host([color='error']) {
-    --_fill-bg: var(--color-error);
-    --_shadow: var(--color-error-focus-shadow);
+  /* Map theme variables to slider-specific variables */
+  :host {
+    --_fill-bg: var(--slider-fill-bg, var(--_theme-base));
+    --_shadow: var(--_theme-shadow);
   }
 
   /* ========================================
@@ -189,16 +156,81 @@ const styles = css`
   }
 `;
 
-export type SliderProps = {
+/**
+ * Slider Component Properties
+ *
+ * A range slider for selecting numeric values with keyboard and pointer support.
+ *
+ * ## Slots
+ * - **default**: Slider label text
+ *
+ * ## Events
+ * - **change**: Emitted when slider value changes
+ *
+ * ## CSS Custom Properties
+ * - `--slider-track-height`: Track height
+ * - `--slider-thumb-size`: Thumb dimensions
+ * - `--slider-track-bg`: Track background color
+ * - `--slider-fill-bg`: Fill (progress) background color
+ * - `--slider-thumb-bg`: Thumb background color
+ *
+ * ## Keyboard Support
+ * - `Arrow Right/Up`: Increase by step
+ * - `Arrow Left/Down`: Decrease by step
+ * - `Home`: Jump to minimum
+ * - `End`: Jump to maximum
+ *
+ * @example
+ * ```html
+ * <!-- Basic usage -->
+ * <bit-slider min="0" max="100" value="50">
+ *   Volume
+ * </bit-slider>
+ *
+ * <!-- With step and color -->
+ * <bit-slider
+ *   min="0"
+ *   max="10"
+ *   step="0.5"
+ *   value="5"
+ *   color="primary"
+ * >
+ *   Rating
+ * </bit-slider>
+ *
+ * <!-- Different sizes -->
+ * <bit-slider size="sm" value="30">Small</bit-slider>
+ * <bit-slider size="lg" value="70">Large</bit-slider>
+ *
+ * <!-- Disabled -->
+ * <bit-slider value="50" disabled>
+ *   Cannot adjust
+ * </bit-slider>
+ * ```
+ */
+export interface SliderProps {
+  /** Minimum value */
   min?: number;
+  /** Maximum value */
   max?: number;
+  /** Step increment */
   step?: number;
+  /** Current value */
   value?: number;
+  /** Disable slider interaction */
   disabled?: boolean;
+  /** Form field name */
   name?: string;
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  size?: 'sm' | 'md' | 'lg';
-};
+  /** Theme color */
+  color?: ThemeColor;
+  /** Slider size */
+  size?: ComponentSize;
+}
+
+/**
+ * Slider Change Event Detail
+ */
+export interface SliderInputEvent extends SliderChangeEventDetail {}
 
 defineElement<HTMLElement, SliderProps>('bit-slider', {
   observedAttributes: ['min', 'max', 'step', 'value', 'disabled', 'name', 'color', 'size'] as const,

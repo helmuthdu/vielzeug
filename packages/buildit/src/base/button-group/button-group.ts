@@ -1,31 +1,14 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import type { ThemeColor, ComponentSize, VisualVariant } from '../../types';
 
 /**
- * bit-button-group - A container for grouping buttons together
+ * # bit-button-group
+ *
+ * A container for grouping buttons with coordinated styling and layout.
  *
  * @element bit-button-group
- *
- * @attr {string} orientation - Group orientation: 'horizontal' | 'vertical'
- * @attr {string} size - Button size for all children: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Button variant for all children
- * @attr {string} color - Button color for all children
- * @attr {boolean} attached - Remove spacing between buttons
- * @attr {boolean} fullwidth - Buttons take full width
- *
- * @slot - Button elements to group
- *
- * @cssprop --group-gap - Gap between buttons (default: var(--size-2))
- * @cssprop --group-radius - Border radius for attached mode (default: var(--rounded-md))
- *
- * @example
- * <bit-button-group>
- *   <bit-button variant="bordered">Day</bit-button>
- *   <bit-button variant="solid">Week</bit-button>
- *   <bit-button variant="bordered">Month</bit-button>
- * </bit-button-group>
  */
 
-// -------------------- Styles --------------------
 const styles = css`
   /* ========================================
      Base Styles
@@ -114,15 +97,65 @@ const styles = css`
   }
 `;
 
-// -------------------- Types --------------------
-export type ButtonGroupProps = {
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
+/**
+ * Button Group Component Properties
+ *
+ * A container for organizing multiple buttons with coordinated styling and layout options.
+ *
+ * ## Slots
+ * - **default**: button elements
+ *
+ * ## Behavior
+ * - Propagates `size`, `variant`, and `color` to all child buttons
+ * - Supports horizontal and vertical orientation
+ * - Can attach buttons together seamlessly
+ * - Optional full-width mode
+ *
+ * @example
+ * ```html
+ * <!-- Basic group -->
+ * <bit-button-group>
+ *   <bit-button>First</bit-button>
+ *   <bit-button>Second</bit-button>
+ *   <bit-button>Third</bit-button>
+ * </bit-button-group>
+ *
+ * <!-- Attached buttons with shared styling -->
+ * <bit-button-group variant="outline" color="primary" attached>
+ *   <bit-button>Left</bit-button>
+ *   <bit-button>Center</bit-button>
+ *   <bit-button>Right</bit-button>
+ * </bit-button-group>
+ *
+ * <!-- Vertical orientation -->
+ * <bit-button-group orientation="vertical" variant="flat" size="lg">
+ *   <bit-button>Top</bit-button>
+ *   <bit-button>Middle</bit-button>
+ *   <bit-button>Bottom</bit-button>
+ * </bit-button-group>
+ *
+ * <!-- Full width -->
+ * <bit-button-group fullwidth attached variant="bordered">
+ *   <bit-button>Option A</bit-button>
+ *   <bit-button>Option B</bit-button>
+ *   <bit-button>Option C</bit-button>
+ * </bit-button-group>
+ * ```
+ */
+export interface ButtonGroupProps {
+  /** Button size for all children (propagated) */
+  size?: ComponentSize;
+  /** Button variant for all children (propagated) */
+  variant?: Exclude<VisualVariant, 'glass'>;
+  /** Button color for all children (propagated) */
+  color?: ThemeColor;
+  /** Group orientation */
   orientation?: 'horizontal' | 'vertical';
+  /** Attach buttons together (no gap, rounded only on edges) */
   attached?: boolean;
-  'fullwidth'?: boolean;
-};
+  /** Make all buttons full width */
+  fullwidth?: boolean;
+}
 
 // -------------------- Component Definition --------------------
 defineElement<HTMLDivElement, ButtonGroupProps>('bit-button-group', {

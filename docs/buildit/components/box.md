@@ -41,7 +41,11 @@ Animated rainbow border effect perfect for highlighting special content or CTAs.
 <ComponentPreview center>
 
 ```html
-<bit-box variant="frost" rainbow padding="lg" style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
+<bit-box
+  variant="frost"
+  rainbow
+  padding="lg"
+  style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
   <bit-text variant="heading" size="lg">Rainbow Box</bit-text>
   <bit-text size="sm">Animated rainbow border with glow effect</bit-text>
 </bit-box>
@@ -56,28 +60,14 @@ Six semantic colors for different contexts.
 <ComponentPreview>
 
 ```html
-<bit-grid cols="3" gap="md">
-  <bit-box>
-    Default
-  </bit-box>
-  <bit-box color="primary">
-    Primary
-  </bit-box>
-  <bit-box color="secondary">
-    Secondary
-  </bit-box>
-  <bit-box color="info">
-    Info
-  </bit-box>
-  <bit-box color="success">
-    Success
-  </bit-box>
-  <bit-box color="warning">
-    Warning
-  </bit-box>
-  <bit-box color="error">
-    Error
-  </bit-box>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
+  <bit-box>Default</bit-box>
+  <bit-box color="primary">Primary</bit-box>
+  <bit-box color="secondary">Secondary</bit-box>
+  <bit-box color="info">Info</bit-box>
+  <bit-box color="success">Success</bit-box>
+  <bit-box color="warning">Warning</bit-box>
+  <bit-box color="error">Error</bit-box>
 </bit-grid>
 ```
 
@@ -90,35 +80,22 @@ Box supports a special variant for advanced visual effects.
 ### Frost
 
 Translucent frost effect with backdrop blur that adapts based on color:
+
 - **Without color**: Subtle canvas-based frost overlay
 - **With color**: Frosted glass effect with colored tint
 
 <ComponentPreview>
 
 ```html
-  <bit-grid cols="1" cols-sm="2" cols-md="3" cols-lg="4" gap="lg" style="width: 100%">
-    <bit-box variant="frost">
-      <bit-text>Default</bit-text>
-    </bit-box>
-    <bit-box variant="frost" color="primary">
-      Primary
-    </bit-box>
-    <bit-box variant="frost" color="secondary">
-      Secondary
-    </bit-box>
-    <bit-box variant="frost" color="info">
-      Info
-    </bit-box>
-    <bit-box variant="frost" color="success">
-      Success
-    </bit-box>
-    <bit-box variant="frost" color="warning">
-      Warning
-    </bit-box>
-    <bit-box variant="frost" color="error">
-      Error
-    </bit-box>
-  </bit-grid>
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
+  <bit-box variant="frost">Default</bit-box>
+  <bit-box variant="frost" color="primary">Primary</bit-box>
+  <bit-box variant="frost" color="secondary">Secondary</bit-box>
+  <bit-box variant="frost" color="info">Info</bit-box>
+  <bit-box variant="frost" color="success">Success</bit-box>
+  <bit-box variant="frost" color="warning">Warning</bit-box>
+  <bit-box variant="frost" color="error">Error</bit-box>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -130,7 +107,7 @@ Control shadow depth with elevation levels from 0 to 5.
 <ComponentPreview>
 
 ```html
-<bit-grid cols="3" gap="lg">
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
   <bit-box elevation="0" color="primary">
     <bit-text size="sm">Elevation 0</bit-text>
   </bit-box>
@@ -161,7 +138,7 @@ Choose from five padding sizes.
 <ComponentPreview>
 
 ```html
-<bit-grid cols="2" gap="md">
+<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
   <bit-box padding="none" color="secondary" elevation="1">
     <bit-text size="sm">No padding</bit-text>
   </bit-box>
@@ -186,33 +163,33 @@ Choose from five padding sizes.
 
 ### Attributes
 
-| Attribute   | Type                                                      | Default  | Description                    |
-| ----------- | --------------------------------------------------------- | -------- | ------------------------------ |
-| `variant`   | `'frost'`                                                 | -        | Style variant                  |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -        | Color theme                    |
-| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                  | `'md'`   | Padding size                   |
-| `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                  | -        | Shadow elevation (0-5)         |
-| `rainbow`   | `boolean`                                                 | `false`  | Animated rainbow border effect |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`   | Border radius                  |
-| `as`        | `string`                                                  | `'div'`  | HTML element to render as      |
+| Attribute   | Type                                                                      | Default | Description                    |
+| ----------- | ------------------------------------------------------------------------- | ------- | ------------------------------ |
+| `variant`   | `'frost'`                                                                 | -       | Style variant                  |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme                    |
+| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Padding size                   |
+| `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow elevation (0-5)         |
+| `rainbow`   | `boolean`                                                                 | `false` | Animated rainbow border effect |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius                  |
+| `as`        | `string`                                                                  | `'div'` | HTML element to render as      |
 
 ### Slots
 
-| Slot      | Description                    |
-| --------- | ------------------------------ |
-| (default) | Main content of the box        |
+| Slot      | Description             |
+| --------- | ----------------------- |
+| (default) | Main content of the box |
 
 ### CSS Custom Properties
 
-| Property              | Default                       | Description                    |
-| --------------------- | ----------------------------- | ------------------------------ |
-| `--box-bg`            | `var(--color-contrast-50)`    | Background color               |
-| `--box-color`         | `var(--color-contrast-900)`   | Text color                     |
-| `--box-border`        | `var(--border)`               | Border width                   |
-| `--box-border-color`  | `var(--color-contrast-300)`   | Border color                   |
-| `--box-radius`        | `var(--rounded-md)`           | Border radius                  |
-| `--box-padding`       | `var(--size-4)`               | Inner padding                  |
-| `--box-shadow`        | `var(--shadow-sm)`            | Box shadow                     |
+| Property             | Default                     | Description      |
+| -------------------- | --------------------------- | ---------------- |
+| `--box-bg`           | `var(--color-contrast-50)`  | Background color |
+| `--box-color`        | `var(--color-contrast-900)` | Text color       |
+| `--box-border`       | `var(--border)`             | Border width     |
+| `--box-border-color` | `var(--color-contrast-300)` | Border color     |
+| `--box-radius`       | `var(--rounded-md)`         | Border radius    |
+| `--box-padding`      | `var(--size-4)`             | Inner padding    |
+| `--box-shadow`       | `var(--shadow-sm)`          | Box shadow       |
 
 ## Accessibility
 
@@ -221,20 +198,8 @@ Choose from five padding sizes.
 - ✅ Glass and frost variants maintain readable contrast ratios
 - ✅ Elevation changes are purely visual and don't affect accessibility
 
-::: tip Semantic HTML
-While Box provides styling, use appropriate semantic HTML elements outside the component:
-```html
-<nav role="navigation" aria-label="Main">
-  <bit-box variant="glass">
-    <!-- Navigation content -->
-  </bit-box>
-</nav>
-```
-:::
-
 ## Related Components
 
 - [Card](/buildit/components/card) - Built on top of Box with additional features
 - [Grid](/buildit/components/grid) - Layout system for organizing boxes
 - [Text](/buildit/components/text) - Typography for box content
-

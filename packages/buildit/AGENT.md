@@ -261,7 +261,7 @@ declare global {
 - [ ] Design tokens only (no hardcoded values)
 - [ ] CSS: Public `--component-*`, Internal `--_*`
 - [ ] CSS: Alphabetically sorted, clear sections
-- [ ] Variants: 8 visual (solid, flat, bordered, outline, ghost, text, glass, frost)
+- [ ] Variants: 7 visual (solid, flat, bordered, outline, ghost, text, frost)
 - [ ] Colors: 5 (primary, secondary, success, warning, error)
 - [ ] Sizes: 3 (sm, md, lg)
 - [ ] ARIA: role, aria-checked/disabled, tabindex

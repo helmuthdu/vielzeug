@@ -84,10 +84,10 @@ Modern frost effect with backdrop blur that adapts based on color:
 Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
-<ComponentPreview center background="https://images.unsplash.com/photo-1516919549054-e08258825f80?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
+<ComponentPreview center>
 
 ```html
-<bit-button variant="frost">Frost</bit-button>
+<bit-button variant="frost">Default</bit-button>
 <bit-button variant="frost" color="primary">Primary</bit-button>
 <bit-button variant="frost" color="secondary">Secondary</bit-button>
 <bit-button variant="frost" color="info">Info</bit-button>
@@ -313,7 +313,7 @@ Buttons expand to fill the container equally.
 
 | Attribute   | Type                                                                                          | Default     | Description                      |
 | ----------- | --------------------------------------------------------------------------------------------- | ----------- | -------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`   | Visual style variant             |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual style variant             |
 | `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                               | `'primary'` | Semantic color                   |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                              | `'md'`      | Button size                      |
 | `type`      | `'button' \| 'submit' \| 'reset'`                                   | `'button'`  | Button type (for forms)          |
@@ -332,7 +332,7 @@ Buttons expand to fill the container equally.
 | `attached`    | `boolean`                                                                                     | `false`        | Remove spacing and connect buttons |
 | `fullwidth`  | `boolean`                                                                                     | `false`        | Buttons expand to fill container   |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                                        | -              | Apply size to all child buttons    |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | -              | Apply variant to all child buttons |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -              | Apply variant to all child buttons |
 | `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                               | -              | Apply color to all child buttons   |
 
 ### Slots

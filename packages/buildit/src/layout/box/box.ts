@@ -1,19 +1,19 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
 import { boxBaseCss } from './box-base.css';
+import {
+  frostVariantMixin,
+  rainbowEffectMixin,
+  registerRainbowProperty,
+} from '../../styles';
+import type {
+  ThemeColor,
+  PaddingSize,
+  ElevationLevel,
+  RoundedSize,
+} from '../../types';
 
-// Register CSS property for rainbow animation (must be done in JS for Shadow DOM)
-if (typeof CSS !== 'undefined' && CSS.registerProperty) {
-  try {
-    CSS.registerProperty({
-      name: '--rainbow-angle',
-      syntax: '<angle>',
-      initialValue: '0deg',
-      inherits: false,
-    });
-  } catch (e) {
-    // Property might already be registered, ignore error
-  }
-}
+// Register CSS property for rainbow animation
+registerRainbowProperty();
 
 /**
  * bit-box - A foundational layout primitive with theming support
@@ -114,6 +114,7 @@ const styles = css`
     border-radius: var(--_radius);
     border: var(--_border) solid var(--_border-color);
     padding: var(--_padding);
+    box-shadow: var(--_shadow);
     transition:
       backdrop-filter var(--transition-slow),
       box-shadow var(--transition-normal),
@@ -142,87 +143,91 @@ const styles = css`
      Rainbow Border Effect
      ======================================== */
 
-  :host([rainbow]) .box {
-    position: relative;
-    border: var(--border-2) solid transparent;
-    background: var(--_bg);
-    /* Add overflow visible to ensure glow extends beyond */
-    overflow: visible;
-  }
+  /* ========================================
+     Rainbow Border Effect (Shared Mixin)
+     ======================================== */
 
-  /* Rainbow border and glow layers */
-  :host([rainbow]) .box::before,
-  :host([rainbow]) .box::after {
-    content: '';
-    position: absolute;
-    inset: calc(-1 * var(--border-2));
-    border: inherit;
-    border-radius: inherit;
-    /* Reserve no-clip space for glow */
-    box-shadow: 0 0 calc(3 * var(--blur-xl)) rgba(0 0 0 / 0.001);
-    background: conic-gradient(
-        from var(--rainbow-angle),
-        #f94144,
-        #f3722c,
-        #f8961e,
-        #f9844a,
-        #f9c74f,
-        #90be6d,
-        #43aa8b,
-        #4d908e,
-        #277da1,
-        #577590,
-        #f94144
-      )
-      border-box;
-    /* Make everything inside padding-box transparent
-       by subtracting padding-box from no-clip box */
-    -webkit-mask:
-      conic-gradient(red 0 0) no-clip subtract,
-      conic-gradient(red 0 0) padding-box;
-    mask:
-      conic-gradient(red 0 0) no-clip subtract,
-      conic-gradient(red 0 0) padding-box;
-    pointer-events: none;
-    animation: rainbow-rotate 4s linear infinite;
-  }
+  ${rainbowEffectMixin('.box')}
 
-  /* Turn one pseudo layer into glow halo */
-  :host([rainbow]) .box::after {
-    filter: blur(var(--blur-xl));
-  }
+  /* ========================================
+     Frost Variant (Shared Mixin)
+     ======================================== */
 
-  @keyframes rainbow-rotate {
-    to {
-      --rainbow-angle: 1turn;
-    }
-  }
-
-  /* Frost variant - Enhanced backdrop blur with transparency */
-  /* Neutral: canvas-based frost effect */
-  :host([variant='frost']:not([color])) .box {
-    --_bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    --_border-color: color-mix(in srgb, var(--_theme-border) 55%, transparent);
-    --_color: color-mix(in srgb, var(--color-contrast) 90%, transparent);
-    border: var(--border) solid var(--_border-color);
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    text-shadow: var(--text-shadow-xs);
-    box-shadow: var(--_theme-halo);
-  }
-
-  /* Frost with color: premium frosted glass effect */
-  :host([variant='frost'][color]) .box {
-    --_bg: color-mix(in srgb, var(--_theme-base), transparent);
-    --_border-color: color-mix(in srgb, var(--_theme-focus) 45%, transparent);
-    --_color: var(--_theme-contrast);
-    border: var(--border) solid var(--_border-color);
-    backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
-    -webkit-backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
-    text-shadow: var(--text-shadow-xs);
-    box-shadow: var(--_theme-halo);
-  }
+  ${frostVariantMixin('.box')}
 `;
+
+/**
+ * Box Component Properties
+ *
+ * A foundational layout primitive with theming, elevation, and special effects support.
+ *
+ * ## Slots
+ * - **default**: Box content
+ *
+ * ## CSS Custom Properties
+ * - `--box-bg`: Background color
+ * - `--box-color`: Text color
+ * - `--box-border`: Border width
+ * - `--box-border-color`: Border color
+ * - `--box-radius`: Border radius
+ * - `--box-padding`: Internal padding
+ * - `--box-shadow`: Box shadow
+ *
+ * ## Special Features
+ * - **Frost variant**: Glassmorphism effect with backdrop blur
+ * - **Rainbow effect**: Animated rainbow border (when `rainbow` attribute is set)
+ * - **Elevation**: Shadow depth control (0-5)
+ * - **Custom element**: Render as any HTML element via `as` attribute
+ *
+ * @example
+ * ```html
+ * <!-- Basic box -->
+ * <bit-box padding="lg" elevation="2">
+ *   Simple content box
+ * </bit-box>
+ *
+ * <!-- Colored box -->
+ * <bit-box color="primary" padding="md" rounded="lg">
+ *   Primary colored box
+ * </bit-box>
+ *
+ * <!-- Frost effect -->
+ * <bit-box variant="frost" elevation="3" padding="xl">
+ *   Glassmorphism box
+ * </bit-box>
+ *
+ * <!-- Frost with color -->
+ * <bit-box variant="frost" color="secondary" padding="lg">
+ *   Colored frosted glass
+ * </bit-box>
+ *
+ * <!-- Rainbow effect -->
+ * <bit-box variant="frost" rainbow padding="md">
+ *   Animated rainbow border
+ * </bit-box>
+ *
+ * <!-- Custom element -->
+ * <bit-box as="section" padding="lg" elevation="1">
+ *   Rendered as section element
+ * </bit-box>
+ * ```
+ */
+export interface BoxProps {
+  /** Visual style variant */
+  variant?: 'frost';
+  /** Theme color */
+  color?: ThemeColor;
+  /** Internal padding size */
+  padding?: PaddingSize;
+  /** Shadow elevation level (0-5) */
+  elevation?: `${ElevationLevel}`;
+  /** Border radius size */
+  rounded?: RoundedSize;
+  /** Enable animated rainbow border effect */
+  rainbow?: boolean;
+  /** Semantic HTML element to render as */
+  as?: string;
+}
 
 // -------------------- Component --------------------
 defineElement('bit-box', {

@@ -1,27 +1,17 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import { colorThemeMixin, disabledStateMixin } from '../../styles';
+import type {
+  ThemeColor,
+  ComponentSize,
+  CheckableChangeEventDetail,
+} from '../../types';
 
 /**
- * bit-radio - A customizable radio button component
+ * # bit-radio
+ *
+ * A customizable radio button component for mutually exclusive selections.
  *
  * @element bit-radio
- *
- * @attr {boolean} checked - Radio button checked state
- * @attr {boolean} disabled - Disable the radio button
- * @attr {string} value - Radio button value
- * @attr {string} name - Form field name (required for grouping)
- * @attr {string} color - Radio button color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} size - Radio button size: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for radio button label
- *
- * @cssprop --radio-size - Size of the radio circle
- * @cssprop --radio-bg - Background color
- * @cssprop --radio-border - Border style
- * @cssprop --radio-checked-bg - Background color when checked
- * @cssprop --radio-color - Dot color
- *
- * @fires change - Emitted when checked state changes.
- *   detail: { checked: true; value: string | null; originalEvent: Event }
  */
 
 const styles = css`
@@ -42,11 +32,11 @@ const styles = css`
     user-select: none;
   }
 
-  :host([disabled]) {
-    cursor: not-allowed;
-    opacity: 0.5;
-    pointer-events: none;
-  }
+  /* ========================================
+     States (Shared Mixin)
+     ======================================== */
+
+  ${disabledStateMixin()}
 
   .radio-wrapper {
     position: relative;
@@ -75,49 +65,16 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host(:not([color])) {
-    --_active-bg: var(--radio-checked-bg, var(--color-neutral));
-    --_dot-color: var(--radio-color, var(--color-neutral-contrast));
-    --_focus-shadow: var(--color-neutral-focus-shadow);
-  }
+  ${colorThemeMixin()}
 
-  :host([color='primary']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-primary));
-    --_dot-color: var(--radio-color, var(--color-primary-contrast));
-    --_focus-shadow: var(--color-primary-focus-shadow);
-  }
-
-  :host([color='secondary']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-secondary));
-    --_dot-color: var(--radio-color, var(--color-secondary-contrast));
-    --_focus-shadow: var(--color-secondary-focus-shadow);
-  }
-
-  :host([color='info']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-info));
-    --_dot-color: var(--radio-color, var(--color-info-contrast));
-    --_focus-shadow: var(--color-info-focus-shadow);
-  }
-
-  :host([color='success']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-success));
-    --_dot-color: var(--radio-color, var(--color-success-contrast));
-    --_focus-shadow: var(--color-success-focus-shadow);
-  }
-
-  :host([color='warning']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-warning));
-    --_dot-color: var(--radio-color, var(--color-warning-contrast));
-    --_focus-shadow: var(--color-warning-focus-shadow);
-  }
-
-  :host([color='error']) {
-    --_active-bg: var(--radio-checked-bg, var(--color-error));
-    --_dot-color: var(--radio-color, var(--color-error-contrast));
-    --_focus-shadow: var(--color-error-focus-shadow);
+  /* Map theme variables to radio-specific variables */
+  :host {
+    --_active-bg: var(--radio-checked-bg, var(--_theme-base));
+    --_dot-color: var(--radio-color, var(--_theme-contrast));
+    --_focus-shadow: var(--_theme-shadow);
   }
 
   /* ========================================
@@ -168,11 +125,13 @@ const styles = css`
   :host([size='sm']) {
     --_size: var(--size-4);
     --_font-size: var(--text-xs);
+    gap: var(--size-1-5);
   }
 
   :host([size='lg']) {
     --_size: var(--size-6);
     --_font-size: var(--text-base);
+    gap: var(--size-2-5);
   }
 
   /* ========================================
@@ -185,14 +144,67 @@ const styles = css`
   }
 `;
 
-export type RadioProps = {
+/**
+ * Radio Component Properties
+ *
+ * A customizable radio button for mutually exclusive selections within a group.
+ *
+ * ## Slots
+ * - **default**: Radio button label text
+ *
+ * ## Events
+ * - **change**: Emitted when radio is selected
+ *
+ * ## CSS Custom Properties
+ * - `--radio-size`: Radio button dimensions
+ * - `--radio-bg`: Background color (unchecked)
+ * - `--radio-checked-bg`: Background color (checked)
+ * - `--radio-border-color`: Border color
+ * - `--radio-color`: Inner dot color
+ * - `--radio-font-size`: Label font size
+ *
+ * ## Keyboard Navigation
+ * - `Space/Enter`: Select radio
+ * - `Arrow Up/Left`: Select previous radio in group
+ * - `Arrow Down/Right`: Select next radio in group
+ *
+ * @example
+ * ```html
+ * <!-- Radio group -->
+ * <bit-radio name="size" value="small">Small</bit-radio>
+ * <bit-radio name="size" value="medium" checked>Medium</bit-radio>
+ * <bit-radio name="size" value="large">Large</bit-radio>
+ *
+ * <!-- With color and size -->
+ * <bit-radio name="plan" value="pro" color="primary" size="lg">
+ *   Pro Plan
+ * </bit-radio>
+ *
+ * <!-- Disabled -->
+ * <bit-radio name="option" value="disabled" disabled>
+ *   Not available
+ * </bit-radio>
+ * ```
+ */
+export interface RadioProps {
+  /** Checked state */
   checked?: boolean;
+  /** Disable radio interaction */
   disabled?: boolean;
+  /** Field value */
   value?: string;
+  /** Form field name (required for radio groups) */
   name?: string;
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  size?: 'sm' | 'md' | 'lg';
-};
+  /** Theme color */
+  color?: ThemeColor;
+  /** Radio size */
+  size?: ComponentSize;
+}
+
+/**
+ * Radio Change Event Detail
+ */
+export interface RadioChangeEvent extends CheckableChangeEventDetail {}
 
 defineElement<HTMLInputElement, RadioProps>('bit-radio', {
   observedAttributes: ['checked', 'disabled', 'value', 'name', 'color', 'size'] as const,

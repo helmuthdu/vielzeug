@@ -1,18 +1,12 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import type { ComponentSize, VisualVariant } from '../../types';
 
 /**
- * bit-accordion - A container for accordion items
+ * # bit-accordion
+ *
+ * A container for accordion items with single or multiple selection modes.
  *
  * @element bit-accordion
- *
- * @attr {string} selection-mode - Selection mode: 'single' | 'multiple' (default: multiple)
- * @attr {string} variant - Visual variant for all items: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
- * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for bit-accordion-item elements
- *
- * @fires change - Emitted when selection changes in single mode.
- *   detail: { expandedItem: HTMLElement | null }
  */
 
 const styles = css`
@@ -99,11 +93,66 @@ const styles = css`
   }
 `;
 
+/**
+ * Accordion Component Properties
+ *
+ * A container for managing multiple accordion items with coordinated expand/collapse behavior.
+ *
+ * ## Slots
+ * - **default**: accordion-item elements
+ *
+ * ## Events
+ * - **expand**: Emitted when an item expands
+ * - **change**: Emitted when selection changes (single mode)
+ *
+ * ## Behavior
+ * - **single mode**: Only one item can be expanded at a time
+ * - **multiple mode**: Multiple items can be expanded simultaneously (default)
+ * - Propagates `variant` and `size` to all child items
+ *
+ * @example
+ * ```html
+ * <!-- Single selection mode -->
+ * <bit-accordion selection-mode="single" variant="bordered">
+ *   <bit-accordion-item>
+ *     <span slot="title">Section 1</span>
+ *     <p>Content for section 1</p>
+ *   </bit-accordion-item>
+ *   <bit-accordion-item>
+ *     <span slot="title">Section 2</span>
+ *     <p>Content for section 2</p>
+ *   </bit-accordion-item>
+ * </bit-accordion>
+ *
+ * <!-- Multiple selection (default) -->
+ * <bit-accordion variant="solid" size="lg">
+ *   <bit-accordion-item expanded>
+ *     <span slot="title">FAQ 1</span>
+ *     <p>Answer 1</p>
+ *   </bit-accordion-item>
+ *   <bit-accordion-item>
+ *     <span slot="title">FAQ 2</span>
+ *     <p>Answer 2</p>
+ *   </bit-accordion-item>
+ * </bit-accordion>
+ *
+ * <!-- Frost variant -->
+ * <bit-accordion variant="frost" size="md">
+ *   <bit-accordion-item>
+ *     <span slot="title">Features</span>
+ *     <p>Feature list...</p>
+ *   </bit-accordion-item>
+ * </bit-accordion>
+ * ```
+ */
 export type AccordionProps = {
+  /** Selection mode (single = only one open, multiple = multiple can be open) */
   'selection-mode'?: 'single' | 'multiple';
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-};
+  /** Size for all items (propagated to children) */
+  size?: ComponentSize;
+  /** Visual variant for all items (propagated to children) */
+  variant?: VisualVariant;
+}
 
 defineElement<HTMLElement, AccordionProps>('bit-accordion', {
   observedAttributes: ['selection-mode', 'size', 'variant'] as const,

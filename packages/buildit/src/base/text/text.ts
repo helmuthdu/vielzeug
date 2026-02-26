@@ -1,26 +1,11 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
 
 /**
- * bit-text - Typography component with semantic variants
+ * # bit-text
+ *
+ * A typography component with semantic variants and responsive sizing.
  *
  * @element bit-text
- *
- * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
- * @attr {string} size - Text size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
- * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
- * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
- * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
- * @attr {boolean} truncate - Enable single-line text truncation with ellipsis
- * @attr {boolean} italic - Italic text style
- * @attr {string} as - Semantic HTML tag: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'
- *
- * @slot - Default slot for text content
- *
- * @cssprop --text-size - Font size
- * @cssprop --text-weight - Font weight
- * @cssprop --text-color - Text color
- * @cssprop --text-line-height - Line height
- * @cssprop --text-letter-spacing - Letter spacing
  */
 
 const styles = css`
@@ -170,16 +155,82 @@ const styles = css`
   }
 `;
 
-export type TextProps = {
+/**
+ * Text Component Properties
+ *
+ * A flexible typography component with semantic variants, responsive sizing, and theme color support.
+ *
+ * ## Slots
+ * - **default**: Text content
+ *
+ * ## CSS Custom Properties
+ * - `--text-size`: Font size
+ * - `--text-weight`: Font weight
+ * - `--text-color`: Text color
+ * - `--text-line-height`: Line height
+ * - `--text-letter-spacing`: Letter spacing
+ *
+ * @example
+ * ```html
+ * <!-- Heading -->
+ * <bit-text variant="heading" size="3xl" weight="bold">
+ *   Welcome to Our Site
+ * </bit-text>
+ *
+ * <!-- Body text -->
+ * <bit-text variant="body" size="base">
+ *   This is regular body text with default styling.
+ * </bit-text>
+ *
+ * <!-- Colored text -->
+ * <bit-text color="primary" weight="semibold">
+ *   Important notice
+ * </bit-text>
+ *
+ * <!-- Caption/muted -->
+ * <bit-text variant="caption" color="muted">
+ *   Posted 2 hours ago
+ * </bit-text>
+ *
+ * <!-- Overline -->
+ * <bit-text variant="overline" size="xs">
+ *   Featured Article
+ * </bit-text>
+ *
+ * <!-- Code -->
+ * <bit-text variant="code">
+ *   npm install @vielzeug/buildit
+ * </bit-text>
+ *
+ * <!-- Truncated text -->
+ * <bit-text truncate>
+ *   This is a very long text that will be truncated with ellipsis...
+ * </bit-text>
+ *
+ * <!-- Custom element -->
+ * <bit-text as="h1" size="4xl" weight="bold">
+ *   Page Heading
+ * </bit-text>
+ * ```
+ */
+export interface TextProps {
+  /** Text semantic variant */
   variant?: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code';
+  /** Text size (responsive scale) */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
+  /** Font weight */
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  /** Text color (semantic + theme colors) */
   color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast';
+  /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
+  /** Truncate text with ellipsis */
   truncate?: boolean;
+  /** Italic text style */
   italic?: boolean;
+  /** Semantic HTML element to render as */
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code';
-};
+}
 
 defineElement<HTMLElement, TextProps>('bit-text', {
   observedAttributes: ['variant', 'size', 'weight', 'color', 'align', 'truncate', 'italic', 'as'] as const,

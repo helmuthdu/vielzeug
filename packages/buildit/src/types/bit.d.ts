@@ -16,7 +16,7 @@ import type {
   SliderProps,
   SwitchProps,
   TextProps
-} from './';
+} from '../index';
 
 // ============================================
 // Component Type Definitions

@@ -1,11 +1,22 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
 import { defineConfig } from 'vite';
 import { getConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   getConfig(__dirname, {
+    build: {
+      cssMinify: 'lightningcss',
+    },
+    css: {
+      lightningcss: {
+        targets: browserslistToTargets(browserslist('>= 0.25%')),
+      },
+      transformer: 'lightningcss',
+    },
     entry: {
       accordion: resolve(__dirname, './src/base/accordion/accordion'),
       'accordion-item': resolve(__dirname, './src/base/accordion-item/accordion-item'),

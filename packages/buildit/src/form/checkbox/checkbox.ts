@@ -1,29 +1,17 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import { colorThemeMixin, disabledStateMixin } from '../../styles';
+import type {
+  ThemeColor,
+  ComponentSize,
+  CheckableChangeEventDetail,
+} from '../../types';
 
 /**
- * bit-checkbox - A customizable checkbox component
+ * # bit-checkbox
+ *
+ * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
  *
  * @element bit-checkbox
- *
- * @attr {boolean} checked - Checkbox checked state
- * @attr {boolean} disabled - Disable the checkbox
- * @attr {boolean} indeterminate - Indeterminate state
- * @attr {string} value - Checkbox value
- * @attr {string} name - Form field name
- * @attr {string} color - Checkbox color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} size - Checkbox size: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for checkbox label
- *
- * @cssprop --checkbox-size - Size of the checkbox square
- * @cssprop --checkbox-bg - Background color
- * @cssprop --checkbox-border - Border style
- * @cssprop --checkbox-radius - Border radius
- * @cssprop --checkbox-checked-bg - Background color when checked
- * @cssprop --checkbox-color - Checkmark color
- *
- * @fires change - Emitted when checked state changes
- *   detail: { checked: boolean; value: string | null; originalEvent: Event }
  */
 
 const styles = css`
@@ -45,11 +33,11 @@ const styles = css`
     user-select: none;
   }
 
-  :host([disabled]) {
-    cursor: not-allowed;
-    opacity: 0.5;
-    pointer-events: none;
-  }
+  /* ========================================
+     States (Shared Mixin)
+     ======================================== */
+
+  ${disabledStateMixin()}
 
   .checkbox-wrapper {
     position: relative;
@@ -78,49 +66,16 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host(:not([color])) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-neutral));
-    --_icon-color: var(--checkbox-color, var(--color-neutral-contrast));
-    --_focus-shadow: var(--color-neutral-focus-shadow);
-  }
+  ${colorThemeMixin()}
 
-  :host([color='primary']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-primary));
-    --_icon-color: var(--checkbox-color, var(--color-primary-contrast));
-    --_focus-shadow: var(--color-primary-focus-shadow);
-  }
-
-  :host([color='secondary']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-secondary));
-    --_icon-color: var(--checkbox-color, var(--color-secondary-contrast));
-    --_focus-shadow: var(--color-secondary-focus-shadow);
-  }
-
-  :host([color='info']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-info));
-    --_icon-color: var(--checkbox-color, var(--color-info-contrast));
-    --_focus-shadow: var(--color-info-focus-shadow);
-  }
-
-  :host([color='success']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-success));
-    --_icon-color: var(--checkbox-color, var(--color-success-contrast));
-    --_focus-shadow: var(--color-success-focus-shadow);
-  }
-
-  :host([color='warning']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-warning));
-    --_icon-color: var(--checkbox-color, var(--color-warning-contrast));
-    --_focus-shadow: var(--color-warning-focus-shadow);
-  }
-
-  :host([color='error']) {
-    --_active-bg: var(--checkbox-checked-bg, var(--color-error));
-    --_icon-color: var(--checkbox-color, var(--color-error-contrast));
-    --_focus-shadow: var(--color-error-focus-shadow);
+  /* Map theme variables to checkbox-specific variables */
+  :host {
+    --_active-bg: var(--checkbox-checked-bg, var(--_theme-base));
+    --_icon-color: var(--checkbox-color, var(--_theme-contrast));
+    --_focus-shadow: var(--_theme-shadow);
   }
 
   /* ========================================
@@ -178,11 +133,13 @@ const styles = css`
   :host([size='sm']) {
     --_size: var(--size-4);
     --_font-size: var(--text-xs);
+    gap: var(--size-1-5);
   }
 
   :host([size='lg']) {
     --_size: var(--size-6);
     --_font-size: var(--text-base);
+    gap: var(--size-2-5);
   }
 
   /* ========================================
@@ -195,15 +152,68 @@ const styles = css`
   }
 `;
 
-export type CheckboxProps = {
+/**
+ * Checkbox Component Properties
+ *
+ * A customizable checkbox with theme colors, sizes, checked and indeterminate states.
+ *
+ * ## Slots
+ * - **default**: Checkbox label text
+ *
+ * ## Events
+ * - **change**: Emitted when checkbox state changes
+ *
+ * ## CSS Custom Properties
+ * - `--checkbox-size`: Checkbox dimensions
+ * - `--checkbox-bg`: Background color (unchecked)
+ * - `--checkbox-checked-bg`: Background color (checked)
+ * - `--checkbox-border-color`: Border color
+ * - `--checkbox-color`: Checkmark icon color
+ * - `--checkbox-radius`: Border radius
+ * - `--checkbox-font-size`: Label font size
+ *
+ * @example
+ * ```html
+ * <!-- Basic usage -->
+ * <bit-checkbox checked>Accept terms</bit-checkbox>
+ *
+ * <!-- With color and size -->
+ * <bit-checkbox color="primary" size="lg">
+ *   Subscribe to newsletter
+ * </bit-checkbox>
+ *
+ * <!-- Indeterminate state -->
+ * <bit-checkbox indeterminate>
+ *   Select all
+ * </bit-checkbox>
+ *
+ * <!-- Disabled -->
+ * <bit-checkbox checked disabled>
+ *   Cannot change
+ * </bit-checkbox>
+ * ```
+ */
+export interface CheckboxProps {
+  /** Checked state */
   checked?: boolean;
+  /** Disable checkbox interaction */
   disabled?: boolean;
+  /** Indeterminate state (partially checked) */
   indeterminate?: boolean;
+  /** Field value */
   value?: string;
+  /** Form field name */
   name?: string;
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  size?: 'sm' | 'md' | 'lg';
-};
+  /** Theme color */
+  color?: ThemeColor;
+  /** Checkbox size */
+  size?: ComponentSize;
+}
+
+/**
+ * Checkbox Change Event Detail
+ */
+export interface CheckboxChangeEvent extends CheckableChangeEventDetail {}
 
 defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
   observedAttributes: ['checked', 'disabled', 'indeterminate', 'value', 'name', 'color', 'size'] as const,

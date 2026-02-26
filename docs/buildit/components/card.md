@@ -116,7 +116,7 @@ Modern frost effect with backdrop blur that adapts based on color:
 Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
-<ComponentPreview center background="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=3429&auto=format&fit=crop">
+<ComponentPreview center>
 
 ```html
 <bit-card variant="frost" padding="lg">
@@ -124,14 +124,6 @@ Frost variant works best when placed over colorful backgrounds or images to show
   <bit-text>Subtle canvas-based transparency with backdrop blur.</bit-text>
   <div slot="footer">
     <bit-button variant="frost" size="sm">Learn More</bit-button>
-  </div>
-</bit-card>
-
-<bit-card variant="frost" color="primary" padding="lg">
-  <bit-text slot="header" variant="heading" size="xl" color="contrast">Primary Frost Card</bit-text>
-  <bit-text color="contrast">Beautiful translucent effect with primary color tint.</bit-text>
-  <div slot="footer">
-    <bit-button variant="frost" size="sm" color="primary">Learn More</bit-button>
   </div>
 </bit-card>
 ```
@@ -537,7 +529,7 @@ Perfect for compact layouts and list views:
 
 | Attribute     | Type                                                  | Default     | Description                                           |
 |--------------|-------------------------------------------------------|-------------|-------------------------------------------------------|
-| `variant`    | `'solid' \| 'flat' \| 'glass' \| 'frost'` | `'solid'`| Visual style variant                                   |
+| `variant`    | `'solid' \| 'flat' \| 'frost'` | `'solid'`| Visual style variant                                   |
 | `color`      | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'neutral'` | `'neutral'` | Color theme for the card                              |
 | `padding`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`             | `'md'`      | Internal padding size                                 |
 | `elevation`  | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`             | `undefined` | Shadow elevation level (0=none, 5=maximum)            |

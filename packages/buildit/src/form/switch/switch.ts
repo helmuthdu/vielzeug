@@ -1,28 +1,17 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import { colorThemeMixin, disabledStateMixin } from '../../styles';
+import type {
+  ThemeColor,
+  ComponentSize,
+  CheckableChangeEventDetail,
+} from '../../types';
 
 /**
- * bit-switch - A toggle switch component
+ * # bit-switch
+ *
+ * A toggle switch component for binary on/off states.
  *
  * @element bit-switch
- *
- * @attr {boolean} checked - Switch checked state
- * @attr {boolean} disabled - Disable the switch
- * @attr {string} value - Switch value
- * @attr {string} name - Form field name
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} size - Switch size: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for switch label
- *
- * @cssprop --switch-width - Width of the switch track
- * @cssprop --switch-height - Height of the switch track
- * @cssprop --switch-bg - Background color when checked
- * @cssprop --switch-track-bg - Background color of the track (default: --color-contrast-300)
- * @cssprop --switch-thumb-bg - Background color of the thumb (default: white)
- * @cssprop --switch-font-size - Font size of the label
- *
- * @fires change - Emitted when checked state changes
- *   detail: { checked: boolean; value: string | null; originalEvent: Event }
  */
 
 const styles = css`
@@ -48,11 +37,11 @@ const styles = css`
     touch-action: manipulation;
   }
 
-  :host([disabled]) {
-    cursor: not-allowed;
-    opacity: 0.5;
-    pointer-events: none;
-  }
+  /* ========================================
+     States (Shared Mixin)
+     ======================================== */
+
+  ${disabledStateMixin()}
 
   /* ========================================
      Track & Thumb
@@ -97,42 +86,15 @@ const styles = css`
   }
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host(:not([color])) {
-    --_active-bg: var(--switch-bg, var(--color-neutral));
-    --_focus-shadow: var(--color-neutral-focus-shadow);
-  }
+  ${colorThemeMixin()}
 
-  :host([color='primary']) {
-    --_active-bg: var(--switch-bg, var(--color-primary));
-    --_focus-shadow: var(--color-primary-focus-shadow);
-  }
-
-  :host([color='secondary']) {
-    --_active-bg: var(--switch-bg, var(--color-secondary));
-    --_focus-shadow: var(--color-secondary-focus-shadow);
-  }
-
-  :host([color='info']) {
-    --_active-bg: var(--switch-bg, var(--color-info));
-    --_focus-shadow: var(--color-info-focus-shadow);
-  }
-
-  :host([color='success']) {
-    --_active-bg: var(--switch-bg, var(--color-success));
-    --_focus-shadow: var(--color-success-focus-shadow);
-  }
-
-  :host([color='warning']) {
-    --_active-bg: var(--switch-bg, var(--color-warning));
-    --_focus-shadow: var(--color-warning-focus-shadow);
-  }
-
-  :host([color='error']) {
-    --_active-bg: var(--switch-bg, var(--color-error));
-    --_focus-shadow: var(--color-error-focus-shadow);
+  /* Map theme variables to switch-specific variables */
+  :host {
+    --_active-bg: var(--switch-bg, var(--_theme-base));
+    --_focus-shadow: var(--_theme-shadow);
   }
 
   /* ========================================
@@ -172,14 +134,16 @@ const styles = css`
      ======================================== */
 
   :host([size='sm']) {
-    --_width: var(--size-8);
-    --_height: var(--size-4);
+    --_width: var(--size-9);
+    --_height: var(--size-5);
+    --_thumb-size: var(--size-4);
     --_font-size: var(--text-xs);
   }
 
   :host([size='lg']) {
-    --_width: var(--size-12);
-    --_height: var(--size-6);
+    --_width: var(--size-14);
+    --_height: var(--size-7);
+    --_thumb-size: var(--size-6);
     --_font-size: var(--text-base);
   }
 
@@ -193,14 +157,67 @@ const styles = css`
   }
 `;
 
-export type SwitchProps = {
+/**
+ * Switch Component Properties
+ *
+ * A toggle switch for binary on/off states with smooth animations.
+ *
+ * ## Slots
+ * - **default**: Switch label text
+ *
+ * ## Events
+ * - **change**: Emitted when switch is toggled
+ *
+ * ## CSS Custom Properties
+ * - `--switch-width`: Track width
+ * - `--switch-height`: Track height
+ * - `--switch-bg`: Background color (checked state)
+ * - `--switch-track-bg`: Track background color (unchecked)
+ * - `--switch-thumb-bg`: Thumb background color
+ * - `--switch-font-size`: Label font size
+ *
+ * ## Keyboard Support
+ * - `Space/Enter`: Toggle switch
+ *
+ * @example
+ * ```html
+ * <!-- Basic usage -->
+ * <bit-switch checked>Enable feature</bit-switch>
+ *
+ * <!-- With color -->
+ * <bit-switch color="primary">
+ *   Dark mode
+ * </bit-switch>
+ *
+ * <!-- Different sizes -->
+ * <bit-switch size="sm">Small</bit-switch>
+ * <bit-switch size="lg">Large</bit-switch>
+ *
+ * <!-- Disabled -->
+ * <bit-switch checked disabled>
+ *   Cannot toggle
+ * </bit-switch>
+ * ```
+ */
+export interface SwitchProps {
+  /** Checked/on state */
   checked?: boolean;
+  /** Disable switch interaction */
   disabled?: boolean;
+  /** Field value */
   value?: string;
+  /** Form field name */
   name?: string;
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  size?: 'sm' | 'md' | 'lg';
-};
+  /** Theme color */
+  color?: ThemeColor;
+  /** Switch size */
+  size?: ComponentSize;
+}
+
+/**
+ * Switch Change Event Detail
+ */
+export interface SwitchChangeEvent extends CheckableChangeEventDetail {}
 
 defineElement<HTMLElement, SwitchProps>('bit-switch', {
   observedAttributes: ['checked', 'disabled', 'value', 'name', 'color', 'size'] as const,

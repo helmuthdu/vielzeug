@@ -1,45 +1,21 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
 import { boxBaseCss } from '../../layout/box/box-base.css';
+import { frostVariantMixin } from '../../styles';
+import type {
+  ThemeColor,
+  PaddingSize,
+  ElevationLevel,
+  ClickEventDetail,
+} from '../../types';
 
 /**
- * bit-card - A versatile card container component
+ * # bit-card
  *
- * Built on the Box theming foundation, adding semantic slots and interactive states.
+ * A versatile card container with semantic slots for header, body, and footer content.
  *
  * @element bit-card
- *
- * @attr {string} variant - Card style variant: 'frost'
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
- * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
- * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {string} orientation - Card layout: 'vertical' | 'horizontal'
- * @attr {boolean} hoverable - Enable hover effect
- * @attr {boolean} clickable - Enable clickable state with cursor pointer
- * @attr {boolean} disabled - Disable the card (prevents interaction)
- * @attr {boolean} loading - Show loading state
- *
- * @slot - Default slot for card content
- * @slot header - Header section of the card
- * @slot media - Media/image section at the top
- * @slot footer - Footer section of the card
- * @slot actions - Action buttons section (typically in footer)
- *
- * @cssprop --card-bg - Background color
- * @cssprop --card-color - Text color
- * @cssprop --card-border - Border style
- * @cssprop --card-border-color - Border color
- * @cssprop --card-radius - Border radius
- * @cssprop --card-padding - Inner padding
- * @cssprop --card-shadow - Box shadow
- * @cssprop --card-hover-shadow - Hover state shadow
- * @cssprop --card-gap - Gap between sections
- *
- * @fires click - Native click event (when clickable attribute is set and not disabled)
- * @fires cardclick - Custom event with card details (when clickable)
  */
 
-// -------------------- Styles --------------------
 const styles = css`
   /* ========================================
      Base Styles & Defaults
@@ -94,28 +70,25 @@ const styles = css`
   }
 
   /* Glass & Frost - Apply backdrop filters to .card element */
-  :host([variant='glass']) .card,
-  :host([variant='frost']) .card {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    box-shadow: var(--shadow-md);
-    border: var(--_border) solid var(--_border-color);
-  }
-
   :host([variant='glass']) .card {
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    border: var(--_border) solid var(--_border-color);
     text-shadow: var(--text-shadow-xs);
   }
 
-  :host([variant='frost']) .card {
-    text-shadow: var(--text-shadow-2xs);
-  }
+  /* ========================================
+     Frost Variant (Shared Mixin)
+     ======================================== */
+
+  ${frostVariantMixin('.card')}
 
   /* Card-specific hover states for glass/frost */
   :host([variant='glass']) .card:hover {
     --_bg: color-mix(in srgb, var(--color-secondary) 60%, var(--color-contrast) 20%);
     backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
+    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
     box-shadow: var(--shadow-xl), var(--inset-shadow-sm);
   }
 
@@ -123,15 +96,6 @@ const styles = css`
     box-shadow: var(--shadow-2xl), var(--inset-shadow-sm);
   }
 
-  :host([variant='frost']) .card:hover {
-    --_bg: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    backdrop-filter: blur(var(--blur-xl)) saturate(200%);
-    box-shadow: var(--shadow-xl);
-  }
-
-  :host([variant='frost'][clickable]) .card:hover {
-    box-shadow: var(--shadow-2xl);
-  }
 
   /* ========================================
      Hover Shadow Enhancement
@@ -306,18 +270,96 @@ const styles = css`
   }
 `;
 
-// -------------------- Props Type --------------------
-export type CardProps = {
-  variant?: 'solid' | 'flat' | 'glass' | 'frost';
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
-  elevation?: '0' | '1' | '2' | '3' | '4' | '5';
+/**
+ * Card Component Properties
+ *
+ * A versatile card container with semantic slots for structured content display.
+ *
+ * ## Slots
+ * - **media**: Media content (images, videos) displayed at top/left
+ * - **header**: Card header (title, subtitle)
+ * - **default**: Main card content
+ * - **footer**: Card footer content
+ * - **actions**: Action buttons or links
+ *
+ * ## Events
+ * - **cardclick**: Emitted when clickable card is clicked
+ *
+ * ## CSS Custom Properties
+ * - `--card-bg`: Background color
+ * - `--card-color`: Text color
+ * - `--card-border`: Border style
+ * - `--card-border-color`: Border color
+ * - `--card-radius`: Border radius
+ * - `--card-padding`: Internal padding
+ * - `--card-shadow`: Box shadow
+ * - `--card-hover-shadow`: Shadow on hover
+ * - `--card-gap`: Gap between sections
+ *
+ * @example
+ * ```html
+ * <!-- Basic card -->
+ * <bit-card elevation="2">
+ *   <h3 slot="header">Article Title</h3>
+ *   <p>Article content goes here...</p>
+ *   <button slot="actions">Read more</button>
+ * </bit-card>
+ *
+ * <!-- Card with media -->
+ * <bit-card variant="solid" color="primary">
+ *   <img slot="media" src="image.jpg" alt="Cover">
+ *   <h2 slot="header">Product Name</h2>
+ *   <p>Product description</p>
+ *   <span slot="footer">$99.99</span>
+ * </bit-card>
+ *
+ * <!-- Clickable card -->
+ * <bit-card clickable hoverable elevation="1">
+ *   <h3 slot="header">Click me</h3>
+ *   <p>This entire card is clickable</p>
+ * </bit-card>
+ *
+ * <!-- Horizontal layout -->
+ * <bit-card orientation="horizontal" elevation="2">
+ *   <img slot="media" src="thumb.jpg">
+ *   <h4 slot="header">News Headline</h4>
+ *   <p>News summary...</p>
+ * </bit-card>
+ *
+ * <!-- Frost variant -->
+ * <bit-card variant="frost" color="secondary" padding="lg">
+ *   <h2 slot="header">Frosted Card</h2>
+ *   <p>Beautiful glassmorphism effect</p>
+ * </bit-card>
+ * ```
+ */
+export interface CardProps {
+  /** Visual style variant */
+  variant?: 'solid' | 'flat' | 'frost';
+  /** Theme color */
+  color?: ThemeColor;
+  /** Internal padding size */
+  padding?: PaddingSize;
+  /** Shadow elevation level (0-5) */
+  elevation?: `${ElevationLevel}`;
+  /** Card orientation */
   orientation?: 'vertical' | 'horizontal';
+  /** Show hover effects */
   hoverable?: boolean;
+  /** Enable click interaction */
   clickable?: boolean;
+  /** Disable card interaction */
   disabled?: boolean;
+  /** Show loading state */
   loading?: boolean;
-};
+}
+
+/**
+ * Card Click Event Detail
+ */
+export interface CardClickEvent extends ClickEventDetail {}
+
+// -------------------- Props Type --------------------
 
 // -------------------- Component Definition --------------------
 defineElement<HTMLElement, CardProps>('bit-card', {

@@ -1,41 +1,20 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import { frostVariantMixin, roundedVariantMixin, colorThemeMixin, disabledLoadingMixin } from '../../styles';
+import type {
+  ThemeColor,
+  VisualVariant,
+  ComponentSize,
+  RoundedSize,
+  InputType,
+  InputChangeEventDetail,
+} from '../../types';
 
 /**
- * bit-input - A customizable text input component
+ * # bit-input
+ *
+ * A customizable text input component with multiple variants, label placements, and form features.
  *
  * @element bit-input
- *
- * @attr {string} type - Input type: 'text' | 'email' | 'password' | 'search' | 'url' | 'tel' | 'number'
- * @attr {string} value - Current input value
- * @attr {string} name - Form field name
- * @attr {string} placeholder - Placeholder text
- * @attr {string} label - Label text
- * @attr {string} label-placement - Label placement: 'inset' | 'outside' (default: 'inset')
- * @attr {string} helper - Helper text displayed below the input
- * @attr {boolean} disabled - Disable the input
- * @attr {boolean} readonly - Make the input read-only
- * @attr {boolean} required - Mark the field as required
- * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost'
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} rounded - Border radius: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '' (empty = 'full')
- *
- * @slot prefix - Content before the input (e.g. icon)
- * @slot suffix - Content after the input (e.g. clear button, icon)
- * @slot helper - Complex helper content below the input
- *
- * @cssprop --input-backdrop - Backdrop color
- * @cssprop --input-color - Text color
- * @cssprop --input-border-color - Border color
- * @cssprop --input-focus - Focus border color
- * @cssprop --input-placeholder-color - Placeholder color
- * @cssprop --input-radius - Border radius
- * @cssprop --input-padding - Inner padding (vertical horizontal)
- * @cssprop --input-gap - Gap between prefix/suffix and input
- * @cssprop --input-font-size - Font size
- *
- * @fires input - Emitted when the value changes (user input)
- * @fires change - Emitted when the value is committed (blur or Enter)
  */
 
 const styles = css`
@@ -57,11 +36,11 @@ const styles = css`
     flex-direction: column;
   }
 
-  :host([disabled]) {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
+  /* ========================================
+     States (Shared Mixin)
+     ======================================== */
+
+  ${disabledLoadingMixin()}
 
   .input-wrapper {
     display: flex;
@@ -218,181 +197,83 @@ const styles = css`
   }
 
   /* ========================================
-     Rounded Variant
+     Rounded Variant (Shared Mixin)
      ======================================== */
 
-  :host([rounded='sm']) {
-    --_radius: var(--rounded-sm);
-  }
-
-  :host([rounded='md']) {
-    --_radius: var(--rounded-md);
-  }
-
-  :host([rounded='lg']) {
-    --_radius: var(--rounded-lg);
-  }
-
-  :host([rounded='xl']) {
-    --_radius: var(--rounded-xl);
-  }
-
-  :host([rounded='2xl']) {
-    --_radius: var(--rounded-2xl);
-  }
-
-  :host([rounded='3xl']) {
-    --_radius: var(--rounded-3xl);
-  }
-
-  :host([rounded='full']),
-  :host([rounded='']) {
-    --_radius: var(--rounded-full);
-  }
+  ${roundedVariantMixin()}
 
   /* ========================================
-     Color Themes (Default: Neutral)
+     Color Themes (Shared Mixin)
      ======================================== */
 
-  :host(:not([color])) {
-    --_theme-base: var(--color-neutral);
-    --_theme-backdrop: var(--input-backdrop, var(--color-neutral-backdrop));
-    --_theme-border: var(--color-neutral-border);
-    --_theme-content: var(--input-color, var(--color-neutral-content));
-    --_theme-contrast: var(--color-neutral-contrast);
-    --_theme-focus: var(--input-focus, var(--color-neutral-focus));
-    --_theme-shadow: var(--color-neutral-focus-shadow);
-    --_theme-halo: var(--halo-shadow-neutral);
-  }
-
-  :host([color='primary']) {
-    --_theme-base: var(--color-primary);
-    --_theme-backdrop: var(--color-primary-backdrop);
-    --_theme-border: var(--color-primary-border);
-    --_theme-content: var(--color-primary-content);
-    --_theme-contrast: var(--color-primary-contrast);
-    --_theme-focus: var(--color-primary-focus);
-    --_theme-shadow: var(--color-primary-focus-shadow);
-    --_theme-halo: var(--halo-shadow-primary);
-  }
-
-  :host([color='secondary']) {
-    --_theme-base: var(--color-secondary);
-    --_theme-backdrop: var(--color-secondary-backdrop);
-    --_theme-border: var(--color-secondary-border);
-    --_theme-content: var(--color-secondary-content);
-    --_theme-contrast: var(--color-secondary-contrast);
-    --_theme-focus: var(--color-secondary-focus);
-    --_theme-shadow: var(--color-secondary-focus-shadow);
-    --_theme-halo: var(--halo-shadow-secondary);
-  }
-
-  :host([color='info']) {
-    --_theme-base: var(--color-info);
-    --_theme-backdrop: var(--color-info-backdrop);
-    --_theme-border: var(--color-info-border);
-    --_theme-content: var(--color-info-content);
-    --_theme-contrast: var(--color-info-contrast);
-    --_theme-focus: var(--color-info-focus);
-    --_theme-shadow: var(--color-info-focus-shadow);
-    --_theme-halo: var(--halo-shadow-info);
-  }
-
-  :host([color='success']) {
-    --_theme-base: var(--color-success);
-    --_theme-backdrop: var(--color-success-backdrop);
-    --_theme-border: var(--color-success-border);
-    --_theme-content: var(--color-success-content);
-    --_theme-contrast: var(--color-success-contrast);
-    --_theme-focus: var(--color-success-focus);
-    --_theme-shadow: var(--color-success-focus-shadow);
-    --_theme-halo: var(--halo-shadow-success);
-  }
-
-  :host([color='warning']) {
-    --_theme-base: var(--color-warning);
-    --_theme-backdrop: var(--color-warning-backdrop);
-    --_theme-border: var(--color-warning-border);
-    --_theme-content: var(--color-warning-content);
-    --_theme-contrast: var(--color-warning-contrast);
-    --_theme-focus: var(--color-warning-focus);
-    --_theme-shadow: var(--color-warning-focus-shadow);
-    --_theme-halo: var(--halo-shadow-warning);
-  }
-
-  :host([color='error']) {
-    --_theme-base: var(--color-error);
-    --_theme-backdrop: var(--color-error-backdrop);
-    --_theme-border: var(--color-error-border);
-    --_theme-content: var(--color-error-content);
-    --_theme-contrast: var(--color-error-contrast);
-    --_theme-focus: var(--color-error-focus);
-    --_theme-shadow: var(--color-error-focus-shadow);
-    --_theme-halo: var(--halo-shadow-error);
-  }
+  ${colorThemeMixin()}
 
   /* ========================================
      Visual Variants
      ======================================== */
 
-  /* Solid (Default) */
-  :host(:not([variant])),
-  :host([variant='solid']) {
-    --_shadown: var(--shadow-2xs);
-    --_bg: var(--color-contrast-50);
-    --_border-color: var(--color-contrast-300);
+  /* Solid (Default) - Standard input with background */
+  :host(:not([variant])) .field,
+  :host([variant='solid']) .field {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+    box-shadow: var(--shadow-2xs);
   }
 
-  /* Flat - Minimal but visible, with subtle color hint */
-  :host([variant='flat']) {
-    --_shadown: var(--inset-shadow-2xs);
-    --_bg: color-mix(in srgb, var(--_theme-base) 4%, var(--color-contrast-100));
-    --_border-color: var(--_theme-border);
+  /* Flat - Minimal with subtle color hint */
+  :host([variant='flat']) .field {
+    background: color-mix(in srgb, var(--_theme-base) 4%, var(--color-contrast-100));
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-2xs);
   }
 
-  :host([variant='flat']:not([disabled])) .field:hover {
-    --_bg: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-    --_border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  :host([variant='flat']) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
   }
 
-  :host([variant='flat']:not([disabled])) .field:focus-within {
-    --_bg: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-    --_border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+  :host([variant='flat']) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
     box-shadow: var(--_theme-shadow);
   }
 
-  /* Bordered */
-  :host([variant='bordered']) {
-    --_bg: var(--_theme-backdrop);
-    --_border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-    --_placeholder: color-mix(in srgb, var(--_theme-content) 45%, transparent);
+  /* Bordered - Filled with theme color */
+  :host([variant='bordered']) .field {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
   }
 
-  :host([variant='bordered']:not([disabled])) .field:hover {
-    --_border-color: var(--_theme-focus);
+  :host([variant='bordered']) input {
+    color: var(--_theme-content);
   }
 
-  /* Outline */
-  :host([variant='outline']) {
-    --_shadown: none;
-    --_bg: transparent;
+  :host([variant='bordered']) input::placeholder {
+    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
   }
 
-  /* Ghost */
-  :host([variant='ghost']) {
-    --_bg: transparent;
-    --_border-color: transparent;
+  :host([variant='bordered']) .field:hover {
+    border-color: var(--_theme-focus);
   }
 
-  :host([variant='ghost']) .field {
+  /* Outline - Transparent background */
+  :host([variant='outline']) .field {
+    background: transparent;
     box-shadow: none;
   }
 
-  :host([variant='ghost']:not([disabled])) .field:hover {
+  /* Ghost - Transparent until hover */
+  :host([variant='ghost']) .field {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']) .field:hover {
     background: var(--color-contrast-100);
   }
 
-  /* Text */
+  /* Text - Underline style */
   :host([variant='text']) .field {
     background: transparent;
     border: none;
@@ -401,102 +282,172 @@ const styles = css`
     box-shadow: none;
   }
 
-  :host([variant='text']:not([disabled])) .field:focus-within {
+  :host([variant='text']) .field:focus-within {
     border-bottom: var(--border-2) solid var(--_theme-focus);
+    transform: none;
   }
 
-  /* Frost - Smart backdrop blur variant */
-  :host([variant='frost']) .field {
-    backdrop-filter: blur(var(--blur-lg)) saturate(190%);
-    -webkit-backdrop-filter: blur(var(--blur-md)) saturate(190%);
-    box-shadow: var(--_shadow);
-  }
+  /* ========================================
+     Frost Variant (Shared Mixin + Input-Specific)
+     ======================================== */
 
-  /* Neutral: canvas-based frost */
-  :host([variant='frost']:not([color])) {
-    --_bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    --_border-color: color-mix(in srgb, var(--color-canvas) 40%, transparent);
-    --_placeholder: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-    --_shadow: var(--_theme-halo);
-  }
+  ${frostVariantMixin('.field')}
 
-  :host([variant='frost']:not([color]):not([disabled])) .field:hover {
-    background: color-mix(in srgb, var(--color-canvas) 65%, transparent);
-    border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
-    backdrop-filter: blur(var(--blur-lg)) saturate(200%);
-    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(200%);
-  }
-
-  :host([variant='frost']:not([color]):not([disabled])) .field:focus-within {
-    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-    border-color: color-mix(in srgb, var(--_theme-focus) 40%, transparent);
-    backdrop-filter: blur(var(--blur-xl)) saturate(210%);
-    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(210%);
-  }
-
+  /* Input-specific frost customizations for text and labels */
   :host([variant='frost']:not([color])) input {
-    color: var(--_theme-content);
-    box-shadow: var(--_shadow);
-    text-shadow: var(--text-shadow-2xs);
+    color: var(--color-contrast);
+    text-shadow: var(--text-shadow-sm);
   }
 
-  /* Frost with color: frosted glass effect */
-  :host([variant='frost'][color]) {
-    --_bg: color-mix(in srgb, var(--_theme-base) 30%, var(--color-contrast) 10%);
-    --_border-color: color-mix(in srgb, var(--_theme-border) 50%, transparent);
-    --_placeholder: color-mix(in srgb, var(--_theme-contrast) 30%, transparent);
-    --_shadow: var(--_theme-halo);
+  :host([variant='frost']:not([color])) .label-inset {
+    color: color-mix(in srgb, var(--color-contrast) 85%, transparent);
   }
 
-  :host([variant='frost'][color]) .field {
-    filter: brightness(1.1);
-  }
-
-  :host([variant='frost'][color]:not([disabled])) .field:hover {
-    background: color-mix(in srgb, var(--_theme-base) 60%, var(--color-contrast) 40%);
-    border-color: color-mix(in srgb, var(--_theme-focus) 50%, transparent);
-    backdrop-filter: blur(var(--blur-lg)) saturate(200%);
-    -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(200%);
-  }
-
-  :host([variant='frost'][color]:not([disabled])) .field:focus-within {
-    background: color-mix(in srgb, var(--_theme-base) 50%, var(--color-contrast) 50%);
-    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-    backdrop-filter: blur(var(--blur-xl)) saturate(210%);
-    -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(210%);
+  :host([variant='frost']:not([color])) input::placeholder {
+    color: color-mix(in srgb, var(--color-contrast) 50%, transparent);
   }
 
   :host([variant='frost'][color]) input {
-    color: var(--text-color-contrast);
-    text-shadow: var(--text-shadow-xs);
+    color: var(--_theme-content);
+    text-shadow: var(--text-shadow-sm);
+  }
+
+  :host([variant='frost'][color]) input::placeholder {
+    color: color-mix(in srgb, var(--_theme-content) 40%, transparent);
   }
 
   :host([variant='frost'][color]) .label-inset {
-    color: color-mix(in srgb, var(--text-color-contrast) 80%, transparent);
+    color: color-mix(in srgb, var(--_theme-content) 90%, transparent);
   }
 
   :host([variant='frost'][color]) ::slotted([slot='prefix']),
   :host([variant='frost'][color]) ::slotted([slot='suffix']) {
-    color: color-mix(in srgb, var(--text-color-contrast) 75%, transparent);
+    color: color-mix(in srgb, var(--_theme-content) 80%, transparent);
+  }
+
+  /* Input-specific hover/focus states with enhanced opacity */
+  :host([variant='frost']:not([color])) .field:hover {
+    background: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+    border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
+  }
+
+  :host([variant='frost']:not([color])) .field:focus-within {
+    background: color-mix(in srgb, var(--color-canvas) 85%, transparent);
+    border-color: color-mix(in srgb, var(--_theme-focus) 40%, transparent);
+  }
+
+  :host([variant='frost'][color]) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 30%);
+    border-color: color-mix(in srgb, var(--_theme-focus) 50%, transparent);
+  }
+
+  :host([variant='frost'][color]) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 65%, var(--color-contrast) 35%);
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
   }
 `;
 
+/**
+ * Input Component Properties
+ *
+ * A customizable text input with label placement options, multiple variants, and form features.
+ *
+ * ## Slots
+ * - **prefix**: Content before the input (e.g., icons, decorative elements)
+ * - **suffix**: Content after the input (e.g., clear button, validation icon)
+ * - **helper**: Complex helper content below the input
+ *
+ * ## Events
+ * - **input**: Emitted when input value changes (on every keystroke)
+ * - **change**: Emitted when input loses focus with changed value
+ *
+ * ## CSS Custom Properties
+ * - `--input-bg`: Background color
+ * - `--input-color`: Text color
+ * - `--input-border-color`: Border color
+ * - `--input-focus`: Focus border color
+ * - `--input-placeholder-color`: Placeholder text color
+ * - `--input-radius`: Border radius
+ * - `--input-padding`: Inner padding (vertical horizontal)
+ * - `--input-gap`: Gap between prefix/suffix and input
+ * - `--input-font-size`: Font size
+ *
+ * @example
+ * ```html
+ * <!-- Basic usage -->
+ * <bit-input
+ *   type="email"
+ *   label="Email"
+ *   placeholder="you@example.com"
+ * />
+ *
+ * <!-- With outside label -->
+ * <bit-input
+ *   label="Name"
+ *   label-placement="outside"
+ *   variant="bordered"
+ *   color="primary"
+ * />
+ *
+ * <!-- With prefix icon -->
+ * <bit-input
+ *   placeholder="Search..."
+ *   variant="outline"
+ * >
+ *   <svg slot="prefix">...</svg>
+ * </bit-input>
+ *
+ * <!-- With helper text -->
+ * <bit-input
+ *   type="password"
+ *   label="Password"
+ *   helper="Must be at least 8 characters"
+ *   required
+ * />
+ *
+ * <!-- Frost variant -->
+ * <bit-input
+ *   variant="frost"
+ *   color="primary"
+ *   label="Username"
+ * />
+ * ```
+ */
 export type InputProps = {
-  'label-placement'?: 'inset' | 'outside';
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-  disabled?: boolean;
-  helper?: string;
+  /** Label text */
   label?: string;
+  /** Label placement */
+  'label-placement'?: 'inset' | 'outside';
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable input interaction */
+  disabled?: boolean;
+  /** Helper text displayed below the input */
+  helper?: string;
+  /** Form field name */
   name?: string;
+  /** Placeholder text */
   placeholder?: string;
+  /** Make the input read-only */
   readonly?: boolean;
+  /** Mark the field as required */
   required?: boolean;
-  rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | '';
-  size?: 'sm' | 'md' | 'lg';
-  type?: 'text' | 'email' | 'password' | 'search' | 'url' | 'tel' | 'number';
+  /** Border radius size */
+  rounded?: RoundedSize | '';
+  /** Input size */
+  size?: ComponentSize;
+  /** HTML input type */
+  type?: InputType;
+  /** Current input value */
   value?: string;
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass'>;
 };
+
+/**
+ * Input Change Event Detail
+ */
+export type InputInputEvent = InputChangeEventDetail;
 
 const VALID_INPUT_TYPES = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'] as const;
 
@@ -585,12 +536,12 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     return html`
       <div class="input-wrapper">
         ${labelText && labelPlacement === 'outside'
-        ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
-        : ''}
+          ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
+          : ''}
         <div class="field">
           ${labelText && labelPlacement === 'inset'
-          ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
-          : ''}
+            ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
+            : ''}
           <div class="input-row">
             <slot name="prefix"></slot>
             <input
@@ -608,12 +559,12 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
           </div>
         </div>
         ${helperText || el.querySelector('[slot="helper"]')
-        ? html`
+          ? html`
               <div class="helper-text" id="${helperId}">
                 <slot name="helper">${helperText}</slot>
               </div>
             `
-        : ''}
+          : ''}
       </div>
     `;
   },

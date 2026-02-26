@@ -1,31 +1,12 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
+import type { ComponentSize, VisualVariant, AccordionEventDetail } from '../../types';
 
 /**
- * bit-accordion-item - An individual accordion item using details/summary
+ * # bit-accordion-item
+ *
+ * An individual accordion item with expand/collapse functionality using native details/summary.
  *
  * @element bit-accordion-item
- *
- * @attr {boolean} expanded - Whether the item is expanded (synced with details[open])
- * @attr {boolean} disabled - Whether the item is disabled
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
- * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
- *
- * @slot - Default slot for the accordion body content
- * @slot title - Slot for the summary/title content
- * @slot subtitle - Slot for the subtitle content (appears below the title)
- * @slot prefix - Content before the title
- * @slot suffix - Content after the title
- *
- * @cssprop --accordion-item-bg - Background color
- * @cssprop --accordion-item-border - Border style
- * @cssprop --accordion-item-radius - Border radius
- * @cssprop --accordion-item-padding - Inner padding
- * @cssprop --accordion-item-transition - Transition timing
- *
- * @fires expand - Emitted when the item is expanded
- *   detail: { expanded: true; item: HTMLElement }
- * @fires collapse - Emitted when the item is collapsed
- *   detail: { expanded: false; item: HTMLElement }
  */
 
 const styles = css`
@@ -270,12 +251,66 @@ const styles = css`
   }
 `;
 
-export type AccordionItemProps = {
+/**
+ * Accordion Item Component Properties
+ *
+ * An individual expandable/collapsible section using native HTML details/summary elements.
+ *
+ * ## Slots
+ * - **prefix**: Content before the title (e.g., icons)
+ * - **title**: Main accordion item title
+ * - **subtitle**: Optional subtitle text
+ * - **suffix**: Content after the title (e.g., badges)
+ * - **default**: Accordion item content (shown when expanded)
+ *
+ * ## Events
+ * - **expand**: Emitted when item expands
+ * - **collapse**: Emitted when item collapses
+ *
+ * @example
+ * ```html
+ * <!-- Basic item -->
+ * <bit-accordion-item>
+ *   <span slot="title">Click to expand</span>
+ *   <p>Hidden content revealed on click</p>
+ * </bit-accordion-item>
+ *
+ * <!-- With subtitle -->
+ * <bit-accordion-item expanded>
+ *   <span slot="title">Main Title</span>
+ *   <span slot="subtitle">Additional info</span>
+ *   <p>Content here</p>
+ * </bit-accordion-item>
+ *
+ * <!-- With prefix icon -->
+ * <bit-accordion-item variant="bordered" size="lg">
+ *   <svg slot="prefix">...</svg>
+ *   <span slot="title">Section with Icon</span>
+ *   <p>Content</p>
+ * </bit-accordion-item>
+ *
+ * <!-- Disabled -->
+ * <bit-accordion-item disabled>
+ *   <span slot="title">Cannot expand</span>
+ *   <p>Content</p>
+ * </bit-accordion-item>
+ * ```
+ */
+export interface AccordionItemProps {
+  /** Whether the item is expanded/open */
   expanded?: boolean;
+  /** Disable accordion item interaction */
   disabled?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost';
-};
+  /** Item size */
+  size?: ComponentSize;
+  /** Visual style variant */
+  variant?: VisualVariant;
+}
+
+/**
+ * Accordion Item Toggle Event Detail
+ */
+export interface AccordionItemToggleEvent extends AccordionEventDetail {}
 
 defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
   observedAttributes: ['expanded', 'disabled', 'size', 'variant'] as const,
