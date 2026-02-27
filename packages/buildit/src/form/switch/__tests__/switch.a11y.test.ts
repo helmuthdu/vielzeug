@@ -59,7 +59,7 @@ describe('bit-switch accessibility', () => {
     const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
 
     for (const color of colors) {
-      const fixture = await createFixture('bit-switch', { color, checked: true });
+      const fixture = await createFixture('bit-switch', { checked: true, color });
       fixture.element.textContent = `${color} switch`;
 
       const results = await axe.run(fixture.element, {
@@ -91,5 +91,3 @@ describe('bit-switch accessibility', () => {
     }
   });
 });
-
-

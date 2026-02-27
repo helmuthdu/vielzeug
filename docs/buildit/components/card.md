@@ -30,7 +30,7 @@ A versatile and feature-rich card container component with purposeful variants, 
   <bit-text>This is the card content. It can contain any HTML elements.</bit-text>
   <bit-text slot="footer" size="sm" variant="caption">Additional information</bit-text>
   <div slot="actions">
-    <bit-button size="sm" variant="solid">Primary</bit-button>
+    <bit-button size="sm">Primary</bit-button>
     <bit-button size="sm" variant="ghost">Secondary</bit-button>
   </div>
 </bit-card>
@@ -56,6 +56,7 @@ The card has a **clean default style** with optional special variants for advanc
 Use the `elevation` prop (0-5) to control shadow depth! The default style works beautifully with any elevation level, while glass and frost variants are perfect for floating UI elements.
 
 **Example:**
+
 ```html
 <!-- Default card with high elevation -->
 <bit-card elevation="4">High shadow</bit-card>
@@ -63,6 +64,7 @@ Use the `elevation` prop (0-5) to control shadow depth! The default style works 
 <!-- Default card with no shadow -->
 <bit-card elevation="0">Flat appearance</bit-card>
 ```
+
 :::
 
 <ComponentPreview center>
@@ -109,6 +111,7 @@ The real power comes from combining colors with elevation levels:
 ### Frost Variant
 
 Modern frost effect with backdrop blur that adapts based on color:
+
 - **Without color**: Subtle canvas-based frost overlay
 - **With color**: Frosted glass effect with colored tint
 
@@ -172,32 +175,32 @@ Apply semantic color themes to cards for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-card color="primary" variant="solid" elevation="2">
+<bit-card color="primary">
   <bit-text slot="header" variant="heading" size="lg">Primary Card</bit-text>
   <bit-text>Uses the primary brand color.</bit-text>
 </bit-card>
 
-<bit-card color="secondary" variant="solid" elevation="2">
+<bit-card color="secondary">
   <bit-text slot="header" variant="heading" size="lg">Secondary Card</bit-text>
   <bit-text>Uses the secondary brand color.</bit-text>
 </bit-card>
 
-<bit-card color="info" variant="solid" elevation="2">
+<bit-card color="info">
   <bit-text slot="header" variant="heading" size="lg">Info Card</bit-text>
   <bit-text>Perfect for positive messages.</bit-text>
 </bit-card>
 
-<bit-card color="success" variant="solid" elevation="2">
+<bit-card color="success">
   <bit-text slot="header" variant="heading" size="lg">Success Card</bit-text>
   <bit-text>Perfect for positive messages.</bit-text>
 </bit-card>
 
-<bit-card color="warning" variant="solid" elevation="2">
+<bit-card color="warning">
   <bit-text slot="header" variant="heading" size="lg">Warning Card</bit-text>
   <bit-text>Great for caution messages.</bit-text>
 </bit-card>
 
-<bit-card color="error" variant="solid" elevation="2">
+<bit-card color="error">
   <bit-text slot="header" variant="heading" size="lg">Error Card</bit-text>
   <bit-text>Ideal for error states.</bit-text>
 </bit-card>
@@ -253,7 +256,9 @@ Cards support both vertical (default) and horizontal layouts.
 
 ```html
 <bit-card orientation="horizontal" elevation="2" style="max-width: 600px;">
-  <div slot="media" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
+  <div
+    slot="media"
+    style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📷
   </div>
   <bit-text slot="header" variant="heading" size="xl">Horizontal Card</bit-text>
@@ -276,7 +281,11 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 
 ```html
 <bit-card elevation="2" style="max-width: 350px;">
-  <img slot="media" src="https://images.unsplash.com/photo-1557683316-973673baf926?w=400" alt="Gradient" style="width: 100%; height: 200px; object-fit: cover;" />
+  <img
+    slot="media"
+    src="https://images.unsplash.com/photo-1557683316-973673baf926?w=400"
+    alt="Gradient"
+    style="width: 100%; height: 200px; object-fit: cover;" />
   <bit-text slot="header" variant="heading" size="xl">Beautiful Gradient</bit-text>
   <bit-text>Images automatically fill the media slot with proper sizing.</bit-text>
 </bit-card>
@@ -295,7 +304,7 @@ Separate slot for action buttons with automatic layout.
   <bit-text slot="header" variant="heading" size="xl">Action Card</bit-text>
   <bit-text>This card has multiple actions in a dedicated slot.</bit-text>
   <div slot="actions">
-    <bit-button variant="solid" color="primary" size="sm">Confirm</bit-button>
+    <bit-button color="primary" size="sm">Confirm</bit-button>
     <bit-button variant="outline" color="primary" size="sm">Cancel</bit-button>
     <bit-button variant="ghost" size="sm">Learn More</bit-button>
   </div>
@@ -370,7 +379,10 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 ```html
 <bit-card clickable hoverable elevation="2">
   <bit-text slot="header" variant="heading" size="lg">Click Me</bit-text>
-  <bit-text>This card is clickable, supports keyboard navigation (Enter/Space), and emits both 'click' and 'cardclick' events.</bit-text>
+  <bit-text
+    >This card is clickable, supports keyboard navigation (Enter/Space), and emits both 'click' and 'cardclick'
+    events.</bit-text
+  >
 </bit-card>
 
 <script>
@@ -392,7 +404,8 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 ```html
 <bit-card padding="lg" elevation="2" style="max-width: 320px">
   <div slot="media" style="text-align: center; padding: var(--size-4) var(--size-4) 0;">
-    <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-primary); margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-2xl); font-weight: var(--font-bold);">
+    <div
+      style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-primary); margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-2xl); font-weight: var(--font-bold);">
       JD
     </div>
   </div>
@@ -400,13 +413,11 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
     <bit-text variant="heading" size="xl">Jane Doe</bit-text>
     <bit-text size="sm" variant="caption" color="muted">Software Engineer</bit-text>
   </div>
-  <bit-text align="center" color="body">
-    Building beautiful web experiences with modern technologies.
-  </bit-text>
+  <bit-text align="center" color="body"> Building beautiful web experiences with modern technologies. </bit-text>
   <div slot="actions" style="display: flex; width: 100%;">
     <bit-button-group attached fullwidth>
-    <bit-button variant="solid" color="primary" style="flex: 1">Follow</bit-button>
-    <bit-button variant="outline" color="primary" style="flex: 1">Message</bit-button>
+      <bit-button color="primary" style="flex: 1">Follow</bit-button>
+      <bit-button variant="outline" color="primary" style="flex: 1">Message</bit-button>
     </bit-button-group>
   </div>
 </bit-card>
@@ -419,8 +430,10 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 <ComponentPreview center>
 
 ```html
-<bit-card variant="solid" elevation="2" hoverable clickable padding="none" style="max-width: 280px">
-  <div slot="media" style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
+<bit-card elevation="2" hoverable clickable padding="none" style="max-width: 280px">
+  <div
+    slot="media"
+    style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📦
   </div>
   <div style="padding: var(--size-4)">
@@ -434,9 +447,7 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
     </div>
   </div>
   <div slot="actions" style="padding: 0 var(--size-4) var(--size-4); width: 100%;">
-    <bit-button variant="solid" color="primary" fullwidth>
-      Get Started
-    </bit-button>
+    <bit-button color="primary" fullwidth> Get Started </bit-button>
   </div>
 </bit-card>
 ```
@@ -450,16 +461,13 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 ```html
 <bit-card color="success" variant="flat" elevation="1" padding="lg" style="max-width: 400px">
   <div style="display: flex; align-items: start; gap: var(--size-3)">
-    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-success); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
+    <div
+      style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-success); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
       ✓
     </div>
     <div style="flex: 1">
-      <bit-text variant="heading" size="lg" color="success">
-        Success!
-      </bit-text>
-      <bit-text color="body">
-        Your changes have been saved successfully.
-      </bit-text>
+      <bit-text variant="heading" size="lg" color="success"> Success! </bit-text>
+      <bit-text color="body"> Your changes have been saved successfully. </bit-text>
     </div>
   </div>
 </bit-card>
@@ -473,12 +481,11 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 
 ```html
 <bit-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
-  <div style="font-size: var(--text-4xl); font-weight: var(--font-bold); color: var(--color-primary); margin-bottom: var(--size-2);">
+  <div
+    style="font-size: var(--text-4xl); font-weight: var(--font-bold); color: var(--color-primary); margin-bottom: var(--size-2);">
     1,234
   </div>
-  <div style="color: var(--color-contrast-600); font-size: var(--text-sm);">
-    Total Users
-  </div>
+  <div style="color: var(--color-contrast-600); font-size: var(--text-sm);">Total Users</div>
   <div style="color: var(--color-success); font-size: var(--text-sm); margin-top: var(--size-2);">
     ↑ 12% from last month
   </div>
@@ -496,26 +503,30 @@ Perfect for compact layouts and list views:
 ```html
 <div style="display: flex; flex-direction: column; gap: var(--size-3); max-width: 700px;">
   <bit-card orientation="horizontal" variant="flat" elevation="1" hoverable clickable>
-    <div slot="media" style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
+    <div
+      slot="media"
+      style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       📱
     </div>
     <bit-text slot="header" variant="heading" size="lg">Smartphone Pro</bit-text>
     <bit-text>Latest model with advanced features.</bit-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <bit-text weight="bold">$999</bit-text>
-      <bit-button size="sm" variant="solid" color="primary">Buy Now</bit-button>
+      <bit-button size="sm" color="primary">Buy Now</bit-button>
     </div>
   </bit-card>
-  
+
   <bit-card orientation="horizontal" variant="flat" elevation="1" hoverable clickable>
-    <div slot="media" style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
+    <div
+      slot="media"
+      style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       💻
     </div>
     <bit-text slot="header" variant="heading" size="lg">Laptop Elite</bit-text>
     <bit-text>Powerful performance for professionals.</bit-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <bit-text weight="bold">$1,499</bit-text>
-      <bit-button size="sm" variant="solid" color="primary">Buy Now</bit-button>
+      <bit-button size="sm" color="primary">Buy Now</bit-button>
     </div>
   </bit-card>
 </div>
@@ -527,22 +538,22 @@ Perfect for compact layouts and list views:
 
 ### Attributes
 
-| Attribute     | Type                                                  | Default     | Description                                           |
-|--------------|-------------------------------------------------------|-------------|-------------------------------------------------------|
-| `variant`    | `'solid' \| 'flat' \| 'frost'` | `'solid'`| Visual style variant                                   |
-| `color`      | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'neutral'` | `'neutral'` | Color theme for the card                              |
-| `padding`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`             | `'md'`      | Internal padding size                                 |
-| `elevation`  | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`             | `undefined` | Shadow elevation level (0=none, 5=maximum)            |
-| `orientation`| `'vertical' \| 'horizontal'`                         | `'vertical'`| Card layout direction                                 |
-| `hoverable`  | `boolean`                                             | `false`     | Enable hover effect with lift animation               |
-| `clickable`  | `boolean`                                             | `false`     | Make card clickable with keyboard support             |
-| `disabled`   | `boolean`                                             | `false`     | Disable card interaction                              |
-| `loading`    | `boolean`                                             | `false`     | Show loading state with animated bar                  |
+| Attribute     | Type                                                                         | Default      | Description                                |
+| ------------- | ---------------------------------------------------------------------------- | ------------ | ------------------------------------------ |
+| `variant`     | `'solid' \| 'flat' \| 'frost'`                                               | `'solid'`    | Visual style variant                       |
+| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'neutral'` | `'neutral'`  | Color theme for the card                   |
+| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                     | `'md'`       | Internal padding size                      |
+| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                     | `undefined`  | Shadow elevation level (0=none, 5=maximum) |
+| `orientation` | `'vertical' \| 'horizontal'`                                                 | `'vertical'` | Card layout direction                      |
+| `hoverable`   | `boolean`                                                                    | `false`      | Enable hover effect with lift animation    |
+| `clickable`   | `boolean`                                                                    | `false`      | Make card clickable with keyboard support  |
+| `disabled`    | `boolean`                                                                    | `false`      | Disable card interaction                   |
+| `loading`     | `boolean`                                                                    | `false`      | Show loading state with animated bar       |
 
 ### Slots
 
 | Slot      | Description                                  |
-|-----------|----------------------------------------------|
+| --------- | -------------------------------------------- |
 | (default) | Main content area of the card                |
 | `media`   | Media section (images/video) at the top      |
 | `header`  | Header section below media                   |
@@ -551,31 +562,31 @@ Perfect for compact layouts and list views:
 
 ### Events
 
-| Event       | Detail                                              | Description                            |
-|-------------|-----------------------------------------------------|----------------------------------------|
-| `click`     | `{ originalEvent: Event }`                          | Native click event (when clickable)    |
-| `cardclick` | `{ originalEvent: Event, variant: string, color: string }` | Custom event with card details |
+| Event       | Detail                                                     | Description                         |
+| ----------- | ---------------------------------------------------------- | ----------------------------------- |
+| `click`     | `{ originalEvent: Event }`                                 | Native click event (when clickable) |
+| `cardclick` | `{ originalEvent: Event, variant: string, color: string }` | Custom event with card details      |
 
 ### CSS Custom Properties
 
-| Property                   | Default                        | Description                      |
-|---------------------------|--------------------------------|----------------------------------|
-| `--card-bg`               | `var(--color-contrast-50)`     | Background color                 |
-| `--card-color`            | `var(--color-contrast-900)`    | Text color                       |
-| `--card-border`           | `var(--border)`                | Border width                     |
-| `--card-border-color`     | `var(--color-contrast-200)`    | Border color                     |
-| `--card-radius`           | `var(--rounded-lg)`            | Border radius                    |
-| `--card-padding`          | `var(--size-4)`                | Internal padding                 |
-| `--card-shadow`           | `var(--shadow-sm)`             | Box shadow                       |
-| `--card-hover-shadow`     | `var(--shadow-md)`             | Hover state shadow               |
-| `--card-gap`              | `var(--size-3)`                | Gap between sections             |
+| Property              | Default                     | Description          |
+| --------------------- | --------------------------- | -------------------- |
+| `--card-bg`           | `var(--color-contrast-50)`  | Background color     |
+| `--card-color`        | `var(--color-contrast-900)` | Text color           |
+| `--card-border`       | `var(--border)`             | Border width         |
+| `--card-border-color` | `var(--color-contrast-200)` | Border color         |
+| `--card-radius`       | `var(--rounded-lg)`         | Border radius        |
+| `--card-padding`      | `var(--size-4)`             | Internal padding     |
+| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow           |
+| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow   |
+| `--card-gap`          | `var(--size-3)`             | Gap between sections |
 
 ## Customization
 
 ### Custom Styling
 
 ```html
-<bit-card 
+<bit-card
   style="
     --card-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --card-color: white;
@@ -590,7 +601,7 @@ Perfect for compact layouts and list views:
 ### Custom Shadow
 
 ```html
-<bit-card 
+<bit-card
   style="
     --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -615,6 +626,7 @@ The card component is built with accessibility in mind:
 ### Keyboard Support
 
 When a card has the `clickable` attribute:
+
 - **Enter** or **Space**: Activates the card
 - **Tab**: Moves focus to the card
 - Disabled cards cannot receive focus
@@ -651,13 +663,13 @@ if (card) {
   card.setAttribute('variant', 'glass');
   card.setAttribute('color', 'primary');
   card.setAttribute('elevation', '4');
-  
+
   // Listen for cardclick event
   card.addEventListener('cardclick', (e) => {
     console.log('Card clicked', e.detail);
     // e.detail contains: { originalEvent, variant, color }
   });
-  
+
   // Programmatically control states
   card.setAttribute('loading', '');
   setTimeout(() => {
@@ -665,4 +677,3 @@ if (card) {
   }, 2000);
 }
 ```
-

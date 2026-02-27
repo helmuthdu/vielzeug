@@ -429,8 +429,8 @@ const displayCode = computed(() => {
 .preview-scroll-container {
   overflow: auto;
   width: var(--size-full);
-  background: var(--color-contrast-100);
-  background-image: radial-gradient(circle, var(--color-contrast-400) var(--border), transparent var(--border));
+  background: var(--color-contrast-50);
+  background-image: radial-gradient(circle, var(--color-contrast-300) var(--border), transparent var(--border));
   background-size: var(--size-4) var(--size-4);
   background-position: 0 0;
   height: var(--size-full);
@@ -447,13 +447,11 @@ const displayCode = computed(() => {
   margin: auto;
   container-type: inline-size;
   container-name: preview;
-  box-shadow: var(--shadow-2xs), var(--inset-shadow-sm);
-  border: var(--border) solid var(--color-contrast-100);
 }
 
 .preview-container {
-  padding: var(--size-8);
-  background: var(--color-canvas);
+  padding: var(--size-4);
+  background: transparent;
   min-height: var(--size-24);
   display: flex;
   gap: var(--size-4);
@@ -461,8 +459,6 @@ const displayCode = computed(() => {
   align-items: flex-start;
   transition: all 0.2s ease;
   position: relative;
-  border-radius: var(--rounded-sm);
-  box-shadow: var(--shadow-2xs);
 }
 
 .preview-container.vertical {

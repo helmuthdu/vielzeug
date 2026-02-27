@@ -138,4 +138,3 @@ describe('bit-checkbox accessibility', () => {
     });
   });
 });
-

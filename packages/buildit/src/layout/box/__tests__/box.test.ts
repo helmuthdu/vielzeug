@@ -148,10 +148,10 @@ describe('bit-box', () => {
   describe('Combined attributes', () => {
     it('should combine variant, color, elevation, and padding', async () => {
       fixture = await createFixture('bit-box', {
-        variant: 'glass',
         color: 'primary',
         elevation: '3',
         padding: 'lg',
+        variant: 'glass',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('glass');
@@ -161,6 +161,3 @@ describe('bit-box', () => {
     });
   });
 });
-
-
-

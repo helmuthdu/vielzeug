@@ -1,5 +1,5 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import type { ComponentSize, VisualVariant, AccordionEventDetail } from '../../types';
+import type { AccordionEventDetail, ComponentSize, VisualVariant } from '../../types';
 
 /**
  * # bit-accordion-item
@@ -10,158 +10,161 @@ import type { ComponentSize, VisualVariant, AccordionEventDetail } from '../../t
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles & Defaults
-     ======================================== */
+  @layer buildit.base {
+    /* ========================================
+       Base Styles & Defaults
+       ======================================== */
 
-  :host {
-    display: block;
-    color: var(--accordion-item-body-color, var(--text-color-body));
-    --accordion-details-radius: var(--rounded-md);
-    --accordion-item-transition: var(--transition-normal);
+    :host {
+      display: block;
+      color: var(--accordion-item-body-color, var(--text-color-body));
+      --accordion-details-radius: var(--rounded-md);
+      --accordion-item-transition: var(--transition-normal);
+    }
+
+    details {
+      width: 100%;
+      border-radius: var(--accordion-item-radius);
+      overflow: hidden;
+      transition: all var(--accordion-item-transition);
+    }
+
+    summary {
+      border-radius: var(--accordion-details-radius);
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      font-size: var(--accordion-item-title);
+      align-items: center;
+      gap: var(--size-4);
+      padding: var(--accordion-item-details-padding, var(--size-3) var(--size-4));
+      user-select: none;
+      transition: all var(--accordion-item-transition);
+      outline: none;
+      position: relative;
+      background: var(--accordion-item-bg);
+      border: var(--border) solid var(--accordion-item-border-color);
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .header-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .subtitle {
+      font-size: var(--accordion-item-subtitle-size);
+      color: var(--accordion-item-subtitle-color, var(--text-color-secondary));
+      line-height: var(--leading-normal);
+    }
+
+    .title {
+      font-weight: var(--font-medium);
+      color: var(--accordion-item-title-color, var(--text-color-heading));
+    }
+
+    .content-wrapper {
+      font-size: var(--accordion-item-body);
+      padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
+      background: var(--accordion-item-bg);
+      border-left: 1px solid var(--accordion-item-border-color);
+      border-right: 1px solid var(--accordion-item-border-color);
+      border-bottom: 1px solid var(--accordion-item-border-color);
+      border-radius: var(--accordion-summary-radius);
+    }
   }
 
-  details {
-    width: 100%;
-    border-radius: var(--accordion-item-radius);
-    overflow: hidden;
-    transition: all var(--accordion-item-transition);
-  }
+  @layer buildit.variants {
+    /* ========================================
+       Visual Variants
+       ======================================== */
 
-  summary {
-    border-radius: var(--accordion-details-radius);
-    list-style: none;
-    cursor: pointer;
-    display: flex;
-    font-size: var(--accordion-item-title);
-    align-items: center;
-    gap: var(--size-4);
-    padding: var(--accordion-item-details-padding, var(--size-3) var(--size-4));
-    user-select: none;
-    transition: all var(--accordion-item-transition);
-    outline: none;
-    position: relative;
-    background: var(--accordion-item-bg);
-    border: var(--border) solid var(--accordion-item-border-color);
-  }
+    :host,
+    :host([variant='solid']) {
+      --accordion-item-bg: var(--color-contrast-50);
+      --accordion-item-border-color: transparent;
+    }
 
-  summary::-webkit-details-marker {
-    display: none;
-  }
+    :host summary:hover,
+    :host([variant='solid']) summary:hover {
+      --accordion-item-bg: var(--color-contrast-200);
+    }
 
-  .header-content {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-  }
+    :host([variant='flat']) {
+      --accordion-item-bg: var(--color-contrast-100);
+    }
 
-  .subtitle {
-    font-size: var(--accordion-item-subtitle-size);
-    color: var(--accordion-item-subtitle-color, var(--text-color-secondary));
-    line-height: var(--leading-normal);
-  }
+    :host([variant='flat']) summary:hover {
+      --accordion-item-bg: var(--color-contrast-200);
+    }
 
-  .title {
-    font-weight: var(--font-medium);
-    color: var(--accordion-item-title-color, var(--text-color-heading));
-  }
+    :host([variant='bordered']) {
+      --accordion-item-bg: var(--color-contrast-100);
+      --accordion-item-border-color: var(--color-contrast-300);
 
-  .content-wrapper {
-    font-size: var(--accordion-item-body);
-    padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
-    background: var(--accordion-item-bg);
-    border-left: 1px solid var(--accordion-item-border-color);
-    border-right: 1px solid var(--accordion-item-border-color);
-    border-bottom: 1px solid var(--accordion-item-border-color);
-    border-radius: var(--accordion-summary-radius);
-  }
+      box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
+    }
 
-  /* ========================================
-     Visual Variants
-     ======================================== */
+    :host([variant='bordered']) summary:hover {
+      background: var(--color-contrast-200);
+    }
 
-  :host,
-  :host([variant='solid']) {
-    --accordion-item-bg: var(--color-contrast-50);
-    --accordion-item-border-color: transparent;
-  }
+    :host([variant='outline']) {
+      --accordion-item-bg: transparent;
+      --accordion-item-border-color: var(--color-contrast-300);
+    }
 
-  :host summary:hover,
-  :host([variant='solid']) summary:hover {
-    --accordion-item-bg: var(--color-contrast-200);
-  }
+    :host([variant='outline']) summary:hover {
+      background: var(--color-contrast-300);
+    }
 
-  :host([variant='flat']) {
-    --accordion-item-bg: var(--color-contrast-100);
-  }
+    :host([variant='ghost']) {
+      --accordion-item-bg: transparent;
+      --accordion-item-border-color: transparent;
+    }
 
-  :host([variant='flat']) summary:hover {
-    --accordion-item-bg: var(--color-contrast-200);
-  }
+    :host([variant='ghost']) summary:hover {
+      background: var(--color-contrast-200);
+    }
 
-  :host([variant='bordered']) {
-    --accordion-item-bg: var(--color-contrast-100);
-    --accordion-item-border-color: var(--color-contrast-300);
+    :host([variant='text']) {
+      --accordion-item-bg: transparent;
+      --accordion-item-border-color: transparent;
+    }
 
-    box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
-  }
+    :host([variant='text']) summary:hover {
+      background: transparent;
+    }
 
-  :host([variant='bordered']) summary:hover {
-    background: var(--color-contrast-200);
-  }
+    /* Glass & Frost - Shared Styles */
+    :host([variant='glass']) details,
+    :host([variant='frost']) details {
+      border-radius: inherit;
+    }
 
-  :host([variant='outline']) {
-    --accordion-item-bg: transparent;
-    --accordion-item-border-color: var(--color-contrast-300);
-  }
+    :host([variant='glass']) summary,
+    :host([variant='frost']) summary {
+      border-radius: inherit;
+      backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+    }
 
-  :host([variant='outline']) summary:hover {
-    background: var(--color-contrast-300);
-  }
+    :host([variant='glass']) .content-wrapper,
+    :host([variant='frost']) .content-wrapper {
+      backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+      border-radius: 0;
+    }
 
-  :host([variant='ghost']) {
-    --accordion-item-bg: transparent;
-    --accordion-item-border-color: transparent;
-  }
-
-  :host([variant='ghost']) summary:hover {
-    background: var(--color-contrast-200);
-  }
-
-  :host([variant='text']) {
-    --accordion-item-bg: transparent;
-    --accordion-item-border-color: transparent;
-  }
-
-  :host([variant='text']) summary:hover {
-    background: transparent;
-  }
-
-  /* Glass & Frost - Shared Styles */
-  :host([variant='glass']) details,
-  :host([variant='frost']) details {
-    border-radius: inherit;
-  }
-
-  :host([variant='glass']) summary,
-  :host([variant='frost']) summary {
-    border-radius: inherit;
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  }
-
-  :host([variant='glass']) .content-wrapper,
-  :host([variant='frost']) .content-wrapper {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-    border-radius: 0;
-  }
-
-  /* Glass */
-  :host([variant='glass']) {
-    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    --accordion-item-border-color: transparent;
-    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
-    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
+    /* Glass */
+    :host([variant='glass']) {
+      --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+      --accordion-item-border-color: transparent;
+      --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
+      --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
     --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
   }
 
@@ -248,6 +251,7 @@ const styles = css`
   :host([expanded]) {
     --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
     --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
+  }
   }
 `;
 

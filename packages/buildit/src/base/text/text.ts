@@ -99,59 +99,62 @@ const styles = css`
   :host([weight='semibold']) { --_weight: var(--font-semibold); }
   :host([weight='bold']) { --_weight: var(--font-bold); }
 
-  /* ========================================
-     Color Variants
-     ======================================== */
+    /* ========================================
+       Color Variants
+       ======================================== */
 
-  :host([color='primary']) { --_color: var(--color-primary); }
-  :host([color='secondary']) { --_color: var(--color-secondary); }
-  :host([color='info']) { --_color: var(--color-info); }
-  :host([color='success']) { --_color: var(--color-success); }
-  :host([color='warning']) { --_color: var(--color-warning); }
-  :host([color='error']) { --_color: var(--color-error); }
-  :host([color='heading']) { --_color: var(--text-color-heading); }
-  :host([color='body']) { --_color: var(--text-color-body); }
-  :host([color='muted']) { --_color: var(--text-color-secondary); }
-  :host([color='disabled']) { --_color: var(--text-color-disabled); }
-  :host([color='contrast']) { --_color: var(--text-color-contrast); }
-
-  /* ========================================
-     Alignment
-     ======================================== */
-
-  :host([align]) { display: block; }
-  :host([align='left']) { text-align: left; }
-  :host([align='center']) { text-align: center; }
-  :host([align='right']) { text-align: right; }
-  :host([align='justify']) { text-align: justify; }
-
-  /* ========================================
-     Truncate
-     ======================================== */
-
-  :host([truncate]) {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    :host([color='primary']) { --_color: var(--color-primary); }
+    :host([color='secondary']) { --_color: var(--color-secondary); }
+    :host([color='info']) { --_color: var(--color-info); }
+    :host([color='success']) { --_color: var(--color-success); }
+    :host([color='warning']) { --_color: var(--color-warning); }
+    :host([color='error']) { --_color: var(--color-error); }
+    :host([color='heading']) { --_color: var(--text-color-heading); }
+    :host([color='body']) { --_color: var(--text-color-body); }
+    :host([color='muted']) { --_color: var(--text-color-secondary); }
+    :host([color='disabled']) { --_color: var(--text-color-disabled); }
+    :host([color='contrast']) { --_color: var(--text-color-contrast); }
   }
 
-  /* ========================================
-     Italic
-     ======================================== */
+  @layer buildit.utilities {
+    /* ========================================
+       Alignment
+       ======================================== */
 
-  :host([italic]) {
-    font-style: italic;
-  }
+    :host([align]) { display: block; }
+    :host([align='left']) { text-align: left; }
+    :host([align='center']) { text-align: center; }
+    :host([align='right']) { text-align: right; }
+    :host([align='justify']) { text-align: justify; }
 
-  /* ========================================
-     Block Display for Certain Tags
-     ======================================== */
+    /* ========================================
+       Truncate
+       ======================================== */
 
-  :host([as='p']),
-  :host([as='div']),
-  :host(:is([as='h1'], [as='h2'], [as='h3'], [as='h4'], [as='h5'], [as='h6'])) {
-    display: block;
+    :host([truncate]) {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ========================================
+       Italic
+       ======================================== */
+
+    :host([italic]) {
+      font-style: italic;
+    }
+
+    /* ========================================
+       Block Display for Certain Tags
+       ======================================== */
+
+    :host([as='p']),
+    :host([as='div']),
+    :host(:is([as='h1'], [as='h2'], [as='h3'], [as='h4'], [as='h5'], [as='h6'])) {
+      display: block;
+    }
   }
 `;
 
@@ -221,7 +224,18 @@ export interface TextProps {
   /** Font weight */
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
   /** Text color (semantic + theme colors) */
-  color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast';
+  color?:
+    | 'primary'
+    | 'secondary'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | 'heading'
+    | 'body'
+    | 'muted'
+    | 'disabled'
+    | 'contrast';
   /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
   /** Truncate text with ellipsis */
@@ -241,4 +255,3 @@ defineElement<HTMLElement, TextProps>('bit-text', {
 });
 
 export default {};
-

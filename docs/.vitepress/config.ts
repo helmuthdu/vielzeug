@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'vitepress';
 import type { ThemeConfig } from './theme/types';
 import { getPackagesData } from './theme/utils/packageData';
+import { browserslistToTargets } from 'lightningcss';
+import browserslist from 'browserslist';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -626,6 +628,15 @@ export default defineConfig({
   },
   title: 'Vielzeug',
   vite: {
+    build: {
+      cssMinify: 'lightningcss',
+    },
+    css: {
+      lightningcss: {
+        targets: browserslistToTargets(browserslist('>= 0.25%')),
+      },
+      transformer: 'lightningcss',
+    },
     resolve: {
       alias: {
         '@vielzeug/buildit': resolve(__dirname, '../../packages/buildit/src'),

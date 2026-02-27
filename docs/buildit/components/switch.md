@@ -70,8 +70,7 @@ Toggle between on and off states.
 <ComponentPreview center>
 
 ```html
-<bit-switch>Unchecked</bit-switch>
-<bit-switch checked>Checked</bit-switch>
+<bit-switch>Unchecked</bit-switch> <bit-switch checked>Checked</bit-switch>
 ```
 
 </ComponentPreview>
@@ -83,8 +82,7 @@ Prevent interaction and reduce opacity for unavailable options.
 <ComponentPreview center>
 
 ```html
-<bit-switch disabled>Disabled off</bit-switch>
-<bit-switch checked disabled>Disabled on</bit-switch>
+<bit-switch disabled>Disabled off</bit-switch> <bit-switch checked disabled>Disabled on</bit-switch>
 ```
 
 </ComponentPreview>
@@ -99,15 +97,9 @@ Switches work seamlessly with forms using name and value attributes.
 
 ```html
 <form id="settings-form">
-  <bit-switch name="notifications" value="enabled" checked>
-    Push notifications
-  </bit-switch>
-  <bit-switch name="darkMode" value="on">
-    Dark mode
-  </bit-switch>
-  <bit-switch name="analytics" value="track">
-    Analytics tracking
-  </bit-switch>
+  <bit-switch name="notifications" value="enabled" checked> Push notifications </bit-switch>
+  <bit-switch name="darkMode" value="on"> Dark mode </bit-switch>
+  <bit-switch name="analytics" value="track"> Analytics tracking </bit-switch>
 </form>
 
 <script>
@@ -135,7 +127,7 @@ Listen to change events for custom logic.
 <script>
   const toggle = document.getElementById('feature-toggle');
   const status = document.getElementById('status');
-  
+
   toggle.addEventListener('change', (e) => {
     const { checked, value } = e.detail;
     status.textContent = `Feature is ${checked ? 'enabled' : 'disabled'}`;
@@ -149,19 +141,19 @@ Listen to change events for custom logic.
 
 ### Attributes
 
-| Attribute  | Type                                                            | Default     | Description                |
-| ---------- | --------------------------------------------------------------- | ----------- | -------------------------- |
-| `checked`  | `boolean`                                                       | `false`     | Switch checked state       |
-| `disabled` | `boolean`                                                       | `false`     | Disable the switch         |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color             |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size                |
-| `name`     | `string`                                                        | -           | Form field name            |
-| `value`    | `string`                                                        | -           | Form field value when on   |
+| Attribute  | Type                                                            | Default     | Description              |
+| ---------- | --------------------------------------------------------------- | ----------- | ------------------------ |
+| `checked`  | `boolean`                                                       | `false`     | Switch checked state     |
+| `disabled` | `boolean`                                                       | `false`     | Disable the switch       |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color           |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size              |
+| `name`     | `string`                                                        | -           | Form field name          |
+| `value`    | `string`                                                        | -           | Form field value when on |
 
 ### Slots
 
-| Slot      | Description         |
-| --------- | ------------------- |
+| Slot      | Description          |
+| --------- | -------------------- |
 | (default) | Switch label content |
 
 ### Events
@@ -172,39 +164,44 @@ Listen to change events for custom logic.
 
 ## CSS Custom Properties
 
-| Property             | Description                  | Default            |
-| -------------------- | ---------------------------- | ------------------ |
-| `--switch-width`     | Width of the switch track    | Size-dependent     |
-| `--switch-height`    | Height of the switch track   | Size-dependent     |
-| `--switch-bg`        | Background when checked      | Color-dependent    |
-| `--switch-track-bg`  | Background of unchecked track| `--color-contrast-300` |
-| `--switch-thumb-bg`  | Background of the thumb      | `white`            |
-| `--switch-font-size` | Font size of the label       | Size-dependent     |
+| Property             | Description                   | Default                |
+| -------------------- | ----------------------------- | ---------------------- |
+| `--switch-width`     | Width of the switch track     | Size-dependent         |
+| `--switch-height`    | Height of the switch track    | Size-dependent         |
+| `--switch-bg`        | Background when checked       | Color-dependent        |
+| `--switch-track`  | Background of unchecked track | `--color-contrast-300` |
+| `--switch-thumb`  | Background of the thumb       | `white`                |
+| `--switch-font-size` | Font size of the label        | Size-dependent         |
 
 ## Accessibility
 
 The switch component follows WAI-ARIA best practices for the switch role.
 
 ✅ **Keyboard Navigation**
+
 - `Space` and `Enter` toggle the switch.
 - `Tab` moves focus to/from the switch.
 
 ✅ **Screen Readers**
+
 - Announces switch role and label.
 - `aria-checked` reflects current state (true, false).
 - `aria-disabled` reflects disabled state.
 
 ✅ **Touch Targets**
+
 - Minimum 44px touch target height for mobile accessibility.
 
 ## Best Practices
 
 **Do:**
+
 - Use switches for instant actions that take effect immediately.
 - Use clear labels that describe what the switch controls.
 - Use appropriate colors (e.g., success for "enable", error for "disable critical feature").
 
 **Don't:**
+
 - Use switches when changes require a save/submit action (use checkbox instead).
 - Use switches for more than two options (use radio buttons or select).
 - Hide critical settings behind disabled switches without explanation.
@@ -212,11 +209,13 @@ The switch component follows WAI-ARIA best practices for the switch role.
 ## When to Use Switch vs Checkbox
 
 **Use Switch for:**
+
 - Settings that take effect immediately
 - Enabling/disabling features
 - Toggling system states (on/off, true/false)
 
 **Use Checkbox for:**
+
 - Form selections that require submit
 - Multiple selections in a list
 - Agreeing to terms and conditions
@@ -232,10 +231,7 @@ function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
 
   return (
-    <bit-switch
-      checked={notifications}
-      onChange={(e) => setNotifications(e.detail.checked)}
-    >
+    <bit-switch checked={notifications} onChange={(e) => setNotifications(e.detail.checked)}>
       Enable notifications
     </bit-switch>
   );
@@ -246,10 +242,7 @@ function SettingsPanel() {
 
 ```vue
 <template>
-  <bit-switch
-    :checked="notifications"
-    @change="notifications = $event.detail.checked"
-  >
+  <bit-switch :checked="notifications" @change="notifications = $event.detail.checked">
     Enable notifications
   </bit-switch>
 </template>
@@ -277,4 +270,3 @@ const notifications = ref(true);
   Enable notifications
 </bit-switch>
 ```
-

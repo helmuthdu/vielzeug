@@ -10,4 +10,3 @@ export * from './shared';
 // Component-specific types will be imported from their respective files
 // This allows consumers to import types like:
 // import type { ButtonProps, ThemeColor } from '@vielzeug/buildit/types';
-

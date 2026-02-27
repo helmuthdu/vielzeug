@@ -42,5 +42,3 @@ describe('bit-box - Accessibility', () => {
     expect(fixture.element.getAttribute('aria-describedby')).toBe('desc-id');
   });
 });
-
-

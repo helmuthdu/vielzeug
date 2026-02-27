@@ -216,5 +216,3 @@ describe('bit-switch', () => {
     });
   });
 });
-
-

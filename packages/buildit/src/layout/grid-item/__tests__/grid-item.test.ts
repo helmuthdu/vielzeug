@@ -100,7 +100,7 @@ describe('bit-grid-item', () => {
     });
 
     it('should apply both colStart and colEnd', async () => {
-      fixture = await createFixture('bit-grid-item', { colStart: '1', colEnd: '3' });
+      fixture = await createFixture('bit-grid-item', { colEnd: '3', colStart: '1' });
 
       expect(fixture.element.getAttribute('colStart')).toBe('1');
       expect(fixture.element.getAttribute('colEnd')).toBe('3');
@@ -127,7 +127,7 @@ describe('bit-grid-item', () => {
     });
 
     it('should apply both rowStart and rowEnd', async () => {
-      fixture = await createFixture('bit-grid-item', { rowStart: '1', rowEnd: '3' });
+      fixture = await createFixture('bit-grid-item', { rowEnd: '3', rowStart: '1' });
 
       expect(fixture.element.getAttribute('rowStart')).toBe('1');
       expect(fixture.element.getAttribute('rowEnd')).toBe('3');
@@ -201,10 +201,10 @@ describe('bit-grid-item', () => {
 
     it('should handle multiple attributes', async () => {
       fixture = await createFixture('bit-grid-item', {
-        colSpan: '2',
-        rowSpan: '2',
         align: 'center',
+        colSpan: '2',
         justify: 'center',
+        rowSpan: '2',
       });
 
       expect(fixture.element.getAttribute('colSpan')).toBe('2');
@@ -223,10 +223,10 @@ describe('bit-grid-item', () => {
 
     it('should handle complex placement', async () => {
       fixture = await createFixture('bit-grid-item', {
-        colStart: '1',
         colEnd: '4',
-        rowStart: '2',
+        colStart: '1',
         rowEnd: '5',
+        rowStart: '2',
       });
 
       expect(fixture.element.getAttribute('colStart')).toBe('1');
@@ -253,4 +253,3 @@ describe('bit-grid-item', () => {
     });
   });
 });
-

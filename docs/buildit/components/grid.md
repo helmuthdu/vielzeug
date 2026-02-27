@@ -97,13 +97,13 @@ Try resizing your browser window or use the viewport controls above to see the g
 
 The grid uses **CSS Container Queries** to respond to its container's width, not the browser viewport. This means it works perfectly in ComponentPreview, sidebars, modals, and any constrained space.
 
-| Breakpoint | Attribute | Min Container Width | Example |
-|------------|-----------|---------------------|---------|
-| Mobile | `cols="1"` | Default | 1 column |
-| Small | `cols-sm="2"` | ≥640px | 2 columns |
-| Medium | `cols-md="3"` | ≥768px | 3 columns |
-| Large | `cols-lg="4"` | ≥1024px | 4 columns |
-| Extra Large | `cols-xl="6"` | ≥1280px | 6 columns |
+| Breakpoint  | Attribute     | Min Container Width | Example   |
+| ----------- | ------------- | ------------------- | --------- |
+| Mobile      | `cols="1"`    | Default             | 1 column  |
+| Small       | `cols-sm="2"` | ≥640px              | 2 columns |
+| Medium      | `cols-md="3"` | ≥768px              | 3 columns |
+| Large       | `cols-lg="4"` | ≥1024px             | 4 columns |
+| Extra Large | `cols-xl="6"` | ≥1280px             | 6 columns |
 
 ## Row Layouts
 
@@ -136,10 +136,10 @@ Pre-built layouts for common page structures.
 
 ```html
 <bit-grid layout="sidebar" gap="md" style="width: 100%; min-height: 300px;">
-  <bit-box rounded="none" variant="flat" color="warning" padding="lg" as="aside">
+  <bit-box rounded="none" color="warning" elevation="0" padding="lg" as="aside">
     <bit-text variant="heading" size="md">Sidebar</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" padding="lg" as="main">
+  <bit-box rounded="none" elevation="0" padding="lg" as="main">
     <bit-text variant="heading" size="lg">Main Content</bit-text>
   </bit-box>
 </bit-grid>
@@ -154,11 +154,11 @@ Main content first, sidebar on the right.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid layout="sidebar-right" gap="md" style="width: 100%; min-height: 300px;">
-  <bit-box rounded="none" variant="flat" padding="lg" as="main" style="height: 100%;">
+<bit-grid layout="sidebar-right" gap="md" style="min-height: 300px;">
+  <bit-box rounded="none" elevation="0" padding="lg" as="main">
     <bit-text variant="heading" size="lg">Main Content</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" color="warning" padding="lg" as="aside" style="height: 100%;">
+  <bit-box rounded="none" color="warning" elevation="0" padding="lg" as="aside">
     <bit-text variant="heading" size="md">Sidebar</bit-text>
   </bit-box>
 </bit-grid>
@@ -174,15 +174,21 @@ App shell with navigation rail on desktop. The rail spans the full height on the
 
 ```html
 <bit-grid layout="app-shell" gap="none" style="width: 100%; height: 500px;">
-  <bit-box rounded="none" variant="flat" color="warning" padding="lg" as="nav" style="display: flex; flex-direction: column; gap: var(--size-2); align-items: center;">
+  <bit-box
+    rounded="none"
+    elevation="0"
+    color="warning"
+    padding="lg"
+    as="nav"
+    style="display: flex; flex-direction: column; gap: var(--size-2); align-items: center;">
     <bit-text size="xl">🏠</bit-text>
     <bit-text size="xl">📊</bit-text>
     <bit-text size="xl">⚙️</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" color="error" padding="lg" as="header">
+  <bit-box rounded="none" elevation="0" color="error" padding="lg" as="header">
     <bit-text variant="heading" size="lg">App Title</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" padding="xl" as="main">
+  <bit-box rounded="none" elevation="0" padding="xl" as="main">
     <bit-text variant="heading" size="xl">Main Content Area</bit-text>
     <bit-text>On mobile, implement bottom navigation or modal drawer for access to nav items.</bit-text>
   </bit-box>
@@ -199,7 +205,7 @@ Standard navigation drawer pattern with a full-width header and permanent side d
 
 ```html
 <bit-grid layout="nav-content" gap="none" style="width: 100%; height: 500px;">
-  <bit-box rounded="none" variant="flat" color="warning" padding="lg" as="nav">
+  <bit-box rounded="none" elevation="0" color="warning" padding="lg" as="nav">
     <bit-text variant="heading" size="md">Navigation</bit-text>
     <bit-text size="sm">Dashboard</bit-text>
     <bit-text size="sm">Projects</bit-text>
@@ -207,12 +213,12 @@ Standard navigation drawer pattern with a full-width header and permanent side d
     <bit-text size="sm">Reports</bit-text>
     <bit-text size="sm">Settings</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" color="error" padding="lg" as="header">
+  <bit-box rounded="none" elevation="0" color="error" padding="lg" as="header">
     <bit-text variant="heading" size="lg">App</bit-text>
   </bit-box>
-  <bit-box rounded="none" variant="flat" padding="xl" as="main" style="overflow: auto;">
+  <bit-box rounded="none" elevation="0" padding="xl" as="main" style="overflow: auto;">
     <bit-text variant="heading" size="2xl">Dashboard</bit-text>
-    <bit-text>Main content area with M3-compliant spacing and typography.</bit-text>
+    <bit-text>Main content</bit-text>
   </bit-box>
 </bit-grid>
 ```
@@ -227,27 +233,27 @@ Asymmetric magazine-style layout perfect for showcasing content with varying imp
 
 ```html
 <bit-grid layout="bento" gap="md" style="width: 100%; min-height: 500px;">
-  <bit-box padding="lg" color="primary" style="height: 100%;">
+  <bit-box padding="lg" color="primary">
     <bit-text variant="heading" size="2xl">Hero</bit-text>
     <bit-text>Large featured content area</bit-text>
   </bit-box>
-  <bit-box padding="lg" color="info" style="height: 100%;">
+  <bit-box padding="lg" color="info">
     <bit-text variant="heading" size="lg">Featured</bit-text>
     <bit-text>Secondary feature</bit-text>
   </bit-box>
-  <bit-box padding="md" color="secondary" style="height: 100%;">
+  <bit-box padding="md" color="secondary">
     <bit-text variant="heading" size="md">Card 1</bit-text>
   </bit-box>
-  <bit-box padding="md" color="secondary" style="height: 100%;">
+  <bit-box padding="md" color="secondary">
     <bit-text variant="heading" size="md">Card 2</bit-text>
   </bit-box>
-  <bit-box padding="md" color="secondary" style="height: 100%;">
+  <bit-box padding="md" color="secondary">
     <bit-text variant="heading" size="md">Card 3</bit-text>
   </bit-box>
-  <bit-box padding="md" color="secondary" style="height: 100%;">
+  <bit-box padding="md" color="secondary">
     <bit-text variant="heading" size="md">Card 4</bit-text>
   </bit-box>
-  <bit-box padding="lg" color="secondary" style="height: 100%;">
+  <bit-box padding="lg" color="secondary">
     <bit-text variant="heading" size="lg">Card 5</bit-text>
   </bit-box>
 </bit-grid>
@@ -469,20 +475,20 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 ### Grid Attributes
 
-| Attribute    | Type                                                      | Default  | Description          |
-| ------------ | --------------------------------------------------------- | -------- | -------------------- |
-| `cols`       | `'1'-'12' \| 'auto'`                                      | -        | Number of columns    |
-| `cols-sm`    | `'1'-'12' \| 'auto'`                                      | -        | Columns at ≥640px    |
-| `cols-md`    | `'1'-'12' \| 'auto'`                                      | -        | Columns at ≥768px    |
-| `cols-lg`    | `'1'-'12' \| 'auto'`                                      | -        | Columns at ≥1024px   |
-| `cols-xl`    | `'1'-'12' \| 'auto'`                                      | -        | Columns at ≥1280px   |
-| `rows`       | `'1'-'6' \| 'auto'`                                       | `'auto'` | Number of rows       |
-| `gap`        | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`   | Gap between items    |
-| `align`      | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -        | Vertical alignment   |
-| `justify`    | `'start' \| 'center' \| 'end' \| 'stretch'`               | -        | Horizontal alignment |
-| `flow`       | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`  | Grid auto flow       |
+| Attribute    | Type                                                                      | Default  | Description          |
+| ------------ | ------------------------------------------------------------------------- | -------- | -------------------- |
+| `cols`       | `'1'-'12' \| 'auto'`                                                      | -        | Number of columns    |
+| `cols-sm`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥640px    |
+| `cols-md`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥768px    |
+| `cols-lg`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥1024px   |
+| `cols-xl`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥1280px   |
+| `rows`       | `'1'-'6' \| 'auto'`                                                       | `'auto'` | Number of rows       |
+| `gap`        | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                 | `'md'`   | Gap between items    |
+| `align`      | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'`                 | -        | Vertical alignment   |
+| `justify`    | `'start' \| 'center' \| 'end' \| 'stretch'`                               | -        | Horizontal alignment |
+| `flow`       | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`                      | `'row'`  | Grid auto flow       |
 | `layout`     | `'sidebar' \| 'sidebar-right' \| 'app-shell' \| 'nav-content' \| 'bento'` | -        | Preset layout        |
-| `responsive` | `boolean`                                                 | `false`  | Enable auto-fit mode |
+| `responsive` | `boolean`                                                                 | `false`  | Enable auto-fit mode |
 
 ### Grid Item Attributes
 

@@ -15,6 +15,11 @@
     }
   },
   "exports": {
+    "./styles": "./src/styles/styles.css",
+    "./styles/animation.css": "./src/styles/animation.css",
+    "./styles/layers.css": "./src/styles/layers.css",
+    "./styles/styles.css": "./src/styles/styles.css",
+    "./styles/theme.css": "./src/styles/theme.css",
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
@@ -75,11 +80,11 @@
       "import": "./dist/text.js",
       "require": "./dist/text.cjs"
     },
-    "./types": "./dist/types.d.ts"
+    "./bit": "./dist/bit.d.ts"
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && cp src/types.d.ts dist/types.d.ts",
+    "build": "tsc && vite build && cp -r src/styles/*.css dist/styles && cp src/types/bit.d.ts dist",
     "preview": "vite preview",
     "test": "vitest"
   },

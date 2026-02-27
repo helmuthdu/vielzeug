@@ -47,7 +47,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations for responsive grid', async () => {
-      const fixture = await createFixture('bit-grid', { responsive: true, gap: 'lg' });
+      const fixture = await createFixture('bit-grid', { gap: 'lg', responsive: true });
       fixture.element.innerHTML = `
         <div>Item 1</div>
         <div>Item 2</div>
@@ -81,9 +81,9 @@ describe('bit-grid accessibility', () => {
 
     it('should have no violations with various alignment options', async () => {
       const fixture = await createFixture('bit-grid', {
+        align: 'center',
         cols: '3',
         gap: 'md',
-        align: 'center',
         justify: 'between',
       });
       fixture.element.innerHTML = `
@@ -201,4 +201,3 @@ describe('bit-grid accessibility', () => {
     });
   });
 });
-

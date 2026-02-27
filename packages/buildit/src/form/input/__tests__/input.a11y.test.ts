@@ -277,4 +277,3 @@ describe('bit-input accessibility', () => {
     });
   });
 });
-

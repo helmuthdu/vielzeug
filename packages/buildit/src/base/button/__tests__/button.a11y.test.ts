@@ -453,5 +453,3 @@ describe('bit-button accessibility', () => {
     });
   });
 });
-
-

@@ -94,7 +94,17 @@ describe('bit-text', () => {
   });
 
   describe('Colors', () => {
-    const colors = ['primary', 'secondary', 'success', 'warning', 'error', 'heading', 'body', 'muted', 'disabled'] as const;
+    const colors = [
+      'primary',
+      'secondary',
+      'success',
+      'warning',
+      'error',
+      'heading',
+      'body',
+      'muted',
+      'disabled',
+    ] as const;
 
     colors.forEach((color) => {
       it(`should apply ${color} color`, async () => {
@@ -214,11 +224,11 @@ describe('bit-text', () => {
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
       fixture = await createFixture('bit-text', {
-        variant: 'heading',
-        size: '2xl',
-        weight: 'bold',
-        color: 'primary',
         align: 'center',
+        color: 'primary',
+        size: '2xl',
+        variant: 'heading',
+        weight: 'bold',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('heading');
@@ -230,8 +240,8 @@ describe('bit-text', () => {
 
     it('should handle truncate with alignment', async () => {
       fixture = await createFixture('bit-text', {
-        truncate: true,
         align: 'center',
+        truncate: true,
       });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
@@ -241,8 +251,8 @@ describe('bit-text', () => {
     it('should handle italic with weight and size', async () => {
       fixture = await createFixture('bit-text', {
         italic: true,
-        weight: 'bold',
         size: 'lg',
+        weight: 'bold',
       });
 
       expect(fixture.element.hasAttribute('italic')).toBe(true);
@@ -290,10 +300,10 @@ describe('bit-text', () => {
       fixture = await createFixture('bit-text');
 
       await fixture.setAttributes({
-        variant: 'heading',
-        size: 'xl',
-        weight: 'bold',
         color: 'primary',
+        size: 'xl',
+        variant: 'heading',
+        weight: 'bold',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('heading');
@@ -311,8 +321,3 @@ describe('bit-text', () => {
     });
   });
 });
-
-
-
-
-

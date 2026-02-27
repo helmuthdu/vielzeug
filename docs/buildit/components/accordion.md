@@ -41,6 +41,7 @@ A flexible accordion component for organizing collapsible content sections. Buil
 ### Selection Modes
 
 #### Multiple (Default)
+
 Allow multiple items to be expanded simultaneously.
 
 <ComponentPreview vertical>
@@ -61,6 +62,7 @@ Allow multiple items to be expanded simultaneously.
 </ComponentPreview>
 
 #### Single
+
 Only one item can be expanded at a time.
 
 <ComponentPreview vertical>
@@ -289,6 +291,7 @@ Prevent interaction with specific items.
 ### Slots
 
 #### `bit-accordion-item`
+
 | Slot       | Description                                            |
 | ---------- | ------------------------------------------------------ |
 | (default)  | Content shown when item is expanded                    |
@@ -300,42 +303,48 @@ Prevent interaction with specific items.
 ### Events
 
 #### `bit-accordion`
-| Event    | Detail                               | Description                                       |
-| -------- | ------------------------------------ | ------------------------------------------------- |
+
+| Event    | Detail                                  | Description                                       |
+| -------- | --------------------------------------- | ------------------------------------------------- |
 | `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
 #### `bit-accordion-item`
-| Event      | Detail                                        | Description                        |
-| ---------- | --------------------------------------------- | ---------------------------------- |
-| `expand`   | `{ expanded: true, item: HTMLElement }`       | Emitted when the item is expanded  |
-| `collapse` | `{ expanded: false, item: HTMLElement }`      | Emitted when the item is collapsed |
+
+| Event      | Detail                                   | Description                        |
+| ---------- | ---------------------------------------- | ---------------------------------- |
+| `expand`   | `{ expanded: true, item: HTMLElement }`  | Emitted when the item is expanded  |
+| `collapse` | `{ expanded: false, item: HTMLElement }` | Emitted when the item is collapsed |
 
 ## CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--accordion-item-bg` | Background color | `transparent` |
-| `--accordion-item-radius` | Border radius | `0.375rem` |
-| `--accordion-item-padding` | Inner padding | Size-dependent |
+| Property                   | Description      | Default        |
+| -------------------------- | ---------------- | -------------- |
+| `--accordion-item-bg`      | Background color | `transparent`  |
+| `--accordion-item-radius`  | Border radius    | `0.375rem`     |
+| `--accordion-item-padding` | Inner padding    | Size-dependent |
 
 ## Accessibility
 
 The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
 ✅ **Native Semantics**
+
 - Built with native `<details>` and `<summary>` elements.
 - Progressive enhancement - works without JavaScript.
 
 ✅ **Keyboard Navigation**
+
 - `Enter` and `Space` toggle expansion.
 - `Tab` moves focus between accordion items.
 
 ## Best Practices
 
 **Do:**
+
 - Use clear, descriptive titles.
 - Use `single` mode for mutually exclusive content.
 
 **Don't:**
+
 - Nest accordions deeply (max 1-2 levels).
 - Hide critical information in a collapsed state.

@@ -53,7 +53,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have no violations with custom range', async () => {
-      const fixture = await createFixture('bit-slider', { min: '0', max: '200', value: '100' });
+      const fixture = await createFixture('bit-slider', { max: '200', min: '0', value: '100' });
       fixture.element.setAttribute('aria-label', 'Temperature');
 
       const results = await axe.run(fixture.element, {
@@ -104,12 +104,11 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have aria-valuemin, aria-valuemax, and aria-valuenow', async () => {
-      const fixture = await createFixture('bit-slider', { min: '10', max: '90', value: '50' });
+      const fixture = await createFixture('bit-slider', { max: '90', min: '10', value: '50' });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('10');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('90');
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
-
 
       fixture.destroy();
     });
@@ -152,7 +151,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Screen Reader Support', () => {
     it('should provide value information to screen readers', async () => {
-      const fixture = await createFixture('bit-slider', { min: '0', max: '100', value: '75' });
+      const fixture = await createFixture('bit-slider', { max: '100', min: '0', value: '75' });
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('75');
@@ -186,6 +185,3 @@ describe('bit-slider accessibility', () => {
     });
   });
 });
-
-
-

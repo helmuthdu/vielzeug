@@ -1,5 +1,6 @@
 import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+
 describe('bit-grid', () => {
   let fixture: ComponentFixture<HTMLElement>;
   beforeAll(async () => {

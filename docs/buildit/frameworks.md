@@ -13,11 +13,7 @@ import '@vielzeug/buildit/button';
 
 function App() {
   return (
-    <bit-button
-      variant="solid"
-      color="primary"
-      onClick={() => console.log('Clicked!')}
-    >
+    <bit-button variant="solid" color="primary" onClick={() => console.log('Clicked!')}>
       React Button
     </bit-button>
   );
@@ -43,13 +39,7 @@ Vue has top-tier support for Web Components.
 
 ```vue
 <template>
-  <bit-button
-    :variant="variant"
-    :color="color"
-    @click="handleClick"
-  >
-    Vue Button
-  </bit-button>
+  <bit-button :variant="variant" :color="color" @click="handleClick"> Vue Button </bit-button>
 </template>
 
 <script setup>
@@ -86,15 +76,13 @@ Add `CUSTOM_ELEMENTS_SCHEMA` to your `@NgModule` to allow custom elements in tem
 import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 @NgModule({
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export class AppModule { }
+export class AppModule {}
 ```
 
 Then use them in your templates:
 
 ```html
-<bit-button [attr.variant]="'solid'" (click)="onClick()">
-  Angular Button
-</bit-button>
+<bit-button [attr.variant]="'solid'" (click)="onClick()"> Angular Button </bit-button>
 ```

@@ -1,5 +1,5 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import type { ThemeColor, ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 /**
  * # bit-button-group
@@ -10,90 +10,96 @@ import type { ThemeColor, ComponentSize, VisualVariant } from '../../types';
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles
-     ======================================== */
+  @layer buildit.base {
+    /* ========================================
+       Base Styles
+       ======================================== */
 
-  :host {
-    display: inline-flex;
-    --group-gap: var(--size-2);
-    --group-radius: var(--rounded-md);
+    :host {
+      display: inline-flex;
+      --group-gap: var(--size-2);
+      --group-radius: var(--rounded-md);
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: row;
+      gap: var(--group-gap);
+    }
   }
 
-  .button-group {
-    display: flex;
-    flex-direction: row;
-    gap: var(--group-gap);
+  @layer buildit.variants {
+    /* ========================================
+       Orientation
+       ======================================== */
+
+    :host([orientation='vertical']) .button-group {
+      flex-direction: column;
+    }
   }
 
-  /* ========================================
-     Orientation
-     ======================================== */
+  @layer buildit.overrides {
+    /* ========================================
+       Full Width
+       ======================================== */
 
-  :host([orientation='vertical']) .button-group {
-    flex-direction: column;
-  }
+    :host([fullwidth]) {
+      display: flex;
+      width: 100%;
+    }
 
-  /* ========================================
-     Full Width
-     ======================================== */
+    :host([fullwidth]) .button-group {
+      width: 100%;
+    }
 
-  :host([fullwidth]) {
-    display: flex;
-    width: 100%;
-  }
+    :host([fullwidth]) ::slotted(bit-button) {
+      flex: 1;
+    }
 
-  :host([fullwidth]) .button-group {
-    width: 100%;
-  }
+    /* ========================================
+       Attached Mode
+       ======================================== */
 
-  :host([fullwidth]) ::slotted(bit-button) {
-    flex: 1;
-  }
+    :host([attached]) .button-group {
+      gap: 0;
+    }
 
-  /* ========================================
-     Attached Mode
-     ======================================== */
+    /* Ensure attached buttons have proper z-index on hover/focus */
+    :host([attached]) ::slotted(bit-button:hover),
+    :host([attached]) ::slotted(bit-button:focus-within) {
+      position: relative;
+      z-index: 1;
+    }
 
-  :host([attached]) .button-group {
-    gap: 0;
-  }
+    /* Horizontal attached - remove inner borders and round corners */
+    :host([attached]:not([orientation='vertical'])) ::slotted(bit-button) {
+      --button-radius: 0;
+      margin-left: calc(-1 * var(--border));
+    }
 
-  /* Ensure attached buttons have proper z-index on hover/focus */
-  :host([attached]) ::slotted(bit-button:hover),
-  :host([attached]) ::slotted(bit-button:focus-within) {
-    position: relative;
-    z-index: 1;
-  }
+    :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:first-child) {
+      margin-left: 0;
+      --button-radius: var(--group-radius) 0 0 var(--group-radius);
+    }
 
-  /* Horizontal attached - remove inner borders and round corners */
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button) {
-    --button-radius: 0;
-    margin-left: calc(-1 * var(--border));
-  }
+    :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:last-child) {
+      --button-radius: 0 var(--group-radius) var(--group-radius) 0;
+    }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:first-child) {
-    margin-left: 0;
-    --button-radius: var(--group-radius) 0 0 var(--group-radius);
-  }
+    /* Vertical attached - remove inner borders and round corners */
+    :host([attached][orientation='vertical']) ::slotted(bit-button) {
+      --button-radius: 0;
+      margin-top: calc(-1 * var(--border));
+    }
 
-  :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:last-child) {
-    --button-radius: 0 var(--group-radius) var(--group-radius) 0;
-  }
+    :host([attached][orientation='vertical']) ::slotted(bit-button:first-child) {
+      margin-top: 0;
+      --button-radius: var(--group-radius) var(--group-radius) 0 0;
+    }
 
-  /* Vertical attached - remove inner borders and round corners */
-  :host([attached][orientation='vertical']) ::slotted(bit-button) {
-    --button-radius: 0;
-    margin-top: calc(-1 * var(--border));
-  }
-
-  :host([attached][orientation='vertical']) ::slotted(bit-button:first-child) {
-    margin-top: 0;
-    --button-radius: var(--group-radius) var(--group-radius) 0 0;
-  }
-
-  :host([attached][orientation='vertical']) ::slotted(bit-button:last-child) {
-    --button-radius: 0 0 var(--group-radius) var(--group-radius);
+    :host([attached][orientation='vertical']) ::slotted(bit-button:last-child) {
+      --button-radius: 0 0 var(--group-radius) var(--group-radius);
+    }
   }
 `;
 

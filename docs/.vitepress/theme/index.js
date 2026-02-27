@@ -1,10 +1,14 @@
-import '@vielzeug/buildit/styles/theme.css';
 import DefaultTheme from 'vitepress/theme';
 import { Logit } from '../../../packages/logit/src';
 import ComponentPreview from './components/ComponentPreview.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
+
+// Import BuildIt styles - using direct paths for monorepo
+import '@vielzeug/buildit/styles/theme.css';
+import '@vielzeug/buildit/styles/animation.css';
+import '@vielzeug/buildit/styles/layer.css';
 import './theme.css';
 
 export default {

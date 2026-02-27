@@ -1,10 +1,6 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin } from '../../styles';
-import type {
-  ThemeColor,
-  ComponentSize,
-  CheckableChangeEventDetail,
-} from '../../types';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import type { CheckableChangeEventDetail, ComponentSize, ThemeColor } from '../../types';
 
 /**
  * # bit-switch
@@ -15,146 +11,136 @@ import type {
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles & Defaults
-     ======================================== */
+  @layer buildit.base {
+    :host {
+      --_width: var(--switch-width, var(--size-10));
+      --_height: var(--switch-height, var(--size-5));
+      --_padding: var(--size-0-5);
+      --_thumb-size: calc(var(--_height) - var(--_padding) * 2);
+      --_track-bg: var(--switch-track, var(--color-contrast-300));
+      --_thumb-bg: var(--switch-thumb, white);
+      --_font-size: var(--switch-font-size, var(--text-sm));
 
-  :host {
-    --_width: var(--switch-width, var(--size-10));
-    --_height: var(--switch-height, var(--size-5));
-    --_padding: var(--size-0-5);
-    --_thumb-size: calc(var(--_height) - var(--_padding) * 2);
-    --_track-bg: var(--switch-track-bg, var(--color-contrast-300));
-    --_thumb-bg: var(--switch-thumb-bg, white);
-    --_font-size: var(--switch-font-size, var(--text-sm));
+      display: inline-flex;
+      align-items: center;
+      gap: var(--_gap, var(--size-2-5));
+      min-height: var(--size-11);
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+    }
 
-    display: inline-flex;
-    align-items: center;
-    gap: var(--size-2-5);
-    min-height: var(--size-11);
-    cursor: pointer;
-    user-select: none;
-    touch-action: manipulation;
+    /* ========================================
+       Track & Thumb
+       ======================================== */
+
+    .switch-wrapper {
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .switch-track {
+      position: relative;
+      width: var(--_width);
+      height: var(--_height);
+      background: var(--_track-bg);
+      border-radius: var(--rounded-full);
+      transition:
+        background var(--transition-slower),
+        box-shadow var(--transition-normal);
+      will-change: background;
+    }
+
+    .switch-thumb {
+      position: absolute;
+      top: var(--_padding);
+      left: var(--_padding);
+      width: var(--_thumb-size);
+      height: var(--_thumb-size);
+      background: var(--_thumb-bg);
+      border-radius: var(--rounded-full);
+      box-shadow: var(--shadow-sm);
+      transition:
+        transform var(--transition-spring),
+        box-shadow var(--transition-normal);
+      will-change: transform;
+    }
+
+    /* ========================================
+       Focus State
+       ======================================== */
+
+    input:focus-visible ~ .switch-track {
+      box-shadow: var(--_focus-shadow);
+    }
+
+    /* ========================================
+       Label
+       ======================================== */
+
+    .label {
+      font-size: var(--_font-size);
+      color: var(--color-contrast);
+    }
   }
-
-  /* ========================================
-     States (Shared Mixin)
-     ======================================== */
-
-  ${disabledStateMixin()}
-
-  /* ========================================
-     Track & Thumb
-     ======================================== */
-
-  .switch-wrapper {
-    display: flex;
-    flex-shrink: 0;
-  }
-
-  input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .switch-track {
-    position: relative;
-    width: var(--_width);
-    height: var(--_height);
-    background: var(--_track-bg);
-    border-radius: var(--rounded-full);
-    transition:
-      background var(--transition-slower),
-      box-shadow var(--transition-normal);
-    will-change: background;
-  }
-
-  .switch-thumb {
-    position: absolute;
-    top: var(--_padding);
-    left: var(--_padding);
-    width: var(--_thumb-size);
-    height: var(--_thumb-size);
-    background: var(--_thumb-bg);
-    border-radius: var(--rounded-full);
-    box-shadow: var(--shadow-sm);
-    transition:
-      transform var(--transition-spring),
-      box-shadow var(--transition-normal);
-    will-change: transform;
-  }
-
-  /* ========================================
-     Color Themes (Shared Mixin)
-     ======================================== */
 
   ${colorThemeMixin()}
+  ${disabledStateMixin()}
 
-  /* Map theme variables to switch-specific variables */
-  :host {
-    --_active-bg: var(--switch-bg, var(--_theme-base));
-    --_focus-shadow: var(--_theme-shadow);
+  @layer buildit.overrides {
+    /* Map theme variables to switch-specific variables */
+    :host {
+      --_active-bg: var(--switch-bg, var(--_theme-base));
+      --_focus-shadow: var(--_theme-shadow);
+    }
+
+    /* ========================================
+       Checked State
+       ======================================== */
+
+    :host([checked]) .switch-track {
+      background: var(--_active-bg);
+    }
+
+    :host([checked]) .switch-thumb {
+      transform: translateX(calc(var(--_width) - var(--_height)));
+    }
+
+    /* ========================================
+       Hover & Active States
+       ======================================== */
+
+    :host(:hover:not([disabled]):not([checked])) .switch-track {
+      background: var(--color-contrast-400);
+    }
+
+    :host(:hover:not([disabled])[checked]) .switch-track {
+      filter: brightness(1.1);
+    }
   }
 
-  /* ========================================
-     Checked State
-     ======================================== */
-
-  :host([checked]) .switch-track {
-    background: var(--_active-bg);
-  }
-
-  :host([checked]) .switch-thumb {
-    transform: translateX(calc(var(--_width) - var(--_height)));
-  }
-
-  /* ========================================
-     Hover & Active States
-     ======================================== */
-
-  :host(:hover:not([disabled]):not([checked])) .switch-track {
-    background: var(--color-contrast-400);
-  }
-
-  :host(:hover:not([disabled])[checked]) .switch-track {
-    filter: brightness(1.1);
-  }
-
-  /* ========================================
-     Focus State
-     ======================================== */
-
-  input:focus-visible ~ .switch-track {
-    box-shadow: var(--_focus-shadow);
-  }
-
-  /* ========================================
-     Size Variants
-     ======================================== */
-
-  :host([size='sm']) {
-    --_width: var(--size-9);
-    --_height: var(--size-5);
-    --_thumb-size: var(--size-4);
-    --_font-size: var(--text-xs);
-  }
-
-  :host([size='lg']) {
-    --_width: var(--size-14);
-    --_height: var(--size-7);
-    --_thumb-size: var(--size-6);
-    --_font-size: var(--text-base);
-  }
-
-  /* ========================================
-     Label
-     ======================================== */
-
-  .label {
-    font-size: var(--_font-size);
-    color: var(--color-contrast);
-  }
+  ${sizeVariantMixin({
+    lg: {
+      fontSize: 'var(--text-base)',
+      gap: 'var(--size-3)',
+      height: 'var(--size-7)',
+      thumbSize: 'var(--size-6)',
+      width: 'var(--size-14)',
+    },
+    sm: {
+      fontSize: 'var(--text-xs)',
+      gap: 'var(--size-2)',
+      height: 'var(--size-5)',
+      thumbSize: 'var(--size-4)',
+      width: 'var(--size-9)',
+    },
+  })}
 `;
 
 /**
@@ -172,8 +158,8 @@ const styles = css`
  * - `--switch-width`: Track width
  * - `--switch-height`: Track height
  * - `--switch-bg`: Background color (checked state)
- * - `--switch-track-bg`: Track background color (unchecked)
- * - `--switch-thumb-bg`: Thumb background color
+ * - `--switch-track`: Track background color (unchecked)
+ * - `--switch-thumb`: Thumb background color
  * - `--switch-font-size`: Label font size
  *
  * ## Keyboard Support

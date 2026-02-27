@@ -2,19 +2,25 @@ import { css } from '@vielzeug/craftit';
 
 /**
  * Register CSS custom property for rainbow animation
- * Must be called before using rainbow effect in components
+ * Auto-registered when rainbowEffectMixin is called
  */
+let rainbowRegistered = false;
+
 export function registerRainbowProperty() {
+  if (rainbowRegistered) return;
+
   if (typeof CSS !== 'undefined' && CSS.registerProperty) {
     try {
       CSS.registerProperty({
+        inherits: false,
+        initialValue: '0deg',
         name: '--rainbow-angle',
         syntax: '<angle>',
-        initialValue: '0deg',
-        inherits: false,
       });
+      rainbowRegistered = true;
     } catch {
       // Property might already be registered, ignore error
+      rainbowRegistered = true;
     }
   }
 }
@@ -25,15 +31,14 @@ export function registerRainbowProperty() {
  * Animated rainbow border with glow effect.
  * Perfect for highlighting call-to-action elements or special features.
  *
+ * Auto-registers the --rainbow-angle CSS property when first called.
+ *
  * @param selector - CSS selector for the element (e.g., 'button', '.box')
  * @returns CSS string with rainbow border animation
  *
  * @example
  * ```typescript
- * import { rainbowEffectMixin, registerRainbowProperty } from '../../styles/effects/rainbow.css';
- *
- * // Register the CSS property first
- * registerRainbowProperty();
+ * import { rainbowEffectMixin } from '../../styles/effects/rainbow.css';
  *
  * const styles = css`
  *   // ...other styles...
@@ -41,16 +46,21 @@ export function registerRainbowProperty() {
  * `;
  * ```
  */
-export const rainbowEffectMixin = (selector: string) => css`
-  /* ========================================
-     Rainbow Border Effect
-     ======================================== */
+export const rainbowEffectMixin = (selector: string) => {
+  // Auto-register the CSS property
+  registerRainbowProperty();
 
-  :host([rainbow]) ${selector} {
-    position: relative;
-    border: var(--border-2) solid transparent !important;
-    overflow: visible;
-  }
+  return css`
+    @layer buildit.utilities {
+      /* ========================================
+         Rainbow Border Effect
+         ======================================== */
+
+      :host([rainbow]) ${selector} {
+        position: relative;
+        border: var(--border-2) solid transparent !important;
+        overflow: visible;
+      }
 
   /* Rainbow border and glow layers */
   :host([rainbow]) ${selector}::before, :host([rainbow]) ${selector}::after {
@@ -97,15 +107,16 @@ export const rainbowEffectMixin = (selector: string) => css`
   :host([rainbow]) ${selector}::after {
     filter: blur(var(--blur-xl));
   }
-
-  /* ========================================
-     Rainbow Animation
-     ======================================== */
-
-  @keyframes rainbow-rotate {
-    to {
-      --rainbow-angle: 1turn;
     }
-  }
-`;
 
+    /* ========================================
+       Rainbow Animation (unlayered for easy override)
+       ======================================== */
+
+    @keyframes rainbow-rotate {
+      to {
+        --rainbow-angle: 1turn;
+      }
+    }
+  `;
+};

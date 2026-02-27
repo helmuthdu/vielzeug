@@ -31,14 +31,14 @@ export type AllColors = ThemeColor | 'neutral';
  * Common across interactive components
  */
 export type VisualVariant =
-  | 'solid'    // Filled with solid background
-  | 'flat'     // Subtle background
+  | 'solid' // Filled with solid background
+  | 'flat' // Subtle background
   | 'bordered' // Emphasized border
-  | 'outline'  // Transparent with border
-  | 'ghost'    // Transparent until hover
-  | 'text'     // Minimal text-only
-  | 'frost'    // Frosted glass effect
-  | 'glass';   // Full glassmorphism
+  | 'outline' // Transparent with border
+  | 'ghost' // Transparent until hover
+  | 'text' // Minimal text-only
+  | 'frost' // Frosted glass effect
+  | 'glass'; // Full glassmorphism
 
 /**
  * Rounded corner sizes
@@ -283,9 +283,7 @@ export interface InteractiveComponentProps
  * Standard form control props
  * For checkbox, radio, switch, slider
  */
-export interface FormControlProps
-  extends InteractiveComponentProps,
-    FormElementProps {}
+export interface FormControlProps extends InteractiveComponentProps, FormElementProps {}
 
 /**
  * Standard container props
@@ -307,8 +305,7 @@ export interface ContainerProps
  * Check if a value is a valid theme color
  */
 export function isThemeColor(value: unknown): value is ThemeColor {
-  return typeof value === 'string' &&
-    ['primary', 'secondary', 'info', 'success', 'warning', 'error'].includes(value);
+  return typeof value === 'string' && ['primary', 'secondary', 'info', 'success', 'warning', 'error'].includes(value);
 }
 
 /**
@@ -322,6 +319,8 @@ export function isComponentSize(value: unknown): value is ComponentSize {
  * Check if a value is a valid visual variant
  */
 export function isVisualVariant(value: unknown): value is VisualVariant {
-  return typeof value === 'string' &&
-    ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost', 'glass'].includes(value);
+  return (
+    typeof value === 'string' &&
+    ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost', 'glass'].includes(value)
+  );
 }

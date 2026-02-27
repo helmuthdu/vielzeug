@@ -21,18 +21,11 @@ import { css } from '@vielzeug/craftit';
  * ```
  */
 export const frostVariantMixin = (selector: string) => css`
-  /* ========================================
-     Frost Variant - Base Styles
-     ======================================== */
-
+  @layer buildit.variants {
   :host([variant='frost']) ${selector} {
     backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
     -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
   }
-
-  /* ========================================
-     Frost Neutral (No Color)
-     ======================================== */
 
   :host([variant='frost']:not([color])) ${selector} {
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
@@ -51,10 +44,6 @@ export const frostVariantMixin = (selector: string) => css`
   :host([variant='frost']:not([color])[elevation]) ${selector} {
     box-shadow: var(--halo-shadow-neutral), var(--_shadow);
   }
-
-  /* ========================================
-     Frost with Color
-     ======================================== */
 
   :host([variant='frost'][color]) ${selector} {
     background: color-mix(in srgb, var(--_theme-base), transparent);
@@ -76,10 +65,6 @@ export const frostVariantMixin = (selector: string) => css`
   :host([variant='frost'][color][elevation]) ${selector} {
     box-shadow: var(--_theme-halo), var(--_shadow);
   }
-
-  /* ========================================
-     Frost Hover States
-     ======================================== */
 
   :host([variant='frost']:not([color])) ${selector}:hover {
     backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
@@ -118,8 +103,4 @@ export const frostVariantMixin = (selector: string) => css`
   :host([variant='frost'][color='error']) ${selector} {
     box-shadow: var(--halo-shadow-error);
   }
-
-  /* Note: Halo shadows with elevation will be combined automatically 
-     by the elevation-specific rules above */
 `;
-

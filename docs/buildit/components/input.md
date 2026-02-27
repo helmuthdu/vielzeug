@@ -51,6 +51,7 @@ Six visual variants for different UI contexts and levels of emphasis.
 ### Frost Variant
 
 Modern frost effect with backdrop blur that adapts based on color:
+
 - **Without color**: Subtle canvas-based frost overlay
 - **With color**: Frosted glass effect with colored tint
 
@@ -269,8 +270,7 @@ Prevent interaction or modification of the input.
 <ComponentPreview center>
 
 ```html
-<bit-input disabled placeholder="Disabled input"></bit-input>
-<bit-input readonly value="Read-only value"></bit-input>
+<bit-input disabled placeholder="Disabled input"></bit-input> <bit-input readonly value="Read-only value"></bit-input>
 ```
 
 </ComponentPreview>
@@ -279,21 +279,21 @@ Prevent interaction or modification of the input.
 
 ### Attributes
 
-| Attribute     | Type                                                                        | Default     | Description              |
-| ------------- | --------------------------------------------------------------------------- | ----------- | ------------------------ |
-| `type`        | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type               |
-| `value`       | `string`                                                                    | `''`        | Current input value      |
-| `name`        | `string`                                                                    | `''`        | Form field name          |
-| `placeholder`    | `string`                                                                    | `''`        | Placeholder text                |
-| `label`          | `string`                                                                    | `''`        | Label text                      |
-| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement                 |
-| `helper`         | `string`                                                                    | `''`        | Helper text below input         |
-| `disabled`       | `boolean`                                                                   | `false`     | Disable the input               |
-| `readonly`    | `boolean`                                                                   | `false`     | Make the input read-only |
-| `required`    | `boolean`                                                                   | `false`     | Mark field as required   |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual variant           |
-| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme              |
+| Attribute         | Type                                                                           | Default     | Description              |
+| ----------------- | ------------------------------------------------------------------------------ | ----------- | ------------------------ |
+| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'`    | `'text'`    | Input type               |
+| `value`           | `string`                                                                       | `''`        | Current input value      |
+| `name`            | `string`                                                                       | `''`        | Form field name          |
+| `placeholder`     | `string`                                                                       | `''`        | Placeholder text         |
+| `label`           | `string`                                                                       | `''`        | Label text               |
+| `label-placement` | `'inset' \| 'outside'`                                                         | `'inset'`   | Label placement          |
+| `helper`          | `string`                                                                       | `''`        | Helper text below input  |
+| `disabled`        | `boolean`                                                                      | `false`     | Disable the input        |
+| `readonly`        | `boolean`                                                                      | `false`     | Make the input read-only |
+| `required`        | `boolean`                                                                      | `false`     | Mark field as required   |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Input size               |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual variant           |
+| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Color theme              |
 
 ### Slots
 
@@ -312,27 +312,30 @@ Prevent interaction or modification of the input.
 
 ## CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--_theme-bg` | Background color | `var(--color-contrast-50)` |
-| `--_theme-radius` | Border radius | `var(--rounded-md)` |
-| `--_theme-font-size` | Font size | `var(--text-sm)` |
+| Property             | Description      | Default                    |
+| -------------------- | ---------------- | -------------------------- |
+| `--_theme-bg`        | Background color | `var(--color-contrast-50)` |
+| `--_theme-radius`    | Border radius    | `var(--rounded-md)`        |
+| `--_theme-font-size` | Font size        | `var(--text-sm)`           |
 
 ## Accessibility
 
 The input component follows WCAG 2.1 Level AA standards.
 
 ✅ **Keyboard Navigation**
+
 - `Tab` focuses the input.
 - Native input behavior (Enter to commit, etc.).
 
 ✅ **Screen Reader Support**
+
 - Proper ARIA states (disabled, required, readonly).
 - Associated labels via `aria-label` or `<label>`.
 
 ## Best Practices
 
 **Do:**
+
 - Use the `label` attribute for integrated labels with a modern floating effect.
 - Use external `<label>` elements when the label needs to be positioned outside the input.
 - Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element.
@@ -341,6 +344,7 @@ The input component follows WCAG 2.1 Level AA standards.
 - Combine labels with prefix/suffix slots for enhanced UX (e.g., currency symbols, icons).
 
 **Don't:**
+
 - Use placeholder text as a label replacement (placeholders disappear on input).
 - Over-customize colors to the point of breaking contrast.
 - Use labels for inputs that should remain visually minimal (ghost, text variants).

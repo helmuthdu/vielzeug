@@ -183,4 +183,3 @@ describe('bit-grid-item accessibility', () => {
     });
   });
 });
-

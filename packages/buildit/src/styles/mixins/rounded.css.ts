@@ -21,13 +21,14 @@ import { css } from '@vielzeug/craftit';
  * ```
  */
 export const roundedVariantMixin = () => css`
-  :host([rounded='none']) { --_radius: var(--rounded-none); }
-  :host([rounded='sm']) { --_radius: var(--rounded-sm); }
-  :host([rounded='md']) { --_radius: var(--rounded-md); }
-  :host([rounded='lg']) { --_radius: var(--rounded-lg); }
-  :host([rounded='xl']) { --_radius: var(--rounded-xl); }
-  :host([rounded='2xl']) { --_radius: var(--rounded-2xl); }
-  :host([rounded='3xl']) { --_radius: var(--rounded-3xl); }
-  :host([rounded='full']), :host([rounded='']) { --_radius: var(--rounded-full); }
+  @layer buildit.variants {
+    :host([rounded='none']) { --_radius: var(--rounded-none); }
+    :host([rounded='sm']) { --_radius: var(--rounded-sm); }
+    :host([rounded='md']) { --_radius: var(--rounded-md); }
+    :host([rounded='lg']) { --_radius: var(--rounded-lg); }
+    :host([rounded='xl']) { --_radius: var(--rounded-xl); }
+    :host([rounded='2xl']) { --_radius: var(--rounded-2xl); }
+    :host([rounded='3xl']) { --_radius: var(--rounded-3xl); }
+    :host([rounded='full']), :host([rounded='']) { --_radius: var(--rounded-full); }
+  }
 `;
-

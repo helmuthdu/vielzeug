@@ -116,19 +116,14 @@ Prevent interaction for unavailable controls.
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider 
-  min="0" 
-  max="100" 
-  value="70" 
-  color="primary" 
-  id="volume-slider">
+<bit-slider min="0" max="100" value="70" color="primary" id="volume-slider">
   Volume: <span id="volume-value">70</span>%
 </bit-slider>
 
 <script>
   const slider = document.getElementById('volume-slider');
   const valueDisplay = document.getElementById('volume-value');
-  
+
   slider.addEventListener('change', (e) => {
     valueDisplay.textContent = e.detail.value;
   });
@@ -142,15 +137,7 @@ Prevent interaction for unavailable controls.
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider 
-  min="0" 
-  max="100" 
-  step="5"
-  value="80" 
-  color="warning"
-  id="brightness-slider">
-  Brightness
-</bit-slider>
+<bit-slider min="0" max="100" step="5" value="80" color="warning" id="brightness-slider"> Brightness </bit-slider>
 
 <script>
   const brightness = document.getElementById('brightness-slider');
@@ -192,19 +179,17 @@ Sliders work seamlessly with forms using name and value attributes.
 
 The slider supports comprehensive keyboard controls:
 
-| Key | Action |
-|-----|--------|
-| `Arrow Right` / `Arrow Up` | Increase value by step |
+| Key                         | Action                 |
+| --------------------------- | ---------------------- |
+| `Arrow Right` / `Arrow Up`  | Increase value by step |
 | `Arrow Left` / `Arrow Down` | Decrease value by step |
-| `Home` | Jump to minimum value |
-| `End` | Jump to maximum value |
+| `Home`                      | Jump to minimum value  |
+| `End`                       | Jump to maximum value  |
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="50" step="10">
-  Use arrow keys or Home/End
-</bit-slider>
+<bit-slider value="50" step="10"> Use arrow keys or Home/End </bit-slider>
 ```
 
 </ComponentPreview>
@@ -213,54 +198,57 @@ The slider supports comprehensive keyboard controls:
 
 ### Attributes
 
-| Attribute  | Type                                                            | Default     | Description                             |
-| ---------- | --------------------------------------------------------------- | ----------- | --------------------------------------- |
-| `min`      | `number`                                                        | `0`         | Minimum value                           |
-| `max`      | `number`                                                        | `100`       | Maximum value                           |
-| `step`     | `number`                                                        | `1`         | Value increment/decrement step          |
-| `value`    | `number`                                                        | `0`         | Current slider value                    |
-| `disabled` | `boolean`                                                       | `false`     | Disable the slider                      |
-| `name`     | `string`                                                        | -           | Form field name                         |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                          |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Slider size                             |
+| Attribute  | Type                                                            | Default     | Description                    |
+| ---------- | --------------------------------------------------------------- | ----------- | ------------------------------ |
+| `min`      | `number`                                                        | `0`         | Minimum value                  |
+| `max`      | `number`                                                        | `100`       | Maximum value                  |
+| `step`     | `number`                                                        | `1`         | Value increment/decrement step |
+| `value`    | `number`                                                        | `0`         | Current slider value           |
+| `disabled` | `boolean`                                                       | `false`     | Disable the slider             |
+| `name`     | `string`                                                        | -           | Form field name                |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                 |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Slider size                    |
 
 ### Slots
 
-| Slot      | Description            |
-| --------- | ---------------------- |
-| (default) | Slider label content   |
+| Slot      | Description          |
+| --------- | -------------------- |
+| (default) | Slider label content |
 
 ### Events
 
-| Event    | Detail                                      | Description                     |
-| -------- | ------------------------------------------- | ------------------------------- |
-| `change` | `{ value: number, originalEvent: Event }`   | Emitted when value changes      |
+| Event    | Detail                                    | Description                |
+| -------- | ----------------------------------------- | -------------------------- |
+| `change` | `{ value: number, originalEvent: Event }` | Emitted when value changes |
 
 ## CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--slider-track-height` | Height of the slider track | Size-dependent |
-| `--slider-thumb-size` | Size of the slider thumb | Size-dependent |
-| `--slider-track-bg` | Background color of the track | `var(--color-contrast-300)` |
-| `--slider-fill-bg` | Background color of the filled portion | Theme color |
-| `--slider-thumb-bg` | Background color of the thumb | `var(--color-contrast-100)` |
+| Property                | Description                            | Default                     |
+| ----------------------- | -------------------------------------- | --------------------------- |
+| `--slider-height` | Height of the slider track             | Size-dependent              |
+| `--slider-size`   | Size of the slider thumb               | Size-dependent              |
+| `--slider-track`     | Background color of the track          | `var(--color-contrast-300)` |
+| `--slider-fill`      | Background color of the filled portion | Theme color                 |
+| `--slider-thumb`     | Background color of the thumb          | `var(--color-contrast-100)` |
 
 ## Accessibility
 
 The slider component follows WAI-ARIA best practices.
 
 ✅ **Keyboard Navigation**
+
 - Arrow keys adjust the value by step increment
 - Home/End keys jump to min/max values
 - Tab moves focus to/from the slider
 
 ✅ **Screen Readers**
+
 - Announces slider role and current value
 - `aria-valuenow`, `aria-valuemin`, `aria-valuemax` reflect state
 - `aria-disabled` reflects disabled state
 
 ✅ **Focus Management**
+
 - Visible focus indicator on keyboard focus
 - Disabled state removes from tab order
 - Touch-friendly target size (44×44px minimum)
@@ -268,12 +256,14 @@ The slider component follows WAI-ARIA best practices.
 ## Best Practices
 
 **Do:**
+
 - Provide clear labels describing what the slider controls
 - Use appropriate step values for the use case
 - Consider decimal steps for fine-grained control (e.g., 0.1, 0.01)
 - Use semantic colors (warning for volume at high levels)
 
 **Don't:**
+
 - Make sliders too small for touch targets (use size="lg" on mobile)
 - Use sliders for binary choices (use switches instead)
 - Forget to display the current value to users
@@ -306,12 +296,7 @@ The slider component follows WAI-ARIA best practices.
 ### Temperature Control
 
 ```html
-<bit-slider 
-  min="16" 
-  max="30" 
-  step="0.5" 
-  value="22" 
-  color="warning">
+<bit-slider min="16" max="30" step="0.5" value="22" color="warning">
   Temperature: <span id="temp">22</span>°C
 </bit-slider>
 
@@ -326,11 +311,10 @@ The slider component follows WAI-ARIA best practices.
 
 ### Slider vs Switch
 
-| Feature | Slider | Switch |
-|---------|--------|--------|
-| **Purpose** | Numeric range selection | Binary on/off |
-| **Value Type** | Number (0-100, etc.) | Boolean |
-| **Interaction** | Drag or keyboard | Click or keyboard |
-| **Use Cases** | Volume, brightness, zoom | Enable/disable features |
-| **Bundle Size** | 6.30 kB | 6.03 kB |
-
+| Feature         | Slider                   | Switch                  |
+| --------------- | ------------------------ | ----------------------- |
+| **Purpose**     | Numeric range selection  | Binary on/off           |
+| **Value Type**  | Number (0-100, etc.)     | Boolean                 |
+| **Interaction** | Drag or keyboard         | Click or keyboard       |
+| **Use Cases**   | Volume, brightness, zoom | Enable/disable features |
+| **Bundle Size** | 6.30 kB                  | 6.03 kB                 |

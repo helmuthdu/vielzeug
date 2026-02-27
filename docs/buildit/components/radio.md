@@ -64,7 +64,6 @@ Three sizes for different contexts.
 <bit-radio name="size" size="lg">Large</bit-radio>
 ```
 
-
 </ComponentPreview>
 
 ## States
@@ -109,31 +108,35 @@ Prevent interaction and reduce opacity for unavailable options.
 
 ## CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--radio-size` | Size of the circle | Size-dependent |
+| Property             | Description             | Default         |
+| -------------------- | ----------------------- | --------------- |
+| `--radio-size`       | Size of the circle      | Size-dependent  |
 | `--radio-checked-bg` | Background when checked | Color-dependent |
-| `--radio-color` | Inner dot color | `white` |
+| `--radio-color`      | Inner dot color         | `white`         |
 
 ## Accessibility
 
 The radio button component follows WAI-ARIA best practices.
 
 ✅ **Keyboard Navigation**
+
 - `Space` and `Enter` select the radio button.
 - `Tab` moves focus to/from the radio group.
 - `Arrow Keys` navigate and select between items in a group.
 
 ✅ **Screen Readers**
+
 - Announces radio role and label.
 - `aria-checked` reflects current state.
 
 ## Best Practices
 
 **Do:**
+
 - Always use the `name` attribute to group related radios.
 - Provide a default selection when appropriate.
 
 **Don't:**
+
 - Use radio buttons for non-mutually exclusive options (use checkboxes).
 - Have only one radio button in a group.

@@ -22,28 +22,29 @@ import { css } from '@vielzeug/craftit';
  * ```
  */
 export const paddingMixin = () => css`
-  /* ========================================
-     Padding Variants
-     ======================================== */
+  @layer buildit.utilities {
+    /* ========================================
+       Padding Variants
+       ======================================== */
 
-  :host([padding='none']) {
-    --_padding: var(--size-0);
-  }
+    :host([padding='none']) {
+      --_padding: var(--size-0);
+    }
 
-  :host([padding='sm']) {
-    --_padding: var(--size-3);
-  }
+    :host([padding='sm']) {
+      --_padding: var(--size-3);
+    }
 
-  :host([padding='md']) {
-    --_padding: var(--size-4);
-  }
+    :host([padding='md']) {
+      --_padding: var(--size-4);
+    }
 
-  :host([padding='lg']) {
-    --_padding: var(--size-6);
-  }
+    :host([padding='lg']) {
+      --_padding: var(--size-6);
+    }
 
-  :host([padding='xl']) {
-    --_padding: var(--size-8);
+    :host([padding='xl']) {
+      --_padding: var(--size-8);
+    }
   }
 `;
-

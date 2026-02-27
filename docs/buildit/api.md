@@ -23,29 +23,29 @@ import '@vielzeug/buildit/text';
 
 ### Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'` | Visual style variant |
-| `color` | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Button size |
-| `type` | `'button' \| 'submit' \| 'reset'` | `'button'` | Button type (for forms) |
-| `disabled` | `boolean` | `false` | Disable the button |
-| `loading` | `boolean` | `false` | Show loading state |
-| `icon-only` | `boolean` | `false` | Icon-only mode (smaller padding) |
-| `rounded` | `boolean` | `false` | Fully rounded corners |
+| Attribute   | Type                                                                | Default     | Description                      |
+| ----------- | ------------------------------------------------------------------- | ----------- | -------------------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'` | `'solid'`   | Visual style variant             |
+| `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`     | `'primary'` | Semantic color                   |
+| `size`      | `'sm' \| 'md' \| 'lg'`                                              | `'md'`      | Button size                      |
+| `type`      | `'button' \| 'submit' \| 'reset'`                                   | `'button'`  | Button type (for forms)          |
+| `disabled`  | `boolean`                                                           | `false`     | Disable the button               |
+| `loading`   | `boolean`                                                           | `false`     | Show loading state               |
+| `icon-only` | `boolean`                                                           | `false`     | Icon-only mode (smaller padding) |
+| `rounded`   | `boolean`                                                           | `false`     | Fully rounded corners            |
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
+| Slot      | Description                        |
+| --------- | ---------------------------------- |
 | (default) | Button content (text, icons, etc.) |
-| `prefix` | Content before the main content |
-| `suffix` | Content after the main content |
+| `prefix`  | Content before the main content    |
+| `suffix`  | Content after the main content     |
 
 ### Events
 
-| Event | Detail | Description |
-|-------|--------|-------------|
+| Event   | Detail                          | Description                                              |
+| ------- | ------------------------------- | -------------------------------------------------------- |
 | `click` | `{ originalEvent: MouseEvent }` | Emitted when button is clicked (if not disabled/loading) |
 
 ### CSS Custom Properties
@@ -60,40 +60,40 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'` | Visual style variant |
-| `padding` | `'none' \| 'sm' \| 'md' \| 'lg'` | `'md'` | Internal padding size |
-| `hoverable` | `boolean` | `false` | Enable hover effect with lift animation |
-| `clickable` | `boolean` | `false` | Make card clickable and emit click events |
+| Attribute   | Type                                                                           | Default   | Description                               |
+| ----------- | ------------------------------------------------------------------------------ | --------- | ----------------------------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'` | Visual style variant                      |
+| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg'`                                               | `'md'`    | Internal padding size                     |
+| `hoverable` | `boolean`                                                                      | `false`   | Enable hover effect with lift animation   |
+| `clickable` | `boolean`                                                                      | `false`   | Make card clickable and emit click events |
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
-| (default) | Main content area of the card |
-| `header` | Header section at the top of the card |
-| `footer` | Footer section at the bottom of the card |
+| Slot      | Description                              |
+| --------- | ---------------------------------------- |
+| (default) | Main content area of the card            |
+| `header`  | Header section at the top of the card    |
+| `footer`  | Footer section at the bottom of the card |
 
 ### Events
 
-| Event | Detail | Description |
-|-------|--------|-------------|
+| Event   | Detail                     | Description                            |
+| ------- | -------------------------- | -------------------------------------- |
 | `click` | `{ originalEvent: Event }` | Emitted when clickable card is clicked |
 
 ### CSS Custom Properties
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `--card-bg` | `var(--color-contrast-50)` | Background color |
-| `--card-color` | `var(--color-contrast-900)` | Text color |
-| `--card-border` | `var(--border)` | Border width |
-| `--card-border-color` | `var(--color-contrast-200)` | Border color |
-| `--card-radius` | `var(--rounded-lg)` | Border radius |
-| `--card-padding` | `var(--size-4)` | Internal padding |
-| `--card-shadow` | `var(--shadow-sm)` | Box shadow |
-| `--card-hover-shadow` | `var(--shadow-md)` | Hover state shadow |
-| `--card-gap` | `var(--size-3)` | Gap between sections |
+| Property              | Default                     | Description          |
+| --------------------- | --------------------------- | -------------------- |
+| `--card-bg`           | `var(--color-contrast-50)`  | Background color     |
+| `--card-color`        | `var(--color-contrast-900)` | Text color           |
+| `--card-border`       | `var(--border)`             | Border width         |
+| `--card-border-color` | `var(--color-contrast-200)` | Border color         |
+| `--card-radius`       | `var(--rounded-lg)`         | Border radius        |
+| `--card-padding`      | `var(--size-4)`             | Internal padding     |
+| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow           |
+| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow   |
+| `--card-gap`          | `var(--size-3)`             | Gap between sections |
 
 ## Accordion Component
 
@@ -104,52 +104,52 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### bit-accordion Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `selection-mode` | `'single' \| 'multiple'` | `'multiple'` | Selection mode |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | - | Visual style variant (propagated to children) |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size (propagated to children) |
+| Attribute        | Type                                                                           | Default      | Description                                   |
+| ---------------- | ------------------------------------------------------------------------------ | ------------ | --------------------------------------------- |
+| `selection-mode` | `'single' \| 'multiple'`                                                       | `'multiple'` | Selection mode                                |
+| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -            | Visual style variant (propagated to children) |
+| `size`           | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`       | Size (propagated to children)                 |
 
 ### bit-accordion-item Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `expanded` | `boolean` | `false` | Whether the item is expanded |
-| `disabled` | `boolean` | `false` | Disable the accordion item |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | - | Visual style variant |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Item size |
+| Attribute  | Type                                                                           | Default | Description                  |
+| ---------- | ------------------------------------------------------------------------------ | ------- | ---------------------------- |
+| `expanded` | `boolean`                                                                      | `false` | Whether the item is expanded |
+| `disabled` | `boolean`                                                                      | `false` | Disable the accordion item   |
+| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -       | Visual style variant         |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`  | Item size                    |
 
 ### Slots
 
 #### bit-accordion
 
-| Slot | Description |
-|------|-------------|
+| Slot      | Description                                     |
+| --------- | ----------------------------------------------- |
 | (default) | Accordion items (`bit-accordion-item` elements) |
 
 #### bit-accordion-item
 
-| Slot | Description |
-|------|-------------|
-| `title` | Title/summary content |
+| Slot       | Description                         |
+| ---------- | ----------------------------------- |
+| `title`    | Title/summary content               |
 | `subtitle` | Subtitle text shown below the title |
-| `prefix` | Content before the header content |
-| `suffix` | Content after the header content |
-| (default) | Content shown when expanded |
+| `prefix`   | Content before the header content   |
+| `suffix`   | Content after the header content    |
+| (default)  | Content shown when expanded         |
 
 ### Events
 
 #### bit-accordion
 
-| Event | Detail | Description |
-|-------|--------|-------------|
+| Event    | Detail                                  | Description                                       |
+| -------- | --------------------------------------- | ------------------------------------------------- |
 | `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
 #### bit-accordion-item
 
-| Event | Detail | Description |
-|-------|--------|-------------|
-| `expand` | `{ expanded: true, item: HTMLElement }` | Emitted when item is expanded |
+| Event      | Detail                                   | Description                    |
+| ---------- | ---------------------------------------- | ------------------------------ |
+| `expand`   | `{ expanded: true, item: HTMLElement }`  | Emitted when item is expanded  |
 | `collapse` | `{ expanded: false, item: HTMLElement }` | Emitted when item is collapsed |
 
 ## Text Component
@@ -160,32 +160,32 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `variant` | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'` | `'body'` | Text variant style |
-| `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'` | - | Text size (13 options from 12px to 128px) |
-| `weight` | `'normal' \| 'medium' \| 'semibold' \| 'bold'` | - | Font weight |
-| `color` | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | - | Text color |
-| `align` | `'left' \| 'center' \| 'right' \| 'justify'` | - | Text alignment |
-| `truncate` | `boolean` | `false` | Enable single-line truncation with ellipsis |
-| `italic` | `boolean` | `false` | Apply italic font style |
-| `as` | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'` | - | Semantic HTML tag to render |
+| Attribute  | Type                                                                                                            | Default  | Description                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------- |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                           | `'body'` | Text variant style                          |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'`  | -        | Text size (13 options from 12px to 128px)   |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                  | -        | Font weight                                 |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | -        | Text color                                  |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                    | -        | Text alignment                              |
+| `truncate` | `boolean`                                                                                                       | `false`  | Enable single-line truncation with ellipsis |
+| `italic`   | `boolean`                                                                                                       | `false`  | Apply italic font style                     |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                   | -        | Semantic HTML tag to render                 |
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
+| Slot      | Description  |
+| --------- | ------------ |
 | (default) | Text content |
 
 ### CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--text-size` | Font size | `var(--text-base)` |
-| `--text-weight` | Font weight | `var(--font-normal)` |
-| `--text-color` | Text color | `var(--text-color-body)` |
-| `--text-line-height` | Line height | `var(--leading-normal)` |
-| `--text-letter-spacing` | Letter spacing | `normal` |
+| Property                | Description    | Default                  |
+| ----------------------- | -------------- | ------------------------ |
+| `--text-size`           | Font size      | `var(--text-base)`       |
+| `--text-weight`         | Font weight    | `var(--font-normal)`     |
+| `--text-color`          | Text color     | `var(--text-color-body)` |
+| `--text-line-height`    | Line height    | `var(--leading-normal)`  |
+| `--text-letter-spacing` | Letter spacing | `normal`                 |
 
 ### Usage Examples
 
@@ -213,9 +213,7 @@ Refer to the component source for a full list of overridable CSS variables.
 #### Truncated Text
 
 ```html
-<bit-text truncate style="max-width: 200px;">
-  This long text will be truncated with ellipsis...
-</bit-text>
+<bit-text truncate style="max-width: 200px;"> This long text will be truncated with ellipsis... </bit-text>
 ```
 
 ## Checkbox Component
@@ -250,19 +248,19 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute  | Type                                                            | Default     | Description                |
-| ---------- | --------------------------------------------------------------- | ----------- | -------------------------- |
-| `checked`  | `boolean`                                                       | `false`     | Switch checked state       |
-| `disabled` | `boolean`                                                       | `false`     | Disable the switch         |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color             |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size                |
-| `name`     | `string`                                                        | -           | Form field name            |
-| `value`    | `string`                                                        | -           | Form field value when on   |
+| Attribute  | Type                                                            | Default     | Description              |
+| ---------- | --------------------------------------------------------------- | ----------- | ------------------------ |
+| `checked`  | `boolean`                                                       | `false`     | Switch checked state     |
+| `disabled` | `boolean`                                                       | `false`     | Disable the switch       |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color           |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size              |
+| `name`     | `string`                                                        | -           | Form field name          |
+| `value`    | `string`                                                        | -           | Form field value when on |
 
 ### Slots
 
-| Slot      | Description         |
-| --------- | ------------------- |
+| Slot      | Description          |
+| --------- | -------------------- |
 | (default) | Switch label content |
 
 ### Events
@@ -273,35 +271,35 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### CSS Custom Properties
 
-| Property             | Description                  | Default            |
-| -------------------- | ---------------------------- | ------------------ |
-| `--switch-width`     | Width of the switch track    | Size-dependent     |
-| `--switch-height`    | Height of the switch track   | Size-dependent     |
-| `--switch-bg`        | Background when checked      | Color-dependent    |
-| `--switch-track-bg`  | Background of unchecked track| `--color-contrast-300` |
-| `--switch-thumb-bg`  | Background of the thumb      | `white`            |
-| `--switch-font-size` | Font size of the label       | Size-dependent     |
+| Property             | Description                   | Default                |
+| -------------------- | ----------------------------- | ---------------------- |
+| `--switch-width`     | Width of the switch track     | Size-dependent         |
+| `--switch-height`    | Height of the switch track    | Size-dependent         |
+| `--switch-bg`        | Background when checked       | Color-dependent        |
+| `--switch-track`  | Background of unchecked track | `--color-contrast-300` |
+| `--switch-thumb`  | Background of the thumb       | `white`                |
+| `--switch-font-size` | Font size of the label        | Size-dependent         |
 
 ### CSS Custom Properties
 
 #### bit-accordion
 
-| Property | Description | Default |
-|----------|-------------|---------|
+| Property          | Description                 | Default  |
+| ----------------- | --------------------------- | -------- |
 | `--accordion-gap` | Gap between accordion items | `0.5rem` |
 
 #### bit-accordion-item
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--accordion-item-bg` | Background color | `transparent` |
-| `--accordion-item-color` | Text color | `var(--color-contrast)` |
-| `--accordion-item-border-color` | Border color | `var(--color-backdrop)` |
-| `--accordion-item-radius` | Border radius | `0.375rem` |
-| `--accordion-item-padding` | Content padding | Size-dependent |
-| `--accordion-item-header-padding` | Header padding | Size-dependent |
-| `--accordion-item-font-size` | Font size | Size-dependent |
-| `--accordion-item-transition` | Transition duration | `200ms ease-in-out` |
+| Property                          | Description         | Default                 |
+| --------------------------------- | ------------------- | ----------------------- |
+| `--accordion-item-bg`             | Background color    | `transparent`           |
+| `--accordion-item-color`          | Text color          | `var(--color-contrast)` |
+| `--accordion-item-border-color`   | Border color        | `var(--color-backdrop)` |
+| `--accordion-item-radius`         | Border radius       | `0.375rem`              |
+| `--accordion-item-padding`        | Content padding     | Size-dependent          |
+| `--accordion-item-header-padding` | Header padding      | Size-dependent          |
+| `--accordion-item-font-size`      | Font size           | Size-dependent          |
+| `--accordion-item-transition`     | Transition duration | `200ms ease-in-out`     |
 
 ### Examples
 
@@ -353,7 +351,7 @@ Refer to the component source for a full list of overridable CSS variables.
   <bit-accordion-item>
     <span slot="header">Custom Icon</span>
     <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path d="M9 18l6-6-6-6"/>
+      <path d="M9 18l6-6-6-6" />
     </svg>
     <p>Content with custom chevron</p>
   </bit-accordion-item>
@@ -559,11 +557,11 @@ declare global {
 ### Supported Browsers
 
 | Browser | Minimum Version |
-|---------|----------------|
-| Chrome | 77+ |
-| Firefox | 93+ |
-| Safari | 16.4+ |
-| Edge | 79+ |
+| ------- | --------------- |
+| Chrome  | 77+             |
+| Firefox | 93+             |
+| Safari  | 16.4+           |
+| Edge    | 79+             |
 
 ### Required Features
 
@@ -591,11 +589,11 @@ For older browsers, use [@webcomponents/webcomponentsjs](https://github.com/webc
 
 Component sizes (minified + gzipped):
 
-| Component | Size |
-|-----------|------|
-| Button | ~6.8 KB |
-| Input | Coming soon |
-| Select | Coming soon |
+| Component | Size        |
+| --------- | ----------- |
+| Button    | ~6.8 KB     |
+| Input     | Coming soon |
+| Select    | Coming soon |
 
 ### Tree Shaking
 
@@ -621,7 +619,7 @@ async function loadButton() {
 
 // Use with intersection observer
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     if (entry.isIntersecting) {
       loadButton();
     }

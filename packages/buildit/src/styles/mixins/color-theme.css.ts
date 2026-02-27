@@ -25,21 +25,22 @@ import { css } from '@vielzeug/craftit';
  * ```
  */
 export const colorThemeMixin = () => css`
-  /* ========================================
-     Color Themes (Default: Neutral)
-     ======================================== */
+  @layer buildit.themes {
+    /* ========================================
+       Color Themes (Default: Neutral)
+       ======================================== */
 
-  :host {
-    /* Default to neutral when no color is specified */
-    --_theme-base: var(--color-neutral);
-    --_theme-content: var(--color-neutral-content);
-    --_theme-contrast: var(--color-neutral-contrast);
-    --_theme-focus: var(--color-neutral-focus);
-    --_theme-backdrop: var(--color-neutral-backdrop);
-    --_theme-border: var(--color-neutral-border);
-    --_theme-shadow: var(--color-neutral-focus-shadow);
-    --_theme-halo: var(--halo-shadow-neutral);
-  }
+    :host {
+      /* Default to neutral when no color is specified */
+      --_theme-base: var(--color-neutral);
+      --_theme-content: var(--color-neutral-content);
+      --_theme-contrast: var(--color-neutral-contrast);
+      --_theme-focus: var(--color-neutral-focus);
+      --_theme-backdrop: var(--color-neutral-backdrop);
+      --_theme-border: var(--color-neutral-border);
+      --_theme-shadow: var(--color-neutral-focus-shadow);
+      --_theme-halo: var(--halo-shadow-neutral);
+    }
 
   :host([color='primary']) {
     --_theme-base: var(--color-primary);
@@ -106,5 +107,5 @@ export const colorThemeMixin = () => css`
     --_theme-shadow: var(--color-error-focus-shadow);
     --_theme-halo: var(--halo-shadow-error);
   }
+  }
 `;
-

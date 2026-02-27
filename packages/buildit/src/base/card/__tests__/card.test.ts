@@ -68,7 +68,6 @@ describe('bit-card', () => {
     });
   });
 
-
   describe('Padding Variants', () => {
     const paddings = ['none', 'sm', 'md', 'lg'] as const;
 
@@ -143,7 +142,6 @@ describe('bit-card', () => {
       expect(fixture.element.getAttribute('variant')).toBe('flat');
     });
 
-
     it('should update padding dynamically', async () => {
       fixture = await createFixture('bit-card', { padding: 'sm' });
 
@@ -175,9 +173,9 @@ describe('bit-card', () => {
   describe('Combined Attributes', () => {
     it('should apply multiple attributes together', async () => {
       fixture = await createFixture('bit-card', {
-        variant: 'outline',
-        padding: 'lg',
         hoverable: true,
+        padding: 'lg',
+        variant: 'outline',
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
@@ -194,6 +192,3 @@ describe('bit-card', () => {
     });
   });
 });
-
-
-

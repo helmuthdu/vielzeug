@@ -40,11 +40,22 @@ CDN imports are not recommended for production as they bypass your build process
 
 ## Basic Usage
 
+### Import Global Styles [REQUIRED]
+
+**Critical:** Before using any components, import the global styles in the correct order:
+
+```typescript
+import '@vielzeug/buildit/styles';
+```
+
 ### Importing Components
 
 Buildit uses modular imports for optimal tree-shaking. Import only the components you need:
 
 ```typescript
+// Import everything
+import '@vielzeug/buildit';
+
 // Import specific components
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/checkbox';
@@ -63,13 +74,7 @@ Once imported, components are available as custom elements:
 Set attributes directly on the custom element:
 
 ```html
-<bit-button
-  variant="outline"
-  color="secondary"
-  size="lg"
-  disabled>
-  Large Outline Button
-</bit-button>
+<bit-button variant="outline" color="secondary" size="lg" disabled> Large Outline Button </bit-button>
 ```
 
 ### Event Handling

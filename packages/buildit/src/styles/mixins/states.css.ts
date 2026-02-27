@@ -21,14 +21,16 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const disabledStateMixin = (selector: string = '') => {
+export const disabledStateMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
   return css`
-    :host([disabled])${sel} {
-      opacity: 0.5;
-      cursor: not-allowed;
-      pointer-events: none;
+    @layer buildit.states {
+      :host([disabled])${sel} {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
     }
   `;
 };
@@ -54,14 +56,16 @@ export const disabledStateMixin = (selector: string = '') => {
  * `;
  * ```
  */
-export const loadingStateMixin = (selector: string = '') => {
+export const loadingStateMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
   return css`
-    :host([loading])${sel} {
-      opacity: 0.5;
-      cursor: wait;
-      pointer-events: none;
+    @layer buildit.states {
+      :host([loading])${sel} {
+        opacity: 0.5;
+        cursor: wait;
+        pointer-events: none;
+      }
     }
   `;
 };
@@ -84,20 +88,21 @@ export const loadingStateMixin = (selector: string = '') => {
  * `;
  * ```
  */
-export const disabledLoadingMixin = (selector: string = '') => {
+export const disabledLoadingMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
   return css`
-    :host([disabled])${sel},
-    :host([loading])${sel} {
-      opacity: 0.5;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
+    @layer buildit.states {
+      :host([disabled])${sel},
+      :host([loading])${sel} {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
 
-    :host([loading])${sel} {
-      cursor: wait;
+      :host([loading])${sel} {
+        cursor: wait;
+      }
     }
   `;
 };
-

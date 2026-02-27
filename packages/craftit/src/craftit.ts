@@ -491,7 +491,7 @@ class BaseComponent<T = HTMLElement, P extends object = object, S extends object
           return value === '' ? true : value;
         },
         set: (value: any) => {
-          (value == null || value === false)
+          value == null || value === false
             ? this.removeAttribute(attrStr)
             : this.setAttribute(attrStr, value === true ? '' : String(value));
         },
@@ -1484,9 +1484,10 @@ export const html = Object.assign(
       };
 
       // Schedule portal creation
-      const schedule = document.readyState === 'loading'
-        ? () => document.addEventListener('DOMContentLoaded', createPortal, { once: true })
-        : () => queueMicrotask(createPortal);
+      const schedule =
+        document.readyState === 'loading'
+          ? () => document.addEventListener('DOMContentLoaded', createPortal, { once: true })
+          : () => queueMicrotask(createPortal);
 
       schedule();
 
@@ -1605,11 +1606,7 @@ export const html = Object.assign(
         return typeof result === 'string' ? result : result.toString();
       };
 
-      return condition
-        ? resolveValue(truthyValue)
-        : falsyValue !== undefined
-          ? resolveValue(falsyValue)
-          : '';
+      return condition ? resolveValue(truthyValue) : falsyValue !== undefined ? resolveValue(falsyValue) : '';
     },
   },
 );

@@ -141,7 +141,6 @@ describe('bit-card accessibility', () => {
       fixture.destroy();
     });
 
-
     it('should have no violations with padding variants', async () => {
       const paddings = ['none', 'sm', 'md', 'lg'] as const;
 
@@ -220,8 +219,3 @@ describe('bit-card accessibility', () => {
     });
   });
 });
-
-
-
-
-

@@ -22,32 +22,33 @@ import { css } from '@vielzeug/craftit';
  * ```
  */
 export const elevationMixin = () => css`
-  /* ========================================
-     Elevation Levels (0-5)
-     ======================================== */
+  @layer buildit.utilities {
+    /* ========================================
+       Elevation Levels (0-5)
+       ======================================== */
 
-  :host([elevation='0']) {
-    --_shadow: none;
-  }
+    :host([elevation='0']) {
+      --_shadow: none;
+    }
 
-  :host([elevation='1']) {
-    --_shadow: var(--shadow-sm);
-  }
+    :host([elevation='1']) {
+      --_shadow: var(--shadow-sm);
+    }
 
-  :host([elevation='2']) {
-    --_shadow: var(--shadow-md);
-  }
+    :host([elevation='2']) {
+      --_shadow: var(--shadow-md);
+    }
 
-  :host([elevation='3']) {
-    --_shadow: var(--shadow-lg);
-  }
+    :host([elevation='3']) {
+      --_shadow: var(--shadow-lg);
+    }
 
-  :host([elevation='4']) {
-    --_shadow: var(--shadow-xl);
-  }
+    :host([elevation='4']) {
+      --_shadow: var(--shadow-xl);
+    }
 
-  :host([elevation='5']) {
-    --_shadow: var(--shadow-2xl);
+    :host([elevation='5']) {
+      --_shadow: var(--shadow-2xl);
+    }
   }
 `;
-

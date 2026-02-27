@@ -1,10 +1,6 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin } from '../../styles';
-import type {
-  ThemeColor,
-  ComponentSize,
-  SliderChangeEventDetail,
-} from '../../types';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, SliderChangeEventDetail, ThemeColor } from '../../types';
 
 /**
  * # bit-slider
@@ -15,28 +11,30 @@ import type {
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles & Defaults
-     ======================================== */
+  @layer buildit.base {
+    /* ========================================
+       Base Styles & Defaults
+       ======================================== */
 
-  :host {
-    --_track-height: var(--slider-track-height, var(--size-1-5));
-    --_thumb-size: var(--slider-thumb-size, var(--size-5));
-    --_track-bg: var(--slider-track-bg, var(--color-contrast-300));
-    --_fill-bg: var(--slider-fill-bg, var(--color-neutral));
-    --_thumb-bg: var(--slider-thumb-bg, var(--color-contrast-100));
-    --_font-size: var(--text-sm);
-    --_shadow: var(--color-neutral-focus-shadow);
+    :host {
+      --_size: var(--slider-size, var(--size-5));
+      --_height: var(--slider-height, calc(var(--size-5) / 3));
+      --_track: var(--slider-track, var(--color-contrast-300));
+      --_fill: var(--slider-fill, var(--color-neutral));
+      --_thumb: var(--slider-thumb, var(--color-contrast-100));
+      --_font-size: var(--text-sm);
+      --_shadow: var(--color-neutral-focus-shadow);
 
-    align-items: center;
-    cursor: pointer;
-    display: inline-flex;
-    gap: var(--size-3);
-    min-height: var(--size-11);
-    position: relative;
-    touch-action: none;
-    user-select: none;
-    width: 100%;
+      align-items: center;
+      cursor: pointer;
+      display: inline-flex;
+      gap: var(--_gap, var(--size-3));
+      min-height: var(--size-11);
+      position: relative;
+      touch-action: none;
+      user-select: none;
+      width: 100%;
+    }
   }
 
   /* ========================================
@@ -53,21 +51,21 @@ const styles = css`
     align-items: center;
     display: flex;
     flex: 1;
-    height: var(--_thumb-size);
+    height: var(--_size);
     position: relative;
     width: 100%;
   }
 
   .slider-track {
-    background: var(--_track-bg);
+    background: var(--_track);
     border-radius: var(--rounded-full);
-    height: var(--_track-height);
+    height: var(--_height);
     position: relative;
     width: 100%;
   }
 
   .slider-fill {
-    background: var(--_fill-bg);
+    background: var(--_fill);
     border-radius: var(--rounded-full);
     height: 100%;
     left: 0;
@@ -83,11 +81,11 @@ const styles = css`
   }
 
   .slider-thumb {
-    background: var(--_thumb-bg);
-    border: 2px solid var(--_fill-bg);
+    background: var(--_thumb);
+    border: 2px solid var(--_fill);
     border-radius: var(--rounded-full);
     box-shadow: var(--shadow-sm);
-    height: var(--_thumb-size);
+    height: var(--_size);
     left: var(--_progress, 0%);
     position: absolute;
     top: 50%;
@@ -96,7 +94,7 @@ const styles = css`
       box-shadow var(--transition-normal), 
       transform var(--transition-fast),
       left var(--transition-normal);
-    width: var(--_thumb-size);
+    width: var(--_size);
     z-index: 1;
   }
 
@@ -117,27 +115,24 @@ const styles = css`
 
   ${colorThemeMixin()}
 
-  /* Map theme variables to slider-specific variables */
-  :host {
-    --_fill-bg: var(--slider-fill-bg, var(--_theme-base));
-    --_shadow: var(--_theme-shadow);
+  @layer buildit.overrides {
+    /* Map theme variables to slider-specific variables */
+    :host {
+      --_fill: var(--slider-fill, var(--_theme-base));
+      --_shadow: var(--_theme-shadow);
+    }
   }
 
-  /* ========================================
-     Size Variants
-     ======================================== */
-
-  :host([size='sm']) {
-    --_track-height: var(--size-1);
-    --_thumb-size: var(--size-4);
-    --_font-size: var(--text-xs);
-  }
-
-  :host([size='lg']) {
-    --_track-height: var(--size-2);
-    --_thumb-size: var(--size-6);
-    --_font-size: var(--text-base);
-  }
+  ${sizeVariantMixin({
+    lg: {
+      fontSize: 'var(--text-base)',
+      size: 'var(--size-6)',
+    },
+    sm: {
+      fontSize: 'var(--text-xs)',
+      size: 'var(--size-4)',
+    },
+  })}
 
   /* ========================================
      Label & Hidden Input
@@ -168,11 +163,11 @@ const styles = css`
  * - **change**: Emitted when slider value changes
  *
  * ## CSS Custom Properties
- * - `--slider-track-height`: Track height
- * - `--slider-thumb-size`: Thumb dimensions
- * - `--slider-track-bg`: Track background color
- * - `--slider-fill-bg`: Fill (progress) background color
- * - `--slider-thumb-bg`: Thumb background color
+ * - `--slider-height`: Track height
+ * - `--slider-size`: Thumb dimensions
+ * - `--slider-track`: Track background color
+ * - `--slider-fill`: Fill (progress) background color
+ * - `--slider-thumb`: Thumb background color
  *
  * ## Keyboard Support
  * - `Arrow Right/Up`: Increase by step
@@ -309,7 +304,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
       if (Number(host.getAttribute('value')) !== newValue) {
         host.setAttribute('value', newValue.toString());
         updateUI(newValue);
-        el.emit('change', { value: newValue, originalEvent: new CustomEvent('change') });
+        el.emit('change', { originalEvent: new CustomEvent('change'), value: newValue });
       }
     };
 
@@ -376,7 +371,7 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
       if (newValue !== val) {
         host.setAttribute('value', newValue.toString());
         updateUI(newValue);
-        el.emit('change', { value: newValue, originalEvent: e });
+        el.emit('change', { originalEvent: e, value: newValue });
       }
     });
   },
@@ -405,4 +400,3 @@ defineElement<HTMLElement, SliderProps>('bit-slider', {
 });
 
 export default {};
-

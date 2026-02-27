@@ -10,86 +10,90 @@ import type { ComponentSize, VisualVariant } from '../../types';
  */
 
 const styles = css`
-  :host {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-2);
-    width: 100%;
+  @layer buildit.base {
+    :host {
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-2);
+      width: 100%;
+    }
+
+    ::slotted(bit-accordion-item) {
+      width: 100%;
+    }
   }
 
-  ::slotted(bit-accordion-item) {
-    width: 100%;
-  }
+  @layer buildit.variants {
+    /* ========================================
+       Visual Variants
+       ======================================== */
 
-  /* ========================================
-     Visual Variants
-     ======================================== */
+    /* Text variant - borderless with dividers */
+    :host([variant='text']) {
+      gap: 0;
+    }
 
-  /* Text variant - borderless with dividers */
-  :host([variant='text']) {
-    gap: 0;
-  }
+    :host([variant='text']) ::slotted(bit-accordion-item:not(:last-child)) {
+      border-bottom: 1px solid var(--color-contrast-200);
+    }
 
-  :host([variant='text']) ::slotted(bit-accordion-item:not(:last-child)) {
-    border-bottom: 1px solid var(--color-contrast-200);
-  }
+    /* Contained variants - grouped appearance */
+    :host([variant='solid']),
+    :host([variant='flat']),
+    :host([variant='glass']),
+    :host([variant='frost']) {
+      border-radius: var(--rounded-md);
+      gap: 0;
+      padding: var(--size-2);
+    }
 
-  /* Contained variants - grouped appearance */
-  :host([variant='solid']),
-  :host([variant='flat']),
-  :host([variant='glass']),
-  :host([variant='frost']) {
-    border-radius: var(--rounded-md);
-    gap: 0;
-    padding: var(--size-2);
-  }
+    /* Solid variant (default) */
+    :host([variant='solid']) {
+      background: var(--color-contrast-50);
+      border: var(--border) solid var(--color-contrast-200);
+      box-shadow: var(--shadow-xs);
+    }
 
-  /* Solid variant (default) */
-  :host([variant='solid']) {
-    background: var(--color-contrast-50);
-    border: var(--border) solid var(--color-contrast-200);
-    box-shadow: var(--shadow-xs);
-  }
+    /* Flat variant */
+    :host([variant='flat']) {
+      background: var(--color-contrast-100);
+      border: var(--border) solid var(--color-contrast-200);
+      box-shadow: var(--inset-shadow-xs);
+    }
 
-  /* Flat variant */
-  :host([variant='flat']) {
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
-    box-shadow: var(--inset-shadow-xs);
-  }
+    /* Glass & Frost - Shared styles */
+    :host([variant='glass']),
+    :host([variant='frost']) {
+      backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    }
 
-  /* Glass & Frost - Shared styles */
-  :host([variant='glass']),
-  :host([variant='frost']) {
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-  }
+    /* Glass variant - translucent with blur */
+    :host([variant='glass']) {
+      background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    }
 
-  /* Glass variant - translucent with blur */
-  :host([variant='glass']) {
-    background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-  }
+    /* Frost variant - canvas-based transparency */
+    :host([variant='frost']) {
+      background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    }
 
-  /* Frost variant - canvas-based transparency */
-  :host([variant='frost']) {
-    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-  }
+    /* Nested item border radius for glass and frost variants */
+    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item) {
+      border-radius: 0;
+    }
 
-  /* Nested item border radius for glass and frost variants */
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item) {
-    border-radius: 0;
-  }
+    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:first-child) {
+      border-radius: var(--rounded-md) var(--rounded-md) 0 0;
+    }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:first-child) {
-    border-radius: var(--rounded-md) var(--rounded-md) 0 0;
-  }
+    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:last-child) {
+      border-radius: 0 0 var(--rounded-md) var(--rounded-md);
+    }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:last-child) {
-    border-radius: 0 0 var(--rounded-md) var(--rounded-md);
-  }
-
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:only-child) {
-    border-radius: var(--rounded-md);
+    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:only-child) {
+      border-radius: var(--rounded-md);
+    }
   }
 `;
 
@@ -152,7 +156,7 @@ export type AccordionProps = {
   size?: ComponentSize;
   /** Visual variant for all items (propagated to children) */
   variant?: VisualVariant;
-}
+};
 
 defineElement<HTMLElement, AccordionProps>('bit-accordion', {
   observedAttributes: ['selection-mode', 'size', 'variant'] as const,
@@ -212,7 +216,7 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
 
   styles: [styles],
 
-  template: () => html`<slot></slot>`,
+  template: html`<slot></slot>`,
 });
 
 export default {};

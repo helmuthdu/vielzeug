@@ -1,10 +1,6 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin } from '../../styles';
-import type {
-  ThemeColor,
-  ComponentSize,
-  CheckableChangeEventDetail,
-} from '../../types';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import type { CheckableChangeEventDetail, ComponentSize, ThemeColor } from '../../types';
 
 /**
  * # bit-checkbox
@@ -15,141 +11,133 @@ import type {
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles & Defaults
-     ======================================== */
+  @layer buildit.base {
+    /* ========================================
+       Base Styles & Defaults
+       ======================================== */
 
-  :host {
-    --_size: var(--checkbox-size, var(--size-5));
-    --_radius: var(--checkbox-radius, var(--rounded-md));
-    --_font-size: var(--checkbox-font-size, var(--text-sm));
-    --_bg: var(--checkbox-bg, var(--color-contrast-200));
-    --_border: var(--checkbox-border-color, var(--color-contrast-300));
-    
-    display: inline-flex;
-    align-items: center;
-    gap: var(--size-2);
-    cursor: pointer;
-    user-select: none;
+    :host {
+      --_size: var(--checkbox-size, var(--size-5));
+      --_radius: var(--checkbox-radius, var(--rounded-md));
+      --_font-size: var(--checkbox-font-size, var(--text-sm));
+      --_bg: var(--checkbox-bg, var(--color-contrast-200));
+      --_border: var(--checkbox-border-color, var(--color-contrast-300));
+      
+      display: inline-flex;
+      align-items: center;
+      gap: var(--_gap, var(--size-2));
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-wrapper {
+      position: relative;
+      display: block;
+      width: var(--_size);
+      height: var(--_size);
+      flex-shrink: 0;
+    }
+
+    input {
+      display: none;
+    }
+
+    .box {
+      width: var(--_size);
+      height: var(--_size);
+      border: var(--border-2) solid var(--_border);
+      border-radius: var(--_radius);
+      background: var(--_bg);
+      transition:
+        background var(--transition-slower),
+        border-color var(--transition-slower),
+        box-shadow var(--transition-normal);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    /* ========================================
+       Focus State
+       ======================================== */
+
+    input:focus-visible + .box {
+      box-shadow: var(--_focus-shadow);
+    }
+
+    /* ========================================
+       Icons (Checkmark & Dash)
+       ======================================== */
+
+    .checkmark,
+    .dash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 80%;
+      height: 80%;
+      transform: translate(-50%, -50%) scale(0.5);
+      color: var(--_icon-color);
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      opacity: 0;
+      transition:
+        opacity var(--transition-spring),
+        transform var(--transition-spring);
+    }
+
+    /* ========================================
+       Label
+       ======================================== */
+
+    .label {
+      font-size: var(--_font-size);
+      color: var(--color-contrast);
+    }
   }
-
-  /* ========================================
-     States (Shared Mixin)
-     ======================================== */
-
-  ${disabledStateMixin()}
-
-  .checkbox-wrapper {
-    position: relative;
-    display: block;
-    width: var(--_size);
-    height: var(--_size);
-    flex-shrink: 0;
-  }
-
-  input {
-    display: none;
-  }
-
-  .box {
-    width: var(--_size);
-    height: var(--_size);
-    border: var(--border-2) solid var(--_border);
-    border-radius: var(--_radius);
-    background: var(--_bg);
-    transition:
-      background var(--transition-slower),
-      border-color var(--transition-slower),
-      box-shadow var(--transition-normal);
-    position: relative;
-    box-sizing: border-box;
-  }
-
-  /* ========================================
-     Color Themes (Shared Mixin)
-     ======================================== */
 
   ${colorThemeMixin()}
+  ${disabledStateMixin()}
 
-  /* Map theme variables to checkbox-specific variables */
-  :host {
-    --_active-bg: var(--checkbox-checked-bg, var(--_theme-base));
-    --_icon-color: var(--checkbox-color, var(--_theme-contrast));
-    --_focus-shadow: var(--_theme-shadow);
+  @layer buildit.overrides {
+    /* Map theme variables to checkbox-specific variables */
+    :host {
+      --_active-bg: var(--checkbox-checked-bg, var(--_theme-base));
+      --_icon-color: var(--checkbox-color, var(--_theme-contrast));
+      --_focus-shadow: var(--_theme-shadow);
+    }
+
+    /* ========================================
+       Checked & Indeterminate States
+       ======================================== */
+
+    :host([checked]) .box,
+    :host([indeterminate]) .box {
+      background: var(--_active-bg);
+      border-color: var(--_active-bg);
+    }
+
+    :host([checked]) .checkmark,
+    :host([indeterminate]:not([checked])) .dash {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
   }
 
-  /* ========================================
-     Checked & Indeterminate States
-     ======================================== */
-
-  :host([checked]) .box,
-  :host([indeterminate]) .box {
-    background: var(--_active-bg);
-    border-color: var(--_active-bg);
-  }
-
-  /* ========================================
-     Focus State
-     ======================================== */
-
-  input:focus-visible + .box {
-    box-shadow: var(--_focus-shadow);
-  }
-
-  /* ========================================
-     Icons (Checkmark & Dash)
-     ======================================== */
-
-  .checkmark,
-  .dash {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 80%;
-    height: 80%;
-    transform: translate(-50%, -50%) scale(0.5);
-    color: var(--_icon-color);
-    stroke: currentColor;
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    fill: none;
-    opacity: 0;
-    transition:
-      opacity var(--transition-spring),
-      transform var(--transition-spring);
-  }
-
-  :host([checked]) .checkmark,
-  :host([indeterminate]:not([checked])) .dash {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  /* ========================================
-     Size Variants
-     ======================================== */
-
-  :host([size='sm']) {
-    --_size: var(--size-4);
-    --_font-size: var(--text-xs);
-    gap: var(--size-1-5);
-  }
-
-  :host([size='lg']) {
-    --_size: var(--size-6);
-    --_font-size: var(--text-base);
-    gap: var(--size-2-5);
-  }
-
-  /* ========================================
-     Label
-     ======================================== */
-
-  .label {
-    font-size: var(--_font-size);
-    color: var(--color-contrast);
-  }
+  ${sizeVariantMixin({
+    lg: {
+      fontSize: 'var(--text-base)',
+      gap: 'var(--size-2-5)',
+      size: 'var(--size-6)',
+    },
+    sm: {
+      fontSize: 'var(--text-xs)',
+      gap: 'var(--size-1-5)',
+      size: 'var(--size-4)',
+    },
+  })}
 `;
 
 /**
@@ -161,7 +149,7 @@ const styles = css`
  * - **default**: Checkbox label text
  *
  * ## Events
- * - **change**: Emitted when checkbox state changes
+ * - **change**: Emitted when the checkbox state changes
  *
  * ## CSS Custom Properties
  * - `--checkbox-size`: Checkbox dimensions

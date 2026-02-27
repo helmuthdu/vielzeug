@@ -24,6 +24,7 @@ Buildit provides a comprehensive set of design tokens organized into categories:
 Buildit uses a carefully designed contrast scale that divides into two ranges:
 
 ### Background Colors (50-400)
+
 Optimized for UI elements, cards, borders, and backgrounds with soft, subtle progression:
 
 - `--color-contrast-50`: Canvas, page background
@@ -33,6 +34,7 @@ Optimized for UI elements, cards, borders, and backgrounds with soft, subtle pro
 - `--color-contrast-400`: Disabled backgrounds, subtle UI
 
 ### Text Colors (500-900)
+
 Optimized for readability and WCAG AA/AAA compliance:
 
 - `--color-contrast-500`: Tertiary text, placeholders (AA for large text)
@@ -101,7 +103,7 @@ You can override the default theme by setting global CSS variables in your root 
 
   /* Override spacing */
   --size-4: 1.2rem;
-  
+
   /* Override border radius */
   --rounded-md: 0.5rem;
 }
@@ -117,8 +119,7 @@ Each component exposes specific CSS custom properties for fine-tuned control:
     --button-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --button-radius: 20px;
     --button-padding: 0.75rem 2rem;
-  "
->
+  ">
   Gradient Button
 </bit-button>
 ```
@@ -226,7 +227,7 @@ Use background range (50-400) for backgrounds and text range (500-900) for text:
 ```css
 /* ✅ Good - Follows the scale design */
 background: var(--color-contrast-100); /* Card background */
-color: var(--text-color-body);         /* Body text */
+color: var(--text-color-body); /* Body text */
 
 /* ❌ Avoid - Using text colors for backgrounds */
 background: var(--color-contrast-700);

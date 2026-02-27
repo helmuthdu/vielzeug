@@ -58,7 +58,6 @@ Three sizes for different contexts.
 <bit-checkbox checked size="lg">Large</bit-checkbox>
 ```
 
-
 </ComponentPreview>
 
 ## States
@@ -82,8 +81,7 @@ Prevent interaction and reduce opacity for unavailable options.
 <ComponentPreview center>
 
 ```html
-<bit-checkbox disabled>Disabled unchecked</bit-checkbox>
-<bit-checkbox checked disabled>Disabled checked</bit-checkbox>
+<bit-checkbox disabled>Disabled unchecked</bit-checkbox> <bit-checkbox checked disabled>Disabled checked</bit-checkbox>
 ```
 
 </ComponentPreview>
@@ -116,10 +114,10 @@ Prevent interaction and reduce opacity for unavailable options.
 
 ## CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--checkbox-size` | Size of the square | Size-dependent |
-| `--checkbox-radius` | Border radius | `0.375rem` |
+| Property                | Description             | Default         |
+| ----------------------- | ----------------------- | --------------- |
+| `--checkbox-size`       | Size of the square      | Size-dependent  |
+| `--checkbox-radius`     | Border radius           | `0.375rem`      |
 | `--checkbox-checked-bg` | Background when checked | Color-dependent |
 
 ## Accessibility
@@ -127,19 +125,23 @@ Prevent interaction and reduce opacity for unavailable options.
 The checkbox component follows WAI-ARIA best practices.
 
 ✅ **Keyboard Navigation**
+
 - `Space` and `Enter` toggle the checkbox.
 - `Tab` moves focus to/from the checkbox.
 
 ✅ **Screen Readers**
+
 - Announces checkbox role and label.
 - `aria-checked` reflects current state (true, false, mixed).
 
 ## Best Practices
 
 **Do:**
+
 - Use clear, concise labels.
 - Use indeterminate state for "select all" patterns.
 
 **Don't:**
+
 - Use checkboxes for mutually exclusive options (use radio buttons).
 - Hide critical options using the disabled state.

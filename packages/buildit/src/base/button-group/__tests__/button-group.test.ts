@@ -90,13 +90,13 @@ describe('bit-button-group', () => {
     });
 
     it('should apply fullwidth mode', async () => {
-      fixture = await createFixture('bit-button-group', { 'fullwidth': true });
+      fixture = await createFixture('bit-button-group', { fullwidth: true });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('should toggle fullwidth mode', async () => {
-      fixture = await createFixture('bit-button-group', { 'fullwidth': true });
+      fixture = await createFixture('bit-button-group', { fullwidth: true });
 
       await fixture.setAttribute('fullwidth', false);
 
@@ -255,7 +255,7 @@ describe('bit-button-group', () => {
     it('should handle multiple attributes together', async () => {
       fixture = await createFixture('bit-button-group', {
         attached: true,
-        'fullwidth': true,
+        fullwidth: true,
         orientation: 'vertical',
       });
 
@@ -291,9 +291,9 @@ describe('bit-button-group', () => {
 
       await fixture.update();
       await fixture.setAttributes({
+        color: 'error',
         size: 'lg',
         variant: 'outline',
-        color: 'error',
       });
 
       const button = fixture.element.querySelector('bit-button');
@@ -305,7 +305,7 @@ describe('bit-button-group', () => {
 
   describe('Dynamic Children', () => {
     it('should apply attributes to dynamically added buttons', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'lg', color: 'primary' });
+      fixture = await createFixture('bit-button-group', { color: 'primary', size: 'lg' });
       fixture.element.innerHTML = '<bit-button>Button 1</bit-button>';
 
       await fixture.update();
@@ -362,7 +362,7 @@ describe('bit-button-group', () => {
     });
 
     it('should override individual button attributes', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'lg', color: 'error' });
+      fixture = await createFixture('bit-button-group', { color: 'error', size: 'lg' });
       fixture.element.innerHTML = `
         <bit-button size="sm" color="primary">Button 1</bit-button>
         <bit-button>Button 2</bit-button>

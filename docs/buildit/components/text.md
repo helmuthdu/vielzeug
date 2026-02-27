@@ -41,8 +41,8 @@ Normal paragraph text with standard line height. The default variant for general
 
 ```html
 <bit-text>
-  This is body text with normal styling. It's perfect for paragraphs,
-  descriptions, and general content throughout your application.
+  This is body text with normal styling. It's perfect for paragraphs, descriptions, and general content throughout your
+  application.
 </bit-text>
 ```
 
@@ -84,15 +84,9 @@ Smaller, secondary text for additional context or metadata.
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="caption" color="muted">
-  Last updated 2 hours ago
-</bit-text>
-<bit-text variant="caption" color="muted">
-  Optional field
-</bit-text>
-<bit-text variant="caption" color="muted">
-  File size: 2.4 MB
-</bit-text>
+<bit-text variant="caption" color="muted"> Last updated 2 hours ago </bit-text>
+<bit-text variant="caption" color="muted"> Optional field </bit-text>
+<bit-text variant="caption" color="muted"> File size: 2.4 MB </bit-text>
 ```
 
 </ComponentPreview>
@@ -208,19 +202,22 @@ When using the `align` attribute, the text component automatically changes from 
 <ComponentPreview center vertical>
 
 ```html
-<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div
+  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="left">Left aligned text</bit-text>
 </div>
-<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div
+  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="center">Centered text</bit-text>
 </div>
-<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<div
+  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
   <bit-text align="right">Right aligned text</bit-text>
 </div>
 <div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem;">
   <bit-text align="justify">
-    Justified text distributes words evenly across the line width.
-    This is useful for formal documents or newspaper-style layouts.
+    Justified text distributes words evenly across the line width. This is useful for formal documents or
+    newspaper-style layouts.
   </bit-text>
 </div>
 ```
@@ -238,7 +235,8 @@ Enable single-line truncation with ellipsis for overflow text.
 ```html
 <div style="max-width: 300px;">
   <bit-text truncate>
-    This is a very long text that will be truncated with an ellipsis when it exceeds the container width and demonstrates how the component handles overflow content gracefully
+    This is a very long text that will be truncated with an ellipsis when it exceeds the container width and
+    demonstrates how the component handles overflow content gracefully
   </bit-text>
 </div>
 ```
@@ -295,15 +293,13 @@ Combine multiple text components for rich layouts.
 ```html
 <div style="border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); padding: var(--size-4);">
   <bit-text variant="overline" color="primary" size="xs">Featured Product</bit-text>
-  <bit-text variant="heading" size="xl" as="h2" style="margin-top: var(--size-2);">
-    Premium Headphones
-  </bit-text>
+  <bit-text variant="heading" size="xl" as="h2" style="margin-top: var(--size-2);"> Premium Headphones </bit-text>
   <bit-text variant="caption" color="muted" style="display: block; margin-top: var(--size-1);">
     Added 2 days ago • Electronics
   </bit-text>
   <bit-text style="display: block; margin-top: var(--size-3);">
-    High-quality wireless headphones with active noise cancellation,
-    40-hour battery life, and premium comfort for all-day wear.
+    High-quality wireless headphones with active noise cancellation, 40-hour battery life, and premium comfort for
+    all-day wear.
   </bit-text>
 </div>
 ```
@@ -318,9 +314,7 @@ Label with helper text pattern.
 
 ```html
 <div>
-  <bit-text variant="label" as="label" style="display: block; margin-bottom: var(--size-1);">
-    Email Address
-  </bit-text>
+  <bit-text variant="label" as="label" style="display: block; margin-bottom: var(--size-1);"> Email Address </bit-text>
   <bit-text variant="caption" color="muted" size="xs" style="display: block; margin-bottom: var(--size-2);">
     We'll never share your email with anyone else
   </bit-text>
@@ -343,9 +337,7 @@ Use semantic colors for feedback.
 <bit-text color="warning" weight="medium" style="display: block; margin-bottom: var(--size-2);">
   ⚠ Please review the highlighted fields
 </bit-text>
-<bit-text color="error" weight="medium" style="display: block;">
-  ✗ An error occurred. Please try again
-</bit-text>
+<bit-text color="error" weight="medium" style="display: block;"> ✗ An error occurred. Please try again </bit-text>
 ```
 
 </ComponentPreview>
@@ -357,7 +349,8 @@ Show file information with truncation.
 <ComponentPreview center vertical>
 
 ```html
-<div style="max-width: 250px; padding: var(--size-3); border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-md);">
+<div
+  style="max-width: 250px; padding: var(--size-3); border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-md);">
   <bit-text truncate color="primary" weight="medium">
     very-long-document-name-that-needs-truncation-for-display.pdf
   </bit-text>
@@ -373,32 +366,32 @@ Show file information with truncation.
 
 ### Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `variant` | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'` | `'body'` | Text variant style |
-| `size` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'` | — | Text size (uses variant default if not specified) |
-| `weight` | `'normal' \| 'medium' \| 'semibold' \| 'bold'` | — | Font weight (uses variant default if not specified) |
-| `color` | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | — | Text color (uses variant default if not specified) |
-| `align` | `'left' \| 'center' \| 'right' \| 'justify'` | — | Text alignment |
-| `truncate` | `boolean` | `false` | Enable single-line truncation |
-| `italic` | `boolean` | `false` | Italic font style |
-| `as` | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'` | — | Semantic HTML tag to render |
+| Attribute  | Type                                                                                                            | Default  | Description                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                           | `'body'` | Text variant style                                  |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'`  | —        | Text size (uses variant default if not specified)   |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                  | —        | Font weight (uses variant default if not specified) |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | —        | Text color (uses variant default if not specified)  |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                    | —        | Text alignment                                      |
+| `truncate` | `boolean`                                                                                                       | `false`  | Enable single-line truncation                       |
+| `italic`   | `boolean`                                                                                                       | `false`  | Italic font style                                   |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                   | —        | Semantic HTML tag to render                         |
 
 ### Slots
 
-| Slot | Description |
-|------|-------------|
+| Slot      | Description  |
+| --------- | ------------ |
 | (default) | Text content |
 
 ### CSS Custom Properties
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `--text-size` | Font size | `var(--text-base)` |
-| `--text-weight` | Font weight | `var(--font-normal)` |
-| `--text-color` | Text color | `var(--text-color-body)` |
-| `--text-line-height` | Line height | `var(--leading-normal)` |
-| `--text-letter-spacing` | Letter spacing | `normal` |
+| Property                | Description    | Default                  |
+| ----------------------- | -------------- | ------------------------ |
+| `--text-size`           | Font size      | `var(--text-base)`       |
+| `--text-weight`         | Font weight    | `var(--font-normal)`     |
+| `--text-color`          | Text color     | `var(--text-color-body)` |
+| `--text-line-height`    | Line height    | `var(--leading-normal)`  |
+| `--text-letter-spacing` | Letter spacing | `normal`                 |
 
 ## Accessibility
 
@@ -420,4 +413,3 @@ The text component fully integrates with the Buildit design system:
 - Follows internal variable pattern (`--_*`) for implementation
 - Exposes public CSS custom properties for customization
 - Supports all theme typography scales
-

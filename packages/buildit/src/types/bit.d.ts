@@ -15,7 +15,7 @@ import type {
   RadioProps,
   SliderProps,
   SwitchProps,
-  TextProps
+  TextProps,
 } from '../index';
 
 // ============================================

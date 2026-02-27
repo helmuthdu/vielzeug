@@ -72,9 +72,7 @@ describe('bit-text Accessibility', () => {
 
       // Disabled text is allowed to have lower contrast per WCAG
       // We just check that there are no critical violations
-      const criticalViolations = results.violations.filter(
-        v => v.impact === 'critical' || v.impact === 'serious'
-      );
+      const criticalViolations = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
       expect(criticalViolations).toHaveLength(0);
 
       fixture.destroy();
@@ -169,11 +167,11 @@ describe('bit-text Accessibility', () => {
   describe('Combined Attributes', () => {
     it('should have no violations with multiple attributes', async () => {
       const fixture = await createFixture('bit-text', {
-        variant: 'heading',
-        size: '2xl',
-        weight: 'bold',
-        color: 'primary',
         align: 'center',
+        color: 'primary',
+        size: '2xl',
+        variant: 'heading',
+        weight: 'bold',
       });
       fixture.element.textContent = 'Combined Attributes Heading';
 
@@ -196,5 +194,3 @@ describe('bit-text Accessibility', () => {
     });
   });
 });
-
-

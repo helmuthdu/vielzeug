@@ -135,4 +135,3 @@ describe('bit-radio accessibility', () => {
     });
   });
 });
-

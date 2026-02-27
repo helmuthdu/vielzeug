@@ -97,8 +97,8 @@ describe('Craftit Library', () => {
         expect((result as any).__propertyBindings).toBeDefined();
         expect((result as any).__propertyBindings).toHaveLength(1);
         expect((result as any).__propertyBindings[0]).toEqual({
-          selector: '[data-__prop_0]',
           property: 'value',
+          selector: '[data-__prop_0]',
           value: 'test value',
         });
       });
@@ -331,8 +331,8 @@ describe('Craftit Library', () => {
 
       it('should provide typed variable access', () => {
         const theme = css.theme({
-          primaryColor: '#3b82f6',
           bgColor: '#ffffff',
+          primaryColor: '#3b82f6',
         });
 
         const primary: string = theme.primaryColor;
@@ -345,12 +345,12 @@ describe('Craftit Library', () => {
       it('should handle light/dark themes', () => {
         const theme = css.theme(
           {
-            primaryColor: '#3b82f6',
             bgColor: '#ffffff',
+            primaryColor: '#3b82f6',
           },
           {
-            primaryColor: '#60a5fa',
             bgColor: '#1f2937',
+            primaryColor: '#60a5fa',
           },
         );
 
@@ -418,10 +418,10 @@ describe('Craftit Library', () => {
         let called = false;
 
         defineElement('test-connected', {
-          template: html`<div>Test</div>`,
           onConnected: () => {
             called = true;
           },
+          template: html`<div>Test</div>`,
         });
 
         const el = document.createElement('test-connected');
@@ -435,13 +435,13 @@ describe('Craftit Library', () => {
         let disconnected = false;
 
         defineElement('test-disconnected', {
-          template: html`<div>Test</div>`,
           onConnected: () => {
             connected = true;
           },
           onDisconnected: () => {
             disconnected = true;
           },
+          template: html`<div>Test</div>`,
         });
 
         const el = document.createElement('test-disconnected');
@@ -456,11 +456,11 @@ describe('Craftit Library', () => {
         let updateCount = 0;
 
         defineElement('test-updated', {
-          state: { count: 0 },
-          template: (el) => html`<div>${el.state.count}</div>`,
           onUpdated: () => {
             updateCount++;
           },
+          state: { count: 0 },
+          template: (el) => html`<div>${el.state.count}</div>`,
         });
 
         const el = document.createElement('test-updated') as WebComponent<HTMLElement, object, { count: number }>;
@@ -515,7 +515,7 @@ describe('Craftit Library', () => {
 
       it('should handle nested state objects', async () => {
         defineElement('test-nested-state', {
-          state: { user: { name: 'Alice', age: 30 } },
+          state: { user: { age: 30, name: 'Alice' } },
           template: (el) => html`<div>${el.state.user.name}</div>`,
         });
 
@@ -536,9 +536,9 @@ describe('Craftit Library', () => {
         let renderCount = 0;
 
         defineElement('test-private-state', {
-          state: { count: 0, _internal: 0 },
-          template: (el) => html`<div>${el.state.count}</div>`,
           onUpdated: () => renderCount++,
+          state: { _internal: 0, count: 0 },
+          template: (el) => html`<div>${el.state.count}</div>`,
         });
 
         const el = document.createElement('test-private-state') as WebComponent<
@@ -618,15 +618,15 @@ describe('Craftit Library', () => {
     describe('Computed Properties', () => {
       it('should compute derived values', async () => {
         defineElement('test-computed', {
+          computed: {
+            itemCount: (state) => state.items.length,
+            total: (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+          },
           state: {
             items: [
               { price: 10, quantity: 2 },
               { price: 20, quantity: 1 },
             ],
-          },
-          computed: {
-            total: (state) => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-            itemCount: (state) => state.items.length,
           },
           template: (el) => html`
             <div class="total">${el.computed.total}</div>
@@ -647,10 +647,10 @@ describe('Craftit Library', () => {
 
       it('should recompute when state changes', async () => {
         defineElement('test-computed-update', {
-          state: { price: 10, quantity: 2 },
           computed: {
             total: (state) => state.price * state.quantity,
           },
+          state: { price: 10, quantity: 2 },
           template: (el) => html`<div class="total">${el.computed.total}</div>`,
         });
 
@@ -673,13 +673,13 @@ describe('Craftit Library', () => {
         let computeCount = 0;
 
         defineElement('test-computed-cache', {
-          state: { value: 10 },
           computed: {
             doubled: (state) => {
               computeCount++;
               return state.value * 2;
             },
           },
+          state: { value: 10 },
           template: (el) => html`<div>${el.computed.doubled}</div>`,
         });
 
@@ -709,18 +709,18 @@ describe('Craftit Library', () => {
     describe('Actions', () => {
       it('should define reusable action methods', async () => {
         defineElement('test-actions', {
-          state: { count: 0 },
           actions: {
-            increment(el) {
-              el.state.count++;
-            },
             decrement(el) {
               el.state.count--;
+            },
+            increment(el) {
+              el.state.count++;
             },
             reset(el) {
               el.state.count = 0;
             },
           },
+          state: { count: 0 },
           template: (el) => html`<div class="count">${el.state.count}</div>`,
         });
 
@@ -742,12 +742,12 @@ describe('Craftit Library', () => {
 
       it('should pass arguments to actions', async () => {
         defineElement('test-actions-args', {
-          state: { count: 0 },
           actions: {
             add(el, amount: number) {
               el.state.count += amount;
             },
           },
+          state: { count: 0 },
           template: (el) => html`<div class="count">${el.state.count}</div>`,
         });
 
@@ -765,19 +765,19 @@ describe('Craftit Library', () => {
 
       it('should work with event handlers', async () => {
         defineElement('test-actions-events', {
-          state: { count: 0 },
           actions: {
             increment(el) {
               el.state.count++;
             },
           },
+          onConnected(el) {
+            el.on('button', 'click', () => el.actions.increment());
+          },
+          state: { count: 0 },
           template: (el) => html`
             <div class="count">${el.state.count}</div>
             <button>Increment</button>
           `,
-          onConnected(el) {
-            el.on('button', 'click', () => el.actions.increment());
-          },
         });
 
         const el = document.createElement('test-actions-events') as WebComponent<
@@ -837,7 +837,6 @@ describe('Craftit Library', () => {
 
       it('should work with actions', async () => {
         defineElement('test-refs-actions', {
-          state: { value: '' },
           actions: {
             focusInput(el) {
               el.refs.input?.focus();
@@ -846,6 +845,7 @@ describe('Craftit Library', () => {
               return (el.refs.input as HTMLInputElement)?.value || '';
             },
           },
+          state: { value: '' },
           template: () => html`<input ref="input" type="text" />`,
         });
 
@@ -864,8 +864,8 @@ describe('Craftit Library', () => {
       it('should provide and inject values', async () => {
         defineElement('test-provider', {
           provide: {
-            theme: 'dark',
             apiUrl: 'https://api.example.com',
+            theme: 'dark',
           },
           template: () => html`<div><slot></slot></div>`,
         });
@@ -890,7 +890,7 @@ describe('Craftit Library', () => {
 
       it('should work across multiple levels', async () => {
         defineElement('test-provider-multi', {
-          provide: { user: 'Alice', role: 'admin' },
+          provide: { role: 'admin', user: 'Alice' },
           template: () => html`<slot></slot>`,
         });
 
@@ -981,8 +981,8 @@ describe('Craftit Library', () => {
 
       it('should work alongside state', async () => {
         defineElement('test-signals-state', {
-          state: { items: ['a', 'b'] },
           signals: { count: 0 },
+          state: { items: ['a', 'b'] },
           template: (el) => html`
             <div class="items">${el.state.items.length}</div>
             <div class="count">${el.signals.count}</div>
@@ -1009,10 +1009,10 @@ describe('Craftit Library', () => {
       it('should handle different data types', async () => {
         defineElement('test-signals-types', {
           signals: {
-            num: 42,
-            str: 'hello',
             bool: true,
+            num: 42,
             obj: { key: 'value' },
+            str: 'hello',
           },
           template: () => html`<div>Test</div>`,
         });
@@ -1028,7 +1028,6 @@ describe('Craftit Library', () => {
 
       it('should work with actions', async () => {
         defineElement('test-signals-actions', {
-          signals: { count: 0 },
           actions: {
             increment(el) {
               el.signals.count = (el.signals.count as number) + 1;
@@ -1037,6 +1036,7 @@ describe('Craftit Library', () => {
               el.signals.count = 0;
             },
           },
+          signals: { count: 0 },
           template: (el) => html`<div>${el.signals.count}</div>`,
         });
 
@@ -1129,12 +1129,12 @@ describe('Craftit Library', () => {
         let clicked = false;
 
         defineElement('test-click', {
-          template: html`<button>Click me</button>`,
           onConnected(el) {
             el.on('button', 'click', () => {
               clicked = true;
             });
           },
+          template: html`<button>Click me</button>`,
         });
 
         const el = document.createElement('test-click') as WebComponent;
@@ -1151,13 +1151,13 @@ describe('Craftit Library', () => {
         let targetReceived: Element | null = null;
 
         defineElement('test-event-target', {
-          template: html`<button class="btn">Click</button>`,
           onConnected(el) {
             el.on('.btn', 'click', (e, target) => {
               eventReceived = e;
               targetReceived = target as Element;
             });
           },
+          template: html`<button class="btn">Click</button>`,
         });
 
         const el = document.createElement('test-event-target') as WebComponent;
@@ -1176,11 +1176,11 @@ describe('Craftit Library', () => {
         let count = 0;
 
         defineElement('test-multi-listeners', {
-          template: html`<button>Click</button>`,
           onConnected(el) {
             el.on('button', 'click', () => count++);
             el.on('button', 'click', () => count++);
           },
+          template: html`<button>Click</button>`,
         });
 
         const el = document.createElement('test-multi-listeners') as WebComponent;
@@ -1196,10 +1196,10 @@ describe('Craftit Library', () => {
         let clickCount = 0;
 
         defineElement('test-cleanup', {
-          template: html`<button>Click</button>`,
           onConnected(el) {
             el.on('button', 'click', () => clickCount++);
           },
+          template: html`<button>Click</button>`,
         });
 
         const el = document.createElement('test-cleanup') as WebComponent;
@@ -1221,12 +1221,12 @@ describe('Craftit Library', () => {
         let detail: any = null;
 
         defineElement('test-emit', {
-          template: html`<button>Emit</button>`,
           onConnected(el) {
             el.on('button', 'click', () => {
               el.emit('custom-event', { value: 42 });
             });
           },
+          template: html`<button>Emit</button>`,
         });
 
         const el = document.createElement('test-emit') as WebComponent;
@@ -1268,14 +1268,14 @@ describe('Craftit Library', () => {
       it('should set form value', async () => {
         defineElement('test-form-value', {
           formAssociated: true,
-          state: { value: 'test' },
-          template: () => html`<input />`,
           onConnected(el) {
             // Only test if internals are available
             if (el.internals && typeof el.internals.setFormValue === 'function') {
               el.form?.value('test-value');
             }
           },
+          state: { value: 'test' },
+          template: () => html`<input />`,
         });
 
         const el = document.createElement('test-form-value') as WebComponent;
@@ -1289,7 +1289,7 @@ describe('Craftit Library', () => {
     describe('Property Binding Integration', () => {
       it('should bind properties to DOM elements', async () => {
         defineElement('test-prop-binding', {
-          state: { inputValue: 'test', disabled: true },
+          state: { disabled: true, inputValue: 'test' },
           template: (el) => html`<input .value="${el.state.inputValue}" ?disabled="${el.state.disabled}" />`,
         });
 
@@ -1379,27 +1379,14 @@ describe('Craftit Library', () => {
   describe('Integration Tests', () => {
     it('should combine all features - complete app pattern', async () => {
       defineElement('test-complete-app', {
-        state: {
-          items: [
-            { id: 1, text: 'Item 1', done: false },
-            { id: 2, text: 'Item 2', done: true },
-          ],
-        },
-        signals: {
-          liveCount: 0,
-        },
-        computed: {
-          completedCount: (state) => state.items.filter((item) => item.done).length,
-          totalCount: (state) => state.items.length,
-        },
         actions: {
           addItem(el) {
             const input = el.refs.input as HTMLInputElement;
             if (input?.value) {
               el.state.items.push({
+                done: false,
                 id: Date.now(),
                 text: input.value,
-                done: false,
               });
               input.value = '';
             }
@@ -1408,6 +1395,22 @@ describe('Craftit Library', () => {
             const item = el.state.items.find((i) => i.id === id);
             if (item) item.done = !item.done;
           },
+        },
+        computed: {
+          completedCount: (state) => state.items.filter((item) => item.done).length,
+          totalCount: (state) => state.items.length,
+        },
+        onConnected(el) {
+          el.on('button', 'click', () => el.actions.addItem());
+        },
+        signals: {
+          liveCount: 0,
+        },
+        state: {
+          items: [
+            { done: false, id: 1, text: 'Item 1' },
+            { done: true, id: 2, text: 'Item 2' },
+          ],
         },
         template: (el) => html`
           <div class="stats">
@@ -1422,9 +1425,6 @@ describe('Craftit Library', () => {
             )}
           </ul>
         `,
-        onConnected(el) {
-          el.on('button', 'click', () => el.actions.addItem());
-        },
       });
 
       const el = document.createElement('test-complete-app') as WebComponent<
@@ -1445,4 +1445,3 @@ describe('Craftit Library', () => {
     });
   });
 });
-

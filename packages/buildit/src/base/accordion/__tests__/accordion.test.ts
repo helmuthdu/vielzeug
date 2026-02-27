@@ -216,9 +216,9 @@ describe('bit-accordion', () => {
 
     it('should handle multiple attributes with selection mode', async () => {
       fixture = await createFixture('bit-accordion', {
+        'selection-mode': 'single',
         size: 'sm',
         variant: 'bordered',
-        'selection-mode': 'single',
       });
 
       const item1 = document.createElement('bit-accordion-item');

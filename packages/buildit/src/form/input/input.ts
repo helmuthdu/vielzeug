@@ -1,12 +1,18 @@
 import { css, defineElement, html } from '@vielzeug/craftit';
-import { frostVariantMixin, roundedVariantMixin, colorThemeMixin, disabledLoadingMixin } from '../../styles';
+import {
+  colorThemeMixin,
+  disabledLoadingMixin,
+  frostVariantMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import type {
+  ComponentSize,
+  InputChangeEventDetail,
+  InputType,
+  RoundedSize,
   ThemeColor,
   VisualVariant,
-  ComponentSize,
-  RoundedSize,
-  InputType,
-  InputChangeEventDetail,
 } from '../../types';
 
 /**
@@ -18,333 +24,323 @@ import type {
  */
 
 const styles = css`
-  /* ========================================
-     Base Styles & Defaults
-     ======================================== */
+  @layer buildit.base {
+    /* ========================================
+       Base Styles & Defaults
+       ======================================== */
 
-  :host {
-    --_font-size: var(--input-font-size, var(--text-sm));
-    --_gap: var(--input-gap, var(--size-2));
-    --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--input-radius, var(--rounded-md));
-    --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
-    --_bg: var(--input-bg, var(--color-contrast-100));
-    --_border-color: var(--input-border-color, var(--color-contrast-300));
+    :host {
+      --_font-size: var(--input-font-size, var(--text-sm));
+      --_gap: var(--input-gap, var(--size-2));
+      --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
+      --_radius: var(--input-radius, var(--rounded-md));
+      --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
+      --_bg: var(--input-bg, var(--color-contrast-100));
+      --_border-color: var(--input-border-color, var(--color-contrast-300));
 
-    align-items: stretch;
-    display: inline-flex;
-    flex-direction: column;
+      align-items: stretch;
+      display: inline-flex;
+      flex-direction: column;
+    }
+
+    .input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-1-5);
+      width: 100%;
+    }
+
+    .field {
+      align-items: stretch;
+      background: var(--_bg);
+      border-radius: var(--_radius);
+      border: var(--border) solid var(--_border-color);
+      box-shadow: var(--_shadown, var(--shadow-2xs));
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      justify-content: center;
+      min-height: var(--size-10);
+      padding: var(--_padding);
+      transition:
+        background var(--transition-fast),
+        backdrop-filter var(--transition-slow),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: var(--_gap);
+      flex: 1;
+    }
+
+    /* ========================================
+       Label Styles
+       ======================================== */
+
+    .label-inset,
+    .label-outside,
+    label.label-inset,
+    label.label-outside {
+      color: var(--color-contrast-500);
+      cursor: pointer;
+      font-weight: var(--font-medium);
+      transition: color var(--transition-fast);
+      user-select: none;
+    }
+
+    .label-inset,
+    label.label-inset {
+      font-size: var(--text-xs);
+      line-height: var(--leading-tight);
+      margin-bottom: 2px;
+    }
+
+    .label-outside,
+    label.label-outside {
+      font-size: var(--text-sm);
+      line-height: var(--leading-none);
+    }
+
+    /* ========================================
+       Helper Text
+       ======================================== */
+
+    .helper-text {
+      color: var(--color-contrast-500);
+      font-size: var(--text-xs);
+      line-height: var(--leading-tight);
+      padding-inline: 2px;
+    }
+
+    /* ========================================
+       Slotted Prefix/Suffix Icons
+       ======================================== */
+
+    ::slotted([slot='prefix']),
+    ::slotted([slot='suffix']) {
+      align-items: center;
+      color: var(--color-contrast-500);
+      display: inline-flex;
+      font-size: var(--size-4);
+      justify-content: center;
+      opacity: 0.8;
+      transition: color var(--transition-fast);
+      user-select: none;
+    }
+
+    /* ========================================
+       Input Element
+       ======================================== */
+
+    input {
+      /* No all: unset needed - reset layer handles it */
+      color: var(--_theme-content);
+      flex: 1;
+      font: inherit;
+      font-size: var(--_font-size);
+      line-height: var(--leading-normal);
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: var(--_placeholder);
+      transition: color var(--transition-fast);
+    }
+
+    input:focus-visible {
+      outline: none;
+    }
+
+    /* ========================================
+       Hover & Focus States
+       ======================================== */
+
+    :host(:not([disabled]):not([variant='bordered']):not([variant='flat'])) .field:hover {
+      border-color: var(--color-contrast-400);
+    }
+
+    :host(:not([disabled]):not([variant='text']):not([variant='flat'])) .field:focus-within {
+      background: var(--color-canvas);
+      border-color: var(--_theme-focus);
+      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+      transform: translateY(-1px);
+    }
+
+    :host(:not([disabled]):not([variant='frost'])) .field:focus-within .label-inset,
+    :host(:not([disabled])) .field:focus-within .label-outside {
+      color: var(--_theme-focus);
+    }
+
+    :host(:not([disabled])) .field:focus-within ::slotted([slot='prefix']),
+    :host(:not([disabled])) .field:focus-within ::slotted([slot='suffix']) {
+      color: var(--_theme-focus);
+    }
+  }
+
+  ${sizeVariantMixin({
+    lg: {
+      fontSize: 'var(--text-base)',
+      gap: 'var(--size-2-5)',
+      padding: 'var(--size-2) var(--size-3-5)',
+    },
+    sm: {
+      fontSize: 'var(--text-xs)',
+      gap: 'var(--size-1-5)',
+      padding: 'var(--size-1) var(--size-2)',
+    },
+  })}
+
+  @layer buildit.variants {
+
+    /* ========================================
+       Visual Variants
+       ======================================== */
+
+    /* Solid (Default) - Standard input with background */
+    :host(:not([variant])) .field,
+    :host([variant='solid']) .field {
+      background: var(--color-contrast-50);
+      border-color: var(--color-contrast-300);
+      box-shadow: var(--shadow-2xs);
+    }
+
+    /* Flat - Minimal with subtle color hint */
+    :host([variant='flat']) .field {
+      background: color-mix(in srgb, var(--_theme-base) 4%, var(--color-contrast-100));
+      border-color: var(--_theme-border);
+      box-shadow: var(--inset-shadow-2xs);
+    }
+
+    :host([variant='flat']) .field:hover {
+      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+    }
+
+    :host([variant='flat']) .field:focus-within {
+      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+      box-shadow: var(--_theme-shadow);
+    }
+
+    /* Bordered - Filled with theme color */
+    :host([variant='bordered']) .field {
+      background: var(--_theme-backdrop);
+      border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+    }
+
+    :host([variant='bordered']) input {
+      color: var(--_theme-content);
+    }
+
+    :host([variant='bordered']) input::placeholder {
+      color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
+    }
+
+    :host([variant='bordered']) .field:hover {
+      border-color: var(--_theme-focus);
+    }
+
+    /* Outline - Transparent background */
+    :host([variant='outline']) .field {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    /* Ghost - Transparent until hover */
+    :host([variant='ghost']) .field {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    :host([variant='ghost']) .field:hover {
+      background: var(--color-contrast-100);
+    }
+
+    /* Text - Underline style */
+    :host([variant='text']) .field {
+      background: transparent;
+      border: none;
+      border-bottom: var(--border) solid var(--_border-color);
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    :host([variant='text']) .field:focus-within {
+      border-bottom: var(--border-2) solid var(--_theme-focus);
+      transform: none;
+    }
+
+    /* Input-specific frost customizations for text and labels */
+    :host([variant='frost']:not([color])) input {
+      color: var(--color-contrast);
+      text-shadow: var(--text-shadow-sm);
+    }
+
+    :host([variant='frost']:not([color])) .label-inset {
+      color: color-mix(in srgb, var(--color-contrast) 85%, transparent);
+    }
+
+    :host([variant='frost']:not([color])) input::placeholder {
+      color: color-mix(in srgb, var(--color-contrast) 50%, transparent);
+    }
+
+    :host([variant='frost'][color]) input {
+      color: var(--_theme-content);
+      text-shadow: var(--text-shadow-sm);
+    }
+
+    :host([variant='frost'][color]) input::placeholder {
+      color: color-mix(in srgb, var(--_theme-content) 40%, transparent);
+    }
+
+    :host([variant='frost'][color]) .label-inset {
+      color: color-mix(in srgb, var(--_theme-content) 90%, transparent);
+    }
+
+    :host([variant='frost'][color]) ::slotted([slot='prefix']),
+    :host([variant='frost'][color]) ::slotted([slot='suffix']) {
+      color: color-mix(in srgb, var(--_theme-content) 80%, transparent);
+    }
+
+    /* Input-specific hover/focus states with enhanced opacity */
+    :host([variant='frost']:not([color])) .field:hover {
+      background: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+      border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
+    }
+
+    :host([variant='frost']:not([color])) .field:focus-within {
+      background: color-mix(in srgb, var(--color-canvas) 85%, transparent);
+      border-color: color-mix(in srgb, var(--_theme-focus) 40%, transparent);
+    }
+
+    :host([variant='frost'][color]) .field:hover {
+      background: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 30%);
+      border-color: color-mix(in srgb, var(--_theme-focus) 50%, transparent);
+    }
+
+    :host([variant='frost'][color]) .field:focus-within {
+      background: color-mix(in srgb, var(--_theme-base) 65%, var(--color-contrast) 35%);
+      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    }
   }
 
   /* ========================================
-     States (Shared Mixin)
-     ======================================== */
-
-  ${disabledLoadingMixin()}
-
-  .input-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-1-5);
-    width: 100%;
-  }
-
-  .field {
-    align-items: stretch;
-    background: var(--_bg);
-    border-radius: var(--_radius);
-    border: var(--border) solid var(--_border-color);
-    box-shadow: var(--_shadown, var(--shadow-2xs));
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    justify-content: center;
-    min-height: var(--size-10);
-    padding: var(--_padding);
-    transition:
-      background var(--transition-fast),
-      backdrop-filter var(--transition-slow),
-      border-color var(--transition-fast),
-      box-shadow var(--transition-fast),
-      transform var(--transition-fast);
-  }
-
-  .input-row {
-    display: flex;
-    align-items: center;
-    gap: var(--_gap);
-    flex: 1;
-  }
-
-  /* ========================================
-     Label Styles
-     ======================================== */
-
-  .label-inset,
-  .label-outside,
-  label.label-inset,
-  label.label-outside {
-    color: var(--color-contrast-500);
-    cursor: pointer;
-    font-weight: var(--font-medium);
-    transition: color var(--transition-fast);
-    user-select: none;
-  }
-
-  .label-inset,
-  label.label-inset {
-    font-size: var(--text-xs);
-    line-height: var(--leading-tight);
-    margin-bottom: 2px;
-  }
-
-  .label-outside,
-  label.label-outside {
-    font-size: var(--text-sm);
-    line-height: var(--leading-none);
-  }
-
-  /* ========================================
-     Helper Text
-     ======================================== */
-
-  .helper-text {
-    color: var(--color-contrast-500);
-    font-size: var(--text-xs);
-    line-height: var(--leading-tight);
-    padding-inline: 2px;
-  }
-
-  /* ========================================
-     Slotted Prefix/Suffix Icons
-     ======================================== */
-
-  ::slotted([slot='prefix']),
-  ::slotted([slot='suffix']) {
-    align-items: center;
-    color: var(--color-contrast-500);
-    display: inline-flex;
-    font-size: var(--size-4);
-    justify-content: center;
-    opacity: 0.8;
-    transition: color var(--transition-fast);
-    user-select: none;
-  }
-
-  /* ========================================
-     Input Element
-     ======================================== */
-
-  input {
-    all: unset;
-    color: var(--_theme-content);
-    flex: 1;
-    font: inherit;
-    font-size: var(--_font-size);
-    line-height: var(--leading-normal);
-    min-width: 0;
-  }
-
-  input::placeholder {
-    color: var(--_placeholder);
-    transition: color var(--transition-fast);
-  }
-
-  input:focus-visible {
-    outline: none;
-  }
-
-  /* ========================================
-     Hover & Focus States
-     ======================================== */
-
-  :host(:not([disabled]):not([variant='bordered']):not([variant='flat'])) .field:hover {
-    border-color: var(--color-contrast-400);
-  }
-
-  :host(:not([disabled]):not([variant='text']):not([variant='flat'])) .field:focus-within {
-    background: var(--color-canvas);
-    border-color: var(--_theme-focus);
-    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-    transform: translateY(-1px);
-  }
-
-  :host(:not([disabled]):not([variant='frost'])) .field:focus-within .label-inset,
-  :host(:not([disabled])) .field:focus-within .label-outside {
-    color: var(--_theme-focus);
-  }
-
-  :host(:not([disabled])) .field:focus-within ::slotted([slot='prefix']),
-  :host(:not([disabled])) .field:focus-within ::slotted([slot='suffix']) {
-    color: var(--_theme-focus);
-  }
-
-  /* ========================================
-     Size Variants
-     ======================================== */
-
-  :host([size='sm']) {
-    --_font-size: var(--text-xs);
-    --_gap: var(--size-1-5);
-    --_padding: var(--size-1) var(--size-2);
-  }
-
-  :host([size='lg']) {
-    --_font-size: var(--text-base);
-    --_gap: var(--size-2-5);
-    --_padding: var(--size-2) var(--size-3-5);
-  }
-
-  /* ========================================
-     Rounded Variant (Shared Mixin)
+     Mixins - Order doesn't matter!
      ======================================== */
 
   ${roundedVariantMixin()}
-
-  /* ========================================
-     Color Themes (Shared Mixin)
-     ======================================== */
-
   ${colorThemeMixin()}
-
-  /* ========================================
-     Visual Variants
-     ======================================== */
-
-  /* Solid (Default) - Standard input with background */
-  :host(:not([variant])) .field,
-  :host([variant='solid']) .field {
-    background: var(--color-contrast-50);
-    border-color: var(--color-contrast-300);
-    box-shadow: var(--shadow-2xs);
-  }
-
-  /* Flat - Minimal with subtle color hint */
-  :host([variant='flat']) .field {
-    background: color-mix(in srgb, var(--_theme-base) 4%, var(--color-contrast-100));
-    border-color: var(--_theme-border);
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  :host([variant='flat']) .field:hover {
-    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-  }
-
-  :host([variant='flat']) .field:focus-within {
-    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-    box-shadow: var(--_theme-shadow);
-  }
-
-  /* Bordered - Filled with theme color */
-  :host([variant='bordered']) .field {
-    background: var(--_theme-backdrop);
-    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-  }
-
-  :host([variant='bordered']) input {
-    color: var(--_theme-content);
-  }
-
-  :host([variant='bordered']) input::placeholder {
-    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-  }
-
-  :host([variant='bordered']) .field:hover {
-    border-color: var(--_theme-focus);
-  }
-
-  /* Outline - Transparent background */
-  :host([variant='outline']) .field {
-    background: transparent;
-    box-shadow: none;
-  }
-
-  /* Ghost - Transparent until hover */
-  :host([variant='ghost']) .field {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-  }
-
-  :host([variant='ghost']) .field:hover {
-    background: var(--color-contrast-100);
-  }
-
-  /* Text - Underline style */
-  :host([variant='text']) .field {
-    background: transparent;
-    border: none;
-    border-bottom: var(--border) solid var(--_border-color);
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  :host([variant='text']) .field:focus-within {
-    border-bottom: var(--border-2) solid var(--_theme-focus);
-    transform: none;
-  }
-
-  /* ========================================
-     Frost Variant (Shared Mixin + Input-Specific)
-     ======================================== */
-
   ${frostVariantMixin('.field')}
-
-  /* Input-specific frost customizations for text and labels */
-  :host([variant='frost']:not([color])) input {
-    color: var(--color-contrast);
-    text-shadow: var(--text-shadow-sm);
-  }
-
-  :host([variant='frost']:not([color])) .label-inset {
-    color: color-mix(in srgb, var(--color-contrast) 85%, transparent);
-  }
-
-  :host([variant='frost']:not([color])) input::placeholder {
-    color: color-mix(in srgb, var(--color-contrast) 50%, transparent);
-  }
-
-  :host([variant='frost'][color]) input {
-    color: var(--_theme-content);
-    text-shadow: var(--text-shadow-sm);
-  }
-
-  :host([variant='frost'][color]) input::placeholder {
-    color: color-mix(in srgb, var(--_theme-content) 40%, transparent);
-  }
-
-  :host([variant='frost'][color]) .label-inset {
-    color: color-mix(in srgb, var(--_theme-content) 90%, transparent);
-  }
-
-  :host([variant='frost'][color]) ::slotted([slot='prefix']),
-  :host([variant='frost'][color]) ::slotted([slot='suffix']) {
-    color: color-mix(in srgb, var(--_theme-content) 80%, transparent);
-  }
-
-  /* Input-specific hover/focus states with enhanced opacity */
-  :host([variant='frost']:not([color])) .field:hover {
-    background: color-mix(in srgb, var(--color-canvas) 80%, transparent);
-    border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
-  }
-
-  :host([variant='frost']:not([color])) .field:focus-within {
-    background: color-mix(in srgb, var(--color-canvas) 85%, transparent);
-    border-color: color-mix(in srgb, var(--_theme-focus) 40%, transparent);
-  }
-
-  :host([variant='frost'][color]) .field:hover {
-    background: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 30%);
-    border-color: color-mix(in srgb, var(--_theme-focus) 50%, transparent);
-  }
-
-  :host([variant='frost'][color]) .field:focus-within {
-    background: color-mix(in srgb, var(--_theme-base) 65%, var(--color-contrast) 35%);
-    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-  }
+  ${disabledLoadingMixin()}
 `;
 
 /**
@@ -535,13 +531,17 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
 
     return html`
       <div class="input-wrapper">
-        ${labelText && labelPlacement === 'outside'
-          ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
-          : ''}
+        ${
+          labelText && labelPlacement === 'outside'
+            ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
+            : ''
+        }
         <div class="field">
-          ${labelText && labelPlacement === 'inset'
-            ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
-            : ''}
+          ${
+            labelText && labelPlacement === 'inset'
+              ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
+              : ''
+          }
           <div class="input-row">
             <slot name="prefix"></slot>
             <input
@@ -558,13 +558,15 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
             <slot name="suffix"></slot>
           </div>
         </div>
-        ${helperText || el.querySelector('[slot="helper"]')
-          ? html`
+        ${
+          helperText || el.querySelector('[slot="helper"]')
+            ? html`
               <div class="helper-text" id="${helperId}">
                 <slot name="helper">${helperText}</slot>
               </div>
             `
-          : ''}
+            : ''
+        }
       </div>
     `;
   },

@@ -49,20 +49,20 @@ import '@vielzeug/buildit/button';
 ```
 
 ```html
-<bit-button variant="solid" color="primary">
-  Click me
-</bit-button>
+<bit-button variant="solid" color="primary"> Click me </bit-button>
 ```
 
 ## 📋 Available Components
 
 ### Base
+
 - **[Button](./components/button.md)** – Versatile button with multiple variants, colors, and states. Includes button groups for organizing related actions.
 - **[Card](./components/card.md)** – Versatile card container with multiple variants, interactive states, and flexible content layout.
 - **[Accordion](./components/accordion.md)** – Collapsible content sections with single/multiple selection.
 - **[Text](./components/text.md)** – Typography component with semantic variants for consistent text styling.
 
 ### Forms
+
 - **[Checkbox](./components/checkbox.md)** – Checkbox input with indeterminate state support.
 - **[Radio](./components/radio.md)** – Radio button input with keyboard navigation.
 - **[Input](./components/input.md)** – Text input with multiple types and validation states.
@@ -74,9 +74,7 @@ Buildit supports automatic light/dark mode detection and full customization thro
 ```html
 <!-- Manual dark theme -->
 <html class="dark-theme">
-  <bit-button style="--button-radius: 20px;">
-    Custom Button
-  </bit-button>
+  <bit-button style="--button-radius: 20px;"> Custom Button </bit-button>
 </html>
 ```
 
@@ -104,14 +102,14 @@ Theme CSS variables can be customized globally:
 
 Buildit is designed to be lightweight with tree-shaking support:
 
-| Component | Size (gzipped) |
-|-----------|----------------|
-| Button    | ~1.7 KB        |
-| Button Group | ~1.0 KB     |
-| Checkbox  | ~1.8 KB        |
-| Radio     | ~1.7 KB        |
-| Input     | ~1.5 KB        |
-| Accordion | ~1.6 KB        |
+| Component    | Size (gzipped) |
+| ------------ | -------------- |
+| Button       | ~1.7 KB        |
+| Button Group | ~1.0 KB        |
+| Checkbox     | ~1.8 KB        |
+| Radio        | ~1.7 KB        |
+| Input        | ~1.5 KB        |
+| Accordion    | ~1.6 KB        |
 
 Import only what you need to keep your bundle small!
 
@@ -162,6 +160,7 @@ Web Components are a set of web platform APIs that allow you to create reusable 
 ### How is this different from other component libraries?
 
 Buildit is built on native Web Components standards, meaning:
+
 - No framework lock-in
 - No virtual DOM overhead
 - Works everywhere (React, Vue, Svelte, vanilla JS)
