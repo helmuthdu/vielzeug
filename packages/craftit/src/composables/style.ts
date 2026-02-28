@@ -11,8 +11,7 @@ import { toKebab } from '../utils/string';
 function getCSPNonce(): string | null {
   if (typeof document === 'undefined') return null;
 
-  const meta = document.querySelector('meta[name="csp-nonce"]') ||
-                document.querySelector('meta[property="csp-nonce"]');
+  const meta = document.querySelector('meta[name="csp-nonce"], meta[property="csp-nonce"]');
   return meta?.getAttribute('content') || null;
 }
 
@@ -44,7 +43,7 @@ export function css(strings: TemplateStringsArray, ...values: unknown[]): CSSRes
 
   return {
     content,
-    ...(nonce && { nonce })
+    ...(nonce && { nonce }),
   };
 }
 
@@ -65,7 +64,6 @@ export function createStyleElement(cssResult: CSSResult | string): HTMLStyleElem
 
   return style;
 }
-
 
 /**
  * Theme variable proxy
@@ -124,4 +122,3 @@ css.theme = <T extends Record<string, string | number>>(
     },
   });
 };
-

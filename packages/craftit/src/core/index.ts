@@ -5,52 +5,42 @@
 
 export { define, type SetupFunction, type SetupResult } from './define';
 export {
-  errorBoundary,
   createErrorBoundary,
-  setGlobalErrorHandler,
   type ErrorBoundaryOptions,
   type ErrorInfo,
+  errorBoundary,
+  setGlobalErrorHandler,
 } from './error-boundary';
+export { type LazyOptions, lazy } from './lazy';
 export { onMount, onUnmount, onUpdated } from './lifecycle';
-export { lazy, preload, type LazyOptions } from './lazy';
 export {
-  signal,
-  computed,
-  readonly,
-  effect,
-  watch,
   batch,
-  untrack,
-  shallowEqual,
-  deepEqual,
-  type Signal,
-  type ComputedSignal,
   type Cleanup,
+  type ComputedSignal,
+  computed,
+  deepEqual,
+  effect,
+  readonly,
+  type Signal,
+  shallowEqual,
+  signal,
+  untrack,
+  watch,
 } from './signal';
 export {
-  isSignal,
+  type ComponentProps,
+  type DeepReadonly,
+  type EnsureSignal,
   isComputedSignal,
   isReactive,
-  type UnwrapSignal,
-  type UnwrapComputed,
-  type UnwrapReactive,
-  type UnwrapNestedRefs,
-  type UnwrapSignals,
-  type Reactive,
-  type ComponentProps,
-  type TemplateValue,
-  type EnsureSignal,
-  type SetupReturnType,
+  isSignal,
   type Merge,
-  type RequiredKeys,
-  type OptionalKeys,
-  type KeysOfType,
-  type DeepReadonly,
-  type Mutable,
-  type DeepMutable,
+  type Reactive,
+  type SetupReturnType,
+  type TemplateValue,
+  type UnwrapComputed,
+  type UnwrapNestedRefs,
+  type UnwrapReactive,
+  type UnwrapSignal,
+  type UnwrapSignals,
 } from './types';
-
-
-
-
-

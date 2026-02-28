@@ -2,7 +2,7 @@
  * Testing utilities for buildit web components
  * Provides helpers for testing web components
  *
- * @module buildit/testing
+ * @module buildit/trial
  */
 
 /**
@@ -517,3 +517,344 @@ export async function createFixture<T extends HTMLElement = HTMLElement>(
 
   return new ComponentFixture<T>(element, container);
 }
+
+/**
+ * Form Testing Utilities
+ * Helpers for testing form components and validation
+ */
+export const formUtils = {
+  /**
+   * Get form that owns an element
+   * @param element - Form field element
+   * @example
+   * const form = formUtils.getForm(input);
+   */
+  getForm(element: HTMLElement): HTMLFormElement | null {
+    if ('form' in element && element.form instanceof HTMLFormElement) {
+      return element.form;
+    }
+    return element.closest('form');
+  },
+  /**
+   * Get form data from a form element
+   * @param form - Form element
+   * @returns FormData object as plain object
+   * @example
+   * const data = formUtils.getFormData(form);
+   * expect(data.username).toBe('john');
+   */
+  getFormData(form: HTMLFormElement): Record<string, FormDataEntryValue> {
+    const formData = new FormData(form);
+    const data: Record<string, FormDataEntryValue> = {};
+
+    for (const [key, value] of formData.entries()) {
+      data[key] = value;
+    }
+
+    return data;
+  },
+
+  /**
+   * Get validation message from form field
+   * @param element - Form field element
+   * @example
+   * const message = formUtils.getValidationMessage(input);
+   */
+  getValidationMessage(element: HTMLElement): string {
+    if ('validationMessage' in element) {
+      return (element as any).validationMessage || '';
+    }
+    return '';
+  },
+
+  /**
+   * Check if form field has specific validity state
+   * @param element - Form field element
+   * @param state - Validity state property
+   * @example
+   * expect(formUtils.hasValidityState(input, 'valueMissing')).toBe(true);
+   */
+  hasValidityState(element: HTMLElement, state: keyof ValidityState): boolean {
+    if ('validity' in element) {
+      const validity = (element as any).validity as ValidityState;
+      return validity?.[state] === true;
+    }
+    return false;
+  },
+
+  /**
+   * Check if element is form-associated
+   * @param element - Element to check
+   * @example
+   * expect(formUtils.isFormAssociated(input)).toBe(true);
+   */
+  isFormAssociated(element: HTMLElement): boolean {
+    return 'form' in element && element instanceof HTMLElement;
+  },
+
+  /**
+   * Check if form field is valid
+   * @param element - Form field element
+   * @example
+   * expect(formUtils.isValid(input)).toBe(true);
+   */
+  isValid(element: HTMLElement): boolean {
+    if ('validity' in element) {
+      return (element as any).validity?.valid === true;
+    }
+    return true;
+  },
+
+  /**
+   * Trigger form validation with UI feedback
+   * @param element - Form field element
+   * @returns Validation result
+   * @example
+   * const valid = await formUtils.reportValidity(input);
+   */
+  async reportValidity(element: HTMLElement): Promise<boolean> {
+    let result = true;
+
+    if ('reportValidity' in element && typeof (element as any).reportValidity === 'function') {
+      result = (element as any).reportValidity();
+    }
+
+    await waitForRender();
+    return result;
+  },
+
+  /**
+   * Reset form and wait for update
+   * @param form - Form element
+   * @example
+   * await formUtils.reset(form);
+   */
+  async reset(form: HTMLFormElement): Promise<void> {
+    form.reset();
+    await waitForRender();
+  },
+
+  /**
+   * Set custom validity message
+   * @param element - Form field element
+   * @param message - Validation message
+   * @example
+   * formUtils.setValidity(input, 'Username is taken');
+   */
+  setValidity(element: HTMLElement, message: string): void {
+    if ('setCustomValidity' in element && typeof (element as any).setCustomValidity === 'function') {
+      (element as any).setCustomValidity(message);
+    }
+  },
+
+  /**
+   * Submit form and wait for event
+   * @param form - Form element
+   * @returns Submit event
+   * @example
+   * const event = await formUtils.submit(form);
+   */
+  async submit(form: HTMLFormElement): Promise<SubmitEvent> {
+    const submitPromise = waitForEvent<SubmitEvent>(form, 'submit');
+    form.requestSubmit();
+    return submitPromise;
+  },
+
+  /**
+   * Trigger form validation on element
+   * @param element - Form field element
+   * @returns Validation result
+   * @example
+   * const valid = await formUtils.validate(input);
+   */
+  async validate(element: HTMLElement): Promise<boolean> {
+    let result = true;
+
+    if ('checkValidity' in element && typeof (element as any).checkValidity === 'function') {
+      result = (element as any).checkValidity();
+    }
+
+    await waitForRender();
+    return result;
+  },
+};
+
+/**
+ * Accessibility Testing Utilities
+ * Helpers for testing ARIA attributes and accessibility
+ */
+export const a11yUtils = {
+  /**
+   * Check if element has accessible description
+   * @param element - Element to check
+   * @returns Accessible description or empty string
+   * @example
+   * expect(a11yUtils.getAccessibleDescription(input)).toBe('Must be at least 8 characters');
+   */
+  getAccessibleDescription(element: HTMLElement): string {
+    const describedBy = element.getAttribute('aria-describedby');
+    if (!describedBy) return '';
+
+    const ids = describedBy.split(/\s+/);
+    const descriptions = ids
+      .map((id) => document.getElementById(id)?.textContent?.trim())
+      .filter((text): text is string => Boolean(text));
+
+    return descriptions.join(' ');
+  },
+  /**
+   * Check if element has accessible name
+   * @param element - Element to check
+   * @returns Accessible name or empty string
+   * @example
+   * expect(a11yUtils.getAccessibleName(button)).toBe('Submit');
+   */
+  getAccessibleName(element: HTMLElement): string {
+    // Check aria-label
+    const ariaLabel = element.getAttribute('aria-label');
+    if (ariaLabel) return ariaLabel;
+
+    // Check aria-labelledby
+    const labelledBy = element.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      const labelElement = document.getElementById(labelledBy);
+      if (labelElement) return labelElement.textContent?.trim() || '';
+    }
+
+    // Check for associated label
+    if (element.id) {
+      const label = document.querySelector(`label[for="${element.id}"]`);
+      if (label) return label.textContent?.trim() || '';
+    }
+
+    // Fallback to text content for buttons
+    if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'button') {
+      return element.textContent?.trim() || '';
+    }
+
+    return '';
+  },
+
+  /**
+   * Get ARIA properties from element
+   * @param element - Element to check
+   * @returns Object with all aria-* attributes
+   * @example
+   * const aria = a11yUtils.getAriaProperties(element);
+   * expect(aria['aria-expanded']).toBe('true');
+   */
+  getAriaProperties(element: HTMLElement): Record<string, string> {
+    const aria: Record<string, string> = {};
+
+    for (const attr of element.attributes) {
+      if (attr.name.startsWith('aria-')) {
+        aria[attr.name] = attr.value;
+      }
+    }
+
+    return aria;
+  },
+
+  /**
+   * Get keyboard shortcuts for element
+   * @param element - Element to check
+   * @returns Array of keyboard shortcuts
+   * @example
+   * const shortcuts = a11yUtils.getKeyboardShortcuts(button);
+   */
+  getKeyboardShortcuts(element: HTMLElement): string[] {
+    const accessKey = element.getAttribute('accesskey');
+    return accessKey ? [accessKey] : [];
+  },
+
+  /**
+   * Check if element has valid ARIA state
+   * @param element - Element to check
+   * @param state - ARIA state name (without 'aria-' prefix)
+   * @param expectedValue - Expected value
+   * @example
+   * expect(a11yUtils.hasAriaState(toggle, 'pressed', 'true')).toBe(true);
+   */
+  hasAriaState(element: HTMLElement, state: string, expectedValue: string): boolean {
+    const value = element.getAttribute(`aria-${state}`);
+    return value === expectedValue;
+  },
+
+  /**
+   * Check if element has proper ARIA role
+   * @param element - Element to check
+   * @param expectedRole - Expected role
+   * @example
+   * expect(a11yUtils.hasRole(button, 'button')).toBe(true);
+   */
+  hasRole(element: HTMLElement, expectedRole: string): boolean {
+    const role = element.getAttribute('role') || element.tagName.toLowerCase();
+    return role === expectedRole || element.getAttribute('role') === expectedRole;
+  },
+
+  /**
+   * Check if element is semantically disabled
+   * @param element - Element to check
+   * @example
+   * expect(a11yUtils.isDisabled(button)).toBe(true);
+   */
+  isDisabled(element: HTMLElement): boolean {
+    return element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
+  },
+
+  /**
+   * Check if element is focusable
+   * @param element - Element to check
+   * @example
+   * expect(a11yUtils.isFocusable(button)).toBe(true);
+   */
+  isFocusable(element: HTMLElement): boolean {
+    // Check if element is disabled
+    if (element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true') {
+      return false;
+    }
+
+    // Check tabindex
+    const tabindex = element.getAttribute('tabindex');
+    if (tabindex !== null) {
+      return Number.parseInt(tabindex, 10) >= 0;
+    }
+
+    // Check if natively focusable
+    const focusableTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+    return focusableTags.includes(element.tagName);
+  },
+
+  /**
+   * Check if element is in tab order
+   * @param element - Element to check
+   * @example
+   * expect(a11yUtils.isInTabOrder(button)).toBe(true);
+   */
+  isInTabOrder(element: HTMLElement): boolean {
+    if (!this.isFocusable(element)) return false;
+
+    const tabindex = element.getAttribute('tabindex');
+    return tabindex === null || Number.parseInt(tabindex, 10) >= 0;
+  },
+
+  /**
+   * Check if element is invalid
+   * @param element - Element to check
+   * @example
+   * expect(a11yUtils.isInvalid(input)).toBe(true);
+   */
+  isInvalid(element: HTMLElement): boolean {
+    return element.getAttribute('aria-invalid') === 'true';
+  },
+
+  /**
+   * Check if element is required for forms
+   * @param element - Element to check
+   * @example
+   * expect(a11yUtils.isRequired(input)).toBe(true);
+   */
+  isRequired(element: HTMLElement): boolean {
+    return element.hasAttribute('required') || element.getAttribute('aria-required') === 'true';
+  },
+};

@@ -39,20 +39,16 @@ export function runMountCallbacks(context: ComponentContext): void {
   for (const callback of context.mountCallbacks) {
     try {
       const cleanup = callback();
-      // Handle both sync and async cleanups
-      if (cleanup instanceof Promise) {
-        cleanup
-          .then((result) => {
-            if (typeof result === 'function') {
-              context.cleanups.add(result as Cleanup);
-            }
-          })
-          .catch((error) => {
-            console.error(`[craftit] Error in async onMount callback for ${context.name}:`, error);
-          });
-      } else if (typeof cleanup === 'function') {
-        context.cleanups.add(cleanup as Cleanup);
-      }
+      // Handle both sync and async cleanups uniformly
+      Promise.resolve(cleanup)
+        .then((result) => {
+          if (typeof result === 'function') {
+            context.cleanups.add(result as Cleanup);
+          }
+        })
+        .catch((error) => {
+          console.error(`[craftit] Error in onMount callback for ${context.name}:`, error);
+        });
     } catch (error) {
       console.error(`[craftit] Error in onMount callback for ${context.name}:`, error);
     }

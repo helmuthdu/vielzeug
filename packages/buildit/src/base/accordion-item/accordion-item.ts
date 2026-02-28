@@ -256,51 +256,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Accordion Item Component Properties
- *
- * An individual expandable/collapsible section using native HTML details/summary elements.
- *
- * ## Slots
- * - **prefix**: Content before the title (e.g., icons)
- * - **title**: Main accordion item title
- * - **subtitle**: Optional subtitle text
- * - **suffix**: Content after the title (e.g., badges)
- * - **default**: Accordion item content (shown when expanded)
- *
- * ## Events
- * - **expand**: Emitted when item expands
- * - **collapse**: Emitted when item collapses
- *
- * @example
- * ```html
- * <!-- Basic item -->
- * <bit-accordion-item>
- *   <span slot="title">Click to expand</span>
- *   <p>Hidden content revealed on click</p>
- * </bit-accordion-item>
- *
- * <!-- With subtitle -->
- * <bit-accordion-item expanded>
- *   <span slot="title">Main Title</span>
- *   <span slot="subtitle">Additional info</span>
- *   <p>Content here</p>
- * </bit-accordion-item>
- *
- * <!-- With prefix icon -->
- * <bit-accordion-item variant="bordered" size="lg">
- *   <svg slot="prefix">...</svg>
- *   <span slot="title">Section with Icon</span>
- *   <p>Content</p>
- * </bit-accordion-item>
- *
- * <!-- Disabled -->
- * <bit-accordion-item disabled>
- *   <span slot="title">Cannot expand</span>
- *   <p>Content</p>
- * </bit-accordion-item>
- * ```
- */
+/** Accordion item component properties */
 export interface AccordionItemProps {
   /** Whether the item is expanded/open */
   expanded?: boolean;
@@ -343,6 +299,12 @@ export interface AccordionItemProps {
  * @cssprop --accordion-item-body - Body font size
  * @cssprop --accordion-item-details-padding - Summary/header padding
  * @cssprop --accordion-item-summary-padding - Content padding
+ *
+ * @example
+ * ```html
+ * <bit-accordion-item><span slot="title">Click to expand</span><p>Content</p></bit-accordion-item>
+ * <bit-accordion-item expanded variant="bordered"><span slot="title">Title</span><p>Content</p></bit-accordion-item>
+ * ```
  */
 class BitAccordionItem extends HTMLElement {
   static observedAttributes = ['expanded', 'disabled', 'size', 'variant'] as const;
@@ -405,14 +367,14 @@ class BitAccordionItem extends HTMLElement {
 
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <details ${isExpanded ? 'open' : ''}>
-        <summary aria-expanded="${isExpanded ? 'true' : 'false'}" aria-disabled="${isDisabled ? 'true' : 'false'}">
+      <details part="item" ${isExpanded ? 'open' : ''}>
+        <summary part="summary" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-disabled="${isDisabled ? 'true' : 'false'}">
           <slot name="prefix"></slot>
-          <div class="header-content">
-            <span class="title" id="${titleId}">
+          <div class="header-content" part="header">
+            <span class="title" part="title" id="${titleId}">
               <slot name="title"></slot>
             </span>
-            <span class="subtitle">
+            <span class="subtitle" part="subtitle">
               <slot name="subtitle"></slot>
             </span>
           </div>
@@ -425,11 +387,12 @@ class BitAccordionItem extends HTMLElement {
             stroke-linecap="round"
             stroke-linejoin="round"
             class="chevron"
+            part="chevron"
             xmlns="http://www.w3.org/2000/svg">
             <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" />
           </svg>
         </summary>
-        <div class="content-wrapper" role="region" aria-labelledby="${titleId}">
+        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
           <slot></slot>
         </div>
       </details>

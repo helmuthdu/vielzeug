@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '../../../utils/testing';
+import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-grid-item', () => {
   let fixture: ComponentFixture<HTMLElement>;

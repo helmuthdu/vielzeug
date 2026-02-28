@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { computed, define, html, signal } from '..';
-import { cleanup, fireEvent, mount } from '../testing/render';
+import { cleanup, fireEvent, mount } from '../test/trial';
 
 describe('Template: HTML System', () => {
   afterEach(() => cleanup());
@@ -166,19 +166,6 @@ describe('Template: HTML System', () => {
 
       const { query } = mount('test-when-else');
       expect(query('div')?.textContent).toBe('No');
-    });
-
-    it('should support unless mode', () => {
-      define('test-when-unless', () => {
-        const hide = signal(true);
-        return html`${html.when(hide.value, {
-          then: () => html`<div>Content</div>`,
-          unless: true,
-        })}`;
-      });
-
-      const { query } = mount('test-when-unless');
-      expect(query('div')).toBeNull();
     });
   });
 

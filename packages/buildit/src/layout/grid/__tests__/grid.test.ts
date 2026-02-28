@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { type ComponentFixture, createFixture } from '../../../utils/testing';
+import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-grid', () => {
   let fixture: ComponentFixture<HTMLElement>;

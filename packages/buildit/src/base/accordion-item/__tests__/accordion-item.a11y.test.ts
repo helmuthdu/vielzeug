@@ -1,6 +1,6 @@
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createFixture } from '../../../utils/testing';
+import { createFixture } from '../../../utils/trial';
 
 describe('bit-accordion-item accessibility', () => {
   beforeAll(async () => {

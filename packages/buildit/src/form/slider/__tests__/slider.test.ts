@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture, userEvent, waitForEvent } from '../../../utils/testing';
+import { type ComponentFixture, createFixture, userEvent, waitForEvent } from '../../../utils/trial';
 
 describe('bit-slider', () => {
   let fixture: ComponentFixture<HTMLElement>;

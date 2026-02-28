@@ -14,6 +14,35 @@ const pendingEffects = new Set<Effect>();
 let flushScheduled = false;
 
 /**
+ * Global error handler for effects
+ */
+let globalErrorHandler: ((error: unknown, context: string) => void) | null = null;
+
+/**
+ * Set global error handler for effects
+ *
+ * @example
+ * setEffectErrorHandler((error, context) => {
+ *   console.error(`[${context}]`, error);
+ *   reportToSentry(error);
+ * });
+ */
+export function setEffectErrorHandler(handler: ((error: unknown, context: string) => void) | null): void {
+  globalErrorHandler = handler;
+}
+
+/**
+ * Handle effect errors
+ */
+function handleEffectError(error: unknown, context: string): void {
+  if (globalErrorHandler) {
+    globalErrorHandler(error, context);
+  } else {
+    console.error(`[craftit:${context}]`, error);
+  }
+}
+
+/**
  * Cleanup function type
  */
 export type Cleanup = () => void;
@@ -80,9 +109,10 @@ export class Signal<T> {
   get value(): T {
     // Track dependency if inside effect
     if (activeEffect) {
-      this.#subscribers.add(activeEffect);
-      activeEffect.dependencies.add(() => {
-        this.#subscribers.delete(activeEffect!);
+      const effect = activeEffect;
+      this.#subscribers.add(effect);
+      effect.dependencies.add(() => {
+        this.#subscribers.delete(effect);
       });
     }
     return this.#value;
@@ -111,14 +141,9 @@ export class Signal<T> {
         queueMicrotask(flushEffects);
       }
     } else {
-      // Auto-batch: Start a batch for synchronous updates
-      startBatch();
-      try {
-        for (const subscriber of subscribers) {
-          pendingEffects.add(subscriber);
-        }
-      } finally {
-        endBatch();
+      // Execute immediately
+      for (const subscriber of subscribers) {
+        subscriber.execute();
       }
     }
   }
@@ -185,9 +210,10 @@ export class ComputedSignal<T> {
   get value(): T {
     // Track as dependency of current effect
     if (activeEffect) {
-      this.#subscribers.add(activeEffect);
-      activeEffect.dependencies.add(() => {
-        this.#subscribers.delete(activeEffect!);
+      const effect = activeEffect;
+      this.#subscribers.add(effect);
+      effect.dependencies.add(() => {
+        this.#subscribers.delete(effect);
       });
     }
 
@@ -211,14 +237,20 @@ export class ComputedSignal<T> {
       const newValue = this.#fn();
 
       // Only update if value actually changed according to equality function
-      if (!this.#dirty || this.#value === undefined || !this.#equals(this.#value, newValue)) {
+      if (this.#value === undefined || !this.#equals(this.#value, newValue)) {
         this.#value = newValue;
       }
     });
 
     // Execute to get value and track dependencies
-    this.#effect.execute();
-    this.#dirty = false;
+    try {
+      this.#effect.execute();
+      this.#dirty = false;
+    } catch (error) {
+      // Keep dirty on error so next read will retry
+      this.#dirty = true;
+      throw error;
+    }
 
     // Override the effect function to mark dirty when dependencies change
     this.#effect.fn = () => {
@@ -286,6 +318,17 @@ export function shallowEqual<T extends Record<string, unknown>>(a: T, b: T): boo
 
 /**
  * Deep equality check (for simple objects/arrays)
+ *
+ * ⚠️ WARNING: Not cycle-safe! Use only for simple, non-circular structures.
+ * For complex objects with circular references, use a dedicated deep-equal library.
+ *
+ * @example
+ * deepEqual([1, 2, 3], [1, 2, 3]) // true
+ * deepEqual({ a: 1 }, { a: 1 }) // true
+ *
+ * // Don't use with circular structures:
+ * // const obj = { self: null };
+ * // obj.self = obj; // Will cause stack overflow!
  */
 export function deepEqual<T>(a: T, b: T): boolean {
   if (a === b) return true;
@@ -314,33 +357,49 @@ export function deepEqual<T>(a: T, b: T): boolean {
 /**
  * Create a readonly version of a signal
  */
-export function readonly<T>(source: Signal<T>): Readonly<Signal<T>> {
-  return {
-    peek: () => source.peek(),
-    toString: () => source.toString(),
-    get value() {
-      return source.value;
-    },
-  } as Readonly<Signal<T>>;
+export function readonly<T>(source: Signal<T>): ComputedSignal<T> {
+  return computed(() => source.value);
 }
 
 /**
  * Effect - runs code and tracks dependencies
  * Automatically handles both sync and async functions
  *
+ * ⚠️ AVOID INFINITE LOOPS:
+ * Effects that write to signals they read from can create infinite loops.
+ * Use batching or conditional logic to prevent feedback loops.
+ *
  * @example Sync effect
  * effect(() => {
  *   console.log('Count:', count.value);
  * });
  *
- * @example Async effect
- * effect(async () => {
- *   const data = await fetch(`/api/${id.value}`);
+ * @example Async effect with AbortSignal
+ * effect(async (signal) => {
+ *   const data = await fetch(`/api/${id.value}`, { signal });
  *   result.value = await data.json();
  * });
+ *
+ * @example Avoid infinite loops
+ * // ❌ Bad: creates infinite loop
+ * effect(() => {
+ *   count.value = count.value + 1; // Reads and writes same signal!
+ * });
+ *
+ * // ✅ Good: conditional write
+ * effect(() => {
+ *   if (trigger.value) {
+ *     count.value = 0; // Only writes when condition changes
+ *   }
+ * });
  */
-export function effect(fn: (() => unknown) | (() => Promise<unknown>)): Cleanup {
-  // Check if function is async by checking its constructor
+export function effect(
+  fn: (() => unknown) | ((signal: AbortSignal) => Promise<unknown>) | (() => Promise<unknown>),
+): Cleanup {
+  // Check if function accepts signal parameter or is async
+  // Note: constructor.name check is best-effort and may not work in all bundlers/minifiers
+  // For reliability, use explicit async functions or pass AbortSignal parameter
+  const fnLength = fn.length;
   const isAsync = fn.constructor.name === 'AsyncFunction';
 
   // If it's async, handle async
@@ -362,8 +421,13 @@ export function effect(fn: (() => unknown) | (() => Promise<unknown>)): Cleanup 
       currentController = new AbortController();
       const controller = currentController;
 
-      // Run async function
-      (fn as () => Promise<unknown>)()
+      // Run async function - pass signal if function accepts it
+      const promise =
+        fnLength > 0
+          ? (fn as (signal: AbortSignal) => Promise<unknown>)(controller.signal)
+          : (fn as () => Promise<unknown>)();
+
+      promise
         .then((asyncResult) => {
           // Only set cleanup if this run wasn't aborted
           if (!controller.signal.aborted && typeof asyncResult === 'function') {
@@ -371,9 +435,9 @@ export function effect(fn: (() => unknown) | (() => Promise<unknown>)): Cleanup 
           }
         })
         .catch((err) => {
-          // Only log error if this run wasn't aborted
+          // Only a log error if this run wasn't aborted
           if (!controller.signal.aborted) {
-            console.error('[craftit] Async effect error:', err);
+            handleEffectError(err, 'async-effect');
           }
         });
     });
@@ -410,12 +474,12 @@ export function effect(fn: (() => unknown) | (() => Promise<unknown>)): Cleanup 
 export function watch<T>(
   source: Signal<T> | ComputedSignal<T> | (() => T),
   callback: (newValue: T, oldValue: T) => void,
-  options?: { immediate?: boolean; flush?: 'sync' | 'post' },
+  options?: { immediate?: boolean },
 ): Cleanup;
 export function watch<T extends readonly unknown[]>(
   sources: { [K in keyof T]: Signal<T[K]> | ComputedSignal<T[K]> | (() => T[K]) },
   callback: (newValues: T, oldValues: T) => void,
-  options?: { immediate?: boolean; flush?: 'sync' | 'post' },
+  options?: { immediate?: boolean },
 ): Cleanup;
 export function watch(
   source:
@@ -424,65 +488,37 @@ export function watch(
     | (() => any)
     | ReadonlyArray<Signal<any> | ComputedSignal<any> | (() => any)>,
   callback: (newValue: any, oldValue: any) => void,
-  options?: { immediate?: boolean; flush?: 'sync' | 'post' },
+  options?: { immediate?: boolean },
 ): Cleanup {
-  // Handle array of sources (multiple)
-  if (Array.isArray(source)) {
-    return watchMultiple(source as any, callback as any, options);
-  }
-
-  // Handle single source
   let oldValue: any;
-  const getter = typeof source === 'function' ? source : () => (source as Signal<any>).value;
+
+  // Create getter function(s)
+  const getter = Array.isArray(source)
+    ? () => source.map((s) => (typeof s === 'function' ? s() : s.value))
+    : typeof source === 'function'
+      ? source
+      : () => (source as Signal<any> | ComputedSignal<any>).value;
 
   // Get initial value
   oldValue = getter();
 
+  // Run immediately if requested
   if (options?.immediate) {
     callback(oldValue, oldValue);
   }
 
+  // Watch for changes
   return effect(() => {
     const newValue = getter();
-    if (!Object.is(newValue, oldValue)) {
+
+    // Check if changed (handles both single values and arrays)
+    const hasChanged = Array.isArray(newValue)
+      ? newValue.some((val, i) => !Object.is(val, (oldValue as any[])[i]))
+      : !Object.is(newValue, oldValue);
+
+    if (hasChanged) {
       callback(newValue, oldValue);
       oldValue = newValue;
-    }
-  });
-}
-
-/**
- * Watch multiple sources
- */
-export function watchMultiple<T extends readonly unknown[]>(
-  sources: { [K in keyof T]: Signal<T[K]> | ComputedSignal<T[K]> | (() => T[K]) },
-  callback: (newValues: T, oldValues: T) => void,
-  options?: { immediate?: boolean },
-): Cleanup {
-  let oldValues: T;
-
-  const getters = sources.map((source) => (typeof source === 'function' ? source : () => source.value));
-
-  oldValues = getters.map((getter) => getter()) as unknown as T;
-
-  if (options?.immediate) {
-    callback(oldValues, oldValues);
-  }
-
-  return effect(() => {
-    const newValues = getters.map((getter) => getter()) as unknown as T;
-    let changed = false;
-
-    for (let i = 0; i < newValues.length; i++) {
-      if (!Object.is(newValues[i], oldValues[i])) {
-        changed = true;
-        break;
-      }
-    }
-
-    if (changed) {
-      callback(newValues, oldValues);
-      oldValues = newValues;
     }
   });
 }
@@ -543,7 +579,6 @@ export function batch(fn: () => void): void {
     endBatch();
   }
 }
-
 
 /**
  * Untrack - run code without tracking dependencies

@@ -1,9 +1,14 @@
 /**
  * Craftit - Testing Utilities
  * Complete testing toolkit for Craftit components
+ *
+ * ⚠️ Requirements:
+ * - Requires a DOM environment (browser or jsdom/happy-dom)
+ * - Not compatible with pure Node.js environments
  */
 
-import { type ComponentContext, setContext } from '../composables/context';
+import type { ComponentContext } from '../composables/context';
+import { setContext } from '../composables/context';
 import type { Ref } from '../composables/ref';
 import type { ComputedSignal, Signal } from '../core/signal';
 
@@ -213,12 +218,32 @@ export const userEvent = {
 
   /**
    * Double click an element
+   * Fires the full event sequence: mousedown, mouseup, click (x2), dblclick
+   *
    * @example await userEvent.dblClick(button)
    */
   async dblClick(element: Element): Promise<void> {
+    // First click sequence
+    const mouseDownEvent1 = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    const mouseUpEvent1 = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+    element.dispatchEvent(mouseDownEvent1);
+    element.dispatchEvent(mouseUpEvent1);
     fireEvent.click(element);
+
+    // Small delay between clicks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Second click sequence
+    const mouseDownEvent2 = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    const mouseUpEvent2 = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+    element.dispatchEvent(mouseDownEvent2);
+    element.dispatchEvent(mouseUpEvent2);
     fireEvent.click(element);
-    fireEvent.custom(element, 'dblclick');
+
+    // Double click event
+    const dblClickEvent = new MouseEvent('dblclick', { bubbles: true, cancelable: true });
+    element.dispatchEvent(dblClickEvent);
+
     await new Promise((resolve) => setTimeout(resolve, 0));
   },
 
@@ -293,6 +318,14 @@ export const userEvent = {
  *
  * unmount();
  * ```
+ *
+ * @param tagName - The custom element tag name to mount
+ * @param options - Mount options
+ * @param options.props - Props to set as attributes
+ * @param options.innerHTML - Inner HTML content (for default slot)
+ * @param options.attachToDOM - Whether to attach to document.body (default: true)
+ * @param options.container - Container to attach to (default: document.body).
+ *                            Note: If attachToDOM is false, container is only a reference.
  */
 export function mount<T extends HTMLElement = HTMLElement>(
   tagName: string,
@@ -381,10 +414,13 @@ export async function waitFor(
   options: {
     timeout?: number;
     interval?: number;
+    /** Optional message to include in timeout error */
+    message?: string;
   } = {},
 ): Promise<void> {
-  const { timeout = 1000, interval = 50 } = options;
+  const { timeout = 1000, interval = 50, message } = options;
   const startTime = Date.now();
+  let lastError: unknown;
 
   while (Date.now() - startTime < timeout) {
     try {
@@ -392,17 +428,32 @@ export async function waitFor(
       if (result !== false) {
         return;
       }
-    } catch (_error) {
+    } catch (error) {
       // Assertion failed, continue waiting
+      lastError = error;
     }
 
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
   // Final attempt - throws if still failing
-  const result = await callback();
-  if (result === false) {
-    throw new Error(`waitFor timed out after ${timeout}ms`);
+  try {
+    const result = await callback();
+    if (result === false) {
+      const errorMsg = message
+        ? `waitFor timed out after ${timeout}ms: ${message}`
+        : `waitFor timed out after ${timeout}ms`;
+      throw new Error(errorMsg);
+    }
+  } catch (error) {
+    // If we have a last error from assertions, include it
+    if (lastError) {
+      const errorMsg = message
+        ? `waitFor timed out after ${timeout}ms: ${message}\nLast error: ${lastError}`
+        : `waitFor timed out after ${timeout}ms\nLast error: ${lastError}`;
+      throw new Error(errorMsg);
+    }
+    throw error;
   }
 }
 
@@ -557,9 +608,16 @@ export function runInContext<T>(fn: () => T, options?: { name?: string }): T {
  * Useful for testing components that depend on other components
  *
  * @example
+ * // Simple static mock
+ * createMockComponent('mock-child', () => '<div>Mocked</div>');
+ *
+ * // Using html template (will be converted to string)
  * createMockComponent('mock-child', () => html`<div>Mocked</div>`);
+ *
+ * @param tagName - The custom element tag name
+ * @param template - Function returning template content (string or TemplateResult)
  */
-export function createMockComponent(tagName: string, template: () => any): void {
+export function createMockComponent(tagName: string, template: () => string | { toString(): string }): void {
   if (customElements.get(tagName)) {
     return; // Already defined
   }

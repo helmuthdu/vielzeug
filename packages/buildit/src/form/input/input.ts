@@ -6,6 +6,8 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import type { ComponentSize, InputType, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { generateId } from '../../utils/common';
+import { FormFieldController } from '../../utils/controllers';
 
 const styles = /* css */ `
   @layer buildit.base {
@@ -345,72 +347,7 @@ const styles = /* css */ `
   ${disabledLoadingMixin()}
 `;
 
-/**
- * Input Component Properties
- *
- * A customizable text input with label placement options, multiple variants, and form features.
- *
- * ## Slots
- * - **prefix**: Content before the input (e.g., icons, decorative elements)
- * - **suffix**: Content after the input (e.g., clear button, validation icon)
- * - **helper**: Complex helper content below the input
- *
- * ## Events
- * - **input**: Emitted when input value changes (on every keystroke)
- * - **change**: Emitted when input loses focus with changed value
- *
- * ## CSS Custom Properties
- * - `--input-bg`: Background color
- * - `--input-color`: Text color
- * - `--input-border-color`: Border color
- * - `--input-focus`: Focus border color
- * - `--input-placeholder-color`: Placeholder text color
- * - `--input-radius`: Border radius
- * - `--input-padding`: Inner padding (vertical horizontal)
- * - `--input-gap`: Gap between prefix/suffix and input
- * - `--input-font-size`: Font size
- *
- * @example
- * ```html
- * <!-- Basic usage -->
- * <bit-input
- *   type="email"
- *   label="Email"
- *   placeholder="you@example.com"
- * />
- *
- * <!-- With outside label -->
- * <bit-input
- *   label="Name"
- *   label-placement="outside"
- *   variant="bordered"
- *   color="primary"
- * />
- *
- * <!-- With prefix icon -->
- * <bit-input
- *   placeholder="Search..."
- *   variant="outline"
- * >
- *   <svg slot="prefix">...</svg>
- * </bit-input>
- *
- * <!-- With helper text -->
- * <bit-input
- *   type="password"
- *   label="Password"
- *   helper="Must be at least 8 characters"
- *   required
- * />
- *
- * <!-- Frost variant -->
- * <bit-input
- *   variant="frost"
- *   color="primary"
- *   label="Username"
- * />
- * ```
- */
+/** Input component properties */
 export type InputProps = {
   /** Label text */
   label?: string;
@@ -494,6 +431,13 @@ const validateInputType = (type: string | null): string => {
  * @cssprop --input-padding - Inner padding (vertical horizontal)
  * @cssprop --input-gap - Gap between prefix/suffix and input
  * @cssprop --input-font-size - Font size
+ *
+ * @example
+ * ```html
+ * <bit-input type="email" label="Email" placeholder="you@example.com" />
+ * <bit-input label="Name" variant="bordered" color="primary" />
+ * <bit-input variant="frost" helper="Must be at least 8 characters" />
+ * ```
  */
 class BitInput extends HTMLElement {
   static formAssociated = true;
@@ -515,38 +459,65 @@ class BitInput extends HTMLElement {
     'rounded',
   ] as const;
 
-  #internals: ElementInternals;
+  private formField = new FormFieldController(this, {
+    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
+  });
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.#internals = this.attachInternals();
   }
 
-  formResetCallback() {
-    this.setAttribute('value', '');
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (input) input.value = '';
-    this.#updateFormValue();
-  }
+  // ============================================
+  // Constraint Validation API (delegated to controller)
+  // ============================================
 
-  formStateRestoreCallback(state: string | File | FormData | null) {
-    if (typeof state === 'string') {
-      this.setAttribute('value', state);
-      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) input.value = state;
+  /**
+   * Sets a custom validation message
+   * @param message - The validation message (empty string to clear)
+   */
+  setCustomValidity(message: string): void {
+    this.formField.setCustomValidity(message);
+    if (message) {
+      this.setAttribute('error', message);
+    } else {
+      this.removeAttribute('error');
     }
-    this.#updateFormValue();
   }
 
-  #updateFormValue() {
-    if (!this.#internals?.setFormValue) return;
-    const value = this.getAttribute('value') || '';
-    this.#internals.setFormValue(value);
+  /**
+   * Checks if the input is valid
+   * @returns true if valid, false otherwise
+   */
+  checkValidity(): boolean {
+    return this.formField.checkValidity();
+  }
+
+  /**
+   * Checks validity and reports issues to the user
+   * @returns true if valid, false otherwise
+   */
+  reportValidity(): boolean {
+    return this.formField.reportValidity();
+  }
+
+  /**
+   * Gets the validity state
+   */
+  get validity(): ValidityState {
+    return this.formField.validity;
+  }
+
+  /**
+   * Gets the validation message
+   */
+  get validationMessage(): string {
+    return this.formField.validationMessage;
   }
 
   connectedCallback() {
     this.render();
+    this.formField.hostConnected();
 
     const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
     if (!input) return;
@@ -555,7 +526,7 @@ class BitInput extends HTMLElement {
     const handleValueChange = (e: Event, eventName: 'input' | 'change') => {
       const target = e.target as HTMLInputElement;
       this.setAttribute('value', target.value);
-      this.#updateFormValue();
+      this.formField.setFormValue(target.value);
       this.dispatchEvent(
         new CustomEvent(eventName, {
           bubbles: true,
@@ -569,6 +540,10 @@ class BitInput extends HTMLElement {
     input.addEventListener('change', (e) => handleValueChange(e, 'change'));
   }
 
+  disconnectedCallback() {
+    this.formField.hostDisconnected();
+  }
+
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
     const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
     if (!input) return;
@@ -576,7 +551,7 @@ class BitInput extends HTMLElement {
     switch (name) {
       case 'value':
         input.value = newValue ?? '';
-        this.#updateFormValue();
+        this.formField.setFormValue(newValue ?? '');
         break;
       case 'name':
         input.name = newValue ?? '';
@@ -608,7 +583,7 @@ class BitInput extends HTMLElement {
     const name = this.getAttribute('name');
 
     // Generate IDs for accessibility
-    const inputId = name ? `input-${name}` : `input-${Math.random().toString(36).substr(2, 9)}`;
+    const inputId = name ? `input-${name}` : generateId('input');
     const labelId = labelText ? `label-${inputId}` : '';
     const helperId = helperText ? `helper-${inputId}` : '';
     const errorId = errorText ? `error-${inputId}` : '';
@@ -666,7 +641,7 @@ class BitInput extends HTMLElement {
         }
       </div>
     `;
-    this.#updateFormValue();
+    this.formField.setFormValue(this.getAttribute('value') || '');
   }
 }
 

@@ -1,42 +1,3 @@
-/**
- * bit-grid-item - A grid item with custom placement and span
- *
- * @element bit-grid-item
- *
- * @attr {string} colSpan - Number of columns to span: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full'
- * @attr {string} rowSpan - Number of rows to span: '1' | '2' | '3' | '4' | '5' | '6' | 'full'
- * @attr {string} colStart - Starting column: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13'
- * @attr {string} colEnd - Ending column: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13' | 'auto'
- * @attr {string} rowStart - Starting row: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto'
- * @attr {string} rowEnd - Ending row: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto'
- * @attr {string} align - Align self vertically: 'start' | 'center' | 'end' | 'stretch'
- * @attr {string} justify - Justify self horizontally: 'start' | 'center' | 'end' | 'stretch'
- *
- * @slot - Grid item content
- *
- * @cssprop --grid-item-col-span - Column span value
- * @cssprop --grid-item-row-span - Row span value
- * @cssprop --grid-item-col-start - Column start value
- * @cssprop --grid-item-col-end - Column end value
- * @cssprop --grid-item-row-start - Row start value
- * @cssprop --grid-item-row-end - Row end value
- *
- * @example
- * <bit-grid cols="4">
- *   <bit-grid-item colSpan="2">Spans 2 columns</bit-grid-item>
- *   <bit-grid-item>Single column</bit-grid-item>
- *   <bit-grid-item>Single column</bit-grid-item>
- * </bit-grid>
- *
- * @example
- * <!-- Custom placement -->
- * <bit-grid cols="3">
- *   <bit-grid-item colStart="1" colEnd="3">Columns 1-2</bit-grid-item>
- *   <bit-grid-item colStart="3">Column 3</bit-grid-item>
- * </bit-grid>
- */
-
-// -------------------- Styles --------------------
 const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
@@ -358,7 +319,44 @@ const styles = /* css */ `
     }
 `;
 
-// -------------------- Component Definition --------------------
+/**
+ * bit-grid-item - A grid item with custom placement and span
+ *
+ * @element bit-grid-item
+ *
+ * @attr {string} colSpan - Number of columns to span: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full'
+ * @attr {string} rowSpan - Number of rows to span: '1' | '2' | '3' | '4' | '5' | '6' | 'full'
+ * @attr {string} colStart - Starting column: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13'
+ * @attr {string} colEnd - Ending column: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13' | 'auto'
+ * @attr {string} rowStart - Starting row: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto'
+ * @attr {string} rowEnd - Ending row: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto'
+ * @attr {string} align - Align self vertically: 'start' | 'center' | 'end' | 'stretch'
+ * @attr {string} justify - Justify self horizontally: 'start' | 'center' | 'end' | 'stretch'
+ *
+ * @slot - Grid item content
+ *
+ * @cssprop --grid-item-col-span - Column span value
+ * @cssprop --grid-item-row-span - Row span value
+ * @cssprop --grid-item-col-start - Column start value
+ * @cssprop --grid-item-col-end - Column end value
+ * @cssprop --grid-item-row-start - Row start value
+ * @cssprop --grid-item-row-end - Row end value
+ *
+ * @example
+ * <bit-grid cols="4">
+ *   <bit-grid-item colSpan="2">Spans 2 columns</bit-grid-item>
+ *   <bit-grid-item>Single column</bit-grid-item>
+ *   <bit-grid-item>Single column</bit-grid-item>
+ * </bit-grid>
+ *
+ * @example
+ * <!-- Custom placement -->
+ * <bit-grid cols="3">
+ *   <bit-grid-item colStart="1" colEnd="3">Columns 1-2</bit-grid-item>
+ *   <bit-grid-item colStart="3">Column 3</bit-grid-item>
+ * </bit-grid>
+ */
+
 class BitGridItem extends HTMLElement {
   static observedAttributes = ['colSpan', 'rowSpan', 'colStart', 'colEnd', 'rowStart', 'rowEnd', 'align', 'justify'];
 
@@ -374,7 +372,7 @@ class BitGridItem extends HTMLElement {
   render() {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <slot></slot>
+      <div part="item"><slot></slot></div>
     `;
   }
 }

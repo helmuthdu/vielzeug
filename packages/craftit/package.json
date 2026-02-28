@@ -14,35 +14,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./core": {
-      "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js",
-      "require": "./dist/core/index.cjs"
-    },
-    "./reactivity": {
-      "types": "./dist/core/signal.d.ts",
-      "import": "./dist/core/signal.js",
-      "require": "./dist/core/signal.cjs"
-    },
-    "./template": {
-      "types": "./dist/template/index.d.ts",
-      "import": "./dist/template/index.js",
-      "require": "./dist/template/index.cjs"
-    },
-    "./composables": {
-      "types": "./dist/composables/index.d.ts",
-      "import": "./dist/composables/index.js",
-      "require": "./dist/composables/index.cjs"
-    },
-    "./testing": {
-      "types": "./dist/testing.d.ts",
-      "import": "./dist/testing.js",
-      "require": "./dist/testing.cjs"
-    },
-    "./dev": {
-      "types": "./dist/dev/debug.d.ts",
-      "import": "./dist/dev/debug.js",
-      "require": "./dist/dev/debug.cjs"
+    "./test": {
+      "types": "./dist/test.d.ts",
+      "import": "./dist/test.js",
+      "require": "./dist/test.cjs"
     }
   },
   "scripts": {

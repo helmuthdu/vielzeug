@@ -1,10 +1,10 @@
 /**
- * Composables - Ref, Props, Context, Form Tests
- * Comprehensive tests for all composable utilities
+ * Composables - Ref, Props, Context Tests
+ * Comprehensive tests for composable utilities
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { createInjectionKey, define, html, inject, prop, provide, ref, useForm, validators } from '..';
-import { cleanup, mount } from '../testing/render';
+import { define, html, type InjectionKey, inject, prop, provide, ref } from '..';
+import { cleanup, mount } from '../test/trial';
 
 // Counter for unique component names
 let componentCounter = 0;
@@ -70,10 +70,9 @@ describe('Composables', () => {
     });
   });
 
-  describe.skip('Context (provide/inject)', () => {
-    // Skip these tests - context parent propagation needs architectural work
+  describe('Context (provide/inject)', () => {
     it('should provide and inject values', async () => {
-      const ThemeKey = createInjectionKey<string>('theme');
+      const ThemeKey = Symbol('theme') as InjectionKey<string>;
       let injectedValue = '';
 
       const consumerName = uniqueName('test-consumer');
@@ -94,7 +93,7 @@ describe('Composables', () => {
     });
 
     it('should use default value when not provided', () => {
-      const Key = createInjectionKey<string>('test');
+      const Key = Symbol('test') as InjectionKey<string>;
       const name = uniqueName('test-inject-default');
 
       define(name, () => {
@@ -104,60 +103,6 @@ describe('Composables', () => {
 
       const { query } = mount(name);
       expect(query('div')?.textContent).toBe('default');
-    });
-  });
-
-  describe('Form Integration', () => {
-    it('should create form with fields', () => {
-      const name = uniqueName('test-form');
-      define(name, () => {
-        const form = useForm({
-          email: { rules: [validators.required(), validators.email()], value: '' },
-          password: { rules: [validators.required(), validators.minLength(8)], value: '' },
-        });
-
-        return html`
-          <form>
-            <input class="email" value=${form.fields.email.value} />
-            <input class="password" value=${form.fields.password.value} />
-          </form>
-        `;
-      });
-
-      const { query } = mount(name);
-      expect(query('.email')).not.toBeNull();
-      expect(query('.password')).not.toBeNull();
-    });
-
-    it('should validate fields', async () => {
-      const name = uniqueName('test-form-validation');
-      define(name, () => {
-        const form = useForm({
-          email: { rules: [validators.email()], value: '' },
-        });
-
-        const handleSubmit = async (e: Event) => {
-          e.preventDefault();
-          await form.validate();
-        };
-
-        return html`
-          <form @submit=${handleSubmit}>
-            <input 
-              class="email" 
-              value=${form.fields.email.value}
-              @input=${(e: Event) => {
-                form.fields.email.value.value = (e.target as HTMLInputElement).value;
-              }}
-            />
-            <button type="submit">Submit</button>
-          </form>
-        `;
-      });
-
-      const { query } = mount(name);
-      const input = query('.email') as HTMLInputElement;
-      expect(input).not.toBeNull();
     });
   });
 
@@ -181,31 +126,35 @@ describe('Composables', () => {
       expect(query('span')).not.toBeNull();
     });
 
-    it.skip('should handle nested provides', async () => {
-      // Skip - context parent propagation needs architectural work
-      const Key = createInjectionKey<number>('value');
+    it('should handle nested provides', async () => {
+      const Key = Symbol('value') as InjectionKey<number>;
+      let receivedValue: number | undefined;
 
-      const consumerName = uniqueName('test-nested-provide-consumer');
-      define(consumerName, () => {
-        const value = inject(Key);
-        return html`<div>${value}</div>`;
+      define('test-nested-consumer-4', () => {
+        receivedValue = inject(Key);
+        return html`<div class="result">${receivedValue}</div>`;
       });
 
-      const innerName = uniqueName('test-nested-provide-inner');
-      define(innerName, () => {
+      define('test-nested-inner-4', () => {
         provide(Key, 2);
-        return html`<${consumerName}></${consumerName}>`;
+        return html`<test-nested-consumer-4></test-nested-consumer-4>`;
       });
 
-      const outerName = uniqueName('test-nested-provide-outer');
-      define(outerName, () => {
+      define('test-nested-outer-4', () => {
         provide(Key, 1);
-        return html`<${innerName}></${innerName}>`;
+        return html`<test-nested-inner-4></test-nested-inner-4>`;
       });
 
-      const { query, waitForUpdates } = mount(outerName);
+      const { element, waitForUpdates } = mount('test-nested-outer-4');
       await waitForUpdates();
-      expect(query('div')?.textContent).toBe('2');
+
+      // Navigate through nested shadow roots to find the div
+      const innerEl = element.shadowRoot?.querySelector('test-nested-inner-4');
+      const consumerEl = innerEl?.shadowRoot?.querySelector('test-nested-consumer-4');
+      const resultDiv = consumerEl?.shadowRoot?.querySelector('div.result');
+
+      expect(receivedValue).toBe(2);
+      expect(resultDiv?.textContent).toBe('2');
     });
   });
 });

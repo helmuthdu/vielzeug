@@ -82,25 +82,6 @@ const styles = /* css */ `
     }
   }
 
-  ${sizeVariantMixin({
-    lg: {
-      fontSize: 'var(--text-base)',
-      gap: 'var(--size-2-5)',
-      height: 'var(--size-12)',
-      iconSize: 'var(--size-6)',
-      lineHeight: 'var(--leading-relaxed)',
-      padding: 'var(--size-2-5) var(--size-5)',
-    },
-    sm: {
-      fontSize: 'var(--text-sm)',
-      gap: 'var(--size-1-5)',
-      height: 'var(--size-8)',
-      iconSize: 'var(--size-4)',
-      lineHeight: 'var(--leading-tight)',
-      padding: 'var(--size-1-5) var(--size-3)',
-    },
-  })}
-
   @layer buildit.variants {
 
     :host([icon-only]) button {
@@ -116,7 +97,6 @@ const styles = /* css */ `
     }
   }
 
-  ${roundedVariantMixin()}
   ${colorThemeMixin()}
 
   @layer buildit.variants {
@@ -252,9 +232,29 @@ const styles = /* css */ `
   }
 
   /* ========================================
-     Frost & Rainbow Mixins
+     Other Variants & States
      ======================================== */
 
+
+  ${sizeVariantMixin({
+    lg: {
+      fontSize: 'var(--text-base)',
+      gap: 'var(--size-2-5)',
+      height: 'var(--size-12)',
+      iconSize: 'var(--size-6)',
+      lineHeight: 'var(--leading-relaxed)',
+      padding: 'var(--size-2-5) var(--size-5)',
+    },
+    sm: {
+      fontSize: 'var(--text-sm)',
+      gap: 'var(--size-1-5)',
+      height: 'var(--size-8)',
+      iconSize: 'var(--size-4)',
+      lineHeight: 'var(--leading-tight)',
+      padding: 'var(--size-1-5) var(--size-3)',
+    },
+  })}
+  ${roundedVariantMixin()}
   ${frostVariantMixin('button')}
   ${rainbowEffectMixin('button')}
   ${disabledLoadingMixin('button')}
@@ -295,60 +295,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Button Component Properties
- *
- * A customizable button with multiple visual variants, theme colors, and special effects.
- *
- * ## Slots
- * - **default**: Button content (text, icons, etc.)
- * - **prefix**: Content before the button text (e.g., icons)
- * - **suffix**: Content after the button text (e.g., icons, badges)
- *
- * ## Events
- * - **click**: Emitted when button is clicked (unless disabled/loading)
- *
- * ## CSS Custom Properties
- * - `--button-bg`: Background color
- * - `--button-color`: Text color
- * - `--button-hover-bg`: Hover background
- * - `--button-active-bg`: Active/pressed background
- * - `--button-border`: Border (width, style, color)
- * - `--button-radius`: Border radius
- * - `--button-padding`: Inner padding
- * - `--button-gap`: Gap between icon and text
- * - `--button-font-size`: Font size
- * - `--button-font-weight`: Font weight
- *
- * @example
- * ```html
- * <!-- Basic usage -->
- * <bit-button variant="solid" color="primary">
- *   Click me
- * </bit-button>
- *
- * <!-- With icon -->
- * <bit-button color="secondary">
- *   <svg slot="prefix">...</svg>
- *   Save
- * </bit-button>
- *
- * <!-- Loading state -->
- * <bit-button loading color="success">
- *   Processing...
- * </bit-button>
- *
- * <!-- Icon-only -->
- * <bit-button icon-only color="primary">
- *   <svg slot="prefix">...</svg>
- * </bit-button>
- *
- * <!-- Frost variant with rainbow effect -->
- * <bit-button variant="frost" rainbow color="primary">
- *   Special Button
- * </bit-button>
- * ```
- */
+/** Button component properties */
 export type ButtonProps = {
   /** Visual style variant */
   variant?: Exclude<VisualVariant, 'glass'>;
@@ -399,6 +346,10 @@ const isDisabledOrLoading = (el: HTMLElement): boolean => {
  * @slot prefix - Content before the button text (e.g., icons)
  * @slot suffix - Content after the button text (e.g., icons, badges)
  *
+ * @part button - The button element
+ * @part loader - The loading spinner element
+ * @part content - The button content wrapper
+ *
  * @cssprop --button-bg - Background color
  * @cssprop --button-color - Text color
  * @cssprop --button-hover-bg - Hover background
@@ -410,6 +361,13 @@ const isDisabledOrLoading = (el: HTMLElement): boolean => {
  * @cssprop --button-gap - Gap between icon and text
  * @cssprop --button-font-size - Font size
  * @cssprop --button-shadow - Box shadow
+ *
+ * @example
+ * ```html
+ * <bit-button variant="solid" color="primary">Click me</bit-button>
+ * <bit-button loading color="success">Processing...</bit-button>
+ * <bit-button variant="frost" rainbow>Special Button</bit-button>
+ * ```
  */
 class BitButton extends HTMLElement {
   static observedAttributes = [
@@ -492,13 +450,14 @@ class BitButton extends HTMLElement {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
       <button
+        part="button"
         type="${type}"
         ${disabled ? 'disabled' : ''}
         aria-disabled="${disabled ? 'true' : 'false'}"
         aria-busy="${loading ? 'true' : 'false'}">
-        ${loading ? '<span class="loader" aria-label="Loading"></span>' : ''}
+        ${loading ? '<span class="loader" part="loader" aria-label="Loading"></span>' : ''}
         <slot name="prefix"></slot>
-        <span class="content"><slot></slot></span>
+        <span class="content" part="content"><slot></slot></span>
         <slot name="suffix"></slot>
       </button>
     `;

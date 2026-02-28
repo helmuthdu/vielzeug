@@ -1,4 +1,4 @@
-import { createFixture, userEvent } from '../../../utils/testing';
+import { createFixture, userEvent } from '../../../utils/trial';
 
 describe('bit-button', () => {
   beforeAll(async () => {

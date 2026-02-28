@@ -1,8 +1,5 @@
-import { colorThemeMixin, frostVariantMixin, rainbowEffectMixin, registerRainbowProperty } from '../../styles';
+import { colorThemeMixin, frostVariantMixin, rainbowEffectMixin } from '../../styles';
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
-
-// Register CSS property for rainbow animation
-registerRainbowProperty();
 
 const styles = /* css */ `
   /* Color themes - mixin already defines @layer buildit.themes */
@@ -155,62 +152,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Box Component Properties
- *
- * A foundational layout primitive with theming, elevation, and special effects support.
- *
- * ## Slots
- * - **default**: Box content
- *
- * ## CSS Custom Properties
- * - `--box-bg`: Background color
- * - `--box-color`: Text color
- * - `--box-border`: Border width
- * - `--box-border-color`: Border color
- * - `--box-radius`: Border radius
- * - `--box-padding`: Internal padding
- * - `--box-shadow`: Box shadow
- *
- * ## Special Features
- * - **Frost variant**: Glassmorphism effect with backdrop blur
- * - **Rainbow effect**: Animated rainbow border (when `rainbow` attribute is set)
- * - **Elevation**: Shadow depth control (0-5)
- * - **Custom element**: Render as any HTML element via `as` attribute
- *
- * @example
- * ```html
- * <!-- Basic box -->
- * <bit-box padding="lg" elevation="2">
- *   Simple content box
- * </bit-box>
- *
- * <!-- Colored box -->
- * <bit-box color="primary" padding="md" rounded="lg">
- *   Primary colored box
- * </bit-box>
- *
- * <!-- Frost effect -->
- * <bit-box variant="frost" elevation="3" padding="xl">
- *   Glassmorphism box
- * </bit-box>
- *
- * <!-- Frost with color -->
- * <bit-box variant="frost" color="secondary" padding="lg">
- *   Colored frosted glass
- * </bit-box>
- *
- * <!-- Rainbow effect -->
- * <bit-box variant="frost" rainbow padding="md">
- *   Animated rainbow border
- * </bit-box>
- *
- * <!-- Custom element -->
- * <bit-box as="section" padding="lg" elevation="1">
- *   Rendered as section element
- * </bit-box>
- * ```
- */
+/** Box component properties */
 export interface BoxProps {
   /** Visual style variant */
   variant?: 'frost';
@@ -255,20 +197,21 @@ export interface BoxProps {
  * @cssprop --box-radius - Border radius
  * @cssprop --box-padding - Inner padding
  * @cssprop --box-shadow - Box shadow
+ *
+ * @example
+ * ```html
+ * <bit-box padding="lg" elevation="2">Simple content</bit-box>
+ * <bit-box variant="frost" rainbow padding="md">Frosted glass</bit-box>
+ * <bit-box as="section" color="primary">Semantic section</bit-box>
+ * ```
  */
 class BitBox extends HTMLElement {
-  static observedAttributes = ['variant', 'color', 'padding', 'elevation', 'rounded', 'rainbow', 'as'] as const;
-
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
   }
 
   connectedCallback() {
-    this.render();
-  }
-
-  attributeChangedCallback() {
     this.render();
   }
 

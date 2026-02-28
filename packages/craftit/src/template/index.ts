@@ -3,32 +3,30 @@
  * Exports for @vielzeug/craftit/template
  */
 
-export { html, renderTemplate, type TemplateResult } from './html';
 export {
-  isDirective,
   type Directive,
   type DirectiveType,
-  type WhenDirective,
-  type ShowDirective,
   type EachDirective,
+  isDirective,
   type LogDirective,
   type PortalDirective,
+  type ShowDirective,
+  type WhenDirective,
 } from './directives';
+export { html, renderTemplate, type TemplateResult } from './html';
 export {
-  sanitizeHTML,
   escapeHTML,
-  trustHTML,
+  getSecurityPolicy,
   isTrustedHTML,
-  sanitizeURL,
+  processValue,
+  SecurityPolicy,
+  safe,
   sanitizeAttribute,
   sanitizeCSS,
-  safe,
-  stripHTML,
-  SecurityPolicy,
+  sanitizeHTML,
+  sanitizeURL,
   setSecurityPolicy,
-  getSecurityPolicy,
-  processValue,
+  stripHTML,
   type TrustedHTML,
+  trustHTML,
 } from './sanitize';
-
-

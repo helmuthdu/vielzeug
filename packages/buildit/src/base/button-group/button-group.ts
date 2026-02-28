@@ -94,51 +94,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Button Group Component Properties
- *
- * A container for organizing multiple buttons with coordinated styling and layout options.
- *
- * ## Slots
- * - **default**: button elements
- *
- * ## Behavior
- * - Propagates `size`, `variant`, and `color` to all child buttons
- * - Supports horizontal and vertical orientation
- * - Can attach buttons together seamlessly
- * - Optional full-width mode
- *
- * @example
- * ```html
- * <!-- Basic group -->
- * <bit-button-group>
- *   <bit-button>First</bit-button>
- *   <bit-button>Second</bit-button>
- *   <bit-button>Third</bit-button>
- * </bit-button-group>
- *
- * <!-- Attached buttons with shared styling -->
- * <bit-button-group variant="outline" color="primary" attached>
- *   <bit-button>Left</bit-button>
- *   <bit-button>Center</bit-button>
- *   <bit-button>Right</bit-button>
- * </bit-button-group>
- *
- * <!-- Vertical orientation -->
- * <bit-button-group orientation="vertical" variant="flat" size="lg">
- *   <bit-button>Top</bit-button>
- *   <bit-button>Middle</bit-button>
- *   <bit-button>Bottom</bit-button>
- * </bit-button-group>
- *
- * <!-- Full width -->
- * <bit-button-group fullwidth attached variant="bordered">
- *   <bit-button>Option A</bit-button>
- *   <bit-button>Option B</bit-button>
- *   <bit-button>Option C</bit-button>
- * </bit-button-group>
- * ```
- */
+/** Button group component properties */
 export interface ButtonGroupProps {
   /** Button size for all children (propagated) */
   size?: ComponentSize;
@@ -171,6 +127,12 @@ export interface ButtonGroupProps {
  *
  * @cssprop --group-gap - Gap between buttons
  * @cssprop --group-radius - Border radius for edge buttons
+ *
+ * @example
+ * ```html
+ * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
+ * <bit-button-group attached color="primary"><bit-button>Left</bit-button><bit-button>Right</bit-button></bit-button-group>
+ * ```
  */
 class BitButtonGroup extends HTMLElement {
   static observedAttributes = ['size', 'variant', 'color', 'orientation', 'attached', 'fullwidth'] as const;
@@ -218,7 +180,7 @@ class BitButtonGroup extends HTMLElement {
   render() {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <div class="button-group" role="group">
+      <div class="button-group" part="group" role="group">
         <slot></slot>
       </div>
     `;

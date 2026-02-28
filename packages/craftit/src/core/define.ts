@@ -4,10 +4,14 @@
  */
 
 import type { ComponentContext } from '../composables/context';
-import { runCleanups, setContext } from '../composables/context';
+import { maybeGetContext, runCleanups, setContext } from '../composables/context';
 import type { TemplateResult } from '../template/html';
 import { renderTemplate } from '../template/html';
+import { escapeHTML } from '../template/sanitize';
 import { runMountCallbacks, runUnmountCallbacks } from './lifecycle';
+
+// WeakMap to store component contexts for parent-child linking
+const componentContexts = new WeakMap<HTMLElement, ComponentContext>();
 
 /**
  * Setup function result
@@ -56,16 +60,68 @@ export function define(tagName: string, setup: SetupFunction): void {
         mountCallbacks: [],
         mounted: false,
         name: tagName,
-        parent: null, // Can be set if nested components need context inheritance
+        parent: null,
         provides: new Map(),
         shadow: this.#shadow,
         unmountCallbacks: [],
         updateCallbacks: [],
       };
+
+      // Store context in WeakMap for parent-child linking
+      componentContexts.set(this, this.#context);
     }
 
     connectedCallback(): void {
-      // Set context
+      // Link to parent context by walking up DOM tree
+      this.#resolveParentContext();
+
+      // Run the setup
+      this.#runSetup();
+    }
+
+    disconnectedCallback(): void {
+      // Run unmount callbacks
+      runUnmountCallbacks(this.#context);
+
+      // Run cleanups
+      runCleanups(this.#context);
+
+      // Mark as unmounted
+      this.#context.mounted = false;
+    }
+
+    /**
+     * Resolve parent context by walking DOM tree
+     * Checks both light DOM and shadow DOM boundaries
+     */
+    #resolveParentContext(): void {
+      let parentContext: ComponentContext | null = null;
+      let parentElement = this.parentElement;
+
+      // Walk light DOM ancestry
+      while (parentElement && !parentContext) {
+        parentContext = componentContexts.get(parentElement) || null;
+        parentElement = parentElement.parentElement;
+      }
+
+      // If no parent in light DOM, check if we're inside a shadow root
+      if (!parentContext) {
+        const root = this.getRootNode();
+        if (root instanceof ShadowRoot && root.host) {
+          parentContext = componentContexts.get(root.host as HTMLElement) || null;
+        }
+      }
+
+      // Fallback to active context if no parent found in DOM
+      this.#context.parent = parentContext || maybeGetContext();
+    }
+
+    /**
+     * Run component setup
+     * Extracted to allow retry on errors
+     */
+    #runSetup(): void {
+      // Set this component's context as active
       setContext(this.#context);
 
       try {
@@ -104,23 +160,54 @@ export function define(tagName: string, setup: SetupFunction): void {
       }
     }
 
-    disconnectedCallback(): void {
-      // Run unmount callbacks
-      runUnmountCallbacks(this.#context);
-
-      // Run cleanups
+    /**
+     * Retry component setup after an error
+     * Public method that can be called from error UI
+     */
+    public retryComponent(): void {
+      // Clean up any previous state
+      if (this.#context.mounted) {
+        runUnmountCallbacks(this.#context);
+      }
       runCleanups(this.#context);
 
-      // Mark as unmounted
+      // Reset context state
       this.#context.mounted = false;
+      this.#context.mountCallbacks = [];
+      this.#context.unmountCallbacks = [];
+      this.#context.updateCallbacks = [];
+      this.#context.cleanups = new Set();
+
+      // Clear shadow root
+      this.#shadow.innerHTML = '';
+
+      // Re-run setup
+      this.#runSetup();
     }
 
+    /**
+     * Apply styles to shadow root
+     * Uses adoptedStyleSheets (modern) with fallback to style tag (legacy)
+     */
     #applyStyles(styles: string[]): void {
-      const styleSheet = new CSSStyleSheet();
-      styleSheet.replaceSync(styles.join('\n'));
-      this.#shadow.adoptedStyleSheets = [styleSheet];
+      const css = styles.join('\n');
+
+      // Modern approach: Constructable Stylesheets (Chrome 73+, Firefox 101+, Safari 16.4+)
+      if ('adoptedStyleSheets' in Document.prototype && 'replace' in CSSStyleSheet.prototype) {
+        const styleSheet = new CSSStyleSheet();
+        styleSheet.replaceSync(css);
+        this.#shadow.adoptedStyleSheets = [styleSheet];
+      } else {
+        // Fallback for older browsers: inject <style> tag
+        const styleElement = document.createElement('style');
+        styleElement.textContent = css;
+        this.#shadow.appendChild(styleElement);
+      }
     }
 
+    /**
+     * Render error UI with retry capability
+     */
     #renderError(error: unknown): void {
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : '';
@@ -138,7 +225,7 @@ export function define(tagName: string, setup: SetupFunction): void {
 						⚠️ Component Error
 					</strong>
 					<p style="margin: 0.5rem 0; font-family: monospace;">
-						${escapeHtml(message)}
+						${escapeHTML(message)}
 					</p>
 					${
             stack
@@ -154,13 +241,13 @@ export function define(tagName: string, setup: SetupFunction): void {
 								border-radius: 0.25rem;
 								overflow-x: auto;
 								font-size: 0.85em;
-							">${escapeHtml(stack)}</pre>
+							">${escapeHTML(stack)}</pre>
 						</details>
 					`
               : ''
           }
 					<button
-						onclick="this.getRootNode().host.remove(); this.getRootNode().host.connectedCallback()"
+						id="retry-btn"
 						style="
 							margin-top: 0.5rem;
 							padding: 0.25rem 0.5rem;
@@ -176,18 +263,17 @@ export function define(tagName: string, setup: SetupFunction): void {
 					</button>
 				</div>
 			`;
+
+      // Attach retry handler properly
+      const retryBtn = this.#shadow.getElementById('retry-btn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          this.retryComponent();
+        });
+      }
     }
   }
 
   // Define the custom element
   customElements.define(tagName, CraftitComponent);
-}
-
-/**
- * Escape HTML for error messages
- */
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }

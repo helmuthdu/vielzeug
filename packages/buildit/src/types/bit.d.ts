@@ -6,6 +6,16 @@
 import type {
   AccordionItemProps,
   AccordionProps,
+  AddEventListeners,
+  BitAccordionEvents,
+  BitAccordionItemEvents,
+  BitButtonEvents,
+  BitCardEvents,
+  BitCheckboxEvents,
+  BitInputEvents,
+  BitRadioEvents,
+  BitSliderEvents,
+  BitSwitchEvents,
   ButtonGroupProps,
   ButtonProps,
   CardProps,
@@ -21,16 +31,16 @@ import type {
 // Component Type Definitions
 // ============================================
 
-type BitAccordion = HTMLElement & AccordionProps;
-type BitAccordionItem = HTMLElement & AccordionItemProps;
-type BitButton = HTMLElement & ButtonProps;
+type BitAccordion = HTMLElement & AccordionProps & AddEventListeners<BitAccordionEvents>;
+type BitAccordionItem = HTMLElement & AccordionItemProps & AddEventListeners<BitAccordionItemEvents>;
+type BitButton = HTMLElement & ButtonProps & AddEventListeners<BitButtonEvents>;
 type BitButtonGroup = HTMLElement & ButtonGroupProps;
-type BitCard = HTMLElement & CardProps;
-type BitCheckbox = HTMLElement & CheckboxProps;
-type BitInput = HTMLElement & InputProps;
-type BitRadio = HTMLElement & RadioProps;
-type BitSlider = HTMLElement & SliderProps;
-type BitSwitch = HTMLElement & SwitchProps;
+type BitCard = HTMLElement & CardProps & AddEventListeners<BitCardEvents>;
+type BitCheckbox = HTMLElement & CheckboxProps & AddEventListeners<BitCheckboxEvents>;
+type BitInput = HTMLElement & InputProps & AddEventListeners<BitInputEvents>;
+type BitRadio = HTMLElement & RadioProps & AddEventListeners<BitRadioEvents>;
+type BitSlider = HTMLElement & SliderProps & AddEventListeners<BitSliderEvents>;
+type BitSwitch = HTMLElement & SwitchProps & AddEventListeners<BitSwitchEvents>;
 type BitText = HTMLElement & TextProps;
 
 // ============================================

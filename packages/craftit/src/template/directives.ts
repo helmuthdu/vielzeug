@@ -5,11 +5,18 @@
 
 import type { ComputedSignal, Signal } from '../core/signal';
 import type { TemplateResult } from './html';
+import type { KeyedListState } from './reconciliation';
+
+/**
+ * Supported directive types
+ * Centralized list to ensure type and runtime consistency
+ */
+const DIRECTIVE_TYPES = ['when', 'show', 'each', 'log', 'portal'] as const;
 
 /**
  * Directive types supported by the template engine
  */
-export type DirectiveType = 'when' | 'show' | 'each' | 'log' | 'portal';
+export type DirectiveType = (typeof DIRECTIVE_TYPES)[number];
 
 /**
  * Base directive interface
@@ -20,18 +27,21 @@ export interface BaseDirective {
 
 /**
  * When directive - unified conditional rendering
- * Supports if, unless (inverse), and else branches
+ * Supports conditional rendering with optional else branch
+ *
+ * Note: TemplateResult uses the reactive engine; string is treated as raw HTML.
  */
 export interface WhenDirective extends BaseDirective {
   type: 'when';
   condition: boolean | Signal<boolean> | ComputedSignal<boolean>;
   template: TemplateResult | string | (() => TemplateResult | string);
   elseTemplate?: TemplateResult | string | (() => TemplateResult | string);
-  inverse?: boolean; // If true, renders when condition is falsy (unless behavior)
 }
 
 /**
  * Show directive - CSS display toggle
+ *
+ * Note: TemplateResult uses the reactive engine; string is treated as raw HTML.
  */
 export interface ShowDirective extends BaseDirective {
   type: 'show';
@@ -41,6 +51,8 @@ export interface ShowDirective extends BaseDirective {
 
 /**
  * Each directive - keyed list rendering with optional fallback
+ *
+ * Note: TemplateResult uses the reactive engine; string is treated as raw HTML.
  */
 export interface EachDirective<T = unknown> extends BaseDirective {
   type: 'each';
@@ -61,6 +73,8 @@ export interface LogDirective extends BaseDirective {
 
 /**
  * Portal directive - render content elsewhere in DOM
+ *
+ * Note: TemplateResult uses the reactive engine; string is treated as raw HTML.
  */
 export interface PortalDirective extends BaseDirective {
   type: 'portal';
@@ -75,17 +89,19 @@ export type Directive = WhenDirective | ShowDirective | EachDirective<any> | Log
 
 /**
  * Check if value is a directive
+ * Uses centralized directive type list for consistency
  */
 export function isDirective(value: unknown): value is Directive {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    'type' in value &&
-    ['when', 'show', 'each', 'log', 'portal'].includes((value as any).type)
-  );
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+
+  const type = (value as { type?: unknown }).type;
+  return typeof type === 'string' && DIRECTIVE_TYPES.includes(type as DirectiveType);
 }
 
 /**
  * Global state for keyed lists
+ * Maps comment markers to their reconciliation state
  */
-export const listStates = new WeakMap<Comment, any>();
+export const listStates = new WeakMap<Comment, KeyedListState>();

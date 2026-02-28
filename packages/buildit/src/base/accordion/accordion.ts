@@ -88,58 +88,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Accordion Component Properties
- *
- * A container for managing multiple accordion items with coordinated expand/collapse behavior.
- *
- * ## Slots
- * - **default**: accordion-item elements
- *
- * ## Events
- * - **expand**: Emitted when an item expands
- * - **change**: Emitted when selection changes (single mode)
- *
- * ## Behavior
- * - **single mode**: Only one item can be expanded at a time
- * - **multiple mode**: Multiple items can be expanded simultaneously (default)
- * - Propagates `variant` and `size` to all child items
- *
- * @example
- * ```html
- * <!-- Single selection mode -->
- * <bit-accordion selection-mode="single" variant="bordered">
- *   <bit-accordion-item>
- *     <span slot="title">Section 1</span>
- *     <p>Content for section 1</p>
- *   </bit-accordion-item>
- *   <bit-accordion-item>
- *     <span slot="title">Section 2</span>
- *     <p>Content for section 2</p>
- *   </bit-accordion-item>
- * </bit-accordion>
- *
- * <!-- Multiple selection (default) -->
- * <bit-accordion variant="solid" size="lg">
- *   <bit-accordion-item expanded>
- *     <span slot="title">FAQ 1</span>
- *     <p>Answer 1</p>
- *   </bit-accordion-item>
- *   <bit-accordion-item>
- *     <span slot="title">FAQ 2</span>
- *     <p>Answer 2</p>
- *   </bit-accordion-item>
- * </bit-accordion>
- *
- * <!-- Frost variant -->
- * <bit-accordion variant="frost" size="md">
- *   <bit-accordion-item>
- *     <span slot="title">Features</span>
- *     <p>Feature list...</p>
- *   </bit-accordion-item>
- * </bit-accordion>
- * ```
- */
+/** Accordion component properties */
 export type AccordionProps = {
   /** Selection mode (single = only one opens, multiple = multiple can be open) */
   'selection-mode'?: 'single' | 'multiple';
@@ -162,6 +111,12 @@ export type AccordionProps = {
  * @fires change - Emitted when selection changes (single mode)
  *
  * @slot - Accordion item elements (bit-accordion-item)
+ *
+ * @example
+ * ```html
+ * <bit-accordion selection-mode="single"><bit-accordion-item>...</bit-accordion-item></bit-accordion>
+ * <bit-accordion variant="frost" size="lg"><bit-accordion-item>...</bit-accordion-item></bit-accordion>
+ * ```
  */
 class BitAccordion extends HTMLElement {
   static observedAttributes = ['selection-mode', 'size', 'variant'] as const;
@@ -223,7 +178,9 @@ class BitAccordion extends HTMLElement {
   render() {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <slot></slot>
+      <div part="accordion">
+        <slot></slot>
+      </div>
     `;
   }
 }

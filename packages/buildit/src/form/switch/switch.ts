@@ -1,5 +1,7 @@
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
+import { setupLabelAssociation } from '../../utils/common';
+import { CheckedStateController, FormFieldController } from '../../utils/controllers';
 
 const styles = /* css */ `
   @layer buildit.base {
@@ -134,48 +136,7 @@ const styles = /* css */ `
   })}
 `;
 
-/**
- * Switch Component Properties
- *
- * A toggle switch for binary on/off states with smooth animations.
- *
- * ## Slots
- * - **default**: Switch label text
- *
- * ## Events
- * - **change**: Emitted when switch is toggled
- *
- * ## CSS Custom Properties
- * - `--switch-width`: Track width
- * - `--switch-height`: Track height
- * - `--switch-bg`: Background color (checked state)
- * - `--switch-track`: Track background color (unchecked)
- * - `--switch-thumb`: Thumb background color
- * - `--switch-font-size`: Label font size
- *
- * ## Keyboard Support
- * - `Space/Enter`: Toggle switch
- *
- * @example
- * ```html
- * <!-- Basic usage -->
- * <bit-switch checked>Enable feature</bit-switch>
- *
- * <!-- With color -->
- * <bit-switch color="primary">
- *   Dark mode
- * </bit-switch>
- *
- * <!-- Different sizes -->
- * <bit-switch size="sm">Small</bit-switch>
- * <bit-switch size="lg">Large</bit-switch>
- *
- * <!-- Disabled -->
- * <bit-switch checked disabled>
- *   Cannot toggle
- * </bit-switch>
- * ```
- */
+/** Switch component properties */
 export interface SwitchProps {
   /** Checked/on state */
   checked?: boolean;
@@ -218,139 +179,93 @@ export interface SwitchProps {
  * @cssprop --switch-track - Track background color (unchecked)
  * @cssprop --switch-thumb - Thumb background color
  * @cssprop --switch-font-size - Label font size
+ *
+ * @example
+ * ```html
+ * <bit-switch checked>Enable feature</bit-switch>
+ * <bit-switch color="primary">Dark mode</bit-switch>
+ * <bit-switch size="lg">Large toggle</bit-switch>
+ * ```
  */
 class BitSwitch extends HTMLElement {
   static formAssociated = true;
   static observedAttributes = ['checked', 'disabled', 'value', 'name', 'color', 'size'] as const;
 
-  #internals: ElementInternals;
+  private formField = new FormFieldController(this, {
+    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
+  });
+
+  private checkedState = new CheckedStateController(this, {
+    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
+    onToggle: (checked, value) => {
+      this.formField.setFormValue(checked ? value : null, checked ? 'on' : 'off');
+    },
+    type: 'switch',
+  });
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.#internals = this.attachInternals();
   }
 
-  formResetCallback() {
-    this.removeAttribute('checked');
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (input) input.checked = false;
-    this.setAttribute('aria-checked', 'false');
-    this.#updateFormValue();
+  // ============================================
+  // Constraint Validation API (delegated to controller)
+  // ============================================
+
+  setCustomValidity(message: string): void {
+    this.formField.setCustomValidity(message);
   }
 
-  formStateRestoreCallback(state: string | File | FormData | null) {
-    if (state === 'on') {
-      this.setAttribute('checked', '');
-      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) input.checked = true;
-      this.setAttribute('aria-checked', 'true');
-    } else {
-      this.removeAttribute('checked');
-      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) input.checked = false;
-      this.setAttribute('aria-checked', 'false');
-    }
-    this.#updateFormValue();
+  checkValidity(): boolean {
+    return this.formField.checkValidity();
   }
 
-  #updateFormValue() {
-    if (!this.#internals?.setFormValue) return;
-    const isChecked = this.hasAttribute('checked');
-    const value = this.getAttribute('value') || 'on';
-    this.#internals.setFormValue(isChecked ? value : null, isChecked ? 'on' : 'off');
+  reportValidity(): boolean {
+    return this.formField.reportValidity();
+  }
+
+  get validity(): ValidityState {
+    return this.formField.validity;
+  }
+
+  get validationMessage(): string {
+    return this.formField.validationMessage;
   }
 
   connectedCallback() {
     this.render();
+    this.formField.hostConnected();
+    this.checkedState.syncState();
 
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    const label = this.shadowRoot?.querySelector('.label') as HTMLElement | null;
+    // Setup label association
+    setupLabelAssociation(this.shadowRoot, this, 'switch');
 
-    const isChecked = this.hasAttribute('checked');
-    const isDisabled = this.hasAttribute('disabled');
+    // Toggle on click
+    this.addEventListener('click', (e) => {
+      this.checkedState.toggle(e);
+    });
 
-    if (input) {
-      input.checked = isChecked;
-    }
-
-    this.setAttribute('role', 'switch');
-    this.setAttribute('aria-checked', isChecked ? 'true' : 'false');
-    this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-
-    // Generate unique ID for label association
-    const labelId = `switch-label-${Math.random().toString(36).substr(2, 9)}`;
-    if (label && label.textContent?.trim()) {
-      label.id = labelId;
-      this.setAttribute('aria-labelledby', labelId);
-    }
-
-    if (!isDisabled && !this.hasAttribute('tabindex')) {
-      this.setAttribute('tabindex', '0');
-    }
-
-    // Helper to toggle switch state
-    const toggleSwitch = (originalEvent: Event) => {
-      if (this.hasAttribute('disabled')) return;
-
-      const nextChecked = !this.hasAttribute('checked');
-
-      if (nextChecked) this.setAttribute('checked', '');
-      else this.removeAttribute('checked');
-
-      if (input) {
-        input.checked = nextChecked;
-      }
-
-      this.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
-      this.#updateFormValue();
-      this.dispatchEvent(
-        new CustomEvent('change', {
-          bubbles: true,
-          composed: true,
-          detail: {
-            checked: nextChecked,
-            originalEvent,
-            value: this.getAttribute('value'),
-          },
-        }),
-      );
-    };
-
+    // Toggle on Space/Enter
     this.addEventListener('keydown', (keyEvent) => {
       const kbEvent = keyEvent as KeyboardEvent;
       if (kbEvent.key === ' ' || kbEvent.key === 'Enter') {
         kbEvent.preventDefault();
-        toggleSwitch(keyEvent);
+        this.checkedState.toggle(keyEvent);
       }
-    });
-
-    this.addEventListener('click', (e) => {
-      toggleSwitch(e);
     });
   }
 
+  disconnectedCallback() {
+    this.formField.hostDisconnected();
+  }
+
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (!input) return;
-
-    if (name === 'checked') {
-      const isChecked = newValue !== null;
-      input.checked = isChecked;
-
-      // Update aria-checked
-      this.setAttribute('aria-checked', isChecked ? 'true' : 'false');
-      this.#updateFormValue();
-    } else if (name === 'disabled') {
-      const isDisabled = newValue !== null;
-      input.disabled = isDisabled;
-
-      // Update aria-disabled and tabindex
-      this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-      if (isDisabled) {
-        this.removeAttribute('tabindex');
-      } else if (!this.hasAttribute('tabindex')) {
-        this.setAttribute('tabindex', '0');
+    if (name === 'checked' || name === 'disabled') {
+      this.checkedState.syncState();
+      if (name === 'checked') {
+        const isChecked = newValue !== null;
+        const value = this.getAttribute('value') || 'on';
+        this.formField.setFormValue(isChecked ? value : null, isChecked ? 'on' : 'off');
       }
     }
   }
@@ -359,7 +274,7 @@ class BitSwitch extends HTMLElement {
     const isChecked = this.hasAttribute('checked');
     const isDisabled = this.hasAttribute('disabled');
     const name = this.getAttribute('name') || '';
-    const value = this.getAttribute('value') || '';
+    const value = this.getAttribute('value') || 'on';
 
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
@@ -378,7 +293,7 @@ class BitSwitch extends HTMLElement {
       </div>
       <span class="label" part="label"><slot></slot></span>
     `;
-    this.#updateFormValue();
+    this.formField.setFormValue(isChecked ? value : null, isChecked ? 'on' : 'off');
   }
 }
 

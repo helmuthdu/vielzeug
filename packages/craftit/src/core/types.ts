@@ -3,8 +3,8 @@
  * Better type inference and helpers
  */
 
-import { Signal, ComputedSignal } from './signal';
 import type { TemplateResult } from '../template/html';
+import { ComputedSignal, Signal } from './signal';
 
 /**
  * Unwrap Signal type to get inner value type
@@ -19,11 +19,7 @@ export type UnwrapComputed<T> = T extends ComputedSignal<infer U> ? U : T;
 /**
  * Unwrap any reactive type (Signal or ComputedSignal)
  */
-export type UnwrapReactive<T> = T extends Signal<infer U>
-  ? U
-  : T extends ComputedSignal<infer U>
-  ? U
-  : T;
+export type UnwrapReactive<T> = T extends Signal<infer U> ? U : T extends ComputedSignal<infer U> ? U : T;
 
 /**
  * Deep unwrap object with reactive properties
@@ -31,8 +27,8 @@ export type UnwrapReactive<T> = T extends Signal<infer U>
 export type UnwrapNestedRefs<T> = T extends Signal<any> | ComputedSignal<any>
   ? UnwrapReactive<T>
   : T extends object
-  ? { [K in keyof T]: UnwrapNestedRefs<T[K]> }
-  : T;
+    ? { [K in keyof T]: UnwrapNestedRefs<T[K]> }
+    : T;
 
 /**
  * Extract value types from a record of signals
@@ -82,26 +78,7 @@ export type SetupReturnType<T> = T extends () => infer R ? R : never;
 /**
  * Merge multiple types
  */
-export type Merge<T extends readonly unknown[]> = T extends readonly [infer F, ...infer R]
-  ? F & Merge<R>
-  : unknown;
-
-/**
- * Make specific keys required
- */
-export type RequiredKeys<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
-
-/**
- * Make specific keys optional
- */
-export type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-/**
- * Extract keys of a specific type
- */
-export type KeysOfType<T, V> = {
-  [K in keyof T]: T[K] extends V ? K : never;
-}[keyof T];
+export type Merge<T extends readonly unknown[]> = T extends readonly [infer F, ...infer R] ? F & Merge<R> : unknown;
 
 /**
  * Readonly deep
@@ -109,10 +86,10 @@ export type KeysOfType<T, V> = {
 export type DeepReadonly<T> = T extends (infer R)[]
   ? DeepReadonlyArray<R>
   : T extends Function
-  ? T
-  : T extends object
-  ? DeepReadonlyObject<T>
-  : T;
+    ? T
+    : T extends object
+      ? DeepReadonlyObject<T>
+      : T;
 
 type DeepReadonlyArray<T> = ReadonlyArray<DeepReadonly<T>>;
 type DeepReadonlyObject<T> = {
@@ -120,46 +97,22 @@ type DeepReadonlyObject<T> = {
 };
 
 /**
- * Mutable (opposite of Readonly)
- */
-export type Mutable<T> = {
-  -readonly [K in keyof T]: T[K];
-};
-
-/**
- * Deep mutable
- */
-export type DeepMutable<T> = T extends (infer R)[]
-  ? DeepMutableArray<R>
-  : T extends Function
-  ? T
-  : T extends object
-  ? DeepMutableObject<T>
-  : T;
-
-type DeepMutableArray<T> = Array<DeepMutable<T>>;
-type DeepMutableObject<T> = {
-  -readonly [K in keyof T]: DeepMutable<T[K]>;
-};
-
-/**
  * Type guard for Signal
  */
 export function isSignal<T>(value: unknown): value is Signal<T> {
-  return value instanceof Signal || (typeof value === 'object' && value !== null && 'value' in value && 'peek' in value);
+  return value instanceof Signal;
 }
 
 /**
  * Type guard for ComputedSignal
  */
 export function isComputedSignal<T>(value: unknown): value is ComputedSignal<T> {
-  return value instanceof ComputedSignal || (typeof value === 'object' && value !== null && 'value' in value && !('update' in value));
+  return value instanceof ComputedSignal;
 }
 
 /**
  * Type guard for reactive value (Signal or ComputedSignal)
  */
 export function isReactive(value: unknown): value is Signal<any> | ComputedSignal<any> {
-  return isSignal(value) || isComputedSignal(value);
+  return value instanceof Signal || value instanceof ComputedSignal;
 }
-

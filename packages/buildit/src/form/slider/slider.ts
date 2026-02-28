@@ -1,5 +1,7 @@
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
+import { setupLabelAssociation } from '../../utils/common';
+import { FormFieldController } from '../../utils/controllers';
 
 const styles = /* css */ `
   @layer buildit.base {
@@ -142,58 +144,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Slider Component Properties
- *
- * A range slider for selecting numeric values with keyboard and pointer support.
- *
- * ## Slots
- * - **default**: Slider label text
- *
- * ## Events
- * - **change**: Emitted when slider value changes
- *
- * ## CSS Custom Properties
- * - `--slider-height`: Track height
- * - `--slider-size`: Thumb dimensions
- * - `--slider-track`: Track background color
- * - `--slider-fill`: Fill (progress) background color
- * - `--slider-thumb`: Thumb background color
- *
- * ## Keyboard Support
- * - `Arrow Right/Up`: Increase by step
- * - `Arrow Left/Down`: Decrease by step
- * - `Home`: Jump to minimum
- * - `End`: Jump to maximum
- *
- * @example
- * ```html
- * <!-- Basic usage -->
- * <bit-slider min="0" max="100" value="50">
- *   Volume
- * </bit-slider>
- *
- * <!-- With step and color -->
- * <bit-slider
- *   min="0"
- *   max="10"
- *   step="0.5"
- *   value="5"
- *   color="primary"
- * >
- *   Rating
- * </bit-slider>
- *
- * <!-- Different sizes -->
- * <bit-slider size="sm" value="30">Small</bit-slider>
- * <bit-slider size="lg" value="70">Large</bit-slider>
- *
- * <!-- Disabled -->
- * <bit-slider value="50" disabled>
- *   Cannot adjust
- * </bit-slider>
- * ```
- */
+/** Slider component properties */
 export interface SliderProps {
   /** Minimum value */
   min?: number;
@@ -243,44 +194,54 @@ export interface SliderProps {
  * @cssprop --slider-track - Track background color
  * @cssprop --slider-fill - Fill (progress) background color
  * @cssprop --slider-thumb - Thumb background color
+ *
+ * @example
+ * ```html
+ * <bit-slider min="0" max="100" value="50">Volume</bit-slider>
+ * <bit-slider min="0" max="10" step="0.5" color="primary">Rating</bit-slider>
+ * <bit-slider size="lg" value="70">Large</bit-slider>
+ * ```
  */
 class BitSlider extends HTMLElement {
   static formAssociated = true;
   static observedAttributes = ['min', 'max', 'step', 'value', 'disabled', 'name', 'color', 'size'] as const;
 
-  #internals: ElementInternals;
+  private formField = new FormFieldController(this, {
+    getInput: () => this.shadowRoot?.querySelector('input[type="range"]') ?? null,
+  });
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.#internals = this.attachInternals();
   }
 
-  formResetCallback() {
-    const min = this.getAttribute('min') || '0';
-    this.setAttribute('value', min);
-    const input = this.shadowRoot?.querySelector('input[type="range"]') as HTMLInputElement | null;
-    if (input) input.value = min;
-    this.#updateFormValue();
+  // ============================================
+  // Constraint Validation API (delegated to controller)
+  // ============================================
+
+  setCustomValidity(message: string): void {
+    this.formField.setCustomValidity(message);
   }
 
-  formStateRestoreCallback(state: string | File | FormData | null) {
-    if (typeof state === 'string') {
-      this.setAttribute('value', state);
-      const input = this.shadowRoot?.querySelector('input[type="range"]') as HTMLInputElement | null;
-      if (input) input.value = state;
-    }
-    this.#updateFormValue();
+  checkValidity(): boolean {
+    return this.formField.checkValidity();
   }
 
-  #updateFormValue() {
-    if (!this.#internals?.setFormValue) return;
-    const value = this.getAttribute('value') || '0';
-    this.#internals.setFormValue(value);
+  reportValidity(): boolean {
+    return this.formField.reportValidity();
+  }
+
+  get validity(): ValidityState {
+    return this.formField.validity;
+  }
+
+  get validationMessage(): string {
+    return this.formField.validationMessage;
   }
 
   connectedCallback() {
     this.render();
+    this.formField.hostConnected();
 
     const min = Number(this.getAttribute('min') || 0);
     const max = Number(this.getAttribute('max') || 100);
@@ -309,13 +270,8 @@ class BitSlider extends HTMLElement {
     this.setAttribute('aria-valuemax', max.toString());
     this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
 
-    // Generate unique ID for label association
-    const label = this.shadowRoot?.querySelector('.label') as HTMLElement | null;
-    const labelId = `slider-label-${Math.random().toString(36).substr(2, 9)}`;
-    if (label && label.textContent?.trim()) {
-      label.id = labelId;
-      this.setAttribute('aria-labelledby', labelId);
-    }
+    // Setup label association
+    setupLabelAssociation(this.shadowRoot, this, 'slider');
 
     if (!isDisabled) {
       this.setAttribute('tabindex', '0');
@@ -342,7 +298,7 @@ class BitSlider extends HTMLElement {
       if (Number(this.getAttribute('value')) !== newValue) {
         this.setAttribute('value', newValue.toString());
         updateUI(newValue);
-        this.#updateFormValue();
+        this.formField.setFormValue(newValue.toString());
         this.dispatchEvent(
           new CustomEvent('change', {
             bubbles: true,
@@ -419,7 +375,7 @@ class BitSlider extends HTMLElement {
       if (newValue !== val) {
         this.setAttribute('value', newValue.toString());
         updateUI(newValue);
-        this.#updateFormValue();
+        this.formField.setFormValue(newValue.toString());
         this.dispatchEvent(
           new CustomEvent('change', {
             bubbles: true,
@@ -429,6 +385,10 @@ class BitSlider extends HTMLElement {
         );
       }
     });
+  }
+
+  disconnectedCallback() {
+    this.formField.hostDisconnected();
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
@@ -448,7 +408,7 @@ class BitSlider extends HTMLElement {
       const progress = ((numVal - min) / (max - min)) * 100;
       this.style.setProperty('--_progress', `${progress}%`);
       this.setAttribute('aria-valuenow', val);
-      this.#updateFormValue();
+      this.formField.setFormValue(val);
     } else if (name === 'min' || name === 'max') {
       input.setAttribute(name, newValue || '0');
 
@@ -511,7 +471,7 @@ class BitSlider extends HTMLElement {
       </div>
       <span class="label" part="label"><slot></slot></span>
     `;
-    this.#updateFormValue();
+    this.formField.setFormValue(value);
   }
 }
 

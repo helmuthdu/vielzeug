@@ -296,69 +296,7 @@ const styles = /* css */ `
   }
 `;
 
-/**
- * Card Component Properties
- *
- * A versatile card container with semantic slots for structured content display.
- *
- * ## Slots
- * - **media**: Media content (images, videos) displayed at top/left
- * - **header**: Card header (title, subtitle)
- * - **default**: Main card content
- * - **footer**: Card footer content
- * - **actions**: Action buttons or links
- *
- * ## Events
- * - **cardclick**: Emitted when a clickable card is clicked
- *
- * ## CSS Custom Properties
- * - `--card-bg`: Background color
- * - `--card-color`: Text color
- * - `--card-border`: Border style
- * - `--card-border-color`: Border color
- * - `--card-radius`: Border radius
- * - `--card-padding`: Internal padding
- * - `--card-shadow`: Box shadow
- * - `--card-hover-shadow`: Shadow on hover
- * - `--card-gap`: Gap between sections
- *
- * @example
- * ```html
- * <!-- Basic card -->
- * <bit-card elevation="2">
- *   <h3 slot="header">Article Title</h3>
- *   <p>Article content goes here...</p>
- *   <button slot="actions">Read more</button>
- * </bit-card>
- *
- * <!-- Card with media -->
- * <bit-card variant="solid" color="primary">
- *   <img slot="media" src="image.jpg" alt="Cover">
- *   <h2 slot="header">Product Name</h2>
- *   <p>Product description</p>
- *   <span slot="footer">$99.99</span>
- * </bit-card>
- *
- * <!-- Clickable card -->
- * <bit-card clickable hoverable elevation="1">
- *   <h3 slot="header">Click me</h3>
- *   <p>This entire card is clickable</p>
- * </bit-card>
- *
- * <!-- Horizontal layout -->
- * <bit-card orientation="horizontal" elevation="2">
- *   <img slot="media" src="thumb.jpg">
- *   <h4 slot="header">News Headline</h4>
- *   <p>News summary...</p>
- * </bit-card>
- *
- * <!-- Frost variant -->
- * <bit-card variant="frost" color="secondary" padding="lg">
- *   <h2 slot="header">Frosted Card</h2>
- *   <p>Beautiful glassmorphism effect</p>
- * </bit-card>
- * ```
- */
+/** Card component properties */
 export interface CardProps {
   /** Visual style variant */
   variant?: 'solid' | 'flat' | 'frost';
@@ -412,6 +350,13 @@ export interface CardProps {
  * @cssprop --card-shadow - Box shadow
  * @cssprop --card-hover-shadow - Shadow on hover
  * @cssprop --card-gap - Gap between sections
+ *
+ * @example
+ * ```html
+ * <bit-card elevation="2"><h3 slot="header">Title</h3><p>Content</p></bit-card>
+ * <bit-card clickable hoverable><h3 slot="header">Click me</h3></bit-card>
+ * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
+ * ```
  */
 class BitCard extends HTMLElement {
   static observedAttributes = [
@@ -553,21 +498,21 @@ class BitCard extends HTMLElement {
   render() {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <div class="card">
-        <div class="card-media">
+      <div class="card" part="card">
+        <div class="card-media" part="media">
           <slot name="media"></slot>
         </div>
-        <div class="card-body">
-          <div class="card-header">
+        <div class="card-body" part="body">
+          <div class="card-header" part="header">
             <slot name="header"></slot>
           </div>
-          <div class="card-content">
+          <div class="card-content" part="content">
             <slot></slot>
           </div>
-          <div class="card-footer">
+          <div class="card-footer" part="footer">
             <slot name="footer"></slot>
           </div>
-          <div class="card-actions">
+          <div class="card-actions" part="actions">
             <slot name="actions"></slot>
           </div>
         </div>

@@ -4,19 +4,19 @@
  */
 
 import { effect } from '../core/signal';
+import { isSignal } from '../core/types';
+import { createFragment } from './_common';
 import type { EachDirective } from './directives';
-import type { TemplateResult } from './html';
-import { renderTemplate } from './html';
 
 /**
  * Keyed list state for reconciliation
+ * Tracks all nodes for each key to properly handle multi-node templates
  */
 export interface KeyedListState {
   keyToNode: Map<
     string | number,
     {
-      node: Node;
-      data: any;
+      nodes: Node[]; // Track all nodes for proper multi-node template support
     }
   >;
   parent: Element | null;
@@ -27,12 +27,24 @@ export interface KeyedListState {
 /**
  * Reconcile a keyed list
  * This implements a simple but effective reconciliation algorithm
+ * Properly handles multi-node templates by tracking all nodes per key
  */
 export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<T>, state: KeyedListState): void {
   const { items: itemsSource, keyFn, template, fallback } = directive;
 
-  // Get current items
-  const items = Array.isArray(itemsSource) ? itemsSource : itemsSource.value;
+  // Get current items with proper signal detection
+  const items = Array.isArray(itemsSource)
+    ? itemsSource
+    : isSignal(itemsSource)
+      ? itemsSource.value
+      : (() => {
+          throw new Error('[craftit] Invalid itemsSource for html.each - must be array or signal');
+        })();
+
+  // Ensure items is an array
+  if (!Array.isArray(items)) {
+    throw new Error('[craftit] html.each items must be an array');
+  }
 
   // Get parent element
   if (!marker.parentElement) return;
@@ -52,10 +64,12 @@ export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<
 
   // Handle empty list with fallback
   if (items.length === 0) {
-    // Remove all existing nodes
-    for (const [key, { node }] of state.keyToNode.entries()) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
+    // Remove all existing nodes (all nodes for each key)
+    for (const [key, entry] of state.keyToNode.entries()) {
+      for (const node of entry.nodes) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
       }
       state.keyToNode.delete(key);
     }
@@ -63,7 +77,7 @@ export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<
     // Render fallback if provided
     if (fallback && state.parent) {
       const fallbackContent = typeof fallback === 'function' ? fallback() : fallback;
-      const fragment = createFragmentFromTemplate(fallbackContent);
+      const fragment = createFragment(fallbackContent);
 
       // Track fallback nodes
       state.fallbackNodes = Array.from(fragment.childNodes);
@@ -85,11 +99,13 @@ export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<
   // Track which keys we've seen
   const newKeySet = new Set(newKeys.map((k) => k.key));
 
-  // Remove nodes for keys that no longer exist
-  for (const [key, { node }] of state.keyToNode.entries()) {
+  // Remove nodes for keys that no longer exist (remove all nodes for each key)
+  for (const [key, entry] of state.keyToNode.entries()) {
     if (!newKeySet.has(key)) {
-      if (node.parentNode) {
-        node.parentNode.removeChild(node);
+      for (const node of entry.nodes) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
       }
       state.keyToNode.delete(key);
     }
@@ -102,23 +118,28 @@ export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<
     const existing = state.keyToNode.get(key);
 
     if (existing) {
-      // Reuse existing node - move if needed
-      const { node } = existing;
+      // Reuse existing nodes - move if needed
+      const { nodes } = existing;
+      const firstNode = nodes[0];
 
-      // Check if node needs to be moved
-      if (node.previousSibling !== previousNode) {
+      // Check if nodes need to be moved
+      if (firstNode.previousSibling !== previousNode) {
+        // Move all nodes for this key
+        const fragment = document.createDocumentFragment();
+        for (const node of nodes) {
+          fragment.appendChild(node);
+        }
         if (state.parent) {
-          state.parent.insertBefore(node, previousNode.nextSibling);
+          state.parent.insertBefore(fragment, previousNode.nextSibling);
         }
       }
 
-      // Update the node data (in case item changed)
-      existing.data = item;
-      previousNode = node;
+      // Update previousNode to last node of this item
+      previousNode = nodes[nodes.length - 1];
     } else {
-      // Create new node
+      // Create new nodes
       const content = template(item, index);
-      const fragment = createFragmentFromTemplate(content);
+      const fragment = createFragment(content);
 
       // Insert after previous node
       const nodes = Array.from(fragment.childNodes);
@@ -126,38 +147,13 @@ export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<
         state.parent.insertBefore(fragment, previousNode.nextSibling);
       }
 
-      // Store reference (use first node as anchor)
+      // Store all nodes for this key
       if (nodes.length > 0) {
-        state.keyToNode.set(key, {
-          data: item,
-          node: nodes[0],
-        });
+        state.keyToNode.set(key, { nodes });
         previousNode = nodes[nodes.length - 1];
       }
     }
   }
-}
-
-/**
- * Create a DocumentFragment from a template result or string
- */
-function createFragmentFromTemplate(content: TemplateResult | string): DocumentFragment {
-  if (typeof content === 'string') {
-    const template = document.createElement('template');
-    template.innerHTML = content;
-    return template.content;
-  }
-
-  // For TemplateResult, we need to render it
-  const container = document.createElement('div');
-  renderTemplate(content, container);
-
-  const fragment = document.createDocumentFragment();
-  while (container.firstChild) {
-    fragment.appendChild(container.firstChild);
-  }
-
-  return fragment;
 }
 
 /**
@@ -167,7 +163,7 @@ export function makeKeyedListReactive<T>(marker: Comment, directive: EachDirecti
   const { items: itemsSource } = directive;
 
   // If items is a signal, make it reactive
-  if (typeof itemsSource === 'object' && 'value' in itemsSource) {
+  if (isSignal(itemsSource)) {
     effect(() => {
       reconcileKeyedList(marker, directive, state);
     });

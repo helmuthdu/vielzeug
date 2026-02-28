@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, signal } from '..';
-import { cleanup, mount } from '../testing/render';
+import { cleanup, mount } from '../test/trial';
 
 describe('Core: Component Definition', () => {
   afterEach(() => cleanup());

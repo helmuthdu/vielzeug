@@ -7,8 +7,20 @@ import { maybeGetContext } from '../composables/context';
 import { bindRef, isRef, type Ref } from '../composables/ref';
 import { runUpdateCallbacks } from '../core/lifecycle';
 import { type ComputedSignal, effect, type Signal } from '../core/signal';
-import { isDirective, listStates } from './directives';
+import { isSignal } from '../core/types';
+import { toKebab } from '../utils/string';
+import { createFragment, setRenderTemplate } from './_common';
+import {
+  type EachDirective,
+  isDirective,
+  type LogDirective,
+  listStates,
+  type PortalDirective,
+  type ShowDirective,
+  type WhenDirective,
+} from './directives';
 import { type KeyedListState, makeKeyedListReactive } from './reconciliation';
+import { escapeHTML as escapeHtml } from './sanitize';
 
 /**
  * Template cache for performance optimization
@@ -93,6 +105,24 @@ function normalizeClass(
 }
 
 /**
+ * Check if CSS property is unitless
+ */
+function isUnitlessProperty(prop: string): boolean {
+  const unitlessProps = new Set([
+    'opacity',
+    'zIndex',
+    'fontWeight',
+    'lineHeight',
+    'flex',
+    'flexGrow',
+    'flexShrink',
+    'order',
+    'zoom',
+  ]);
+  return unitlessProps.has(prop);
+}
+
+/**
  * Normalize style object to CSS string
  */
 function normalizeStyle(value: Record<string, string | number> | null | undefined): string {
@@ -100,9 +130,8 @@ function normalizeStyle(value: Record<string, string | number> | null | undefine
 
   return Object.entries(value)
     .map(([key, val]) => {
-      // Convert camelCase to kebab-case
-      const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-      const cssValue = typeof val === 'number' && !key.match(/opacity|weight|zIndex/i) ? `${val}px` : val;
+      const cssKey = toKebab(key);
+      const cssValue = typeof val === 'number' && !isUnitlessProperty(key) ? `${val}px` : val;
       return `${cssKey}:${cssValue}`;
     })
     .join(';');
@@ -115,20 +144,6 @@ export interface TemplateResult {
   type: 'template';
   strings: TemplateStringsArray;
   values: unknown[];
-}
-
-
-/**
- * Check if value is a signal
- */
-function isSignal(value: unknown): value is Signal<unknown> | ComputedSignal<unknown> {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    'value' in value &&
-    'peek' in value &&
-    typeof (value as Signal<unknown>).peek === 'function'
-  );
 }
 
 /**
@@ -177,15 +192,16 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
 
   // Always need to process template for current bindings
   const bindings: Binding[] = [];
+  const bindingsByMarker = new Map<string, Binding[]>();
 
   if (cached) {
     // Use cached structure (clone it)
     fragment = cached.fragment.cloneNode(true) as DocumentFragment;
     // Still need to process template to get current binding values
-    processTemplateRecursive(template, bindings);
+    processTemplateRecursive(template, bindings, bindingsByMarker);
   } else {
     // Not in cache - parse template structure
-    const htmlString = processTemplateRecursive(template, bindings);
+    const htmlString = processTemplateRecursive(template, bindings, bindingsByMarker);
     fragment = parseHTML(htmlString);
 
     // Cache the parsed structure for future use
@@ -196,7 +212,7 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
   }
 
   // Process bindings with current values
-  processBindings(fragment, bindings);
+  processBindings(fragment, bindingsByMarker);
 
   // Replace content
   // Support fragments - can have multiple root nodes
@@ -204,10 +220,17 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
   target.appendChild(fragment);
 }
 
+// Initialize the renderTemplate reference in utils to break circular dependency
+setRenderTemplate(renderTemplate);
+
 /**
  * Create a fragment template (multiple root nodes)
  *
- * @example
+ * **Note:** This creates a static fragment. Any signals or directives
+ * in the provided templates will NOT be reactive. Use this only for
+ * static content that doesn't need to update.
+ *
+ * @example Static content only
  * define('list-items', () => {
  *   return html`
  *     <li>Item 1</li>
@@ -218,7 +241,16 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
  */
 html.fragment = (...templates: (TemplateResult | string)[]): TemplateResult => {
   // Combine multiple templates into one
-  const combined = templates.map((t) => (typeof t === 'string' ? t : processTemplateRecursive(t, []))).join('');
+  const combined = templates
+    .map((t) => {
+      if (typeof t === 'string') {
+        return t;
+      }
+      const bindings: Binding[] = [];
+      const bindingsByMarker = new Map<string, Binding[]>();
+      return processTemplateRecursive(t, bindings, bindingsByMarker);
+    })
+    .join('');
 
   return {
     strings: [combined, ''] as unknown as TemplateStringsArray,
@@ -231,9 +263,21 @@ html.fragment = (...templates: (TemplateResult | string)[]): TemplateResult => {
  * Process template and return HTML string with bindings
  * This handles nested templates properly
  */
-function processTemplateRecursive(template: TemplateResult, bindings: Binding[]): string {
+function processTemplateRecursive(
+  template: TemplateResult,
+  bindings: Binding[],
+  bindingsByMarker: Map<string, Binding[]>,
+): string {
   const { strings, values } = template;
   let htmlString = '';
+
+  // Helper to add binding to both arrays and map
+  const addBinding = (binding: Binding) => {
+    bindings.push(binding);
+    const list = bindingsByMarker.get(binding.marker) ?? [];
+    list.push(binding);
+    bindingsByMarker.set(binding.marker, list);
+  };
 
   for (let i = 0; i < strings.length; i++) {
     const str = strings[i];
@@ -244,13 +288,13 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
 
       // Check if this is an attribute context
       const lastPart = str.trimEnd();
-      const attrMatch = lastPart.match(/\s+([@\w][-\w.]*)\s*=\s*["']?$/);
+      const attrMatch = lastPart.match(/\s+([@:?]?[-\w.]+)\s*=\s*["']?$/);
 
       if (attrMatch) {
         const attrName = attrMatch[1];
 
-        // Boolean property binding (.property)
-        const isBooleanProp = attrName.startsWith('.');
+        // Boolean property binding (:property)
+        const isBooleanProp = attrName.startsWith(':');
         const propName = isBooleanProp ? attrName.slice(1) : attrName;
 
         if (isEventHandler(attrName)) {
@@ -258,7 +302,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
           const { name, modifiers } = parseEventName(attrName);
           const index = bindings.length;
           const marker = `__event_${index}__`;
-          bindings.push({
+          addBinding({
             event: name,
             handler: value as EventListener,
             marker,
@@ -270,7 +314,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
           // Ref binding
           const index = bindings.length;
           const marker = `__ref_${index}__`;
-          bindings.push({
+          addBinding({
             marker,
             ref: value,
             type: 'ref',
@@ -280,7 +324,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
           // Signal in attribute or property
           const index = bindings.length;
           const marker = `__signal_${index}__`;
-          bindings.push({
+          addBinding({
             attr: propName,
             marker,
             signal: value,
@@ -298,7 +342,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
             // Create reactive binding
             const index = bindings.length;
             const marker = `__class_${index}__`;
-            bindings.push({
+            addBinding({
               marker,
               type: 'class-reactive',
               value: value as any,
@@ -318,7 +362,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
             // Create reactive binding
             const index = bindings.length;
             const marker = `__style_${index}__`;
-            bindings.push({
+            addBinding({
               marker,
               type: 'style-reactive',
               value: value as any,
@@ -356,7 +400,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
               // Skip adding the attribute entirely by using a removable marker
               const index = bindings.length;
               const marker = `__remove_attr_${index}__`;
-              bindings.push({
+              addBinding({
                 attr: propName,
                 marker,
                 type: 'remove-attr',
@@ -370,29 +414,28 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
       } else {
         // Text content
         if (isDirective(value)) {
-          // Handle directives
-          const directive = value as any;
+          // Handle directives - isDirective narrows type to Directive
+          const directive = value;
           const index = bindings.length;
-          const marker = `<!--directive-${index}-->`;
+          const marker = `directive-${index}`;
 
           if (directive.type === 'when') {
-            bindings.push({
+            addBinding({
               condition: directive.condition,
               elseTemplate: directive.elseTemplate,
-              inverse: directive.inverse,
               marker,
               template: directive.template,
               type: 'directive-when',
             });
           } else if (directive.type === 'show') {
-            bindings.push({
+            addBinding({
               condition: directive.condition,
               marker,
               template: directive.template,
               type: 'directive-show',
             });
           } else if (directive.type === 'each') {
-            bindings.push({
+            addBinding({
               fallback: directive.fallback,
               items: directive.items,
               keyFn: directive.keyFn,
@@ -401,14 +444,14 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
               type: 'directive-each',
             });
           } else if (directive.type === 'log') {
-            bindings.push({
+            addBinding({
               label: directive.label,
               marker,
               type: 'directive-log',
               value: directive.value,
             });
           } else if (directive.type === 'portal') {
-            bindings.push({
+            addBinding({
               marker,
               target: directive.target,
               template: directive.template,
@@ -416,23 +459,22 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
             });
           }
 
-          htmlString += marker;
+          htmlString += `<!--${marker}-->`;
         } else if (isSignal(value)) {
           const index = bindings.length;
-          const textNodeId = `signal-${index}`;
-          const marker = `<!--${textNodeId}-->`;
-          bindings.push({
+          const marker = `signal-${index}`;
+          addBinding({
             index,
             marker,
             signal: value,
             type: 'signal-text',
           });
-          htmlString += marker;
+          htmlString += `<!--${marker}-->`;
         } else if (Array.isArray(value)) {
           // Array of template results
           for (const item of value) {
             if (typeof item === 'object' && item !== null && 'type' in item) {
-              htmlString += processTemplateRecursive(item as TemplateResult, bindings);
+              htmlString += processTemplateRecursive(item as TemplateResult, bindings, bindingsByMarker);
             } else {
               htmlString += escapeHtml(String(item ?? ''));
             }
@@ -444,7 +486,7 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
           (value as TemplateResult).type === 'template'
         ) {
           // Nested template - recursively process it
-          htmlString += processTemplateRecursive(value as TemplateResult, bindings);
+          htmlString += processTemplateRecursive(value as TemplateResult, bindings, bindingsByMarker);
         } else {
           // Regular text
           htmlString += escapeHtml(String(value ?? ''));
@@ -511,7 +553,6 @@ type Binding =
       condition: boolean | Signal<boolean> | ComputedSignal<boolean>;
       template: TemplateResult | string | (() => TemplateResult | string);
       elseTemplate?: TemplateResult | string | (() => TemplateResult | string);
-      inverse?: boolean;
     }
   | {
       type: 'directive-show';
@@ -542,8 +583,9 @@ type Binding =
 
 /**
  * Process bindings in DOM
+ * Uses bindingsByMarker map for O(1) lookup instead of O(n) scanning
  */
-function processBindings(root: DocumentFragment, bindings: Binding[]): void {
+function processBindings(root: DocumentFragment, bindingsByMarker: Map<string, Binding[]>): void {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ALL);
 
   // Collect all nodes to process first (to avoid mutation during traversal)
@@ -564,191 +606,177 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
   for (const comment of commentNodes) {
     const text = comment.textContent || '';
 
-    for (const binding of bindings) {
+    // O(1) lookup instead of O(n) scan
+    const matchingBindings = bindingsByMarker.get(text);
+    if (!matchingBindings) continue;
+
+    for (const binding of matchingBindings) {
       // Handle signal text bindings
       if (binding.type === 'signal-text') {
-        const expectedMarker = `signal-${binding.index}`;
-        if (text === expectedMarker) {
-          // Create text node for signal
-          const textNode = document.createTextNode('');
+        // Create text node for signal
+        const textNode = document.createTextNode('');
 
-          // Capture context for onUpdated callbacks
-          const ctx = maybeGetContext();
-          let isFirstRun = true;
+        // Capture context for onUpdated callbacks
+        const ctx = maybeGetContext();
+        let isFirstRun = true;
 
-          // Make it reactive
-          effect(() => {
-            textNode.textContent = String(binding.signal.value);
+        // Make it reactive
+        effect(() => {
+          textNode.textContent = String(binding.signal.value);
 
-            // Run onUpdated callbacks only after first run (i.e., on actual updates)
-            if (ctx?.mounted && !isFirstRun) {
-              runUpdateCallbacks(ctx);
-            }
-            isFirstRun = false;
-          });
+          // Run onUpdated callbacks only after first run (i.e., on actual updates)
+          if (ctx?.mounted && !isFirstRun) {
+            runUpdateCallbacks(ctx);
+          }
+          isFirstRun = false;
+        });
 
-          // Replace comment with text node
-          comment.replaceWith(textNode);
-          break;
-        }
+        // Replace comment with text node
+        comment.replaceWith(textNode);
+        break;
       }
 
       // Handle directive-when (unified conditional rendering)
       if (binding.type === 'directive-when') {
-        if (text === binding.marker.slice(4, -3)) {
-          const marker = comment;
+        const marker = comment;
 
-          effect(() => {
-            let condition = isSignal(binding.condition)
-              ? (binding.condition as Signal<boolean>).value
-              : binding.condition;
+        effect(() => {
+          const condition = isSignal(binding.condition)
+            ? (binding.condition as Signal<boolean>).value
+            : binding.condition;
 
-            // Apply inverse if specified (unless behavior)
-            if (binding.inverse) {
-              condition = !condition;
-            }
+          // Remove existing content
+          let next = marker.nextSibling;
+          while (next && next.nodeType !== Node.COMMENT_NODE) {
+            const toRemove = next;
+            next = next.nextSibling;
+            toRemove.remove();
+          }
 
-            // Remove existing content
-            let next = marker.nextSibling;
-            while (next && next.nodeType !== Node.COMMENT_NODE) {
-              const toRemove = next;
-              next = next.nextSibling;
-              toRemove.remove();
-            }
+          // Render appropriate template
+          const template = condition ? binding.template : binding.elseTemplate;
+          if (template) {
+            const content = typeof template === 'function' ? template() : template;
+            const fragment = createFragment(content);
+            marker.after(fragment);
+          }
+        });
 
-            // Render appropriate template
-            const template = condition ? binding.template : binding.elseTemplate;
-            if (template) {
-              const content = typeof template === 'function' ? template() : template;
-              const fragment = createFragment(content);
-              marker.after(fragment);
-            }
-          });
-
-          break;
-        }
+        break;
       }
 
       // Handle directive-show
       if (binding.type === 'directive-show') {
-        if (text === binding.marker.slice(4, -3)) {
-          const marker = comment;
-          const content = binding.template;
-          const fragment = createFragment(content);
-          const wrapper = document.createElement('div');
-          wrapper.style.display = 'contents';
-          wrapper.append(fragment);
-          marker.after(wrapper);
+        const marker = comment;
+        const content = binding.template;
+        const fragment = createFragment(content);
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'contents';
+        wrapper.append(fragment);
+        marker.after(wrapper);
 
-          effect(() => {
-            const condition = isSignal(binding.condition)
-              ? (binding.condition as Signal<boolean>).value
-              : binding.condition;
-            wrapper.style.display = condition ? 'contents' : 'none';
-          });
+        effect(() => {
+          const condition = isSignal(binding.condition)
+            ? (binding.condition as Signal<boolean>).value
+            : binding.condition;
+          wrapper.style.display = condition ? 'contents' : 'none';
+        });
 
-          break;
-        }
+        break;
       }
 
       // Handle directive-each (keyed list with optional fallback)
       if (binding.type === 'directive-each') {
-        if (text === binding.marker.slice(4, -3)) {
-          const marker = comment;
-          const state: KeyedListState = {
-            keyToNode: new Map(),
-            marker: null,
-            parent: null,
-          };
+        const marker = comment;
+        const state: KeyedListState = {
+          keyToNode: new Map(),
+          marker: null,
+          parent: null,
+        };
 
-          listStates.set(marker, state);
+        listStates.set(marker, state);
 
-          makeKeyedListReactive(marker, binding as any, state);
+        makeKeyedListReactive(marker, binding as unknown as EachDirective<unknown>, state);
 
-          break;
-        }
+        break;
       }
 
       // Handle directive-log (debug logging)
       if (binding.type === 'directive-log') {
-        if (text === binding.marker.slice(4, -3)) {
-          const label = binding.label || 'Template Debug';
+        const label = binding.label || 'Template Debug';
 
-          effect(() => {
-            const value = isSignal(binding.value) ? (binding.value as Signal<unknown>).value : binding.value;
+        effect(() => {
+          const value = isSignal(binding.value) ? (binding.value as Signal<unknown>).value : binding.value;
 
-            console.log(`[${label}]`, value);
-          });
+          console.log(`[${label}]`, value);
+        });
 
-          break;
-        }
+        break;
       }
 
       // Handle directive-portal (render elsewhere in DOM)
       if (binding.type === 'directive-portal') {
-        if (text === binding.marker.slice(4, -3)) {
-          const marker = comment;
-          let portalContainer: Element | null = null;
-          let cleanup: (() => void) | null = null;
+        const marker = comment;
+        let portalContainer: Element | null = null;
+        let cleanup: (() => void) | null = null;
 
-          // Get or create portal target
-          const getPortalTarget = (): Element | null => {
-            if (typeof binding.target === 'string') {
-              return document.querySelector(binding.target);
-            }
-            return binding.target;
-          };
+        // Get or create portal target
+        const getPortalTarget = (): Element | null => {
+          if (typeof binding.target === 'string') {
+            return document.querySelector(binding.target);
+          }
+          return binding.target;
+        };
 
-          // Render portal content
-          const renderPortal = () => {
-            // Clean up previous render
-            if (cleanup) {
-              cleanup();
-              cleanup = null;
-            }
-
-            // Get target element
-            portalContainer = getPortalTarget();
-            if (!portalContainer) {
-              console.warn('[Portal] Target not found:', binding.target);
-              return;
-            }
-
-            // Render content to portal
-            const content = binding.template;
-            const fragment = createFragment(content);
-
-            // Clear target and append
-            portalContainer.innerHTML = '';
-            portalContainer.appendChild(fragment);
-
-            // Setup cleanup
-            cleanup = () => {
-              if (portalContainer) {
-                portalContainer.innerHTML = '';
-              }
-            };
-          };
-
-          // Initial render
-          renderPortal();
-
-          // Cleanup when marker is removed
-          const observer = new MutationObserver(() => {
-            if (!marker.parentNode) {
-              if (cleanup) {
-                cleanup();
-              }
-              observer.disconnect();
-            }
-          });
-
-          if (marker.parentNode) {
-            observer.observe(marker.parentNode, { childList: true });
+        // Render portal content
+        const renderPortal = () => {
+          // Clean up previous render
+          if (cleanup) {
+            cleanup();
+            cleanup = null;
           }
 
-          break;
+          // Get target element
+          portalContainer = getPortalTarget();
+          if (!portalContainer) {
+            console.warn('[Portal] Target not found:', binding.target);
+            return;
+          }
+
+          // Render content to portal
+          const content = binding.template;
+          const fragment = createFragment(content);
+
+          // Clear target and append
+          portalContainer.innerHTML = '';
+          portalContainer.appendChild(fragment);
+
+          // Setup cleanup
+          cleanup = () => {
+            if (portalContainer) {
+              portalContainer.innerHTML = '';
+            }
+          };
+        };
+
+        // Initial render
+        renderPortal();
+
+        // Cleanup when marker is removed
+        const observer = new MutationObserver(() => {
+          if (!marker.parentNode) {
+            if (cleanup) {
+              cleanup();
+            }
+            observer.disconnect();
+          }
+        });
+
+        if (marker.parentNode) {
+          observer.observe(marker.parentNode, { childList: true });
         }
+
+        break;
       }
     }
   }
@@ -756,154 +784,141 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
   // Process element attributes
   for (const element of elementNodes) {
     for (const attr of Array.from(element.attributes)) {
-      for (const binding of bindings) {
-        if (attr.value.includes(binding.marker)) {
-          if (binding.type === 'signal-attr') {
-            // Check if this should be a property instead
-            const useProperty = shouldUseProperty(element.tagName, binding.attr);
+      const attrValue = attr.value;
 
-            if (useProperty) {
-              // Auto-upgrade to property binding
-              const setValue = () => {
-                (element as any)[binding.attr] = binding.signal.value;
-              };
-              setValue();
-              effect(setValue);
-            } else {
-              // Regular attribute binding
-              const setValue = () => {
-                const value = binding.signal.value;
-                if (typeof value === 'boolean') {
-                  if (value) {
-                    element.setAttribute(binding.attr, '');
-                  } else {
-                    element.removeAttribute(binding.attr);
-                  }
+      // O(1) lookup instead of O(n) scan
+      const matchingBindings = bindingsByMarker.get(attrValue);
+      if (!matchingBindings) continue;
+
+      for (const binding of matchingBindings) {
+        if (binding.type === 'signal-attr') {
+          // Check if this should be a property instead
+          const useProperty = shouldUseProperty(element.tagName, binding.attr);
+
+          if (useProperty) {
+            // Auto-upgrade to property binding
+            effect(() => {
+              (element as any)[binding.attr] = binding.signal.value;
+            });
+          } else {
+            // Regular attribute binding
+            effect(() => {
+              const value = binding.signal.value;
+              if (typeof value === 'boolean') {
+                if (value) {
+                  element.setAttribute(binding.attr, '');
                 } else {
-                  element.setAttribute(binding.attr, String(value));
+                  element.removeAttribute(binding.attr);
                 }
-              };
-              setValue();
-              effect(setValue);
-            }
-
-            // Only remove the attribute if it still contains the marker
-            // (if we set a real value, don't remove it)
-            if (element.getAttribute(attr.name) === binding.marker) {
-              element.removeAttribute(attr.name);
-            }
-            break; // Move to next attribute
-          }
-
-          if (binding.type === 'class-reactive') {
-            // Reactive class binding - object or array
-            const setValue = () => {
-              const classValue = binding.value;
-              let result: string;
-
-              if (Array.isArray(classValue)) {
-                // Handle array - evaluate signals
-                const evaluated = classValue.map((v) => (isSignal(v) ? (v as Signal<string>).value : v));
-                result = normalizeClass(evaluated);
               } else {
-                // Handle object - evaluate signals in values
-                const evaluated: Record<string, boolean> = {};
-                for (const [key, val] of Object.entries(classValue)) {
-                  evaluated[key] = isSignal(val) ? (val as Signal<boolean>).value : val;
-                }
-                result = normalizeClass(evaluated);
+                element.setAttribute(binding.attr, String(value));
               }
-
-              element.setAttribute('class', result);
-            };
-
-            setValue();
-            effect(setValue);
-            element.removeAttribute(attr.name);
-            break;
+            });
           }
 
-          if (binding.type === 'remove-attr') {
-            // Remove false boolean attribute
-            element.removeAttribute(binding.attr);
+          // Only remove the attribute if it still contains the marker
+          if (element.getAttribute(attr.name) === binding.marker) {
             element.removeAttribute(attr.name);
-            break;
           }
+          break; // Move to next attribute
+        }
 
-          if (binding.type === 'style-reactive') {
-            // Reactive style binding - object
-            const setValue = () => {
-              const styleValue = binding.value;
-              const evaluated: Record<string, string | number> = {};
+        if (binding.type === 'class-reactive') {
+          // Reactive class binding - object or array
+          effect(() => {
+            const classValue = binding.value;
+            let result: string;
 
-              for (const [key, val] of Object.entries(styleValue)) {
-                evaluated[key] = isSignal(val) ? (val as Signal<string | number>).value : val;
+            if (Array.isArray(classValue)) {
+              // Handle array - evaluate signals
+              const evaluated = classValue.map((v) => (isSignal(v) ? (v as Signal<string>).value : v));
+              result = normalizeClass(evaluated);
+            } else {
+              // Handle object - evaluate signals in values
+              const evaluated: Record<string, boolean> = {};
+              for (const [key, val] of Object.entries(classValue)) {
+                evaluated[key] = isSignal(val) ? (val as Signal<boolean>).value : val;
               }
-
-              const result = normalizeStyle(evaluated);
-              element.setAttribute('style', result);
-            };
-
-            setValue();
-            effect(setValue);
-            element.removeAttribute(attr.name);
-            break;
-          }
-
-          if (binding.type === 'signal-prop') {
-            // Reactive property (for boolean properties like .checked, .disabled)
-            const setValue = () => {
-              (element as HTMLElement & Record<string, unknown>)[binding.attr] = binding.signal.value;
-            };
-
-            // Set initial value
-            setValue();
-
-            // Make it reactive
-            effect(setValue);
-
-            // Remove marker attribute
-            element.removeAttribute(attr.name);
-            break; // Move to next attribute
-          }
-
-          if (binding.type === 'ref') {
-            // Ref binding
-            bindRef(binding.ref, element);
-            element.removeAttribute(attr.name);
-            break; // Move to next attribute
-          }
-
-          if (binding.type === 'event') {
-            // Event handler with modifier support
-            const eventName = binding.event;
-            const modifiers = binding.modifiers;
-
-            let handler = binding.handler;
-
-            // Wrap handler to apply modifiers
-            if (modifiers.size > 0) {
-              handler = (event: Event) => {
-                // Apply event modifiers
-                if (modifiers.has('prevent')) event.preventDefault();
-                if (modifiers.has('stop')) event.stopPropagation();
-                if (modifiers.has('self') && event.target !== event.currentTarget) return;
-
-                binding.handler(event);
-              };
+              result = normalizeClass(evaluated);
             }
 
-            // Event listener options from modifiers
-            const options: AddEventListenerOptions = {
-              capture: modifiers.has('capture'),
-              once: modifiers.has('once'),
-              passive: modifiers.has('passive'),
-            };
+            element.setAttribute('class', result);
+          });
+          element.removeAttribute(attr.name);
+          break;
+        }
 
-            element.addEventListener(eventName, handler, options);
-            element.removeAttribute(attr.name);
-            break; // Move to next attribute
+        if (binding.type === 'remove-attr') {
+          // Remove false boolean attribute
+          element.removeAttribute(binding.attr);
+          element.removeAttribute(attr.name);
+          break;
+        }
+
+        if (binding.type === 'style-reactive') {
+          // Reactive style binding - object
+          effect(() => {
+            const styleValue = binding.value;
+            const evaluated: Record<string, string | number> = {};
+
+            for (const [key, val] of Object.entries(styleValue)) {
+              evaluated[key] = isSignal(val) ? (val as Signal<string | number>).value : val;
+            }
+
+            const result = normalizeStyle(evaluated);
+            element.setAttribute('style', result);
+          });
+          element.removeAttribute(attr.name);
+          break;
+        }
+
+        if (binding.type === 'signal-prop') {
+          // Reactive property (for boolean properties like .checked, .disabled)
+          effect(() => {
+            (element as HTMLElement & Record<string, unknown>)[binding.attr] = binding.signal.value;
+          });
+
+          // Remove marker attribute
+          element.removeAttribute(attr.name);
+          break; // Move to next attribute
+        }
+
+        if (binding.type === 'ref') {
+          // Ref binding
+          bindRef(binding.ref, element);
+          element.removeAttribute(attr.name);
+          break; // Move to next attribute
+        }
+
+        if (binding.type === 'event') {
+          // Event handler with modifier support
+          const eventName = binding.event;
+          const modifiers = binding.modifiers;
+
+          let handler = binding.handler;
+
+          // Wrap handler to apply modifiers
+          if (modifiers.size > 0) {
+            handler = (event: Event) => {
+              // Apply event modifiers
+              if (modifiers.has('prevent')) event.preventDefault();
+              if (modifiers.has('stop')) event.stopPropagation();
+              if (modifiers.has('self') && event.target !== event.currentTarget) return;
+
+              binding.handler(event);
+            };
           }
+
+          // Event listener options from modifiers
+          const options: AddEventListenerOptions = {
+            capture: modifiers.has('capture'),
+            once: modifiers.has('once'),
+            passive: modifiers.has('passive'),
+          };
+
+          element.addEventListener(eventName, handler, options);
+          element.removeAttribute(attr.name);
+          break; // Move to next attribute
         }
       }
     }
@@ -917,37 +932,6 @@ function parseHTML(html: string): DocumentFragment {
   const template = document.createElement('template');
   template.innerHTML = html.trim();
   return template.content;
-}
-
-/**
- * Create DocumentFragment from template result or string
- */
-function createFragment(content: TemplateResult | string): DocumentFragment {
-  if (typeof content === 'string') {
-    const template = document.createElement('template');
-    template.innerHTML = content;
-    return template.content;
-  }
-
-  // For TemplateResult, render it to a temp container
-  const container = document.createElement('div');
-  renderTemplate(content, container);
-
-  const fragment = document.createDocumentFragment();
-  while (container.firstChild) {
-    fragment.appendChild(container.firstChild);
-  }
-
-  return fragment;
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 /**
@@ -977,34 +961,13 @@ html.classes = (classes: string | string[] | Record<string, boolean | undefined 
  * Create inline style string from object
  */
 html.style = (styles: Record<string, string | number | undefined | null>): string => {
-  return Object.entries(styles)
-    .filter(([_, value]) => value !== undefined && value !== null)
-    .map(([key, value]) => {
-      const cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-      const cssValue = typeof value === 'number' && !isUnitlessProperty(key) ? `${value}px` : value;
-      return `${cssKey}:${cssValue}`;
-    })
-    .join(';');
+  // Filter out null/undefined and use normalizeStyle
+  const filtered = Object.fromEntries(
+    Object.entries(styles).filter(([_, value]) => value !== undefined && value !== null),
+  ) as Record<string, string | number>;
+
+  return normalizeStyle(filtered);
 };
-
-/**
- * Check if CSS property is unitless
- */
-function isUnitlessProperty(prop: string): boolean {
-  const unitlessProps = new Set([
-    'opacity',
-    'zIndex',
-    'fontWeight',
-    'lineHeight',
-    'flex',
-    'flexGrow',
-    'flexShrink',
-    'order',
-    'zoom',
-  ]);
-  return unitlessProps.has(prop);
-}
-
 
 /**
  * Conditional rendering directive (#when)
@@ -1019,11 +982,8 @@ function isUnitlessProperty(prop: string): boolean {
  *   else: () => html`<div>Hidden</div>`
  * })
  *
- * @example Unless behavior (inverse)
- * html.when(isHidden, {
- *   then: () => html`<div>Content</div>`,
- *   unless: true  // Renders when condition is falsy
- * })
+ * @example Unless behavior - just negate the condition
+ * html.when(!isHidden, () => html`<div>Content</div>`)
  */
 html.when = (
   condition: boolean | Signal<boolean> | ComputedSignal<boolean>,
@@ -1034,9 +994,8 @@ html.when = (
     | {
         then: TemplateResult | string | (() => TemplateResult | string);
         else?: TemplateResult | string | (() => TemplateResult | string);
-        unless?: boolean;
       },
-): any => {
+): WhenDirective => {
   // Handle simple case: html.when(condition, template)
   if (typeof templateOrOptions === 'function' || typeof templateOrOptions === 'string' || 'type' in templateOrOptions) {
     return {
@@ -1047,11 +1006,10 @@ html.when = (
   }
 
   // Handle options object
-  const { then: template, else: elseTemplate, unless: inverse } = templateOrOptions;
+  const { then: template, else: elseTemplate } = templateOrOptions;
   return {
     condition,
     elseTemplate,
-    inverse,
     template,
     type: 'when',
   };
@@ -1072,7 +1030,7 @@ html.each = <T>(
   keyFn: (item: T, index: number) => string | number,
   template: (item: T, index: number) => TemplateResult | string,
   fallback?: TemplateResult | string | (() => TemplateResult | string),
-): any => {
+): EachDirective<T> => {
   return {
     fallback,
     items,
@@ -1092,7 +1050,7 @@ html.each = <T>(
 html.show = (
   condition: boolean | Signal<boolean> | ComputedSignal<boolean>,
   template: TemplateResult | string,
-): any => {
+): ShowDirective => {
   return {
     condition,
     template,
@@ -1109,7 +1067,7 @@ html.show = (
  * html`${html.log(count, 'Current count')}`
  * html`${html.log(user)}`
  */
-html.log = (value: unknown, label?: string): any => {
+html.log = (value: unknown, label?: string): LogDirective => {
   return {
     label,
     type: 'log',
@@ -1130,7 +1088,7 @@ html.log = (value: unknown, label?: string): any => {
  * // Render in body
  * html`${html.portal(html`<div class="tooltip">Tooltip</div>`, document.body)}`
  */
-html.portal = (template: TemplateResult | string, target: string | Element): any => {
+html.portal = (template: TemplateResult | string, target: string | Element): PortalDirective => {
   return {
     target,
     template,

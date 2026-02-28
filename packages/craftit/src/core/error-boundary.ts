@@ -41,7 +41,7 @@ export interface ErrorBoundaryOptions {
  */
 export function errorBoundary(
   component: () => TemplateResult | string,
-  options: ErrorBoundaryOptions
+  options: ErrorBoundaryOptions,
 ): TemplateResult | string {
   try {
     return component();
@@ -88,19 +88,11 @@ export function createErrorBoundary(
   component: () => TemplateResult | string,
   options: Omit<ErrorBoundaryOptions, 'fallback'> & {
     fallback: (error: Error, info: ErrorInfo & { retry: () => void }) => TemplateResult | string;
-  }
+  },
 ) {
-  let retryCount = 0;
-  const maxRetries = 3;
-
   const retry = () => {
-    if (retryCount < maxRetries) {
-      retryCount++;
-      options.onRetry?.();
-      return render();
-    } else {
-      console.warn('[craftit] Max retries reached');
-    }
+    options.onRetry?.();
+    return render();
   };
 
   const render = (): TemplateResult | string => {
@@ -116,9 +108,7 @@ export function createErrorBoundary(
 /**
  * Global error handler for uncaught errors in components
  */
-export function setGlobalErrorHandler(
-  handler: (error: Error, info: ErrorInfo) => void
-): void {
+export function setGlobalErrorHandler(handler: (error: Error, info: ErrorInfo) => void): void {
   if (typeof window !== 'undefined') {
     window.addEventListener('error', (event) => {
       handler(event.error, {
@@ -128,13 +118,9 @@ export function setGlobalErrorHandler(
     });
 
     window.addEventListener('unhandledrejection', (event) => {
-      handler(
-        new Error(`Unhandled Promise Rejection: ${event.reason}`),
-        {
-          timestamp: Date.now(),
-        }
-      );
+      handler(new Error(`Unhandled Promise Rejection: ${event.reason}`), {
+        timestamp: Date.now(),
+      });
     });
   }
 }
-

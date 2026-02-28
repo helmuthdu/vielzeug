@@ -1,83 +1,3 @@
-/**
- * bit-grid - A flexible grid layout component with intuitive responsive controls
- *
- * @element bit-grid
- *
- * @attr {string} cols - Number of columns: '1'-'12' | 'auto'
- * @attr {string} cols-sm - Columns at sm breakpoint (≥640px)
- * @attr {string} cols-md - Columns at md breakpoint (≥768px)
- * @attr {string} cols-lg - Columns at lg breakpoint (≥1024px)
- * @attr {string} cols-xl - Columns at xl breakpoint (≥1280px)
- * @attr {string} rows - Number of rows: '1'-'12' | 'auto'
- * @attr {string} gap - Gap size: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (or 'md lg' for row-gap col-gap)
- * @attr {string} align - Align items vertically: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
- * @attr {string} justify - Justify items horizontally: 'start' | 'center' | 'end' | 'stretch'
- * @attr {string} flow - Grid auto flow: 'row' | 'column' | 'row-dense' | 'column-dense'
- * @attr {boolean} responsive - Enable auto-fit responsive columns
- * @attr {string} layout - Preset layouts: 'sidebar' | 'sidebar-right' | 'app-shell' | 'nav-content' | 'bento'
- *
- * @slot - Grid items
- *
- * @cssprop --grid-cols - Custom column template
- * @cssprop --grid-rows - Custom row template
- * @cssprop --grid-gap - Gap between items
- * @cssprop --grid-row-gap - Row gap
- * @cssprop --grid-col-gap - Column gap
- * @cssprop --grid-min-col-width - Minimum column width for responsive mode (default: 250px)
- * @cssprop --grid-max-col-width - Maximum column width for responsive mode (default: 1fr)
- *
- * @example
- * <!-- Simple 3-column grid -->
- * <bit-grid cols="3" gap="md">
- *   <bit-card>Item 1</bit-card>
- *   <bit-card>Item 2</bit-card>
- *   <bit-card>Item 3</bit-card>
- * </bit-grid>
- *
- * @example
- * <!-- Responsive grid with breakpoints -->
- * <bit-grid cols="1" cols-sm="2" cols-md="3" cols-lg="4" gap="lg">
- *   <bit-card>Item 1</bit-card>
- *   <bit-card>Item 2</bit-card>
- *   <bit-card>Item 3</bit-card>
- * </bit-grid>
- *
- * @example
- * <!-- Sidebar layout -->
- * <bit-grid layout="sidebar" gap="lg">
- *   <aside>Sidebar</aside>
- *   <main>Content</main>
- * </bit-grid>
- *
- * @example
- * <!-- Material Design 3 App Shell (navigation rail) -->
- * <bit-grid layout="app-shell" gap="none">
- *   <nav>Navigation Rail (80px compact, 256px expanded)</nav>
- *   <header>Top App Bar</header>
- *   <main>Content Area</main>
- * </bit-grid>
- *
- * @example
- * <!-- M3 Navigation Drawer Pattern -->
- * <bit-grid layout="nav-content" gap="none">
- *   <header>Top App Bar</header>
- *   <nav>Navigation Drawer (256px)</nav>
- *   <main>Content Area</main>
- * </bit-grid>
- *
- * @example
- * <!-- Bento grid (magazine-style asymmetric layout) -->
- * <bit-grid layout="bento" gap="md">
- *   <bit-card>Hero (large)</bit-card>
- *   <bit-card>Featured</bit-card>
- *   <bit-card>Card 1</bit-card>
- *   <bit-card>Card 2</bit-card>
- *   <bit-card>Card 3</bit-card>
- *   <bit-card>Card 4</bit-card>
- *   <bit-card>Card 5 (wide)</bit-card>
- * </bit-grid>
- */
-
 // -------------------- Styles --------------------
 const styles = /* css */ `
   @layer buildit.base {
@@ -714,7 +634,7 @@ class BitGrid extends HTMLElement {
   render() {
     this.shadowRoot!.innerHTML = /* html */ `
       <style>${styles}</style>
-      <slot></slot>
+      <div part="grid"><slot></slot></div>
     `;
   }
 }

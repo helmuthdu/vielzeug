@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { type ComponentFixture, createFixture, userEvent } from '../../../utils/testing';
+import { type ComponentFixture, createFixture, userEvent } from '../../../utils/trial';
 
 describe('bit-checkbox', () => {
   let fixture: ComponentFixture<HTMLElement>;

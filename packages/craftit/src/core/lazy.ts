@@ -3,8 +3,8 @@
  * Support for lazy-loaded components with suspense
  */
 
-import { signal } from './signal';
 import type { TemplateResult } from '../template/html';
+import { signal } from './signal';
 
 export interface LazyComponentModule {
   default: () => TemplateResult;
@@ -34,32 +34,26 @@ export interface LazyOptions {
  */
 export function lazy(
   factory: () => Promise<LazyComponentModule>,
-  options: LazyOptions = {}
+  options: LazyOptions = {},
 ): () => TemplateResult | string {
   const loading = signal(true);
   const error = signal<Error | null>(null);
   const component = signal<(() => TemplateResult) | null>(null);
 
-  let loadStarted = false;
+  // Start loading immediately
+  factory()
+    .then((module) => {
+      component.value = module.default;
+      loading.value = false;
+    })
+    .catch((err) => {
+      error.value = err;
+      loading.value = false;
+      options.onError?.(err);
+      console.error('[craftit] Lazy loading error:', err);
+    });
 
   return () => {
-    // Start loading on first access
-    if (!loadStarted) {
-      loadStarted = true;
-
-      factory()
-        .then((module) => {
-          component.value = module.default;
-          loading.value = false;
-        })
-        .catch((err) => {
-          error.value = err;
-          loading.value = false;
-          options.onError?.(err);
-          console.error('[craftit] Lazy loading error:', err);
-        });
-    }
-
     // Show error if loading failed
     if (error.value) {
       return `<div class="lazy-error">Failed to load component: ${error.value.message}</div>`;
@@ -81,17 +75,3 @@ export function lazy(
     return '';
   };
 }
-
-/**
- * Preload a lazy component
- * Useful for preloading components before they're needed
- *
- * @example
- * const HeavyComponent = lazy(() => import('./Heavy'));
- * preload(HeavyComponent); // Start loading immediately
- */
-export function preload(lazyComponent: () => TemplateResult | string): void {
-  // Trigger the lazy component to start loading
-  lazyComponent();
-}
-

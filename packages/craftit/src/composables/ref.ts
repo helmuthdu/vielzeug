@@ -38,7 +38,7 @@ export function bindRef<T>(ref: Ref<T>, element: T): void {
  * @internal
  */
 export function isRef(value: unknown): value is Ref {
-  return value !== null && typeof value === 'object' && 'value' in value && Object.keys(value).length === 1;
+  return (
+    value !== null && typeof value === 'object' && 'value' in value && Object.getOwnPropertyNames(value).length === 1
+  );
 }
-
-

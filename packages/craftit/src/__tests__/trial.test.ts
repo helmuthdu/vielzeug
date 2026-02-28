@@ -2,7 +2,6 @@
  * Testing - Render Utilities Tests
  * Tests for the testing utilities themselves
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { define, html, signal } from '..';
 import {
   cleanup,
@@ -13,7 +12,7 @@ import {
   waitFor,
   waitForElement,
   waitForElementToBeRemoved,
-} from '../testing/render';
+} from '../test/trial';
 
 // Counter for unique component names
 let componentCounter = 0;

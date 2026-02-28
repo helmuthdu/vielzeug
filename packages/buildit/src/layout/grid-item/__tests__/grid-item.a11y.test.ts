@@ -1,5 +1,5 @@
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/testing';
+import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for bit-grid-item component using axe-core
