@@ -5,6 +5,7 @@
 
 import { type Signal, signal, watch } from '../core/signal';
 import { getContext, onCleanup } from './context';
+import { toKebab } from '../utils/string';
 
 /**
  * Prop options
@@ -12,21 +13,12 @@ import { getContext, onCleanup } from './context';
 export interface PropOptions<T> {
   /** Reflect prop changes back to attribute */
   reflect?: boolean;
-  /** Emit change events */
-  notify?: boolean;
   /** Parse attribute value */
   parse?: (value: string) => T;
   /** Serialize value to attribute */
   serialize?: (value: T) => string;
   /** Prop is readonly (attribute → prop only) */
   readonly?: boolean;
-}
-
-/**
- * Convert camelCase to kebab-case
- */
-function toKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
 /**
@@ -128,44 +120,3 @@ export function prop<T>(name: string, defaultValue: T, options?: PropOptions<T>)
   return sig;
 }
 
-/**
- * Create a boolean prop
- */
-export function propBoolean(name: string, defaultValue = false): Signal<boolean> {
-  return prop(name, defaultValue, {
-    parse: (val) => val === '' || val === 'true',
-    reflect: true,
-    serialize: (val) => (val ? '' : 'false'),
-  });
-}
-
-/**
- * Create a number prop
- */
-export function propNumber(name: string, defaultValue = 0): Signal<number> {
-  return prop(name, defaultValue, {
-    parse: (val) => {
-      const num = Number(val);
-      return Number.isNaN(num) ? 0 : num;
-    },
-    reflect: true,
-    serialize: (val) => String(val),
-  });
-}
-
-/**
- * Create a JSON prop
- */
-export function propJSON<T>(name: string, defaultValue: T): Signal<T> {
-  return prop(name, defaultValue, {
-    parse: (val) => {
-      try {
-        return JSON.parse(val);
-      } catch {
-        return defaultValue;
-      }
-    },
-    reflect: true,
-    serialize: (val) => JSON.stringify(val),
-  });
-}

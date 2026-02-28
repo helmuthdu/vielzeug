@@ -117,10 +117,6 @@ export interface TemplateResult {
   values: unknown[];
 }
 
-/**
- * Fragment symbol for multi-root templates
- */
-export const Fragment = Symbol('Fragment');
 
 /**
  * Check if value is a signal
@@ -1009,40 +1005,6 @@ function isUnitlessProperty(prop: string): boolean {
   return unitlessProps.has(prop);
 }
 
-/**
- * Render raw HTML without escaping (UNSAFE - use with caution!)
- *
- * ⚠️ WARNING: This can expose your application to XSS attacks if used with
- * untrusted content. Only use with content you control or have sanitized.
- *
- * @example Safe usage (static content)
- * html.unsafe('<div class="highlight">Formatted text</div>')
- *
- * @example DANGEROUS (user content - DON'T DO THIS!)
- * html.unsafe(userInput) // ❌ XSS vulnerability!
- *
- * @example Safe with sanitization
- * import DOMPurify from 'dompurify';
- * html.unsafe(DOMPurify.sanitize(userInput)) // ✅ Safe
- *
- * Returns a special marker that will be processed during rendering
- */
-html.unsafe = (htmlContent: string): TemplateResult => {
-  // Development warning (check for NODE_ENV safely)
-  if (typeof globalThis !== 'undefined') {
-    const isDev = !(globalThis as any).__CRAFTIT_PROD__;
-    if (isDev) {
-      console.warn('[Craftit] html.unsafe() used - ensure content is trusted or sanitized to prevent XSS attacks');
-    }
-  }
-
-  // Create a special template result that marks this as unsafe HTML
-  return {
-    strings: ['', ''] as unknown as TemplateStringsArray,
-    type: 'template',
-    values: [{ __unsafeHTML: htmlContent }],
-  };
-};
 
 /**
  * Conditional rendering directive (#when)

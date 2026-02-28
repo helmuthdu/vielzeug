@@ -78,6 +78,7 @@ export function onCleanup(cleanup: Cleanup): void {
 
 /**
  * Run all cleanups for a context
+ * @internal - Used by define.ts
  */
 export function runCleanups(context: ComponentContext): void {
   for (const cleanup of context.cleanups) {
@@ -122,27 +123,3 @@ export function inject<T>(key: InjectionKey<T> | string, defaultValue?: T): T | 
   return defaultValue;
 }
 
-/**
- * Create a typed injection key
- * @param description - Description for debugging
- */
-export function createInjectionKey<T>(description: string): InjectionKey<T> {
-  return Symbol(description) as InjectionKey<T>;
-}
-
-/**
- * Check if a key has been provided
- * @param key - Key to check
- */
-export function hasInjection(key: InjectionKey<unknown> | string): boolean {
-  let context = maybeGetContext();
-
-  while (context) {
-    if (context.provides.has(key)) {
-      return true;
-    }
-    context = context.parent;
-  }
-
-  return false;
-}

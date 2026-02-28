@@ -1,23 +1,71 @@
 /**
  * Craftit - CSS Helpers
- * Utilities for component styling
+ * Utilities for component styling with CSP support
  */
+
+import { toKebab } from '../utils/string';
+
+/**
+ * Get CSP nonce from meta tag
+ */
+function getCSPNonce(): string | null {
+  if (typeof document === 'undefined') return null;
+
+  const meta = document.querySelector('meta[name="csp-nonce"]') ||
+                document.querySelector('meta[property="csp-nonce"]');
+  return meta?.getAttribute('content') || null;
+}
+
+/**
+ * CSS style result with nonce support
+ */
+export interface CSSResult {
+  content: string;
+  nonce?: string;
+}
 
 /**
  * CSS tagged template function
+ * Supports CSP nonce for inline styles
+ *
+ * @example
+ * // With CSP nonce in meta tag
+ * <meta name="csp-nonce" content="abc123">
+ *
+ * // CSS will automatically use the nonce
+ * const styles = css`color: red;`;
  */
-export function css(strings: TemplateStringsArray, ...values: unknown[]): string {
-  return strings.reduce((result, str, i) => {
+export function css(strings: TemplateStringsArray, ...values: unknown[]): CSSResult {
+  const content = strings.reduce((result, str, i) => {
     return result + str + (values[i] ?? '');
   }, '');
+
+  const nonce = getCSPNonce();
+
+  return {
+    content,
+    ...(nonce && { nonce })
+  };
 }
 
 /**
- * Convert camelCase to kebab-case
+ * Create a style element with CSP nonce
  */
-function toKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+export function createStyleElement(cssResult: CSSResult | string): HTMLStyleElement {
+  const style = document.createElement('style');
+
+  if (typeof cssResult === 'string') {
+    style.textContent = cssResult;
+  } else {
+    style.textContent = cssResult.content;
+    if (cssResult.nonce) {
+      style.setAttribute('nonce', cssResult.nonce);
+    }
+  }
+
+  return style;
 }
+
 
 /**
  * Theme variable proxy
@@ -77,46 +125,3 @@ css.theme = <T extends Record<string, string | number>>(
   });
 };
 
-/**
- * Helper to create class names conditionally
- */
-css.classes = (
-  classes:
-    | Record<string, boolean | undefined>
-    | (string | false | undefined | null | Record<string, boolean | undefined>)[],
-): string => {
-  // Array support
-  if (Array.isArray(classes)) {
-    return classes
-      .map((item) => {
-        if (!item) return '';
-        if (typeof item === 'string') return item;
-        if (typeof item === 'object') {
-          // Nested object
-          return Object.entries(item)
-            .filter(([, value]) => value)
-            .map(([key]) => key)
-            .join(' ');
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join(' ');
-  }
-
-  // Object support
-  return Object.entries(classes)
-    .filter(([, value]) => value)
-    .map(([key]) => key)
-    .join(' ');
-};
-
-/**
- * Helper to create inline styles from object
- */
-css.styles = (styles: Partial<CSSStyleDeclaration> | Record<string, string | number | undefined | null>): string => {
-  return Object.entries(styles)
-    .filter(([, value]) => value != null)
-    .map(([key, value]) => `${toKebab(key)}: ${value}`)
-    .join('; ');
-};
