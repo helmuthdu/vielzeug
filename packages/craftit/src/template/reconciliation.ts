@@ -3,32 +3,32 @@
  * Efficient list rendering with DOM node reuse
  */
 
+import { effect } from '../core/signal';
 import type { EachDirective } from './directives';
 import type { TemplateResult } from './html';
-import { effect } from '../core/signal';
 import { renderTemplate } from './html';
 
 /**
  * Keyed list state for reconciliation
  */
 export interface KeyedListState {
-  keyToNode: Map<string | number, {
-    node: Node;
-    data: any;
-  }>;
+  keyToNode: Map<
+    string | number,
+    {
+      node: Node;
+      data: any;
+    }
+  >;
   parent: Element | null;
   marker: Comment | null;
+  fallbackNodes?: Node[]; // Track fallback nodes for cleanup
 }
 
 /**
  * Reconcile a keyed list
  * This implements a simple but effective reconciliation algorithm
  */
-export function reconcileKeyedList<T>(
-  marker: Comment,
-  directive: EachDirective<T>,
-  state: KeyedListState,
-): void {
+export function reconcileKeyedList<T>(marker: Comment, directive: EachDirective<T>, state: KeyedListState): void {
   const { items: itemsSource, keyFn, template, fallback } = directive;
 
   // Get current items
@@ -39,6 +39,16 @@ export function reconcileKeyedList<T>(
 
   state.parent = marker.parentElement;
   state.marker = marker;
+
+  // Clean up any previous fallback nodes
+  if (state.fallbackNodes) {
+    for (const node of state.fallbackNodes) {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+    }
+    state.fallbackNodes = undefined;
+  }
 
   // Handle empty list with fallback
   if (items.length === 0) {
@@ -54,6 +64,9 @@ export function reconcileKeyedList<T>(
     if (fallback && state.parent) {
       const fallbackContent = typeof fallback === 'function' ? fallback() : fallback;
       const fragment = createFragmentFromTemplate(fallbackContent);
+
+      // Track fallback nodes
+      state.fallbackNodes = Array.from(fragment.childNodes);
       state.parent.insertBefore(fragment, marker.nextSibling);
     }
 
@@ -62,18 +75,15 @@ export function reconcileKeyedList<T>(
 
   // Build new key map
   const newKeys = items.map((item, index) => ({
-    key: keyFn(item, index),
-    item,
     index,
+    item,
+    key: keyFn(item, index),
   }));
 
   if (!state.parent) return;
 
-  state.parent = parent;
-  state.marker = marker;
-
   // Track which keys we've seen
-  const newKeySet = new Set(newKeys.map(k => k.key));
+  const newKeySet = new Set(newKeys.map((k) => k.key));
 
   // Remove nodes for keys that no longer exist
   for (const [key, { node }] of state.keyToNode.entries()) {
@@ -97,7 +107,9 @@ export function reconcileKeyedList<T>(
 
       // Check if node needs to be moved
       if (node.previousSibling !== previousNode) {
-        state.parent.insertBefore(node, previousNode.nextSibling);
+        if (state.parent) {
+          state.parent.insertBefore(node, previousNode.nextSibling);
+        }
       }
 
       // Update the node data (in case item changed)
@@ -110,13 +122,15 @@ export function reconcileKeyedList<T>(
 
       // Insert after previous node
       const nodes = Array.from(fragment.childNodes);
-      state.parent.insertBefore(fragment, previousNode.nextSibling);
+      if (state.parent) {
+        state.parent.insertBefore(fragment, previousNode.nextSibling);
+      }
 
       // Store reference (use first node as anchor)
       if (nodes.length > 0) {
         state.keyToNode.set(key, {
-          node: nodes[0],
           data: item,
+          node: nodes[0],
         });
         previousNode = nodes[nodes.length - 1];
       }
@@ -149,11 +163,7 @@ function createFragmentFromTemplate(content: TemplateResult | string): DocumentF
 /**
  * Make keyed list reactive
  */
-export function makeKeyedListReactive<T>(
-  marker: Comment,
-  directive: EachDirective<T>,
-  state: KeyedListState,
-): void {
+export function makeKeyedListReactive<T>(marker: Comment, directive: EachDirective<T>, state: KeyedListState): void {
   const { items: itemsSource } = directive;
 
   // If items is a signal, make it reactive
@@ -166,5 +176,3 @@ export function makeKeyedListReactive<T>(
     reconcileKeyedList(marker, directive, state);
   }
 }
-
-

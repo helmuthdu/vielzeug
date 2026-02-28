@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Register CSS custom property for rainbow animation
  * Auto-registered when rainbowEffectMixin is called
@@ -37,7 +35,7 @@ export function registerRainbowProperty() {
  * @returns CSS string with rainbow border animation
  *
  * @example
- * ```typescript
+ * ```ts
  * import { rainbowEffectMixin } from '../../styles/effects/rainbow.css';
  *
  * const styles = css`
@@ -50,7 +48,7 @@ export const rainbowEffectMixin = (selector: string) => {
   // Auto-register the CSS property
   registerRainbowProperty();
 
-  return css`
+  return `
     @layer buildit.utilities {
       /* ========================================
          Rainbow Border Effect

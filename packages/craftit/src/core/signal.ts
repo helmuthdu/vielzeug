@@ -23,11 +23,11 @@ export type Cleanup = () => void;
  */
 class Effect {
   public dependencies = new Set<Cleanup>();
-  public fn: () => void | Cleanup;
+  public fn: () => unknown;
   private cleanup?: Cleanup;
   private isDisposed = false;
 
-  constructor(fn: () => void | Cleanup) {
+  constructor(fn: () => unknown) {
     this.fn = fn;
   }
 
@@ -44,7 +44,7 @@ class Effect {
     try {
       const result = this.fn();
       if (typeof result === 'function') {
-        this.cleanup = result;
+        this.cleanup = result as Cleanup;
       }
     } finally {
       effectStack.pop();
@@ -339,15 +339,13 @@ export function readonly<T>(source: Signal<T>): Readonly<Signal<T>> {
  *   result.value = await data.json();
  * });
  */
-export function effect(fn: () => void | Cleanup): Cleanup;
-export function effect(fn: () => Promise<void | Cleanup>): Cleanup;
-export function effect(fn: (() => void | Cleanup) | (() => Promise<void | Cleanup>)): Cleanup {
+export function effect(fn: (() => unknown) | (() => Promise<unknown>)): Cleanup {
   // Check if function is async by checking its constructor
   const isAsync = fn.constructor.name === 'AsyncFunction';
 
   // If it's async, handle async
   if (isAsync) {
-    let cleanup: Cleanup | void;
+    let cleanup: Cleanup | undefined;
     let currentController: AbortController | null = null;
 
     // Create a sync effect that manages the async execution
@@ -365,11 +363,11 @@ export function effect(fn: (() => void | Cleanup) | (() => Promise<void | Cleanu
       const controller = currentController;
 
       // Run async function
-      (fn as () => Promise<void | Cleanup>)()
+      (fn as () => Promise<unknown>)()
         .then((asyncResult) => {
           // Only set cleanup if this run wasn't aborted
           if (!controller.signal.aborted && typeof asyncResult === 'function') {
-            cleanup = asyncResult;
+            cleanup = asyncResult as Cleanup;
           }
         })
         .catch((err) => {
@@ -392,7 +390,7 @@ export function effect(fn: (() => void | Cleanup) | (() => Promise<void | Cleanu
   }
 
   // Handle sync
-  const eff = new Effect(fn as () => void | Cleanup);
+  const eff = new Effect(fn as () => unknown);
   eff.execute();
 
   return () => eff.dispose();

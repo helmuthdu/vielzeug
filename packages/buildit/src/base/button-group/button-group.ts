@@ -1,15 +1,6 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-/**
- * # bit-button-group
- *
- * A container for grouping buttons with coordinated styling and layout.
- *
- * @element bit-button-group
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles
@@ -164,55 +155,78 @@ export interface ButtonGroupProps {
 }
 
 // -------------------- Component Definition --------------------
-defineElement<HTMLDivElement, ButtonGroupProps>('bit-button-group', {
-  observedAttributes: ['size', 'variant', 'color', 'orientation', 'attached', 'fullwidth'] as const,
+/**
+ * A container for grouping buttons with coordinated styling and layout.
+ *
+ * @element bit-button-group
+ *
+ * @attr {string} size - Button size: 'sm' | 'md' | 'lg' (propagated to children)
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost' (propagated to children)
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral' (propagated to children)
+ * @attr {string} orientation - Group orientation: 'horizontal' | 'vertical'
+ * @attr {boolean} attached - Attach buttons together (no gap, rounded only on edges)
+ * @attr {boolean} fullwidth - Make all buttons full width
+ *
+ * @slot - Button elements (bit-button)
+ *
+ * @cssprop --group-gap - Gap between buttons
+ * @cssprop --group-radius - Border radius for edge buttons
+ */
+class BitButtonGroup extends HTMLElement {
+  static observedAttributes = ['size', 'variant', 'color', 'orientation', 'attached', 'fullwidth'] as const;
 
-  onAttributeChanged(name, _oldValue, _newValue, el) {
-    if (name === 'size' || name === 'variant' || name === 'color') {
-      const host = el as unknown as HTMLElement;
-      // Reuse the applyToChildren logic stored on the element
-      const applyFn = (host as any).__applyToChildren;
-      if (applyFn) applyFn();
-    }
-  },
+  private applyToChildren: () => void;
 
-  onConnected(el) {
-    const host = el as unknown as HTMLElement;
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
 
     // Helper to apply attributes to child buttons
-    const applyToChildren = () => {
-      const size = host.getAttribute('size');
-      const variant = host.getAttribute('variant');
-      const color = host.getAttribute('color');
+    this.applyToChildren = () => {
+      const size = this.getAttribute('size');
+      const variant = this.getAttribute('variant');
+      const color = this.getAttribute('color');
 
-      const buttons = host.querySelectorAll('bit-button');
+      const buttons = this.querySelectorAll('bit-button');
       buttons.forEach((button) => {
         if (size) button.setAttribute('size', size);
         if (variant) button.setAttribute('variant', variant);
         if (color) button.setAttribute('color', color);
       });
     };
+  }
 
-    // Store for use in onAttributeChanged
-    (host as any).__applyToChildren = applyToChildren;
+  connectedCallback() {
+    this.render();
 
     // Initial propagation to existing children
-    applyToChildren();
+    this.applyToChildren();
 
     // Re-apply when slotted children change
-    const slot = host.shadowRoot?.querySelector('slot');
+    const slot = this.shadowRoot?.querySelector('slot');
     if (slot) {
-      slot.addEventListener('slotchange', applyToChildren);
+      slot.addEventListener('slotchange', this.applyToChildren);
     }
-  },
+  }
 
-  styles: [styles],
+  attributeChangedCallback(name: string) {
+    if (name === 'size' || name === 'variant' || name === 'color') {
+      this.applyToChildren();
+    }
+  }
 
-  template: () => html`
-    <div class="button-group" role="group">
-      <slot></slot>
-    </div>
-  `,
-});
+  render() {
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <div class="button-group" role="group">
+        <slot></slot>
+      </div>
+    `;
+  }
+}
+
+if (!customElements.get('bit-button-group')) {
+  customElements.define('bit-button-group', BitButtonGroup);
+}
 
 export default {};

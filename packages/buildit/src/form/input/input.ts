@@ -1,4 +1,3 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import {
   colorThemeMixin,
   disabledLoadingMixin,
@@ -6,24 +5,9 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type {
-  ComponentSize,
-  InputChangeEventDetail,
-  InputType,
-  RoundedSize,
-  ThemeColor,
-  VisualVariant,
-} from '../../types';
+import type { ComponentSize, InputType, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-/**
- * # bit-input
- *
- * A customizable text input component with multiple variants, label placements, and form features.
- *
- * @element bit-input
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -182,6 +166,24 @@ const styles = css`
     :host(:not([disabled])) .field:focus-within ::slotted([slot='prefix']),
     :host(:not([disabled])) .field:focus-within ::slotted([slot='suffix']) {
       color: var(--_theme-focus);
+    }
+
+    /* ========================================
+       Error State
+       ======================================== */
+
+    :host([error]) .field {
+      border-color: var(--color-error);
+    }
+
+    :host([error]) .field:focus-within {
+      border-color: var(--color-error);
+      box-shadow: var(--color-error-focus-shadow);
+    }
+
+    :host([error]) .label-inset,
+    :host([error]) .label-outside {
+      color: var(--color-error);
     }
   }
 
@@ -420,6 +422,8 @@ export type InputProps = {
   disabled?: boolean;
   /** Helper text displayed below the input */
   helper?: string;
+  /** Error message (marks field as invalid) */
+  error?: string;
   /** Form field name */
   name?: string;
   /** Placeholder text */
@@ -440,19 +444,60 @@ export type InputProps = {
   variant?: Exclude<VisualVariant, 'glass'>;
 };
 
-/**
- * Input Change Event Detail
- */
-export type InputInputEvent = InputChangeEventDetail;
-
 const VALID_INPUT_TYPES = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'] as const;
 
 const validateInputType = (type: string | null): string => {
-  return VALID_INPUT_TYPES.includes(type as any) ? type! : 'text';
+  return VALID_INPUT_TYPES.includes(type as (typeof VALID_INPUT_TYPES)[number]) ? type! : 'text';
 };
 
-defineElement<HTMLInputElement, InputProps>('bit-input', {
-  observedAttributes: [
+/**
+ * A customizable text input component with multiple variants, label placements, and form features.
+ *
+ * @element bit-input
+ *
+ * @attr {string} label - Label text
+ * @attr {string} label-placement - Label placement: 'inset' | 'outside'
+ * @attr {string} type - HTML input type: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search'
+ * @attr {string} value - Current input value
+ * @attr {string} placeholder - Placeholder text
+ * @attr {string} name - Form field name
+ * @attr {string} helper - Helper text displayed below the input
+ * @attr {string} error - Error message (marks field as invalid)
+ * @attr {boolean} disabled - Disable input interaction
+ * @attr {boolean} readonly - Make the input read-only
+ * @attr {boolean} required - Mark the field as required
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'
+ * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
+ *
+ * @fires input - Emitted when input value changes (on every keystroke)
+ * @fires change - Emitted when input loses focus with changed value
+ *
+ * @slot prefix - Content before the input (e.g., icons)
+ * @slot suffix - Content after the input (e.g., clear button, validation icon)
+ * @slot helper - Complex helper content below the input
+ *
+ * @part wrapper - The input wrapper element
+ * @part label - The label element (inset or outside)
+ * @part field - The field container element
+ * @part input-row - The input row container element
+ * @part input - The input element
+ * @part helper - The helper text element
+ *
+ * @cssprop --input-bg - Background color
+ * @cssprop --input-color - Text color
+ * @cssprop --input-border-color - Border color
+ * @cssprop --input-focus - Focus border color
+ * @cssprop --input-placeholder-color - Placeholder text color
+ * @cssprop --input-radius - Border radius
+ * @cssprop --input-padding - Inner padding (vertical horizontal)
+ * @cssprop --input-gap - Gap between prefix/suffix and input
+ * @cssprop --input-font-size - Font size
+ */
+class BitInput extends HTMLElement {
+  static formAssociated = true;
+  static observedAttributes = [
     'type',
     'value',
     'name',
@@ -460,6 +505,7 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     'label',
     'label-placement',
     'helper',
+    'error',
     'disabled',
     'readonly',
     'required',
@@ -467,16 +513,70 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
     'variant',
     'color',
     'rounded',
-  ] as const,
+  ] as const;
 
-  onAttributeChanged(name, _oldValue, newValue, el) {
-    const host = el as unknown as HTMLElement;
-    const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  #internals: ElementInternals;
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.#internals = this.attachInternals();
+  }
+
+  formResetCallback() {
+    this.setAttribute('value', '');
+    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+    if (input) input.value = '';
+    this.#updateFormValue();
+  }
+
+  formStateRestoreCallback(state: string | File | FormData | null) {
+    if (typeof state === 'string') {
+      this.setAttribute('value', state);
+      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+      if (input) input.value = state;
+    }
+    this.#updateFormValue();
+  }
+
+  #updateFormValue() {
+    if (!this.#internals?.setFormValue) return;
+    const value = this.getAttribute('value') || '';
+    this.#internals.setFormValue(value);
+  }
+
+  connectedCallback() {
+    this.render();
+
+    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+    if (!input) return;
+
+    // Helper to update value and emit event
+    const handleValueChange = (e: Event, eventName: 'input' | 'change') => {
+      const target = e.target as HTMLInputElement;
+      this.setAttribute('value', target.value);
+      this.#updateFormValue();
+      this.dispatchEvent(
+        new CustomEvent(eventName, {
+          bubbles: true,
+          composed: true,
+          detail: { originalEvent: e, value: target.value },
+        }),
+      );
+    };
+
+    input.addEventListener('input', (e) => handleValueChange(e, 'input'));
+    input.addEventListener('change', (e) => handleValueChange(e, 'change'));
+  }
+
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
     if (!input) return;
 
     switch (name) {
       case 'value':
         input.value = newValue ?? '';
+        this.#updateFormValue();
         break;
       case 'name':
         input.name = newValue ?? '';
@@ -497,79 +597,81 @@ defineElement<HTMLInputElement, InputProps>('bit-input', {
         input.required = newValue !== null;
         break;
     }
-  },
+  }
 
-  onConnected(el) {
-    const host = el as unknown as HTMLElement;
-    const input = el.query('input') as HTMLInputElement | undefined;
-    if (!input) return;
-
-    // Helper to update value and emit event
-    const handleValueChange = (e: Event, eventName: 'input' | 'change') => {
-      const target = e.target as HTMLInputElement;
-      host.setAttribute('value', target.value);
-      el.emit(eventName, { originalEvent: e, value: target.value });
-    };
-
-    el.on(input, 'input', (e) => handleValueChange(e, 'input'));
-    el.on(input, 'change', (e) => handleValueChange(e, 'change'));
-  },
-
-  styles: [styles],
-
-  template: (el) => {
-    const type = validateInputType(el.getAttribute('type'));
-    const labelText = el.getAttribute('label');
-    const labelPlacement = el.getAttribute('label-placement') || 'inset';
-    const helperText = el.getAttribute('helper');
-    const name = el.getAttribute('name');
+  render() {
+    const type = validateInputType(this.getAttribute('type'));
+    const labelText = this.getAttribute('label');
+    const labelPlacement = this.getAttribute('label-placement') || 'inset';
+    const helperText = this.getAttribute('helper');
+    const errorText = this.getAttribute('error');
+    const name = this.getAttribute('name');
 
     // Generate IDs for accessibility
     const inputId = name ? `input-${name}` : `input-${Math.random().toString(36).substr(2, 9)}`;
     const labelId = labelText ? `label-${inputId}` : '';
     const helperId = helperText ? `helper-${inputId}` : '';
+    const errorId = errorText ? `error-${inputId}` : '';
 
-    return html`
-      <div class="input-wrapper">
+    const value = this.getAttribute('value') || '';
+    const placeholder = this.getAttribute('placeholder') || '';
+    const isDisabled = this.hasAttribute('disabled');
+    const isReadonly = this.hasAttribute('readonly');
+    const isRequired = this.hasAttribute('required');
+    const hasError = !!errorText;
+
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <div class="input-wrapper" part="wrapper">
         ${
           labelText && labelPlacement === 'outside'
-            ? html`<label class="label-outside" for="${inputId}" id="${labelId}">${labelText}</label>`
+            ? `<label class="label-outside" for="${inputId}" id="${labelId}" part="label">${labelText}</label>`
             : ''
         }
-        <div class="field">
+        <div class="field" part="field">
           ${
             labelText && labelPlacement === 'inset'
-              ? html`<label class="label-inset" for="${inputId}" id="${labelId}">${labelText}</label>`
+              ? `<label class="label-inset" for="${inputId}" id="${labelId}" part="label">${labelText}</label>`
               : ''
           }
-          <div class="input-row">
+          <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
+              part="input"
               id="${inputId}"
               type="${type}"
-              name="${name}"
-              value="${el.getAttribute('value') || ''}"
-              placeholder="${el.getAttribute('placeholder') || ''}"
+              name="${name || ''}"
+              value="${value}"
+              placeholder="${placeholder}"
               aria-labelledby="${labelId}"
-              aria-describedby="${helperId}"
-              ?disabled="${el.hasAttribute('disabled')}"
-              ?readonly="${el.hasAttribute('readonly')}"
-              ?required="${el.hasAttribute('required')}" />
+              aria-describedby="${hasError ? errorId : helperId}"
+              aria-invalid="${hasError ? 'true' : 'false'}"
+              ${hasError ? `aria-errormessage="${errorId}"` : ''}
+              ${isDisabled ? 'disabled' : ''}
+              ${isReadonly ? 'readonly' : ''}
+              ${isRequired ? 'required aria-required="true"' : ''} />
             <slot name="suffix"></slot>
           </div>
         </div>
         ${
-          helperText || el.querySelector('[slot="helper"]')
-            ? html`
-              <div class="helper-text" id="${helperId}">
-                <slot name="helper">${helperText}</slot>
-              </div>
-            `
-            : ''
+          errorText
+            ? `<div class="helper-text" id="${errorId}" role="alert" style="color: var(--color-error);" part="helper">
+                ${errorText}
+              </div>`
+            : helperText
+              ? `<div class="helper-text" id="${helperId}" part="helper">
+                  <slot name="helper">${helperText}</slot>
+                </div>`
+              : ''
         }
       </div>
     `;
-  },
-});
+    this.#updateFormValue();
+  }
+}
+
+if (!customElements.get('bit-input')) {
+  customElements.define('bit-input', BitInput);
+}
 
 export default {};

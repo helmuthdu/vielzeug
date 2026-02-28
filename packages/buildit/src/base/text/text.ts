@@ -1,14 +1,27 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
-
 /**
- * # bit-text
- *
  * A typography component with semantic variants and responsive sizing.
  *
  * @element bit-text
+ *
+ * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
+ * @attr {string} size - Font size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
+ * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
+ * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
+ * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
+ * @attr {boolean} truncate - Truncate text with ellipsis
+ * @attr {boolean} italic - Italic text style
+ * @attr {string} as - Semantic HTML element: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'
+ *
+ * @slot - Text content
+ *
+ * @cssprop --text-size - Font size
+ * @cssprop --text-weight - Font weight
+ * @cssprop --text-color - Text color
+ * @cssprop --text-line-height - Line height
+ * @cssprop --text-letter-spacing - Letter spacing
  */
 
-const styles = css`
+const styles = /* css */ `
   /* ========================================
      Base Styles & Defaults
      ======================================== */
@@ -20,7 +33,7 @@ const styles = css`
     --_color: var(--text-color, inherit);
     --_line-height: var(--text-line-height, var(--leading-normal));
     --_letter-spacing: var(--text-letter-spacing, normal);
-    
+
     display: block;
     font-size: var(--_size);
     font-weight: var(--_weight);
@@ -246,12 +259,50 @@ export interface TextProps {
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code';
 }
 
-defineElement<HTMLElement, TextProps>('bit-text', {
-  observedAttributes: ['variant', 'size', 'weight', 'color', 'align', 'truncate', 'italic', 'as'] as const,
+/**
+ * A typography component with semantic variants and responsive sizing.
+ *
+ * @element bit-text
+ *
+ * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
+ * @attr {string} size - Font size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
+ * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
+ * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
+ * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
+ * @attr {boolean} truncate - Truncate text with ellipsis
+ * @attr {boolean} italic - Italic text style
+ * @attr {string} as - Semantic HTML element: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'
+ *
+ * @slot - Text content
+ *
+ * @cssprop --text-size - Font size
+ * @cssprop --text-weight - Font weight
+ * @cssprop --text-color - Text color
+ * @cssprop --text-line-height - Line height
+ * @cssprop --text-letter-spacing - Letter spacing
+ */
+class BitText extends HTMLElement {
+  static observedAttributes = ['variant', 'size', 'weight', 'color', 'align', 'truncate', 'italic', 'as'] as const;
 
-  styles: [styles],
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-  template: () => html`<slot></slot>`,
-});
+  connectedCallback() {
+    this.render();
+  }
+
+  render() {
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <slot></slot>
+    `;
+  }
+}
+
+if (!customElements.get('bit-text')) {
+  customElements.define('bit-text', BitText);
+}
 
 export default {};

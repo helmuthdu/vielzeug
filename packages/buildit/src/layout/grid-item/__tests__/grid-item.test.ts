@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture } from '../../../utils/testing';
 
 describe('bit-grid-item', () => {
   let fixture: ComponentFixture<HTMLElement>;

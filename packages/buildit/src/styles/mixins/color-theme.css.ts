@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Color Theme Mixin
  *
@@ -11,10 +9,10 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with color theme definitions
  *
  * @example
- * ```typescript
+ * ```ts
  * import { colorThemeMixin } from '../../styles';
  *
- * const styles = css`
+ * const styles = `
  *   ${colorThemeMixin()}
  *
  *   .my-element {
@@ -24,7 +22,7 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const colorThemeMixin = () => css`
+export const colorThemeMixin = () => `
   @layer buildit.themes {
     /* ========================================
        Color Themes (Default: Neutral)

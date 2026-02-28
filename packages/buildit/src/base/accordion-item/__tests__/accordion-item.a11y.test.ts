@@ -1,6 +1,6 @@
-import { createFixture } from '@vielzeug/craftit/testing';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createFixture } from '../../../utils/testing';
 
 describe('bit-accordion-item accessibility', () => {
   beforeAll(async () => {

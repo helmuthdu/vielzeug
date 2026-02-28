@@ -3,25 +3,37 @@
  * Tagged template literal for creating reactive templates
  */
 
+import { maybeGetContext } from '../composables/context';
 import { bindRef, isRef, type Ref } from '../composables/ref';
+import { runUpdateCallbacks } from '../core/lifecycle';
 import { type ComputedSignal, effect, type Signal } from '../core/signal';
 import { isDirective, listStates } from './directives';
-import { makeKeyedListReactive, type KeyedListState } from './reconciliation';
+import { type KeyedListState, makeKeyedListReactive } from './reconciliation';
 
 /**
  * Template cache for performance optimization
  * Caches parsed template structure keyed by TemplateStringsArray
  */
-const templateCache = new WeakMap<TemplateStringsArray, {
-  fragment: DocumentFragment;
-  bindings: Binding[];
-}>();
+const templateCache = new WeakMap<
+  TemplateStringsArray,
+  {
+    fragment: DocumentFragment;
+    bindings: Binding[];
+  }
+>();
 
 /**
  * HTML Properties Map
  * Maps HTML elements to their properties that should use property binding
  */
 const ELEMENT_PROPERTIES: Record<string, Set<string>> = {
+  AUDIO: new Set(['src', 'muted', 'volume', 'currentTime', 'loop', 'autoplay']),
+  BUTTON: new Set(['disabled', 'type']),
+  DETAILS: new Set(['open']),
+  DIALOG: new Set(['open']),
+  FIELDSET: new Set(['disabled']),
+  IFRAME: new Set(['src']),
+  IMG: new Set(['src', 'alt']),
   INPUT: new Set([
     'value',
     'checked',
@@ -41,18 +53,11 @@ const ELEMENT_PROPERTIES: Record<string, Set<string>> = {
     'defaultChecked',
     'indeterminate',
   ]),
+  OPTGROUP: new Set(['disabled']),
+  OPTION: new Set(['selected', 'disabled', 'value', 'defaultSelected']),
   SELECT: new Set(['value', 'disabled', 'required', 'selectedIndex', 'multiple', 'size']),
   TEXTAREA: new Set(['value', 'disabled', 'readOnly', 'required', 'placeholder', 'defaultValue']),
-  BUTTON: new Set(['disabled', 'type']),
-  OPTION: new Set(['selected', 'disabled', 'value', 'defaultSelected']),
-  OPTGROUP: new Set(['disabled']),
-  FIELDSET: new Set(['disabled']),
-  IMG: new Set(['src', 'alt']),
-  IFRAME: new Set(['src']),
-  AUDIO: new Set(['src', 'muted', 'volume', 'currentTime', 'loop', 'autoplay']),
   VIDEO: new Set(['src', 'muted', 'volume', 'currentTime', 'poster', 'loop', 'autoplay']),
-  DETAILS: new Set(['open']),
-  DIALOG: new Set(['open']),
 };
 
 /**
@@ -148,7 +153,7 @@ function parseEventName(attrName: string): {
   const parts = attrName.slice(1).split('.'); // Remove @ and split by .
   const name = parts[0];
   const modifiers = new Set(parts.slice(1));
-  return { name, modifiers };
+  return { modifiers, name };
 }
 
 /**
@@ -189,8 +194,8 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
 
     // Cache the parsed structure for future use
     templateCache.set(strings, {
-      fragment: fragment.cloneNode(true) as DocumentFragment,
       bindings: [], // Bindings are regenerated each time
+      fragment: fragment.cloneNode(true) as DocumentFragment,
     });
   }
 
@@ -217,9 +222,7 @@ export function renderTemplate(template: TemplateResult, target: Element | Shado
  */
 html.fragment = (...templates: (TemplateResult | string)[]): TemplateResult => {
   // Combine multiple templates into one
-  const combined = templates.map(t =>
-    typeof t === 'string' ? t : processTemplateRecursive(t, [])
-  ).join('');
+  const combined = templates.map((t) => (typeof t === 'string' ? t : processTemplateRecursive(t, []))).join('');
 
   return {
     strings: [combined, ''] as unknown as TemplateStringsArray,
@@ -332,7 +335,41 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
           }
         } else {
           // Regular value
-          htmlString += `"${escapeHtml(String(value ?? ''))}"`;
+          // Check if this is a boolean attribute
+          const booleanAttrs = [
+            'disabled',
+            'checked',
+            'selected',
+            'readonly',
+            'required',
+            'multiple',
+            'autofocus',
+            'autoplay',
+            'controls',
+            'loop',
+            'muted',
+          ];
+          const isBooleanAttr = booleanAttrs.includes(propName.toLowerCase());
+
+          if (isBooleanAttr && typeof value === 'boolean') {
+            // For boolean attributes, false means remove the attribute entirely
+            // We'll use an empty marker that gets removed during processing
+            if (value) {
+              htmlString += '""'; // Present = true
+            } else {
+              // Skip adding the attribute entirely by using a removable marker
+              const index = bindings.length;
+              const marker = `__remove_attr_${index}__`;
+              bindings.push({
+                attr: propName,
+                marker,
+                type: 'remove-attr',
+              });
+              htmlString += `"${marker}"`;
+            }
+          } else {
+            htmlString += `"${escapeHtml(String(value ?? ''))}"`;
+          }
         }
       } else {
         // Text content
@@ -344,42 +381,42 @@ function processTemplateRecursive(template: TemplateResult, bindings: Binding[])
 
           if (directive.type === 'when') {
             bindings.push({
-              type: 'directive-when',
-              marker,
               condition: directive.condition,
-              template: directive.template,
               elseTemplate: directive.elseTemplate,
               inverse: directive.inverse,
+              marker,
+              template: directive.template,
+              type: 'directive-when',
             });
           } else if (directive.type === 'show') {
             bindings.push({
-              type: 'directive-show',
-              marker,
               condition: directive.condition,
+              marker,
               template: directive.template,
+              type: 'directive-show',
             });
           } else if (directive.type === 'each') {
             bindings.push({
-              type: 'directive-each',
-              marker,
+              fallback: directive.fallback,
               items: directive.items,
               keyFn: directive.keyFn,
+              marker,
               template: directive.template,
-              fallback: directive.fallback,
+              type: 'directive-each',
             });
           } else if (directive.type === 'log') {
             bindings.push({
-              type: 'directive-log',
-              marker,
-              value: directive.value,
               label: directive.label,
+              marker,
+              type: 'directive-log',
+              value: directive.value,
             });
           } else if (directive.type === 'portal') {
             bindings.push({
-              type: 'directive-portal',
               marker,
-              template: directive.template,
               target: directive.target,
+              template: directive.template,
+              type: 'directive-portal',
             });
           }
 
@@ -449,6 +486,11 @@ type Binding =
       type: 'ref';
       marker: string;
       ref: Ref;
+    }
+  | {
+      type: 'remove-attr';
+      marker: string;
+      attr: string;
     }
   | {
       type: 'event';
@@ -534,9 +576,19 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
           // Create text node for signal
           const textNode = document.createTextNode('');
 
+          // Capture context for onUpdated callbacks
+          const ctx = maybeGetContext();
+          let isFirstRun = true;
+
           // Make it reactive
           effect(() => {
             textNode.textContent = String(binding.signal.value);
+
+            // Run onUpdated callbacks only after first run (i.e., on actual updates)
+            if (ctx?.mounted && !isFirstRun) {
+              runUpdateCallbacks(ctx);
+            }
+            isFirstRun = false;
           });
 
           // Replace comment with text node
@@ -609,8 +661,8 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
           const marker = comment;
           const state: KeyedListState = {
             keyToNode: new Map(),
-            parent: null,
             marker: null,
+            parent: null,
           };
 
           listStates.set(marker, state);
@@ -627,9 +679,7 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
           const label = binding.label || 'Template Debug';
 
           effect(() => {
-            const value = isSignal(binding.value)
-              ? (binding.value as Signal<unknown>).value
-              : binding.value;
+            const value = isSignal(binding.value) ? (binding.value as Signal<unknown>).value : binding.value;
 
             console.log(`[${label}]`, value);
           });
@@ -664,7 +714,7 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
             // Get target element
             portalContainer = getPortalTarget();
             if (!portalContainer) {
-              console.warn(`[Portal] Target not found:`, binding.target);
+              console.warn('[Portal] Target not found:', binding.target);
               return;
             }
 
@@ -741,8 +791,11 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
               effect(setValue);
             }
 
-            // Remove marker attribute
-            element.removeAttribute(attr.name);
+            // Only remove the attribute if it still contains the marker
+            // (if we set a real value, don't remove it)
+            if (element.getAttribute(attr.name) === binding.marker) {
+              element.removeAttribute(attr.name);
+            }
             break; // Move to next attribute
           }
 
@@ -770,6 +823,13 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
 
             setValue();
             effect(setValue);
+            element.removeAttribute(attr.name);
+            break;
+          }
+
+          if (binding.type === 'remove-attr') {
+            // Remove false boolean attribute
+            element.removeAttribute(binding.attr);
             element.removeAttribute(attr.name);
             break;
           }
@@ -839,8 +899,8 @@ function processBindings(root: DocumentFragment, bindings: Binding[]): void {
 
             // Event listener options from modifiers
             const options: AddEventListenerOptions = {
-              once: modifiers.has('once'),
               capture: modifiers.has('capture'),
+              once: modifiers.has('once'),
               passive: modifiers.has('passive'),
             };
 
@@ -893,7 +953,6 @@ function escapeHtml(str: string): string {
   div.textContent = str;
   return div.innerHTML;
 }
-
 
 /**
  * Create class string from object or array
@@ -973,9 +1032,7 @@ html.unsafe = (htmlContent: string): TemplateResult => {
   if (typeof globalThis !== 'undefined') {
     const isDev = !(globalThis as any).__CRAFTIT_PROD__;
     if (isDev) {
-      console.warn(
-        '[Craftit] html.unsafe() used - ensure content is trusted or sanitized to prevent XSS attacks'
-      );
+      console.warn('[Craftit] html.unsafe() used - ensure content is trusted or sanitized to prevent XSS attacks');
     }
   }
 
@@ -1021,20 +1078,20 @@ html.when = (
   // Handle simple case: html.when(condition, template)
   if (typeof templateOrOptions === 'function' || typeof templateOrOptions === 'string' || 'type' in templateOrOptions) {
     return {
-      type: 'when',
       condition,
       template: templateOrOptions,
+      type: 'when',
     };
   }
 
   // Handle options object
   const { then: template, else: elseTemplate, unless: inverse } = templateOrOptions;
   return {
-    type: 'when',
     condition,
-    template,
     elseTemplate,
     inverse,
+    template,
+    type: 'when',
   };
 };
 
@@ -1055,11 +1112,11 @@ html.each = <T>(
   fallback?: TemplateResult | string | (() => TemplateResult | string),
 ): any => {
   return {
-    type: 'each',
+    fallback,
     items,
     keyFn,
     template,
-    fallback,
+    type: 'each',
   };
 };
 
@@ -1075,9 +1132,9 @@ html.show = (
   template: TemplateResult | string,
 ): any => {
   return {
-    type: 'show',
     condition,
     template,
+    type: 'show',
   };
 };
 
@@ -1090,14 +1147,11 @@ html.show = (
  * html`${html.log(count, 'Current count')}`
  * html`${html.log(user)}`
  */
-html.log = (
-  value: unknown,
-  label?: string,
-): any => {
+html.log = (value: unknown, label?: string): any => {
   return {
+    label,
     type: 'log',
     value,
-    label,
   };
 };
 
@@ -1114,14 +1168,11 @@ html.log = (
  * // Render in body
  * html`${html.portal(html`<div class="tooltip">Tooltip</div>`, document.body)}`
  */
-html.portal = (
-  template: TemplateResult | string,
-  target: string | Element,
-): any => {
+html.portal = (template: TemplateResult | string, target: string | Element): any => {
   return {
-    type: 'portal',
-    template,
     target,
+    template,
+    type: 'portal',
   };
 };
 
@@ -1147,4 +1198,3 @@ html.slot = (name?: string): TemplateResult => {
   }
   return html`<slot></slot>`;
 };
-

@@ -3,7 +3,6 @@
  * Use these to get full type safety when working with component tags
  */
 
-import type { WebComponent } from '@vielzeug/craftit';
 import type {
   AccordionItemProps,
   AccordionProps,
@@ -22,17 +21,17 @@ import type {
 // Component Type Definitions
 // ============================================
 
-type BitAccordion = WebComponent<HTMLDivElement, AccordionProps>;
-type BitAccordionItem = WebComponent<HTMLDivElement, AccordionItemProps>;
-type BitButton = WebComponent<HTMLButtonElement, ButtonProps>;
-type BitButtonGroup = WebComponent<HTMLDivElement, ButtonGroupProps>;
-type BitCard = WebComponent<HTMLDivElement, CardProps>;
-type BitCheckbox = WebComponent<HTMLDivElement, CheckboxProps>;
-type BitInput = WebComponent<HTMLInputElement, InputProps>;
-type BitRadio = WebComponent<HTMLDivElement, RadioProps>;
-type BitSlider = WebComponent<HTMLDivElement, SliderProps>;
-type BitSwitch = WebComponent<HTMLDivElement, SwitchProps>;
-type BitText = WebComponent<HTMLDivElement, TextProps>;
+type BitAccordion = HTMLElement & AccordionProps;
+type BitAccordionItem = HTMLElement & AccordionItemProps;
+type BitButton = HTMLElement & ButtonProps;
+type BitButtonGroup = HTMLElement & ButtonGroupProps;
+type BitCard = HTMLElement & CardProps;
+type BitCheckbox = HTMLElement & CheckboxProps;
+type BitInput = HTMLElement & InputProps;
+type BitRadio = HTMLElement & RadioProps;
+type BitSlider = HTMLElement & SliderProps;
+type BitSwitch = HTMLElement & SwitchProps;
+type BitText = HTMLElement & TextProps;
 
 // ============================================
 // Global HTML Element Tag Name Map

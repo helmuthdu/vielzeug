@@ -2,6 +2,7 @@
   "name": "@vielzeug/buildit",
   "version": "1.0.0",
   "type": "module",
+  "customElements": "dist/custom-elements.json",
   "files": [
     "dist"
   ],
@@ -84,12 +85,13 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && cp -r src/styles/*.css dist/styles && cp src/types/bit.d.ts dist",
+    "build": "tsc && vite build && cp -r src/styles/*.css dist/styles && cp src/types/bit.d.ts dist && pnpm run analyze",
+    "analyze": "custom-elements-manifest analyze --config custom-elements-manifest.config.mjs",
     "preview": "vite preview",
     "test": "vitest"
   },
   "devDependencies": {
-    "@vielzeug/craftit": "workspace:*",
+    "@custom-elements-manifest/analyzer": "^0.11.0",
     "axe-core": "^4.11.1",
     "browserslist": "^4.28.1",
     "lightningcss": "^1.31.1",
@@ -97,8 +99,5 @@
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.18"
-  },
-  "peerDependencies": {
-    "@vielzeug/craftit": "workspace:*"
   }
 }

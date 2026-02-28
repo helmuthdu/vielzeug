@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Size Variant Mixin
  *
@@ -10,7 +8,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with size variant styles
  *
  * @example
- * ```typescript
+ * ```ts
  * import { sizeVariantMixin } from '../../styles';
  *
  * const styles = css`
@@ -20,7 +18,7 @@ import { css } from '@vielzeug/craftit';
  * ```
  *
  * @example
- * ```typescript
+ * ```ts
  * // Custom size configuration
  * ${sizeVariantMixin({
  *   sm: { size: 'var(--size-3)', fontSize: 'var(--text-2xs)' },
@@ -102,7 +100,7 @@ export const sizeVariantMixin = (config?: {
       .join('\n        ');
   };
 
-  return css`
+  return `
     @layer buildit.variants {
       /* ========================================
          Size Variants (Shared Mixin)

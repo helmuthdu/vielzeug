@@ -1,12 +1,6 @@
 /**
  * Craftit - Testing Utilities
- * Vitest-friendly utilities for testing Craftit components
- *
- * Philosophy:
- * - Use Vitest for: test running, assertions (expect), mocking (vi), coverage
- * - Use Craftit test for: component mounting, shadow DOM access, signal/ref helpers
- *
- * This module complements Vitest, not replaces it.
+ * Complete testing toolkit for Craftit components
  */
 
 import { type ComponentContext, setContext } from '../composables/context';
@@ -22,6 +16,8 @@ export interface ComponentFixture<T extends HTMLElement = HTMLElement> {
   element: T;
   /** Shadow root (may be null if component doesn't use shadow DOM) */
   shadow: ShadowRoot | null;
+  /** Container element (parent of component) */
+  container: HTMLElement;
   /** Query a single element within shadow root */
   query: <E extends Element = Element>(selector: string) => E | null;
   /** Query all elements within shadow root */
@@ -32,25 +28,270 @@ export interface ComponentFixture<T extends HTMLElement = HTMLElement> {
   unmount: () => void;
 }
 
+// ============================================
+// Event Utilities
+// ============================================
+
+/**
+ * Fire DOM events with proper bubbling and cancelable options
+ */
+export const fireEvent = {
+  /**
+   * Fire a blur event
+   * @example fireEvent.blur(input)
+   */
+  blur(element: Element, options?: FocusEventInit): void {
+    const event = new FocusEvent('blur', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a change event (for inputs, selects, etc.)
+   * @example fireEvent.change(input)
+   */
+  change(element: Element, options?: EventInit): void {
+    const event = new Event('change', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+  /**
+   * Fire a click event
+   * @example fireEvent.click(button)
+   */
+  click(element: Element, options?: MouseEventInit): void {
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a custom event
+   * @example fireEvent.custom(element, 'my-event', { detail: { value: 123 } })
+   */
+  custom<T = any>(element: Element, eventName: string, options?: CustomEventInit<T>): void {
+    const event = new CustomEvent(eventName, {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a focus event
+   * @example fireEvent.focus(input)
+   */
+  focus(element: Element, options?: FocusEventInit): void {
+    const event = new FocusEvent('focus', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire an input event (for inputs, textareas, etc.)
+   * @example fireEvent.input(input)
+   */
+  input(element: Element, options?: EventInit): void {
+    const event = new Event('input', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a keydown event
+   * @example fireEvent.keyDown(input, { key: 'Enter' })
+   */
+  keyDown(element: Element, options?: KeyboardEventInit): void {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a keyup event
+   * @example fireEvent.keyUp(input, { key: 'a' })
+   */
+  keyUp(element: Element, options?: KeyboardEventInit): void {
+    const event = new KeyboardEvent('keyup', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a mouseenter event
+   * @example fireEvent.mouseEnter(element)
+   */
+  mouseEnter(element: Element, options?: MouseEventInit): void {
+    const event = new MouseEvent('mouseenter', {
+      bubbles: false,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a mouseleave event
+   * @example fireEvent.mouseLeave(element)
+   */
+  mouseLeave(element: Element, options?: MouseEventInit): void {
+    const event = new MouseEvent('mouseleave', {
+      bubbles: false,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+
+  /**
+   * Fire a submit event (for forms)
+   * @example fireEvent.submit(form)
+   */
+  submit(element: Element, options?: EventInit): void {
+    const event = new Event('submit', {
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    element.dispatchEvent(event);
+  },
+};
+
+// ============================================
+// User Interaction Utilities
+// ============================================
+
+/**
+ * User interaction utilities
+ * Higher-level helpers for common user interactions
+ */
+export const userEvent = {
+  /**
+   * Clear an input element
+   * @example await userEvent.clear(input)
+   */
+  async clear(element: HTMLInputElement | HTMLTextAreaElement): Promise<void> {
+    element.focus();
+    fireEvent.focus(element);
+    (element as any).value = '';
+    fireEvent.input(element);
+    fireEvent.change(element);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+
+  /**
+   * Click an element (with proper event sequence)
+   * @example await userEvent.click(button)
+   */
+  async click(element: Element): Promise<void> {
+    fireEvent.mouseEnter(element);
+    fireEvent.click(element);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+
+  /**
+   * Double click an element
+   * @example await userEvent.dblClick(button)
+   */
+  async dblClick(element: Element): Promise<void> {
+    fireEvent.click(element);
+    fireEvent.click(element);
+    fireEvent.custom(element, 'dblclick');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+
+  /**
+   * Hover over an element
+   * @example await userEvent.hover(element)
+   */
+  async hover(element: Element): Promise<void> {
+    fireEvent.mouseEnter(element);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+
+  /**
+   * Select an option from a select element
+   * @example await userEvent.selectOption(select, 'option2')
+   */
+  async selectOption(element: HTMLSelectElement, value: string | string[]): Promise<void> {
+    const values = Array.isArray(value) ? value : [value];
+
+    Array.from(element.options).forEach((option) => {
+      option.selected = values.includes(option.value);
+    });
+
+    fireEvent.change(element);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+  /**
+   * Type text into an input element
+   * @example await userEvent.type(input, 'Hello World')
+   */
+  async type(element: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
+    element.focus();
+    fireEvent.focus(element);
+
+    for (const char of text) {
+      (element as any).value += char;
+      fireEvent.input(element);
+      fireEvent.keyDown(element, { key: char });
+      fireEvent.keyUp(element, { key: char });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    fireEvent.change(element);
+  },
+
+  /**
+   * Unhover (leave) an element
+   * @example await userEvent.unhover(element)
+   */
+  async unhover(element: Element): Promise<void> {
+    fireEvent.mouseLeave(element);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  },
+};
+
+// ============================================
+// Component Mounting
+// ============================================
+
 /**
  * Mount a Craftit component for testing
  * Returns a fixture with helpers for interacting with the component
  *
  * @example
  * ```ts
- * import { expect, test } from 'vitest';
- * import { mount } from 'craftit/test';
+ * const { query, waitForUpdates, unmount } = mount('my-counter');
  *
- * test('counter increments', async () => {
- *   const { query, waitForUpdates, unmount } = mount('my-counter');
+ * expect(query('.count')?.textContent).toBe('0');
+ * fireEvent.click(query('button')!);
+ * await waitForUpdates();
+ * expect(query('.count')?.textContent).toBe('1');
  *
- *   expect(query('.count')?.textContent).toBe('0');
- *   (query('button') as HTMLButtonElement)?.click();
- *   await waitForUpdates();
- *   expect(query('.count')?.textContent).toBe('1');
- *
- *   unmount();
- * });
+ * unmount();
  * ```
  */
 export function mount<T extends HTMLElement = HTMLElement>(
@@ -88,12 +329,13 @@ export function mount<T extends HTMLElement = HTMLElement>(
 
   // Attach to DOM (triggers connectedCallback)
   const shouldAttach = options?.attachToDOM !== false;
+  const container = options?.container || document.body;
   if (shouldAttach) {
-    const container = options?.container || document.body;
     container.appendChild(element);
   }
 
   return {
+    container,
     element,
 
     // Query methods for shadow DOM
@@ -113,31 +355,159 @@ export function mount<T extends HTMLElement = HTMLElement>(
 
     // Wait for all reactive updates to complete
     async waitForUpdates(): Promise<void> {
-      // Wait for microtasks (effects, promises)
       await Promise.resolve();
-      // Wait for requestAnimationFrame (DOM updates)
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-      // One more microtask for good measure
       await Promise.resolve();
     },
   };
 }
+
+// ============================================
+// Waiting Utilities
+// ============================================
+
+/**
+ * Wait for a condition to be true
+ * Enhanced version with support for async callbacks and assertions
+ *
+ * @example
+ * await waitFor(() => element.textContent === 'loaded');
+ * await waitFor(() => {
+ *   expect(element.textContent).toContain('loaded');
+ * });
+ */
+export async function waitFor(
+  callback: () => undefined | boolean | Promise<undefined | boolean>,
+  options: {
+    timeout?: number;
+    interval?: number;
+  } = {},
+): Promise<void> {
+  const { timeout = 1000, interval = 50 } = options;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    try {
+      const result = await callback();
+      if (result !== false) {
+        return;
+      }
+    } catch (_error) {
+      // Assertion failed, continue waiting
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+
+  // Final attempt - throws if still failing
+  const result = await callback();
+  if (result === false) {
+    throw new Error(`waitFor timed out after ${timeout}ms`);
+  }
+}
+
+/**
+ * Wait for an element to appear in the DOM
+ *
+ * @example
+ * const button = await waitForElement(() => container.querySelector('button'));
+ */
+export async function waitForElement<T extends Element = Element>(
+  query: () => T | null,
+  options: {
+    timeout?: number;
+    interval?: number;
+  } = {},
+): Promise<T> {
+  const { timeout = 1000, interval = 50 } = options;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    const element = query();
+    if (element) {
+      return element;
+    }
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+
+  const element = query();
+  if (!element) {
+    throw new Error('Element not found within timeout');
+  }
+  return element;
+}
+
+/**
+ * Wait for element to disappear from the DOM
+ *
+ * @example
+ * await waitForElementToBeRemoved(() => container.querySelector('.loading'));
+ */
+export async function waitForElementToBeRemoved(
+  query: () => Element | null,
+  options: {
+    timeout?: number;
+    interval?: number;
+  } = {},
+): Promise<void> {
+  await waitFor(() => query() === null, options);
+}
+
+/**
+ * Wait for a signal to reach a specific value
+ *
+ * @example
+ * const loading = signal(true);
+ * fetchData().then(() => loading.value = false);
+ * await waitForSignal(loading, false);
+ */
+export async function waitForSignal<T>(
+  signal: Signal<T> | ComputedSignal<T>,
+  expectedValue: T,
+  options?: {
+    timeout?: number;
+    interval?: number;
+  },
+): Promise<void> {
+  const timeout = options?.timeout ?? 1000;
+  const interval = options?.interval ?? 10;
+
+  await waitFor(() => signal.value === expectedValue, { interval, timeout });
+}
+
+/**
+ * Wait for a ref to be populated
+ *
+ * @example
+ * const buttonRef = ref<HTMLButtonElement>();
+ * await waitForRef(buttonRef);
+ */
+export async function waitForRef<T>(
+  ref: Ref<T>,
+  options?: {
+    timeout?: number;
+    interval?: number;
+  },
+): Promise<void> {
+  const timeout = options?.timeout ?? 1000;
+  const interval = options?.interval ?? 10;
+
+  await waitFor(() => ref.value !== null, { interval, timeout });
+}
+
+// ============================================
+// Context Utilities
+// ============================================
 
 /**
  * Create a test context for running code that requires a component context
  * Useful for testing hooks and composables in isolation
  *
  * @example
- * ```ts
  * const context = createTestContext();
  * setContext(context);
- *
- * const count = signal(0);
- * onMount(() => console.log('mounted'));
  * // ... test your logic
- *
  * setContext(null);
- * ```
  */
 export function createTestContext(options?: { name?: string; element?: HTMLElement }): ComponentContext {
   const element = options?.element || document.createElement('div');
@@ -162,16 +532,11 @@ export function createTestContext(options?: { name?: string; element?: HTMLEleme
  * Convenient wrapper around createTestContext
  *
  * @example
- * ```ts
- * import { expect } from 'vitest';
- *
  * const doubled = runInContext(() => {
  *   const count = signal(5);
  *   return computed(() => count.value * 2).value;
  * });
- *
  * expect(doubled).toBe(10);
- * ```
  */
 export function runInContext<T>(fn: () => T, options?: { name?: string }): T {
   const context = createTestContext(options);
@@ -183,132 +548,42 @@ export function runInContext<T>(fn: () => T, options?: { name?: string }): T {
   }
 }
 
+// ============================================
+// Helper Utilities
+// ============================================
+
 /**
- * Wait for a signal to reach a specific value
- * Useful for testing async signal updates
+ * Create a mock component for testing
+ * Useful for testing components that depend on other components
  *
  * @example
- * ```ts
- * import { expect } from 'vitest';
- *
- * const loading = signal(true);
- * fetchData().then(() => loading.value = false);
- *
- * await waitForSignal(loading, false);
- * expect(loading.value).toBe(false);
- * ```
+ * createMockComponent('mock-child', () => html`<div>Mocked</div>`);
  */
-export async function waitForSignal<T>(
-  signal: Signal<T> | ComputedSignal<T>,
-  expectedValue: T,
-  options?: {
-    timeout?: number;
-    interval?: number;
-  },
-): Promise<void> {
-  const timeout = options?.timeout ?? 1000;
-  const interval = options?.interval ?? 10;
-  const start = Date.now();
+export function createMockComponent(tagName: string, template: () => any): void {
+  if (customElements.get(tagName)) {
+    return; // Already defined
+  }
 
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (signal.value === expectedValue) {
-        resolve();
-        return;
+  customElements.define(
+    tagName,
+    class extends HTMLElement {
+      connectedCallback() {
+        const shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.innerHTML = String(template());
       }
-
-      if (Date.now() - start > timeout) {
-        reject(new Error(`Timeout: signal never reached ${expectedValue} (current: ${signal.value})`));
-        return;
-      }
-
-      setTimeout(check, interval);
-    };
-
-    check();
-  });
+    },
+  );
 }
 
 /**
- * Wait for a ref to be populated
- * Useful for testing ref bindings
+ * Cleanup all mounted components
+ * Useful in afterEach hooks
  *
  * @example
- * ```ts
- * import { expect } from 'vitest';
- *
- * const buttonRef = ref<HTMLButtonElement>();
- * // ... component with ref=${buttonRef}
- *
- * await waitForRef(buttonRef);
- * expect(buttonRef.value).toBeInstanceOf(HTMLButtonElement);
- * ```
+ * afterEach(() => {
+ *   cleanup();
+ * });
  */
-export async function waitForRef<T>(
-  ref: Ref<T>,
-  options?: {
-    timeout?: number;
-    interval?: number;
-  },
-): Promise<void> {
-  const timeout = options?.timeout ?? 1000;
-  const interval = options?.interval ?? 10;
-  const start = Date.now();
-
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (ref.value !== null) {
-        resolve();
-        return;
-      }
-
-      if (Date.now() - start > timeout) {
-        reject(new Error('Timeout: ref was never populated'));
-        return;
-      }
-
-      setTimeout(check, interval);
-    };
-
-    check();
-  });
-}
-
-/**
- * Wait for a condition to be true
- * Generic async waiting utility
- *
- * @example
- * ```ts
- * await waitFor(() => element.classList.contains('loaded'));
- * ```
- */
-export async function waitFor(
-  condition: () => boolean,
-  options?: {
-    timeout?: number;
-    interval?: number;
-  },
-): Promise<void> {
-  const timeout = options?.timeout ?? 1000;
-  const interval = options?.interval ?? 10;
-  const start = Date.now();
-
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (condition()) {
-        resolve();
-        return;
-      }
-
-      if (Date.now() - start > timeout) {
-        reject(new Error(`Timeout: condition never became true after ${timeout}ms`));
-        return;
-      }
-
-      setTimeout(check, interval);
-    };
-
-    check();
-  });
+export function cleanup(): void {
+  document.body.innerHTML = '';
 }

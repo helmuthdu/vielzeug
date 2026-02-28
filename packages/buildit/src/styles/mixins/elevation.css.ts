@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Elevation Mixin
  *
@@ -9,7 +7,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with elevation level definitions
  *
  * @example
- * ```typescript
+ * ```ts
  * import { elevationMixin } from '../../styles';
  *
  * const styles = css`
@@ -21,7 +19,7 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const elevationMixin = () => css`
+export const elevationMixin = () => `
   @layer buildit.utilities {
     /* ========================================
        Elevation Levels (0-5)

@@ -1,15 +1,6 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
-import type { AccordionEventDetail, ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, VisualVariant } from '../../types';
 
-/**
- * # bit-accordion-item
- *
- * An individual accordion item with expand/collapse functionality using native details/summary.
- *
- * @element bit-accordion-item
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -48,6 +39,16 @@ const styles = css`
 
     summary::-webkit-details-marker {
       display: none;
+    }
+
+    summary:focus {
+      outline: none;
+    }
+
+    summary:focus-visible {
+      outline: var(--border-2) solid currentColor;
+      outline-offset: var(--border-2);
+      box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
     }
 
     .header-content {
@@ -312,53 +313,99 @@ export interface AccordionItemProps {
 }
 
 /**
- * Accordion Item Toggle Event Detail
+ * An individual accordion item with expand/collapse functionality using native details/summary.
+ *
+ * @element bit-accordion-item
+ *
+ * @attr {boolean} expanded - Whether the item is expanded/open
+ * @attr {boolean} disabled - Disable accordion item interaction
+ * @attr {string} size - Item size: 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
+ *
+ * @fires expand - Emitted when item expands
+ * @fires collapse - Emitted when item collapses
+ *
+ * @slot prefix - Content before the title (e.g., icons)
+ * @slot title - Main accordion item title
+ * @slot subtitle - Optional subtitle text
+ * @slot suffix - Content after the title (e.g., badges)
+ * @slot - Accordion item content (shown when expanded)
+ *
+ * @cssprop --accordion-item-bg - Background color
+ * @cssprop --accordion-item-border-color - Border color
+ * @cssprop --accordion-item-title-color - Title text color
+ * @cssprop --accordion-item-subtitle-color - Subtitle text color
+ * @cssprop --accordion-item-body-color - Body text color
+ * @cssprop --accordion-item-radius - Border radius
+ * @cssprop --accordion-item-transition - Transition duration
+ * @cssprop --accordion-item-title - Title font size
+ * @cssprop --accordion-item-subtitle-size - Subtitle font size
+ * @cssprop --accordion-item-body - Body font size
+ * @cssprop --accordion-item-details-padding - Summary/header padding
+ * @cssprop --accordion-item-summary-padding - Content padding
  */
-export interface AccordionItemToggleEvent extends AccordionEventDetail {}
+class BitAccordionItem extends HTMLElement {
+  static observedAttributes = ['expanded', 'disabled', 'size', 'variant'] as const;
 
-defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
-  observedAttributes: ['expanded', 'disabled', 'size', 'variant'] as const,
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-  onAttributeChanged(el, name, _oldValue, newValue) {
-    if (name === 'expanded') {
-      const host = el as unknown as HTMLElement;
-      const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
-      if (details) {
-        details.open = newValue !== null;
-      }
-    }
-  },
+  connectedCallback() {
+    this.render();
 
-  onConnected(el) {
-    const host = el as unknown as HTMLElement;
-    const details = host.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
+    const details = this.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
     if (!details) return;
 
     details.addEventListener('toggle', () => {
       const isOpen = details.open;
 
-      if (isOpen && !host.hasAttribute('expanded')) {
-        host.setAttribute('expanded', '');
-        el.emit('expand', { expanded: true, item: host }, { bubbles: true, composed: true });
-      } else if (!isOpen && host.hasAttribute('expanded')) {
-        host.removeAttribute('expanded');
-        el.emit('collapse', { expanded: false, item: host }, { bubbles: true, composed: true });
+      if (isOpen && !this.hasAttribute('expanded')) {
+        this.setAttribute('expanded', '');
+        this.dispatchEvent(
+          new CustomEvent('expand', {
+            bubbles: true,
+            composed: true,
+            detail: { expanded: true, item: this },
+          }),
+        );
+      } else if (!isOpen && this.hasAttribute('expanded')) {
+        this.removeAttribute('expanded');
+        this.dispatchEvent(
+          new CustomEvent('collapse', {
+            bubbles: true,
+            composed: true,
+            detail: { expanded: false, item: this },
+          }),
+        );
       }
     });
 
     // Initial sync
-    details.open = host.hasAttribute('expanded');
-  },
+    details.open = this.hasAttribute('expanded');
+  }
 
-  styles: [styles],
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    const details = this.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
+    const summary = this.shadowRoot?.querySelector('summary') as HTMLElement | null;
+    if (!details || !summary) return;
 
-  template: (el) => {
-    const isExpanded = el.hasAttribute('expanded');
-    const isDisabled = el.hasAttribute('disabled');
+    if (name === 'expanded') {
+      const isExpanded = newValue !== null;
+      details.open = isExpanded;
+      summary.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    }
+  }
+
+  render() {
+    const isExpanded = this.hasAttribute('expanded');
+    const isDisabled = this.hasAttribute('disabled');
     const titleId = 'accordion-item-title';
 
-    return html`
-      <details ?open="${isExpanded}">
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <details ${isExpanded ? 'open' : ''}>
         <summary aria-expanded="${isExpanded ? 'true' : 'false'}" aria-disabled="${isDisabled ? 'true' : 'false'}">
           <slot name="prefix"></slot>
           <div class="header-content">
@@ -387,7 +434,11 @@ defineElement<HTMLDetailsElement, AccordionItemProps>('bit-accordion-item', {
         </div>
       </details>
     `;
-  },
-});
+  }
+}
+
+if (!customElements.get('bit-accordion-item')) {
+  customElements.define('bit-accordion-item', BitAccordionItem);
+}
 
 export default {};

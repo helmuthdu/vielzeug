@@ -1,7 +1,7 @@
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { getConfig } from '../../vite.config';
 

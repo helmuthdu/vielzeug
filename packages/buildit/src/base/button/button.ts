@@ -1,4 +1,3 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import {
   colorThemeMixin,
   disabledLoadingMixin,
@@ -7,18 +6,9 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ButtonType, ClickEventDetail, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-/**
- * # bit-button
- *
- * A customizable button component with multiple variants, sizes, and states.
- * Supports icons, loading states, and special effects like frost and rainbow.
- *
- * @element bit-button
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     :host {
       --_bg: var(--button-bg, var(--color-contrast-50));
@@ -27,7 +17,7 @@ const styles = css`
       --_border-color: var(--button-border-color, var(--color-contrast-200));
       --_radius: var(--button-radius, var(--rounded-md));
       --_shadow: var(--button-shadow, var(--shadow-2xs));
-      
+
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -382,17 +372,47 @@ export type ButtonProps = {
   rounded?: RoundedSize;
 };
 
-/**
- * Button Click Event Detail
- */
-export type ButtonClickEvent = ClickEventDetail;
-
 const isDisabledOrLoading = (el: HTMLElement): boolean => {
   return el.hasAttribute('disabled') || el.hasAttribute('loading');
 };
 
-defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
-  observedAttributes: [
+/**
+ * A customizable button component with multiple variants, sizes, and states.
+ * Supports icons, loading states, and special effects like frost and rainbow.
+ *
+ * @element bit-button
+ *
+ * @attr {string} type - HTML button type: 'button' | 'submit' | 'reset'
+ * @attr {boolean} disabled - Disable button interaction
+ * @attr {boolean} loading - Show loading state with spinner
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
+ * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
+ * @attr {boolean} rainbow - Enable animated rainbow border effect
+ * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
+ * @attr {boolean} fullwidth - Full width button (100% of container)
+ *
+ * @fires click - Emitted when button is clicked (unless disabled/loading)
+ *
+ * @slot - Button content (text, icons, etc.)
+ * @slot prefix - Content before the button text (e.g., icons)
+ * @slot suffix - Content after the button text (e.g., icons, badges)
+ *
+ * @cssprop --button-bg - Background color
+ * @cssprop --button-color - Text color
+ * @cssprop --button-hover-bg - Hover background
+ * @cssprop --button-active-bg - Active/pressed background
+ * @cssprop --button-border - Border width
+ * @cssprop --button-border-color - Border color
+ * @cssprop --button-radius - Border radius
+ * @cssprop --button-padding - Inner padding
+ * @cssprop --button-gap - Gap between icon and text
+ * @cssprop --button-font-size - Font size
+ * @cssprop --button-shadow - Box shadow
+ */
+class BitButton extends HTMLElement {
+  static observedAttributes = [
     'variant',
     'color',
     'size',
@@ -403,50 +423,90 @@ defineElement<HTMLButtonElement, ButtonProps>('bit-button', {
     'icon-only',
     'fullwidth',
     'rounded',
-  ] as const,
+  ] as const;
 
-  onAttributeChanged(name, _oldValue, _newValue, el) {
-    const host = el as unknown as HTMLElement;
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+
+    const button = this.shadowRoot?.querySelector('button') as HTMLButtonElement | null;
+    if (button) {
+      button.addEventListener('click', (e) => {
+        if (isDisabledOrLoading(this)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
+        this.dispatchEvent(
+          new CustomEvent('click', {
+            bubbles: true,
+            composed: true,
+            detail: { originalEvent: e },
+          }),
+        );
+        e.stopPropagation();
+      });
+    }
+  }
+
+  attributeChangedCallback(name: string, _oldValue: string | null, _newValue: string | null) {
+    const innerButton = this.shadowRoot?.querySelector('button') as HTMLButtonElement | null;
+    if (!innerButton) return;
 
     if (name === 'disabled' || name === 'loading') {
-      const disabled = isDisabledOrLoading(host);
-      host.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-      host.setAttribute('aria-busy', host.hasAttribute('loading') ? 'true' : 'false');
-    }
-  },
+      const disabled = isDisabledOrLoading(this);
+      const loading = this.hasAttribute('loading');
 
-  onConnected(el) {
-    el.on('button', 'click', (e) => {
-      if (isDisabledOrLoading(el)) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
+      innerButton.disabled = disabled;
+      innerButton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      innerButton.setAttribute('aria-busy', loading ? 'true' : 'false');
+
+      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      this.setAttribute('aria-busy', loading ? 'true' : 'false');
+
+      // Handle loader visibility
+      const existingLoader = this.shadowRoot?.querySelector('.loader');
+      if (loading && !existingLoader) {
+        const loader = document.createElement('span');
+        loader.className = 'loader';
+        loader.setAttribute('aria-label', 'Loading');
+        innerButton.insertBefore(loader, innerButton.firstChild);
+      } else if (!loading && existingLoader) {
+        existingLoader.remove();
       }
+    } else if (name === 'type') {
+      innerButton.type = (_newValue || 'button') as 'button' | 'submit' | 'reset';
+    }
+  }
 
-      el.emit('click', { originalEvent: e });
-      e.stopPropagation();
-    });
-  },
+  render() {
+    const disabled = isDisabledOrLoading(this);
+    const loading = this.hasAttribute('loading');
+    const type = this.getAttribute('type') || 'button';
 
-  styles: [styles],
-
-  template: (el) => {
-    const disabled = isDisabledOrLoading(el);
-    const loading = el.hasAttribute('loading');
-
-    return html`
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
       <button
-        type="${el.getAttribute('type') || 'button'}"
-        ?disabled="${disabled}"
+        type="${type}"
+        ${disabled ? 'disabled' : ''}
         aria-disabled="${disabled ? 'true' : 'false'}"
         aria-busy="${loading ? 'true' : 'false'}">
-        ${loading ? html`<span class="loader" aria-label="Loading"></span>` : ''}
+        ${loading ? '<span class="loader" aria-label="Loading"></span>' : ''}
         <slot name="prefix"></slot>
         <span class="content"><slot></slot></span>
         <slot name="suffix"></slot>
       </button>
     `;
-  },
-});
+  }
+}
+
+if (!customElements.get('bit-button')) {
+  customElements.define('bit-button', BitButton);
+}
 
 export default {};

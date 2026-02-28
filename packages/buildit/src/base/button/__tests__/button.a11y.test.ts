@@ -1,5 +1,5 @@
-import { createFixture } from '@vielzeug/craftit/testing';
 import axe from 'axe-core';
+import { createFixture } from '../../../utils/testing';
 
 /**
  * Accessibility tests for a bit-button component using axe-core

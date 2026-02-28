@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Frost Variant Mixin
  *
@@ -11,7 +9,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with complete frost variant implementation
  *
  * @example
- * ```typescript
+ * ```ts
  * import { frostVariantMixin } from '../../styles/mixins/frost.css';
  *
  * const styles = css`
@@ -20,7 +18,7 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const frostVariantMixin = (selector: string) => css`
+export const frostVariantMixin = (selector: string) => `
   @layer buildit.variants {
   :host([variant='frost']) ${selector} {
     backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);

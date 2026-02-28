@@ -1,72 +1,10 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import { colorThemeMixin, frostVariantMixin, rainbowEffectMixin, registerRainbowProperty } from '../../styles';
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
 // Register CSS property for rainbow animation
 registerRainbowProperty();
 
-/**
- * bit-box - A foundational layout primitive with theming support
- *
- * A simple, semantic container with color, elevation, and padding support.
- * The perfect building block for layouts and compositions.
- *
- * @element bit-box
- *
- * @attr {string} variant - Style variant: 'frost'
- * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
- * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
- * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {boolean} rainbow - Enable animated rainbow border effect
- * @attr {string} as - Semantic HTML element to render as (div by default)
- *
- * @slot - Default slot for content
- *
- * @part box - The inner box element (for styling with ::part)
- *
- * @cssprop --box-bg - Background color
- * @cssprop --box-color - Text color
- * @cssprop --box-border - Border width
- * @cssprop --box-border-color - Border color
- * @cssprop --box-radius - Border radius
- * @cssprop --box-padding - Inner padding
- * @cssprop --box-shadow - Box shadow
- *
- * @example
- * <!-- Simple box with primary color -->
- * <bit-box color="primary">Content</bit-box>
- *
- * @example
- * <!-- Frost effect with elevation -->
- * <bit-box variant="frost" elevation="2">
- *   Navigation content
- * </bit-box>
- *
- * @example
- * <!-- Frost with color for frosted glass effect -->
- * <bit-box variant="frost" color="primary" padding="lg">
- *   Article content
- * </bit-box>
- *
- * @example
- * <!-- Rounded corners -->
- * <bit-box rounded="xl" color="primary">
- *   Extra large rounded corners
- * </bit-box>
- *
- * @example
- * <!-- Custom styles via ::part -->
- * <bit-box style="width: 100%;">Content</bit-box>
- * <style>
- *   bit-box::part(box) {
- *     border-left: 4px solid var(--color-primary);
- *   }
- * </style>
- */
-
-// -------------------- Styles --------------------
-const styles = css`
+const styles = /* css */ `
   /* Color themes - mixin already defines @layer buildit.themes */
   ${colorThemeMixin()}
 
@@ -152,7 +90,7 @@ const styles = css`
   ${rainbowEffectMixin('.box')}
 
   ${frostVariantMixin('.box')}
-  
+
   /* Elevation, Padding & Rounded - IN buildit.utilities layer for proper cascade */
   @layer buildit.utilities {
     :host([elevation='0']) {
@@ -173,7 +111,7 @@ const styles = css`
     :host([elevation='5']) {
       --_shadow: var(--shadow-2xl);
     }
-    
+
     :host([padding='none']) {
       --_padding: var(--size-0);
     }
@@ -189,7 +127,7 @@ const styles = css`
     :host([padding='xl']) {
       --_padding: var(--size-8);
     }
-    
+
     :host([rounded='none']) {
       --_radius: var(--rounded-none);
     }
@@ -290,13 +228,61 @@ export interface BoxProps {
   as?: string;
 }
 
-// -------------------- Component --------------------
-defineElement<HTMLElement, BoxProps>('bit-box', {
-  observedAttributes: ['variant', 'color', 'padding', 'elevation', 'rounded', 'rainbow', 'as'] as const,
+/**
+ * bit-box - A foundational layout primitive with theming support
+ *
+ * A simple, semantic container with color, elevation, and padding support.
+ * The perfect building block for layouts and compositions.
+ *
+ * @element bit-box
+ *
+ * @attr {string} variant - Style variant: 'frost'
+ * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
+ * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+ * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
+ * @attr {boolean} rainbow - Enable animated rainbow border effect
+ * @attr {string} as - Semantic HTML element to render as (div by default)
+ *
+ * @slot - Default slot for content
+ *
+ * @part box - The inner box element (for styling with ::part)
+ *
+ * @cssprop --box-bg - Background color
+ * @cssprop --box-color - Text color
+ * @cssprop --box-border - Border width
+ * @cssprop --box-border-color - Border color
+ * @cssprop --box-radius - Border radius
+ * @cssprop --box-padding - Inner padding
+ * @cssprop --box-shadow - Box shadow
+ */
+class BitBox extends HTMLElement {
+  static observedAttributes = ['variant', 'color', 'padding', 'elevation', 'rounded', 'rainbow', 'as'] as const;
 
-  styles: [styles],
-  template: (el) => {
-    const tagName = el.getAttribute('as') || 'div';
-    return html`<${tagName} class="box" part="box"><slot></slot></${tagName}>`;
-  },
-});
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  attributeChangedCallback() {
+    this.render();
+  }
+
+  render() {
+    const tagName = this.getAttribute('as') || 'div';
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <${tagName} class="box" part="box"><slot></slot></${tagName}>
+    `;
+  }
+}
+
+if (!customElements.get('bit-box')) {
+  customElements.define('bit-box', BitBox);
+}
+
+export default {};

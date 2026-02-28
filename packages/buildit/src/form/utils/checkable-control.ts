@@ -8,15 +8,13 @@
  * - Toggle behavior
  */
 
-import type { WebComponent } from '@vielzeug/craftit';
-
 export interface CheckableConfig {
   /** ARIA role for the control */
   role: 'checkbox' | 'radio' | 'switch';
   /** Whether control supports indeterminate state (checkbox only) */
   supportsIndeterminate?: boolean;
   /** Custom toggle handler */
-  onToggle?: (el: WebComponent, checked: boolean, event: Event) => void;
+  onToggle?: (el: HTMLElement, checked: boolean, event: Event) => void;
 }
 
 /**
@@ -107,9 +105,9 @@ export function initializeCheckable(host: HTMLElement, config: CheckableConfig) 
 /**
  * Create toggle handler for checkable controls
  */
-export function createToggleHandler(el: WebComponent, config: CheckableConfig) {
+export function createToggleHandler(el: HTMLElement, config: CheckableConfig) {
   return (originalEvent: Event) => {
-    const host = el as unknown as HTMLElement;
+    const host = el as HTMLElement;
 
     if (host.hasAttribute('disabled')) {
       return;
@@ -141,15 +139,21 @@ export function createToggleHandler(el: WebComponent, config: CheckableConfig) {
     // Update ARIA
     host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
 
-    // Call custom handler or emit change event
+    // Call a custom handler or emit a change event
     if (config.onToggle) {
       config.onToggle(el, nextChecked, originalEvent);
     } else {
-      el.emit('change', {
-        checked: nextChecked,
-        originalEvent,
-        value: host.getAttribute('value'),
-      });
+      el.dispatchEvent(
+        new CustomEvent('change', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            checked: nextChecked,
+            originalEvent,
+            value: host.getAttribute('value'),
+          },
+        }),
+      );
     }
   };
 }
@@ -157,10 +161,11 @@ export function createToggleHandler(el: WebComponent, config: CheckableConfig) {
 /**
  * Setup keyboard navigation for checkable controls
  */
-export function setupCheckableKeyboard(el: WebComponent, toggleHandler: (event: Event) => void) {
-  el.on('keydown', (event: KeyboardEvent) => {
-    if (event.key === ' ' || event.key === 'Enter') {
-      event.preventDefault();
+export function setupCheckableKeyboard(el: HTMLElement, toggleHandler: (event: Event) => void) {
+  el.addEventListener('keydown', (event: Event) => {
+    const keyEvent = event as KeyboardEvent;
+    if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
+      keyEvent.preventDefault();
       toggleHandler(event);
     }
   });
@@ -169,15 +174,15 @@ export function setupCheckableKeyboard(el: WebComponent, toggleHandler: (event: 
 /**
  * Setup click handling for checkable controls
  */
-export function setupCheckableClick(el: WebComponent, toggleHandler: (event: Event) => void) {
-  el.on('click', toggleHandler);
+export function setupCheckableClick(el: HTMLElement, toggleHandler: (event: Event) => void) {
+  el.addEventListener('click', toggleHandler);
 }
 
 /**
  * All-in-one setup for checkable controls
  *
  * @example
- * ```typescript
+ * ```ts
  * onConnected(el) {
  *   setupCheckableControl(el, {
  *     role: 'checkbox',
@@ -186,13 +191,13 @@ export function setupCheckableClick(el: WebComponent, toggleHandler: (event: Eve
  * }
  * ```
  */
-export function setupCheckableControl(el: WebComponent, config: CheckableConfig) {
-  const host = el as unknown as HTMLElement;
+export function setupCheckableControl(el: HTMLElement, config: CheckableConfig) {
+  const host = el as HTMLElement;
 
   // Initialize ARIA
   initializeCheckable(host, config);
 
-  // Create toggle handler
+  // Create a toggle handler
   const toggleHandler = createToggleHandler(el, config);
 
   // Setup keyboard

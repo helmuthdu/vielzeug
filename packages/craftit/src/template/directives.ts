@@ -3,7 +3,7 @@
  * Internal types for directive processing
  */
 
-import type { Signal, ComputedSignal } from '../core/signal';
+import type { ComputedSignal, Signal } from '../core/signal';
 import type { TemplateResult } from './html';
 
 /**
@@ -89,4 +89,3 @@ export function isDirective(value: unknown): value is Directive {
  * Global state for keyed lists
  */
 export const listStates = new WeakMap<Comment, any>();
-

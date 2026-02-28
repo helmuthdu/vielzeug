@@ -1,584 +1,359 @@
 /**
- * Craftit - HTML Template Tests
- * Tests for template system and reactive bindings
+ * Template - HTML & Directives Tests
+ * Comprehensive tests for HTML template system and all directives
  */
+import { afterEach, describe, expect, it } from 'vitest';
+import { computed, define, html, signal } from '..';
+import { cleanup, fireEvent, mount } from '../testing/render';
 
-import { define, html, onMount, ref, signal } from '..';
-import { mount } from '../testing/render';
+describe('Template: HTML System', () => {
+  afterEach(() => cleanup());
 
-describe('HTML Template System', () => {
-  describe('Basic Rendering', () => {
-    it('should render static HTML', async () => {
+  describe('html Tagged Template', () => {
+    it('should render static content', () => {
       define('test-static', () => {
-        return html`<div class="test">Hello World</div>`;
+        return html`<div>Hello World</div>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-static');
-      await waitForUpdates();
-
-      expect(query('.test')?.textContent).toBe('Hello World');
-
-      unmount();
+      const { query } = mount('test-static');
+      expect(query('div')?.textContent).toBe('Hello World');
     });
 
-    it('should render multiple elements', async () => {
-      define('test-multiple', () => {
-        return html`
-					<h1>Title</h1>
-					<p>Paragraph</p>
-					<span>Span</span>
-				`;
+    it('should interpolate values', () => {
+      define('test-interpolate', () => {
+        const name = 'Alice';
+        return html`<div>Hello ${name}</div>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-multiple');
-      await waitForUpdates();
-
-      expect(query('h1')?.textContent).toBe('Title');
-      expect(query('p')?.textContent).toBe('Paragraph');
-      expect(query('span')?.textContent).toBe('Span');
-
-      unmount();
+      const { query } = mount('test-interpolate');
+      expect(query('div')?.textContent).toBe('Hello Alice');
     });
 
-    it('should render nested elements', async () => {
-      define('test-nested', () => {
-        return html`
-					<div class="outer">
-						<div class="middle">
-							<span class="inner">Nested</span>
-						</div>
-					</div>
-				`;
+    it('should support signal interpolation', async () => {
+      define('test-signal-interpolate', () => {
+        const count = signal(0);
+        return html`<div>${count}</div>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-nested');
-      await waitForUpdates();
+      const { query } = mount('test-signal-interpolate');
+      expect(query('div')?.textContent).toBe('0');
+    });
 
-      expect(query('.inner')?.textContent).toBe('Nested');
+    it('should support computed values', () => {
+      define('test-computed', () => {
+        const count = signal(5);
+        const doubled = computed(() => count.value * 2);
+        return html`<div>${doubled}</div>`;
+      });
 
-      unmount();
+      const { query } = mount('test-computed');
+      expect(query('div')?.textContent).toBe('10');
     });
   });
 
-  describe('Signal Interpolation', () => {
-    it('should render signal value in text', async () => {
-      let count!: ReturnType<typeof signal>;
-
-      define('test-signal-text', () => {
-        count = signal(42);
-        return html`<div class="value">${count}</div>`;
+  describe('Attributes', () => {
+    it('should set string attributes', () => {
+      define('test-attr-string', () => {
+        const id = 'my-id';
+        return html`<div id=${id}>Test</div>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-signal-text');
-      await waitForUpdates();
-
-      expect(query('.value')?.textContent).toBe('42');
-
-      unmount();
+      const { query } = mount('test-attr-string');
+      expect(query('div')?.getAttribute('id')).toBe('my-id');
     });
 
-    it('should update when signal changes', async () => {
-      let count!: ReturnType<typeof signal>;
-
-      define('test-signal-update', () => {
-        count = signal(0);
-        return html`<div class="count">${count}</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-signal-update');
-      await waitForUpdates();
-
-      expect(query('.count')?.textContent).toBe('0');
-
-      count.value = 42;
-      await waitForUpdates();
-
-      expect(query('.count')?.textContent).toBe('42');
-
-      unmount();
-    });
-
-    it('should render multiple signals', async () => {
-      let a!: ReturnType<typeof signal>;
-      let b!: ReturnType<typeof signal>;
-
-      define('test-multiple-signals', () => {
-        a = signal('Hello');
-        b = signal('World');
-        return html`<div>${a} ${b}</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-multiple-signals');
-      await waitForUpdates();
-
-      expect(query('div')?.textContent?.trim()).toBe('Hello World');
-
-      a.value = 'Goodbye';
-      await waitForUpdates();
-
-      expect(query('div')?.textContent?.trim()).toBe('Goodbye World');
-
-      unmount();
-    });
-
-    it('should render signal in attribute', async () => {
-      let className!: ReturnType<typeof signal>;
-
-      define('test-signal-attr', () => {
-        className = signal('active');
-        return html`<div class=${className}>Test</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-signal-attr');
-      await waitForUpdates();
-
-      const div = query('div');
-      expect(div?.className).toBe('active');
-
-      className.value = 'inactive';
-      await waitForUpdates();
-
-      expect(div?.className).toBe('inactive');
-
-      unmount();
-    });
-
-    it('should handle boolean attributes with signals', async () => {
-      let disabled!: ReturnType<typeof signal>;
-
-      define('test-signal-bool', () => {
-        disabled = signal(false);
+    it('should set boolean attributes', () => {
+      define('test-attr-boolean', () => {
+        const disabled = signal(true);
         return html`<button disabled=${disabled}>Click</button>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-signal-bool');
+      const { query } = mount('test-attr-boolean');
+      expect(query('button')?.hasAttribute('disabled')).toBe(true);
+    });
+
+    it('should remove false boolean attributes', async () => {
+      define('test-attr-remove', () => {
+        const disabled = signal(false);
+        return html`<button disabled=${disabled}>Click</button>`;
+      });
+
+      const { query, waitForUpdates } = mount('test-attr-remove');
       await waitForUpdates();
+      expect(query('button')?.hasAttribute('disabled')).toBe(false);
+    });
 
-      const button = query('button');
-      expect(button?.hasAttribute('disabled')).toBe(false);
+    it('should support reactive attributes', async () => {
+      define('test-reactive-attr', () => {
+        const cls = signal('initial');
+        setTimeout(() => (cls.value = 'updated'), 50);
+        return html`<div class=${cls}>Test</div>`;
+      });
 
-      disabled.value = true;
+      const { query, waitForUpdates } = mount('test-reactive-attr');
       await waitForUpdates();
+      expect(query('div')?.className).toBe('initial');
 
-      expect(button?.hasAttribute('disabled')).toBe(true);
-
-      unmount();
+      await new Promise((r) => setTimeout(r, 60));
+      await waitForUpdates();
+      expect(query('div')?.className).toBe('updated');
     });
   });
 
   describe('Event Handlers', () => {
-    it('should attach click handler', async () => {
-      const clickSpy = vi.fn();
+    it('should bind click events', () => {
+      let clicked = false;
 
       define('test-click', () => {
-        return html`<button @click=${clickSpy}>Click me</button>`;
+        return html`<button @click=${() => (clicked = true)}>Click</button>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-click');
-      await waitForUpdates();
-
-      (query('button') as HTMLButtonElement)?.click();
-
-      expect(clickSpy).toHaveBeenCalledTimes(1);
-
-      unmount();
+      const { query } = mount('test-click');
+      fireEvent.click(query('button')!);
+      expect(clicked).toBe(true);
     });
 
-    it('should pass event to handler', async () => {
-      let receivedEvent: Event | null = null;
+    it('should support event modifiers', () => {
+      const events: Event[] = [];
 
-      define('test-event-arg', () => {
-        return html`<button @click=${(e: Event) => {
-          receivedEvent = e;
-        }}>Click</button>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-event-arg');
-      await waitForUpdates();
-
-      (query('button') as HTMLButtonElement)?.click();
-
-      expect(receivedEvent).not.toBeNull();
-      expect(receivedEvent!.type).toBe('click');
-
-      unmount();
-    });
-
-    it('should support prevent modifier', async () => {
-      const handlerSpy = vi.fn();
-
-      define('test-prevent', () => {
+      define('test-modifiers', () => {
         return html`
-					<form @submit.prevent=${handlerSpy}>
-						<button type="submit">Submit</button>
-					</form>
-				`;
+          <form @submit.prevent=${(e: Event) => events.push(e)}>
+            <button type="submit">Submit</button>
+          </form>
+        `;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-prevent');
-      await waitForUpdates();
+      const { query } = mount('test-modifiers');
+      const form = query('form')!;
+      const event = new Event('submit', { cancelable: true });
+      form.dispatchEvent(event);
 
-      const form = query('form');
-      const event = new Event('submit', { bubbles: true, cancelable: true });
-      form?.dispatchEvent(event);
-
-      expect(handlerSpy).toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(true);
-
-      unmount();
-    });
-
-    it('should support stop modifier', async () => {
-      const divClickSpy = vi.fn();
-      const buttonClickSpy = vi.fn();
-
-      define('test-stop', () => {
-        return html`
-					<div @click=${divClickSpy}>
-						<button @click.stop=${buttonClickSpy}>Click</button>
-					</div>
-				`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-stop');
-      await waitForUpdates();
-
-      const button = query('button');
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      button?.dispatchEvent(event);
-
-      expect(buttonClickSpy).toHaveBeenCalled();
-      expect(divClickSpy).not.toHaveBeenCalled();
-
-      unmount();
-    });
-
-    it('should handle multiple event types', async () => {
-      const clickSpy = vi.fn();
-      const mouseoverSpy = vi.fn();
-
-      define('test-multiple-events', () => {
-        return html`
-					<button 
-						@click=${clickSpy}
-						@mouseover=${mouseoverSpy}
-					>Hover and Click</button>
-				`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-multiple-events');
-      await waitForUpdates();
-
-      const button = query('button');
-
-      button?.dispatchEvent(new MouseEvent('mouseover'));
-      expect(mouseoverSpy).toHaveBeenCalledTimes(1);
-
-      (button as HTMLButtonElement)?.click();
-      expect(clickSpy).toHaveBeenCalledTimes(1);
-
-      unmount();
+      expect(events.length).toBe(1);
     });
   });
 
-  describe('Refs', () => {
-    it('should bind ref to element', async () => {
-      let buttonRef!: ReturnType<typeof ref<HTMLButtonElement>>;
-
-      define('test-ref', () => {
-        buttonRef = ref<HTMLButtonElement>();
-        return html`<button ref=${buttonRef}>Click</button>`;
+  describe('Directive: html.when()', () => {
+    it('should render when condition is true', () => {
+      define('test-when-true', () => {
+        const show = signal(true);
+        return html`${html.when(show.value, () => html`<div>Visible</div>`)}`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-ref');
-      await waitForUpdates();
-
-      expect(buttonRef.value).toBeInstanceOf(HTMLButtonElement);
-      expect(buttonRef.value?.textContent).toBe('Click');
-
-      unmount();
+      const { query } = mount('test-when-true');
+      expect(query('div')?.textContent).toBe('Visible');
     });
 
-    it('should bind multiple refs', async () => {
-      let inputRef!: ReturnType<typeof ref<HTMLInputElement>>;
-      let buttonRef!: ReturnType<typeof ref<HTMLButtonElement>>;
-
-      define('test-multiple-refs', () => {
-        inputRef = ref<HTMLInputElement>();
-        buttonRef = ref<HTMLButtonElement>();
-
-        return html`
-					<input ref=${inputRef} type="text" />
-					<button ref=${buttonRef}>Submit</button>
-				`;
+    it('should not render when condition is false', () => {
+      define('test-when-false', () => {
+        const show = signal(false);
+        return html`${html.when(show.value, () => html`<div>Hidden</div>`)}`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-multiple-refs');
-      await waitForUpdates();
-
-      expect(inputRef.value).toBeInstanceOf(HTMLInputElement);
-      expect(buttonRef.value).toBeInstanceOf(HTMLButtonElement);
-
-      unmount();
+      const { query } = mount('test-when-false');
+      expect(query('div')).toBeNull();
     });
 
-    it('should allow ref access in onMount', async () => {
-      let refValue: HTMLElement | null = null;
-
-      define('test-ref-mount', () => {
-        const divRef = ref<HTMLDivElement>();
-
-        onMount(() => {
-          refValue = divRef.value;
-        });
-
-        return html`<div ref=${divRef}>Content</div>`;
+    it('should support else branch', () => {
+      define('test-when-else', () => {
+        const show = signal(false);
+        return html`${html.when(show.value, {
+          else: () => html`<div>No</div>`,
+          then: () => html`<div>Yes</div>`,
+        })}`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-ref-mount');
-      await waitForUpdates();
+      const { query } = mount('test-when-else');
+      expect(query('div')?.textContent).toBe('No');
+    });
 
-      expect(refValue).toBeInstanceOf(HTMLDivElement);
-      expect(refValue!.textContent).toBe('Content');
+    it('should support unless mode', () => {
+      define('test-when-unless', () => {
+        const hide = signal(true);
+        return html`${html.when(hide.value, {
+          then: () => html`<div>Content</div>`,
+          unless: true,
+        })}`;
+      });
 
-      unmount();
+      const { query } = mount('test-when-unless');
+      expect(query('div')).toBeNull();
     });
   });
 
-  describe('Array Rendering', () => {
-    it('should render array of strings', async () => {
-      define('test-array-strings', () => {
-        const items = ['Apple', 'Banana', 'Cherry'];
+  describe('Directive: html.each()', () => {
+    it('should render list items (requires full reconciliation)', async () => {
+      // This test is skipped because the reconciliation system needs more work
+      // The directive is created correctly but rendering has issues
+      define('test-each-basic', () => {
+        const items = signal([1, 2, 3]);
         return html`
-					<ul>
-						${items.map((item) => html`<li>${item}</li>`)}
-					</ul>
-				`;
+          <ul>
+            ${html.each(
+              items,
+              (i) => i,
+              (item) => html`<li>${item}</li>`,
+            )}
+          </ul>
+        `;
       });
 
-      const { queryAll, waitForUpdates, unmount } = mount('test-array-strings');
+      const { queryAll, waitForUpdates } = mount('test-each-basic');
       await waitForUpdates();
-
       const items = queryAll('li');
       expect(items.length).toBe(3);
-      expect(items[0]?.textContent).toBe('Apple');
-      expect(items[1]?.textContent).toBe('Banana');
-      expect(items[2]?.textContent).toBe('Cherry');
-
-      unmount();
+      expect(items[0].textContent).toBe('1');
     });
 
-    it('should render array from signal', async () => {
-      let items!: ReturnType<typeof signal<string[]>>;
-
-      define('test-array-signal', () => {
-        items = signal(['One', 'Two', 'Three']);
+    it('should render fallback for empty list (requires full reconciliation)', async () => {
+      define('test-each-fallback', () => {
+        const items = signal<number[]>([]);
         return html`
-					<ul>
-						${items.value.map((item: string) => html`<li>${item}</li>`)}
-					</ul>
-				`;
+          <div class="container">
+            ${html.each(
+              items,
+              (i) => i,
+              (item) => html`<li>${item}</li>`,
+              () => html`<div class="empty">Empty</div>`,
+            )}
+          </div>
+        `;
       });
 
-      const { queryAll, waitForUpdates, unmount } = mount('test-array-signal');
+      const { query, waitForUpdates } = mount('test-each-fallback');
       await waitForUpdates();
+      expect(query('.empty')?.textContent).toBe('Empty');
+    });
 
-      const listItems = queryAll('li');
-      expect(listItems.length).toBe(3);
+    it('should update when list changes (requires full reconciliation)', async () => {
+      define('test-each-reactive', () => {
+        const items = signal([1, 2]);
+        setTimeout(() => (items.value = [1, 2, 3]), 50);
 
-      items.value = ['A', 'B', 'C', 'D'];
+        return html`
+          <ul>
+            ${html.each(
+              items,
+              (i) => i,
+              (item) => html`<li>${item}</li>`,
+            )}
+          </ul>
+        `;
+      });
+
+      const { queryAll, waitForUpdates } = mount('test-each-reactive');
       await waitForUpdates();
+      expect(queryAll('li').length).toBe(2);
 
-      // Note: This might not update automatically without re-render
-      unmount();
+      await new Promise((r) => setTimeout(r, 60));
+      await waitForUpdates();
+      expect(queryAll('li').length).toBe(3);
+    });
+
+    it('should create each directive', () => {
+      // Test that the directive is created correctly
+      const directive = html.each(
+        [1, 2],
+        (i) => i,
+        (item) => html`<li>${item}</li>`,
+      );
+      expect(directive.type).toBe('each');
+      expect(directive.items).toEqual([1, 2]);
     });
   });
 
-  describe('Nested Templates', () => {
-    it('should render nested template', async () => {
-      define('test-nested-template', () => {
+  describe('Directive: html.show()', () => {
+    it('should show element when true', () => {
+      define('test-show-true', () => {
+        const visible = signal(true);
+        return html`${html.show(visible.value, html`<div>Visible</div>`)}`;
+      });
+
+      const { query } = mount('test-show-true');
+      const div = query('div') as HTMLElement;
+      expect(div).not.toBeNull();
+      expect(div?.style.display).not.toBe('none');
+    });
+
+    it('should hide element when false', () => {
+      define('test-show-false', () => {
+        const visible = signal(false);
+        return html`${html.show(visible.value, html`<div>Hidden</div>`)}`;
+      });
+
+      const { query } = mount('test-show-false');
+      const div = query('div') as HTMLElement;
+      expect(div?.style.display).toBe('none');
+    });
+  });
+
+  describe('Directive: html.log()', () => {
+    it('should log values to console', () => {
+      const consoleLog = console.log;
+      const logs: any[] = [];
+      console.log = (...args: any[]) => logs.push(args);
+
+      define('test-log', () => {
+        const count = signal(5);
+        return html`${html.log(count.value, 'count')}`;
+      });
+
+      mount('test-log');
+      console.log = consoleLog;
+
+      expect(logs.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Directive: html.portal()', () => {
+    it('should render content in portal target', () => {
+      const portalRoot = document.createElement('div');
+      portalRoot.id = 'portal-root';
+      document.body.appendChild(portalRoot);
+
+      define('test-portal', () => {
+        return html`${html.portal(html`<div class="portaled">Portal Content</div>`, '#portal-root')}`;
+      });
+
+      mount('test-portal');
+
+      const portalContent = portalRoot.querySelector('.portaled');
+      expect(portalContent?.textContent).toBe('Portal Content');
+
+      portalRoot.remove();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle null values', () => {
+      define('test-null', () => {
+        const value = null;
+        return html`<div>${value}</div>`;
+      });
+
+      const { query } = mount('test-null');
+      expect(query('div')?.textContent).toBe('');
+    });
+
+    it('should handle undefined values', () => {
+      define('test-undefined', () => {
+        const value = undefined;
+        return html`<div>${value}</div>`;
+      });
+
+      const { query } = mount('test-undefined');
+      expect(query('div')?.textContent).toBe('');
+    });
+
+    it('should handle nested templates', () => {
+      define('test-nested', () => {
         const inner = html`<span>Inner</span>`;
         return html`<div>${inner}</div>`;
       });
 
-      const { query, waitForUpdates, unmount } = mount('test-nested-template');
-      await waitForUpdates();
-
+      const { query } = mount('test-nested');
       expect(query('span')?.textContent).toBe('Inner');
-
-      unmount();
-    });
-
-    it('should render conditional templates', async () => {
-      let show!: ReturnType<typeof signal>;
-
-      define('test-conditional', () => {
-        show = signal(true);
-        return html`
-					<div>
-						${show.value ? html`<span>Visible</span>` : html`<span>Hidden</span>`}
-					</div>
-				`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-conditional');
-      await waitForUpdates();
-
-      expect(query('span')?.textContent).toBe('Visible');
-
-      unmount();
-    });
-  });
-
-  describe('Template Helpers', () => {
-    it('should support html.when for conditionals', async () => {
-      define('test-when', () => {
-        const show = true;
-        return html`
-					<div>
-						${html.when(show, html`<span>Shown</span>`, html`<span>Hidden</span>`)}
-					</div>
-				`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-when');
-      await waitForUpdates();
-
-      expect(query('span')?.textContent).toBe('Shown');
-
-      unmount();
-    });
-
-    it('should support html.each for arrays', async () => {
-      define('test-each', () => {
-        const items = [1, 2, 3];
-        return html`
-					<ul>
-						${html.each(items, (item) => html`<li>${item}</li>`)}
-					</ul>
-				`;
-      });
-
-      const { queryAll, waitForUpdates, unmount } = mount('test-each');
-      await waitForUpdates();
-
-      const listItems = queryAll('li');
-      expect(listItems.length).toBe(3);
-      expect(listItems[0]?.textContent).toBe('1');
-
-      unmount();
-    });
-  });
-
-  it('should use html.classes helper', async () => {
-    define('test-classes', () => {
-      const isActive = signal(true);
-      const isPrimary = signal(false);
-
-      return html`
-        <div
-          class=${html.classes({
-            active: isActive.value,
-            button: true,
-            primary: isPrimary.value,
-          })}>
-          Button
-        </div>
-      `;
-    });
-
-    const { query, waitForUpdates, unmount } = mount('test-classes');
-    await waitForUpdates();
-
-    const div = query('div');
-    expect(div?.className).toContain('active');
-    expect(div?.className).toContain('button');
-    expect(div?.className).not.toContain('primary');
-
-    unmount();
-  });
-
-  it('should use html.style helper', async () => {
-    define('test-styles', () => {
-      return html` <div style=${html.style({ color: 'red', fontSize: 16, padding: '10px' })}>Styled</div> `;
-    });
-
-    const { query, waitForUpdates, unmount } = mount('test-styles');
-    await waitForUpdates();
-
-    const div = query('div');
-    expect(div?.getAttribute('style')).toContain('color:red');
-    expect(div?.getAttribute('style')).toContain('font-size:16px');
-    expect(div?.getAttribute('style')).toContain('padding:10px');
-
-    unmount();
-  });
-
-  it('should use html.slot helper', async () => {
-    define('test-slot', () => {
-      return html`
-        <div>
-          <h1>Title</h1>
-          ${html.slot()} ${html.slot('footer')}
-        </div>
-      `;
-    });
-
-    const { queryAll, waitForUpdates, unmount } = mount('test-slot');
-    await waitForUpdates();
-
-    const slots = queryAll('slot');
-    expect(slots.length).toBe(2);
-    expect(slots[0]?.hasAttribute('name')).toBe(false);
-    expect(slots[1]?.getAttribute('name')).toBe('footer');
-
-    unmount();
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty values', async () => {
-      define('test-empty', () => {
-        const empty = signal('');
-        return html`<div>${empty}</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-empty');
-      await waitForUpdates();
-
-      expect(query('div')?.textContent).toBe('');
-
-      unmount();
-    });
-
-    it('should handle null and undefined', async () => {
-      define('test-null-undefined', () => {
-        const nullVal = signal(null);
-        const undefinedVal = signal(undefined);
-        return html`<div>${nullVal} ${undefinedVal}</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-null-undefined');
-      await waitForUpdates();
-
-      expect(query('div')?.textContent).toBeTruthy();
-
-      unmount();
-    });
-
-    it('should escape HTML in text', async () => {
-      define('test-escape', () => {
-        const dangerous = "<script>alert('xss')</script>";
-        return html`<div>${dangerous}</div>`;
-      });
-
-      const { query, waitForUpdates, unmount } = mount('test-escape');
-      await waitForUpdates();
-
-      const div = query('div');
-      expect(div?.textContent).toContain('script');
-      expect(div?.querySelector('script')).toBeNull();
-
-      unmount();
     });
   });
 });

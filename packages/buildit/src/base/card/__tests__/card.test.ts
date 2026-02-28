@@ -1,5 +1,5 @@
-import { type ComponentFixture, createFixture, userEvent } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { type ComponentFixture, createFixture, userEvent } from '../../../utils/testing';
 
 describe('bit-card', () => {
   let fixture: ComponentFixture<HTMLElement>;

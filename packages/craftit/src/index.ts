@@ -15,88 +15,104 @@ export { onMount, onUnmount, onUpdated } from './core/lifecycle';
 
 // Signals & Reactivity
 export {
-  signal,
+  batch,
+  type Cleanup,
+  type ComputedSignal,
   computed,
-  readonly,
+  deepEqual,
   effect,
+  readonly,
+  type Signal,
+  shallowEqual,
+  signal,
+  untrack,
   watch,
   watchMultiple,
-  batch,
-  untrack,
-  shallowEqual,
-  deepEqual,
-  type Signal,
-  type ComputedSignal,
-  type Cleanup,
 } from './core/signal';
 
 // ============================================
 // Template - HTML & JSX
 // ============================================
 
-// HTML template
-export { html, renderTemplate, Fragment, type TemplateResult } from './template/html';
-
 // Directives
-export {
-  type Directive,
-  type WhenDirective,
-  type EachDirective,
-  type ShowDirective,
-  type LogDirective,
-  type PortalDirective,
+export type {
+  Directive,
+  EachDirective,
+  LogDirective,
+  PortalDirective,
+  ShowDirective,
+  WhenDirective,
 } from './template/directives';
+// HTML template
+export { Fragment, html, renderTemplate, type TemplateResult } from './template/html';
 
 // ============================================
 // Composables - Reusable Logic
 // ============================================
 
-// Element refs
-export { ref, bindRef, isRef, type Ref } from './composables/ref';
-
-// Props/Attributes
-export { prop, propBoolean, propNumber, propJSON, type PropOptions } from './composables/props';
-
 // Context (Provide/Inject)
 export {
-  createInjectionKey,
-  provide,
-  inject,
-  hasInjection,
-  getContext,
-  maybeGetContext,
-  setContext,
-  onCleanup,
-  runCleanups,
-  type InjectionKey,
   type ComponentContext,
+  createInjectionKey,
+  getContext,
+  hasInjection,
+  type InjectionKey,
+  inject,
+  maybeGetContext,
+  onCleanup,
+  provide,
+  runCleanups,
+  setContext,
 } from './composables/context';
-
 // Form integration
 export {
-  useForm,
-  useFormField,
   bindFormField,
-  validators,
   type Form,
   type FormField,
   type FormFieldConfig,
   type FormFieldValue,
+  useForm,
+  useFormField,
   type ValidationRule,
+  validators,
 } from './composables/form';
+// Props/Attributes
+export { type PropOptions, prop, propBoolean, propJSON, propNumber } from './composables/props';
+// Element refs
+export { bindRef, isRef, type Ref, ref } from './composables/ref';
 
 // Styling
 export { css } from './composables/style';
 
 // ============================================
+// Development Tools
+// ============================================
+
+// Debug utilities (dev mode only)
+export { createDebugLogger, debug } from './dev/debug';
+
+// ============================================
 // Testing
 // ============================================
 
-// Test utilities (use with Vitest)
+// Complete testing toolkit
 export {
-  mount,
-  createTestContext,
+  // Types
   type ComponentFixture,
+  cleanup,
+  // Helpers
+  createMockComponent,
+  createTestContext,
+  // Events
+  fireEvent,
+  // Mounting
+  mount,
+  runInContext,
+  userEvent,
+  // Waiting utilities
+  waitFor,
+  waitForElement,
+  waitForElementToBeRemoved,
+  waitForRef,
+  waitForSignal,
 } from './testing/render';
-
-

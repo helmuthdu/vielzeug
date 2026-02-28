@@ -1,16 +1,7 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import type { CheckableChangeEventDetail, ComponentSize, ThemeColor } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
 
-/**
- * # bit-checkbox
- *
- * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
- *
- * @element bit-checkbox
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -22,7 +13,7 @@ const styles = css`
       --_font-size: var(--checkbox-font-size, var(--text-sm));
       --_bg: var(--checkbox-bg, var(--color-contrast-200));
       --_border: var(--checkbox-border-color, var(--color-contrast-300));
-      
+
       display: inline-flex;
       align-items: center;
       gap: var(--_gap, var(--size-2));
@@ -199,143 +190,236 @@ export interface CheckboxProps {
 }
 
 /**
- * Checkbox Change Event Detail
+ * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
+ *
+ * @element bit-checkbox
+ *
+ * @attr {boolean} checked - Checked state
+ * @attr {boolean} disabled - Disable checkbox interaction
+ * @attr {boolean} indeterminate - Indeterminate state (partially checked)
+ * @attr {string} value - Field value
+ * @attr {string} name - Form field name
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} size - Checkbox size: 'sm' | 'md' | 'lg'
+ *
+ * @fires change - Emitted when the checkbox state changes
+ *
+ * @slot - Checkbox label text
+ *
+ * @part checkbox - The checkbox wrapper element
+ * @part box - The visual checkbox box
+ * @part label - The label text element
+ *
+ * @cssprop --checkbox-size - Checkbox dimensions
+ * @cssprop --checkbox-bg - Background color (unchecked)
+ * @cssprop --checkbox-checked-bg - Background color (checked)
+ * @cssprop --checkbox-border-color - Border color
+ * @cssprop --checkbox-color - Checkmark icon color
+ * @cssprop --checkbox-radius - Border radius
+ * @cssprop --checkbox-font-size - Label font size
  */
-export interface CheckboxChangeEvent extends CheckableChangeEventDetail {}
+class BitCheckbox extends HTMLElement {
+  static formAssociated = true;
+  static observedAttributes = ['checked', 'disabled', 'indeterminate', 'value', 'name', 'color', 'size'] as const;
 
-defineElement<HTMLInputElement, CheckboxProps>('bit-checkbox', {
-  observedAttributes: ['checked', 'disabled', 'indeterminate', 'value', 'name', 'color', 'size'] as const,
+  #internals: ElementInternals;
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Attribute synchronization requires handling multiple states (checked, indeterminate, disabled) and their interactions
-  onAttributeChanged(el, name, _oldValue, newValue) {
-    const host = el as unknown as HTMLElement;
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.#internals = this.attachInternals();
+  }
 
-    if (name === 'indeterminate') {
-      const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) {
-        input.indeterminate = newValue !== null;
-      }
-      host.setAttribute('aria-checked', newValue !== null ? 'mixed' : host.hasAttribute('checked') ? 'true' : 'false');
-    } else if (name === 'checked') {
-      const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) {
-        input.checked = newValue !== null;
-      }
-      if (!host.hasAttribute('indeterminate')) {
-        host.setAttribute('aria-checked', newValue !== null ? 'true' : 'false');
-      }
-    } else if (name === 'disabled') {
-      const isDisabled = newValue !== null;
-      host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+  formResetCallback(): void {
+    this.removeAttribute('checked');
+    this.removeAttribute('indeterminate');
+    this.#updateFormValue();
+  }
 
-      // Optional: adjust tabindex when disabled/enabled
-      if (isDisabled) {
-        host.removeAttribute('tabindex');
-      } else if (!host.hasAttribute('tabindex')) {
-        host.setAttribute('tabindex', '0');
-      }
+  formStateRestoreCallback(state: string | null): void {
+    if (state === 'checked') {
+      this.setAttribute('checked', '');
+    } else {
+      this.removeAttribute('checked');
     }
-  },
+    this.#updateFormValue();
+  }
 
-  onConnected(el) {
-    const host = el as unknown as HTMLElement;
-    const input = host.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  #updateFormValue(): void {
+    if (!this.#internals?.setFormValue) return;
+    const isChecked = this.hasAttribute('checked');
+    const value = this.getAttribute('value') || 'on';
+    this.#internals.setFormValue(isChecked ? value : null, isChecked ? 'checked' : undefined);
+  }
 
-    const isIndeterminate = host.hasAttribute('indeterminate');
-    const isChecked = host.hasAttribute('checked');
-    const isDisabled = host.hasAttribute('disabled');
+  connectedCallback() {
+    this.render();
+
+    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+    const label = this.shadowRoot?.querySelector('.label') as HTMLElement | null;
+
+    const isIndeterminate = this.hasAttribute('indeterminate');
+    const isChecked = this.hasAttribute('checked');
+    const isDisabled = this.hasAttribute('disabled');
 
     if (input) {
       input.indeterminate = isIndeterminate;
       input.checked = isChecked;
     }
 
-    // Host is the interactive element
-    host.setAttribute('role', 'checkbox');
-    host.setAttribute('aria-checked', isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false');
-    host.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    this.setAttribute('role', 'checkbox');
+    this.setAttribute('aria-checked', isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false');
+    this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
 
-    if (!isDisabled && !host.hasAttribute('tabindex')) {
-      host.setAttribute('tabindex', '0');
+    // Generate unique ID for label association
+    const labelId = `checkbox-label-${Math.random().toString(36).substr(2, 9)}`;
+    if (label && label.textContent?.trim()) {
+      label.id = labelId;
+      this.setAttribute('aria-labelledby', labelId);
+    }
+
+    if (!isDisabled && !this.hasAttribute('tabindex')) {
+      this.setAttribute('tabindex', '0');
     }
 
     // Helper to toggle checkbox state
     const toggleCheckbox = (originalEvent: Event) => {
-      if (host.hasAttribute('disabled')) return;
+      if (this.hasAttribute('disabled')) return;
 
-      const nextChecked = !host.hasAttribute('checked');
+      const nextChecked = !this.hasAttribute('checked');
 
-      if (nextChecked) host.setAttribute('checked', '');
-      else host.removeAttribute('checked');
+      if (nextChecked) this.setAttribute('checked', '');
+      else this.removeAttribute('checked');
 
-      if (host.hasAttribute('indeterminate')) host.removeAttribute('indeterminate');
+      if (this.hasAttribute('indeterminate')) this.removeAttribute('indeterminate');
 
       if (input) {
         input.checked = nextChecked;
         input.indeterminate = false;
       }
 
-      host.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
-      el.emit('change', {
-        checked: nextChecked,
-        originalEvent,
-        value: host.getAttribute('value'),
-      });
+      this.setAttribute('aria-checked', nextChecked ? 'true' : 'false');
+      this.#updateFormValue();
+      this.dispatchEvent(
+        new CustomEvent('change', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            checked: nextChecked,
+            originalEvent,
+            value: this.getAttribute('value'),
+          },
+        }),
+      );
     };
 
-    el.on('keydown', (keyEvent) => {
-      if (keyEvent.key === ' ' || keyEvent.key === 'Enter') {
-        keyEvent.preventDefault();
+    this.addEventListener('keydown', (keyEvent) => {
+      const kbEvent = keyEvent as KeyboardEvent;
+      if (kbEvent.key === ' ' || kbEvent.key === 'Enter') {
+        kbEvent.preventDefault();
         toggleCheckbox(keyEvent);
       }
     });
 
-    el.on('click', (e) => {
+    this.addEventListener('click', (e) => {
       toggleCheckbox(e);
     });
-  },
+  }
 
-  styles: [styles],
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Attribute synchronization requires handling multiple states (checked, indeterminate, disabled) and their interactions
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+    if (!input) return;
 
-  template: (el) => html`
-    <div class="checkbox-wrapper">
-      <input
-        type="checkbox"
-        ?checked="${el.hasAttribute('checked')}"
-        ?disabled="${el.hasAttribute('disabled')}"
-        .indeterminate="${el.hasAttribute('indeterminate')}"
-        name="${el.getAttribute('name')}"
-        value="${el.getAttribute('value')}"
-        style="display: none;"
-        aria-hidden="true"
-        tabindex="-1" />
-      <div class="box">
-        <svg
-          class="checkmark"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          xmlns="http://www.w3.org/2000/svg">
-          <path d="M 20,6 9,17 4,12" />
-        </svg>
-        <svg
-          class="dash"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          xmlns="http://www.w3.org/2000/svg">
-          <path d="M 5,12 H 19" />
-        </svg>
+    if (name === 'indeterminate') {
+      const isIndeterminate = newValue !== null;
+      input.indeterminate = isIndeterminate;
+
+      // Update aria-checked to reflect indeterminate state
+      const isChecked = this.hasAttribute('checked');
+      this.setAttribute('aria-checked', isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false');
+    } else if (name === 'checked') {
+      const isChecked = newValue !== null;
+      input.checked = isChecked;
+
+      // Update aria-checked (consider indeterminate state)
+      const isIndeterminate = this.hasAttribute('indeterminate');
+      this.setAttribute('aria-checked', isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false');
+    } else if (name === 'disabled') {
+      const isDisabled = newValue !== null;
+      input.disabled = isDisabled;
+
+      // Update aria-disabled and tabindex
+      this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+      if (isDisabled) {
+        this.removeAttribute('tabindex');
+      } else if (!this.hasAttribute('tabindex')) {
+        this.setAttribute('tabindex', '0');
+      }
+    }
+  }
+
+  render() {
+    const isChecked = this.hasAttribute('checked');
+    const isDisabled = this.hasAttribute('disabled');
+    const isIndeterminate = this.hasAttribute('indeterminate');
+    const name = this.getAttribute('name') || '';
+    const value = this.getAttribute('value') || '';
+
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <div class="checkbox-wrapper" part="checkbox">
+        <input
+          type="checkbox"
+          ${isChecked ? 'checked' : ''}
+          ${isDisabled ? 'disabled' : ''}
+          name="${name}"
+          value="${value}"
+          style="display: none;"
+          aria-hidden="true"
+          tabindex="-1" />
+        <div class="box" part="box">
+          <svg
+            class="checkmark"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M 20,6 9,17 4,12" />
+          </svg>
+          <svg
+            class="dash"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M 5,12 H 19" />
+          </svg>
+        </div>
       </div>
-    </div>
-    <span class="label"><slot></slot></span>
-  `,
-});
+      <span class="label" part="label"><slot></slot></span>
+    `;
+
+    this.#updateFormValue();
+
+    // Set indeterminate after render since it's a property, not an attribute
+    if (isIndeterminate) {
+      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+      if (input) {
+        input.indeterminate = true;
+      }
+    }
+  }
+}
+
+if (!customElements.get('bit-checkbox')) {
+  customElements.define('bit-checkbox', BitCheckbox);
+}
 
 export default {};

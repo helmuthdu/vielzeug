@@ -1,4 +1,4 @@
-import { createFixture, userEvent } from '@vielzeug/craftit/testing';
+import { createFixture, userEvent } from '../../../utils/testing';
 
 describe('bit-button', () => {
   beforeAll(async () => {

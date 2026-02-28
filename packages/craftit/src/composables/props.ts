@@ -3,8 +3,8 @@
  * Reactive component attributes/properties
  */
 
-import { getContext, onCleanup } from './context';
 import { type Signal, signal, watch } from '../core/signal';
+import { getContext, onCleanup } from './context';
 
 /**
  * Prop options

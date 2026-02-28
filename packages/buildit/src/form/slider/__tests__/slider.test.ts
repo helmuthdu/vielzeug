@@ -1,4 +1,4 @@
-import { type ComponentFixture, createFixture, userEvent, waitForEvent } from '@vielzeug/craftit/testing';
+import { type ComponentFixture, createFixture, userEvent, waitForEvent } from '../../../utils/testing';
 
 describe('bit-slider', () => {
   let fixture: ComponentFixture<HTMLElement>;

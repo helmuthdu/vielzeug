@@ -1,5 +1,3 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
-
 /**
  * bit-grid-item - A grid item with custom placement and span
  *
@@ -39,7 +37,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 // -------------------- Styles --------------------
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles
@@ -361,9 +359,28 @@ const styles = css`
 `;
 
 // -------------------- Component Definition --------------------
-defineElement('bit-grid-item', {
-  observedAttributes: ['colSpan', 'rowSpan', 'colStart', 'colEnd', 'rowStart', 'rowEnd', 'align', 'justify'] as const,
+class BitGridItem extends HTMLElement {
+  static observedAttributes = ['colSpan', 'rowSpan', 'colStart', 'colEnd', 'rowStart', 'rowEnd', 'align', 'justify'];
 
-  styles: [styles],
-  template: html`<slot></slot>`,
-});
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  render() {
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <slot></slot>
+    `;
+  }
+}
+
+if (!customElements.get('bit-grid-item')) {
+  customElements.define('bit-grid-item', BitGridItem);
+}
+
+export default {};

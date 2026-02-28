@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Disabled State Mixin
  *
@@ -10,7 +8,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with disabled state styles
  *
  * @example
- * ```typescript
+ * ```ts
  * import { disabledStateMixin } from '../../styles';
  *
  * const styles = css`
@@ -24,7 +22,7 @@ import { css } from '@vielzeug/craftit';
 export const disabledStateMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
-  return css`
+  return `
     @layer buildit.states {
       :host([disabled])${sel} {
         opacity: 0.5;
@@ -45,7 +43,7 @@ export const disabledStateMixin = (selector = '') => {
  * @returns CSS string with loading state styles
  *
  * @example
- * ```typescript
+ * ```ts
  * import { loadingStateMixin } from '../../styles';
  *
  * const styles = css`
@@ -59,7 +57,7 @@ export const disabledStateMixin = (selector = '') => {
 export const loadingStateMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
-  return css`
+  return `
     @layer buildit.states {
       :host([loading])${sel} {
         opacity: 0.5;
@@ -80,7 +78,7 @@ export const loadingStateMixin = (selector = '') => {
  * @returns CSS string with both disabled and loading state styles
  *
  * @example
- * ```typescript
+ * ```ts
  * import { disabledLoadingMixin } from '../../styles';
  *
  * const styles = css`
@@ -91,7 +89,7 @@ export const loadingStateMixin = (selector = '') => {
 export const disabledLoadingMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
-  return css`
+  return `
     @layer buildit.states {
       :host([disabled])${sel},
       :host([loading])${sel} {

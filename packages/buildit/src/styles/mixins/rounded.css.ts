@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Rounded Variant Mixin
  *
@@ -9,7 +7,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with rounded variant rules
  *
  * @example
- * ```typescript
+ * ```ts
  * import { roundedVariantMixin } from '../../styles/mixins/rounded.css';
  *
  * const styles = css`
@@ -20,7 +18,7 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const roundedVariantMixin = () => css`
+export const roundedVariantMixin = () => `
   @layer buildit.variants {
     :host([rounded='none']) { --_radius: var(--rounded-none); }
     :host([rounded='sm']) { --_radius: var(--rounded-sm); }

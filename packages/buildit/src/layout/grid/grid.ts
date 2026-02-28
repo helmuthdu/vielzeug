@@ -1,5 +1,3 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
-
 /**
  * bit-grid - A flexible grid layout component with intuitive responsive controls
  *
@@ -81,7 +79,7 @@ import { css, defineElement, html } from '@vielzeug/craftit';
  */
 
 // -------------------- Styles --------------------
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     /* ========================================
        Base Styles
@@ -660,9 +658,36 @@ const styles = css`
   }
 `;
 
-// -------------------- Component Definition --------------------
-defineElement('bit-grid', {
-  observedAttributes: [
+/**
+ * bit-grid - A flexible grid layout component with intuitive responsive controls
+ *
+ * @element bit-grid
+ *
+ * @attr {string} cols - Number of columns: '1'-'12' | 'auto'
+ * @attr {string} cols-sm - Columns at sm breakpoint (≥640px)
+ * @attr {string} cols-md - Columns at md breakpoint (≥768px)
+ * @attr {string} cols-lg - Columns at lg breakpoint (≥1024px)
+ * @attr {string} cols-xl - Columns at xl breakpoint (≥1280px)
+ * @attr {string} rows - Number of rows: '1'-'12' | 'auto'
+ * @attr {string} gap - Gap size: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (or 'md lg' for row-gap col-gap)
+ * @attr {string} align - Align items vertically: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
+ * @attr {string} justify - Justify items horizontally: 'start' | 'center' | 'end' | 'stretch'
+ * @attr {string} flow - Grid auto flow: 'row' | 'column' | 'row-dense' | 'column-dense'
+ * @attr {boolean} responsive - Enable auto-fit responsive columns
+ * @attr {string} layout - Preset layouts: 'sidebar' | 'sidebar-right' | 'app-shell' | 'nav-content' | 'bento'
+ *
+ * @slot - Grid items
+ *
+ * @cssprop --grid-cols - Custom column template
+ * @cssprop --grid-rows - Custom row template
+ * @cssprop --grid-gap - Gap between items
+ * @cssprop --grid-row-gap - Row gap
+ * @cssprop --grid-col-gap - Column gap
+ * @cssprop --grid-min-col-width - Minimum column width for responsive mode (default: 250px)
+ * @cssprop --grid-max-col-width - Maximum column width for responsive mode (default: 1fr)
+ */
+class BitGrid extends HTMLElement {
+  static observedAttributes = [
     'cols',
     'cols-sm',
     'cols-md',
@@ -675,8 +700,27 @@ defineElement('bit-grid', {
     'flow',
     'responsive',
     'layout',
-  ] as const,
+  ] as const;
 
-  styles: [styles],
-  template: html`<slot></slot>`,
-});
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  render() {
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <slot></slot>
+    `;
+  }
+}
+
+if (!customElements.get('bit-grid')) {
+  customElements.define('bit-grid', BitGrid);
+}
+
+export default {};

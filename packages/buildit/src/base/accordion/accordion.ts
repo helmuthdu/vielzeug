@@ -1,15 +1,6 @@
-import { css, defineElement, html } from '@vielzeug/craftit';
 import type { ComponentSize, VisualVariant } from '../../types';
 
-/**
- * # bit-accordion
- *
- * A container for accordion items with single or multiple selection modes.
- *
- * @element bit-accordion
- */
-
-const styles = css`
+const styles = /* css */ `
   @layer buildit.base {
     :host {
       display: flex;
@@ -150,7 +141,7 @@ const styles = css`
  * ```
  */
 export type AccordionProps = {
-  /** Selection mode (single = only one open, multiple = multiple can be open) */
+  /** Selection mode (single = only one opens, multiple = multiple can be open) */
   'selection-mode'?: 'single' | 'multiple';
   /** Size for all items (propagated to children) */
   size?: ComponentSize;
@@ -158,50 +149,59 @@ export type AccordionProps = {
   variant?: VisualVariant;
 };
 
-defineElement<HTMLElement, AccordionProps>('bit-accordion', {
-  observedAttributes: ['selection-mode', 'size', 'variant'] as const,
+/**
+ * A container for accordion items with single or multiple selection modes.
+ *
+ * @element bit-accordion
+ *
+ * @attr {string} selection-mode - Selection mode: 'single' | 'multiple'
+ * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg' (propagated to children)
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'text' | 'glass' | 'frost' (propagated to children)
+ *
+ * @fires expand - Emitted when an item expands
+ * @fires change - Emitted when selection changes (single mode)
+ *
+ * @slot - Accordion item elements (bit-accordion-item)
+ */
+class BitAccordion extends HTMLElement {
+  static observedAttributes = ['selection-mode', 'size', 'variant'] as const;
 
-  onAttributeChanged(name, _oldValue, _newValue, el) {
-    if (name === 'variant' || name === 'size') {
-      const host = el as unknown as HTMLElement;
-      // Reuse the syncItems function stored on the element
-      const syncFn = (host as any).__syncItems;
-      if (syncFn) syncFn();
-    }
-  },
+  private syncItems: () => void;
 
-  onConnected(el) {
-    const host = el as unknown as HTMLElement;
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
 
     // Helper to sync attributes to child items
-    const syncItems = () => {
-      const variant = host.getAttribute('variant');
-      const size = host.getAttribute('size');
-      const items = host.querySelectorAll('bit-accordion-item');
+    this.syncItems = () => {
+      const variant = this.getAttribute('variant');
+      const size = this.getAttribute('size');
+      const items = this.querySelectorAll('bit-accordion-item');
 
       items.forEach((item) => {
         if (variant) item.setAttribute('variant', variant);
         if (size) item.setAttribute('size', size);
       });
     };
+  }
 
-    // Store for use in onAttributeChanged
-    (host as any).__syncItems = syncItems;
+  connectedCallback() {
+    this.render();
 
     // Initial sync
-    syncItems();
+    this.syncItems();
 
     // Update items when slotted children change
-    const slot = host.shadowRoot?.querySelector('slot');
+    const slot = this.shadowRoot?.querySelector('slot');
     if (slot) {
-      slot.addEventListener('slotchange', syncItems);
+      slot.addEventListener('slotchange', this.syncItems);
     }
 
-    // Single-selection behavior (2 params = host element)
-    el.on('expand', (e) => {
-      if (host.getAttribute('selection-mode') === 'single') {
+    // Single-selection behavior
+    this.addEventListener('expand', (e) => {
+      if (this.getAttribute('selection-mode') === 'single') {
         const expandedItem = e.target as HTMLElement;
-        const items = host.querySelectorAll('bit-accordion-item');
+        const items = this.querySelectorAll('bit-accordion-item');
 
         items.forEach((item) => {
           if (item !== expandedItem && item.hasAttribute('expanded')) {
@@ -209,14 +209,27 @@ defineElement<HTMLElement, AccordionProps>('bit-accordion', {
           }
         });
 
-        el.emit('change', { expandedItem });
+        this.dispatchEvent(new CustomEvent('change', { detail: { expandedItem } }));
       }
     });
-  },
+  }
 
-  styles: [styles],
+  attributeChangedCallback(name: string) {
+    if (name === 'variant' || name === 'size') {
+      this.syncItems();
+    }
+  }
 
-  template: html`<slot></slot>`,
-});
+  render() {
+    this.shadowRoot!.innerHTML = /* html */ `
+      <style>${styles}</style>
+      <slot></slot>
+    `;
+  }
+}
+
+if (!customElements.get('bit-accordion')) {
+  customElements.define('bit-accordion', BitAccordion);
+}
 
 export default {};

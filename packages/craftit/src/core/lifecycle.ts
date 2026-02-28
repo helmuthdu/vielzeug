@@ -8,18 +8,16 @@ import { getContext } from '../composables/context';
 import type { Cleanup } from './signal';
 
 /**
- * Register a callback to run when component is mounted
+ * Register a callback to run when a component is mounted
  * Can return a cleanup function
  */
-export function onMount(
-  callback: () => void | Cleanup | Promise<void | Cleanup>,
-): void {
+export function onMount(callback: () => unknown | Promise<unknown>): void {
   const context = getContext();
   context.mountCallbacks.push(callback);
 }
 
 /**
- * Register a callback to run when component is unmounted
+ * Register a callback to run when the component is unmounted
  */
 export function onUnmount(callback: () => void): void {
   const context = getContext();
@@ -46,14 +44,14 @@ export function runMountCallbacks(context: ComponentContext): void {
         cleanup
           .then((result) => {
             if (typeof result === 'function') {
-              context.cleanups.add(result);
+              context.cleanups.add(result as Cleanup);
             }
           })
           .catch((error) => {
             console.error(`[craftit] Error in async onMount callback for ${context.name}:`, error);
           });
       } else if (typeof cleanup === 'function') {
-        context.cleanups.add(cleanup);
+        context.cleanups.add(cleanup as Cleanup);
       }
     } catch (error) {
       console.error(`[craftit] Error in onMount callback for ${context.name}:`, error);

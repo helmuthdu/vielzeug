@@ -1,5 +1,3 @@
-import { css } from '@vielzeug/craftit';
-
 /**
  * Padding Variant Mixin
  *
@@ -9,7 +7,7 @@ import { css } from '@vielzeug/craftit';
  * @returns CSS string with padding variant definitions
  *
  * @example
- * ```typescript
+ * ```ts
  * import { paddingMixin } from '../../styles';
  *
  * const styles = css`
@@ -21,7 +19,7 @@ import { css } from '@vielzeug/craftit';
  * `;
  * ```
  */
-export const paddingMixin = () => css`
+export const paddingMixin = () => `
   @layer buildit.utilities {
     /* ========================================
        Padding Variants

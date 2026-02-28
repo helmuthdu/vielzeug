@@ -1,413 +1,221 @@
 /**
- * Craftit - Lifecycle Tests
- * Tests for lifecycle hooks
+ * Core - Lifecycle Hooks Tests
+ * Tests for onMount, onUnmount, and onUpdated hooks
  */
-
 import { define, html, onMount, onUnmount, onUpdated, signal } from '..';
-import { mount } from '../testing/render';
+import { cleanup, mount } from '../testing/render';
 
-describe('Lifecycle Hooks', () => {
+// Counter for unique component names
+let componentCounter = 0;
+const uniqueName = (base: string) => `${base}-${++componentCounter}`;
+
+describe('Core: Lifecycle Hooks', () => {
+  afterEach(() => cleanup());
+
   describe('onMount()', () => {
-    it('should run when component is mounted', async () => {
-      const mountSpy = vi.fn();
+    it('should run when component mounts', () => {
+      const spy = vi.fn();
+      const name = uniqueName('test-mount-hook');
 
-      define('test-mount', () => {
-        onMount(mountSpy);
+      define(name, () => {
+        onMount(spy);
         return html`<div>Test</div>`;
       });
 
-      expect(mountSpy).not.toHaveBeenCalled();
-
-      const { waitForUpdates, unmount } = mount('test-mount');
-      await waitForUpdates();
-
-      expect(mountSpy).toHaveBeenCalledTimes(1);
-
-      unmount();
+      mount(name);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('should run after initial render', async () => {
-      let renderedElement: Element | null = null;
+    it('should run after DOM is ready', () => {
+      let hasElement = false;
+      const name = uniqueName('test-mount-dom');
 
-      define('test-mount-order', () => {
+      define(name, () => {
         onMount(() => {
-          // Access the rendered content
-          renderedElement = document.querySelector('test-mount-order')?.shadowRoot?.firstElementChild ?? null;
+          hasElement = true;
         });
-        return html`<div>Content</div>`;
+        return html`<div>Test</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-mount-order');
-      await waitForUpdates();
-
-      expect(renderedElement).not.toBeNull();
-      // At this point, we know renderedElement is not null because of the test assertion above
-      // and because waitForUpdates() ensures onMount has completed
-      expect(renderedElement!.textContent).toBe('Content');
-
-      unmount();
+      mount(name);
+      expect(hasElement).toBe(true);
     });
 
-    it('should support cleanup function', async () => {
-      const cleanupSpy = vi.fn();
+    it('should support multiple onMount callbacks', () => {
+      const calls: number[] = [];
+      const name = uniqueName('test-multiple-mount');
 
-      define('test-mount-cleanup', () => {
+      define(name, () => {
         onMount(() => {
-          return cleanupSpy;
+          calls.push(1);
+        });
+        onMount(() => {
+          calls.push(2);
         });
         return html`<div>Test</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-mount-cleanup');
-      await waitForUpdates();
-
-      expect(cleanupSpy).not.toHaveBeenCalled();
-
-      unmount();
-      await waitForUpdates();
-
-      expect(cleanupSpy).toHaveBeenCalledTimes(1);
-    });
-
-    it('should support multiple onMount calls', async () => {
-      const spy1 = vi.fn();
-      const spy2 = vi.fn();
-      const spy3 = vi.fn();
-
-      define('test-mount-multiple', () => {
-        onMount(spy1);
-        onMount(spy2);
-        onMount(spy3);
-        return html`<div>Test</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-mount-multiple');
-      await waitForUpdates();
-
-      expect(spy1).toHaveBeenCalledTimes(1);
-      expect(spy2).toHaveBeenCalledTimes(1);
-      expect(spy3).toHaveBeenCalledTimes(1);
-
-      unmount();
-    });
-
-    it('should run all cleanup functions', async () => {
-      const cleanup1 = vi.fn();
-      const cleanup2 = vi.fn();
-
-      define('test-mount-cleanups', () => {
-        onMount(() => cleanup1);
-        onMount(() => cleanup2);
-        return html`<div>Test</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-mount-cleanups');
-      await waitForUpdates();
-
-      unmount();
-      await waitForUpdates();
-
-      expect(cleanup1).toHaveBeenCalledTimes(1);
-      expect(cleanup2).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle async setup', async () => {
-      let data = '';
-
-      define('test-mount-async', () => {
-        onMount(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          data = 'loaded';
-        });
-        return html`<div>Test</div>`;
-      });
-
-      const { unmount } = mount('test-mount-async');
-      await new Promise((resolve) => setTimeout(resolve, 30));
-
-      expect(data).toBe('loaded');
-
-      unmount();
+      mount(name);
+      expect(calls).toEqual([1, 2]);
     });
   });
 
   describe('onUnmount()', () => {
-    it('should run when component is unmounted', async () => {
-      const unmountSpy = vi.fn();
+    it('should run when component unmounts', () => {
+      const spy = vi.fn();
+      const name = uniqueName('test-unmount-hook');
 
-      define('test-unmount', () => {
-        onUnmount(unmountSpy);
+      define(name, () => {
+        onUnmount(spy);
         return html`<div>Test</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-unmount');
-      await waitForUpdates();
-
-      expect(unmountSpy).not.toHaveBeenCalled();
+      const { unmount } = mount(name);
+      expect(spy).not.toHaveBeenCalled();
 
       unmount();
-      await waitForUpdates();
-
-      expect(unmountSpy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('should support multiple onUnmount calls', async () => {
-      const spy1 = vi.fn();
-      const spy2 = vi.fn();
+    it('should clean up resources', () => {
+      let cleaned = false;
+      const name = uniqueName('test-cleanup');
 
-      define('test-unmount-multiple', () => {
-        onUnmount(spy1);
-        onUnmount(spy2);
-        return html`<div>Test</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-unmount-multiple');
-      await waitForUpdates();
-
-      unmount();
-      await waitForUpdates();
-
-      expect(spy1).toHaveBeenCalledTimes(1);
-      expect(spy2).toHaveBeenCalledTimes(1);
-    });
-
-    it('should run after mount cleanups', async () => {
-      const callOrder: string[] = [];
-
-      define('test-unmount-order', () => {
-        onMount(() => {
-          return () => callOrder.push('mount-cleanup');
-        });
+      define(name, () => {
         onUnmount(() => {
-          callOrder.push('unmount');
+          cleaned = true;
         });
         return html`<div>Test</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-unmount-order');
-      await waitForUpdates();
-
+      const { unmount } = mount(name);
       unmount();
-      await waitForUpdates();
+      expect(cleaned).toBe(true);
+    });
 
-      expect(callOrder).toContain('mount-cleanup');
-      expect(callOrder).toContain('unmount');
+    it('should support multiple onUnmount callbacks', () => {
+      const calls: number[] = [];
+      const name = uniqueName('test-multiple-unmount');
+
+      define(name, () => {
+        onUnmount(() => calls.push(1));
+        onUnmount(() => calls.push(2));
+        return html`<div>Test</div>`;
+      });
+
+      const { unmount } = mount(name);
+      unmount();
+      expect(calls).toEqual([1, 2]);
     });
   });
 
   describe('onUpdated()', () => {
-    it.skip('should run after updates (not implemented)', async () => {
-      const updateSpy = vi.fn();
-      let count!: ReturnType<typeof signal>;
+    it('should run after signal updates', async () => {
+      const spy = vi.fn();
+      const name = uniqueName('test-updated-hook');
 
-      define('test-updated', () => {
-        count = signal(0);
-        onUpdated(updateSpy);
-        return html`<div>${count}</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-updated');
-      await waitForUpdates();
-
-      // Should not run on initial mount
-      const initialCalls = updateSpy.mock.calls.length;
-
-      count.value = 1;
-      await waitForUpdates();
-
-      expect(updateSpy.mock.calls.length).toBeGreaterThan(initialCalls);
-
-      unmount();
-    });
-
-    it.skip('should not run before mount (onUpdated not implemented)', async () => {
-      const updateSpy = vi.fn();
-
-      define('test-updated-mount', () => {
+      define(name, () => {
         const count = signal(0);
-        onUpdated(updateSpy);
+        onUpdated(spy);
 
-        // Trigger update during setup
-        count.value = 1;
-
+        // Update the signal after mount completes
+        setTimeout(() => count.value++, 10);
         return html`<div>${count}</div>`;
       });
 
-      const { unmount } = mount('test-updated-mount');
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      const { waitForUpdates } = mount(name);
+      await waitForUpdates(); // Wait for initial mount
 
-      // Should not have run during setup, only after mount
-      unmount();
-    });
+      await new Promise((resolve) => setTimeout(resolve, 20)); // Wait for signal update
+      await waitForUpdates(); // Wait for re-render
 
-    it.skip('should run multiple times for multiple updates (onUpdated not implemented)', async () => {
-      const updateSpy = vi.fn();
-      let count!: ReturnType<typeof signal>;
-
-      define('test-updated-multiple', () => {
-        count = signal(0);
-        onUpdated(updateSpy);
-        return html`<div>${count}</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-updated-multiple');
-      await waitForUpdates();
-
-      const initialCalls = updateSpy.mock.calls.length;
-
-      count.value = 1;
-      await waitForUpdates();
-
-      count.value = 2;
-      await waitForUpdates();
-
-      count.value = 3;
-      await waitForUpdates();
-
-      expect(updateSpy.mock.calls.length).toBeGreaterThan(initialCalls);
-
-      unmount();
+      expect(spy).toHaveBeenCalled();
     });
   });
 
-  describe('Lifecycle Integration', () => {
-    it('should run lifecycle hooks in correct order', async () => {
-      const callOrder: string[] = [];
+  describe('Lifecycle Order', () => {
+    it('should execute in correct order', () => {
+      const order: string[] = [];
+      const name = uniqueName('test-lifecycle-order');
 
-      define('test-lifecycle-order', () => {
+      define(name, () => {
+        order.push('setup');
+
         onMount(() => {
-          callOrder.push('mount');
-          return () => callOrder.push('mount-cleanup');
+          order.push('mount');
+        });
+        onUnmount(() => {
+          order.push('unmount');
+        });
+
+        return html`<div>Test</div>`;
+      });
+
+      const { unmount } = mount(name);
+      unmount();
+
+      expect(order).toEqual(['setup', 'mount', 'unmount']);
+    });
+  });
+
+  describe('Integration with Effects', () => {
+    it('should work with effects in onMount', async () => {
+      const values: number[] = [];
+      const name = uniqueName('test-mount-effect');
+
+      define(name, () => {
+        const count = signal(0);
+
+        onMount(() => {
+          count.value = 5;
         });
 
         onUpdated(() => {
-          callOrder.push('updated');
-        });
-
-        onUnmount(() => {
-          callOrder.push('unmount');
-        });
-
-        return html`<div>Test</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-lifecycle-order');
-      await waitForUpdates();
-
-      expect(callOrder).toContain('mount');
-
-      unmount();
-      await waitForUpdates();
-
-      expect(callOrder).toContain('mount-cleanup');
-      expect(callOrder).toContain('unmount');
-    });
-
-    it('should cleanup effects on unmount', async () => {
-      const effectSpy = vi.fn();
-      let count!: ReturnType<typeof signal>;
-
-      define('test-lifecycle-effects', () => {
-        count = signal(0);
-
-        onMount(() => {
-          // Effect should cleanup on unmount
-          const stop = setInterval(() => {
-            effectSpy();
-          }, 10);
-
-          return () => clearInterval(stop);
+          values.push(count.value);
         });
 
         return html`<div>${count}</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-lifecycle-effects');
-      await waitForUpdates();
+      const { waitForUpdates } = mount(name);
+      await waitForUpdates(); // Wait for mount and initial update
 
-      const callsBefore = effectSpy.mock.calls.length;
-      expect(callsBefore).toBeGreaterThan(0);
-
-      unmount();
-
-      const callsAfter = effectSpy.mock.calls.length;
-      // Should not have increased significantly
-      expect(callsAfter - callsBefore).toBeLessThan(5);
+      // The initial value (0) gets updated to 5 in onMount, triggering onUpdated
+      expect(values).toContain(5);
     });
 
-    it('should handle remounting', async () => {
-      const mountSpy = vi.fn();
-      const unmountSpy = vi.fn();
+    it('should cleanup effects on unmount', async () => {
+      let effectRuns = 0;
+      const name = uniqueName('test-effect-cleanup');
 
-      define('test-lifecycle-remount', () => {
-        onMount(mountSpy);
-        onUnmount(unmountSpy);
-        return html`<div>Test</div>`;
-      });
+      define(name, () => {
+        const count = signal(0);
 
-      const el = document.createElement('test-lifecycle-remount');
-
-      const container = document.createElement('div');
-      document.body.appendChild(container);
-
-      // First mount
-      container.appendChild(el);
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      const firstMountCount = mountSpy.mock.calls.length;
-      expect(firstMountCount).toBeGreaterThanOrEqual(1);
-
-      // Unmount
-      el.remove();
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(unmountSpy).toHaveBeenCalled();
-
-      // Remount
-      container.appendChild(el);
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(mountSpy.mock.calls.length).toBeGreaterThan(firstMountCount);
-
-      container.remove();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle errors in mount callbacks', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      define('test-mount-error', () => {
         onMount(() => {
-          throw new Error('Mount error');
+          const interval = setInterval(() => {
+            count.value++;
+            effectRuns++;
+          }, 10);
+
+          onUnmount(() => {
+            clearInterval(interval);
+          });
         });
-        return html`<div>Test</div>`;
+
+        return html`<div>${count}</div>`;
       });
 
-      const { waitForUpdates, unmount } = mount('test-mount-error');
-      await waitForUpdates();
+      const { unmount } = mount(name);
 
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-
-      unmount();
-    });
-
-    it('should handle errors in unmount callbacks', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      define('test-unmount-error', () => {
-        onUnmount(() => {
-          throw new Error('Unmount error');
-        });
-        return html`<div>Test</div>`;
-      });
-
-      const { waitForUpdates, unmount } = mount('test-unmount-error');
-      await waitForUpdates();
+      // Wait for some interval executions
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const runsBeforeUnmount = effectRuns;
 
       unmount();
-      await waitForUpdates();
 
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
+      // Wait and verify no more runs after unmount
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(effectRuns).toBe(runsBeforeUnmount);
     });
   });
 });

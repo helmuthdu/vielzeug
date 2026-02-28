@@ -1,9 +1,9 @@
-import { createFixture } from '@vielzeug/craftit/testing';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createFixture } from '../../../utils/testing';
 
 /**
- * Accessibility tests for bit-checkbox component using axe-core
+ * Accessibility tests for a bit-checkbox component using axe-core
  * Tests WCAG 2.1 Level AA compliance
  */
 describe('bit-checkbox accessibility', () => {

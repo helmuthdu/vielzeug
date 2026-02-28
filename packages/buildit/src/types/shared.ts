@@ -178,57 +178,6 @@ export interface CheckableProps extends FormElementProps {
 }
 
 // ============================================
-// Event Detail Types
-// ============================================
-
-/**
- * Base event detail with original DOM event
- */
-export interface BaseEventDetail<T extends Event = Event> {
-  /** Original DOM event */
-  originalEvent: T;
-}
-
-/**
- * Click event detail
- */
-export interface ClickEventDetail extends BaseEventDetail<MouseEvent> {}
-
-/**
- * Change event detail for input elements
- */
-export interface InputChangeEventDetail extends BaseEventDetail {
-  /** New value */
-  value: string;
-}
-
-/**
- * Change event detail for checkable elements
- */
-export interface CheckableChangeEventDetail extends BaseEventDetail {
-  /** Checked state */
-  checked: boolean;
-  /** Field value (if any) */
-  value?: string | null;
-}
-
-/**
- * Slider change event detail
- */
-export interface SliderChangeEventDetail extends BaseEventDetail {
-  /** New numeric value */
-  value: number;
-}
-
-/**
- * Accordion expand/collapse event detail
- */
-export interface AccordionEventDetail extends BaseEventDetail {
-  /** Whether the item is expanded */
-  expanded: boolean;
-}
-
-// ============================================
 // Utility Types
 // ============================================
 

@@ -21,7 +21,7 @@ export interface ComponentContext {
   /** Cleanup functions */
   cleanups: Set<Cleanup>;
   /** Mount callbacks */
-  mountCallbacks: Array<() => void | Cleanup | Promise<void | Cleanup>>;
+  mountCallbacks: Array<() => unknown>;
   /** Unmount callbacks */
   unmountCallbacks: Array<() => void>;
   /** Update callbacks */

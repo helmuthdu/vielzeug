@@ -1,5 +1,5 @@
-import { type ComponentFixture, createFixture } from '@vielzeug/craftit/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { type ComponentFixture, createFixture } from '../../../utils/testing';
 
 describe('bit-accordion', () => {
   let fixture: ComponentFixture<HTMLElement>;
