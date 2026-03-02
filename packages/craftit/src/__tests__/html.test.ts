@@ -2,7 +2,6 @@
  * Template - HTML & Directives Tests
  * Comprehensive tests for HTML template system and all directives
  */
-import { afterEach, describe, expect, it } from 'vitest';
 import { computed, define, html, signal } from '..';
 import { cleanup, fireEvent, mount } from '../test/trial';
 
@@ -161,22 +160,22 @@ describe('Template: HTML System', () => {
 
       // Test Enter key
       const enterInput = query('#enter-input') as HTMLInputElement;
-      enterInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      enterInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
       expect(enterPressed).toBe(true);
 
       // A key should not trigger the enter handler
       enterPressed = false;
-      enterInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      enterInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
       expect(enterPressed).toBe(false);
 
       // Test Esc key
       const escInput = query('#esc-input') as HTMLInputElement;
-      escInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      escInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
       expect(escPressed).toBe(true);
 
       // Test any key (no modifier)
       const anyInput = query('#any-input') as HTMLInputElement;
-      anyInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+      anyInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'x' }));
       expect(anyKeyPressed).toBe(true);
     });
   });
@@ -205,10 +204,12 @@ describe('Template: HTML System', () => {
     it('should support else branch', () => {
       define('test-when-else', () => {
         const show = signal(false);
-        return html`${html.when(show.value, {
+        const config = {
           else: () => html`<div>No</div>`,
+          // biome-ignore lint/suspicious/noThenProperty: Intentional API design for conditional rendering with then/else pattern
           then: () => html`<div>Yes</div>`,
-        })}`;
+        };
+        return html`${html.when(show.value, config)}`;
       });
 
       const { query } = mount('test-when-else');
@@ -218,8 +219,6 @@ describe('Template: HTML System', () => {
 
   describe('Directive: html.each()', () => {
     it('should render list items (requires full reconciliation)', async () => {
-      // This test is skipped because the reconciliation system needs more work
-      // The directive is created correctly but rendering has issues
       define('test-each-basic', () => {
         const items = signal([1, 2, 3]);
         return html`
@@ -260,7 +259,7 @@ describe('Template: HTML System', () => {
       expect(query('.empty')?.textContent).toBe('Empty');
     });
 
-    it('should update when list changes (requires full reconciliation)', async () => {
+    it('should update when list changes', async () => {
       define('test-each-reactive', () => {
         const items = signal([1, 2]);
         setTimeout(() => (items.value = [1, 2, 3]), 50);
@@ -292,8 +291,13 @@ describe('Template: HTML System', () => {
         (i) => i,
         (item) => html`<li>${item}</li>`,
       );
-      expect(directive.type).toBe('each');
-      expect(directive.items).toEqual([1, 2]);
+      // Type guard to ensure we have an EachDirective
+      if (typeof directive !== 'string' && typeof directive === 'object' && 'type' in directive) {
+        expect(directive.type).toBe('each');
+        expect(directive.items).toEqual([1, 2]);
+      } else {
+        throw new Error('Expected EachDirective but got different type');
+      }
     });
   });
 
@@ -325,8 +329,8 @@ describe('Template: HTML System', () => {
   describe('Directive: html.log()', () => {
     it('should log values to console', () => {
       const consoleLog = console.log;
-      const logs: any[] = [];
-      console.log = (...args: any[]) => logs.push(args);
+      const logs: unknown[] = [];
+      console.log = (...args: unknown[]) => logs.push(args);
 
       define('test-log', () => {
         const count = signal(5);

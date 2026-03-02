@@ -2,7 +2,6 @@
  * Composables - Ref, Props, Context Tests
  * Comprehensive tests for composable utilities
  */
-import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, type InjectionKey, inject, prop, provide, ref } from '..';
 import { cleanup, mount } from '../test/trial';
 

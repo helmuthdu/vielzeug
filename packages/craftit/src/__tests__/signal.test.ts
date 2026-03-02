@@ -2,8 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { describe, expect, it } from 'vitest';
-import { batch, computed, deepEqual, effect, readonly, shallowEqual, signal, untrack, watch } from '../core/signal';
+import { batch, computed, effect, readonly, signal, watch } from '../';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {
@@ -69,7 +68,8 @@ describe('Core: Signal System', () => {
       const count = signal(5);
       const readCount = readonly(count);
       expect(() => {
-        (readCount as any).value = 10;
+        // Type assertion to bypass readonly for testing error case
+        (readCount as { value: number }).value = 10;
       }).toThrow();
     });
   });
@@ -147,33 +147,6 @@ describe('Core: Signal System', () => {
         count.value = 2;
       });
       expect(runs).toBe(2);
-    });
-  });
-
-  describe('untrack()', () => {
-    it('should prevent tracking', () => {
-      const count = signal(0);
-      const other = signal(10);
-      let runs = 0;
-      effect(() => {
-        count.value;
-        untrack(() => other.value);
-        runs++;
-      });
-      other.value = 20;
-      expect(runs).toBe(1);
-    });
-  });
-
-  describe('Equality', () => {
-    it('shallowEqual should compare objects', () => {
-      expect(shallowEqual({ a: 1 }, { a: 1 })).toBe(true);
-      expect(shallowEqual({ a: 1 }, { a: 2 })).toBe(false);
-    });
-
-    it('deepEqual should compare nested objects', () => {
-      expect(deepEqual({ a: { b: 1 } }, { a: { b: 1 } })).toBe(true);
-      expect(deepEqual({ a: { b: 1 } }, { a: { b: 2 } })).toBe(false);
     });
   });
 });

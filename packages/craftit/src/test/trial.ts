@@ -7,10 +7,18 @@
  * - Not compatible with pure Node.js environments
  */
 
-import type { ComponentContext } from '../composables/context';
-import { setContext } from '../composables/context';
-import type { Ref } from '../composables/ref';
-import type { ComputedSignal, Signal } from '../core/signal';
+import type { ComputedSignal, Ref, Signal } from '..';
+
+// Type for component context (for future use)
+export interface ComponentContext {
+  el: HTMLElement;
+  [key: string]: unknown;
+}
+
+// Mock setContext for testing (not used currently)
+export const setContext = (_context: ComponentContext | null): void => {
+  // No-op for now
+};
 
 /**
  * Component test fixture
@@ -83,7 +91,7 @@ export const fireEvent = {
    * Fire a custom event
    * @example fireEvent.custom(element, 'my-event', { detail: { value: 123 } })
    */
-  custom<T = any>(element: Element, eventName: string, options?: CustomEventInit<T>): void {
+  custom<T = unknown>(element: Element, eventName: string, options?: CustomEventInit<T>): void {
     const event = new CustomEvent(eventName, {
       bubbles: true,
       cancelable: true,
@@ -200,7 +208,7 @@ export const userEvent = {
   async clear(element: HTMLInputElement | HTMLTextAreaElement): Promise<void> {
     element.focus();
     fireEvent.focus(element);
-    (element as any).value = '';
+    element.value = '';
     fireEvent.input(element);
     fireEvent.change(element);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -279,7 +287,7 @@ export const userEvent = {
     fireEvent.focus(element);
 
     for (const char of text) {
-      (element as any).value += char;
+      element.value += char;
       fireEvent.input(element);
       fireEvent.keyDown(element, { key: char });
       fireEvent.keyUp(element, { key: char });
@@ -533,7 +541,7 @@ export async function waitForSignal<T>(
  * const buttonRef = ref<HTMLButtonElement>();
  * await waitForRef(buttonRef);
  */
-export async function waitForRef<T>(
+export async function waitForRef<T extends Element | null>(
   ref: Ref<T>,
   options?: {
     timeout?: number;
@@ -566,6 +574,7 @@ export function createTestContext(options?: { name?: string; element?: HTMLEleme
 
   return {
     cleanups: new Set(),
+    el: element,
     element,
     mountCallbacks: [],
     mounted: false,

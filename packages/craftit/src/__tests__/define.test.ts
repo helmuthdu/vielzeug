@@ -2,7 +2,6 @@
  * Core - Component Definition Tests
  * Tests for the define() function and component lifecycle
  */
-import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, signal } from '..';
 import { cleanup, mount } from '../test/trial';
 
