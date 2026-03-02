@@ -101,7 +101,7 @@ define('todo-list', () => {
           todos,
           (todo) => todo.id,
           (todo) => html`
-            <li class=${html.classes({ done: todo.done })}>
+            <li class=${() => html.classes({ done: todo.done })}>
               <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
               <span>${todo.text}</span>
               <button @click=${() => removeTodo(todo.id)}>×</button>
@@ -112,6 +112,456 @@ define('todo-list', () => {
     </div>
   `;
 });
+```
+
+## Form Examples
+
+### Custom Form Input
+
+Basic custom input with form integration using ElementInternals.
+
+```ts
+import { define, signal, html, css, field } from '@vielzeug/craftit';
+
+define('custom-input', () => {
+  const value = signal('');
+  const placeholder = prop('placeholder', '');
+
+  // Register as form field
+  const formField = field({ value });
+
+  const styles = css`
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #0070f3;
+      box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.1);
+    }
+  `;
+
+  return {
+    template: html`
+      <input
+        type="text"
+        :value=${value}
+        :placeholder=${placeholder}
+        @input=${(e) => value.value = e.target.value}
+      />
+    `,
+    styles: [styles.content]
+  };
+}, { formAssociated: true });
+```
+
+Usage in a form:
+
+```html
+<form>
+  <custom-input name="username" placeholder="Enter username"></custom-input>
+  <button type="submit">Submit</button>
+</form>
+```
+
+### Validated Email Input
+
+Email input with built-in validation using ElementInternals.
+
+```ts
+import { define, signal, computed, watch, html, css, field } from '@vielzeug/craftit';
+
+define('email-input', () => {
+  const value = signal('');
+  const required = prop('required', false, {
+    parse: (v) => v !== null
+  });
+
+  const formField = field({ value });
+
+  const emailValid = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
+  );
+
+  // Update validation state
+  watch([value, required], () => {
+    if (required.value && !value.value) {
+      formField.setValidity(
+        { valueMissing: true },
+        'Email is required'
+      );
+    } else if (value.value && !emailValid.value) {
+      formField.setValidity(
+        { typeMismatch: true },
+        'Please enter a valid email address'
+      );
+    } else {
+      formField.setValidity({}, '');
+    }
+  }, { immediate: true });
+
+  const styles = css`
+    .input-wrapper {
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    input:invalid {
+      border-color: #ef4444;
+    }
+
+    input:valid:not(:placeholder-shown) {
+      border-color: #10b981;
+    }
+
+    .error {
+      color: #ef4444;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+  `;
+
+  return {
+    template: html`
+      <div class="input-wrapper">
+        <input
+          type="email"
+          :value=${value}
+          @input=${(e) => value.value = e.target.value}
+          placeholder="email@example.com"
+        />
+        ${html.when(!emailValid && value, () => html`
+          <div class="error">Please enter a valid email</div>
+        `)}
+      </div>
+    `,
+    styles: [styles.content]
+  };
+}, { formAssociated: true });
+```
+
+### Rating Component
+
+Star rating component with form integration.
+
+```ts
+import { define, signal, watch, html, css, field, prop } from '@vielzeug/craftit';
+
+define('star-rating', () => {
+  const rating = signal(0);
+  const maxRating = prop('max', 5, {
+    parse: (v) => Number(v) || 5
+  });
+  const required = prop('required', false, {
+    parse: (v) => v !== null
+  });
+
+  const formField = field({
+    value: rating,
+    toFormValue: (v) => String(v)
+  });
+
+  // Validation
+  watch([rating, required], () => {
+    if (required.value && rating.value === 0) {
+      formField.setValidity(
+        { valueMissing: true },
+        'Please select a rating'
+      );
+    } else {
+      formField.setValidity({}, '');
+    }
+  }, { immediate: true });
+
+  const styles = css`
+    .rating {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    button {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #d1d5db;
+      padding: 0;
+      transition: color 0.2s;
+    }
+
+    button.active,
+    button:hover {
+      color: #fbbf24;
+    }
+
+    button:focus {
+      outline: 2px solid #0070f3;
+      outline-offset: 2px;
+    }
+  `;
+
+  return {
+    template: html`
+      <div class="rating" role="radiogroup" aria-label="Rating">
+        ${Array.from({ length: maxRating.value }, (_, i) => i + 1).map(star => html`
+          <button
+            type="button"
+            class=${() => html.classes({ active: rating.value >= star })}
+            @click=${() => rating.value = star}
+            aria-label="${star} star${star > 1 ? 's' : ''}"
+            role="radio"
+            aria-checked=${rating.value === star}
+          >
+            ★
+          </button>
+        `)}
+      </div>
+    `,
+    styles: [styles.content]
+  };
+}, { formAssociated: true });
+```
+
+Usage:
+
+```html
+<form>
+  <label>Rate this product:</label>
+  <star-rating name="rating" max="5" required></star-rating>
+  <button type="submit">Submit Review</button>
+</form>
+```
+
+### Multi-Select Component
+
+Custom multi-select with form integration.
+
+```ts
+import { define, signal, html, css, field } from '@vielzeug/craftit';
+
+type Option = { value: string; label: string };
+
+define('multi-select', () => {
+  const options: Option[] = [
+    { value: 'js', label: 'JavaScript' },
+    { value: 'ts', label: 'TypeScript' },
+    { value: 'py', label: 'Python' },
+    { value: 'rs', label: 'Rust' }
+  ];
+
+  const selected = signal<string[]>([]);
+
+  const formField = field({
+    value: selected,
+    toFormValue: (values) => {
+      // Send as comma-separated string or FormData
+      return values.join(',');
+    }
+  });
+
+  const toggleOption = (value: string) => {
+    selected.update(current => {
+      if (current.includes(value)) {
+        return current.filter(v => v !== value);
+      }
+      return [...current, value];
+    });
+  };
+
+  const styles = css`
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    label:hover {
+      background: #f3f4f6;
+    }
+
+    input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+      cursor: pointer;
+    }
+  `;
+
+  return {
+    template: html`
+      <div class="options">
+        ${options.map(option => html`
+          <label>
+            <input
+              type="checkbox"
+              ?checked=${selected.value.includes(option.value)}
+              @change=${() => toggleOption(option.value)}
+            />
+            <span>${option.label}</span>
+          </label>
+        `)}
+      </div>
+      <div style="margin-top: 0.5rem; color: #666; font-size: 0.875rem">
+        Selected: ${selected.value.length} item${selected.value.length !== 1 ? 's' : ''}
+      </div>
+    `,
+    styles: [styles.content]
+  };
+}, { formAssociated: true });
+```
+
+### File Upload Component
+
+Custom file uploader with preview and form integration.
+
+```ts
+import { define, signal, html, css, field } from '@vielzeug/craftit';
+
+define('file-upload', () => {
+  const files = signal<FileList | null>(null);
+  const multiple = prop('multiple', false, {
+    parse: (v) => v !== null
+  });
+
+  const formField = field({
+    value: files,
+    toFormValue: (fileList) => {
+      if (!fileList || fileList.length === 0) return null;
+
+      if (fileList.length === 1) {
+        return fileList[0];
+      }
+
+      // Multiple files - return FormData
+      const formData = new FormData();
+      for (let i = 0; i < fileList.length; i++) {
+        formData.append('files[]', fileList[i]);
+      }
+      return formData;
+    }
+  });
+
+  const handleChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    files.value = target.files;
+  };
+
+  const removeFile = (index: number) => {
+    if (!files.value) return;
+
+    const dt = new DataTransfer();
+    for (let i = 0; i < files.value.length; i++) {
+      if (i !== index) {
+        dt.items.add(files.value[i]);
+      }
+    }
+    files.value = dt.files.length > 0 ? dt.files : null;
+  };
+
+  const styles = css`
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-area:hover {
+      border-color: #0070f3;
+      background: #f0f9ff;
+    }
+
+    .file-list {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      background: #f3f4f6;
+      border-radius: 4px;
+    }
+
+    .remove-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  `;
+
+  return {
+    template: html`
+      <div>
+        <div class="upload-area" @click=${() => {
+          const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+          input?.click();
+        }}>
+          <input
+            type="file"
+            ?multiple=${multiple}
+            @change=${handleChange}
+            style="display: none"
+          />
+          <p>Click to upload or drag and drop</p>
+          <p style="font-size: 0.875rem; color: #666">
+            ${multiple.value ? 'Multiple files allowed' : 'Single file only'}
+          </p>
+        </div>
+
+        ${html.when(files && files.value, () => html`
+          <div class="file-list">
+            ${Array.from(files.value!).map((file, i) => html`
+              <div class="file-item">
+                <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+                <button
+                  type="button"
+                  class="remove-btn"
+                  @click=${() => removeFile(i)}
+                >
+                  Remove
+                </button>
+              </div>
+            `)}
+          </div>
+        `)}
+      </div>
+    `,
+    styles: [styles.content]
+  };
+}, { formAssociated: true });
 ```
 
 ## Form Examples
@@ -291,11 +741,12 @@ define('user-card', () => {
         <div class="avatar">
           ${html.when(avatar, () => html` <img src="${avatar.value}" alt="${name.value}" /> `)}
           <div
-            class=${html.classes({
-              status: true,
-              online: online.value,
-              offline: !online.value,
-            })}></div>
+            class=${() =>
+              html.classes({
+                status: true,
+                online: online.value,
+                offline: !online.value,
+              })}></div>
         </div>
         <div class="info">
           <h3>${name}</h3>
@@ -552,29 +1003,29 @@ define('tab-group', () => {
     template: html`
       <div class="tabs">
         <button
-          class=${html.classes({ tab: true, active: activeTab.value === 0 })}
+          class=${() => html.classes({ tab: true, active: activeTab.value === 0 })}
           @click=${() => (activeTab.value = 0)}>
           Tab 1
         </button>
         <button
-          class=${html.classes({ tab: true, active: activeTab.value === 1 })}
+          class=${() => html.classes({ tab: true, active: activeTab.value === 1 })}
           @click=${() => (activeTab.value = 1)}>
           Tab 2
         </button>
         <button
-          class=${html.classes({ tab: true, active: activeTab.value === 2 })}
+          class=${() => html.classes({ tab: true, active: activeTab.value === 2 })}
           @click=${() => (activeTab.value = 2)}>
           Tab 3
         </button>
       </div>
       <div class="tab-panels">
-        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 0 })}>
+        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 0 })}>
           <slot name="tab-1">Panel 1 content</slot>
         </div>
-        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 1 })}>
+        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 1 })}>
           <slot name="tab-2">Panel 2 content</slot>
         </div>
-        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 2 })}>
+        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 2 })}>
           <slot name="tab-3">Panel 3 content</slot>
         </div>
       </div>

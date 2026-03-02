@@ -49,9 +49,10 @@ import {
   ref,
   provide,
   inject,
+  field,
 } from '@vielzeug/craftit';
 // Optional: Import types
-import type { Signal, ComputedSignal, Ref, InjectionKey, HTMLResult, CSSResult } from '@vielzeug/craftit';
+import type { Signal, ComputedSignal, Ref, InjectionKey, HTMLResult, CSSResult, FormFieldHandle } from '@vielzeug/craftit';
 ```
 
 ## Basic Usage
@@ -421,10 +422,35 @@ html`
 
 ### Reactive Functions
 
+Use arrow functions to create reactive expressions that re-evaluate when signals change:
+
 ```ts
 const count = signal(0);
+const name = signal('Alice');
+
+// Reactive HTML
 html` ${() => html`<p>Count: ${count.value}</p>`} `;
+
+// Reactive text
+html` <p>${() => `Hello, ${name.value}!`}</p> `;
+
+// Reactive attributes
+html` <button class=${() => count.value > 0 ? 'btn active' : 'btn'}>Click</button> `;
 ```
+
+::: tip Why Arrow Functions?
+Craftit is a runtime library without a compiler. When you write `count.value`, JavaScript evaluates it immediately. Wrapping in `() => ...` delays evaluation, allowing the template system to re-run it when signals change.
+:::
+
+::: warning Common Mistake
+```ts
+// ❌ Static - evaluated once, never updates
+html`<p>${count.value}</p>`;
+
+// ✅ Reactive - re-evaluates when count changes
+html`<p>${() => count.value}</p>`;
+```
+:::
 
 ## Control Flow
 
@@ -602,27 +628,44 @@ html`
 
 ### Dynamic Classes (html.classes)
 
+Use `html.classes()` to build dynamic class names. Wrap in an arrow function for reactivity:
+
 ```ts
 const isActive = signal(true);
 const isDisabled = signal(false);
-// Object syntax
+
+// Object syntax - wrap in arrow function for reactivity
 html`
   <div
-    class=${html.classes({
-      active: isActive.value,
-      disabled: isDisabled.value,
-      'button-primary': true,
-    })}>
+    class=${() =>
+      html.classes({
+        active: isActive.value,
+        disabled: isDisabled.value,
+        'button-primary': true,
+      })}>
     Styled
   </div>
 `;
+
 // Array syntax
 html`
-  <div class=${html.classes(['btn', isActive.value && 'active', { primary: true, disabled: isDisabled.value }])}>
+  <div class=${() => html.classes(['btn', isActive.value && 'active', { primary: true, disabled: isDisabled.value }])}>
     Styled
   </div>
 `;
 ```
+
+::: tip Reactivity Pattern
+**Always wrap `html.classes()` in an arrow function when using signal values:**
+
+```ts
+// ✅ Reactive - updates when priority changes
+class=${() => html.classes({ active: priority.value === 'high' })}
+
+// ❌ Static - evaluated once with current value
+class=${html.classes({ active: priority.value === 'high' })}
+```
+:::
 
 ## Lifecycle Hooks
 
@@ -679,6 +722,264 @@ onCleanup(() => {
   console.log('Cleaning up...');
 });
 ```
+
+## Form Integration
+
+Craftit provides native form integration through the `field()` helper, which uses the [ElementInternals API](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals) to create custom form controls that work seamlessly with native HTML forms.
+
+::: warning Important
+To use `field()`, you must define your component with the `formAssociated: true` option:
+
+```ts
+define('my-input', () => {
+  // component code
+}, { formAssociated: true }); // ← Required!
+```
+:::
+
+### Basic Form Field
+
+Create a custom input that participates in form submission:
+
+```ts
+import { define, signal, html, field } from '@vielzeug/craftit';
+
+define('custom-input', () => {
+  const value = signal('');
+
+  // Register as a form field
+  const formField = field({
+    value: value
+  });
+
+  return html`
+    <input
+      type="text"
+      :value=${value}
+      @input=${(e) => value.value = e.target.value}
+    />
+  `;
+}, { formAssociated: true }); // ← Must set this!
+```
+
+```html
+<form>
+  <custom-input name="username"></custom-input>
+  <button type="submit">Submit</button>
+</form>
+```
+
+### With Custom Form Value
+
+Transform the signal value before sending to the form:
+
+```ts
+define('number-input', () => {
+  const value = signal(0);
+
+  const formField = field({
+    value: value,
+    toFormValue: (v) => String(v) // Convert number to string
+  });
+
+  return html`
+    <input
+      type="number"
+      :value=${value}
+      @input=${(e) => value.value = Number(e.target.value)}
+    />
+  `;
+}, { formAssociated: true });
+```
+
+### With Validation
+
+Use ElementInternals validation API:
+
+```ts
+import { define, signal, computed, html, field } from '@vielzeug/craftit';
+
+define('email-input', () => {
+  const value = signal('');
+
+  const formField = field({ value });
+
+  const isValid = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
+  );
+
+  // Update validity when value changes
+  watch(value, () => {
+    if (!value.value) {
+      formField.setValidity({}, ''); // Clear validation
+    } else if (!isValid.value) {
+      formField.setValidity(
+        { typeMismatch: true },
+        'Please enter a valid email address'
+      );
+    } else {
+      formField.setValidity({}, ''); // Valid
+    }
+  }, { immediate: true });
+
+  return html`
+    <input
+      type="email"
+      :value=${value}
+      @input=${(e) => value.value = e.target.value}
+      placeholder="email@example.com"
+    />
+  `;
+}, { formAssociated: true });
+```
+
+### With Disabled State
+
+Sync disabled state with form internals:
+
+```ts
+define('toggle-input', () => {
+  const value = signal('');
+  const disabled = signal(false);
+
+  const formField = field({
+    value: value,
+    disabled: disabled // Automatically syncs with internals.states
+  });
+
+  return html`
+    <div>
+      <input
+        type="text"
+        :value=${value}
+        ?disabled=${disabled}
+        @input=${(e) => value.value = e.target.value}
+      />
+      <button @click=${() => disabled.value = !disabled.value}>
+        ${disabled.value ? 'Enable' : 'Disable'}
+      </button>
+    </div>
+  `;
+}, { formAssociated: true });
+```
+
+### Complex Form Control
+
+Full-featured custom form control with validation:
+
+```ts
+define('rating-input', () => {
+  const rating = signal(0);
+  const required = prop('required', false, {
+    parse: (v) => v !== null
+  });
+
+  const formField = field({
+    value: rating,
+    toFormValue: (v) => String(v)
+  });
+
+  // Validate
+  watch([rating, required], () => {
+    if (required.value && rating.value === 0) {
+      formField.setValidity(
+        { valueMissing: true },
+        'Please select a rating'
+      );
+    } else {
+      formField.setValidity({}, '');
+    }
+  }, { immediate: true });
+
+  return html`
+    <div class="rating">
+      ${[1, 2, 3, 4, 5].map(star => html`
+        <button
+          type="button"
+          class=${() => html.classes({ active: rating.value >= star })}
+          @click=${() => rating.value = star}
+        >
+          ★
+        </button>
+      `)}
+    </div>
+  `;
+}, { formAssociated: true });
+```
+
+```html
+<form>
+  <rating-input name="rating" required></rating-input>
+  <button type="submit">Submit</button>
+</form>
+```
+
+### Form Field Handle
+
+The `field()` function returns a handle with useful methods:
+
+```ts
+const formField = field({ value });
+
+// Access ElementInternals (or null if not supported)
+formField.internals; // ElementInternals | null
+
+// Set validity
+formField.setValidity(
+  { valueMissing: true },
+  'This field is required',
+  inputElement
+);
+
+// Report validity (shows validation message)
+const isValid = formField.reportValidity(); // boolean
+```
+
+### File Upload Control
+
+Custom file input with form integration:
+
+```ts
+define('file-uploader', () => {
+  const files = signal<FileList | null>(null);
+
+  const formField = field({
+    value: files,
+    toFormValue: (fileList) => {
+      if (!fileList || fileList.length === 0) return '';
+
+      // Return first file or FormData with all files
+      if (fileList.length === 1) {
+        return fileList[0];
+      }
+
+      const formData = new FormData();
+      for (let i = 0; i < fileList.length; i++) {
+        formData.append('files[]', fileList[i]);
+      }
+      return formData;
+    }
+  });
+
+  return html`
+    <input
+      type="file"
+      multiple
+      @change=${(e) => {
+        const target = e.target as HTMLInputElement;
+        files.value = target.files;
+      }}
+    />
+    ${html.when(files, () => html`
+      <p>Selected: ${files.value?.length || 0} file(s)</p>
+    `)}
+  `;
+}, { formAssociated: true });
+```
+
+### Browser Support
+
+The `field()` helper gracefully degrades in browsers without ElementInternals support. It returns a no-op handle that won't cause errors but won't provide form integration.
 
 ## Props and Attributes
 

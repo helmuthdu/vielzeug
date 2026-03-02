@@ -2,8 +2,8 @@
  * Composables - Ref, Props, Context Tests
  * Comprehensive tests for composable utilities
  */
-import { define, html, type InjectionKey, inject, prop, provide, ref } from '..';
-import { cleanup, mount } from '../trial/trial';
+import { define, field, html, type InjectionKey, inject, prop, provide, ref, signal } from '..';
+import { cleanup, mount } from '../trial';
 
 // Counter for unique component names
 let componentCounter = 0;
@@ -102,6 +102,79 @@ describe('Composables', () => {
 
       const { query } = mount(name);
       expect(query('div')?.textContent).toBe('default');
+    });
+  });
+
+  describe('field()', () => {
+    it('should create form field with validation methods', async () => {
+      const name = uniqueName('test-field-basic');
+
+      define(
+        name,
+        () => {
+          const value = signal('test');
+          const formField = field({ value });
+
+          // Should have required properties
+          expect(formField).toHaveProperty('setValidity');
+          expect(formField).toHaveProperty('reportValidity');
+
+          // Should be callable without error
+          formField.setValidity({ valueMissing: true }, 'Required');
+          const isValid = formField.reportValidity();
+          expect(typeof isValid).toBe('boolean');
+
+          return html`<input :value=${value} />`;
+        },
+        { formAssociated: true },
+      );
+
+      const { waitForUpdates } = mount(name);
+      await waitForUpdates();
+    });
+
+    it('should handle custom toFormValue transformation', () => {
+      const name = uniqueName('test-field-transform');
+      let transformCalled = false;
+
+      define(
+        name,
+        () => {
+          const value = signal(42);
+          field({
+            toFormValue: (v) => {
+              transformCalled = true;
+              return `number:${v}`;
+            },
+            value,
+          });
+
+          return html`<div>${value}</div>`;
+        },
+        { formAssociated: true },
+      );
+
+      mount(name);
+      expect(transformCalled).toBe(true);
+    });
+
+    it('should sync disabled state', async () => {
+      const name = uniqueName('test-field-disabled');
+
+      define(
+        name,
+        () => {
+          const value = signal('test');
+          const disabled = signal(false);
+          field({ disabled, value });
+
+          return html`<input :value=${value} ?disabled=${disabled} />`;
+        },
+        { formAssociated: true },
+      );
+
+      const { waitForUpdates } = mount(name);
+      await waitForUpdates();
     });
   });
 

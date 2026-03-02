@@ -111,6 +111,7 @@ define('my-counter', () => {
 - **🔍 Type-Safe**: Complete TypeScript support with [full type inference](./usage.md#typescript).
 - **📦 Tiny Bundle**: Only **<PackageInfo package="craftit" type="size" /> gzipped** with zero dependencies.
 - **🧪 Testable**: Built-in [testing utilities](./usage.md#testing) for component testing.
+- **📋 Form Integration**: Native [ElementInternals support](./usage.md#form-integration) for custom form controls.
 - **🎭 Advanced Features**: [Error boundaries](./usage.md#error-boundaries), [lazy loading](./usage.md#lazy-loading), and [context](./usage.md#context).
 - **🎯 Props & Refs**: Built-in [prop system](./usage.md#props) and [element references](./usage.md#refs).
 

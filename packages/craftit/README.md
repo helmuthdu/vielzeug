@@ -24,6 +24,7 @@ define('counter-app', () => {
 - **🎨 Scoped Styles** – CSS with CSP support and theming helpers
 - **🔍 TypeScript First** – Full type safety with excellent inference
 - **🪝 Lifecycle Hooks** – Familiar `onMount`, `onUnmount`, `onUpdated`
+- **📋 Form Integration** – Native ElementInternals support for custom form controls
 - **🎭 Advanced Features** – Error boundaries, lazy loading, context/dependency injection
 - **🧪 Testing Utilities** – Built-in testing helpers for component testing
 
@@ -189,8 +190,40 @@ html`
   </ul>
   <!-- Reactive functions -->
   ${() => html`<p>Count: ${count.value}</p>`}
+
+  <!-- Reactive attributes -->
+  <button class=${() => isActive.value ? 'btn active' : 'btn'}>Click</button>
 `;
 ```
+
+### Reactivity Patterns
+
+**When to use arrow functions for reactivity:**
+
+Craftit uses arrow functions (`() => ...`) to make expressions reactive in templates. This is required whenever you want the expression to re-evaluate when signals change.
+
+```ts
+const isActive = signal(true);
+const priority = signal('normal');
+
+// ✅ Reactive - re-evaluates when isActive changes
+html`<button class=${() => isActive.value ? 'btn active' : 'btn'}>Click</button>`;
+
+// ✅ Reactive - re-evaluates when priority changes
+html`<div class=${() => html.classes({ active: priority.value === 'high' })}>...</div>`;
+
+// ✅ Reactive text - re-evaluates when count changes
+html`<p>${() => `Count: ${count.value}`}</p>`;
+
+// ❌ Static - evaluated once, never updates
+html`<button class=${isActive.value ? 'btn active' : 'btn'}>Click</button>`;
+```
+
+**Why arrow functions?**
+
+Unlike Svelte or Vue which use compilers, Craftit is a runtime library. JavaScript evaluates `signal.value` immediately unless wrapped in a function. The arrow function delays evaluation until the template system calls it, enabling automatic re-evaluation when signals change.
+
+**Simple rule:** Wrap attribute expressions and text interpolations in `() => ...` when they use signal values.
 
 #### Event Modifiers
 
@@ -299,14 +332,14 @@ const buttonStyles = html.style({
   fontSize: 16, // automatically adds 'px'
 });
 html`<button style="${buttonStyles}">Click</button>`;
-// CSS classes
-const classes = html.classes({
-  active: isActive.value,
-  disabled: !isEnabled.value,
-});
+// Dynamic classes - use arrow function for reactivity
+html`
+  <button class=${() => html.classes({ active: isActive.value, disabled: !isEnabled.value })}>
+    Click
+  </button>
+`;
 // Or with arrays
-const classes2 = html.classes(['btn', isActive.value && 'active', { primary: isPrimary.value }]);
-html`<div class="${classes}">...</div>`;
+html`<div class=${() => html.classes(['btn', isActive.value && 'active', { primary: isPrimary.value }])}>...</div>`;
 ```
 
 ### Lifecycle Hooks
@@ -411,6 +444,52 @@ define('themed-button', () => {
 <theme-provider>
   <themed-button></themed-button>
 </theme-provider>
+```
+
+### Form Integration
+
+Create custom form controls that integrate with native HTML forms using ElementInternals:
+
+```ts
+import { define, signal, computed, watch, html, field } from '@vielzeug/craftit';
+
+define('email-input', () => {
+  const value = signal('');
+
+  // Register as form field
+  const formField = field({ value });
+
+  const isValid = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
+  );
+
+  // Update validation state
+  watch(value, () => {
+    if (!isValid.value && value.value) {
+      formField.setValidity(
+        { typeMismatch: true },
+        'Please enter a valid email'
+      );
+    } else {
+      formField.setValidity({}, '');
+    }
+  });
+
+  return html`
+    <input
+      type="email"
+      :value=${value}
+      @input=${(e) => value.value = e.target.value}
+    />
+  `;
+}, { formAssociated: true }); // Required for form integration
+```
+
+```html
+<form>
+  <email-input name="email"></email-input>
+  <button type="submit">Submit</button>
+</form>
 ```
 
 ### Portals
@@ -599,6 +678,7 @@ await userEvent.upload(fileInput, file);
 - `provide(key, value)` - Provide value to descendants
 - `inject(key, fallback)` - Inject value from ancestors
 - `ref()` - Create element reference
+- `field(options)` - Create form-associated custom element
 
 ### Advanced
 
@@ -656,7 +736,7 @@ define('todo-list', () => {
           todos,
           (todo) => todo.id,
           (todo) => html`
-            <li class=${html.classes({ done: todo.done })}>
+            <li class=${() => html.classes({ done: todo.done })}>
               <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
               <span>${todo.text}</span>
               <button @click=${() => removeTodo(todo.id)}>×</button>

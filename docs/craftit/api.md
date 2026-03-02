@@ -8,15 +8,21 @@ Complete API documentation for all Craftit functions, types, and interfaces.
 
 ## Core Functions
 
-### `define(name, setup)`
+### `define(name, setup, options?)`
 
 Define and register a custom element with a setup function.
 **Parameters:**
 
 - `name: string` – Element tag name (must contain a hyphen, e.g., 'my-component')
 - `setup: () => SetupResult` – Setup function that returns template or configuration
-  **Returns:** `void`
-  **Example:**
+- `options?: DefineOptions` – Optional configuration
+
+**DefineOptions:**
+
+- `formAssociated?: boolean` – Enable form-associated custom element (required for `field()`)
+
+**Returns:** `void`
+**Example:**
 
 ```ts
 import { define, signal, html } from '@vielzeug/craftit';
@@ -24,6 +30,28 @@ define('my-button', () => {
   const count = signal(0);
   return html` <button @click=${() => count.value++}>Clicked ${count} times</button> `;
 });
+```
+
+**With Form Association:**
+
+```ts
+import { define, signal, html, field } from '@vielzeug/craftit';
+
+// Must set formAssociated: true to use field()
+define('custom-input', () => {
+  const value = signal('');
+
+  // Register as form field
+  const formField = field({ value });
+
+  return html`
+    <input
+      type="text"
+      :value=${value}
+      @input=${(e) => value.value = e.target.value}
+    />
+  `;
+}, { formAssociated: true }); // ← Required for field()
 ```
 
 **With Styles:**
@@ -459,16 +487,20 @@ Generate dynamic class strings.
 ```ts
 const isActive = signal(true);
 // Object syntax
+```ts
+const isActive = signal(true);
+// Object syntax - wrap in arrow function for reactivity
 html`
   <div
-    class=${html.classes({
-      active: isActive.value,
-      disabled: false,
-      'btn-primary': true,
-    })}></div>
+    class=${() =>
+      html.classes({
+        active: isActive.value,
+        disabled: false,
+        'btn-primary': true,
+      })}></div>
 `;
 // Array syntax
-html` <div class=${html.classes(['btn', isActive.value && 'active', { primary: true }])}></div> `;
+html` <div class=${() => html.classes(['btn', isActive.value && 'active', { primary: true }])}></div> `;
 ```
 
 ---
@@ -634,6 +666,117 @@ onCleanup(() => {
 ---
 
 ## Props & Context
+
+### `field(options)`
+
+Create a form-associated custom element using ElementInternals API.
+
+::: warning Important
+The component must be defined with `{ formAssociated: true }` option to use `field()`.
+:::
+
+**Parameters:**
+
+- `options: FormFieldOptions<T>` – Configuration object
+
+**FormFieldOptions:**
+
+- `value: Signal<T>` – Signal containing the form value (required)
+- `disabled?: Signal<boolean>` – Optional signal for disabled state
+- `toFormValue?: (value: T) => File | FormData | string | null` – Custom form value transformation
+
+**Returns:** `FormFieldHandle`
+
+**FormFieldHandle:**
+
+- `internals: ElementInternals | null` – ElementInternals instance (null if not supported)
+- `setValidity: ElementInternals['setValidity']` – Set validation state
+- `reportValidity: () => boolean` – Report validity to user
+
+**Example:**
+
+```ts
+define('custom-input', () => {
+  const value = signal('');
+
+  // Basic usage
+  const formField = field({ value });
+
+  return html`
+    <input
+      :value=${value}
+      @input=${(e) => value.value = e.target.value}
+    />
+  `;
+}, { formAssociated: true }); // ← Required!
+```
+
+**With Validation:**
+
+```ts
+define('email-input', () => {
+  const value = signal('');
+  const formField = field({ value });
+
+  const isValid = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
+  );
+
+  watch(value, () => {
+    if (!isValid.value && value.value) {
+      formField.setValidity(
+        { typeMismatch: true },
+        'Please enter a valid email'
+      );
+    } else {
+      formField.setValidity({}, '');
+    }
+  });
+
+  return html`<input type="email" :value=${value} />`;
+}, { formAssociated: true });
+```
+
+**With Custom Form Value:**
+
+```ts
+define('rating-input', () => {
+  const rating = signal(0);
+
+  const formField = field({
+    value: rating,
+    toFormValue: (v) => String(v) // Convert number to string
+  });
+
+  return html`
+    <div>
+      ${[1,2,3,4,5].map(n => html`
+        <button @click=${() => rating.value = n}>★</button>
+      `)}
+    </div>
+  `;
+}, { formAssociated: true });
+```
+
+**With Disabled State:**
+
+```ts
+define('toggle-input', () => {
+  const value = signal('');
+  const disabled = signal(false);
+
+  const formField = field({
+    value,
+    disabled // Syncs with internals.states
+  });
+
+  return html`
+    <input :value=${value} ?disabled=${disabled} />
+  `;
+}, { formAssociated: true });
+```
+
+---
 
 ### `prop(name, defaultValue, options?)`
 
@@ -945,6 +1088,26 @@ type SetupResult =
       template: string | HTMLResult;
       styles?: (string | CSSStyleSheet)[];
     };
+
+type DefineOptions = {
+  formAssociated?: boolean;
+};
+```
+
+### Form Integration Types
+
+```ts
+interface FormFieldOptions<T> {
+  value: Signal<T>;
+  disabled?: Signal<boolean>;
+  toFormValue?: (value: T) => File | FormData | string | null;
+}
+
+interface FormFieldHandle {
+  readonly internals: ElementInternals | null;
+  setValidity: ElementInternals['setValidity'];
+  reportValidity: () => boolean;
+}
 ```
 
 ---

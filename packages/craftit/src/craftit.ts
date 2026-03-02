@@ -152,9 +152,11 @@ export type WatchOptions = {
 export function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
 export function watch<T extends readonly Signal<unknown>[]>(
   sources: [...T],
-  cb: (values: {
-    [K in keyof T]: T[K] extends Signal<infer V> ? V : never;
-  }) => void,
+  cb: (
+    values: {
+      [K in keyof T]: T[K] extends Signal<infer V> ? V : never;
+    },
+  ) => void,
   options?: WatchOptions,
 ): CleanupFn;
 export function watch<T>(
@@ -577,6 +579,16 @@ export const html = Object.assign(
             signal: value as Signal<unknown>,
             type: 'attr',
           });
+        } else if (typeof value === 'function') {
+          // Support functions for reactive boolean attributes
+          const fnSignal = computed(() => (value as () => unknown)());
+          bindings.push({
+            marker: markerAttr,
+            mode: 'bool',
+            name,
+            signal: fnSignal,
+            type: 'attr',
+          });
         } else {
           bindings.push({
             marker: markerAttr,
@@ -602,6 +614,16 @@ export const html = Object.assign(
             mode: 'attr',
             name,
             signal: value as Signal<unknown>,
+            type: 'attr',
+          });
+        } else if (typeof value === 'function') {
+          // Support functions for reactive attributes
+          const fnSignal = computed(() => (value as () => unknown)());
+          bindings.push({
+            marker: markerAttr,
+            mode: 'attr',
+            name,
+            signal: fnSignal,
             type: 'attr',
           });
         } else {
@@ -710,6 +732,16 @@ export const html = Object.assign(
             signal: value as Signal<unknown>,
             type: 'attr',
           });
+        } else if (typeof value === 'function') {
+          // Support functions for reactive attributes
+          const fnSignal = computed(() => (value as () => unknown)());
+          bindings.push({
+            marker: markerAttr,
+            mode: isBoolAttr ? 'bool' : 'attr',
+            name,
+            signal: fnSignal,
+            type: 'attr',
+          });
         } else {
           bindings.push({
             marker: markerAttr,
@@ -778,6 +810,7 @@ export const html = Object.assign(
 
       // reactive function (() => ...)
       if (!htmlWrapper && typeof value === 'function') {
+        // Always use HTML binding for reactive functions to handle dynamic content types
         let cached: { bindings: Binding[]; html: string } = {
           bindings: [],
           html: '',
@@ -805,7 +838,11 @@ export const html = Object.assign(
             htmlStr = resolveDirectiveValue(res);
           }
 
-          if (htmlStr !== cached.html) {
+          // Check if bindings or HTML changed before updating
+          const bindingsChanged =
+            resBindings.length !== cached.bindings.length || resBindings.some((b, i) => b !== cached.bindings[i]);
+
+          if (htmlStr !== cached.html || bindingsChanged) {
             cached = { bindings: resBindings, html: htmlStr };
             fnSignal.value = cached;
           }
@@ -1436,7 +1473,7 @@ export const onFormStateRestore = (fn: (state: unknown, mode: 'autocomplete' | '
   el[formCallbacksKey]!.formStateRestore = fn;
 };
 
-export type FormControlOptions<T = unknown> = {
+export type FormFieldOptions<T = unknown> = {
   /** Signal for the element's form value; will be reflected via internals.setFormValue */
   value: Signal<T>;
   /** Optional disabled signal; if present, will be mirrored to internals.states / form */
@@ -1448,13 +1485,13 @@ export type FormControlOptions<T = unknown> = {
   toFormValue?: (value: T) => File | FormData | string | null;
 };
 
-export type FormControlHandle = {
+export type FormFieldHandle = {
   readonly internals: ElementInternals | null;
   setValidity: ElementInternals['setValidity'];
   reportValidity: () => boolean;
 };
 
-export const useFormControl = <T = unknown>(options: FormControlOptions<T>): FormControlHandle => {
+export const field = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
   const rt = currentRuntime();
   const host = rt.el as HTMLElement & {
     _internals?: ElementInternals;
@@ -1466,8 +1503,8 @@ export const useFormControl = <T = unknown>(options: FormControlOptions<T>): For
     const noopSetValidity: ElementInternals['setValidity'] = () => {};
     return {
       internals: null,
-      setValidity: noopSetValidity,
       reportValidity: noop,
+      setValidity: noopSetValidity,
     };
   }
 
@@ -1484,7 +1521,7 @@ export const useFormControl = <T = unknown>(options: FormControlOptions<T>): For
 
   if (options.disabled) {
     const stopDisabled = effect(() => {
-      const isDisabled = !!options.disabled!.value;
+      const isDisabled = Boolean(options.disabled!.value);
       if (isDisabled) {
         internals.states.add('disabled');
       } else {
@@ -1503,8 +1540,8 @@ export const useFormControl = <T = unknown>(options: FormControlOptions<T>): For
 
   return {
     internals,
-    setValidity,
     reportValidity,
+    setValidity,
   };
 };
 
@@ -1770,7 +1807,7 @@ export const define = (name: string, setup: () => SetupResult, options?: DefineO
       }
     }
 
-    private applyHtmlBinding(root: Node, b: HtmlBinding) {
+    private applyHtmlBinding(root: Node, b: HtmlBinding, registerCleanup?: (fn: CleanupFn) => void) {
       const found = findCommentMarker(root, b.marker);
 
       if (!found) return;
@@ -1821,6 +1858,9 @@ export const define = (name: string, setup: () => SetupResult, options?: DefineO
               });
 
               registerInnerCleanup(textStop);
+            } else if (binding.type === 'html') {
+              // Handle nested HTML bindings (e.g., reactive functions inside html.when)
+              this.applyHtmlBinding(container, binding as HtmlBinding, registerInnerCleanup);
             } else if (binding.type === 'prop') {
               const el = (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
 
@@ -1851,10 +1891,19 @@ export const define = (name: string, setup: () => SetupResult, options?: DefineO
         });
       });
 
-      this.runtime.cleanups.push(stop);
-      this.runtime.cleanups.push(() => {
-        for (const cleanup of currentCleanups) cleanup();
-      });
+      if (registerCleanup) {
+        // Nested HTML binding - register with parent
+        registerCleanup(stop);
+        registerCleanup(() => {
+          for (const cleanup of currentCleanups) cleanup();
+        });
+      } else {
+        // Top-level HTML binding - register with component
+        this.runtime.cleanups.push(stop);
+        this.runtime.cleanups.push(() => {
+          for (const cleanup of currentCleanups) cleanup();
+        });
+      }
     }
 
     private applyPortalBinding(b: PortalBinding) {
