@@ -27,8 +27,8 @@ export type UnwrapReactive<T> = T extends Signal<infer U> ? U : T extends Comput
 export type UnwrapNestedRefs<T> = T extends Signal<any> | ComputedSignal<any>
   ? UnwrapReactive<T>
   : T extends object
-    ? { [K in keyof T]: UnwrapNestedRefs<T[K]> }
-    : T;
+  ? { [K in keyof T]: UnwrapNestedRefs<T[K]> }
+  : T;
 
 /**
  * Extract value types from a record of signals
@@ -86,10 +86,10 @@ export type Merge<T extends readonly unknown[]> = T extends readonly [infer F, .
 export type DeepReadonly<T> = T extends (infer R)[]
   ? DeepReadonlyArray<R>
   : T extends Function
-    ? T
-    : T extends object
-      ? DeepReadonlyObject<T>
-      : T;
+  ? T
+  : T extends object
+  ? DeepReadonlyObject<T>
+  : T;
 
 type DeepReadonlyArray<T> = ReadonlyArray<DeepReadonly<T>>;
 type DeepReadonlyObject<T> = {
@@ -99,8 +99,8 @@ type DeepReadonlyObject<T> = {
 /**
  * Type guard for Signal
  */
-export function isSignal<T>(value: unknown): value is Signal<T> {
-  return value instanceof Signal;
+export function isSignal<T>(value: unknown): value is Signal<T> | ComputedSignal<T> {
+  return value instanceof Signal || value instanceof ComputedSignal;
 }
 
 /**

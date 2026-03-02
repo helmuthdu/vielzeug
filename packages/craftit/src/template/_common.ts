@@ -23,21 +23,21 @@ export function setRenderTemplate(fn: (template: TemplateResult, target: Element
  * Note: String content is treated as raw HTML (already escaped).
  * TemplateResult content goes through full processing with escaping and signal wiring.
  */
-export function createFragment(content: TemplateResult | string): DocumentFragment {
+export function createFragment(content: TemplateResult | string | import('./directives').Directive): DocumentFragment {
   if (typeof content === 'string') {
     const template = document.createElement('template');
     template.innerHTML = content;
     return template.content;
   }
 
-  // For TemplateResult, use the lazy-loaded renderTemplate
+  // For TemplateResult or Directive, use the lazy-loaded renderTemplate
   if (!renderTemplateRef) {
     throw new Error('[craftit] renderTemplate not initialized - internal error');
   }
 
   // Render it to a temp container
   const container = document.createElement('div');
-  renderTemplateRef(content, container);
+  renderTemplateRef(content as TemplateResult, container);
 
   const fragment = document.createDocumentFragment();
   while (container.firstChild) {

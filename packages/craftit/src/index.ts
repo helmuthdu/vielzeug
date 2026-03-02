@@ -13,14 +13,14 @@ export { define, type SetupFunction, type SetupResult } from './core/define';
 // Error boundaries
 export {
   createErrorBoundary,
-  type ErrorBoundaryOptions,
-  type ErrorInfo,
   errorBoundary,
   setGlobalErrorHandler,
+  type ErrorBoundaryOptions,
+  type ErrorInfo,
 } from './core/error-boundary';
 
 // Lazy loading
-export { type LazyOptions, lazy } from './core/lazy';
+export { lazy, type LazyOptions } from './core/lazy';
 
 // Lifecycle hooks
 export { onMount, onUnmount, onUpdated } from './core/lifecycle';
@@ -28,17 +28,17 @@ export { onMount, onUnmount, onUpdated } from './core/lifecycle';
 // Signals & Reactivity
 export {
   batch,
-  type Cleanup,
-  type ComputedSignal,
   computed,
   deepEqual,
   effect,
   readonly,
-  type Signal,
   shallowEqual,
   signal,
   untrack,
   watch,
+  type Cleanup,
+  type ComputedSignal,
+  type Signal,
 } from './core/signal';
 
 // TypeScript utilities
@@ -63,8 +63,8 @@ export {
   isTrustedHTML,
   sanitizeHTML,
   sanitizeURL,
-  type TrustedHTML,
   trustHTML,
+  type TrustedHTML,
 } from './template/sanitize';
 
 // ============================================
@@ -73,22 +73,22 @@ export {
 
 // Context (Provide/Inject)
 export {
-  type InjectionKey,
   inject,
   onCleanup,
   provide,
+  type InjectionKey,
 } from './composables/context';
 // Props/Attributes
-export { type PropOptions, prop } from './composables/props';
+export { prop, type PropOptions } from './composables/props';
 // Element refs
-export { type Ref, ref } from './composables/ref';
+export { ref, type Ref } from './composables/ref';
 // Slots
 export {
   defaultSlot,
   slot,
 } from './composables/slots';
 // Styling (with CSP support)
-export { type CSSResult, createStyleElement, css } from './composables/style';
+export { createStyleElement, css, type CSSResult } from './composables/style';
 
 // ============================================
 // Testing
@@ -96,8 +96,6 @@ export { type CSSResult, createStyleElement, css } from './composables/style';
 
 // Complete testing toolkit
 export {
-  // Types
-  type ComponentFixture,
   cleanup,
   // Helpers
   createMockComponent,
@@ -114,4 +112,6 @@ export {
   waitForElementToBeRemoved,
   waitForRef,
   waitForSignal,
+  // Types
+  type ComponentFixture,
 } from './test/trial';

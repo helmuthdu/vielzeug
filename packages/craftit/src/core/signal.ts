@@ -3,8 +3,46 @@
  * Fine-grained reactivity with automatic dependency tracking
  */
 
+/**
+ * Effect scope to manage a group of effects
+ */
+export class EffectScope {
+  private effects: (Effect | EffectScope)[] = [];
+  private isDisposed = false;
+
+  run<T>(fn: () => T): T {
+    if (this.isDisposed) return undefined as any;
+
+    const prevScope = activeScope;
+    activeScope = this;
+    try {
+      return fn();
+    } finally {
+      activeScope = prevScope;
+    }
+  }
+
+  addChild(child: Effect | EffectScope): void {
+    if (this.isDisposed) {
+      child.dispose();
+      return;
+    }
+    this.effects.push(child);
+  }
+
+  dispose(): void {
+    if (this.isDisposed) return;
+    this.isDisposed = true;
+    for (const child of this.effects) {
+      child.dispose();
+    }
+    this.effects = [];
+  }
+}
+
 // Global effect tracking
 let activeEffect: Effect | null = null;
+let activeScope: EffectScope | null = null;
 const effectStack: Effect[] = [];
 
 // Batching state
@@ -52,19 +90,44 @@ export type Cleanup = () => void;
  */
 class Effect {
   public dependencies = new Set<Cleanup>();
+  public childEffects = new Set<Effect>();
   public fn: () => unknown;
   private cleanup?: Cleanup;
   private isDisposed = false;
 
   constructor(fn: () => unknown) {
     this.fn = fn;
+
+    // Track as child if there's an active scope or effect
+    if (activeScope) {
+      activeScope.addChild(this);
+    } else if (activeEffect && activeEffect !== this) {
+      activeEffect.addChild(this);
+    }
+  }
+
+  addChild(child: Effect): void {
+    if (this.isDisposed) {
+      child.dispose();
+      return;
+    }
+    this.childEffects.add(child);
   }
 
   execute(): void {
     // Don't execute if disposed
     if (this.isDisposed) return;
 
+    // Run cleanup for previous run
     this.cleanup?.();
+
+    // Dispose all child effects created in the previous run
+    for (const child of this.childEffects) {
+      child.dispose();
+    }
+    this.childEffects.clear();
+
+    // Clean up dependencies before re-tracking
     this.cleanupDependencies();
 
     effectStack.push(this);
@@ -91,6 +154,13 @@ class Effect {
   dispose(): void {
     this.isDisposed = true;
     this.cleanup?.();
+
+    // Dispose all child effects
+    for (const child of this.childEffects) {
+      child.dispose();
+    }
+    this.childEffects.clear();
+
     this.cleanupDependencies();
   }
 }
@@ -119,13 +189,26 @@ export class Signal<T> {
   }
 
   set value(newValue: T) {
-    if (Object.is(this.#value, newValue)) return;
+    console.log(
+      '[Signal.set] Checking equality:',
+      Object.is(this.#value, newValue),
+      'old:',
+      this.#value,
+      'new:',
+      newValue,
+    );
+    if (Object.is(this.#value, newValue)) {
+      console.log('[Signal.set] Values are equal, returning early');
+      return;
+    }
 
+    console.log('[Signal.set] Setting new value, subscribers:', this.#subscribers.size);
     this.#value = newValue;
     this.#notify();
   }
 
   #notify(): void {
+    console.log('[Signal.#notify] Notifying', this.#subscribers.size, 'subscribers');
     // Collect subscribers
     const subscribers = Array.from(this.#subscribers);
 
@@ -194,24 +277,13 @@ export class ComputedSignal<T> {
     this.#setupEffect();
   }
 
-  #setupEffect(): void {
-    this.#effect = new Effect(() => {
-      // This runs when dependencies change
-      // Just mark as dirty and notify subscribers
-      this.#dirty = true;
-
-      const subscribers = Array.from(this.#subscribers);
-      for (const subscriber of subscribers) {
-        subscriber.execute();
-      }
-    });
-  }
-
   get value(): T {
     // Track as dependency of current effect
     if (activeEffect) {
+      console.log('[ComputedSignal.value] Tracking in activeEffect, subscribers before:', this.#subscribers.size);
       const effect = activeEffect;
       this.#subscribers.add(effect);
+      console.log('[ComputedSignal.value] Tracking in activeEffect, subscribers after:', this.#subscribers.size);
       effect.dependencies.add(() => {
         this.#subscribers.delete(effect);
       });
@@ -219,47 +291,75 @@ export class ComputedSignal<T> {
 
     // Recompute if dirty
     if (this.#dirty) {
+      console.log('[ComputedSignal.value] Dirty, calling recompute');
       this.#recompute();
+    } else {
+      console.log('[ComputedSignal.value] Not dirty, returning cached value:', this.#value);
     }
 
     return this.#value!;
   }
 
   #recompute(): void {
-    // Dispose old effect
-    if (this.#effect) {
-      this.#effect.dispose();
+    console.log(
+      '[ComputedSignal.#recompute] Starting recompute, dirty:',
+      this.#dirty,
+      'subscribers:',
+      this.#subscribers.size,
+    );
+
+    // Compute new value within an effect to track dependencies
+    // We DON'T dispose the old effect - we reuse it!
+    if (!this.#effect) {
+      console.log('[ComputedSignal.#recompute] Creating initial effect for dependency tracking');
+      this.#effect = new Effect(() => {
+        console.log('[ComputedSignal.#recompute:effect] Dependencies changed! Marking dirty and notifying');
+        this.#dirty = true;
+        const subscribers = Array.from(this.#subscribers);
+        for (const subscriber of subscribers) {
+          subscriber.execute();
+        }
+      });
     }
 
-    // Set up effect to track dependencies
-    this.#effect = new Effect(() => {
-      // This is the recompute function
+    // Clean up old dependencies and re-track
+    console.log('[ComputedSignal.#recompute] Cleaning up old dependencies');
+    this.#effect.cleanupDependencies();
+
+    // Execute the effect to track dependencies
+    const prevEffect = activeEffect;
+    const prevEffectStack = [...effectStack];
+    effectStack.length = 0;
+    effectStack.push(this.#effect);
+    activeEffect = this.#effect;
+
+    try {
+      console.log('[ComputedSignal.#recompute] Computing new value');
       const newValue = this.#fn();
 
       // Only update if value actually changed according to equality function
       if (this.#value === undefined || !this.#equals(this.#value, newValue)) {
+        console.log('[ComputedSignal.#recompute:effect] Updating value from', this.#value, 'to', newValue);
         this.#value = newValue;
+      } else {
+        console.log('[ComputedSignal.#recompute] Value unchanged, keeping:', this.#value);
       }
-    });
 
-    // Execute to get value and track dependencies
-    try {
-      this.#effect.execute();
       this.#dirty = false;
     } catch (error) {
       // Keep dirty on error so next read will retry
       this.#dirty = true;
       throw error;
+    } finally {
+      effectStack.length = 0;
+      effectStack.push(...prevEffectStack);
+      activeEffect = prevEffect;
     }
+  }
 
-    // Override the effect function to mark dirty when dependencies change
-    this.#effect.fn = () => {
-      this.#dirty = true;
-      const subscribers = Array.from(this.#subscribers);
-      for (const subscriber of subscribers) {
-        subscriber.execute();
-      }
-    };
+  #setupEffect(): void {
+    // This method is now just for initial setup
+    // The actual effect is created in #recompute
   }
 
   peek(): T {
@@ -442,6 +542,11 @@ export function effect(
         });
     });
 
+    // Link to active parent if any
+    if (activeEffect) {
+      activeEffect.childEffects.add(eff);
+    }
+
     eff.execute();
 
     return () => {
@@ -455,6 +560,12 @@ export function effect(
 
   // Handle sync
   const eff = new Effect(fn as () => unknown);
+
+  // Link to active parent if any
+  if (activeEffect) {
+    activeEffect.childEffects.add(eff);
+  }
+
   eff.execute();
 
   return () => eff.dispose();

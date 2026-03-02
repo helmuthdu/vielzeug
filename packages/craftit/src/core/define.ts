@@ -5,6 +5,7 @@
 
 import type { ComponentContext } from '../composables/context';
 import { maybeGetContext, runCleanups, setContext } from '../composables/context';
+import { effect, untrack } from '../core/signal';
 import type { TemplateResult } from '../template/html';
 import { renderTemplate } from '../template/html';
 import { escapeHTML } from '../template/sanitize';
@@ -19,9 +20,9 @@ const componentContexts = new WeakMap<HTMLElement, ComponentContext>();
 export type SetupResult =
   | TemplateResult
   | {
-      template: TemplateResult;
-      styles?: string[];
-    };
+    template: TemplateResult;
+    styles?: string[];
+  };
 
 /**
  * Setup function type
@@ -46,6 +47,7 @@ export function define(tagName: string, setup: SetupFunction): void {
   class CraftitComponent extends HTMLElement {
     #context: ComponentContext;
     #shadow: ShadowRoot;
+    #renderDispose?: () => void;
 
     constructor() {
       super();
@@ -72,6 +74,7 @@ export function define(tagName: string, setup: SetupFunction): void {
     }
 
     connectedCallback(): void {
+      console.log(`[craftit] Component ${tagName} connected`);
       // Link to parent context by walking up DOM tree
       this.#resolveParentContext();
 
@@ -80,8 +83,15 @@ export function define(tagName: string, setup: SetupFunction): void {
     }
 
     disconnectedCallback(): void {
+      console.log(`[craftit] Component ${tagName} disconnected`);
       // Run unmount callbacks
       runUnmountCallbacks(this.#context);
+
+      // Dispose of the render effects
+      if (this.#renderDispose) {
+        this.#renderDispose();
+        this.#renderDispose = undefined;
+      }
 
       // Run cleanups
       runCleanups(this.#context);
@@ -144,8 +154,19 @@ export function define(tagName: string, setup: SetupFunction): void {
           this.#applyStyles(styles);
         }
 
-        // Render template
-        renderTemplate(template, this.#shadow);
+        // Render template - wrap in an effect to collect all nested bindings
+        // and ensure they can be disposed together
+        if (this.#renderDispose) {
+          this.#renderDispose();
+        }
+
+        // Use untrack to prevent the root render effect from depending on signals
+        // that are only meant for child bindings
+        this.#renderDispose = effect(() => {
+          untrack(() => {
+            renderTemplate(template, this.#shadow);
+          });
+        });
 
         // Mark as mounted
         this.#context.mounted = true;
@@ -227,9 +248,8 @@ export function define(tagName: string, setup: SetupFunction): void {
 					<p style="margin: 0.5rem 0; font-family: monospace;">
 						${escapeHTML(message)}
 					</p>
-					${
-            stack
-              ? `
+					${stack
+          ? `
 						<details style="margin-top: 0.5rem;">
 							<summary style="cursor: pointer; user-select: none;">
 								Stack Trace
@@ -244,8 +264,8 @@ export function define(tagName: string, setup: SetupFunction): void {
 							">${escapeHTML(stack)}</pre>
 						</details>
 					`
-              : ''
-          }
+          : ''
+        }
 					<button
 						id="retry-btn"
 						style="

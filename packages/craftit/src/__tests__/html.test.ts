@@ -132,6 +132,53 @@ describe('Template: HTML System', () => {
       expect(event.defaultPrevented).toBe(true);
       expect(events.length).toBe(1);
     });
+
+    it('should support keyboard modifiers', () => {
+      let enterPressed = false;
+      let escPressed = false;
+      let anyKeyPressed = false;
+
+      define('test-keys', () => {
+        return html`
+          <div>
+            <input
+              id="enter-input"
+              @keydown.enter=${() => (enterPressed = true)}
+            />
+            <input
+              id="esc-input"
+              @keydown.esc=${() => (escPressed = true)}
+            />
+            <input
+              id="any-input"
+              @keydown=${() => (anyKeyPressed = true)}
+            />
+          </div>
+        `;
+      });
+
+      const { query } = mount('test-keys');
+
+      // Test Enter key
+      const enterInput = query('#enter-input') as HTMLInputElement;
+      enterInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(enterPressed).toBe(true);
+
+      // A key should not trigger the enter handler
+      enterPressed = false;
+      enterInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      expect(enterPressed).toBe(false);
+
+      // Test Esc key
+      const escInput = query('#esc-input') as HTMLInputElement;
+      escInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(escPressed).toBe(true);
+
+      // Test any key (no modifier)
+      const anyInput = query('#any-input') as HTMLInputElement;
+      anyInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+      expect(anyKeyPressed).toBe(true);
+    });
   });
 
   describe('Directive: html.when()', () => {
@@ -148,11 +195,11 @@ describe('Template: HTML System', () => {
     it('should not render when condition is false', () => {
       define('test-when-false', () => {
         const show = signal(false);
-        return html`${html.when(show.value, () => html`<div>Hidden</div>`)}`;
+        return html`${html.when(show.value, () => html`<div class="content">Hidden</div>`)}`;
       });
 
       const { query } = mount('test-when-false');
-      expect(query('div')).toBeNull();
+      expect(query('.content')).toBeNull();
     });
 
     it('should support else branch', () => {
