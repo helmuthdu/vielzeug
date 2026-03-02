@@ -218,8 +218,14 @@ type HtmlBinding = {
   marker: string;
   signal: Signal<{ html: string; bindings: Binding[] }>;
 };
+type PortalBinding = {
+  type: 'portal';
+  marker: string;
+  signal: Signal<string>;
+  target: string | HTMLElement;
+};
 
-export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | HtmlBinding;
+export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | HtmlBinding | PortalBinding;
 
 // Directive types for when, each, show, etc.
 export type WhenDirective = {
@@ -474,6 +480,19 @@ export const html = Object.assign(
         continue;
       }
 
+      // Check for reactive html.portal result
+      if (value && typeof value === 'object' && '__portalSignal' in value) {
+        const portalValue = value as { __portalSignal: Signal<string>; __portalTarget: string | HTMLElement };
+        bindings.push({
+          marker: `__portal_${markerIndex++}`,
+          signal: portalValue.__portalSignal,
+          target: portalValue.__portalTarget,
+          type: 'portal',
+        });
+        result += str; // Portal doesn't render inline, so no marker in HTML
+        continue;
+      }
+
       // Check for reactive html.when result
       if (value && typeof value === 'object' && 'type' in value && (value as Directive).type === 'when') {
         const whenDir = value as WhenDirective;
@@ -639,7 +658,15 @@ export const html = Object.assign(
       return '';
     },
 
-    portal: (template: string | HTMLResult, target?: string | HTMLElement): string => {
+    portal: (
+      template: string | HTMLResult | Signal<string>,
+      target?: string | HTMLElement,
+    ): string | { __portalSignal: Signal<string>; __portalTarget: string | HTMLElement } => {
+      // If template is a Signal, return a special marker for reactive portal
+      if (template instanceof Signal) {
+        return { __portalSignal: template, __portalTarget: target || 'body' };
+      }
+
       // Portal needs to append, not replace content, and apply bindings
       if (target) {
         const targetEl = typeof target === 'string' ? document.querySelector(target) : target;
@@ -647,16 +674,21 @@ export const html = Object.assign(
           const content = typeof template === 'string' ? template : template.__html;
           const bindings = typeof template === 'string' ? [] : template.__bindings;
 
-          // Create a container for this portal content
-          const container = document.createElement('div');
-          container.setAttribute('data-portal', 'true');
-          container.innerHTML = content;
-
           // Clean up any previous portal content
           const existing = targetEl.querySelector('[data-portal]');
           if (existing) {
             existing.remove();
           }
+
+          // If content is empty, just remove existing portal and return
+          if (!content || content.trim() === '') {
+            return '';
+          }
+
+          // Create a container for this portal content
+          const container = document.createElement('div');
+          container.setAttribute('data-portal', 'true');
+          container.innerHTML = content;
 
           // Append the portal content
           targetEl.appendChild(container);
@@ -1328,6 +1360,42 @@ export const define = (name: string, setup: () => SetupResult): void => {
           this.runtime.cleanups.push(stop);
           this.runtime.cleanups.push(() => {
             for (const cleanup of currentCleanups) cleanup();
+          });
+        } else if (b.type === 'portal') {
+          // Portal binding - renders content to a different target element
+          const targetEl = typeof b.target === 'string' ? document.querySelector(b.target) : (b.target as HTMLElement);
+          if (!targetEl) continue;
+
+          const stop = effect(() => {
+            const content = b.signal.value;
+
+            // Clean up any previous portal content
+            const existing = targetEl.querySelector('[data-portal]');
+            if (existing) {
+              existing.remove();
+            }
+
+            // If content is empty, just remove existing portal
+            if (!content || content.trim() === '') {
+              return;
+            }
+
+            // Create a container for this portal content
+            const container = document.createElement('div');
+            container.setAttribute('data-portal', 'true');
+            container.innerHTML = content;
+
+            // Append the portal content
+            targetEl.appendChild(container);
+          });
+
+          this.runtime.cleanups.push(stop);
+          // Also clean up portal content when component unmounts
+          this.runtime.cleanups.push(() => {
+            const existing = targetEl.querySelector('[data-portal]');
+            if (existing) {
+              existing.remove();
+            }
           });
         } else if (b.type === 'attr') {
           const el = root.querySelector<HTMLElement>(`[${b.marker}]`);
