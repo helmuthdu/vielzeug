@@ -8,936 +8,949 @@ Complete API documentation for all Craftit functions, types, and interfaces.
 
 ## Core Functions
 
-### `defineElement(name, options)`
+### `define(name, setup)`
 
-Define and register a custom element.
-
+Define and register a custom element with a setup function.
 **Parameters:**
 
 - `name: string` – Element tag name (must contain a hyphen, e.g., 'my-component')
-- `options: ComponentOptions<T, S>` – Component configuration
-
-**Returns:** `void`
-
-**Example:**
+- `setup: () => SetupResult` – Setup function that returns template or configuration
+  **Returns:** `void`
+  **Example:**
 
 ```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
+import { define, signal, html } from '@vielzeug/craftit';
+define('my-button', () => {
+  const count = signal(0);
+  return html` <button @click=${() => count.value++}>Clicked ${count} times</button> `;
+});
+```
 
-defineElement('my-button', {
-  template: html`<button>Click Me</button>`,
-  styles: [
-    css`
-      button {
-        color: blue;
-      }
-    `,
-  ],
+**With Styles:**
+
+```ts
+define('styled-button', () => {
+  const styles = css`
+    button {
+      background: #0070f3;
+      color: white;
+    }
+  `;
+  return {
+    template: html`<button>Click Me</button>`,
+    styles: [styles.content],
+  };
 });
 ```
 
 ---
 
-### `createComponent(options)`
+## Signals
 
-Create a custom element constructor without registering it.
+### `signal(initialValue)`
 
+Create a reactive signal.
 **Parameters:**
 
-- `options: ComponentOptions<T, S>` – Component configuration
-
-**Returns:** `CustomElementConstructor`
-
-**Example:**
+- `initialValue: T` – Initial value of the signal
+  **Returns:** `Signal<T>`
+  **Example:**
 
 ```ts
-const ButtonComponent = createComponent({
-  template: html`<button>Click Me</button>`,
-});
+const count = signal(0);
+const name = signal('Alice');
+const user = signal({ name: 'Bob', age: 30 });
+// Read value
+console.log(count.value); // 0
+// Update value
+count.value = 10;
+// Update with function
+count.update((current) => current + 1);
+```
 
-// Register manually
-customElements.define('my-button', ButtonComponent);
+**Signal Methods:**
+
+- `.value` – Get or set the signal value
+- `.peek()` – Read value without tracking dependencies
+- `.update(fn)` – Update value using a function
+- `.map(fn)` – Transform array signals (TypeScript-checked)
+
+---
+
+### `computed(compute)`
+
+Create a computed signal that derives from other signals.
+**Parameters:**
+
+- `compute: () => T` – Function that computes the derived value
+  **Returns:** `ComputedSignal<T>`
+  **Example:**
+
+```ts
+const firstName = signal('John');
+const lastName = signal('Doe');
+const fullName = computed(() => `${firstName.value} ${lastName.value}`);
+console.log(fullName.value); // "John Doe"
+firstName.value = 'Jane';
+console.log(fullName.value); // "Jane Doe"
 ```
 
 ---
 
-### `html(strings, ...values)`
+### `effect(fn)`
 
-Template string helper for HTML content with boolean attribute support.
+Run side effects when dependencies change.
+**Parameters:**
+
+- `fn: () => CleanupFn | void` – Effect function, optionally returns cleanup
+  **Returns:** `CleanupFn`
+  **Example:**
+
+```ts
+const count = signal(0);
+// Runs immediately and on changes
+effect(() => {
+  console.log('Count:', count.value);
+});
+// With cleanup
+const cleanup = effect(() => {
+  const timer = setInterval(() => {
+    console.log('Count:', count.value);
+  }, 1000);
+  return () => clearInterval(timer);
+});
+// Stop the effect
+cleanup();
+```
+
+---
+
+### `watch(source, callback, options?)`
+
+Watch signals for changes with explicit callback.
+**Signatures:**
+
+```ts
+// Watch single signal
+function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
+// Watch multiple signals
+function watch<T extends readonly Signal<unknown>[]>(
+  sources: [...T],
+  cb: (values: [...T]) => void,
+  options?: WatchOptions,
+): CleanupFn;
+```
 
 **Parameters:**
 
-- `strings: TemplateStringsArray` – Template string array
-- `...values: unknown[]` – Template values to interpolate
+- `source` – Signal or array of signals to watch
+- `cb` – Callback function
+- `options.immediate?: boolean` – Run immediately
+  **Returns:** `CleanupFn`
+  **Example:**
 
-**Returns:** `string`
+```ts
+const count = signal(0);
+// Watch single
+watch(count, (newValue, oldValue) => {
+  console.log(`Changed from ${oldValue} to ${newValue}`);
+});
+// Watch multiple
+const name = signal('Alice');
+watch([count, name], ([c, n]) => {
+  console.log(`Count: ${c}, Name: ${n}`);
+});
+// With immediate
+watch(
+  count,
+  (value) => {
+    console.log(value);
+  },
+  { immediate: true },
+);
+```
 
+---
+
+### `batch(fn)`
+
+Batch multiple signal updates into a single re-render.
+**Parameters:**
+
+- `fn: () => void` – Function containing updates
+  **Returns:** `void`
+  **Example:**
+
+```ts
+const count = signal(0);
+const name = signal('Alice');
+batch(() => {
+  count.value = 10;
+  name.value = 'Bob';
+  count.value = 20;
+}); // Only re-renders once
+```
+
+---
+
+### `untrack(fn)`
+
+Read signals without creating dependencies.
+**Parameters:**
+
+- `fn: () => T` – Function to run untracked
+  **Returns:** `T`
+  **Example:**
+
+```ts
+const count = signal(0);
+const multiplier = signal(2);
+const result = computed(() => {
+  const c = count.value; // Tracked
+  const m = untrack(() => multiplier.value); // Not tracked
+  return c * m;
+});
+multiplier.value = 3; // Doesn't trigger update
+count.value = 5; // Triggers update
+```
+
+---
+
+### `readonly(signal)`
+
+Create a read-only view of a signal.
+**Parameters:**
+
+- `signal: Signal<T>` – Signal to make readonly
+  **Returns:** `{ readonly value: T }`
+  **Example:**
+
+```ts
+const count = signal(0);
+const readonlyCount = readonly(count);
+console.log(readonlyCount.value); // 0
+// readonlyCount.value = 10; // Error!
+count.value = 10; // OK
+```
+
+---
+
+## Template System
+
+### `html`
+
+Tagged template function for creating HTML with bindings.
+**Signature:**
+
+```ts
+function html(strings: TemplateStringsArray, ...values: unknown[]): HTMLResult | string;
+```
+
+**Returns:** `HTMLResult | string`
 **Example:**
 
 ```ts
-const name = 'Alice';
-const template = html`<div>Hello, ${name}!</div>`;
-// Result: '<div>Hello, Alice!</div>'
+const name = signal('Alice');
+html`
+  <div>
+    <h1>Hello, ${name}!</h1>
+    <button @click=${() => console.log('Clicked')}>Click Me</button>
+  </div>
+`;
 ```
 
-**Boolean Attributes:**
+**Binding Syntax:**
 
-Craftit supports Lit-style boolean attributes with the `?` prefix. When `true` or `''` (empty string), the attribute is included. When `false`, `null`, or `undefined`, it's omitted.
+- Text: `${value}`
+- Property: `:prop=${value}`
+- Attribute: `:attr=${value}`
+- Boolean Attribute: `?attr=${value}`
+- Event: `@event=${handler}`
+- Ref: `ref=${refObject}`
+
+---
+
+### `html.when(condition, then, else?)`
+
+Conditional rendering helper.
+**Parameters:**
+
+- `condition: unknown | Signal<unknown>` – Condition to evaluate
+- `then: string | HTMLResult | (() => string | HTMLResult) | { then, else }` – Content when true
+- `else?: () => string | HTMLResult` – Content when false (optional)
+  **Returns:** `WhenDirective | string | HTMLResult`
+  **Example:**
 
 ```ts
-const disabled = true;
-const readonly = false;
-
-html`<button ?disabled="${disabled}" ?readonly="${readonly}">Click</button>`;
-// Result: '<button disabled>Click</button>'
-```
-
-This is particularly useful for attributes like `disabled`, `readonly`, `required`, `checked`, etc.
-
-```ts
-template: (el) => html`
-  <button
-    type="submit"
-    ?disabled="${el.hasAttribute('disabled')}"
-    ?aria-busy="${el.hasAttribute('loading')}">
-    Submit
-  </button>
+const isLoggedIn = signal(false);
+// Simple
+html`${html.when(isLoggedIn, () => html`<p>Welcome!</p>`)}`;
+// With else
+html`
+  ${html.when(isLoggedIn, {
+    then: () => html`<p>Welcome!</p>`,
+    else: () => html`<p>Please log in</p>`,
+  })}
 `;
 ```
 
 ---
 
-### `css(strings, ...values)`
+### `html.show(condition, template)`
 
-Template string helper for CSS content with CSS variable utilities.
-
+Toggle visibility with display property.
 **Parameters:**
 
-- `strings: TemplateStringsArray` – Template string array
-- `...values: unknown[]` – Template values to interpolate
+- `condition: unknown | Signal<unknown>` – Condition to evaluate
+- `template: string | HTMLResult` – Content to show/hide
+  **Returns:** `string | object`
+  **Example:**
 
-**Returns:** `string` – CSS string
+```ts
+const isVisible = signal(true);
+html` ${html.show(isVisible, html` <div>Toggle me!</div> `)} `;
+```
 
+---
+
+### `html.each(items, keyFn, template, empty?)`
+
+Efficient list rendering with keys.
+**Parameters:**
+
+- `items: T[] | Signal<T[]>` – Array of items
+- `keyFn: (item: T) => string | number` – Key function
+- `template: (item: T, index: number) => string | HTMLResult` – Item template
+- `empty?: () => string | HTMLResult` – Empty state (optional)
+  **Returns:** `EachDirective | object`
+  **Example:**
+
+```ts
+const todos = signal([
+  { id: 1, text: 'Learn Craftit' },
+  { id: 2, text: 'Build app' },
+]);
+html`
+  ${html.each(
+    todos,
+    (todo) => todo.id,
+    (todo, i) => html`<li>${i + 1}. ${todo.text}</li>`,
+    () => html`<p>No todos</p>`,
+  )}
+`;
+```
+
+---
+
+### `html.choose(value, cases, default?)`
+
+Switch/case helper for multiple conditions.
+**Parameters:**
+
+- `value: T | Signal<T>` – Value to match
+- `cases: Array<[T, () => V]>` – Array of [value, template] pairs
+- `default?: () => V` – Default template (optional)
+  **Returns:** `V | (() => V)`
+  **Example:**
+
+```ts
+const status = signal('loading');
+html`
+  ${html.choose(
+    status,
+    [
+      ['idle', () => html`<p>Ready</p>`],
+      ['loading', () => html`<p>Loading...</p>`],
+      ['success', () => html`<p>Done!</p>`],
+    ],
+    () => html`<p>Unknown</p>`,
+  )}
+`;
+```
+
+---
+
+### `html.until(...values)`
+
+Suspense-like behavior for async operations.
+**Parameters:**
+
+- `...values: unknown[]` – Values in priority order (Promises, fallbacks)
+  **Returns:** `() => string | HTMLResult`
+  **Example:**
+
+```ts
+html`
+  ${html.until(
+    fetchData(), // Promise - highest priority
+    () => html`<p>Loading...</p>`, // Fallback while loading
+    'Error', // Final fallback
+  )}
+`;
+```
+
+---
+
+### `html.portal(template, target)`
+
+Render content to a different DOM location.
+**Parameters:**
+
+- `template: string | HTMLResult | Signal<string>` – Content to portal
+- `target?: string | HTMLElement` – Target selector or element (default: 'body')
+  **Returns:** `string | object`
+  **Example:**
+
+```ts
+const isOpen = signal(false);
+html`
+  <button @click=${() => (isOpen.value = true)}>Open Modal</button>
+  ${html.portal(
+    html.when(
+      isOpen,
+      () => html`
+        <div class="modal">
+          <button @click=${() => (isOpen.value = false)}>Close</button>
+        </div>
+      `,
+    ),
+    'body',
+  )}
+`;
+```
+
+---
+
+### `html.style(styles)`
+
+Generate dynamic inline styles.
+**Parameters:**
+
+- `styles: Partial<CSSStyleDeclaration> | Record<string, string | number>` – Style object
+  **Returns:** `string`
+  **Example:**
+
+```ts
+const fontSize = signal(16);
+html`
+  <div
+    style=${html.style({
+      fontSize: fontSize.value, // Auto-adds 'px'
+      color: 'red',
+      padding: '1rem',
+      fontWeight: 'bold',
+    })}>
+    Styled
+  </div>
+`;
+```
+
+---
+
+### `html.classes(classes)`
+
+Generate dynamic class strings.
+**Parameters:**
+
+- `classes: Record<string, boolean> | Array<...>` – Classes object or array
+  **Returns:** `string`
+  **Example:**
+
+```ts
+const isActive = signal(true);
+// Object syntax
+html`
+  <div
+    class=${html.classes({
+      active: isActive.value,
+      disabled: false,
+      'btn-primary': true,
+    })}></div>
+`;
+// Array syntax
+html` <div class=${html.classes(['btn', isActive.value && 'active', { primary: true }])}></div> `;
+```
+
+---
+
+### `html.log(...args)`
+
+Debug helper that logs to console and returns empty string.
+**Parameters:**
+
+- `...args: unknown[]` – Values to log
+  **Returns:** `string` (empty)
+  **Example:**
+
+```ts
+html` <div>${html.log('Debug:', someValue)} Content</div> `;
+```
+
+---
+
+## Styling
+
+### `css`
+
+Tagged template function for CSS.
+**Signature:**
+
+```ts
+function css(strings: TemplateStringsArray, ...values: unknown[]): CSSResult;
+```
+
+**Returns:** `CSSResult`
 **Example:**
 
 ```ts
-import { css } from '@vielzeug/craftit';
-
-const color = 'blue';
+const primaryColor = '#0070f3';
 const styles = css`
   button {
-    color: ${color};
-    padding: 1rem;
+    background: ${primaryColor};
+    color: white;
   }
 `;
-```
-
-**CSS Variable Helpers:**
-
-
-#### `css.theme<T>(vars, selector?)`
-
-Create a typed theme with CSS variables and autocomplete support.
-
-**Returns a typed proxy object** that provides both:
-
-1. CSS rule string (via implicit `toString()`)
-2. Typed variable references with full autocomplete
-
-**Parameters:**
-
-- `vars: T extends Record<string, string | number>` – Theme variables
-- `selector?: string` – CSS selector (default: `:host`)
-
-**Returns:** `ThemeVars<T>` – Typed proxy with autocomplete for all properties
-
-**Example:**
-
-```ts
-const theme = css.theme({
-  primaryColor: '#3b82f6',
-  backgroundColor: '#ffffff',
-  spacing: '1rem',
-});
-
-// Use as CSS rule (implicit toString)
-css`
-  ${theme}/* → ":host { --primary-color: #3b82f6; --background-color: #ffffff; --spacing: 1rem; }" */
-`;
-
-// Use typed properties (with autocomplete!)
-css`
-  .button {
-    color: ${theme.primaryColor}; /* → "var(--primary-color)" – autocomplete! */
-    background: ${theme.backgroundColor}; /* → "var(--background-color)" – autocomplete! */
-    padding: ${theme.spacing}; /* → "var(--spacing)" – autocomplete! */
-  }
-`;
-
-// Custom selector
-const darkTheme = css.theme({ bgColor: '#000' }, '[data-theme="dark"]');
-```
-
-**Benefits:**
-
-- ✨ **Autocomplete** – Type `theme.` and see all available variables
-- 🔒 **Type-safe** – Typos caught at compile time
-- 🔄 **Refactoring** – Rename variables safely across codebase
-
-**Complete Example:**
-
-```ts
-import { css } from '@vielzeug/craftit';
-
-// Define theme with full type inference
-const appTheme = css.theme({
-  primaryColor: '#3b82f6',
-  secondaryColor: '#8b5cf6',
-  spacing: '1rem',
-  borderRadius: '8px',
-});
-
-const styles = css`
-  /* Inject CSS variables */
-  ${appTheme}
-
-  .button {
-    /* Autocomplete works for all properties! */
-    color: ${appTheme.primaryColor};
-    background: ${appTheme.secondaryColor};
-    padding: ${appTheme.spacing};
-    border-radius: ${appTheme.borderRadius};
-  }
-`;
-```
-
-**TypeScript Support:**
-
-```ts
-// ✅ Autocomplete suggests all theme properties
-theme.primaryColor;
-theme.spacing;
-theme.borderRadius;
-
-// ❌ TypeScript error for typos
-theme.primryColor; // Error: Property 'primryColor' does not exist
-
-// ✅ Safe refactoring
-// Rename 'primaryColor' → 'accentColor'
-// TypeScript will find all usages!
+// Use in component
+return {
+  template: html`<button>Click</button>`,
+  styles: [styles.content],
+};
 ```
 
 ---
 
-### `classMap(classes)`
+### `css.theme(light, dark?, options?)`
 
-Generate conditional class strings.
-
+Create theme variables with light and dark modes.
 **Parameters:**
 
-- `classes: Record<string, boolean | undefined>` – Object mapping class names to conditions
-
-**Returns:** `string`
-
-**Example:**
-
-```ts
-classMap({
-  active: true,
-  disabled: false,
-  'is-loading': isLoading,
-});
-// Result: 'active is-loading' (if isLoading is true)
-```
-
----
-
-### `styleMap(styles)`
-
-Generate inline style strings from objects.
-
-**Parameters:**
-
-- `styles: Partial<CSSStyleDeclaration>` – Object mapping CSS properties to values
-
-**Returns:** `string`
-
-**Example:**
+- `light: Record<string, string | number>` – Light theme values
+- `dark?: Record<string, string | number>` – Dark theme values (optional)
+- `options?: { selector?: string; attribute?: string }` – Configuration
+  **Returns:** `ThemeVars<T>`
+  **Example:**
 
 ```ts
-styleMap({
-  color: 'red',
-  fontSize: '16px',
-  backgroundColor: '#fff',
-});
-// Result: 'color: red; font-size: 16px; background-color: #fff'
-```
-
-## Testing Functions
-
-### `attach(element, container?)`
-
-Attach an element to the DOM and wait for first render.
-
-**Parameters:**
-
-- `element: T extends HTMLElement` – The element to attach
-- `container?: HTMLElement` – Container element (defaults to `document.body`)
-
-**Returns:** `Promise<T>`
-
-**Example:**
-
-```ts
-const el = document.createElement('my-component');
-await attach(el); // Mounts to document.body and waits for render
-
-// Custom container
-const container = document.querySelector('#app')!;
-await attach(el, container);
-```
-
----
-
-### `destroy(element)`
-
-Remove an element from the DOM.
-
-**Parameters:**
-
-- `element: HTMLElement` – The element to remove
-
-**Returns:** `void`
-
-**Example:**
-
-```ts
-const el = await attach(document.createElement('my-component'));
-// ... test code ...
-destroy(el); // Removes element
-```
-
-## Component Options
-
-### `ComponentOptions<T, S>`
-
-Configuration object for defining a web component.
-
-**Properties:**
-
-#### `template`
-
-- **Type:** `Template<T, S>`
-- **Required:** Yes
-- **Description:** Component template (string, Node, or function)
-
-```ts
-// String template
-template: html`<div>Hello</div>`;
-
-// Function template
-template: (el) => html`<div>Count: ${el.state.count}</div>`;
-```
-
-#### `state`
-
-- **Type:** `S`
-- **Required:** No
-- **Description:** Initial reactive state
-
-```ts
-state: {
-  count: 0,
-  user: { name: 'Alice' }
-}
-```
-
-#### `styles`
-
-- **Type:** `(string | CSSStyleSheet)[]`
-- **Required:** No
-- **Description:** Component styles
-
-```ts
-import { css } from '@vielzeug/craftit';
-
-styles: [
-  css`
-    button {
-      color: blue;
-    }
-  `,
-  sharedStyleSheet,
-];
-```
-
-#### `observedAttributes`
-
-- **Type:** `readonly string[]`
-- **Required:** No
-- **Description:** Attributes to observe for changes
-
-```ts
-observedAttributes: ['data-theme', 'disabled'] as const;
-```
-
-#### `formAssociated`
-
-- **Type:** `boolean`
-- **Required:** No
-- **Default:** `false`
-- **Description:** Enable form participation
-
-```ts
-formAssociated: true;
-```
-
-#### Lifecycle Hooks
-
-##### `onConnected`
-
-- **Type:** `(el: WebComponent<T, S>) => void`
-- **Description:** Called when element is added to DOM
-
-```ts
-onConnected(el) {
-  console.log('Component mounted');
-  el.on('button', 'click', () => console.log('clicked'));
-}
-```
-
-##### `onDisconnected`
-
-- **Type:** `(el: WebComponent<T, S>) => void`
-- **Description:** Called when element is removed from DOM
-
-```ts
-onDisconnected(el) {
-  console.log('Component unmounted');
-}
-```
-
-##### `onUpdated`
-
-- **Type:** `(el: WebComponent<T, S>) => void`
-- **Description:** Called after each render
-
-```ts
-onUpdated(el) {
-  console.log('Rendered with state:', el.state);
-}
-```
-
-##### `onAttributeChanged`
-
-- **Type:** `(name: string, oldValue: string | null, newValue: string | null, el: WebComponent<T, S>) => void`
-- **Description:** Called when observed attribute changes
-
-```ts
-onAttributeChanged(name, oldVal, newVal, el) {
-  if (name === 'data-theme') {
-    el.state.theme = newVal;
-  }
-}
-```
-
-##### Form Callbacks
-
-###### `onFormDisabled`
-
-- **Type:** `(disabled: boolean, el: WebComponent<T, S>) => void`
-- **Description:** Called when parent form's disabled state changes
-
-```ts
-onFormDisabled(disabled, el) {
-  el.state.isDisabled = disabled;
-}
-```
-
-###### `onFormReset`
-
-- **Type:** `(el: WebComponent<T, S>) => void`
-- **Description:** Called when parent form is reset
-
-```ts
-onFormReset(el) {
-  el.state.value = '';
-}
-```
-
-###### `onFormStateRestore`
-
-- **Type:** `(state: string | File | FormData | null, mode: 'restore' | 'autocomplete', el: WebComponent<T, S>) => void`
-- **Description:** Called when browser restores form state
-
-```ts
-onFormStateRestore(state, mode, el) {
-  if (typeof state === 'string') {
-    el.state.value = state;
-  }
-}
-```
-
-## Web Component Instance
-
-### `WebComponent<T, S>`
-
-Type representing a web component instance with all available methods and properties.
-
-**Generic Parameters:**
-
-- `T` – Root element type (first child in shadow DOM)
-- `S` – State object type
-
-### Properties
-
-#### `state`
-
-- **Type:** `S`
-- **Readonly:** Yes
-- **Description:** Reactive state object
-
-```ts
-el.state.count++; // Triggers re-render
-```
-
-#### `shadow`
-
-- **Type:** `ShadowRoot`
-- **Readonly:** Yes
-- **Description:** Shadow DOM root
-
-```ts
-el.shadow.querySelector('.button');
-```
-
-#### `root`
-
-- **Type:** `T`
-- **Readonly:** Yes
-- **Description:** First element in shadow DOM
-
-```ts
-const button = el.root as HTMLButtonElement;
-```
-
-#### `internals`
-
-- **Type:** `ElementInternals | undefined`
-- **Readonly:** Yes
-- **Description:** ElementInternals (only when `formAssociated: true`)
-
-```ts
-if (el.internals) {
-  el.internals.setFormValue('value');
-}
-```
-
-#### `value`
-
-- **Type:** `string | undefined`
-- **Description:** Form value (only when `formAssociated: true`)
-
-```ts
-el.value = 'new value';
-```
-
-#### `form`
-
-- **Type:** `FormHelpers | undefined`
-- **Readonly:** Yes
-- **Description:** Form utilities (only when `formAssociated: true`)
-
-```ts
-el.form?.value('new value');
-el.form?.valid({ valueMissing: true }, 'Required');
-```
-
-### Methods
-
-#### `render()`
-
-Schedule a render in the next animation frame.
-
-**Returns:** `void`
-
-```ts
-el.render();
-```
-
-#### `flush()`
-
-Wait for pending render to complete.
-
-**Returns:** `Promise<void>`
-
-```ts
-el.state.count = 10;
-await el.flush();
-console.log('Render complete');
-```
-
-#### `set(patch, options?)`
-
-Update component state.
-
-**Parameters:**
-
-- `patch: Partial<S> | ((state: S) => S | Promise<S>)` – State update
-- `options?: { replace?: boolean; silent?: boolean }` – Update options
-
-**Returns:** `Promise<void>`
-
-```ts
-// Merge update
-await el.set({ count: 10 });
-
-// Replace state
-await el.set({ count: 0 }, { replace: true });
-
-// Updater function
-await el.set((state) => ({ ...state, count: state.count + 1 }));
-
-// Async updater
-await el.set(async (state) => {
-  const data = await fetch('/api/data').then((r) => r.json());
-  return { ...state, data };
-});
-
-// Silent update (no re-render)
-await el.set({ count: 10 }, { silent: true });
-```
-
-#### `watch(selector, callback)`
-
-Watch a state slice and react to changes.
-
-**Parameters:**
-
-- `selector: (state: S) => U` – Function to select a slice of state
-- `callback: (value: U, prev: U) => void` – Callback called on changes
-
-**Returns:** `() => void` – Unsubscribe function
-
-```ts
-const unwatch = el.watch(
-  (state) => state.count,
-  (count, prevCount) => {
-    console.log(`Count changed from ${prevCount} to ${count}`);
+const theme = css.theme(
+  {
+    primaryColor: '#0070f3',
+    textColor: '#333',
+    bgColor: '#fff',
+  },
+  {
+    primaryColor: '#4dabf7',
+    textColor: '#fff',
+    bgColor: '#222',
+  },
+  {
+    selector: ':host',
+    attribute: 'data-theme',
   },
 );
-
-// Cleanup
-unwatch();
+const styles = css`
+  :host {
+    color: ${theme.textColor};
+    background: ${theme.bgColor};
+  }
+  ${theme}/* Inject theme CSS */
+`;
 ```
 
-#### `find(selector)`
+---
 
-Find a single element in shadow DOM.
+## Lifecycle Hooks
 
+### `onMount(fn)`
+
+Register a function to run after component mounts.
 **Parameters:**
 
-- `selector: string` – CSS selector
-
-**Returns:** `E | null`
-
-```ts
-const button = el.find<HTMLButtonElement>('button');
-const input = el.find<HTMLInputElement>('input[name="email"]');
-```
-
-#### `findAll(selector)`
-
-Find all matching elements in shadow DOM.
-
-**Parameters:**
-
-- `selector: string` – CSS selector
-
-**Returns:** `E[]`
+- `fn: () => CleanupFn | void` – Mount callback, optionally returns cleanup
+  **Returns:** `void`
+  **Example:**
 
 ```ts
-const buttons = el.findAll<HTMLButtonElement>('button');
-const items = el.findAll<HTMLDivElement>('.item');
-```
-
-#### `on(target, event, handler, options?)`
-
-Add event listener with automatic cleanup.
-
-**Parameters:**
-
-- `target: string | EventTarget` – CSS selector or EventTarget
-- `event: string` – Event name
-- `handler: EventListener` – Event handler function
-- `options?: AddEventListenerOptions` – Event listener options
-
-**Returns:** `void`
-
-```ts
-// Direct element binding
-const button = el.find('button')!;
-el.on(button, 'click', () => console.log('clicked'));
-
-// Delegation (works for dynamic elements)
-el.on('.item', 'click', (e) => {
-  console.log('Item clicked:', e.currentTarget);
+define('my-component', () => {
+  onMount(() => {
+    console.log('Mounted!');
+    const timer = setInterval(() => {}, 1000);
+    return () => clearInterval(timer);
+  });
+  return html`<div>Content</div>`;
 });
-
-// With options
-el.on('button', 'click', handler, { once: true });
 ```
 
-#### `emit(name, detail?, options?)`
+---
 
-Dispatch a custom event.
+### `onUnmount(fn)`
 
+Register a function to run before component unmounts.
 **Parameters:**
 
-- `name: string` – Event name
-- `detail?: unknown` – Event detail data
-- `options?: CustomEventInit` – CustomEvent options
-
-**Returns:** `void`
+- `fn: CleanupFn` – Unmount callback
+  **Returns:** `void`
+  **Example:**
 
 ```ts
-el.emit('custom-event', { message: 'Hello!' });
-
-el.emit('error', { code: 404 }, { bubbles: true, composed: true });
+onUnmount(() => {
+  console.log('Unmounting...');
+});
 ```
 
-#### `delay(callback, ms)`
+---
 
-Set timeout with automatic cleanup.
+### `onUpdated(fn)`
 
+Register a function to run after each component update.
 **Parameters:**
 
-- `callback: () => void` – Function to call
-- `ms: number` – Delay in milliseconds
-
-**Returns:** `number` – Timeout ID
+- `fn: () => void` – Update callback
+  **Returns:** `void`
+  **Example:**
 
 ```ts
-const id = el.delay(() => {
-  console.log('Timeout fired');
-}, 1000);
-
-// Clear manually if needed
-el.clear(id);
+onUpdated(() => {
+  console.log('Component updated!');
+});
 ```
 
-#### `clear(id)`
+---
 
-Clear a scheduled timeout.
+### `onCleanup(fn)`
 
+Register a cleanup function.
 **Parameters:**
 
-- `id: number` – Timeout ID from `delay()`
-
-**Returns:** `void`
+- `fn: CleanupFn` – Cleanup callback
+  **Returns:** `void`
+  **Example:**
 
 ```ts
-const id = el.delay(() => console.log('hi'), 1000);
-el.clear(id); // Cancel timeout
+onCleanup(() => {
+  console.log('Cleaning up...');
+});
 ```
 
-## Type Definitions
+---
 
-### `Template<T, S>`
+## Props & Context
 
-```ts
-type Template<T = HTMLElement, S extends object = object> =
-  | string
-  | Node
-  | ((el: WebComponent<T, S>) => string | Node | DocumentFragment);
-```
+### `prop(name, defaultValue, options?)`
 
-### `LifecycleHook<T, S>`
+Define a reactive prop that syncs with HTML attributes.
+**Parameters:**
 
-```ts
-type LifecycleHook<T = HTMLElement, S extends object = object> = (el: WebComponent<T, S>) => void;
-```
-
-### `AttributeChangeHook<T, S>`
-
-```ts
-type AttributeChangeHook<T = HTMLElement, S extends object = object> = (
-  name: string,
-  oldValue: string | null,
-  newValue: string | null,
-  el: WebComponent<T, S>,
-) => void;
-```
-
-### `FormCallbacks<T, S>`
+- `name: string` – Prop/attribute name
+- `defaultValue: T` – Default value
+- `options?: PropOptions<T>` – Configuration
+  **PropOptions:**
+- `parse?: (value: string | null) => T` – Custom parser
+- `reflect?: boolean` – Reflect changes back to attribute
+  **Returns:** `Signal<T>`
+  **Example:**
 
 ```ts
-type FormCallbacks<T = HTMLElement, S extends object = object> = {
-  onFormDisabled?: (disabled: boolean, el: WebComponent<T, S>) => void;
-  onFormReset?: (el: WebComponent<T, S>) => void;
-  onFormStateRestore?: (
-    state: string | File | FormData | null,
-    mode: 'restore' | 'autocomplete',
-    el: WebComponent<T, S>,
-  ) => void;
-};
-```
-
-## Best Practices
-
-### TypeScript Usage
-
-```ts
-// Define state type
-type CounterState = {
-  count: number;
-  label: string;
-};
-
-defineElement('typed-counter', {
-  state: {
-    count: 0,
-    label: 'Counter',
-  } as CounterState,
-
-  template: (el) => html`
+define('user-card', () => {
+  const name = prop('name', 'Guest');
+  const age = prop('age', 0, {
+    parse: (v) => Number(v) || 0,
+    reflect: true,
+  });
+  return html`
     <div>
-      <p>${el.state.label}: ${el.state.count}</p>
-      <button>+</button>
+      <h2>${name}</h2>
+      <p>Age: ${age}</p>
+    </div>
+  `;
+});
+```
+
+---
+
+### `ref()`
+
+Create an element reference.
+**Returns:** `Ref<T>`
+**Example:**
+
+```ts
+define('focus-input', () => {
+  const inputRef = ref<HTMLInputElement>();
+  onMount(() => {
+    inputRef.value?.focus();
+  });
+  return html` <input ref=${inputRef} type="text" /> `;
+});
+```
+
+---
+
+### `provide(key, value)`
+
+Provide a value to descendant components.
+**Parameters:**
+
+- `key: InjectionKey<T> | string | symbol` – Injection key
+- `value: T` – Value to provide
+  **Returns:** `void`
+  **Example:**
+
+```ts
+const ThemeKey: InjectionKey<{ mode: Signal<string> }> = Symbol('theme');
+define('app-root', () => {
+  const mode = signal('light');
+  provide(ThemeKey, { mode });
+  return html`<slot></slot>`;
+});
+```
+
+---
+
+### `inject(key, fallback?)`
+
+Inject a value from an ancestor component.
+**Parameters:**
+
+- `key: InjectionKey<T> | string | symbol` – Injection key
+- `fallback?: T` – Fallback value if not found
+  **Returns:** `T | undefined`
+  **Example:**
+
+```ts
+define('themed-button', () => {
+  const theme = inject(ThemeKey);
+  return html` <button class=${theme?.mode.value}>Button</button> `;
+});
+```
+
+---
+
+## Advanced Features
+
+### `errorBoundary(component, options)`
+
+Wrap a component with error handling.
+**Parameters:**
+
+- `component: () => string | HTMLResult` – Component function
+- `options: ErrorBoundaryOptions` – Configuration
+  **ErrorBoundaryOptions:**
+- `fallback: (error: Error) => string | HTMLResult` – Error fallback
+- `onError?: (error: Error) => void` – Error handler
+  **Returns:** `string | HTMLResult`
+  **Example:**
+
+```ts
+define('safe-component', () => {
+  return errorBoundary(() => html`<risky-component></risky-component>`, {
+    fallback: (error) => html`<p>Error: ${error.message}</p>`,
+    onError: (error) => console.error(error),
+  });
+});
+```
+
+---
+
+### `createErrorBoundary(component, options)`
+
+Create a reusable error boundary.
+**Parameters:**
+
+- `component: () => string | HTMLResult` – Component function
+- `options: ErrorBoundaryOptions` – Configuration
+  **Returns:** `() => string | HTMLResult`
+  **Example:**
+
+```ts
+const SafeComponent = createErrorBoundary(() => html`<risky-component></risky-component>`, {
+  fallback: (error) => html`<p>Error</p>`,
+});
+define('app', () => html`${SafeComponent()}`);
+```
+
+---
+
+### `lazy(factory, options?)`
+
+Lazy load a component.
+**Parameters:**
+
+- `factory: () => Promise<{ default: () => string | HTMLResult }>` – Import function
+- `options?: LazyOptions` – Configuration
+  **LazyOptions:**
+- `fallback?: () => string | HTMLResult` – Loading fallback
+  **Returns:** `() => string | HTMLResult`
+  **Example:**
+
+```ts
+const HeavyChart = lazy(() => import('./chart'), {
+  fallback: () => html`<div>Loading...</div>`,
+});
+define(
+  'dashboard',
+  () => html`
+    <div>
+      <h1>Dashboard</h1>
+      ${HeavyChart()}
     </div>
   `,
+);
+```
+
+---
+
+### `setGlobalErrorHandler(handler)`
+
+Set a global error handler for all components.
+**Parameters:**
+
+- `handler: (error: Error) => void` – Global error handler
+  **Returns:** `void`
+  **Example:**
+
+```ts
+setGlobalErrorHandler((error) => {
+  console.error('Global error:', error);
+  // Send to error tracking service
 });
-
-// Type-safe access
-const counter = document.createElement('typed-counter') as WebComponent<HTMLElement, CounterState>;
-counter.state.count = 10; // ✅ Type-safe
-counter.state.unknown = 'value'; // ❌ TypeScript error
 ```
 
-### Performance Tips
+---
 
-1. **Use Event Delegation**
+## Testing Utilities
+
+Import from `@vielzeug/craftit/trial`:
 
 ```ts
-// ✅ Good – works for dynamic elements
-el.on('.item', 'click', handler);
-
-// ❌ Bad – must re-bind after state changes
-el.findAll('.item').forEach((item) => {
-  item.addEventListener('click', handler);
-});
+import { mount, fireEvent, userEvent } from '@vielzeug/craftit/trial';
 ```
 
-2. **Batch State Updates**
+### `mount(tagName, options?)`
+
+Mount a component for testing.
+**Parameters:**
+
+- `tagName: string` – Component tag name
+- `options?: object` – Mount options
+  **Returns:** `Promise<ComponentFixture>`
+  **ComponentFixture:**
+- `element: HTMLElement` – Component element
+- `shadow: ShadowRoot | null` – Shadow root
+- `container: HTMLElement` – Parent container
+- `query<E>(selector: string): E | null` – Query element
+- `queryAll<E>(selector: string): E[]` – Query all elements
+- `waitForUpdates(): Promise<void>` – Wait for reactive updates
+- `unmount(): void` – Unmount component
+  **Example:**
 
 ```ts
-// ✅ Good – single re-render
-await el.set({ name: 'Alice', age: 30, email: 'alice@example.com' });
-
-// ❌ Bad – three re-renders
-el.state.name = 'Alice';
-el.state.age = 30;
-el.state.email = 'alice@example.com';
+const { query, waitForUpdates } = await mount('my-component');
+const button = query('button');
+fireEvent.click(button!);
+await waitForUpdates();
 ```
 
-3. **Use Private State**
+---
+
+### `fireEvent`
+
+Object with methods to fire DOM events.
+**Methods:**
+
+- `click(element, options?)`
+- `input(element, options?)`
+- `change(element, options?)`
+- `keyDown(element, options?)`
+- `keyUp(element, options?)`
+- `focus(element, options?)`
+- `blur(element, options?)`
+- `submit(element, options?)`
+- `mouseEnter(element, options?)`
+- `mouseLeave(element, options?)`
+- `custom(element, eventName, options?)`
+  **Example:**
 
 ```ts
-// Properties starting with _ don't trigger re-renders
-state: {
-  count: 0,
-  _cache: {}, // Won't trigger re-renders
+fireEvent.click(button);
+fireEvent.input(input);
+fireEvent.keyDown(input, { key: 'Enter' });
+fireEvent.custom(element, 'my-event', { detail: { value: 123 } });
+```
+
+---
+
+### `userEvent`
+
+Object with methods for realistic user interactions.
+**Methods:**
+
+- `click(element): Promise<void>`
+- `type(element, text): Promise<void>`
+- `clear(element): Promise<void>`
+- `selectOptions(element, value): Promise<void>`
+- `upload(element, file): Promise<void>`
+  **Example:**
+
+```ts
+await userEvent.click(button);
+await userEvent.type(input, 'Hello');
+await userEvent.clear(input);
+```
+
+---
+
+## TypeScript Types
+
+### Signal Types
+
+```ts
+interface Signal<T> {
+  value: T;
+  peek(): T;
+  update(fn: (current: T) => T): void;
+  map<U>(fn: (item: T[number], index: number) => U): Signal<U[]>;
+}
+type ComputedSignal<T> = Signal<T>;
+type CleanupFn = () => void;
+type EffectFn = () => CleanupFn | void;
+```
+
+### Template Types
+
+```ts
+interface HTMLResult {
+  __html: string;
+  __bindings: Binding[];
+  toString(): string;
+}
+interface CSSResult {
+  content: string;
+  toString(): string;
 }
 ```
 
-4. **Optimize Templates**
+### Component Types
 
 ```ts
-// ✅ Good – pure template
-template: (el) => html`<div>${el.state.count}</div>`;
-
-// ❌ Bad – side effects in template
-template: (el) => {
-  console.log('Rendering'); // Side effect!
-  return html`<div>${el.state.count}</div>`;
-};
-```
-
-## Migration Guide
-
-### From Vanilla Custom Elements
-
-**Before (Vanilla):**
-
-```ts
-class MyCounter extends HTMLElement {
-  #count = 0;
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-    this.render();
-  }
-
-  connectedCallback() {
-    this.shadowRoot!.querySelector('button')?.addEventListener('click', () => {
-      this.#count++;
-      this.render();
-    });
-  }
-
-  render() {
-    this.shadowRoot!.innerHTML = `<div>${this.#count}</div><button>+</button>`;
-  }
+interface Ref<T extends Element | null> {
+  value: T | null;
 }
-```
-
-**After (Craftit):**
-
-```ts
-defineElement('my-counter', {
-  state: { count: 0 },
-  template: (el) =>
-    html`<div>${el.state.count}</div>
-      <button>+</button>`,
-  onConnected(el) {
-    el.on('button', 'click', () => el.state.count++);
-  },
-});
-```
-
-### From Lit
-
-**Before (Lit):**
-
-```ts
-import { LitElement, html } from 'lit';
-import { property } from 'lit/decorators.js';
-
-class MyCounter extends LitElement {
-  @property({ type: Number }) count = 0;
-
-  render() {
-    return html`<div>${this.count}</div>
-      <button @click=${this._increment}>+</button>`;
-  }
-
-  _increment() {
-    this.count++;
-  }
+interface InjectionKey<T> extends Symbol {
+  readonly __craftit_injection_key?: T;
 }
+type SetupResult =
+  | string
+  | HTMLResult
+  | {
+      template: string | HTMLResult;
+      styles?: (string | CSSStyleSheet)[];
+    };
 ```
 
-**After (Craftit):**
+---
 
-```ts
-defineElement('my-counter', {
-  state: { count: 0 },
-  template: (el) =>
-    html`<div>${el.state.count}</div>
-      <button>+</button>`,
-  onConnected(el) {
-    el.on('button', 'click', () => el.state.count++);
-  },
-});
-```
+## Next Steps
+
+- See [Usage Guide](./usage.md) for detailed patterns
+- Check [Examples](./examples.md) for real-world code
+- Visit [GitHub](https://github.com/saatkhel/vielzeug) for source code

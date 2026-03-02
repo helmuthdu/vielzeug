@@ -14,10 +14,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./test": {
-      "types": "./dist/test.d.ts",
-      "import": "./dist/test.js",
-      "require": "./dist/test.cjs"
+    "./trial": {
+      "types": "./dist/trial.d.ts",
+      "import": "./dist/trial.js",
+      "require": "./dist/trial.cjs"
     }
   },
   "scripts": {

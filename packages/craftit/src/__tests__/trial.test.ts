@@ -12,7 +12,7 @@ import {
   waitFor,
   waitForElement,
   waitForElementToBeRemoved,
-} from '../test/trial';
+} from '../trial/trial';
 
 // Counter for unique component names
 let componentCounter = 0;

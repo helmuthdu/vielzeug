@@ -3,7 +3,7 @@
  * Comprehensive tests for composable utilities
  */
 import { define, html, type InjectionKey, inject, prop, provide, ref } from '..';
-import { cleanup, mount } from '../test/trial';
+import { cleanup, mount } from '../trial/trial';
 
 // Counter for unique component names
 let componentCounter = 0;

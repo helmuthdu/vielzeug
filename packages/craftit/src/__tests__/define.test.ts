@@ -3,7 +3,7 @@
  * Tests for the define() function and component lifecycle
  */
 import { define, html, signal } from '..';
-import { cleanup, mount } from '../test/trial';
+import { cleanup, mount } from '../trial/trial';
 
 describe('Core: Component Definition', () => {
   afterEach(() => cleanup());

@@ -1,7 +1,6 @@
 # Craftit Usage Guide
 
-Complete guide to using Craftit for creating type-safe, reactive web components.
-
+Complete guide to using Craftit for creating type-safe, reactive web components with signals.
 ::: tip 💡 Quick Reference
 This guide covers detailed usage patterns. For complete examples, see [Examples](./examples.md). For API documentation, see [API Reference](./api.md).
 :::
@@ -31,10 +30,28 @@ yarn add @vielzeug/craftit
 ## Import
 
 ```ts
-import { defineElement, html, css, classMap, styleMap, attach, destroy } from '@vielzeug/craftit';
-
+import {
+  define,
+  signal,
+  computed,
+  effect,
+  watch,
+  batch,
+  untrack,
+  readonly,
+  html,
+  css,
+  onMount,
+  onUnmount,
+  onUpdated,
+  onCleanup,
+  prop,
+  ref,
+  provide,
+  inject,
+} from '@vielzeug/craftit';
 // Optional: Import types
-import type { WebComponent, ComponentOptions, Template } from '@vielzeug/craftit';
+import type { Signal, ComputedSignal, Ref, InjectionKey, HTMLResult, CSSResult } from '@vielzeug/craftit';
 ```
 
 ## Basic Usage
@@ -42,1148 +59,929 @@ import type { WebComponent, ComponentOptions, Template } from '@vielzeug/craftit
 ### Creating a Component
 
 ```ts
-import { defineElement, html } from '@vielzeug/craftit';
-
-defineElement('my-component', {
-  template: html`
+import { define, html } from '@vielzeug/craftit';
+define('my-component', () => {
+  return html`
     <div class="container">
       <h1>Hello, Craftit!</h1>
     </div>
-  `,
+  `;
 });
-
-// Use in HTML
-// <my-component></my-component>
 ```
 
-### With State
+Use in HTML:
+
+```html
+<my-component></my-component>
+```
+
+### With Signals (Reactive State)
 
 ```ts
-defineElement('user-card', {
-  state: {
-    name: 'Alice',
-    email: 'alice@example.com',
-    isOnline: true,
-  },
-
-  template: (el) => html`
+import { define, signal, html } from '@vielzeug/craftit';
+define('user-card', () => {
+  const name = signal('Alice');
+  const email = signal('alice@example.com');
+  const isOnline = signal(true);
+  return html`
     <div class="user-card">
-      <h2>${el.state.name}</h2>
-      <p>${el.state.email}</p>
-      <span class="status">${el.state.isOnline ? 'Online' : 'Offline'}</span>
+      <h2>${name}</h2>
+      <p>${email}</p>
+      <span class="status">${isOnline.value ? 'Online' : 'Offline'}</span>
     </div>
-  `,
+  `;
 });
 ```
 
-### Dynamic Templates
+### Event Handlers
+
+Use the `@` prefix for event handlers in templates:
 
 ```ts
-defineElement('product-list', {
-  state: {
-    products: [
-      { id: 1, name: 'Product A', price: 29.99 },
-      { id: 2, name: 'Product B', price: 39.99 },
-    ],
+define('click-counter', () => {
+  const count = signal(0);
+  return html`
+    <div>
+      <p>Count: ${count}</p>
+      <button @click=${() => count.value++}>Increment</button>
+      <button @click=${() => count.value--}>Decrement</button>
+    </div>
+  `;
+});
+```
+
+## Signals
+
+Signals are the foundation of Craftit's reactivity system. They provide fine-grained reactive state management.
+
+### Creating Signals
+
+```ts
+import { signal } from '@vielzeug/craftit';
+const count = signal(0);
+const name = signal('Alice');
+const items = signal([1, 2, 3]);
+const user = signal({ name: 'Bob', age: 30 });
+```
+
+### Reading Signal Values
+
+```ts
+// Read with .value
+console.log(count.value); // 0
+// Signals automatically track dependencies in templates
+html`<div>${count}</div>`; // Automatically updates when count changes
+```
+
+### Updating Signal Values
+
+```ts
+// Direct assignment
+count.value = 10;
+// Update with function
+count.update((current) => current + 1);
+// For objects and arrays, reassign to trigger updates
+items.value = [...items.value, 4];
+user.value = { ...user.value, age: 31 };
+```
+
+### Signal Utilities
+
+#### peek() - Read Without Tracking
+
+```ts
+// Read value without creating a dependency
+const currentValue = count.peek();
+```
+
+#### update() - Functional Updates
+
+```ts
+count.update((current) => current + 1);
+items.update((list) => [...list, newItem]);
+```
+
+#### map() - Transform Arrays
+
+```ts
+const numbers = signal([1, 2, 3]);
+const doubled = numbers.map((n, index) => n * 2);
+```
+
+## Computed Signals
+
+Computed signals derive values from other signals and automatically update:
+
+```ts
+import { signal, computed } from '@vielzeug/craftit';
+const firstName = signal('John');
+const lastName = signal('Doe');
+// Automatically updates when dependencies change
+const fullName = computed(() => `${firstName.value} ${lastName.value}`);
+console.log(fullName.value); // "John Doe"
+firstName.value = 'Jane';
+console.log(fullName.value); // "Jane Doe"
+```
+
+### Complex Computations
+
+```ts
+const items = signal([
+  { id: 1, name: 'Apple', category: 'fruit', price: 1.5 },
+  { id: 2, name: 'Carrot', category: 'vegetable', price: 0.8 },
+]);
+const filter = signal('all');
+const filteredItems = computed(() => {
+  const f = filter.value;
+  if (f === 'all') return items.value;
+  return items.value.filter((item) => item.category === f);
+});
+const total = computed(() => {
+  return filteredItems.value.reduce((sum, item) => sum + item.price, 0);
+});
+```
+
+## Effects
+
+Effects run side effects when their dependencies change:
+
+```ts
+import { signal, effect } from '@vielzeug/craftit';
+const count = signal(0);
+// Runs immediately and when count changes
+effect(() => {
+  console.log('Count is:', count.value);
+});
+// With cleanup
+effect(() => {
+  const timer = setInterval(() => {
+    console.log('Current count:', count.value);
+  }, 1000);
+  // Return cleanup function
+  return () => clearInterval(timer);
+});
+```
+
+## Watch
+
+Watch specific signals for changes:
+
+```ts
+import { signal, watch } from '@vielzeug/craftit';
+const count = signal(0);
+// Watch single signal
+watch(count, (newValue, oldValue) => {
+  console.log(`Changed from ${oldValue} to ${newValue}`);
+});
+// Watch multiple signals
+const name = signal('Alice');
+watch([count, name], ([countValue, nameValue]) => {
+  console.log(`Count: ${countValue}, Name: ${nameValue}`);
+});
+// With immediate option
+watch(
+  count,
+  (value) => {
+    console.log('Count:', value);
   },
-
-  template: (el) => html`
-    <div class="products">
-      ${el.state.products
-        .map(
-          (product) => `
-        <div class="product" data-id="${product.id}">
-          <h3>${product.name}</h3>
-          <p>$${product.price.toFixed(2)}</p>
-        </div>
-      `,
-        )
-        .join('')}
-    </div>
-  `,
-});
+  { immediate: true },
+); // Runs immediately
 ```
 
-### Boolean Attributes
+## Batch Updates
 
-Craftit supports Lit-style boolean attributes using the `?` prefix. This provides a clean way to conditionally include HTML boolean attributes:
+Prevent multiple re-renders by batching updates:
 
 ```ts
-defineElement('custom-button', {
-  observedAttributes: ['disabled', 'loading'] as const,
-
-  template: (el) => html`
-    <button
-      ?disabled="${el.hasAttribute('disabled') || el.hasAttribute('loading')}"
-      ?aria-busy="${el.hasAttribute('loading')}">
-      <slot></slot>
-    </button>
-  `,
-});
-
-// Usage:
-// <custom-button disabled>Can't Click</custom-button>  → <button disabled>
-// <custom-button>Click Me</custom-button>             → <button>
+import { signal, batch } from '@vielzeug/craftit';
+const count = signal(0);
+const name = signal('Alice');
+// Multiple updates, single re-render
+batch(() => {
+  count.value = 10;
+  name.value = 'Bob';
+  count.value = 20;
+}); // Only re-renders once here
 ```
 
-**How it works:**
-- `?attrName="${true}"` or `?attrName="${''}"` → attribute is included
-- `?attrName="${false}"`, `?attrName="${null}"`, or `?attrName="${undefined}"` → attribute is omitted
+## Untrack
 
-**Common use cases:**
+Read signals without creating dependencies:
 
 ```ts
-template: (el) => html`
-  <input
-    type="checkbox"
-    ?checked="${el.state.isChecked}"
-    ?required="${el.state.isRequired}"
-    ?readonly="${el.state.isReadonly}"
-    ?disabled="${el.state.isDisabled}" />
+import { signal, computed, untrack } from '@vielzeug/craftit';
+const count = signal(0);
+const multiplier = signal(2);
+const result = computed(() => {
+  // This depends on count
+  const c = count.value;
+  // This doesn't create a dependency
+  const m = untrack(() => multiplier.value);
+  return c * m;
+});
+// Changing multiplier won't trigger recomputation
+multiplier.value = 3; // No update
+count.value = 5; // Updates!
+```
 
-  <button
-    type="submit"
-    ?disabled="${!el.state.isValid || el.state.isSubmitting}"
-    ?aria-busy="${el.state.isSubmitting}">
-    ${el.state.isSubmitting ? 'Submitting...' : 'Submit'}
-  </button>
+## Readonly Signals
+
+Create read-only views of signals:
+
+```ts
+import { signal, readonly } from '@vielzeug/craftit';
+const count = signal(0);
+const readonlyCount = readonly(count);
+console.log(readonlyCount.value); // 0
+// readonlyCount.value = 10; // Error!
+// But the original signal can still be updated
+count.value = 10;
+console.log(readonlyCount.value); // 10
+```
+
+## Template System
+
+Craftit uses tagged template literals for HTML with powerful binding syntax.
+
+### Text Interpolation
+
+```ts
+const name = signal('Alice');
+const age = signal(30);
+html`
+  <div>
+    <p>Name: ${name}</p>
+    <p>Age: ${age}</p>
+  </div>
 `;
 ```
 
-## Advanced Features
+### Properties (: prefix)
 
-Craftit provides powerful features for building complex web components with reactive state, lifecycle management, and form integration.
-
-### State Management
-
-Components can manage internal state that automatically triggers re-renders when changed:
+Bind to element properties:
 
 ```ts
-defineElement('counter', {
-  state: { count: 0 },
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button onclick="this.increment()">Increment</button>
-    </div>
-  `,
-  methods: {
-    increment() {
-      this.state.count++; // Automatic re-render
-    },
-  },
+const value = signal('hello');
+html`<input :value=${value} />`;
+```
+
+### Attributes (: prefix)
+
+Bind to attributes:
+
+```ts
+const id = signal('my-id');
+const className = signal('active');
+html` <div :id=${id} :class=${className}>Content</div> `;
+```
+
+### Boolean Attributes (? prefix)
+
+Toggle boolean attributes:
+
+```ts
+const isDisabled = signal(false);
+const isChecked = signal(true);
+html`
+  <button ?disabled=${isDisabled}>Click</button>
+  <input type="checkbox" ?checked=${isChecked} />
+`;
+```
+
+### Event Handlers (@ prefix)
+
+Bind event handlers:
+
+```ts
+const handleClick = () => console.log('Clicked!');
+const handleInput = (e: Event) => {
+  console.log((e.target as HTMLInputElement).value);
+};
+html`
+  <button @click=${handleClick}>Click Me</button>
+  <input @input=${handleInput} />
+`;
+```
+
+### Event Modifiers
+
+Chain event modifiers with dots:
+
+```ts
+html`
+  <!-- Prevent default -->
+  <form @submit.prevent=${handleSubmit}>
+    <button type="submit">Submit</button>
+  </form>
+  <!-- Stop propagation -->
+  <div @click.stop=${handleClick}>Click</div>
+  <!-- Keyboard shortcuts -->
+  <input @keydown.enter=${handleEnter} />
+  <input @keydown.esc=${handleEscape} />
+  <!-- Combine modifiers -->
+  <form @submit.prevent.stop=${handleSubmit}></form>
+`;
+```
+
+Available modifiers:
+
+- `.prevent` - `preventDefault()`
+- `.stop` - `stopPropagation()`
+- `.self` - only if event.target is the element
+- `.capture` - use capture mode
+- `.once` - trigger only once
+- `.passive` - passive listener
+- `.enter`, `.tab`, `.esc`, `.space`, `.up`, `.down`, `.left`, `.right` - keyboard keys
+
+### Element References (ref)
+
+Get references to DOM elements:
+
+```ts
+import { define, ref, html, onMount } from '@vielzeug/craftit';
+define('focus-input', () => {
+  const inputRef = ref<HTMLInputElement>();
+  onMount(() => {
+    inputRef.value?.focus();
+  });
+  return html` <input ref=${inputRef} type="text" /> `;
 });
 ```
 
-### Shadow DOM & Styling
-
-Craftit supports both Shadow DOM (default) and Light DOM rendering:
+### Arrays and Lists
 
 ```ts
-defineElement('my-card', {
-  shadow: true, // Default: uses Shadow DOM
-  template: html`<div class="card">Content</div>`,
-  styles: [css`
-    .card {
-      border: 1px solid #ccc;
-      padding: 1rem;
-    }
-  `],
-});
-
-// Light DOM (no shadow)
-defineElement('no-shadow', {
-  shadow: false, // Renders in Light DOM
-  template: html`<div>No encapsulation</div>`,
-});
+const items = signal(['Apple', 'Banana', 'Cherry']);
+html`
+  <ul>
+    ${items.value.map((item) => html`<li>${item}</li>`)}
+  </ul>
+`;
 ```
 
-### Form-Associated Elements
-
-Build custom form controls that integrate with native forms:
+### Reactive Functions
 
 ```ts
-defineElement('custom-input', {
-  formAssociated: true,
-  state: { value: '' },
-  template: (el) => html`<input value="${el.state.value}" />`,
-  onConnected(el) {
-    el.on('input', 'change', (e) => {
-      el.state.value = (e.target as HTMLInputElement).value;
-      el.setValue(el.state.value); // Update form value
-    });
-  },
-});
+const count = signal(0);
+html` ${() => html`<p>Count: ${count.value}</p>`} `;
 ```
 
-## Reactive State
+## Control Flow
 
-### Direct Mutation
-
-State changes automatically trigger re-renders:
+### Conditional Rendering (html.when)
 
 ```ts
-defineElement('counter', {
-  state: { count: 0 },
-
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button class="increment">+</button>
-    </div>
-  `,
-
-  onConnected(el) {
-    el.on('.increment', 'click', () => {
-      el.state.count++; // ✅ Automatic re-render
-    });
-  },
-});
+const isLoggedIn = signal(false);
+// Simple conditional
+html` ${html.when(isLoggedIn, () => html` <p>Welcome back!</p> `)} `;
+// With else branch
+html`
+  ${html.when(isLoggedIn, {
+    then: () => html`<p>Welcome!</p>`,
+    else: () => html`<p>Please log in</p>`,
+  })}
+`;
 ```
 
-### Nested State
+### Show/Hide (html.show)
 
-Nested objects and arrays are also reactive:
+Toggles display property instead of removing from DOM:
 
 ```ts
-defineElement('todo-app', {
-  state: {
-    user: {
-      name: 'Alice',
-      preferences: {
-        theme: 'dark',
-      },
-    },
-    todos: [],
-  },
-
-  onConnected(el) {
-    // Nested mutation
-    el.state.user.preferences.theme = 'light'; // ✅ Re-renders
-
-    // Array mutation
-    el.state.todos.push({ id: 1, text: 'Learn Craftit' }); // ✅ Re-renders
-
-    // Deep nesting
-    el.state.user.preferences = { theme: 'auto' }; // ✅ Re-renders
-  },
-});
+const isVisible = signal(true);
+html` ${html.show(isVisible, html` <div>I can be hidden!</div> `)} `;
 ```
 
-### Batch Updates with `set()`
+### Lists (html.each)
 
-Update multiple properties efficiently:
+Efficient list rendering with keys:
 
 ```ts
-// Merge update
-await el.set({ count: 10, name: 'New Name' });
-
-// Replace entire state
-await el.set({ count: 0 }, { replace: true });
-
-// Updater function (sync)
-await el.set((state) => ({
-  ...state,
-  count: state.count + 10,
-}));
-
-// Async updater
-await el.set(async (state) => {
-  const data = await fetch('/api/data').then((r) => r.json());
-  return { ...state, data };
-});
-
-// Silent update (no re-render)
-await el.set({ count: 10 }, { silent: true });
+const todos = signal([
+  { id: 1, text: 'Learn Craftit', done: false },
+  { id: 2, text: 'Build app', done: false },
+]);
+html`
+  ${html.each(
+    todos,
+    (todo) => todo.id, // key function
+    (todo, index) => html`
+      <li>
+        ${index + 1}. ${todo.text}
+        <input type="checkbox" ?checked=${todo.done} />
+      </li>
+    `,
+    () => html`<p>No todos yet!</p>`, // empty state
+  )}
+`;
 ```
 
-### Private State
+### Switch/Case (html.choose)
 
-Properties starting with `_` don't trigger re-renders:
+Pattern matching for multiple conditions:
 
 ```ts
-defineElement('component', {
-  state: {
-    count: 0,
-    _internalCache: {}, // Won't trigger re-renders
-  },
+const status = signal('loading');
+html`
+  ${html.choose(
+    status,
+    [
+      ['idle', () => html`<p>Ready</p>`],
+      ['loading', () => html`<p>Loading...</p>`],
+      ['success', () => html`<p>Success!</p>`],
+      ['error', () => html`<p>Error occurred</p>`],
+    ],
+    () => html`<p>Unknown status</p>`, // default
+  )}
+`;
+```
 
-  onConnected(el) {
-    el.state._internalCache.data = 'cached'; // No re-render
-    el.state.count++; // Re-renders
-  },
-});
+### Suspense (html.until)
+
+Handle async operations:
+
+```ts
+html`
+  ${html.until(
+    fetchData(), // Promise
+    () => html`<p>Loading...</p>`, // loading state
+    (data) => html`<p>${data}</p>`, // success
+  )}
+`;
 ```
 
 ## Styling
 
-### Inline Styles
-
-Use the `css` helper for type-safe CSS with JavaScript template literals:
+### Inline Styles with css
 
 ```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
-
-defineElement('styled-button', {
-  template: html` <button>Click Me</button> `,
-
-  styles: [
-    css`
-      button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1rem;
-      }
-
-      button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-    `,
-  ],
+import { define, html, css } from '@vielzeug/craftit';
+define('styled-button', () => {
+  const styles = css`
+    button {
+      background: #0070f3;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0051cc;
+    }
+  `;
+  return {
+    template: html`<button>Click Me</button>`,
+    styles: [styles.content],
+  };
 });
 ```
 
-### CSS Variables (Custom Properties)
-
-Craftit provides a powerful type-safe API for CSS variables with **automatic autocomplete**:
-
-#### Single Theme with Autocomplete
-
-The `css.theme()` function returns a **typed object** that provides both the CSS rule and typed variable references:
+### CSS with Interpolation
 
 ```ts
-import { css } from '@vielzeug/craftit';
-
-const theme = css.theme({
-  primaryColor: '#3b82f6',
-  backgroundColor: '#ffffff',
-  textColor: '#1f2937',
-  spacing: '1rem',
-});
-
-defineElement('app-component', {
-  template: html`<div class="content">Hello</div>`,
-
-  styles: [
-    css`
-      /* Inject CSS variables */
-      ${theme}
-
-      .content {
-        /* ✨ Autocomplete works here! */
-        background: ${theme.backgroundColor}; /* var(--background-color) */
-        color: ${theme.textColor}; /* var(--text-color) */
-        padding: ${theme.spacing}; /* var(--spacing) */
-      }
-
-      h1 {
-        color: ${theme.primaryColor}; /* ✨ TypeScript knows all properties! */
-      }
-    `,
-  ],
-});
+const primaryColor = '#0070f3';
+const styles = css`
+  button {
+    background: ${primaryColor};
+  }
+`;
 ```
 
-**Benefits:**
-
-- ✅ **Autocomplete** – Type `theme.` and see all available variables
-- ✅ **Type-safe** – Typos caught at compile time
-- ✅ **Refactoring** – Rename variables safely across codebase
-- ✅ **Direct CSS var references** – Clean, simple syntax
-
-#### Light/Dark Theme with Autocomplete
-
-Pass two theme objects to automatically create light/dark modes with `prefers-color-scheme`:
+### Theming with css.theme
 
 ```ts
-import { css } from '@vielzeug/craftit';
-
-// Create light and dark themes
 const theme = css.theme(
   // Light theme
   {
-    primaryColor: '#3b82f6',
-    backgroundColor: '#ffffff',
-    textColor: '#1f2937',
-    borderColor: '#e5e7eb',
+    primaryColor: '#0070f3',
+    textColor: '#333',
+    bgColor: '#fff',
   },
   // Dark theme
   {
-    primaryColor: '#60a5fa',
-    backgroundColor: '#1f2937',
-    textColor: '#f9fafb',
-    borderColor: '#374151',
+    primaryColor: '#4dabf7',
+    textColor: '#fff',
+    bgColor: '#222',
   },
-);
-
-defineElement('auto-theme-card', {
-  template: html`<div class="card">Auto Dark Mode!</div>`,
-
-  styles: [
-    css`
-      /* Inject light/dark themes with media queries */
-      ${theme}
-
-      .card {
-        /* ✨ Same variable references – CSS handles which theme applies! */
-        background: ${theme.backgroundColor};
-        color: ${theme.textColor};
-        border: 1px solid ${theme.borderColor};
-      }
-
-      h1 {
-        color: ${theme.primaryColor};
-      }
-    `,
-  ],
-});
-```
-
-**How it works:**
-
-- Automatically detects user's system preferences
-- Manual override via `data-theme="light"` or `data-theme="dark"` attribute
-- **Same variable references** for both themes – CSS does the work!
-
-**Manual theme control:**
-
-```ts
-// Force dark mode
-element.setAttribute('data-theme', 'dark');
-
-// Force light mode
-element.setAttribute('data-theme', 'light');
-
-// Let system decide (remove manual override)
-element.removeAttribute('data-theme');
-```
-
-
-#### Custom Selectors
-
-You can scope themes to specific selectors:
-
-```ts
-// Single theme with custom selector
-const theme = css.theme(
+  // Options
   {
-    primaryColor: '#3b82f6',
-    backgroundColor: '#ffffff',
+    attribute: 'data-theme',
+    selector: ':host',
   },
-  undefined,
-  { selector: '.custom' },
 );
-
-// Light/dark theme with custom selector
-const theme = css.theme(
-  { primaryColor: '#3b82f6', bg: '#fff' },
-  { primaryColor: '#60a5fa', bg: '#000' },
-  { selector: '.custom', attribute: 'theme' },
-);
-```
-
-#### Complete Theming Example
-
-```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
-
-// Define your theme with full autocomplete
-const appTheme = css.theme({
-  // Colors
-  primaryColor: '#3b82f6',
-  secondaryColor: '#8b5cf6',
-  backgroundColor: '#ffffff',
-  textColor: '#1f2937',
-
-  // Spacing
-  spacing: '1rem',
-  spacingSm: '0.5rem',
-  spacingLg: '2rem',
-
-  // Typography
-  fontSize: '16px',
-  fontFamily: 'system-ui, sans-serif',
-
-  // Effects
-  borderRadius: '8px',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-});
-
-defineElement('my-app', {
-  template: (el) => html`
-    <div class="container">
-      <h1>Themed Component</h1>
-      <button>Click Me</button>
-    </div>
-  `,
-
-  styles: [
-    css`
-      ${appTheme}
-
-      .container {
-        font-family: ${appTheme.fontFamily};
-        font-size: ${appTheme.fontSize};
-        color: ${appTheme.textColor};
-        background: ${appTheme.backgroundColor};
-        padding: ${appTheme.spacing};
-      }
-
-      h1 {
-        color: ${appTheme.primaryColor};
-      }
-
-      button {
-        background: ${appTheme.secondaryColor};
-        color: white;
-        padding: ${appTheme.spacingSm} ${appTheme.spacing};
-        border-radius: ${appTheme.borderRadius};
-        box-shadow: ${appTheme.boxShadow};
-      }
-    `,
-  ],
-});
-```
-
-**What you get:**
-
-- 🎯 **IDE autocomplete** for all theme properties
-- 🔒 **Type safety** – compile-time error for typos
-- 🔄 **Safe refactoring** – rename properties with confidence
-- 📦 **Single import** – just `import { css }`
-
-### CSSStyleSheet Objects
-
-```ts
-import { css } from '@vielzeug/craftit';
-
-const sharedStyles = new CSSStyleSheet();
-await sharedStyles.replace(css`
-  .card {
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+const styles = css`
+  :host {
+    color: ${theme.textColor};
+    background: ${theme.bgColor};
   }
-`);
-
-defineElement('my-card', {
-  template: html`<div class="card">Card Content</div>`,
-  styles: [sharedStyles], // Reuse across components
-});
+  button {
+    background: ${theme.primaryColor};
+  }
+  ${theme}/* Inject theme CSS */
+`;
 ```
 
-### Dynamic Styles with `classMap` and `styleMap`
+### Dynamic Styles (html.style)
 
 ```ts
-import { classMap, styleMap } from '@vielzeug/craftit';
-
-defineElement('dynamic-styles', {
-  state: {
-    isActive: false,
-    color: 'blue',
-    size: 16,
-  },
-
-  template: (el) => html`
-    <div
-      class="${classMap({
-        active: el.state.isActive,
-        inactive: !el.state.isActive,
-      })}"
-      style="${styleMap({
-        color: el.state.color,
-        fontSize: `${el.state.size}px`,
-      })}">
-      Dynamic Content
-    </div>
-  `,
-});
+const fontSize = signal(16);
+const color = signal('red');
+html`
+  <div
+    style=${html.style({
+      fontSize: fontSize.value, // Auto-adds 'px'
+      color: color.value,
+      padding: '12px 24px',
+      fontWeight: 'bold',
+    })}>
+    Styled dynamically
+  </div>
+`;
 ```
 
-## Event Handling
-
-### Direct Element Binding
+### Dynamic Classes (html.classes)
 
 ```ts
-defineElement('simple-button', {
-  template: html`<button id="submit">Submit</button>`,
-
-  onConnected(el) {
-    const button = el.find('#submit');
-    if (button) {
-      el.on(button, 'click', () => {
-        console.log('Button clicked!');
-      });
-    }
-  },
-});
-```
-
-### Event Delegation
-
-Handle events on dynamic elements:
-
-```ts
-defineElement('todo-list', {
-  state: {
-    todos: ['Task 1', 'Task 2', 'Task 3'],
-  },
-
-  template: (el) => html`
-    <ul>
-      ${el.state.todos
-        .map(
-          (todo, i) => `
-        <li>
-          ${todo}
-          <button class="delete" data-index="${i}">Delete</button>
-        </li>
-      `,
-        )
-        .join('')}
-    </ul>
-    <button class="add">Add Todo</button>
-  `,
-
-  onConnected(el) {
-    // Delegation works for dynamically added elements!
-    el.on('.delete', 'click', (e) => {
-      const index = +(e.currentTarget as HTMLElement).dataset.index!;
-      el.state.todos.splice(index, 1);
-    });
-
-    el.on('.add', 'click', () => {
-      el.state.todos.push(`Task ${el.state.todos.length + 1}`);
-    });
-  },
-});
-```
-
-### Custom Events
-
-```ts
-defineElement('custom-emitter', {
-  template: html`<button>Emit Event</button>`,
-
-  onConnected(el) {
-    el.on('button', 'click', () => {
-      el.emit('custom-event', {
-        message: 'Hello from component!',
-        timestamp: Date.now(),
-      });
-    });
-  },
-});
-
-// Listen from outside
-const component = document.querySelector('custom-emitter');
-component?.addEventListener('custom-event', ((e: CustomEvent) => {
-  console.log(e.detail.message);
-}) as EventListener);
-```
-
-### Event Options
-
-```ts
-el.on(
-  'button',
-  'click',
-  (e) => {
-    console.log('Clicked once!');
-  },
-  { once: true },
-); // Remove after first trigger
-
-el.on(
-  'div',
-  'scroll',
-  (e) => {
-    console.log('Scrolling');
-  },
-  { passive: true },
-); // Passive listener for performance
-```
-
-## DOM Queries
-
-### Find Single Element
-
-```ts
-defineElement('query-example', {
-  template: html`
-    <div id="container">
-      <button class="submit">Submit</button>
-      <input type="text" name="username" />
-    </div>
-  `,
-
-  onConnected(el) {
-    // Type-safe queries
-    const button = el.find<HTMLButtonElement>('.submit');
-    const input = el.find<HTMLInputElement>('input[name="username"]');
-    const container = el.find<HTMLDivElement>('#container');
-
-    console.log(button?.textContent); // 'Submit'
-  },
-});
-```
-
-### Find Multiple Elements
-
-```ts
-defineElement('multi-query', {
-  template: html`
-    <div class="item">Item 1</div>
-    <div class="item">Item 2</div>
-    <div class="item">Item 3</div>
-  `,
-
-  onConnected(el) {
-    const items = el.findAll<HTMLDivElement>('.item');
-    console.log(items.length); // 3
-
-    items.forEach((item, index) => {
-      console.log(item.textContent);
-    });
-  },
-});
+const isActive = signal(true);
+const isDisabled = signal(false);
+// Object syntax
+html`
+  <div
+    class=${html.classes({
+      active: isActive.value,
+      disabled: isDisabled.value,
+      'button-primary': true,
+    })}>
+    Styled
+  </div>
+`;
+// Array syntax
+html`
+  <div class=${html.classes(['btn', isActive.value && 'active', { primary: true, disabled: isDisabled.value }])}>
+    Styled
+  </div>
+`;
 ```
 
 ## Lifecycle Hooks
 
-### onConnected
+### onMount
 
-Called when component is added to the DOM:
+Runs after the component is mounted:
 
 ```ts
-defineElement('lifecycle-demo', {
-  template: html`<div>Component</div>`,
-
-  onConnected(el) {
+import { define, signal, html, onMount } from '@vielzeug/craftit';
+define('my-component', () => {
+  const data = signal(null);
+  onMount(() => {
     console.log('Component mounted!');
-
-    // Perfect place for:
-    // – Event listeners
-    // – API calls
-    // – Subscriptions
-    // – Third-party library initialization
-  },
+    // Fetch data
+    fetch('/api/data')
+      .then((r) => r.json())
+      .then((d) => (data.value = d));
+    // Return cleanup
+    return () => {
+      console.log('Cleanup on unmount');
+    };
+  });
+  return html`<div>${data.value}</div>`;
 });
 ```
 
-### onDisconnected
+### onUnmount
 
-Called when component is removed from the DOM:
+Runs before the component is unmounted:
 
 ```ts
-defineElement('cleanup-demo', {
-  template: html`<div>Component</div>`,
-
-  onDisconnected(el) {
-    console.log('Component unmounted!');
-
-    // Cleanup is mostly automatic, but you can:
-    // – Close connections
-    // – Clear external subscriptions
-    // – Clean up third-party libraries
-  },
+onUnmount(() => {
+  console.log('Component unmounting...');
+  // Cleanup subscriptions, timers, etc.
 });
 ```
 
 ### onUpdated
 
-Called after each render:
+Runs after each reactive update:
 
 ```ts
-defineElement('update-tracker', {
-  state: { count: 0 },
-  template: (el) => html`<div>Count: ${el.state.count}</div>`,
-
-  onUpdated(el) {
-    console.log('Rendered with count:', el.state.count);
-
-    // Use for:
-    // – DOM measurements
-    // – Third-party library updates
-    // – Analytics tracking
-  },
+onUpdated(() => {
+  console.log('Component updated!');
 });
 ```
 
-### onAttributeChanged
+### onCleanup
 
-Called when observed attributes change:
+Register cleanup functions:
 
 ```ts
-defineElement('attr-watcher', {
-  template: html`<div>Component</div>`,
-  observedAttributes: ['data-theme', 'data-size'] as const,
-
-  onAttributeChanged(name, oldValue, newValue, el) {
-    console.log(`Attribute "${name}" changed from "${oldValue}" to "${newValue}"`);
-
-    if (name === 'data-theme') {
-      el.state.theme = newValue;
-    }
-  },
+onCleanup(() => {
+  console.log('Cleaning up...');
 });
-
-// <attr-watcher data-theme="dark" data-size="large"></attr-watcher>
 ```
 
-## Observed Attributes
+## Props and Attributes
 
-Attributes automatically become properties:
-
-```ts
-defineElement('my-input', {
-  template: (el) => html`<input type="text" placeholder="${el.placeholder || 'Enter text'}" />`,
-
-  observedAttributes: ['placeholder', 'disabled'] as const,
-});
-
-// Usage in HTML
-// <my-input placeholder="Username"></my-input>
-
-// Access in TypeScript
-const input = document.querySelector('my-input') as WebComponent & {
-  placeholder: string;
-  disabled: boolean;
-};
-
-input.placeholder = 'New placeholder'; // ✅ Updates attribute
-console.log(input.disabled); // ✅ Reads attribute
-```
-
-### Boolean Attributes
+Define reactive props that sync with HTML attributes:
 
 ```ts
-defineElement('toggle-button', {
-  template: (el) => html`<button>${el.active ? 'Active' : 'Inactive'}</button>`,
-
-  observedAttributes: ['active'] as const,
-});
-
-// <toggle-button active></toggle-button>  // active = true
-// <toggle-button></toggle-button>          // active = null
-
-const button = document.querySelector('toggle-button') as WebComponent & { active: boolean };
-button.active = true; // Sets attribute to empty string
-button.active = false; // Removes attribute
-```
-
-## Form Associated Elements
-
-Create custom form controls:
-
-```ts
-defineElement('custom-slider', {
-  state: { value: 50 },
-
-  template: (el) => html`
-    <div class="slider">
-      <input type="range" min="0" max="100" value="${el.state.value}" />
-      <span>${el.state.value}</span>
+import { define, prop, html } from '@vielzeug/craftit';
+define('user-badge', () => {
+  // Basic prop
+  const name = prop('name', 'Guest');
+  // With custom parser
+  const count = prop('count', 0, {
+    parse: (v) => Number(v) || 0,
+  });
+  // With reflection (syncs back to attribute)
+  const status = prop('status', 'offline', {
+    reflect: true,
+  });
+  // Boolean prop
+  const disabled = prop('disabled', false, {
+    parse: (v) => v !== null,
+    reflect: true,
+  });
+  return html`
+    <div class="badge">
+      <span class="name">${name}</span>
+      <span class="count">${count}</span>
+      <span class="status">${status}</span>
     </div>
-  `,
-
-  formAssociated: true,
-  observedAttributes: ['value', 'name'] as const,
-
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const value = +(e.currentTarget as HTMLInputElement).value;
-      el.state.value = value;
-      el.form?.value(String(value));
-    });
-  },
+  `;
 });
-
-// Use in forms
-// <form>
-//   <custom-slider name="volume" value="75"></custom-slider>
-//   <button type="submit">Submit</button>
-// </form>
 ```
 
-### Form Validation
+Use in HTML:
+
+```html
+<user-badge name="Alice" count="5" status="online"></user-badge>
+```
+
+## Context (Dependency Injection)
+
+Share data between parent and child components:
 
 ```ts
-defineElement('validated-input', {
-  state: { value: '', error: '' },
-
-  template: (el) => html`
+import { define, provide, inject, signal, html } from '@vielzeug/craftit';
+import type { InjectionKey } from '@vielzeug/craftit';
+// Create typed injection key
+const ThemeKey: InjectionKey<{ mode: Signal<'light' | 'dark'> }> = Symbol('theme');
+// Parent provides
+define('app-root', () => {
+  const mode = signal<'light' | 'dark'>('light');
+  provide(ThemeKey, { mode });
+  return html`
     <div>
-      <input type="email" value="${el.state.value}" />
-      ${el.state.error ? `<span class="error">${el.state.error}</span>` : ''}
+      <button @click=${() => (mode.value = mode.value === 'light' ? 'dark' : 'light')}>Toggle Theme</button>
+      <slot></slot>
     </div>
-  `,
-
-  formAssociated: true,
-
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const value = (e.currentTarget as HTMLInputElement).value;
-      el.state.value = value;
-
-      // Validate
-      if (!value) {
-        el.state.error = 'Required';
-        el.form?.valid({ valueMissing: true }, 'Required');
-      } else if (!value.includes('@')) {
-        el.state.error = 'Invalid email';
-        el.form?.valid({ typeMismatch: true }, 'Invalid email');
-      } else {
-        el.state.error = '';
-        el.form?.valid(); // Clear validation
-      }
-
-      el.form?.value(value);
-    });
-  },
+  `;
+});
+// Child injects
+define('themed-card', () => {
+  const theme = inject(ThemeKey);
+  return html` <div class="card theme-${theme?.mode.value}">Card content</div> `;
 });
 ```
 
-## State Watchers
+```html
+<app-root>
+  <themed-card></themed-card>
+</app-root>
+```
 
-React to specific state changes:
+## Portals
+
+Render content to a different location in the DOM:
 
 ```ts
-defineElement('watcher-demo', {
-  state: {
-    count: 0,
-    user: { name: 'Alice' },
-  },
-
-  template: (el) => html`<div>Count: ${el.state.count}</div>`,
-
-  onConnected(el) {
-    // Watch a single value
-    const unwatch = el.watch(
-      (state) => state.count,
-      (count, prevCount) => {
-        console.log(`Count changed from ${prevCount} to ${count}`);
-      },
-    );
-
-    // Watch nested value
-    el.watch(
-      (state) => state.user.name,
-      (name, prevName) => {
-        console.log(`Name changed from ${prevName} to ${name}`);
-      },
-    );
-
-    // Cleanup
-    el.delay(() => unwatch(), 5000);
-  },
+import { define, signal, html } from '@vielzeug/craftit';
+define('modal-component', () => {
+  const isOpen = signal(false);
+  return html`
+    <button @click=${() => (isOpen.value = true)}>Open Modal</button>
+    ${html.portal(
+      html.when(
+        isOpen,
+        () => html`
+          <div class="modal-overlay">
+            <div class="modal">
+              <h2>Modal Title</h2>
+              <button @click=${() => (isOpen.value = false)}>Close</button>
+            </div>
+          </div>
+        `,
+      ),
+      'body', // target selector or element
+    )}
+  `;
 });
 ```
 
-## Timeouts and Cleanup
+## Error Boundaries
 
-Automatic cleanup on disconnect:
+Handle errors gracefully in components:
 
 ```ts
-defineElement('timer', {
-  state: { seconds: 0 },
-
-  template: (el) => html`<div>Elapsed: ${el.state.seconds}s</div>`,
-
-  onConnected(el) {
-    // Set timeout (auto-cleanup on disconnect)
-    const id = el.delay(() => {
-      console.log('Timeout fired!');
-    }, 5000);
-
-    // Clear manually if needed
-    el.clear(id);
-
-    // Recurring timer
-    const intervalId = setInterval(() => {
-      el.state.seconds++;
-    }, 1000);
-
-    // Manual cleanup needed for intervals
-    el.delay(() => {
-      clearInterval(intervalId);
-    }, 10000);
-  },
+import { define, html, errorBoundary } from '@vielzeug/craftit';
+define('safe-component', () => {
+  return errorBoundary(() => html`<risky-component></risky-component>`, {
+    fallback: (error) => html`
+      <div class="error">
+        <h3>Something went wrong</h3>
+        <p>${error.message}</p>
+      </div>
+    `,
+    onError: (error) => {
+      console.error('Component error:', error);
+      // Send to error tracking service
+    },
+  });
 });
 ```
 
-## Rendering
-
-### Manual Render
+### Reusable Error Boundaries
 
 ```ts
-el.render(); // Schedule a render
-await el.flush(); // Wait for render to complete
+import { createErrorBoundary } from '@vielzeug/craftit';
+const SafeComponent = createErrorBoundary(() => html`<risky-component></risky-component>`, {
+  fallback: (error) => html`<p>Error: ${error.message}</p>`,
+});
+define('app', () => html` <div>${SafeComponent()}</div> `);
 ```
 
-### Async Operations
+## Lazy Loading
+
+Lazy load components on demand:
 
 ```ts
-defineElement('async-loader', {
-  state: { data: null, loading: false },
-
-  template: (el) => html` <div>${el.state.loading ? 'Loading...' : JSON.stringify(el.state.data)}</div> `,
-
-  async onConnected(el) {
-    el.state.loading = true;
-
-    await el.set(async (state) => {
-      const data = await fetch('/api/data').then((r) => r.json());
-      return { ...state, data, loading: false };
-    });
-  },
+import { define, html, lazy } from '@vielzeug/craftit';
+const HeavyChart = lazy(() => import('./chart-component'), {
+  fallback: () => html`<div class="loading">Loading chart...</div>`,
+});
+define('dashboard', () => {
+  return html`
+    <div class="dashboard">
+      <h1>Dashboard</h1>
+      ${HeavyChart()}
+    </div>
+  `;
 });
 ```
 
 ## Testing
 
-### Basic Testing
+Craftit includes testing utilities for component testing:
 
 ```ts
-import { defineElement, html, attach, destroy } from '@vielzeug/craftit';
-import { expect, test } from 'vitest';
-
-test('counter increments', async () => {
-  defineElement('test-counter', {
-    state: { count: 0 },
-    template: (el) => html`
-      <div class="count">${el.state.count}</div>
-      <button>+</button>
-    `,
-    onConnected(el) {
-      el.on('button', 'click', () => el.state.count++);
-    },
+import { mount, fireEvent, userEvent } from '@vielzeug/craftit/trial';
+import { describe, it, expect } from 'vitest';
+describe('counter-app', () => {
+  it('increments on click', async () => {
+    const { query, waitForUpdates } = await mount('counter-app');
+    const button = query('button');
+    const display = query('p');
+    expect(display?.textContent).toBe('Count: 0');
+    fireEvent.click(button!);
+    await waitForUpdates();
+    expect(display?.textContent).toBe('Count: 1');
   });
-
-  const el = document.createElement('test-counter');
-  await attach(el); // Mounts and waits for render
-
-  expect(el.find('.count')?.textContent).toBe('0');
-
-  el.find<HTMLButtonElement>('button')?.click();
-  await el.flush(); // Wait for re-render
-
-  expect(el.find('.count')?.textContent).toBe('1');
-
-  destroy(el); // Clean removal
 });
 ```
 
-### Testing State Updates
+### Testing API
 
 ```ts
-test('state updates', async () => {
-  const el = document.createElement('test-counter');
-  await attach(el);
-
-  // Direct state mutation
-  el.state.count = 10;
-  await el.flush();
-  expect(el.find('.count')?.textContent).toBe('10');
-
-  // Batch update
-  await el.set({ count: 20 });
-  expect(el.find('.count')?.textContent).toBe('20');
-});
+// Mount component
+const fixture = await mount('my-component');
+// Query elements
+const button = fixture.query('button');
+const buttons = fixture.queryAll('button');
+// Access internals
+fixture.element; // HTMLElement
+fixture.shadow; // ShadowRoot
+fixture.container; // Parent container
+// Wait for updates
+await fixture.waitForUpdates();
+// Cleanup
+fixture.unmount();
 ```
 
-## Type Safety
-
-### Typed Component
+### Fire Events
 
 ```ts
-type UserProfileState = {
-  name: string;
-  email: string;
-  age: number;
-  isActive: boolean;
-};
+fireEvent.click(element);
+fireEvent.input(element);
+fireEvent.change(element);
+fireEvent.keyDown(element, { key: 'Enter' });
+fireEvent.submit(form);
+fireEvent.custom(element, 'my-event', { detail: { value: 123 } });
+```
 
-defineElement('user-profile', {
-  state: {
-    name: 'Alice',
-    email: 'alice@example.com',
-    age: 30,
-    isActive: true,
-  } as UserProfileState,
+### User Events
 
-  template: (el) => html`
-    <div>
-      <h2>${el.state.name}</h2>
-      <p>${el.state.email}</p>
-    </div>
-  `,
+More realistic user interactions:
+
+```ts
+await userEvent.click(button);
+await userEvent.type(input, 'Hello');
+await userEvent.clear(input);
+await userEvent.selectOptions(select, 'option1');
+await userEvent.upload(fileInput, file);
+```
+
+## TypeScript
+
+Craftit provides excellent TypeScript support:
+
+```ts
+import type { Signal, ComputedSignal, Ref, InjectionKey } from '@vielzeug/craftit';
+// Typed signals
+const count: Signal<number> = signal(0);
+const name: Signal<string> = signal('Alice');
+const user: Signal<{ name: string; age: number }> = signal({
+  name: 'Bob',
+  age: 30,
 });
-
-// Type-safe access
-const profile = document.createElement('user-profile') as WebComponent<HTMLElement, UserProfileState>;
-profile.state.name = 'Bob'; // ✅ Type-safe
-profile.state.unknown = 'value'; // ❌ TypeScript error
+// Typed computed
+const doubled: ComputedSignal<number> = computed(() => count.value * 2);
+// Typed refs
+const inputRef: Ref<HTMLInputElement> = ref<HTMLInputElement>();
+// Typed injection keys
+interface AppTheme {
+  mode: 'light' | 'dark';
+  primaryColor: string;
+}
+const ThemeKey: InjectionKey<AppTheme> = Symbol('theme');
 ```
 
 ## Best Practices
 
-### 1. Use Event Delegation
+### 1. Use Signals for State
 
 ```ts
-// ✅ Good – works for dynamic elements
-el.on('.item', 'click', handler);
+// ✅ Good
+const count = signal(0);
+// ❌ Avoid
+let count = 0;
+```
 
-// ❌ Bad – must re-bind after state changes
-el.findAll('.item').forEach((item) => {
-  item.addEventListener('click', handler);
+### 2. Computed for Derived Values
+
+```ts
+// ✅ Good
+const fullName = computed(() => `${firstName.value} ${lastName.value}`);
+// ❌ Avoid
+const fullName = signal(firstName.value + ' ' + lastName.value);
+```
+
+### 3. Batch Multiple Updates
+
+```ts
+// ✅ Good
+batch(() => {
+  count.value = 10;
+  name.value = 'Alice';
+});
+// ❌ Avoid (triggers multiple re-renders)
+count.value = 10;
+name.value = 'Alice';
+```
+
+### 4. Use onCleanup for Side Effects
+
+```ts
+// ✅ Good
+onMount(() => {
+  const timer = setInterval(() => {}, 1000);
+  return () => clearInterval(timer);
+});
+// ❌ Avoid (memory leak)
+onMount(() => {
+  setInterval(() => {}, 1000);
 });
 ```
 
-### 2. Batch State Updates
+### 5. Prefer Small, Focused Components
 
 ```ts
-// ✅ Good – single re-render
-await el.set({ name: 'Alice', age: 30, email: 'alice@example.com' });
-
-// ❌ Bad – three re-renders
-el.state.name = 'Alice';
-el.state.age = 30;
-el.state.email = 'alice@example.com';
+// ✅ Good
+define('user-name', () => {
+  const name = prop('name', '');
+  return html`<span>${name}</span>`;
+});
+define('user-card', () => {
+  return html`
+    <div class="card">
+      <user-name name="Alice"></user-name>
+    </div>
+  `;
+});
 ```
 
-### 3. Use Watchers for Side Effects
+## Next Steps
 
-```ts
-// ✅ Good – declarative
-el.watch(
-  (state) => state.userId,
-  async (userId) => {
-    const user = await fetchUser(userId);
-    el.state.user = user;
-  },
-);
-
-// ❌ Bad – imperative
-el.state.userId = 123;
-const user = await fetchUser(el.state.userId);
-el.state.user = user;
-```
-
-### 4. Keep Templates Pure
-
-```ts
-// ✅ Good – pure template
-template: (el) => html`<div>Count: ${el.state.count}</div>`;
-
-// ❌ Bad – side effects in template
-template: (el) => {
-  console.log('Rendering...'); // Side effect!
-  return html`<div>Count: ${el.state.count}</div>`;
-};
-```
+- See [Examples](./examples.md) for real-world examples
+- Read [API Reference](./api.md) for complete API documentation
+- Check out the [GitHub repository](https://github.com/saatkhel/vielzeug) for source code

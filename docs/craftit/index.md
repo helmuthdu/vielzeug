@@ -4,7 +4,7 @@
 
 # Craftit
 
-**Craftit** is a lightweight, type-safe library for creating web components with reactive state, automatic rendering, and excellent developer experience. Build custom elements with the ergonomics of modern frameworks using native browser APIs.
+**Craftit** is a lightweight, type-safe library for creating web components with signals-based reactivity and excellent developer experience. Build custom elements with the ergonomics of modern frameworks using native browser APIs and fine-grained reactivity.
 
 ## What Problem Does Craftit Solve?
 
@@ -55,49 +55,43 @@ customElements.define('my-counter', MyCounter);
 **With Craftit**:
 
 ```ts
-import { defineElement, html } from '@vielzeug/craftit';
+import { define, signal, html } from '@vielzeug/craftit';
 
-defineElement('my-counter', {
-  state: { count: 0 },
+define('my-counter', () => {
+  const count = signal(0);
 
-  template: (el) => html`
+  return html`
     <div>
-      <p>Count: ${el.state.count}</p>
-      <button>Increment</button>
+      <p>Count: ${count}</p>
+      <button @click=${() => count.value++}>Increment</button>
     </div>
-  `,
-
-  onConnected(el) {
-    el.on('button', 'click', () => {
-      el.state.count++; // Automatic re-render!
-    });
-  },
+  `;
 });
 ```
 
 ### Comparison with Alternatives
 
-| Feature            | Craftit                                               | Lit             | Stencil         | Vanilla CE      |
-| ------------------ | ----------------------------------------------------- | --------------- | --------------- | --------------- |
-| Bundle Size        | **<PackageInfo package="craftit" type="size" />**     | ~7 KB           | ~30 KB          | 0               |
-| Dependencies       | <PackageInfo package="craftit" type="dependencies" /> | 0               | Many            | 0               |
-| DOM Reconciliation | ✅ Yes                                                | ✅ Yes          | ✅ Yes          | ❌              |
-| Event Delegation   | ✅ Built-in                                           | ❌              | ❌              | ⚠️ Manual       |
-| Form Integration   | ✅ Built-in                                           | ⚠️ Limited      | ✅ Built-in     | ⚠️ Manual       |
-| Learning Curve     | Low                                                   | Medium          | High            | Low             |
-| Reactive State     | ✅ Built-in                                           | ⚠️ External lib | ✅ Built-in     | ⚠️ Manual       |
-| Testing Utilities  | ✅ Yes                                                | ⚠️ Limited      | ✅ Yes          | ❌              |
-| TypeScript         | ✅ First-class                                        | ✅ Good         | ✅ First-class  | ⚠️ Manual       |
+| Feature              | Craftit                                               | Lit               | Stencil        | Vanilla CE |
+| -------------------- | ----------------------------------------------------- | ----------------- | -------------- | ---------- |
+| Bundle Size          | **<PackageInfo package="craftit" type="size" />**     | ~7 KB             | ~30 KB         | 0          |
+| Dependencies         | <PackageInfo package="craftit" type="dependencies" /> | 0                 | Many           | 0          |
+| Reactivity Model     | ✅ Signals                                            | ⚠️ Reactive props | ✅ Decorators  | ❌         |
+| Fine-grained Updates | ✅ Yes                                                | ⚠️ Partial        | ⚠️ Partial     | ❌         |
+| Template Syntax      | ✅ Tagged templates                                   | ✅ lit-html       | ✅ JSX         | ❌         |
+| Event Handlers       | ✅ @-syntax                                           | ✅ @-syntax       | ✅ Built-in    | ⚠️ Manual  |
+| Learning Curve       | Low                                                   | Medium            | High           | Low        |
+| Testing Utilities    | ✅ Yes                                                | ⚠️ Limited        | ✅ Yes         | ❌         |
+| TypeScript           | ✅ First-class                                        | ✅ Good           | ✅ First-class | ⚠️ Manual  |
 
 ## When to Use Craftit
 
 ✅ **Use Craftit when you need:**
 
 - Type-safe web component development
-- Reactive state management without a framework
-- Automatic DOM updates and reconciliation
-- Event delegation for dynamic content
-- Form-associated custom elements
+- Signals-based reactive state management
+- Fine-grained automatic DOM updates
+- Tagged template syntax with event handlers
+- Minimal bundle size with zero dependencies
 - Minimal bundle size
 - Framework-agnostic components
 
@@ -109,37 +103,38 @@ defineElement('my-counter', {
 
 ## 🚀 Key Features
 
-- **🔥 Reactive State**: Automatic re-renders on state changes with [Proxy-based reactivity](./usage.md#reactive-state).
-- **⚡ Efficient Updates**: Smart [DOM reconciliation](./usage.md#rendering) – only updates what changed.
-- **🎯 Event Delegation**: Built-in support for [dynamic element event handling](./usage.md#event-delegation).
-- **📝 Form Support**: Full [ElementInternals integration](./usage.md#form-associated-elements) for form participation.
-- **🎨 Shadow DOM**: Encapsulated [styles with CSSStyleSheet](./usage.md#styling) support.
-- **🎭 CSS Variables**: Built-in [theming with CSS variables](./usage.md#css-variables-custom-properties) with `css.theme()`.
-- **🔍 Type-Safe**: Complete TypeScript support with [full type inference](./usage.md#type-safety).
+- **🎯 Signals-Based Reactivity**: Fine-grained [automatic dependency tracking](./usage.md#signals) with signals, computed, and effects.
+- **⚡ Efficient Updates**: [Only updates changed DOM nodes](./usage.md#reactivity) – no virtual DOM diffing needed.
+- **📝 Template Syntax**: Powerful [tagged template syntax](./usage.md#template-system) with event handlers, props, and bindings.
+- **🎨 Scoped Styles**: Encapsulated [Shadow DOM styling](./usage.md#styling) with CSS theming support.
+- **🪝 Lifecycle Hooks**: Full control with [onMount, onUnmount, onUpdated](./usage.md#lifecycle-hooks).
+- **🔍 Type-Safe**: Complete TypeScript support with [full type inference](./usage.md#typescript).
 - **📦 Tiny Bundle**: Only **<PackageInfo package="craftit" type="size" /> gzipped** with zero dependencies.
-- **🧪 Testable**: Built-in [testing utilities](./usage.md#testing) (`attach`, `destroy`, `flush`).
-- **🪝 Lifecycle Hooks**: Full control with [lifecycle callbacks](./usage.md#lifecycle-hooks).
-- **🎭 Framework Agnostic**: Use with [React, Vue, Svelte, or vanilla JS](./examples.md#framework-integration).
+- **🧪 Testable**: Built-in [testing utilities](./usage.md#testing) for component testing.
+- **🎭 Advanced Features**: [Error boundaries](./usage.md#error-boundaries), [lazy loading](./usage.md#lazy-loading), and [context](./usage.md#context).
+- **🎯 Props & Refs**: Built-in [prop system](./usage.md#props) and [element references](./usage.md#refs).
 
 ## 🏁 Quick Start
 
 ```ts
-import { defineElement, html } from '@vielzeug/craftit';
+import { define, signal, html } from '@vielzeug/craftit';
 
-defineElement('click-counter', {
-  state: { count: 0 },
+define('click-counter', () => {
+  const count = signal(0);
 
-  template: (el) => html`
+  return html`
     <div>
-      <p>Count: ${el.state.count}</p>
-      <button>Increment</button>
+      <p>Count: ${count}</p>
+      <button @click=${() => count.value++}>Increment</button>
     </div>
-  `,
-
-  onConnected(el) {
-    el.on('button', 'click', () => el.state.count++); // Auto re-renders!
-  },
+  `;
 });
+```
+
+Use in HTML:
+
+```html
+<click-counter></click-counter>
 ```
 
 ::: tip Next Steps
@@ -151,89 +146,90 @@ defineElement('click-counter', {
 
 ## 📘 Core Concepts
 
-### Reactive State
+### Signals-Based Reactivity
 
-State changes automatically trigger efficient re-renders:
+Signals automatically track dependencies and trigger fine-grained updates:
 
 ```ts
-defineElement('todo-app', {
-  state: {
-    todos: ['Learn Craftit', 'Build components'],
-    filter: 'all',
-  },
+import { define, signal, computed, html } from '@vielzeug/craftit';
 
-  template: (el) => html`
+define('todo-app', () => {
+  const todos = signal(['Learn Craftit', 'Build components']);
+  const filter = signal('all');
+
+  // Computed values automatically update
+  const filteredTodos = computed(() => {
+    return filter.value === 'all'
+      ? todos.value
+      : todos.value.filter(todo => /* filter logic */);
+  });
+
+  return html`
     <ul>
-      ${el.state.todos.map((todo) => `<li>${todo}</li>`).join('')}
+      ${filteredTodos.value.map(todo => html`<li>${todo}</li>`)}
     </ul>
-  `,
-
-  onConnected(el) {
-    // Any state change triggers re-render
-    el.state.todos.push('New todo'); // ✅ Automatic re-render
-
-    // Nested objects are also reactive
-    el.state.filter = 'completed'; // ✅ Automatic re-render
-  },
+  `;
 });
 ```
 
-### Event Delegation
+### Event Handlers
 
-Handle events on dynamic elements without re-binding:
+Handle events directly in templates with @ syntax:
 
 ```ts
-defineElement('todo-list', {
-  state: { todos: ['Item 1', 'Item 2'] },
+define('todo-list', () => {
+  const todos = signal(['Item 1', 'Item 2']);
 
-  template: (el) => html`
+  const deleteTodo = (index: number) => {
+    todos.update((list) => {
+      list.splice(index, 1);
+      return [...list];
+    });
+  };
+
+  const addTodo = () => {
+    todos.update((list) => [...list, `Item ${list.length + 1}`]);
+  };
+
+  return html`
     <ul>
-      ${el.state.todos
-        .map(
-          (todo, i) => `
-        <li>
-          ${todo}
-          <button class="delete" data-index="${i}">×</button>
-        </li>
-      `,
-        )
-        .join('')}
+      ${todos.value.map(
+        (todo, i) => html`
+          <li>
+            ${todo}
+            <button @click=${() => deleteTodo(i)}>×</button>
+          </li>
+        `,
+      )}
     </ul>
-    <button class="add">Add Todo</button>
-  `,
-
-  onConnected(el) {
-    // Delegation works for dynamically added elements!
-    el.on('.delete', 'click', (e) => {
-      const index = +(e.currentTarget as HTMLElement).dataset.index!;
-      el.state.todos.splice(index, 1);
-    });
-
-    el.on('.add', 'click', () => {
-      el.state.todos.push(`Item ${el.state.todos.length + 1}`);
-    });
-  },
+    <button @click=${addTodo}>Add Todo</button>
+  `;
 });
 ```
 
-### Smart DOM Updates
+### Fine-Grained Updates
 
-Only changed elements are updated:
+Only changed values trigger re-renders:
 
 ```ts
-defineElement('efficient-list', {
-  state: { items: ['A', 'B', 'C'] },
+define('efficient-list', () => {
+  const items = signal(['A', 'B', 'C']);
 
-  template: (el) => html`
+  return html`
     <ul>
-      ${el.state.items.map((item) => `<li>${item}</li>`).join('')}
+      ${items.value.map((item) => html`<li>${item}</li>`)}
     </ul>
-  `,
-
-  onConnected(el) {
-    // Changing one item only updates that <li>
-    el.state.items[0] = 'Updated A';
-  },
+    <button
+      @click=${() => {
+        // Only the specific item updates
+        items.update((list) => {
+          list[0] = 'Updated A';
+          return [...list];
+        });
+      }}>
+      Update First
+    </button>
+  `;
 });
 ```
 
@@ -241,7 +237,7 @@ defineElement('efficient-list', {
 
 ### How does Craftit compare to Lit?
 
-Craftit is simpler and smaller (<PackageInfo package="craftit" type="size" /> vs ~7 KB). Lit has more features like directives and SSR support. Choose Craftit for simplicity, Lit for advanced features.
+Craftit uses signals-based reactivity for fine-grained updates, while Lit uses a reactive properties model. Craftit is simpler and smaller (<PackageInfo package="craftit" type="size" /> vs ~7 KB). Choose Craftit for signals and simplicity, Lit for directives and SSR support.
 
 ### Can I use Craftit with React/Vue/Svelte?
 
@@ -253,7 +249,7 @@ Absolutely! Craftit is written in TypeScript with full type inference and type s
 
 ### What about browser support?
 
-Craftit requires modern browsers (Chrome 77+, Firefox 93+, Safari 16.4+) for features like ElementInternals and Shadow DOM.
+Craftit requires modern browsers (Chrome 77+, Firefox 93+, Safari 16.4+) for features like Custom Elements and Shadow DOM.
 
 ### Can I use Craftit in production?
 
@@ -268,18 +264,18 @@ Component is defined but doesn't render anything.
 :::
 
 ::: tip Solution
-Ensure you provide a `template` function:
+Ensure you return a template from your setup function:
 
 ```ts
-// ❌ Wrong – missing template
-defineElement('my-el', {
-  state: { count: 0 },
+// ❌ Wrong – not returning anything
+define('my-el', () => {
+  const count = signal(0);
 });
 
-// ✅ Correct – template required
-defineElement('my-el', {
-  state: { count: 0 },
-  template: html`<div>Count: ${el.state.count}</div>`,
+// ✅ Correct – return html template
+define('my-el', () => {
+  const count = signal(0);
+  return html`<div>Count: ${count}</div>`;
 });
 ```
 
@@ -292,15 +288,14 @@ Event listeners not firing on elements.
 :::
 
 ::: tip Solution
-Bind events in `onConnected` lifecycle hook after elements exist:
+Use @ syntax in templates for event binding:
 
 ```ts
-// ✅ Correct – binding after element exists
-defineElement('my-el', {
-  template: html`<button>Click</button>`,
-  onConnected(el) {
-    el.on('button', 'click', () => console.log('clicked'));
-  },
+// ✅ Correct – @ syntax for events
+define('my-el', () => {
+  const count = signal(0);
+
+  return html` <button @click=${() => count.value++}>Increment</button> `;
 });
 ```
 
@@ -309,21 +304,22 @@ defineElement('my-el', {
 ### State Not Updating
 
 ::: danger Problem
-State changes don't trigger re-renders.
+Signal changes don't trigger re-renders.
 :::
 
 ::: tip Solution
-Mutate the state object or use `set()` method:
+Update signal values using `.value` or `.update()`:
 
 ```ts
-// ❌ Wrong – replacing state object
-el.state = { count: 10 }; // This won't work!
+// ❌ Wrong – reassigning signal
+let count = signal(10); // This won't work!
 
-// ✅ Correct – mutate existing state
-el.state.count = 10;
+// ✅ Correct – updating signal value
+const count = signal(0);
+count.value = 10; // This triggers updates
 
-// ✅ Or use set()
-el.set({ count: 10 });
+// ✅ Or use update method
+count.update((current) => current + 1);
 ```
 
 :::

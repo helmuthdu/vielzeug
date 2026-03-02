@@ -3,7 +3,7 @@
  * Tests for onMount, onUnmount, and onUpdated hooks
  */
 import { define, html, onMount, onUnmount, onUpdated, signal } from '..';
-import { cleanup, mount } from '../test/trial';
+import { cleanup, mount } from '../trial/trial';
 
 // Counter for unique component names
 let componentCounter = 0;

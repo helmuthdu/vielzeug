@@ -16,644 +16,727 @@ These are complete, production-ready examples. For API reference, see [API Docum
 Simple interactive counter with increment/decrement buttons.
 
 ```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
-defineElement('simple-counter', {
-  state: { count: 0 },
-  template: (el) => html`
-    <div class="counter">
-      <h2>Count: ${el.state.count}</h2>
-      <button class="decrement">-</button>
-      <button class="reset">Reset</button>
-      <button class="increment">+</button>
-    </div>
-  `,
-  styles: [
-    css`
-      .counter {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-        padding: 2rem;
-      }
-      button {
-        padding: 0.5rem 1.5rem;
-        font-size: 1rem;
-        cursor: pointer;
-      }
+import { define, signal, html, css } from '@vielzeug/craftit';
+define('simple-counter', () => {
+  const count = signal(0);
+  const styles = css`
+    .counter {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+    }
+    button {
+      padding: 0.5rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    h2 {
+      margin: 0;
+      font-size: 2rem;
+    }
+  `;
+  return {
+    template: html`
+      <div class="counter">
+        <h2>Count: ${count}</h2>
+        <div>
+          <button @click=${() => count.value--}>-</button>
+          <button @click=${() => (count.value = 0)}>Reset</button>
+          <button @click=${() => count.value++}>+</button>
+        </div>
+      </div>
     `,
-  ],
-  onConnected(el) {
-    el.on('.increment', 'click', () => el.state.count++);
-    el.on('.decrement', 'click', () => el.state.count--);
-    el.on('.reset', 'click', () => (el.state.count = 0));
-  },
+    styles: [styles.content],
+  };
 });
 ```
 
 ### Todo List
 
-Dynamic list with add/remove functionality.
+Dynamic list with add/remove functionality using signals and html.each.
 
 ```ts
-defineElement('todo-list', {
-  state: {
-    todos: ['Learn Craftit', 'Build components'],
-    input: '',
-  },
-  template: (el) => html`
+import { define, signal, html } from '@vielzeug/craftit';
+define('todo-list', () => {
+  const todos = signal<Array<{ id: number; text: string; done: boolean }>>([
+    { id: 1, text: 'Learn Craftit', done: false },
+    { id: 2, text: 'Build components', done: false },
+  ]);
+  const input = signal('');
+  let nextId = 3;
+  const addTodo = () => {
+    if (input.value.trim()) {
+      todos.value = [...todos.value, { id: nextId++, text: input.value, done: false }];
+      input.value = '';
+    }
+  };
+  const toggleTodo = (id: number) => {
+    todos.update((list) => list.map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo)));
+  };
+  const removeTodo = (id: number) => {
+    todos.update((list) => list.filter((todo) => todo.id !== id));
+  };
+  return html`
     <div class="todo-app">
       <h2>My Todos</h2>
       <div class="add-todo">
-        <input type="text" placeholder="New todo..." value="${el.state.input}" />
-        <button class="add">Add</button>
+        <input
+          type="text"
+          :value=${input}
+          @input=${(e) => (input.value = e.target.value)}
+          @keydown.enter=${addTodo}
+          placeholder="New todo..." />
+        <button @click=${addTodo}>Add</button>
       </div>
       <ul class="todo-list">
-        ${el.state.todos
-          .map(
-            (todo, i) => `
-          <li>
-            <span>${todo}</span>
-            <button class="delete" data-index="${i}">×</button>
-          </li>
-        `,
-          )
-          .join('')}
+        ${html.each(
+          todos,
+          (todo) => todo.id,
+          (todo) => html`
+            <li class=${html.classes({ done: todo.done })}>
+              <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
+              <span>${todo.text}</span>
+              <button @click=${() => removeTodo(todo.id)}>×</button>
+            </li>
+          `,
+        )}
       </ul>
     </div>
-  `,
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      el.state.input = (e.currentTarget as HTMLInputElement).value;
-    });
-    el.on('.add', 'click', () => {
-      if (el.state.input.trim()) {
-        el.state.todos.push(el.state.input);
-        el.state.input = '';
-      }
-    });
-    el.on('.delete', 'click', (e) => {
-      const index = +(e.currentTarget as HTMLElement).dataset.index!;
-      el.state.todos.splice(index, 1);
-    });
-  },
+  `;
 });
 ```
 
 ## Form Examples
 
-### Custom Input Component
+### Login Form
 
-Form-associated custom input with validation.
-
-```ts
-defineElement('custom-input', {
-  state: {
-    value: '',
-    error: '',
-  },
-  template: (el) => html`
-    <div class="input-wrapper">
-      <label>
-        <span class="label">${el.label || 'Input'}</span>
-        <input type="text" value="${el.state.value}" placeholder="${el.placeholder || ''}" />
-      </label>
-      ${el.state.error ? `<span class="error">${el.state.error}</span>` : ''}
-    </div>
-  `,
-  formAssociated: true,
-  observedAttributes: ['label', 'placeholder', 'required'] as const,
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const value = (e.currentTarget as HTMLInputElement).value;
-      el.state.value = value;
-      // Validation
-      if (el.required && !value) {
-        el.state.error = 'This field is required';
-        el.form?.valid({ valueMissing: true }, 'Required');
-      } else {
-        el.state.error = '';
-        el.form?.valid();
-      }
-      el.form?.value(value);
-    });
-  },
-});
-// Usage
-// <form>
-//   <custom-input name="username" label="Username" required></custom-input>
-//   <button type="submit">Submit</button>
-// </form>
-```
-
-### Complete Form
-
-Full form example with multiple fields and validation.
+Form with validation and state management.
 
 ```ts
-defineElement('registration-form', {
-  state: {
-    email: '',
-    password: '',
-    confirmPassword: '',
-    errors: {} as Record<string, string>,
-  },
-  template: (el) => html`
-    <form>
-      <h2>Register</h2>
-      <div class="field">
-        <input type="email" placeholder="Email" value="${el.state.email}" name="email" />
-        ${el.state.errors.email ? `<span class="error">${el.state.errors.email}</span>` : ''}
+import { define, signal, computed, html } from '@vielzeug/craftit';
+define('login-form', () => {
+  const email = signal('');
+  const password = signal('');
+  const isSubmitting = signal(false);
+  const error = signal('');
+  const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value));
+  const formValid = computed(() => emailValid.value && password.value.length >= 6);
+  const handleSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!formValid.value) return;
+    isSubmitting.value = true;
+    error.value = '';
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log('Login successful!', {
+        email: email.value,
+        password: password.value,
+      });
+    } catch (err) {
+      error.value = 'Login failed. Please try again.';
+    } finally {
+      isSubmitting.value = false;
+    }
+  };
+  return html`
+    <form @submit=${handleSubmit} class="login-form">
+      <h2>Login</h2>
+      ${html.when(error, () => html` <div class="error">${error}</div> `)}
+      <div class="form-group">
+        <label>Email</label>
+        <input
+          type="email"
+          :value=${email}
+          @input=${(e) => (email.value = e.target.value)}
+          ?disabled=${isSubmitting}
+          required />
+        ${html.when(!emailValid && email.value, () => html` <span class="field-error">Invalid email address</span> `)}
       </div>
-      <div class="field">
-        <input type="password" placeholder="Password" value="${el.state.password}" name="password" />
-        ${el.state.errors.password ? `<span class="error">${el.state.errors.password}</span>` : ''}
-      </div>
-      <div class="field">
+      <div class="form-group">
+        <label>Password</label>
         <input
           type="password"
-          placeholder="Confirm Password"
-          value="${el.state.confirmPassword}"
-          name="confirmPassword" />
-        ${el.state.errors.confirmPassword ? `<span class="error">${el.state.errors.confirmPassword}</span>` : ''}
+          :value=${password}
+          @input=${(e) => (password.value = e.target.value)}
+          ?disabled=${isSubmitting}
+          minlength="6"
+          required />
+        ${html.when(
+          password.value && password.value.length < 6,
+          () => html` <span class="field-error">Password must be at least 6 characters</span> `,
+        )}
       </div>
-      <button type="submit">Register</button>
+      <button type="submit" ?disabled=${!formValid || isSubmitting}>
+        ${isSubmitting.value ? 'Logging in...' : 'Login'}
+      </button>
     </form>
-  `,
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const input = e.currentTarget as HTMLInputElement;
-      const name = input.name;
-      const value = input.value;
-      el.state[name] = value;
-      el.validate();
-    });
-    el.on('form', 'submit', async (e) => {
-      e.preventDefault();
-      if (el.validate()) {
-        await el.submitForm();
-      }
-    });
-  },
-  // Methods via set
-  async onUpdated(el) {
-    // Add helper methods
-    (el as any).validate = () => {
-      const errors: Record<string, string> = {};
-      if (!el.state.email.includes('@')) {
-        errors.email = 'Invalid email';
-      }
-      if (el.state.password.length < 8) {
-        errors.password = 'Password must be at least 8 characters';
-      }
-      if (el.state.password !== el.state.confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-      el.state.errors = errors;
-      return Object.keys(errors).length === 0;
-    };
-    (el as any).submitForm = async () => {
-      try {
-        const response = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: el.state.email,
-            password: el.state.password,
-          }),
-        });
-        if (response.ok) {
-          el.emit('registration-success');
-        }
-      } catch (error) {
-        el.state.errors = { form: 'Registration failed' };
-      }
-    };
-  },
+  `;
 });
 ```
 
-## Advanced Examples
+### Dynamic Form
 
-### Data Table with Sorting
+Form with conditional fields based on user selection.
 
 ```ts
+import { define, signal, html } from '@vielzeug/craftit';
+define('dynamic-form', () => {
+  const userType = signal<'personal' | 'business'>('personal');
+  const name = signal('');
+  const companyName = signal('');
+  const taxId = signal('');
+  return html`
+    <form class="dynamic-form">
+      <h2>Registration</h2>
+      <div class="form-group">
+        <label>Account Type</label>
+        <select :value=${userType} @change=${(e) => (userType.value = e.target.value)}>
+          <option value="personal">Personal</option>
+          <option value="business">Business</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>${userType.value === 'personal' ? 'Your Name' : 'Contact Name'}</label>
+        <input type="text" :value=${name} @input=${(e) => (name.value = e.target.value)} />
+      </div>
+      ${html.when(
+        userType.value === 'business',
+        () => html`
+          <div class="form-group">
+            <label>Company Name</label>
+            <input type="text" :value=${companyName} @input=${(e) => (companyName.value = e.target.value)} />
+          </div>
+          <div class="form-group">
+            <label>Tax ID</label>
+            <input type="text" :value=${taxId} @input=${(e) => (taxId.value = e.target.value)} />
+          </div>
+        `,
+      )}
+      <button type="submit">Register</button>
+    </form>
+  `;
+});
+```
+
+## Data Display Examples
+
+### User Card
+
+Component with props and styled presentation.
+
+```ts
+import { define, prop, html, css } from '@vielzeug/craftit';
+define('user-card', () => {
+  const name = prop('name', 'Guest');
+  const role = prop('role', 'User');
+  const avatar = prop('avatar', '');
+  const online = prop('online', false, {
+    parse: (v) => v !== null,
+    reflect: true,
+  });
+  const styles = css`
+    .card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+    }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #ccc;
+      position: relative;
+    }
+    .status {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+    .status.online {
+      background: #4caf50;
+    }
+    .status.offline {
+      background: #9e9e9e;
+    }
+    .info h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .info p {
+      margin: 0.25rem 0 0;
+      color: #666;
+      font-size: 0.875rem;
+    }
+  `;
+  return {
+    template: html`
+      <div class="card">
+        <div class="avatar">
+          ${html.when(avatar, () => html` <img src="${avatar.value}" alt="${name.value}" /> `)}
+          <div
+            class=${html.classes({
+              status: true,
+              online: online.value,
+              offline: !online.value,
+            })}></div>
+        </div>
+        <div class="info">
+          <h3>${name}</h3>
+          <p>${role}</p>
+        </div>
+      </div>
+    `,
+    styles: [styles.content],
+  };
+});
+```
+
+Usage:
+
+```html
+<user-card name="Alice Johnson" role="Senior Developer" avatar="/avatars/alice.jpg" online></user-card>
+```
+
+### Data Table
+
+Sortable and filterable table component.
+
+```ts
+import { define, signal, computed, html } from '@vielzeug/craftit';
 type User = {
   id: number;
   name: string;
   email: string;
   role: string;
 };
-defineElement('data-table', {
-  state: {
-    users: [
-      { id: 1, name: 'Alice', email: 'alice@example.com', role: 'Admin' },
-      { id: 2, name: 'Bob', email: 'bob@example.com', role: 'User' },
-      { id: 3, name: 'Charlie', email: 'charlie@example.com', role: 'User' },
-    ] as User[],
-    sortBy: 'name' as keyof User,
-    sortOrder: 'asc' as 'asc' | 'desc',
-  },
-  template: (el) => {
-    const sorted = [...el.state.users].sort((a, b) => {
-      const aVal = a[el.state.sortBy];
-      const bVal = b[el.state.sortBy];
-      const mult = el.state.sortOrder === 'asc' ? 1 : -1;
-      return aVal > bVal ? mult : aVal < bVal ? -mult : 0;
+define('data-table', () => {
+  const users = signal<User[]>([
+    { id: 1, name: 'Alice', email: 'alice@example.com', role: 'Admin' },
+    { id: 2, name: 'Bob', email: 'bob@example.com', role: 'User' },
+    { id: 3, name: 'Charlie', email: 'charlie@example.com', role: 'User' },
+  ]);
+  const sortBy = signal<keyof User>('name');
+  const sortDir = signal<'asc' | 'desc'>('asc');
+  const filter = signal('');
+  const filteredAndSorted = computed(() => {
+    let result = users.value;
+    // Filter
+    if (filter.value) {
+      const f = filter.value.toLowerCase();
+      result = result.filter(
+        (user) =>
+          user.name.toLowerCase().includes(f) ||
+          user.email.toLowerCase().includes(f) ||
+          user.role.toLowerCase().includes(f),
+      );
+    }
+    // Sort
+    result = [...result].sort((a, b) => {
+      const aVal = a[sortBy.value];
+      const bVal = b[sortBy.value];
+      const mult = sortDir.value === 'asc' ? 1 : -1;
+      return aVal < bVal ? -mult : aVal > bVal ? mult : 0;
     });
-    return html`
+    return result;
+  });
+  const handleSort = (column: keyof User) => {
+    if (sortBy.value === column) {
+      sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy.value = column;
+      sortDir.value = 'asc';
+    }
+  };
+  return html`
+    <div class="data-table">
+      <input
+        type="search"
+        :value=${filter}
+        @input=${(e) => (filter.value = e.target.value)}
+        placeholder="Filter users..." />
       <table>
         <thead>
           <tr>
-            <th data-col="name">
-              Name ${el.state.sortBy === 'name' ? (el.state.sortOrder === 'asc' ? '↑' : '↓') : ''}
+            <th @click=${() => handleSort('name')}>
+              Name ${sortBy.value === 'name' ? (sortDir.value === 'asc' ? '↑' : '↓') : ''}
             </th>
-            <th data-col="email">
-              Email ${el.state.sortBy === 'email' ? (el.state.sortOrder === 'asc' ? '↑' : '↓') : ''}
+            <th @click=${() => handleSort('email')}>
+              Email ${sortBy.value === 'email' ? (sortDir.value === 'asc' ? '↑' : '↓') : ''}
             </th>
-            <th data-col="role">
-              Role ${el.state.sortBy === 'role' ? (el.state.sortOrder === 'asc' ? '↑' : '↓') : ''}
+            <th @click=${() => handleSort('role')}>
+              Role ${sortBy.value === 'role' ? (sortDir.value === 'asc' ? '↑' : '↓') : ''}
             </th>
           </tr>
         </thead>
         <tbody>
-          ${sorted
-            .map(
-              (user) => `
-            <tr>
-              <td>${user.name}</td>
-              <td>${user.email}</td>
-              <td>${user.role}</td>
-            </tr>
-          `,
-            )
-            .join('')}
+          ${html.each(
+            filteredAndSorted,
+            (user) => user.id,
+            (user) => html`
+              <tr>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.role}</td>
+              </tr>
+            `,
+            () => html`
+              <tr>
+                <td colspan="3" style="text-align: center">No users found</td>
+              </tr>
+            `,
+          )}
         </tbody>
       </table>
-    `;
-  },
-  onConnected(el) {
-    el.on('th', 'click', (e) => {
-      const col = (e.currentTarget as HTMLElement).dataset.col as keyof User;
-      if (el.state.sortBy === col) {
-        el.state.sortOrder = el.state.sortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        el.state.sortBy = col;
-        el.state.sortOrder = 'asc';
-      }
-    });
-  },
-});
-```
-
-### Async Data Loading
-
-```ts
-defineElement('user-profile', {
-  state: {
-    userId: 1,
-    user: null as any,
-    loading: false,
-    error: null as string | null,
-  },
-  template: (el) => html`
-    <div class="profile">
-      ${el.state.loading
-        ? `
-        <div class="loading">Loading...</div>
-      `
-        : el.state.error
-          ? `
-        <div class="error">${el.state.error}</div>
-      `
-          : el.state.user
-            ? `
-        <div class="user-info">
-          <h2>${el.state.user.name}</h2>
-          <p>${el.state.user.email}</p>
-          <p>Role: ${el.state.user.role}</p>
-        </div>
-      `
-            : ''}
     </div>
-  `,
-  observedAttributes: ['user-id'] as const,
-  async onConnected(el) {
-    await (el as any).loadUser();
-  },
-  onAttributeChanged(name, oldVal, newVal, el) {
-    if (name === 'user-id' && oldVal !== newVal) {
-      el.state.userId = Number(newVal);
-      (el as any).loadUser();
-    }
-  },
-  async onUpdated(el) {
-    (el as any).loadUser = async () => {
-      await el.set(async (state) => {
-        try {
-          const response = await fetch(`/api/users/${state.userId}`);
-          const user = await response.json();
-          return { ...state, user, loading: false, error: null };
-        } catch (error) {
-          return {
-            ...state,
-            user: null,
-            loading: false,
-            error: 'Failed to load user',
-          };
-        }
-      });
-    };
-  },
+  `;
 });
 ```
 
-### Modal Dialog
+## Advanced Examples
+
+### Modal Component
+
+Reusable modal with portal rendering.
 
 ```ts
-defineElement('modal-dialog', {
-  state: {
-    isOpen: false,
-    title: '',
-    content: '',
-  },
-  template: (el) => html`
-    ${el.state.isOpen
-      ? `
-      <div class="modal-overlay">
-        <div class="modal">
-          <div class="modal-header">
-            <h2>${el.state.title}</h2>
-            <button class="close">×</button>
-          </div>
-          <div class="modal-body">
-            ${el.state.content}
-          </div>
-          <div class="modal-footer">
-            <button class="cancel">Cancel</button>
-            <button class="confirm">Confirm</button>
-          </div>
+import { define, signal, html, css } from '@vielzeug/craftit';
+define('modal-dialog', () => {
+  const isOpen = prop('open', false, {
+    parse: (v) => v !== null,
+    reflect: true,
+  });
+  const handleClose = () => {
+    isOpen.value = false;
+    // Dispatch custom event
+    dispatchEvent(new CustomEvent('modal-close', { bubbles: true }));
+  };
+  const styles = css`
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .close-button {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+    }
+  `;
+  return {
+    template: html`
+      ${html.portal(
+        html.when(
+          isOpen,
+          () => html`
+            <div class="modal-overlay" @click.self=${handleClose}>
+              <div class="modal">
+                <div class="modal-header">
+                  <h2><slot name="title">Modal</slot></h2>
+                  <button class="close-button" @click=${handleClose} aria-label="Close">×</button>
+                </div>
+                <div class="modal-content">
+                  <slot></slot>
+                </div>
+              </div>
+            </div>
+          `,
+        ),
+        'body',
+      )}
+    `,
+    styles: [styles.content],
+  };
+});
+```
+
+Usage:
+
+```html
+<modal-dialog id="myModal">
+  <span slot="title">Confirm Action</span>
+  <p>Are you sure you want to proceed?</p>
+  <button>Confirm</button>
+  <button>Cancel</button>
+</modal-dialog>
+<script>
+  document.querySelector('#myModal').setAttribute('open', '');
+</script>
+```
+
+### Tabs Component
+
+Tab interface with slots and state management.
+
+```ts
+import { define, signal, html, css, onMount } from '@vielzeug/craftit';
+define('tab-group', () => {
+  const activeTab = signal(0);
+  const styles = css`
+    .tabs {
+      border-bottom: 2px solid #e0e0e0;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .tab {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-size: 1rem;
+    }
+    .tab.active {
+      border-bottom-color: #0070f3;
+      color: #0070f3;
+    }
+    .tab-panels {
+      padding: 1rem 0;
+    }
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+  `;
+  onMount(() => {
+    // Initialize from attribute if present
+    const initial = parseInt(getAttribute('active') || '0');
+    if (!isNaN(initial)) activeTab.value = initial;
+  });
+  return {
+    template: html`
+      <div class="tabs">
+        <button
+          class=${html.classes({ tab: true, active: activeTab.value === 0 })}
+          @click=${() => (activeTab.value = 0)}>
+          Tab 1
+        </button>
+        <button
+          class=${html.classes({ tab: true, active: activeTab.value === 1 })}
+          @click=${() => (activeTab.value = 1)}>
+          Tab 2
+        </button>
+        <button
+          class=${html.classes({ tab: true, active: activeTab.value === 2 })}
+          @click=${() => (activeTab.value = 2)}>
+          Tab 3
+        </button>
+      </div>
+      <div class="tab-panels">
+        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 0 })}>
+          <slot name="tab-1">Panel 1 content</slot>
+        </div>
+        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 1 })}>
+          <slot name="tab-2">Panel 2 content</slot>
+        </div>
+        <div class=${html.classes({ 'tab-panel': true, active: activeTab.value === 2 })}>
+          <slot name="tab-3">Panel 3 content</slot>
         </div>
       </div>
-    `
-      : ''}
-  `,
-  styles: [
-    css`
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      .modal {
-        background: white;
-        border-radius: 8px;
-        min-width: 400px;
-        max-width: 90vw;
-        max-height: 90vh;
-        overflow: auto;
-      }
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
-      }
-      .modal-body {
-        padding: 1rem;
-      }
-      .modal-footer {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end;
-        padding: 1rem;
-        border-top: 1px solid #eee;
-      }
     `,
-  ],
-  onConnected(el) {
-    el.on('.close', 'click', () => {
-      el.state.isOpen = false;
-      el.emit('close');
-    });
-    el.on('.cancel', 'click', () => {
-      el.state.isOpen = false;
-      el.emit('cancel');
-    });
-    el.on('.confirm', 'click', () => {
-      el.emit('confirm');
-      el.state.isOpen = false;
-    });
-    el.on('.modal-overlay', 'click', (e) => {
-      if (e.target === e.currentTarget) {
-        el.state.isOpen = false;
-        el.emit('close');
-      }
-    });
-  },
+    styles: [styles.content],
+  };
 });
-// Usage
-const modal = document.querySelector('modal-dialog');
-modal.state.title = 'Confirm Action';
-modal.state.content = 'Are you sure you want to continue?';
-modal.state.isOpen = true;
-modal.addEventListener('confirm', () => {
-  console.log('User confirmed!');
+```
+
+### Theme Provider
+
+Context-based theming system.
+
+```ts
+import { define, provide, inject, signal, html, css } from '@vielzeug/craftit';
+import type { InjectionKey, Signal } from '@vielzeug/craftit';
+// Define theme context
+interface ThemeContext {
+  mode: Signal<'light' | 'dark'>;
+  primaryColor: Signal<string>;
+}
+const ThemeKey: InjectionKey<ThemeContext> = Symbol('theme');
+// Theme provider component
+define('theme-provider', () => {
+  const mode = signal<'light' | 'dark'>('light');
+  const primaryColor = signal('#0070f3');
+  // Provide theme to children
+  provide(ThemeKey, { mode, primaryColor });
+  const toggleTheme = () => {
+    mode.value = mode.value === 'light' ? 'dark' : 'light';
+  };
+  return html`
+    <div class="theme-provider" data-theme=${mode}>
+      <button @click=${toggleTheme}>Toggle to ${mode.value === 'light' ? 'dark' : 'light'} mode</button>
+      <slot></slot>
+    </div>
+  `;
 });
+// Themed button component
+define('themed-button', () => {
+  const theme = inject(ThemeKey);
+  if (!theme) {
+    return html`<button>No theme</button>`;
+  }
+  const styles = css`
+    button {
+      background: ${theme.primaryColor.value};
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    [data-theme='dark'] button {
+      background: ${theme.primaryColor.value};
+      filter: brightness(1.2);
+    }
+  `;
+  return {
+    template: html`
+      <button>
+        <slot>Themed Button</slot>
+      </button>
+    `,
+    styles: [styles.content],
+  };
+});
+```
+
+Usage:
+
+```html
+<theme-provider>
+  <themed-button>Click Me</themed-button>
+  <themed-button>Another Button</themed-button>
+</theme-provider>
 ```
 
 ## Framework Integration
 
-Craftit web components work seamlessly with all major frameworks. Here's how to integrate the same counter component across different frameworks:
+### With React
 
-::: code-group
-
-```tsx [React]
-import { defineElement, html } from '@vielzeug/craftit';
-import { useEffect, useRef, useState } from 'react';
-
-// Define the web component
-defineElement('counter-component', {
-  state: { count: 0 },
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button class="increment">+</button>
-    </div>
-  `,
-  onConnected(el) {
-    el.on('.increment', 'click', () => el.state.count++);
-  },
-});
-
-// Use in React
-function CounterWrapper() {
-  const ref = useRef<any>(null);
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const unwatch = el.watch(
-      (state: any) => state.count,
-      (count: number) => setCount(count),
-    );
-
-    return unwatch;
-  }, []);
-
+```tsx
+import React from 'react';
+import '@vielzeug/craftit'; // Import your components
+import 'simple-counter'; // Or specific component
+function App() {
   return (
     <div>
-      <counter-component ref={ref} />
-      <p>React sees count: {count}</p>
+      <h1>Craftit in React</h1>
+      <simple-counter />
     </div>
   );
 }
 ```
 
-```vue [Vue]
-<script setup lang="ts">
-import { defineElement, html } from '@vielzeug/craftit';
-import { ref, onMounted } from 'vue';
+### With Vue
 
-defineElement('counter-component', {
-  state: { count: 0 },
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button class="increment">+</button>
-    </div>
-  `,
-  onConnected(el) {
-    el.on('.increment', 'click', () => el.state.count++);
-  },
-});
-
-const counter = ref<any>(null);
-const count = ref(0);
-
-onMounted(() => {
-  counter.value?.watch(
-    (state: any) => state.count,
-    (val: number) => (count.value = val),
-  );
-});
-</script>
-
+```vue
 <template>
   <div>
-    <counter-component ref="counter" />
-    <p>Vue sees count: {{ count }}</p>
+    <h1>Craftit in Vue</h1>
+    <simple-counter />
   </div>
 </template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { defineElement, html } from '@vielzeug/craftit';
-  import { onMount } from 'svelte';
-
-  defineElement('counter-component', {
-    state: { count: 0 },
-    template: (el) => html`
-      <div>
-        <p>Count: ${el.state.count}</p>
-        <button class="increment">+</button>
-      </div>
-    `,
-    onConnected(el) {
-      el.on('.increment', 'click', () => el.state.count++);
-    }
-  });
-
-  let counter: any;
-  let count = 0;
-
-  onMount(() => {
-    counter?.watch(
-      (state: any) => state.count,
-      (val: number) => count = val
-    );
-  });
+<script setup>
+import '@vielzeug/craftit';
 </script>
-
-<counter-component bind:this={counter} />
-<p>Svelte sees count: {count}</p>
 ```
 
-```ts [Vanilla JS]
-import { defineElement, html } from '@vielzeug/craftit';
+### With Svelte
 
-defineElement('counter-component', {
-  state: { count: 0 },
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button class="increment">+</button>
-    </div>
-  `,
-  onConnected(el) {
-    el.on('.increment', 'click', () => el.state.count++);
-  },
-});
-
-// Use directly in HTML
-const counter = document.createElement('counter-component');
-document.body.appendChild(counter);
-
-// Watch state changes
-let count = 0;
-counter.watch(
-  (state) => state.count,
-  (val) => {
-    count = val;
-    console.log('Count:', count);
-  },
-);
+```svelte
+<script>
+  import '@vielzeug/craftit';
+</script>
+<div>
+  <h1>Craftit in Svelte</h1>
+  <simple-counter />
+</div>
 ```
-
-:::
 
 ## Testing Examples
 
-### Unit Testing
+### Testing a Counter
 
 ```ts
-import { defineElement, html, attach, destroy } from '@vielzeug/craftit';
-describe('Counter Component', () => {
-  it('increments count when button clicked', async () => {
-    defineElement('test-counter', {
-      state: { count: 0 },
-      template: (el) => html`
-        <div class="count">${el.state.count}</div>
-        <button class="increment">+</button>
-      `,
-      onConnected(el) {
-        el.on('.increment', 'click', () => el.state.count++);
-      },
-    });
-    const el = document.createElement('test-counter');
-    await attach(el);
-    expect(el.find('.count')?.textContent).toBe('0');
-    el.find<HTMLButtonElement>('.increment')?.click();
-    await el.flush();
-    expect(el.find('.count')?.textContent).toBe('1');
-    destroy(el);
+import { mount, fireEvent } from '@vielzeug/craftit/trial';
+import { describe, it, expect } from 'vitest';
+import './simple-counter';
+describe('simple-counter', () => {
+  it('increments count when + button clicked', async () => {
+    const { query, queryAll, waitForUpdates } = await mount('simple-counter');
+    const buttons = queryAll('button');
+    const incrementBtn = buttons[2]; // Third button is increment
+    const h2 = query('h2');
+    expect(h2?.textContent).toBe('Count: 0');
+    fireEvent.click(incrementBtn);
+    await waitForUpdates();
+    expect(h2?.textContent).toBe('Count: 1');
   });
-  it('handles state updates', async () => {
-    const el = document.createElement('test-counter');
-    await attach(el);
-    await el.set({ count: 10 });
-    expect(el.find('.count')?.textContent).toBe('10');
-    destroy(el);
+  it('resets count when reset button clicked', async () => {
+    const { query, queryAll, waitForUpdates } = await mount('simple-counter');
+    const buttons = queryAll('button');
+    const incrementBtn = buttons[2];
+    const resetBtn = buttons[1];
+    const h2 = query('h2');
+    // Increment a few times
+    fireEvent.click(incrementBtn);
+    fireEvent.click(incrementBtn);
+    await waitForUpdates();
+    expect(h2?.textContent).toBe('Count: 2');
+    // Reset
+    fireEvent.click(resetBtn);
+    await waitForUpdates();
+    expect(h2?.textContent).toBe('Count: 0');
   });
 });
 ```
+
+## Next Steps
+
+- See [Usage Guide](./usage.md) for more patterns
+- Read [API Reference](./api.md) for complete documentation
+- Visit [GitHub](https://github.com/saatkhel/vielzeug) for source code

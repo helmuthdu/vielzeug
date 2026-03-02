@@ -3,7 +3,7 @@
  * Comprehensive tests for HTML template system and all directives
  */
 import { computed, define, html, signal } from '..';
-import { cleanup, fireEvent, mount } from '../test/trial';
+import { cleanup, fireEvent, mount } from '../trial/trial';
 
 describe('Template: HTML System', () => {
   afterEach(() => cleanup());
