@@ -154,7 +154,7 @@ Main content first, sidebar on the right.
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid layout="sidebar-right" gap="md" style="min-height: 300px;">
+<bit-grid layout="sidebar-right" gap="md" style="width: 100%; min-height: 300px;">
   <bit-box rounded="none" elevation="0" padding="lg" as="main">
     <bit-text variant="heading" size="lg">Main Content</bit-text>
   </bit-box>

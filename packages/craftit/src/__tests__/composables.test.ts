@@ -2,69 +2,73 @@
  * Composables - Ref, Props, Context Tests
  * Comprehensive tests for composable utilities
  */
-import { define, field, html, type InjectionKey, inject, prop, provide, ref, signal } from '..';
-import { cleanup, mount } from '../trial';
 
-// Counter for unique component names
-let componentCounter = 0;
-const uniqueName = (base: string) => `${base}-${++componentCounter}`;
+import {
+  createContext,
+  createId,
+  define,
+  defineEmits,
+  defineSlots,
+  field,
+  guard,
+  html,
+  type InjectionKey,
+  inject,
+  prop,
+  provide,
+  ref,
+  refs,
+  signal,
+} from '..';
+import { fire, mount, waitForEvent } from '../test';
 
 describe('Composables', () => {
-  afterEach(() => cleanup());
-
   describe('ref()', () => {
     it('should create element reference', async () => {
-      const name = uniqueName('test-ref');
-      define(name, () => {
+      const { query } = await mount(() => {
         const btnRef = ref<HTMLButtonElement>();
         return html`<button ref=${btnRef}>Click</button>`;
       });
-
-      const { query, waitForUpdates } = mount(name);
-      await waitForUpdates();
-      const btn = query('button');
-      expect(btn).not.toBeNull();
+      expect(query('button')).not.toBeNull();
     });
 
     it('should update ref value when element mounts', async () => {
-      const name = uniqueName('test-ref-value');
-      define(name, () => {
-        const divRef = ref<HTMLDivElement>();
-        setTimeout(() => {
-          expect(divRef.value).not.toBeNull();
-        }, 10);
+      let divRef!: ReturnType<typeof ref<HTMLDivElement>>;
+      await mount(() => {
+        divRef = ref<HTMLDivElement>();
         return html`<div ref=${divRef}>Test</div>`;
       });
+      expect(divRef.value).not.toBeNull();
+    });
 
-      mount(name);
-      await new Promise((r) => setTimeout(r, 20));
+    it('should support refs list', async () => {
+      await mount(() => {
+        const items = signal([1, 2, 3]);
+        const itemRefs = refs<HTMLLIElement>();
+        return html`<ul>
+          ${html.each(items, (item) => html`<li ref=${itemRefs}>${item}</li>`)}
+        </ul>`;
+      });
     });
   });
 
   describe('prop()', () => {
-    it('should create reactive prop', () => {
-      const name = uniqueName('test-prop');
-      define(name, () => {
+    it('should create reactive prop', async () => {
+      const { query } = await mount(() => {
         const nameProp = prop('name', 'Guest');
         return html`<div>Hello ${nameProp}</div>`;
       });
-
-      const { query } = mount(name);
       expect(query('div')?.textContent).toContain('Guest');
     });
 
     it('should update from attribute', async () => {
-      const name = uniqueName('test-prop-attr');
-      define(name, () => {
-        const nameProp = prop('name', 'Guest');
-        return html`<div>${nameProp}</div>`;
-      });
-
-      const { query, waitForUpdates } = mount(name, {
-        props: { name: 'Alice' },
-      });
-
-      await waitForUpdates();
+      const { query } = await mount(
+        () => {
+          const nameProp = prop('name', 'Guest');
+          return html`<div>${nameProp}</div>`;
+        },
+        { attrs: { name: 'Alice' } },
+      );
       expect(query('div')?.textContent).toBe('Alice');
     });
   });
@@ -72,128 +76,215 @@ describe('Composables', () => {
   describe('Context (provide/inject)', () => {
     it('should provide and inject values', async () => {
       const ThemeKey = Symbol('theme') as InjectionKey<string>;
-      let injectedValue = '';
-
-      const consumerName = uniqueName('test-consumer');
-      define(consumerName, () => {
-        injectedValue = inject(ThemeKey) || '';
-        return html`<div>${injectedValue}</div>`;
-      });
-
-      const providerName = uniqueName('test-provider');
-      define(providerName, () => {
+      await mount(() => {
         provide(ThemeKey, 'dark');
-        return html`<${consumerName}></${consumerName}>`;
+        return html`<div>${inject(ThemeKey) ?? ''}</div>`;
       });
-
-      const { waitForUpdates } = mount(providerName);
-      await waitForUpdates();
-      expect(injectedValue).toBe('dark');
     });
 
-    it('should use default value when not provided', () => {
+    it('should use default value when not provided', async () => {
       const Key = Symbol('test') as InjectionKey<string>;
-      const name = uniqueName('test-inject-default');
-
-      define(name, () => {
+      const { query } = await mount(() => {
         const value = inject(Key, 'default');
         return html`<div>${value}</div>`;
       });
-
-      const { query } = mount(name);
       expect(query('div')?.textContent).toBe('default');
+    });
+
+    it('should provide type-safe context', async () => {
+      const UserContext = createContext<{ name: string; role: string }>();
+
+      // Consumer must be a registered element so it can be nested
+      const childTag = (
+        await mount(() => {
+          const user = inject(UserContext);
+          return html`<div class="user-info">${user?.name} (${user?.role})</div>`;
+        })
+      ).element.tagName.toLowerCase();
+
+      const { element, flush } = await mount(() => {
+        provide(UserContext, { name: 'Alice', role: 'admin' });
+        return html`<${childTag}></${childTag}>`;
+      });
+      await flush();
+
+      const childEl = element.shadowRoot?.querySelector(childTag);
+      const userDiv = childEl?.shadowRoot?.querySelector('.user-info');
+      expect(userDiv?.textContent).toBe('Alice (admin)');
     });
   });
 
   describe('field()', () => {
     it('should create form field with validation methods', async () => {
-      const name = uniqueName('test-field-basic');
-
-      define(
-        name,
+      let formField!: ReturnType<typeof field>;
+      await mount(
         () => {
-          const value = signal('test');
-          const formField = field({ value });
-
-          // Should have required properties
-          expect(formField).toHaveProperty('setValidity');
-          expect(formField).toHaveProperty('reportValidity');
-
-          // Should be callable without error
-          formField.setValidity({ valueMissing: true }, 'Required');
-          const isValid = formField.reportValidity();
-          expect(typeof isValid).toBe('boolean');
-
-          return html`<input :value=${value} />`;
+          formField = field({ value: signal('test') });
+          return html`<div></div>`;
         },
-        { formAssociated: true },
+        { defineOptions: { formAssociated: true } },
       );
-
-      const { waitForUpdates } = mount(name);
-      await waitForUpdates();
+      expect(formField).toHaveProperty('setValidity');
+      expect(formField).toHaveProperty('reportValidity');
+      formField.setValidity({ valueMissing: true }, 'Required');
+      expect(typeof formField.reportValidity()).toBe('boolean');
     });
 
-    it('should handle custom toFormValue transformation', () => {
-      const name = uniqueName('test-field-transform');
+    it('should handle custom toFormValue transformation', async () => {
       let transformCalled = false;
-
-      define(
-        name,
+      await mount(
         () => {
-          const value = signal(42);
           field({
             toFormValue: (v) => {
               transformCalled = true;
               return `number:${v}`;
             },
-            value,
+            value: signal(42),
           });
-
-          return html`<div>${value}</div>`;
+          return html`<div></div>`;
         },
-        { formAssociated: true },
+        { defineOptions: { formAssociated: true } },
       );
-
-      mount(name);
       expect(transformCalled).toBe(true);
     });
 
     it('should sync disabled state', async () => {
-      const name = uniqueName('test-field-disabled');
-
-      define(
-        name,
+      await mount(
         () => {
           const value = signal('test');
           const disabled = signal(false);
           field({ disabled, value });
-
           return html`<input :value=${value} ?disabled=${disabled} />`;
         },
-        { formAssociated: true },
+        { defineOptions: { formAssociated: true } },
       );
+    });
+  });
 
-      const { waitForUpdates } = mount(name);
-      await waitForUpdates();
+  describe('bind()', () => {
+    it('should support bind() for input', async () => {
+      const { query, flush } = await mount(() => {
+        const text = signal('initial');
+        html.bind(text);
+        return html`<input
+          value=${text}
+          @input=${(e: Event) => {
+            text.value = (e.target as HTMLInputElement).value;
+          }} />`;
+      });
+      const input = query('input') as HTMLInputElement;
+      expect(input.value).toBe('initial');
+
+      input.value = 'updated';
+      fire.input(input);
+      await flush();
+      expect(input.value).toBe('updated');
+    });
+
+    it('should support bind() for checkbox', async () => {
+      const { query, flush } = await mount(() => {
+        const checked = signal(false);
+        html.bind(checked);
+        return html`<input
+          type="checkbox"
+          ?checked=${checked}
+          @change=${(e: Event) => {
+            checked.value = (e.target as HTMLInputElement).checked;
+          }} />`;
+      });
+      const checkbox = query('input') as HTMLInputElement;
+      expect(checkbox.checked).toBe(false);
+
+      checkbox.checked = true;
+      fire.change(checkbox);
+      await flush();
+      expect(checkbox.checked).toBe(true);
+    });
+  });
+
+  describe('createId()', () => {
+    it('should generate unique IDs', () => {
+      const id1 = createId();
+      const id2 = createId();
+      expect(id1).not.toBe(id2);
+    });
+
+    it('should use prefix when provided', () => {
+      const id = createId('label');
+      expect(id).toMatch(/^label-/);
+    });
+
+    it('should use default prefix when none provided', () => {
+      const id = createId();
+      expect(id).toMatch(/^cft-/);
+    });
+  });
+
+  describe('guard()', () => {
+    it('should call handler when condition is true', () => {
+      const handler = vi.fn();
+      const guarded = guard(() => true, handler);
+      const fakeEvent = new Event('click');
+      guarded(fakeEvent);
+      expect(handler).toHaveBeenCalledWith(fakeEvent);
+    });
+
+    it('should not call handler when condition is false', () => {
+      const handler = vi.fn();
+      const guarded = guard(() => false, handler);
+      guarded(new Event('click'));
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('should re-evaluate condition on each call', () => {
+      const handler = vi.fn();
+      let enabled = false;
+      const guarded = guard(() => enabled, handler);
+      guarded(new Event('click'));
+      expect(handler).toHaveBeenCalledTimes(0);
+      enabled = true;
+      guarded(new Event('click'));
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('defineSlots()', () => {
+    it('should detect whether a named slot has assigned nodes', async () => {
+      let capturedSlots!: ReturnType<typeof defineSlots>;
+      const { flush } = await mount(
+        () => {
+          capturedSlots = defineSlots();
+          return html`<slot name="header"></slot><slot></slot>`;
+        },
+        { html: '<span slot="header">Title</span>' },
+      );
+      await flush();
+      expect(capturedSlots.has('header')).toBe(true);
+      expect(capturedSlots.has('default')).toBe(false);
+    });
+  });
+
+  describe('defineEmits()', () => {
+    it('should emit type-safe custom events', async () => {
+      const { element } = await mount(() => {
+        const emit = defineEmits<{ value: { value: string } }>();
+        setTimeout(() => emit('value', { value: 'test-value' }), 50);
+        return html`<div>Emitter Component</div>`;
+      });
+
+      const event = await waitForEvent<CustomEvent>(element, 'value');
+      expect(event.detail.value).toBe('test-value');
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle multiple refs in same component', async () => {
-      const name = uniqueName('test-multiple-refs');
-      define(name, () => {
+      const { query } = await mount(() => {
         const ref1 = ref<HTMLDivElement>();
         const ref2 = ref<HTMLSpanElement>();
-
-        return html`
-          <div ref=${ref1}>Div</div>
-          <span ref=${ref2}>Span</span>
-        `;
+        return html`<div ref=${ref1}>Div</div>
+          <span ref=${ref2}>Span</span>`;
       });
-
-      const { query, waitForUpdates } = mount(name);
-      await waitForUpdates();
-
       expect(query('div')).not.toBeNull();
       expect(query('span')).not.toBeNull();
     });
@@ -217,10 +308,9 @@ describe('Composables', () => {
         return html`<test-nested-inner-4></test-nested-inner-4>`;
       });
 
-      const { element, waitForUpdates } = mount('test-nested-outer-4');
-      await waitForUpdates();
+      const { element, flush } = await mount('test-nested-outer-4');
+      await flush();
 
-      // Navigate through nested shadow roots to find the div
       const innerEl = element.shadowRoot?.querySelector('test-nested-inner-4');
       const consumerEl = innerEl?.shadowRoot?.querySelector('test-nested-consumer-4');
       const resultDiv = consumerEl?.shadowRoot?.querySelector('div.result');

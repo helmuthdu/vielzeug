@@ -1,4 +1,4 @@
-import { createFixture, userEvent } from '../../../utils/trial';
+import { mount, user } from '@vielzeug/craftit/test';
 
 describe('bit-button', () => {
   beforeAll(async () => {
@@ -7,7 +7,7 @@ describe('bit-button', () => {
 
   describe('Rendering', () => {
     it('should render with shadow DOM structure', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Click me';
 
       const innerButton = fixture.query('button');
@@ -20,7 +20,7 @@ describe('bit-button', () => {
     });
 
     it('should render all slots correctly', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.innerHTML = '<span slot="prefix">←</span>Text<span slot="suffix">→</span>';
 
       const prefixSlot = fixture.query('slot[name="prefix"]');
@@ -40,16 +40,16 @@ describe('bit-button', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text'];
 
       for (const variant of variants) {
-        const fixture = await createFixture('bit-button', { variant });
+        const fixture = await mount('bit-button', { attrs: { variant } });
         expect(fixture.element.getAttribute('variant')).toBe(variant);
         fixture.destroy();
       }
     });
 
     it('should update variant dynamically', async () => {
-      const fixture = await createFixture('bit-button', { variant: 'solid' });
+      const fixture = await mount('bit-button', { attrs: { variant: 'solid' } });
 
-      await fixture.setAttribute('variant', 'outline');
+      await fixture.attr('variant', 'outline');
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
       fixture.destroy();
@@ -61,16 +61,16 @@ describe('bit-button', () => {
       const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
 
       for (const color of colors) {
-        const fixture = await createFixture('bit-button', { color });
+        const fixture = await mount('bit-button', { attrs: { color } });
         expect(fixture.element.getAttribute('color')).toBe(color);
         fixture.destroy();
       }
     });
 
     it('should update color dynamically', async () => {
-      const fixture = await createFixture('bit-button', { color: 'primary' });
+      const fixture = await mount('bit-button', { attrs: { color: 'primary' } });
 
-      await fixture.setAttribute('color', 'error');
+      await fixture.attr('color', 'error');
 
       expect(fixture.element.getAttribute('color')).toBe('error');
       fixture.destroy();
@@ -82,16 +82,16 @@ describe('bit-button', () => {
       const sizes = ['sm', 'md', 'lg'];
 
       for (const size of sizes) {
-        const fixture = await createFixture('bit-button', { size });
+        const fixture = await mount('bit-button', { attrs: { size } });
         expect(fixture.element.getAttribute('size')).toBe(size);
         fixture.destroy();
       }
     });
 
     it('should update size dynamically', async () => {
-      const fixture = await createFixture('bit-button', { size: 'sm' });
+      const fixture = await mount('bit-button', { attrs: { size: 'sm' } });
 
-      await fixture.setAttribute('size', 'lg');
+      await fixture.attr('size', 'lg');
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
       fixture.destroy();
@@ -100,7 +100,7 @@ describe('bit-button', () => {
 
   describe('Disabled State', () => {
     it('should disable inner button and set aria-disabled', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       const innerButton = fixture.query('button');
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
@@ -111,40 +111,33 @@ describe('bit-button', () => {
     });
 
     it('should not emit click events when disabled', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       const innerButton = fixture.query<HTMLButtonElement>('button');
       const clickHandler = vi.fn();
 
       fixture.element.addEventListener('click', clickHandler);
 
-      // Dispatch click event directly to test preventDefault/stopPropagation
+      // Dispatch click event directly - guard prevents custom event emission
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
       innerButton?.dispatchEvent(clickEvent);
 
       expect(clickHandler).not.toHaveBeenCalled();
-      expect(clickEvent.defaultPrevented).toBe(true);
       fixture.destroy();
     });
 
-    it('should prevent default and stop propagation when disabled', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+    it('should have inner button disabled when disabled', async () => {
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
-      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
-
-      innerButton?.dispatchEvent(clickEvent);
-
-      expect(preventDefaultSpy).toHaveBeenCalled();
-      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(innerButton?.hasAttribute('disabled')).toBe(true);
+      expect(innerButton?.getAttribute('aria-disabled')).toBe('true');
       fixture.destroy();
     });
 
     it('should toggle disabled state', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
 
-      await fixture.setAttribute('disabled', false);
+      await fixture.attr('disabled', false);
       const innerButton = fixture.query('button');
 
       expect(innerButton?.hasAttribute('disabled')).toBe(false);
@@ -153,18 +146,17 @@ describe('bit-button', () => {
     });
 
     it('should update aria-disabled when disabled changes', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query('button');
 
       expect(innerButton?.getAttribute('aria-disabled')).toBe('false');
 
-      await fixture.setAttribute('disabled', true);
-      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
+      await fixture.attr('disabled', true);
       expect(innerButton?.getAttribute('aria-disabled')).toBe('true');
 
       fixture.element.removeAttribute('disabled');
-      await fixture.update();
-      expect(fixture.element.getAttribute('aria-disabled')).toBe('false');
+      await fixture.flush();
+      expect(innerButton?.getAttribute('aria-disabled')).toBe('false');
 
       fixture.destroy();
     });
@@ -172,7 +164,7 @@ describe('bit-button', () => {
 
   describe('Loading State', () => {
     it('should show spinner, disable button, and set aria-busy', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
       const innerButton = fixture.query('button');
       const loader = fixture.query('.loader');
 
@@ -186,59 +178,51 @@ describe('bit-button', () => {
     });
 
     it('should not emit click events when loading', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
       const innerButton = fixture.query<HTMLButtonElement>('button');
       const clickHandler = vi.fn();
 
       fixture.element.addEventListener('click', clickHandler);
 
-      // Dispatch click event directly to test preventDefault/stopPropagation
+      // Dispatch click event directly - guard prevents custom event emission
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
       innerButton?.dispatchEvent(clickEvent);
 
       expect(clickHandler).not.toHaveBeenCalled();
-      expect(clickEvent.defaultPrevented).toBe(true);
       fixture.destroy();
     });
 
-    it('should prevent default and stop propagation when loading', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+    it('should have inner button disabled when loading', async () => {
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
-      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
-
-      innerButton?.dispatchEvent(clickEvent);
-
-      expect(preventDefaultSpy).toHaveBeenCalled();
-      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(innerButton?.hasAttribute('disabled')).toBe(true);
+      expect(innerButton?.getAttribute('aria-busy')).toBe('true');
       fixture.destroy();
     });
 
     it('should toggle loading state', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
 
-      await fixture.setAttribute('loading', false);
+      await fixture.attr('loading', false);
       const loader = fixture.query('.loader');
 
-      expect(loader).toBeFalsy();
+      expect(loader?.hasAttribute('hidden')).toBe(true);
       fixture.destroy();
     });
 
     it('should update aria-busy when loading changes', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query('button');
 
       expect(innerButton?.getAttribute('aria-busy')).toBe('false');
 
-      await fixture.setAttribute('loading', true);
-      expect(fixture.element.getAttribute('aria-busy')).toBe('true');
+      await fixture.attr('loading', true);
       expect(innerButton?.getAttribute('aria-busy')).toBe('true');
 
       fixture.element.removeAttribute('loading');
-      await fixture.update();
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      await fixture.flush();
+      expect(innerButton?.getAttribute('aria-busy')).toBe('false');
 
       fixture.destroy();
     });
@@ -246,7 +230,7 @@ describe('bit-button', () => {
 
   describe('Button Types', () => {
     it('should default to button type', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query('button');
 
       expect(innerButton?.getAttribute('type')).toBe('button');
@@ -257,7 +241,7 @@ describe('bit-button', () => {
       const types = ['button', 'submit', 'reset'];
 
       for (const type of types) {
-        const fixture = await createFixture('bit-button', { type });
+        const fixture = await mount('bit-button', { attrs: { type } });
         const innerButton = fixture.query('button');
 
         expect(innerButton?.getAttribute('type')).toBe(type);
@@ -266,9 +250,9 @@ describe('bit-button', () => {
     });
 
     it('should update type dynamically', async () => {
-      const fixture = await createFixture('bit-button', { type: 'button' });
+      const fixture = await mount('bit-button', { attrs: { type: 'button' } });
 
-      await fixture.setAttribute('type', 'submit');
+      await fixture.attr('type', 'submit');
       const innerButton = fixture.query('button');
 
       expect(innerButton?.getAttribute('type')).toBe('submit');
@@ -278,16 +262,16 @@ describe('bit-button', () => {
 
   describe('Icon-Only Mode', () => {
     it('should apply icon-only attribute', async () => {
-      const fixture = await createFixture('bit-button', { 'icon-only': true });
+      const fixture = await mount('bit-button', { attrs: { 'icon-only': true } });
 
       expect(fixture.element.hasAttribute('icon-only')).toBe(true);
       fixture.destroy();
     });
 
     it('should toggle icon-only mode', async () => {
-      const fixture = await createFixture('bit-button', { 'icon-only': true });
+      const fixture = await mount('bit-button', { attrs: { 'icon-only': true } });
 
-      await fixture.setAttribute('icon-only', false);
+      await fixture.attr('icon-only', false);
 
       expect(fixture.element.hasAttribute('icon-only')).toBe(false);
       fixture.destroy();
@@ -296,7 +280,7 @@ describe('bit-button', () => {
 
   describe('Rounded Mode', () => {
     it('should apply rounded attribute as boolean (default full)', async () => {
-      const fixture = await createFixture('bit-button', { rounded: '' });
+      const fixture = await mount('bit-button', { attrs: { rounded: '' } });
 
       expect(fixture.element.hasAttribute('rounded')).toBe(true);
       expect(fixture.element.getAttribute('rounded')).toBe('');
@@ -307,14 +291,14 @@ describe('bit-button', () => {
       const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
 
       for (const value of values) {
-        const fixture = await createFixture('bit-button', { rounded: value });
+        const fixture = await mount('bit-button', { attrs: { rounded: value } });
         expect(fixture.element.getAttribute('rounded')).toBe(value);
         fixture.destroy();
       }
     });
 
     it('should toggle rounded mode', async () => {
-      const fixture = await createFixture('bit-button', { rounded: '' });
+      const fixture = await mount('bit-button', { attrs: { rounded: '' } });
 
       await fixture.element.removeAttribute('rounded');
 
@@ -323,9 +307,9 @@ describe('bit-button', () => {
     });
 
     it('should update rounded value dynamically', async () => {
-      const fixture = await createFixture('bit-button', { rounded: 'lg' });
+      const fixture = await mount('bit-button', { attrs: { rounded: 'lg' } });
 
-      await fixture.setAttribute('rounded', 'xl');
+      await fixture.attr('rounded', 'xl');
 
       expect(fixture.element.getAttribute('rounded')).toBe('xl');
       fixture.destroy();
@@ -334,7 +318,7 @@ describe('bit-button', () => {
 
   describe('Click Events', () => {
     it('should emit click event with original event in detail', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
       // biome-ignore lint/suspicious/noExplicitAny: Event detail type varies
@@ -356,7 +340,7 @@ describe('bit-button', () => {
     });
 
     it('should stop propagation on normal clicks', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -372,7 +356,7 @@ describe('bit-button', () => {
       const clickHandler = vi.fn();
 
       // Test disabled
-      const disabledFixture = await createFixture('bit-button', { disabled: true });
+      const disabledFixture = await mount('bit-button', { attrs: { disabled: true } });
       disabledFixture.element.addEventListener('click', clickHandler);
       const disabledButton = disabledFixture.query<HTMLButtonElement>('button');
       const disabledEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -380,7 +364,7 @@ describe('bit-button', () => {
       disabledFixture.destroy();
 
       // Test loading
-      const loadingFixture = await createFixture('bit-button', { loading: true });
+      const loadingFixture = await mount('bit-button', { attrs: { loading: true } });
       loadingFixture.element.addEventListener('click', clickHandler);
       const loadingButton = loadingFixture.query<HTMLButtonElement>('button');
       const loadingEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -393,11 +377,13 @@ describe('bit-button', () => {
 
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
-      const fixture = await createFixture('bit-button', {
-        color: 'secondary',
-        rounded: true,
-        size: 'lg',
-        variant: 'outline',
+      const fixture = await mount('bit-button', {
+        attrs: {
+          color: 'secondary',
+          rounded: true,
+          size: 'lg',
+          variant: 'outline',
+        },
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('outline');
@@ -409,9 +395,11 @@ describe('bit-button', () => {
     });
 
     it('should handle icon-only with rounded', async () => {
-      const fixture = await createFixture('bit-button', {
-        'icon-only': true,
-        rounded: true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'icon-only': true,
+          rounded: true,
+        },
       });
 
       expect(fixture.element.hasAttribute('icon-only')).toBe(true);
@@ -421,9 +409,11 @@ describe('bit-button', () => {
     });
 
     it('should handle disabled and loading together', async () => {
-      const fixture = await createFixture('bit-button', {
-        disabled: true,
-        loading: true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          disabled: true,
+          loading: true,
+        },
       });
       const innerButton = fixture.query('button');
 
@@ -438,9 +428,9 @@ describe('bit-button', () => {
 
   describe('Batch Attribute Updates', () => {
     it('should update multiple attributes at once', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
 
-      await fixture.setAttributes({
+      await fixture.attrs({
         color: 'error',
         disabled: true,
         size: 'lg',
@@ -456,11 +446,11 @@ describe('bit-button', () => {
     });
 
     it('should handle rapid attribute changes', async () => {
-      const fixture = await createFixture('bit-button', { variant: 'solid' });
+      const fixture = await mount('bit-button', { attrs: { variant: 'solid' } });
 
-      await fixture.setAttribute('variant', 'outline');
-      await fixture.setAttribute('variant', 'ghost');
-      await fixture.setAttribute('variant', 'text');
+      await fixture.attr('variant', 'outline');
+      await fixture.attr('variant', 'ghost');
+      await fixture.attr('variant', 'text');
 
       expect(fixture.element.getAttribute('variant')).toBe('text');
       fixture.destroy();
@@ -469,7 +459,7 @@ describe('bit-button', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty button content', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query('button');
 
       expect(fixture.element).toBeTruthy();
@@ -479,7 +469,7 @@ describe('bit-button', () => {
     });
 
     it('should handle HTML content in slots', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.innerHTML = '<strong>Bold</strong> <em>Italic</em>';
 
       const strong = fixture.element.querySelector('strong');
@@ -492,10 +482,12 @@ describe('bit-button', () => {
     });
 
     it('should gracefully handle invalid attribute values', async () => {
-      const fixture = await createFixture('bit-button', {
-        color: 'invalid',
-        size: 'invalid',
-        variant: 'invalid',
+      const fixture = await mount('bit-button', {
+        attrs: {
+          color: 'invalid',
+          size: 'invalid',
+          variant: 'invalid',
+        },
       });
       const innerButton = fixture.query('button');
 
@@ -511,7 +503,7 @@ describe('bit-button', () => {
 
   describe('Form Integration', () => {
     it('should work as submit button in forms', async () => {
-      const fixture = await createFixture('bit-button', { type: 'submit' });
+      const fixture = await mount('bit-button', { attrs: { type: 'submit' } });
       fixture.element.textContent = 'Submit';
 
       const innerButton = fixture.query('button');
@@ -521,7 +513,7 @@ describe('bit-button', () => {
     });
 
     it('should work as reset button in forms', async () => {
-      const fixture = await createFixture('bit-button', { type: 'reset' });
+      const fixture = await mount('bit-button', { attrs: { type: 'reset' } });
       fixture.element.textContent = 'Reset';
 
       const innerButton = fixture.query('button');
@@ -538,7 +530,7 @@ describe('bit-button', () => {
 
       for (const variant of variants) {
         for (const color of colors) {
-          const fixture = await createFixture('bit-button', { color, variant });
+          const fixture = await mount('bit-button', { attrs: { color, variant } });
 
           expect(fixture.element.getAttribute('variant')).toBe(variant);
           expect(fixture.element.getAttribute('color')).toBe(color);
@@ -554,14 +546,14 @@ describe('bit-button', () => {
 
   describe('Events', () => {
     it('should handle click events', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
       const clickHandler = vi.fn();
       fixture.element.addEventListener('click', clickHandler);
 
       if (innerButton) {
-        await userEvent.click(innerButton);
+        await user.click(innerButton);
       }
 
       expect(clickHandler).toHaveBeenCalled();
@@ -569,14 +561,14 @@ describe('bit-button', () => {
     });
 
     it('should handle keyboard events', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       const innerButton = fixture.query<HTMLButtonElement>('button');
 
       const keydownHandler = vi.fn();
 
       if (innerButton) {
         innerButton.addEventListener('keydown', keydownHandler);
-        await userEvent.keyboard(innerButton, 'Enter');
+        await user.press(innerButton, 'Enter');
       }
 
       expect(keydownHandler).toHaveBeenCalled();

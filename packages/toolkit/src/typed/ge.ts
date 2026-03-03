@@ -3,12 +3,12 @@
  *
  * @example
  * ```ts
- * gte(5, 3); // true
- * gte(3, 5); // false
- * gte(5, 5); // true
- * gte(5, '3'); // false
- * gte('5', 3); // false
- * gte('5', '3'); // false
+ * ge(5, 3); // true
+ * ge(3, 5); // false
+ * ge(5, 5); // true
+ * ge(5, '3'); // false
+ * ge('5', 3); // false
+ * ge('5', '3'); // false
  * ```
  * @param a - The first argument to compare.
  * @param b - The second argument to compare.

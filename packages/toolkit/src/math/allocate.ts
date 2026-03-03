@@ -52,16 +52,7 @@ export function allocate(amount: number | bigint, ratios: number[]): (number | b
   }
 
   // Handle number type
-  const results: number[] = [];
-  let remainder = amount;
-
-  for (let i = 0; i < ratios.length - 1; i++) {
-    const share = Math.floor((amount * ratios[i]) / totalRatio);
-    results.push(share);
-    remainder -= share;
-  }
-
-  // Last allocation gets the remainder to ensure exact sum
-  results.push(remainder);
+  const results = Array.from({ length: ratios.length - 1 }, (_, i) => Math.floor((amount * ratios[i]) / totalRatio));
+  results.push(amount - results.reduce((s, v) => s + v, 0));
   return results;
 }

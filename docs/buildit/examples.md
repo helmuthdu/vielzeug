@@ -1,6 +1,15 @@
-# Examples
+---
+title: Buildit — Examples
+description: Framework integration recipes for Buildit web components.
+---
 
-Real-world examples and patterns for using Buildit components in your applications.
+# Buildit Examples
+
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ## Framework Integration Examples
 

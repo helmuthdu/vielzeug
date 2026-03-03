@@ -1,11 +1,11 @@
 /**
- * Subtracts one number from another with precision handling for financial calculations.
+ * Subtracts one number from another.
  * Supports both regular numbers and bigint for exact precision.
  *
  * @example
  * ```ts
  * subtract(20, 10); // 10
- * subtract(0.3, 0.1); // 0.2 (precision-safe)
+ * subtract(0.3, 0.1); // 0.19999999999999998 (use bigint for exact precision)
  * subtract(300n, 100n); // 200n
  * ```
  *

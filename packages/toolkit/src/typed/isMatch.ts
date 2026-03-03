@@ -36,8 +36,8 @@ export function isMatch(object: any, source: any): boolean {
   }
 
   if (typeof source === 'object') {
-    for (const key in source) {
-      if (Object.hasOwn(source, key) && !isMatch(object?.[key], source[key])) {
+    for (const key of Object.keys(source)) {
+      if (!isMatch(object?.[key], source[key])) {
         return false;
       }
     }

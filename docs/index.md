@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: 'Vielzeug'
-  text: 'The modular TypeScript toolkit'
-  tagline: 'Type-safe utilities, blazing-fast storage, flexible logging, and more — all in one monorepo.'
+  text: 'Many libraries. One good decision.'
+  tagline: 'Modular TypeScript tools for routing, forms, storage, i18n, validation, logging, and more — composable by design, type-safe by default.'
   image:
     src: '/logo.svg'
     alt: 'Vielzeug Logo'

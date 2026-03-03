@@ -13,18 +13,18 @@ export type Throttled<T extends Fn> = ((this: ThisParameterType<T>, ...args: Par
 };
 
 /**
- * Throttles a function. By default, leading and trailing are both true (lodash-like behavior).
- * The function is invoked at the leading edge and trailing edge of the throttle period.
+ * Throttles a function. By default, only the leading edge fires.
+ * Pass `{ trailing: true }` to also invoke at the end of the throttle window.
  *
  * Example:
  * const fn = () => ...
  * const t = throttle(fn, 700);
- * const leadingOnly = throttle(fn, 700, { trailing: false });
+ * const withTrailing = throttle(fn, 700, { trailing: true });
  */
 export function throttle<T extends Fn>(
   fn: T,
   delay = 700,
-  options: ThrottleOptions = { leading: true, trailing: true },
+  options: ThrottleOptions = { leading: true, trailing: false },
 ): Throttled<T> {
   assert(typeof fn === 'function', 'First argument must be a function', {
     args: { fn },

@@ -20,14 +20,7 @@ import type { Predicate } from '../types';
  */
 export function some<T>(array: T[], predicate: Predicate<T>) {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
-  for (let index = 0; index < array.length; index++) {
-    if (predicate(array[index], index, array)) {
-      return true;
-    }
-  }
-
-  return false;
+  return array.some(predicate);
 }
 
 some.fp = true;

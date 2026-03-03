@@ -1,4 +1,9 @@
-# 🧩 Array Utilities
+---
+title: Toolkit — Array Examples
+description: Array utility examples for Toolkit.
+---
+
+# Array Utilities
 
 Array utilities provide a powerful set of tools to transform, query, and manipulate arrays in a type-safe, ergonomic way. Use these helpers to write cleaner, more expressive code for common array operations like mapping, filtering, grouping, and more.
 

@@ -1,5 +1,5 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for a bit-button component using axe-core
@@ -12,7 +12,7 @@ describe('bit-button accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations for default button', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Click me';
 
       const results = await axe.run(fixture.element);
@@ -25,7 +25,7 @@ describe('bit-button accessibility', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text'];
 
       for (const variant of variants) {
-        const fixture = await createFixture('bit-button', { variant });
+        const fixture = await mount('bit-button', { attrs: { variant } });
         fixture.element.textContent = 'Button';
 
         const results = await axe.run(fixture.element);
@@ -39,7 +39,7 @@ describe('bit-button accessibility', () => {
       const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
 
       for (const color of colors) {
-        const fixture = await createFixture('bit-button', { color });
+        const fixture = await mount('bit-button', { attrs: { color } });
         fixture.element.textContent = 'Button';
 
         const results = await axe.run(fixture.element);
@@ -50,7 +50,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have no violations for disabled state', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       fixture.element.textContent = 'Disabled';
 
       const results = await axe.run(fixture.element);
@@ -60,7 +60,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have no violations for loading state', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
       fixture.element.textContent = 'Loading';
 
       const results = await axe.run(fixture.element);
@@ -72,7 +72,7 @@ describe('bit-button accessibility', () => {
 
   describe('Keyboard Accessibility', () => {
     it('should be keyboard focusable', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Focusable';
 
       const button = fixture.query<HTMLButtonElement>('button');
@@ -84,7 +84,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should not be focusable when disabled', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       fixture.element.textContent = 'Not Focusable';
 
       const button = fixture.query('button');
@@ -96,7 +96,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have proper ARIA attributes when disabled', async () => {
-      const fixture = await createFixture('bit-button', { disabled: true });
+      const fixture = await mount('bit-button', { attrs: { disabled: true } });
       fixture.element.textContent = 'Disabled';
 
       const results = await axe.run(fixture.element, {
@@ -111,7 +111,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should not have nested interactive elements', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Click me';
 
       const results = await axe.run(fixture.element, {
@@ -126,7 +126,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have valid tabindex', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Button';
 
       const results = await axe.run(fixture.element, {
@@ -143,7 +143,7 @@ describe('bit-button accessibility', () => {
 
   describe('ARIA Labels and Roles', () => {
     it('should have valid ARIA roles', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Button';
 
       const results = await axe.run(fixture.element, {
@@ -158,7 +158,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have accessible button name', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Click me';
 
       const results = await axe.run(fixture.element, {
@@ -173,9 +173,11 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have aria-label for icon-only buttons', async () => {
-      const fixture = await createFixture('bit-button', {
-        'aria-label': 'Settings',
-        'icon-only': true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'aria-label': 'Settings',
+          'icon-only': true,
+        },
       });
       fixture.element.textContent = '⚙️';
 
@@ -191,7 +193,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should fail accessibility if icon-only button has no label', async () => {
-      const fixture = await createFixture('bit-button', { 'icon-only': true });
+      const fixture = await mount('bit-button', { attrs: { 'icon-only': true } });
       fixture.element.innerHTML = '<svg width="20" height="20"><circle cx="10" cy="10" r="8"/></svg>';
 
       const results = await axe.run(fixture.element, {
@@ -207,7 +209,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have aria-busy when loading', async () => {
-      const fixture = await createFixture('bit-button', { loading: true });
+      const fixture = await mount('bit-button', { attrs: { loading: true } });
       fixture.element.textContent = 'Loading';
 
       const results = await axe.run(fixture.element, {
@@ -222,7 +224,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should not have prohibited ARIA attributes', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Button';
 
       const results = await axe.run(fixture.element, {
@@ -237,9 +239,11 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have conditional ARIA attributes correctly', async () => {
-      const fixture = await createFixture('bit-button', {
-        'aria-busy': 'true',
-        loading: true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'aria-busy': 'true',
+          loading: true,
+        },
       });
       fixture.element.textContent = 'Loading';
 
@@ -257,7 +261,7 @@ describe('bit-button accessibility', () => {
 
   describe('Form Integration', () => {
     it('should work correctly as submit button', async () => {
-      const fixture = await createFixture('bit-button', { type: 'submit' });
+      const fixture = await mount('bit-button', { attrs: { type: 'submit' } });
       fixture.element.textContent = 'Submit';
 
       const results = await axe.run(fixture.element, {
@@ -272,7 +276,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should work correctly as reset button', async () => {
-      const fixture = await createFixture('bit-button', { type: 'reset' });
+      const fixture = await mount('bit-button', { attrs: { type: 'reset' } });
       fixture.element.textContent = 'Reset';
 
       const results = await axe.run(fixture.element, {
@@ -291,7 +295,7 @@ describe('bit-button accessibility', () => {
     it.skip('should have sufficient size for touch targets (min 44x44px)', async () => {
       // Skip: jsdom doesn't support layout/rendering, so getBoundingClientRect() returns 0
       // This should be tested in browser-based tests or with Playwright
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Touch Target';
 
       const button = fixture.query('button');
@@ -304,9 +308,11 @@ describe('bit-button accessibility', () => {
     it.skip('should maintain touch target size for icon-only buttons', async () => {
       // Skip: jsdom doesn't support layout/rendering, so getBoundingClientRect() returns 0
       // This should be tested in browser-based tests or with Playwright
-      const fixture = await createFixture('bit-button', {
-        'aria-label': 'Icon',
-        'icon-only': true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'aria-label': 'Icon',
+          'icon-only': true,
+        },
       });
       fixture.element.textContent = '⚙️';
 
@@ -321,7 +327,7 @@ describe('bit-button accessibility', () => {
 
   describe('Focus Management', () => {
     it('should have visible focus indicator', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Focus Test';
 
       const results = await axe.run(fixture.element, {
@@ -336,7 +342,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should not have focus outline violations', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Button';
 
       const results = await axe.run(fixture.element);
@@ -351,7 +357,7 @@ describe('bit-button accessibility', () => {
 
   describe('Screen Reader Support', () => {
     it('should have accessible name', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.textContent = 'Accessible Name';
 
       const results = await axe.run(fixture.element, {
@@ -366,9 +372,11 @@ describe('bit-button accessibility', () => {
     });
 
     it('should announce loading state to screen readers', async () => {
-      const fixture = await createFixture('bit-button', {
-        'aria-busy': 'true',
-        loading: true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'aria-busy': 'true',
+          loading: true,
+        },
       });
       fixture.element.textContent = 'Processing';
 
@@ -379,9 +387,11 @@ describe('bit-button accessibility', () => {
     });
 
     it('should announce disabled state to screen readers', async () => {
-      const fixture = await createFixture('bit-button', {
-        'aria-disabled': 'true',
-        disabled: true,
+      const fixture = await mount('bit-button', {
+        attrs: {
+          'aria-disabled': 'true',
+          disabled: true,
+        },
       });
       fixture.element.textContent = 'Disabled';
 
@@ -394,7 +404,7 @@ describe('bit-button accessibility', () => {
 
   describe('SVG Icons in Slots', () => {
     it('should have no violations with SVG in prefix slot', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.innerHTML = `
         <svg slot="prefix" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
           <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -409,7 +419,7 @@ describe('bit-button accessibility', () => {
     });
 
     it('should have no violations with SVG in suffix slot', async () => {
-      const fixture = await createFixture('bit-button');
+      const fixture = await mount('bit-button');
       fixture.element.innerHTML = `
         Button Text
         <svg slot="suffix" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
@@ -429,7 +439,7 @@ describe('bit-button accessibility', () => {
 
   describe('Rounded Attribute Accessibility', () => {
     it('should have no violations with rounded (default full)', async () => {
-      const fixture = await createFixture('bit-button', { rounded: '' });
+      const fixture = await mount('bit-button', { attrs: { rounded: '' } });
       fixture.element.textContent = 'Rounded Button';
 
       const results = await axe.run(fixture.element);
@@ -442,7 +452,7 @@ describe('bit-button accessibility', () => {
       const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
 
       for (const value of values) {
-        const fixture = await createFixture('bit-button', { rounded: value });
+        const fixture = await mount('bit-button', { attrs: { rounded: value } });
         fixture.element.textContent = `Rounded ${value}`;
 
         const results = await axe.run(fixture.element);

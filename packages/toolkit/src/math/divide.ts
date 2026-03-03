@@ -1,11 +1,11 @@
 /**
- * Divides a number by a divisor with precision handling for financial calculations.
+ * Divides a number by a divisor.
  * Supports both regular numbers and bigint for exact precision.
  *
  * @example
  * ```ts
  * divide(20, 5); // 4
- * divide(0.6, 3); // 0.2 (precision-safe)
+ * divide(0.6, 3); // 0.19999999999999998 (use bigint for exact precision)
  * divide(500n, 5n); // 100n
  * ```
  *

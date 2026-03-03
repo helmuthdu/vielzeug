@@ -1,3 +1,12 @@
+---
+title: Buildit — API Reference
+description: Complete API reference for Buildit web components.
+---
+
+# Buildit API Reference
+
+[[toc]]
+
 ## Component Import Paths
 
 All components are available as modular imports:

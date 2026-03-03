@@ -1,32 +1,42 @@
-# i18nit Usage Guide
+---
+title: I18nit — Usage Guide
+description: Locale setup, interpolation, async loading, and testing for I18nit.
+---
 
-Complete guide to installing and using i18nit in your projects.
+# I18nit Usage Guide
 
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to I18nit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why I18nit?
 
-::: code-group
+Most i18n libraries are heavyweight or framework-specific. I18nit provides the essentials—locale switching, interpolation, async loading—with zero dependencies.
 
-```sh [pnpm]
-pnpm add @vielzeug/i18nit
+```ts
+// Before — manual i18n
+const messages = { en: { hello: 'Hello {name}!' }, es: { hello: '¡Hola {name}!' } };
+function t(key: string, vars?: Record<string, string>) {
+  return messages[locale][key].replace(/{(\w+)}/g, (_, k) => vars?.[k] ?? '');
+}
+
+// After — I18nit
+const i18n = createI18n({ locale: 'en', messages: { en: { hello: 'Hello {name}!' } } });
+i18n.t('hello', { name: 'Alice' }); // "Hello Alice!"
 ```
 
-```sh [npm]
-npm install @vielzeug/i18nit
-```
+| Feature | I18nit | i18next | vue-i18n |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="i18nit" type="size" /> | ~32 kB | ~28 kB |
+| Async loading | ✅ | ✅ | ✅ |
+| Nested keys | ✅ | ✅ | ✅ |
+| Framework | Agnostic | Agnostic | Vue only |
+| Zero dependencies | ✅ | ❌ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/i18nit
-```
+**Use I18nit when** you need simple locale management with async loading for vanilla JS or small TypeScript projects.
 
-:::
 
 ## Import
 
@@ -256,7 +266,7 @@ Define fallback locales for missing translations:
 ```ts
 const i18n = createI18n({
   locale: 'fr-CA',
-  fallbackLocale: ['fr', 'en'],
+  fallback: ['fr', 'en'],
   messages: {
     'fr-CA': { greeting: 'Bonjour' },
     'fr': { farewell: 'Au revoir' },
@@ -966,7 +976,7 @@ try {
   console.log('Spanish translations loaded');
 } catch (error) {
   console.error('Failed to load translations:', error);
-  // i18n will use fallback or missingKey handler
+  // i18n will use fallback locales for missing keys
 }
 ```
 
@@ -1349,36 +1359,45 @@ const validateTranslations = (messages: Record<string, Messages>) => {
 ### 6. Use Type Safety
 
 ```ts
-// Define message keys as types
-type MessageKeys = 'greeting' | 'farewell' | 'welcome';
+// Type your message objects directly
+type EnMessages = {
+  greeting: string;
+  farewell: string;
+  welcome: string;
+};
 
-const i18n = createI18n<Record<MessageKeys, string>>({
-  messages: {
-    en: {
-      greeting: 'Hello',
-      farewell: 'Goodbye',
-      welcome: 'Welcome',
-    },
-  },
+const en: EnMessages = {
+  greeting: 'Hello',
+  farewell: 'Goodbye',
+  welcome: 'Welcome',
+};
+
+const i18n = createI18n({
+  messages: { en },
 });
 
-// TypeScript will ensure keys are valid
+// TypeScript will ensure the message objects are well-typed
 i18n.t('greeting'); // ✅
-i18n.t('invalid'); // ❌ Type error
 ```
 
 ### 7. Handle Missing Translations Gracefully
 
 ```ts
 const i18n = createI18n({
-  missingKey: (key, locale) => {
-    // Log to monitoring service
-    console.warn(`Missing translation: ${key} (${locale})`);
-
-    // Return user-friendly fallback
-    return key.split('.').pop() || key;
+  locale: 'en',
+  fallback: 'en', // always fall back to English
+  messages: {
+    en: { /* complete baseline translations */ },
   },
 });
+
+// Missing keys return the key itself — use has() to guard
+if (!i18n.has('some.key')) {
+  console.warn(`Missing translation: some.key`);
+}
+
+// For async loading you can use hasAsync()
+const exists = await i18n.hasAsync('some.key', 'es');
 ```
 
 ### 8. Optimize for Performance

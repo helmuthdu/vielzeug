@@ -1,14 +1,19 @@
+---
+title: Wireit — Examples
+description: Real-world DI patterns and framework integrations for Wireit.
+---
+
 # Wireit Examples
 
-Real-world examples demonstrating common use cases and patterns with Wireit.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 
@@ -367,8 +372,7 @@ container.registerFactory(
     await db.$connect();
     return db;
   },
-  [Config],
-  { async: true, lifetime: 'singleton' },
+  { deps: [Config], lifetime: 'singleton' },
 );
 
 // Repositories
@@ -689,8 +693,7 @@ class TenantManager {
       container.registerFactory(
         TenantDatabase,
         (config) => new PrismaClient({ datasourceUrl: config.dbUrl }),
-        [TenantConfig],
-        { lifetime: 'singleton' },
+        { deps: [TenantConfig], lifetime: 'singleton' },
       );
 
       this.containers.set(tenantId, container);

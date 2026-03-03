@@ -1,21 +1,18 @@
-import { typeOf } from './typeOf';
-
 /**
- * Determines if the passed value is a promise.
+ * Determines if the passed value is a Promise (or any thenable).
  *
  * @example
  * ```ts
- * isPromise(new Promise((resolve, reject) => {})); // true
- * isPromise(async () => {}); // true
+ * isPromise(new Promise((resolve) => resolve(1))); // true
+ * isPromise(asyncFn()); // true  (calling it returns a Promise)
+ * isPromise(async () => {}); // false (the function itself is not a Promise)
  * isPromise(() => {}); // false
  * ```
  *
  * @param arg - The argument to be checked.
  *
- * @returns `true` if the value is a promise, else `false`.
+ * @returns `true` if the value is a thenable, else `false`.
  */
 export function isPromise(arg: unknown): arg is Promise<unknown> {
-  return typeOf(arg) === 'promise';
+  return typeof arg === 'object' && arg !== null && typeof (arg as { then?: unknown }).then === 'function';
 }
-
-export const IS_PROMISE_ERROR_MSG = 'Expected a promise';

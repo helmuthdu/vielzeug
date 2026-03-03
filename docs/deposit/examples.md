@@ -1,21 +1,27 @@
+---
+title: Deposit — Examples
+description: Real-world storage patterns and framework integrations for Deposit.
+---
+
 # Deposit Examples
 
-Practical examples showing common use cases and patterns.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Basic Setup
 
 ### Define Schema
 
 ```ts
-import { Deposit, IndexedDBAdapter, type DepositDataSchema } from '@vielzeug/deposit';
+import { createDeposit, defineSchema, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
+import type { DepositDataSchema } from '@vielzeug/deposit';
 
 interface User {
   id: string;
@@ -72,18 +78,18 @@ const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>()({
 ```ts [IndexedDB]
 // IndexedDB (recommended for production)
 const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 ```
 
 ```ts [LocalStorage]
 // LocalStorage (simpler, smaller storage)
-const adapter = new LocalStorageAdapter('my-app-db', 1, schema);
-const db = new Deposit(adapter);
+const adapter = new LocalStorageAdapter('my-app-db', schema);
+const db = createDeposit(adapter);
 ```
 
 ```ts [Shorthand]
 // Or use shorthand config
-const db = new Deposit({
+const db = createDeposit({
   type: 'indexedDB',
   dbName: 'my-app-db',
   version: 1,
@@ -259,42 +265,33 @@ const nonAdmins = await db
   .not((user) => user.role === 'admin')
   .toArray();
 
-// AND
+// AND — chain multiple filter calls
 const seniorAdmins = await db
   .query('users')
-  .and(
-    (user) => user.role === 'admin',
-    (user) => user.age >= 30,
-  )
+  .filter((user) => user.role === 'admin')
+  .filter((user) => user.age >= 30)
   .toArray();
 
-// OR
+// OR — use a single filter with logical OR
 const either = await db
   .query('users')
-  .or(
-    (user) => user.role === 'admin',
-    (user) => user.age >= 50,
-  )
+  .filter((user) => user.role === 'admin' || user.age >= 50)
   .toArray();
 ```
 
 ### Transformations
 
 ```ts
-// Modify results
+// Map/transform results
 const uppercased = await db
   .query('users')
-  .modify((user) => ({
+  .map((user) => ({
     ...user,
     name: user.name.toUpperCase(),
   }))
   .toArray();
 
-// Group by field (returns object)
-const byRole = await db.query('users').groupBy('role').toArray();
-// Result: { admin: User[], user: User[] }
-
-// Type-safe grouping (recommended)
+// Type-safe grouping
 const byRoleTyped = await db.query('users').toGrouped('role');
 // Result: Array<{ key: 'admin' | 'user', values: User[] }>
 
@@ -314,7 +311,7 @@ const searchResults = await db.query('users').search('alice').toArray();
 ```
 
 ::: tip Type-Safe Grouping
-Use `toGrouped()` instead of `groupBy().toArray()` for better type safety and clearer results structure. It returns an array that's easier to iterate and filter.
+Use `toGrouped()` for grouped results — it returns a structured array that's easy to iterate and filter.
 :::
 
 ### Chaining Multiple Operations
@@ -523,15 +520,11 @@ interface Todo {
   createdAt: number;
 }
 
-const schema = {
-  todos: {
-    key: 'id',
-    indexes: ['completed', 'createdAt'],
-    record: {} as Todo,
-  },
-};
+const schema = defineSchema<{ todos: Todo }>()({
+  todos: { key: 'id', indexes: ['completed', 'createdAt'] },
+});
 
-const db = new Deposit({ type: 'indexedDB', dbName: 'todos', version: 1, schema });
+const db = createDeposit({ type: 'indexedDB', dbName: 'todos', version: 1, schema });
 
 // Add todo
 async function addTodo(text: string) {
@@ -578,16 +571,15 @@ interface Preference {
   updatedAt: number;
 }
 
-const db = new Deposit({
+const schema = defineSchema<{ prefs: Preference }>()({
+  prefs: { key: 'id' },
+});
+
+const db = createDeposit({
   type: 'localStorage',
   dbName: 'preferences',
   version: 1,
-  schema: {
-    prefs: {
-      key: 'id',
-      record: {} as Preference,
-    },
-  },
+  schema,
 });
 
 // Save preferences
@@ -614,29 +606,27 @@ async function loadPreferences() {
 ### Analytics Queue
 
 ```ts
-interface Event {
+interface AnalyticsEvent {
   id: string;
   type: string;
-  data: any;
+  data: unknown;
   timestamp: number;
   sent: boolean;
 }
 
-const db = new Deposit({
+const schema = defineSchema<{ events: AnalyticsEvent }>()({
+  events: { key: 'id', indexes: ['sent', 'timestamp'] },
+});
+
+const db = createDeposit({
   type: 'indexedDB',
   dbName: 'analytics',
   version: 1,
-  schema: {
-    events: {
-      key: 'id',
-      indexes: ['sent', 'timestamp'],
-      record: {} as Event,
-    },
-  },
+  schema,
 });
 
 // Track event
-async function track(type: string, data: any) {
+async function track(type: string, data: unknown) {
   await db.put('events', {
     id: crypto.randomUUID(),
     type,
@@ -766,17 +756,6 @@ for (const user of users) {
 ```ts [✅ Fast]
 // Fast – single bulk operation
 await db.bulkPut('users', users);
-```
-
-:::
-
-::: tip Query Caching
-Query results are automatically memoized for better performance.
-
-```ts
-const adminQuery = db.query('users').equals('role', 'admin');
-const admins = await adminQuery.toArray(); // Cached
-const adminCount = await adminQuery.count(); // Uses cache
 ```
 
 :::

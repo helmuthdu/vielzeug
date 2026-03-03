@@ -1,4 +1,9 @@
-# ➗ Math Utilities
+---
+title: Toolkit — Math Examples
+description: Math utility examples for Toolkit.
+---
+
+# Math Utilities
 
 Math utilities provide essential tools for common mathematical operations. These helpers simplify calculations, clamping, rounding, and statistical analysis.
 

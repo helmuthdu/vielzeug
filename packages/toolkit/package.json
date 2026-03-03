@@ -10,6 +10,8 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
@@ -27,6 +29,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@types/node": "^25.3.3",
     "@vielzeug/logit": "workspace:*",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",

@@ -3,15 +3,41 @@
  */
 /* ========== Signals Core ========== */
 export type CleanupFn = () => void;
-export type EffectFn = () => CleanupFn | void;
+// biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
+export type EffectFn = () => CleanupFn | undefined | void;
 
+const runAll = (fns: Iterable<() => void>) => {
+  for (const fn of fns) fn();
+};
 let currentEffect: EffectFn | null = null;
 let isBatching = false;
 const pendingEffects = new Set<EffectFn>();
 
+/** Symbol used to identify Signal instances without instanceof checks (works through Proxy / subclasses) */
+const SIGNAL_BRAND = Symbol('craftit.signal');
+/** Symbol-keyed unsubscribe method — keeps it off the public type surface */
+const REMOVE_SUBSCRIBER = Symbol('craftit.removeSubscriber');
+/** Tracks which signals each effect runner currently depends on, enabling proper dep pruning */
+const effectDeps = new WeakMap<EffectFn, Set<Signal<unknown>>>();
+
 export class Signal<T> {
+  /** @internal — brand used by isSignal(); avoids instanceof so proxies and subclasses work */
+  readonly [SIGNAL_BRAND] = true;
+
   get value(): T {
-    if (currentEffect) this.#subscribers.add(currentEffect);
+    if (currentEffect) {
+      this.#subscribers.add(currentEffect);
+      // Register this signal in the running effect's dep set so it can be removed on re-run/dispose.
+      // This enables correct handling of conditional deps (a signal no longer read won't fire the effect).
+      let deps = effectDeps.get(currentEffect);
+
+      if (!deps) {
+        deps = new Set();
+        effectDeps.set(currentEffect, deps);
+      }
+
+      deps.add(this as Signal<unknown>);
+    }
 
     return this.#value;
   }
@@ -21,15 +47,31 @@ export class Signal<T> {
     this.#value = next;
 
     if (isBatching) {
-      this.#subscribers.forEach((fn) => pendingEffects.add(fn));
+      this.#subscribers.forEach((fn) => {
+        pendingEffects.add(fn);
+      });
     } else {
-      this.#subscribers.forEach((fn) => fn());
+      // Snapshot subscribers into an array before iterating.
+      // pruneDeps() (called inside each runner) removes the runner from the live
+      // Set, and fn() immediately re-adds it. Without a snapshot, for...of on a
+      // Set visits items that were deleted-then-re-added, causing an infinite loop.
+      runAll([...this.#subscribers]);
     }
+  }
+  /** @internal — removes a specific subscriber; called by effect cleanup / re-run */
+  [REMOVE_SUBSCRIBER](fn: EffectFn): void {
+    this.#subscribers.delete(fn);
   }
   #subscribers = new Set<EffectFn>();
   #value: T;
-  constructor(initial: T) {
+  #name?: string;
+  constructor(initial: T, name?: string) {
     this.#value = initial;
+    this.#name = name;
+  }
+  /** Optional debug label — set via signal(value, { name: 'mySignal' }) */
+  get debugName(): string | undefined {
+    return this.#name;
   }
   map<U>(fn: (item: T extends readonly (infer I)[] ? I : never, index: number) => U): Signal<U[]> {
     return computed(() => {
@@ -38,25 +80,74 @@ export class Signal<T> {
       return arr.map(fn as (item: unknown, index: number) => U);
     });
   }
+  /** Creates a derived signal by transforming this signal's value. Shorthand for computed(() => fn(this.value)). */
+  derive<U>(fn: (value: T) => U): Signal<U> {
+    return computed(() => fn(this.value));
+  }
   peek(): T {
     return this.#value;
   }
   update(fn: (current: T) => T): void {
     this.value = fn(this.#value);
   }
+  /** Merges a partial object into the current signal value. Only works on object-typed signals. */
+  assign(partial: T extends object ? Partial<T> : never): void {
+    if (typeof this.#value === 'object' && this.#value !== null) {
+      this.value = { ...this.#value, ...(partial as object) } as T;
+    }
+  }
+  /** Subscribes to value changes — shorthand for `watch(signal, cb)`. Returns a cleanup to stop watching. */
+  subscribe(cb: (value: T, prev: T) => void): CleanupFn {
+    return watch(this, cb);
+  }
 }
-export const signal = <T>(initial: T): Signal<T> => new Signal(initial);
-export type ComputedSignal<T> = Signal<T>;
-export const readonly = <T>(s: Signal<T>): { readonly value: T } =>
-  ({
-    get value() {
-      return s.value;
+export const signal = <T>(initial: T, options?: { name?: string }): Signal<T> => new Signal(initial, options?.name);
+/** Type guard that identifies Signal instances without instanceof — works through Proxy and subclasses */
+export const isSignal = <T = unknown>(value: unknown): value is Signal<T> =>
+  typeof value === 'object' && value !== null && SIGNAL_BRAND in value;
+/** Unwraps a plain value or a Signal to its current value. Reads are tracked if called inside an effect. */
+export const toValue = <T>(v: T | Signal<T>): T => (v instanceof Signal ? v.value : v);
+/**
+ * A Signal with the value setter removed — all read operations (peek, map, derive, debugName)
+ * remain available, writes are blocked both at the type level and at runtime.
+ */
+export type ReadonlySignal<T> = Omit<Signal<T>, 'update' | 'assign'> & { readonly value: T };
+/** Shared Proxy get trap — passes `target` as receiver so private fields (#value) resolve correctly. */
+// biome-ignore lint/suspicious/noExplicitAny: required to bind Signal private fields through Proxy
+const signalProxyGet = (target: Signal<any>, prop: string | symbol) => {
+  const val = Reflect.get(target, prop, target);
+  return typeof val === 'function' ? (val as Function).bind(target) : val;
+};
+export const readonly = <T>(s: Signal<T>): ReadonlySignal<T> =>
+  new Proxy(s, {
+    // Pass `target` (not the proxy) as the receiver so private fields (#value) resolve correctly.
+    get: signalProxyGet,
+    set(_target, prop, value, receiver) {
+      if (prop === 'value') {
+        throw new TypeError('[craftit] Cannot assign to value on a ReadonlySignal');
+      }
+      return Reflect.set(_target, prop, value, receiver);
     },
-  }) as { readonly value: T };
+  }) as ReadonlySignal<T>;
 export const effect = (fn: EffectFn): CleanupFn => {
-  let cleanup: CleanupFn | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
+  let cleanup: CleanupFn | undefined | void;
+
+  // Unsubscribes runner from every signal it previously tracked.
+  // Must be called before each re-run (handles conditional deps) and on explicit dispose.
+  const pruneDeps = () => {
+    const deps = effectDeps.get(runner);
+
+    if (deps) {
+      for (const sig of deps) sig[REMOVE_SUBSCRIBER](runner);
+
+      deps.clear();
+    }
+  };
+
   const runner: EffectFn = () => {
     cleanup?.();
+    pruneDeps(); // clear stale subscriptions before re-tracking
 
     try {
       currentEffect = runner;
@@ -73,7 +164,11 @@ export const effect = (fn: EffectFn): CleanupFn => {
 
   runner();
 
-  return () => cleanup?.();
+  return () => {
+    cleanup?.();
+    pruneDeps();
+    effectDeps.delete(runner);
+  };
 };
 export const untrack = <T>(fn: () => T): T => {
   const prev = currentEffect;
@@ -86,42 +181,75 @@ export const untrack = <T>(fn: () => T): T => {
     currentEffect = prev;
   }
 };
+/** Sentinel value used to initialize signals in computed() and writable() before the first effect run.
+ * The effect is called synchronously, so by the time the function returns the sentinel is already replaced. */
+const UNSET = Symbol('craftit.unset');
+
 export const computed = <T>(compute: () => T): Signal<T> => {
-  const s = signal<T>(untrack(compute));
+  const s = signal<T | typeof UNSET>(UNSET);
 
   effect(() => {
     s.value = compute();
   });
 
-  return s;
+  // Safe cast: effect runs synchronously above, so s.value is already T by the time we return.
+  return s as Signal<T>;
 };
-export const batch = (fn: () => void): void => {
+/**
+ * Creates a bi-directional computed signal: reads track the getter reactively, writes are forwarded to `set`.
+ * Useful for form adapters and derived state that needs to write back to a source.
+ * @example
+ * const doubled = writable(() => count.value * 2, (v) => (count.value = v / 2));
+ */
+export const writable = <T>(get: () => T, set: (value: T) => void): Signal<T> => {
+  const s = signal<T | typeof UNSET>(UNSET);
+  effect(() => {
+    s.value = get();
+  });
+  // Safe cast: effect runs synchronously above, so s.value is already T by the time we return.
+  return new Proxy(s as Signal<T>, {
+    get: signalProxyGet,
+    set(_target, prop, newValue) {
+      if (prop === 'value') {
+        set(newValue as T);
+        return true;
+      }
+      return Reflect.set(_target, prop, newValue, _target);
+    },
+  });
+};
+export const batch = <T>(fn: () => T): T => {
   const wasBatching = isBatching;
 
   isBatching = true;
 
+  let result!: T;
   try {
-    fn();
+    result = fn();
   } finally {
     isBatching = wasBatching;
 
     if (!wasBatching) {
-      const run = Array.from(pendingEffects);
-
-      pendingEffects.clear();
-      run.forEach((f) => f());
+      // Snapshot before iterating: effects added by f() during this flush belong to the NEXT batch.
+      for (const f of [...pendingEffects]) {
+        pendingEffects.delete(f);
+        f();
+      }
     }
   }
+  return result;
 };
+
 export type WatchOptions = {
   immediate?: boolean;
 };
 export function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
 export function watch<T extends readonly Signal<unknown>[]>(
   sources: [...T],
-  cb: (values: {
-    [K in keyof T]: T[K] extends Signal<infer V> ? V : never;
-  }) => void,
+  cb: (
+    values: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
+    prevValues: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
+  ) => void,
   options?: WatchOptions,
 ): CleanupFn;
 export function watch<T>(
@@ -134,17 +262,34 @@ export function watch<T>(
     let prevValues = sources.map((s) => s.peek());
 
     if (options?.immediate) {
-      (cb as (values: unknown[]) => void)(prevValues);
+      (cb as (values: unknown[], prev: unknown[]) => void)(prevValues, prevValues);
     }
 
-    return effect(() => {
-      const nextValues = sources.map((s) => s.value);
+    const stop = effect(() => {
+      // Read all values (tracks all deps) then check for changes — avoids allocating
+      // a new array when nothing changed, which is the common hot path.
+      let changed = false;
+      const nextValues: unknown[] = [];
 
-      if (!nextValues.every((v, i) => Object.is(v, prevValues[i]))) {
-        (cb as (values: unknown[]) => void)(nextValues);
+      for (let i = 0; i < sources.length; i++) {
+        const v = sources[i].value;
+
+        nextValues.push(v);
+        if (!Object.is(v, prevValues[i])) changed = true;
+      }
+
+      if (changed) {
+        const prev = prevValues;
+
         prevValues = nextValues;
+        (cb as (values: unknown[], prev: unknown[]) => void)(nextValues, prev);
       }
     });
+
+    // Auto-register cleanup when called inside a component lifecycle context
+    if (runtimeStack.length > 0) onCleanup(stop);
+
+    return stop;
   }
 
   let prev = source.peek();
@@ -153,7 +298,7 @@ export function watch<T>(
     (cb as (value: T, prev: T) => void)(prev, prev);
   }
 
-  return effect(() => {
+  const stop = effect(() => {
     const next = source.value;
 
     if (!Object.is(prev, next)) {
@@ -161,21 +306,49 @@ export function watch<T>(
       prev = next;
     }
   });
+
+  // Auto-register cleanup when called inside a component lifecycle context
+  if (runtimeStack.length > 0) onCleanup(stop);
+
+  return stop;
 }
 
 /* ========== Utilities ========== */
+let _idCounter = 0;
+/**
+ * Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`,
+ * and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
+ */
+export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
+
+/**
+ * Wraps an event handler with a guard condition. The handler is only invoked when `condition()` returns `true`.
+ * Use for disabled checks, readonly guards, or any runtime condition.
+ *
+ * @example
+ * const handleClick = guard(() => !props.disabled.value, (e) => toggle(e));
+ */
+export const guard =
+  <E extends Event = Event>(condition: () => boolean, handler: (e: E) => void): ((e: E) => void) =>
+  (e) => {
+    if (condition()) handler(e);
+  };
+
 const kebabCache = new Map<string, string>();
-const toKebab = (str: string): string => {
-  const cached = kebabCache.get(str);
-
-  if (cached) return cached;
-
-  const result = str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-
-  kebabCache.set(str, result);
-
-  return result;
-};
+const toKebab = (str: string): string =>
+  kebabCache.get(str) ||
+  kebabCache
+    .set(
+      str,
+      str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
+    )
+    .get(str)!;
+// Basic HTML escaping for untrusted text
+export const escapeHtml = (value: unknown): string =>
+  String(value).replace(
+    /[&<>"']/g,
+    (c) => ({ "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!,
+  );
 const parseHTML = (html: string): DocumentFragment => {
   const tpl = document.createElement('template');
 
@@ -217,8 +390,13 @@ type EventBinding = {
 };
 type RefBinding = {
   marker: string;
-  ref: Ref<Element>;
+  ref: Ref<Element> | RefCallback<Element> | RefList<Element>;
   type: 'ref';
+};
+type ModelBinding = {
+  marker: string;
+  signal: Signal<string | number | boolean>;
+  type: 'model';
 };
 type HtmlBinding = {
   keyed?: boolean;
@@ -231,17 +409,11 @@ type HtmlBinding = {
   }>;
   type: 'html';
 };
-type PortalBinding = {
-  marker: string;
-  signal: Signal<string>;
-  target: string | HTMLElement;
-  type: 'portal';
-};
-export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | HtmlBinding | PortalBinding;
+export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | ModelBinding | HtmlBinding;
 export type WhenDirective = {
   condition: unknown;
-  else?: () => string | HTMLResult;
-  then: () => string | HTMLResult;
+  elseBranch?: () => string | HTMLResult;
+  thenBranch: () => string | HTMLResult;
   type: 'when';
 };
 export type EachDirective<T = unknown> = {
@@ -251,25 +423,52 @@ export type EachDirective<T = unknown> = {
   template: (item: T, index: number) => string | HTMLResult;
   type: 'each';
 };
-export type ShowDirective = {
-  condition: unknown;
-  template: string | HTMLResult;
-  type: 'show';
-};
-export type Directive = WhenDirective | EachDirective | ShowDirective;
+export type Directive = WhenDirective | EachDirective;
 export type HTMLResult = {
   __bindings: Binding[];
   __html: string;
   toString(): string;
 };
-/* ========== ref() for element references ========== */
+/* Ref objects and callbacks */
 export interface Ref<T extends Element | null> {
   value: T | null;
 }
-export const ref = <T extends Element>(): Ref<T> => ({ value: null });
-/* ========== Binding helpers (DOM) ========== */
-type RegisterCleanup = (fn: CleanupFn) => void;
+export function ref<T extends Element>(): Ref<T> {
+  return { value: null };
+}
 
+// Refs list for multiple elements
+export interface RefList<T extends Element> {
+  /** Live read-only array — no defensive copy; `ReadonlyArray` prevents external mutation. */
+  readonly values: ReadonlyArray<T>;
+  add(el: T | null): void;
+  clear(): void;
+}
+export function refs<T extends Element>(): RefList<T> {
+  const seen = new Set<T>();
+  const values: T[] = [];
+
+  return {
+    add(el: T | null) {
+      if (el && !seen.has(el)) {
+        seen.add(el);
+        values.push(el);
+      }
+    },
+    clear() {
+      values.length = 0;
+      seen.clear();
+    },
+    get values(): ReadonlyArray<T> {
+      return values;
+    },
+  };
+}
+
+// Ref callback support
+export type RefCallback<T extends Element> = (el: T | null) => void;
+/* ========== Template Engine — DOM Binding Helpers ========== */
+type RegisterCleanup = (fn: CleanupFn) => void;
 const applyAttrBinding = (
   el: HTMLElement,
   binding: AttrBinding,
@@ -280,23 +479,25 @@ const applyAttrBinding = (
 
   const update = (v: unknown) => {
     if (binding.mode === 'bool') {
-      if (v) el.setAttribute(binding.name, '');
-      else el.removeAttribute(binding.name);
-
-      return;
+      if (v) {
+        el.setAttribute(binding.name, '');
+      } else {
+        el.removeAttribute(binding.name);
+      }
+      // For checkbox/radio inputs, also update the property
+      if (binding.name === 'checked' && el instanceof HTMLInputElement) {
+        el.checked = Boolean(v);
+      }
+    } else {
+      if (v == null || v === false) {
+        el.removeAttribute(binding.name);
+      } else {
+        el.setAttribute(binding.name, String(v));
+      }
     }
-
-    if (v == null || v === false) el.removeAttribute(binding.name);
-    else el.setAttribute(binding.name, String(v));
   };
 
-  if (binding.signal) {
-    const stop = effect(() => update(binding.signal!.value));
-
-    registerCleanup(stop);
-  } else {
-    update(binding.value);
-  }
+  binding.signal ? registerCleanup(effect(() => update(binding.signal!.value))) : update(binding.value!);
 };
 const applyPropBinding = (
   el: HTMLElement,
@@ -307,77 +508,19 @@ const applyPropBinding = (
   if (!keepMarker) el.removeAttribute(binding.marker);
 
   const setVal = (v: unknown) => {
-    if (binding.name === 'value') {
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
-        (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value = v as string;
-
-        return;
-      }
-    }
-
-    if (binding.name === 'checked' && el instanceof HTMLInputElement) {
+    if (
+      binding.name === 'value' &&
+      (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)
+    ) {
+      el.value = v as string;
+    } else if (binding.name === 'checked' && el instanceof HTMLInputElement) {
       el.checked = Boolean(v);
-
-      return;
+    } else {
+      (el as unknown as Record<string, unknown>)[binding.name] = v;
     }
-
-    (el as unknown as Record<string, unknown>)[binding.name] = v;
   };
 
-  if (binding.signal) {
-    const stop = effect(() => setVal(binding.signal!.value));
-
-    registerCleanup(stop);
-  } else {
-    setVal(binding.value);
-  }
-};
-const buildEventHandlerWithModifiers = (
-  el: HTMLElement,
-  binding: EventBinding,
-): {
-  handler: (e: Event) => void;
-  options?: AddEventListenerOptions;
-} => {
-  const modifiers = binding.modifiers ?? [];
-
-  if (!modifiers.length) return { handler: binding.handler };
-
-  const options: AddEventListenerOptions = {
-    capture: modifiers.includes('capture'),
-    once: modifiers.includes('once'),
-    passive: modifiers.includes('passive'),
-  };
-  const keyMap: Record<string, string> = {
-    delete: 'Delete',
-    down: 'ArrowDown',
-    enter: 'Enter',
-    esc: 'Escape',
-    left: 'ArrowLeft',
-    right: 'ArrowRight',
-    space: ' ',
-    tab: 'Tab',
-    up: 'ArrowUp',
-  };
-  const handler = (e: Event) => {
-    if (modifiers.includes('prevent')) e.preventDefault();
-
-    if (modifiers.includes('stop')) e.stopPropagation();
-
-    if (modifiers.includes('self') && e.target !== el) return;
-
-    const keyModifier = modifiers.find((m) => keyMap[m]);
-
-    if (keyModifier) {
-      const ke = e as KeyboardEvent;
-
-      if (ke.key !== keyMap[keyModifier]) return;
-    }
-
-    binding.handler(e);
-  };
-
-  return { handler, options };
+  binding.signal ? registerCleanup(effect(() => setVal(binding.signal!.value))) : setVal(binding.value!);
 };
 const applyEventBinding = (
   el: HTMLElement,
@@ -395,679 +538,792 @@ const applyEventBinding = (
     return;
   }
 
-  const { handler, options } = buildEventHandlerWithModifiers(el, binding);
+  const modifiers = binding.modifiers;
+  // Pre-compute all modifier flags once at binding time — avoids linear Array.includes on every event fire.
+  const prevent = modifiers.includes('prevent');
+  const stop = modifiers.includes('stop');
+  const self = modifiers.includes('self');
+  const km = modifiers.find((m) => keyMap[m]);
+  const expectedKey = km ? keyMap[km] : null;
+  const options: AddEventListenerOptions = {
+    capture: modifiers.includes('capture'),
+    once: modifiers.includes('once'),
+    passive: modifiers.includes('passive'),
+  };
+  const handler = (e: Event) => {
+    if (prevent) e.preventDefault();
+    if (stop) e.stopPropagation();
+    if (self && e.target !== el) return;
+    if (expectedKey && (e as KeyboardEvent).key !== expectedKey) return;
+    binding.handler(e);
+  };
 
   el.addEventListener(binding.name, handler, options);
   registerCleanup(() => el.removeEventListener(binding.name, handler, options));
 };
+/* ========== Template Engine — Directives & Builder ========== */
+const booleanAttrs = new Set([
+  'disabled',
+  'readonly',
+  'required',
+  'checked',
+  'selected',
+  'hidden',
+  'open',
+  'autofocus',
+  'autoplay',
+  'controls',
+  'loop',
+  'muted',
+]);
+const hasKey = (obj: unknown, key: string): boolean => typeof obj === 'object' && !!obj && key in obj;
+const keyMap: Record<string, string> = {
+  delete: 'Delete',
+  down: 'ArrowDown',
+  enter: 'Enter',
+  esc: 'Escape',
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  space: ' ',
+  tab: 'Tab',
+  up: 'ArrowUp',
+};
 
-/* ========== html tagged template helpers ========== */
 type HtmlSignalWrapper = {
   __htmlSignal: Signal<{ bindings: Binding[]; html: string }>;
 };
 
-const isHtmlResult = (value: unknown): value is HTMLResult =>
-  !!value && typeof value === 'object' && '__html' in value && '__bindings' in value;
-const toHtmlSignalFromSignalArray = (valueSignal: Signal<unknown[]>): Signal<{ bindings: Binding[]; html: string }> => {
-  const out = signal<{ bindings: Binding[]; html: string }>({
-    bindings: [],
-    html: '',
-  });
+/* Marker for raw HTML content */
+export type RawHTML = {
+  __raw: string;
+};
 
-  effect(() => {
-    const arr = valueSignal.value;
-    let html = '';
-    const bs: Binding[] = [];
+/* Mark content as raw HTML (bypasses escaping) */
+export const rawHtml = (content: string): RawHTML => ({ __raw: content });
 
-    for (const item of arr) {
-      if (isHtmlResult(item)) {
-        html += item.__html;
-        bs.push(...item.__bindings);
+/** Module-level helpers for applyHtmlBinding — hoisted to avoid re-creating closures per binding. */
+const htmlBindingClearAfter = (marker: Comment) => {
+  while (marker.nextSibling) marker.nextSibling.remove();
+};
+const htmlBindingCreateNodes = (htmlString: string): Node[] => Array.from(parseHTML(htmlString).childNodes);
+const htmlBindingRemoveKeyed = (keyedNode: KeyedNode) => {
+  runAll(keyedNode.cleanups);
+  for (const n of keyedNode.nodes) {
+    n.parentNode?.removeChild(n);
+  }
+};
+const htmlBindingInsertBefore = (marker: Comment, nodes: Node[], before: Node | null) => {
+  if (marker.parentNode) {
+    for (const node of nodes) marker.parentNode.insertBefore(node, before);
+  }
+};
+const isRawHtml = (value: unknown): value is RawHTML => typeof value === 'object' && !!value && '__raw' in value;
+const isHtmlResult = (value: unknown): value is HTMLResult => typeof value === 'object' && !!value && '__html' in value;
+// Helper to extract HTML and bindings from string | HTMLResult
+const extractHtml = (value: string | HTMLResult): { bindings: Binding[]; html: string } =>
+  typeof value === 'string' ? { bindings: [], html: value } : { bindings: value.__bindings, html: value.__html };
+
+const applyRefBinding = (
+  el: HTMLElement,
+  binding: RefBinding,
+  registerCleanup: RegisterCleanup,
+  keepMarker = false,
+) => {
+  if (!keepMarker) el.removeAttribute(binding.marker);
+
+  const bindingRef = binding.ref;
+
+  if (typeof bindingRef === 'function') {
+    bindingRef(el as never);
+    registerCleanup(() => bindingRef(null));
+  } else if ('values' in bindingRef) {
+    // RefList — no per-element cleanup; caller should call ref.clear() on unmount
+    (bindingRef as RefList<Element>).add(el as never);
+  } else {
+    bindingRef.value = el as never;
+    registerCleanup(() => {
+      bindingRef.value = null;
+    });
+  }
+};
+
+const applyModelBinding = (
+  el: HTMLElement,
+  binding: ModelBinding,
+  registerCleanup: RegisterCleanup,
+  keepMarker = false,
+) => {
+  if (!keepMarker) el.removeAttribute(binding.marker);
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) return;
+
+  const updateElement = () => {
+    const value = binding.signal.value;
+
+    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+      el.checked = Boolean(value);
+    } else if (el instanceof HTMLInputElement && el.type === 'radio') {
+      el.checked = el.value === String(value);
+    } else {
+      (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value = String(value);
+    }
+  };
+
+  updateElement();
+  registerCleanup(effect(() => updateElement()));
+
+  const eventName = el instanceof HTMLSelectElement ? 'change' : 'input';
+  const handler = () => {
+    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+      binding.signal.value = el.checked as never;
+    } else if (el instanceof HTMLInputElement && el.type === 'radio') {
+      if (el.checked) binding.signal.value = el.value as never;
+    } else {
+      const value = (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
+
+      if (typeof binding.signal.peek() === 'number' && !Number.isNaN(Number(value))) {
+        binding.signal.value = Number(value) as never;
       } else {
-        html += String(item ?? '');
+        binding.signal.value = value as never;
       }
     }
+  };
 
-    if (html !== out.value.html || bs.length !== out.value.bindings.length) {
-      out.value = { bindings: bs, html };
-    }
-  });
-
-  return out;
+  el.addEventListener(eventName, handler);
+  registerCleanup(() => el.removeEventListener(eventName, handler));
 };
-const applyDisplayWrapper = (condition: boolean, tpl: string | HTMLResult) => {
-  const content = typeof tpl === 'string' ? tpl : tpl.__html;
-  const tagMatch = content.match(/^<([a-z][-a-z0-9]*)([\s>])/i);
 
-  if (tagMatch) {
-    const tagName = tagMatch[1];
-    const styleAttrMatch = content.match(/^<[a-z][-a-z0-9]*[^>]*\s*style\s*=\s*["']([^"']*)["']/i);
+/** Helper to apply bindings in a container - reduces duplication */
+const applyBindingsInContainer = (
+  container: ParentNode,
+  bindings: Binding[],
+  registerCleanup: RegisterCleanup,
+  opts?: { eventModifiers?: boolean; keepMarkers?: boolean; onHtml?: (b: HtmlBinding) => void },
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Core binding application logic requires handling many binding types
+) => {
+  const km = opts?.keepMarkers ?? false;
 
-    if (styleAttrMatch) {
-      const existingStyle = styleAttrMatch[1];
-      const newStyle = `display: ${condition ? '' : 'none'}; ${existingStyle}`;
+  for (const b of bindings) {
+    if (b.type === 'text') {
+      const found = findCommentMarker(container, b.marker);
 
-      return content.replace(/style\s*=\s*["'][^"']*["']/i, `style="${newStyle}"`);
+      if (found) {
+        const textNode = document.createTextNode('');
+
+        found.replaceWith(textNode);
+        registerCleanup(
+          effect(() => {
+            textNode.textContent = String(b.signal.value);
+          }),
+        );
+      }
+    } else if (b.type === 'html') {
+      opts?.onHtml?.(b);
+    } else {
+      const el = container.querySelector<HTMLElement>(`[${b.marker}]`);
+
+      if (el) {
+        if (b.type === 'attr') applyAttrBinding(el, b, registerCleanup, km);
+        else if (b.type === 'prop') applyPropBinding(el, b, registerCleanup, km);
+        else if (b.type === 'event') applyEventBinding(el, b, registerCleanup, opts?.eventModifiers ?? true, km);
+        else if (b.type === 'ref') applyRefBinding(el, b, registerCleanup, km);
+        else if (b.type === 'model') applyModelBinding(el, b, registerCleanup, km);
+      }
     }
+  }
+};
+const resolveCondition = (cond: unknown): boolean => !!(cond instanceof Signal ? cond.value : cond);
 
-    return content.replace(
-      new RegExp(`^<${tagName}([\\s>])`, 'i'),
-      `<${tagName} style="display: ${condition ? '' : 'none'}"$1`,
-    );
+/* Internal helper for looping - used by html.each() */
+const eachHelper = <T>(
+  source: T[] | Signal<T[]>,
+  keyFn: (item: T, index: number) => string | number,
+  template: (item: T, index: number) => string | HTMLResult,
+  empty?: () => string | HTMLResult,
+):
+  | EachDirective<T>
+  | {
+      __eachSignal: Signal<{
+        bindings: Binding[];
+        html: string;
+        items: Array<{ bindings: Binding[]; html: string }>;
+        keys: (string | number)[];
+      }>;
+    } => {
+  if (source instanceof Signal) {
+    const htmlSignal = computed(() => {
+      const items = source.value;
+
+      if (!items?.length) {
+        const emptyResult = empty?.();
+
+        return emptyResult
+          ? { ...extractHtml(emptyResult), items: [], keys: [] }
+          : { bindings: [], html: '', items: [], keys: [] };
+      }
+
+      const allHtml: string[] = [];
+      const allBindings: Binding[] = [];
+      const allKeys: (string | number)[] = [];
+      const itemsData: Array<{ bindings: Binding[]; html: string }> = [];
+      let globalBindingCounter = 0;
+      const renumberBindingsForItem = (res: HTMLResult): { bindings: Binding[]; html: string } => {
+        const replacements = new Map<string, string>();
+        const renumberedBindings: Binding[] = [];
+
+        for (const binding of res.__bindings) {
+          const newMarker = binding.marker.replace(/(\\d+)$/, () => String(globalBindingCounter++));
+
+          replacements.set(binding.marker, newMarker);
+          renumberedBindings.push({ ...binding, marker: newMarker });
+        }
+
+        // Single-pass replacement: sort keys longest-first so data-b10 is matched before data-b1,
+        // preventing shorter keys from incorrectly matching inside longer ones.
+        const sortedKeys = [...replacements.keys()].sort((a, b) => b.length - a.length);
+        const escapedKeys = sortedKeys.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const replaceRe = new RegExp(escapedKeys.join('|'), 'g');
+        const itemHtml = res.__html.replace(replaceRe, (m) => replacements.get(m) ?? m);
+
+        return { bindings: renumberedBindings, html: itemHtml };
+      };
+
+      for (let i = 0; i < items.length; i++) {
+        allKeys.push(keyFn(items[i], i));
+
+        const res = template(items[i], i);
+        const { bindings: itemBindings, html: itemHtml } =
+          typeof res === 'string' ? { bindings: [], html: res } : renumberBindingsForItem(res);
+
+        allHtml.push(itemHtml);
+        allBindings.push(...itemBindings);
+        itemsData.push({ bindings: itemBindings, html: itemHtml });
+      }
+
+      return {
+        bindings: allBindings,
+        html: allHtml.join(''),
+        items: itemsData,
+        keys: allKeys,
+      };
+    });
+
+    return { __eachSignal: htmlSignal };
   }
 
-  return `<span style="display: ${condition ? '' : 'none'}">${content}</span>`;
+  return { empty, items: source, keyFn, template, type: 'each' };
 };
-const resolveCondition = (cond: unknown): boolean => {
-  if (cond instanceof Signal) return !!cond.value;
 
-  return !!cond;
-};
 /* Global marker index to ensure unique markers across all components */
 let globalMarkerIndex = 0;
 
-/* ========== html tagged template ========== */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity
-export const html = Object.assign(
-  (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult | string => {
-    let result = '';
-    const bindings: Binding[] = [];
-    const resolveDirectiveValue = (value: unknown): string => {
-      if (typeof value === 'string') return value;
+/** Shared toString for all HTMLResult object literals — avoids one new closure per template call */
+const htmlResultToString = function (this: HTMLResult): string {
+  return this.__html;
+};
+/** Factory for HTMLResult literals — avoids repeating the 3-field shape at every call site */
+const makeHtmlResult = (html: string, bindings: Binding[] = []): HTMLResult => ({
+  __bindings: bindings,
+  __html: html,
+  toString: htmlResultToString,
+});
+/** Reusable empty result — returned by conditional helpers when the falsy branch produces no content */
+const EMPTY_RESULT: HTMLResult = makeHtmlResult('');
 
-      if (value == null) return '';
+/** Marker attribute prefixes — centralised so a typo causes a TS error rather than a silent selector miss. */
+const MARKER_PREFIX = {
+  attr: 'a',
+  bool: 'b',
+  event: 'e',
+  html: '__h_',
+  model: 'v',
+  prop: 'p',
+  ref: 'r',
+} as const;
 
-      if (value instanceof Signal) {
-        return resolveDirectiveValue(value.value);
+/** Hoisted out of htmlTemplate so it isn't re-created as a new closure on every tag call. */
+const createAttrBinding = (mode: 'bool' | 'attr', name: string, markerAttr: string, value: unknown): AttrBinding => {
+  const sig =
+    value instanceof Signal
+      ? (value as Signal<unknown>)
+      : typeof value === 'function'
+        ? computed(() => (value as () => unknown)())
+        : undefined;
+
+  return sig
+    ? { marker: markerAttr, mode, name, signal: sig, type: 'attr' }
+    : { marker: markerAttr, mode, name, type: 'attr', value };
+};
+
+/* Internal template function - handles both escaping and raw modes */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Template processing requires handling many value types and directives
+const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEscape: boolean): HTMLResult => {
+  let result = '';
+  const bindings: Binding[] = [];
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Directive resolution handles many types including nested HTMLResults
+  const resolveDirectiveValue = (value: unknown): string => {
+    // Handle raw HTML markers
+    if (isRawHtml(value)) return value.__raw;
+
+    if (typeof value === 'string') return shouldEscape ? escapeHtml(value) : value;
+
+    if (value == null) return '';
+
+    if (typeof value === 'object' && 'type' in value) {
+      const directive = value as Directive;
+
+      if (directive.type === 'each') {
+        const eachDir = directive as EachDirective;
+
+        if (!eachDir.items?.length) return eachDir.empty ? resolveDirectiveValue(eachDir.empty()) : '';
+
+        const htmlParts: string[] = [];
+
+        for (let i = 0; i < eachDir.items.length; i++) {
+          const { bindings: itemBindings, html } = extractHtml(eachDir.template(eachDir.items[i], i));
+
+          htmlParts.push(html);
+          bindings.push(...itemBindings);
+        }
+
+        return htmlParts.join('');
       }
 
-      if (typeof value === 'object' && 'type' in value) {
-        const directive = value as Directive;
+      if (directive.type === 'when') {
+        const whenDir = directive as WhenDirective;
+        const res = resolveCondition(whenDir.condition) ? whenDir.thenBranch() : (whenDir.elseBranch?.() ?? '');
 
-        if (directive.type === 'each') {
-          const eachDir = directive as EachDirective;
+        if (!res) return '';
 
-          if (!eachDir.items || !eachDir.items.length) {
-            return eachDir.empty ? resolveDirectiveValue(eachDir.empty()) : '';
-          }
+        const { bindings: whenBindings, html } = extractHtml(res);
 
-          const htmlParts: string[] = [];
+        bindings.push(...whenBindings);
 
-          for (let i = 0; i < eachDir.items.length; i++) {
-            const res = eachDir.template(eachDir.items[i], i);
+        return html;
+      }
+    }
 
-            if (typeof res === 'string') htmlParts.push(res);
-            else {
-              htmlParts.push(res.__html);
-              bindings.push(...res.__bindings);
+    // HTMLResult is always kept as raw HTML
+    if (isHtmlResult(value)) return value.__html;
+
+    // Other values are stringified and optionally escaped
+    return shouldEscape ? escapeHtml(String(value)) : String(value);
+  };
+  const addMarker = (str: string, match: RegExpMatchArray, prefix: string) => {
+    const marker = `data-${prefix}${globalMarkerIndex++}`;
+
+    result += `${str.slice(0, -match[0].length)} ${marker}=""`;
+
+    return marker;
+  };
+
+  for (let i = 0; i < strings.length; i++) {
+    const str = strings[i];
+
+    if (i >= values.length) {
+      result += str;
+      break;
+    }
+
+    const value = values[i];
+    const boolMatch = str.match(/\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
+    const attrMatch = str.match(/\s+:([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
+    const propMatch = str.match(/\s+\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
+    const eventMatch = str.match(/\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/);
+    const refMatch = str.match(/\s+ref\s*=\s*["']?$/);
+    const plainAttrMatch = str.match(/\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
+
+    if (boolMatch) {
+      bindings.push(createAttrBinding('bool', boolMatch[1], addMarker(str, boolMatch, MARKER_PREFIX.bool), value));
+      continue;
+    }
+
+    if (attrMatch) {
+      bindings.push(createAttrBinding('attr', attrMatch[1], addMarker(str, attrMatch, MARKER_PREFIX.attr), value));
+      continue;
+    }
+
+    if (propMatch) {
+      const m = addMarker(str, propMatch, MARKER_PREFIX.prop);
+
+      bindings.push(
+        value instanceof Signal
+          ? {
+              marker: m,
+              name: propMatch[1],
+              signal: value as Signal<unknown>,
+              type: 'prop' as const,
             }
-          }
+          : { marker: m, name: propMatch[1], type: 'prop' as const, value },
+      );
+      continue;
+    }
 
-          return htmlParts.join('');
-        }
+    if (eventMatch) {
+      const parts = eventMatch[1].split('.');
+      const m = addMarker(str, eventMatch, MARKER_PREFIX.event);
 
-        if (directive.type === 'when') {
-          const whenDir = directive as WhenDirective;
-          const condition = resolveCondition(whenDir.condition);
-          const res = condition ? whenDir.then() : whenDir.else ? whenDir.else() : '';
-
-          if (typeof res === 'string') return res;
-
-          if (isHtmlResult(res)) {
-            bindings.push(...res.__bindings);
-
-            return res.__html;
-          }
-
-          return '';
-        }
-      }
-
-      if (isHtmlResult(value)) return value.__html;
-
-      return String(value);
-    };
-    const booleanAttrs = new Set([
-      'disabled',
-      'readonly',
-      'required',
-      'checked',
-      'selected',
-      'hidden',
-      'open',
-      'autofocus',
-      'autoplay',
-      'controls',
-      'loop',
-      'muted',
-    ]);
-    const createAttrBinding = (
-      mode: 'bool' | 'attr',
-      name: string,
-      markerAttr: string,
-      value: unknown,
-    ): AttrBinding => {
-      if (value instanceof Signal) {
-        return {
-          marker: markerAttr,
-          mode,
-          name,
-          signal: value as Signal<unknown>,
-          type: 'attr',
-        };
-      }
-
-      if (typeof value === 'function') {
-        const fnSignal = computed(() => (value as () => unknown)());
-
-        return {
-          marker: markerAttr,
-          mode,
-          name,
-          signal: fnSignal,
-          type: 'attr',
-        };
-      }
-
-      return { marker: markerAttr, mode, name, type: 'attr', value };
-    };
-
-    for (let i = 0; i < strings.length; i++) {
-      const str = strings[i];
-
-      if (i >= values.length) {
-        result += str;
-        break;
-      }
-
-      const value = values[i];
-      const boolMatch = str.match(/\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
-      const attrMatch = str.match(/\s+:([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
-      const propMatch = str.match(/\s+\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
-      const eventMatch = str.match(/\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/);
-      const refMatch = str.match(/\s+ref\s*=\s*["']?$/);
-      const plainAttrMatch = str.match(/\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/);
-
-      if (boolMatch) {
-        const name = boolMatch[1];
-        const markerAttr = `data-b${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -boolMatch[0].length)} ${markerAttr}=""`;
-        bindings.push(createAttrBinding('bool', name, markerAttr, value));
-        continue;
-      }
-
-      if (attrMatch) {
-        const name = attrMatch[1];
-        const markerAttr = `data-a${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -attrMatch[0].length)} ${markerAttr}=""`;
-        bindings.push(createAttrBinding('attr', name, markerAttr, value));
-        continue;
-      }
-
-      if (propMatch) {
-        const name = propMatch[1];
-        const markerAttr = `data-p${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -propMatch[0].length)} ${markerAttr}=""`;
-
-        if (value instanceof Signal) {
-          bindings.push({
-            marker: markerAttr,
-            name,
-            signal: value as Signal<unknown>,
-            type: 'prop',
-          });
-        } else {
-          bindings.push({ marker: markerAttr, name, type: 'prop', value });
-        }
-
-        continue;
-      }
-
-      if (eventMatch) {
-        const fullName = eventMatch[1];
-        const parts = fullName.split('.');
-        const name = parts[0];
-        const modifiers = parts.slice(1);
-        const markerAttr = `data-e${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -eventMatch[0].length)} ${markerAttr}=""`;
-
-        if (typeof value !== 'function') {
-          console.warn(`[craftit] @${fullName} expects a function, got`, value);
-        } else {
-          bindings.push({
+      typeof value !== 'function'
+        ? console.warn(`[craftit] @${eventMatch[1]} expects a function, got`, value)
+        : bindings.push({
             handler: value as (e: Event) => void,
-            marker: markerAttr,
-            modifiers,
-            name,
+            marker: m,
+            modifiers: parts.slice(1),
+            name: parts[0],
             type: 'event',
           });
-        }
+      continue;
+    }
 
-        continue;
-      }
+    if (refMatch) {
+      const m = addMarker(str, refMatch, MARKER_PREFIX.ref);
 
-      if (refMatch) {
-        const markerAttr = `data-r${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -refMatch[0].length)} ${markerAttr}=""`;
-
-        if (!value || typeof value !== 'object' || !('value' in value)) {
-          console.warn('[craftit] ref= expects a ref() object');
-        } else {
-          bindings.push({
-            marker: markerAttr,
-            ref: value as Ref<Element>,
-            type: 'ref',
-          });
-        }
-
-        continue;
-      }
-
-      if (plainAttrMatch) {
-        const name = plainAttrMatch[1];
-        const markerAttr = `data-a${globalMarkerIndex++}`;
-
-        result += `${str.slice(0, -plainAttrMatch[0].length)} ${markerAttr}=""`;
-
-        const mode: 'bool' | 'attr' = booleanAttrs.has(name) ? 'bool' : 'attr';
-
-        bindings.push(createAttrBinding(mode, name, markerAttr, value));
-        continue;
-      }
-
-      /*  Reactive HTML wrappers  */
-      let htmlWrapper: HtmlSignalWrapper | null = null;
-      let isKeyed = false;
-
-      if (value && typeof value === 'object' && '__eachSignal' in value) {
-        htmlWrapper = {
-          __htmlSignal: (
-            value as {
-              __eachSignal: Signal<{
-                bindings: Binding[];
-                html: string;
-                items?: Array<{ bindings: Binding[]; html: string }>;
-                keys?: (string | number)[];
-              }>;
-            }
-          ).__eachSignal,
-        };
-        isKeyed = true;
-      } else if (value && typeof value === 'object' && '__showSignal' in value) {
-        htmlWrapper = {
-          __htmlSignal: (
-            value as {
-              __showSignal: Signal<{ bindings: Binding[]; html: string }>;
-            }
-          ).__showSignal,
-        };
-      } else if (value && typeof value === 'object' && '__portalSignal' in value) {
-        const portalValue = value as {
-          __portalSignal: Signal<string>;
-          __portalTarget: string | HTMLElement;
-        };
-
+      if (!value) {
+        console.warn('[craftit] ref= expects a ref() object or callback');
+      } else if (typeof value === 'function') {
+        // Ref callback
         bindings.push({
-          marker: `__portal_${globalMarkerIndex++}`,
-          signal: portalValue.__portalSignal,
-          target: portalValue.__portalTarget,
-          type: 'portal',
+          marker: m,
+          ref: value as RefCallback<Element>,
+          type: 'ref',
         });
-        result += str; // no inline rendering
-        continue;
-      } else if (value && typeof value === 'object' && 'type' in value && (value as Directive).type === 'when') {
-        const whenDir = value as WhenDirective;
-
-        if (whenDir.condition instanceof Signal) {
-          const whenSignal = computed(() => {
-            const cond = resolveCondition(whenDir.condition);
-            const res = cond ? whenDir.then() : whenDir.else ? whenDir.else() : '';
-
-            if (typeof res === 'string') return { bindings: [], html: res };
-
-            return { bindings: res.__bindings, html: res.__html };
-          });
-
-          htmlWrapper = { __htmlSignal: whenSignal };
-        }
-      }
-
-      // Reactive function (() => ...)
-      if (!htmlWrapper && typeof value === 'function') {
-        let cached: { bindings: Binding[]; html: string } = {
-          bindings: [],
-          html: '',
-        };
-        const fnSignal = signal(cached);
-
-        effect(() => {
-          const res = (value as () => unknown)();
-          let htmlStr = '';
-          const resBindings: Binding[] = [];
-          const pushItem = (item: unknown) => {
-            if (isHtmlResult(item)) {
-              htmlStr += item.__html;
-              resBindings.push(...item.__bindings);
-            } else {
-              htmlStr += resolveDirectiveValue(item);
-            }
-          };
-
-          if (Array.isArray(res)) {
-            for (const item of res) pushItem(item);
-          } else {
-            pushItem(res);
-          }
-
-          const bindingsChanged =
-            resBindings.length !== cached.bindings.length || resBindings.some((b, i) => b !== cached.bindings[i]);
-
-          if (htmlStr !== cached.html || bindingsChanged) {
-            cached = { bindings: resBindings, html: htmlStr };
-            fnSignal.value = cached;
-          }
-        });
-        htmlWrapper = { __htmlSignal: fnSignal };
-      }
-
-      // Signal interpolation with array => reactive html
-      if (!htmlWrapper && value instanceof Signal) {
-        const signalValue = value.value;
-
-        if (Array.isArray(signalValue)) {
-          const arraySignal = toHtmlSignalFromSignalArray(value as Signal<unknown[]>);
-
-          htmlWrapper = { __htmlSignal: arraySignal };
-        }
-      }
-
-      if (htmlWrapper) {
-        const marker = `__h_${globalMarkerIndex++}`;
-
-        result += `${str}<!--${marker}-->`;
+      } else if (typeof value === 'object' && ('value' in value || 'values' in value)) {
+        // Ref or RefList
         bindings.push({
-          keyed: isKeyed,
-          marker,
-          signal: htmlWrapper.__htmlSignal,
-          type: 'html',
+          marker: m,
+          ref: value as Ref<Element> | RefList<Element>,
+          type: 'ref',
         });
-        continue;
+      } else {
+        console.warn('[craftit] ref= expects a ref() object or callback function');
       }
+      continue;
+    }
 
-      // Array of values or HTMLResults
-      if (Array.isArray(value)) {
-        let combinedHtml = '';
+    // Model binding for two-way data binding
+    if (hasKey(value, '__model') && value && typeof value === 'object') {
+      const marker = `data-${MARKER_PREFIX.model}${globalMarkerIndex++}`;
+      const sig = (value as { __model: Signal<string | number | boolean> }).__model;
 
-        for (const item of value) {
+      result += `${str} ${marker}=""`;
+      bindings.push({
+        marker,
+        signal: sig,
+        type: 'model',
+      });
+      continue;
+    }
+
+    if (plainAttrMatch) {
+      bindings.push(
+        createAttrBinding(
+          booleanAttrs.has(plainAttrMatch[1]) ? 'bool' : 'attr',
+          plainAttrMatch[1],
+          addMarker(str, plainAttrMatch, MARKER_PREFIX.attr),
+          value,
+        ),
+      );
+      continue;
+    }
+
+    /*  Reactive HTML wrappers  */
+    let htmlWrapper: HtmlSignalWrapper | null = null;
+    let isKeyed = false;
+
+    if (hasKey(value, '__eachSignal')) {
+      htmlWrapper = {
+        __htmlSignal: (
+          value as {
+            __eachSignal: Signal<{
+              bindings: Binding[];
+              html: string;
+              items?: Array<{ bindings: Binding[]; html: string }>;
+              keys?: (string | number)[];
+            }>;
+          }
+        ).__eachSignal,
+      };
+      isKeyed = true;
+    } else if (hasKey(value, 'type') && (value as Directive).type === 'when') {
+      const whenDir = value as WhenDirective;
+
+      if (whenDir.condition instanceof Signal) {
+        const whenSignal = computed(() => {
+          const cond = resolveCondition(whenDir.condition);
+          const res = cond ? whenDir.thenBranch() : whenDir.elseBranch ? whenDir.elseBranch() : '';
+
+          if (typeof res === 'string') return { bindings: [], html: res };
+
+          return { bindings: res.__bindings, html: res.__html };
+        });
+
+        htmlWrapper = { __htmlSignal: whenSignal };
+      }
+    }
+
+    // Reactive function (() => ...)
+    if (!htmlWrapper && typeof value === 'function') {
+      let cached = { bindings: [] as Binding[], html: '' };
+      const fnSignal = signal(cached);
+
+      effect(() => {
+        const res = (value as () => unknown)();
+        const items = Array.isArray(res) ? res : [res];
+        let htmlStr = '';
+        const resBindings: Binding[] = [];
+
+        for (const item of items) {
           if (isHtmlResult(item)) {
-            combinedHtml += item.__html;
-            bindings.push(...item.__bindings);
+            htmlStr += item.__html;
+            resBindings.push(...item.__bindings);
           } else {
-            combinedHtml += resolveDirectiveValue(item);
+            htmlStr += resolveDirectiveValue(item);
           }
         }
-        result += str + combinedHtml;
-        continue;
+
+        const bindingsChanged =
+          resBindings.length !== cached.bindings.length || resBindings.some((b, i) => b !== cached.bindings[i]);
+
+        if (htmlStr !== cached.html || bindingsChanged) {
+          cached = { bindings: resBindings, html: htmlStr };
+          fnSignal.value = cached;
+        }
+      });
+      htmlWrapper = { __htmlSignal: fnSignal };
+    }
+
+    // Signal interpolation with an array or HTMLResult => reactive HTML
+    if (!htmlWrapper && value instanceof Signal) {
+      if (Array.isArray(value.value) || isHtmlResult(value.value)) {
+        htmlWrapper = {
+          __htmlSignal: Array.isArray(value.value)
+            ? computed(() => {
+                let html = '';
+                const bs: Binding[] = [];
+
+                for (const item of (value as Signal<unknown[]>).value) {
+                  if (isHtmlResult(item)) {
+                    html += item.__html;
+                    bs.push(...item.__bindings);
+                  } else {
+                    html += String(item ?? '');
+                  }
+                }
+
+                return { bindings: bs, html };
+              })
+            : computed(() => {
+                const val = (value as Signal<unknown>).value;
+
+                return isHtmlResult(val)
+                  ? { bindings: val.__bindings, html: val.__html }
+                  : { bindings: [], html: String(val) };
+              }),
+        };
       }
+    }
 
-      // Regular signal -> text comment binding
-      if (value instanceof Signal) {
-        const marker = `__s_${globalMarkerIndex++}`;
+    if (htmlWrapper) {
+      const marker = `${MARKER_PREFIX.html}${globalMarkerIndex++}`;
 
-        result += `${str}<!--${marker}-->`;
-        bindings.push({
-          marker,
-          signal: value as Signal<unknown>,
-          type: 'text',
-        });
+      result += `${str}<!--${marker}-->`;
+      bindings.push({
+        keyed: isKeyed,
+        marker,
+        signal: htmlWrapper.__htmlSignal,
+        type: 'html',
+      });
+      continue;
+    }
+
+    // Array of values or HTMLResults
+    if (Array.isArray(value)) {
+      let combinedHtml = '';
+
+      for (const item of value) {
+        if (isHtmlResult(item)) {
+          combinedHtml += item.__html;
+          bindings.push(...item.__bindings);
+        } else {
+          combinedHtml += resolveDirectiveValue(item);
+        }
+      }
+      result += str + combinedHtml;
+      continue;
+    }
+
+    // Regular signal -> text comment binding
+    if (value instanceof Signal) {
+      const marker = `__s_${globalMarkerIndex++}`;
+
+      result += `${str}<!--${marker}-->`;
+      bindings.push({
+        marker,
+        signal: value as Signal<unknown>,
+        type: 'text',
+      });
+    } else {
+      // Check if it's an HTMLResult - if so, extract bindings
+      if (isHtmlResult(value)) {
+        result += str + value.__html;
+        bindings.push(...value.__bindings);
       } else {
         result += str + resolveDirectiveValue(value);
       }
     }
+  }
 
-    const trimmed = result.trim();
+  const trimmed = result.trim();
 
-    if (!bindings.length) return trimmed;
+  // Always return HTMLResult object to preserve HTML status (important for nesting)
+  return makeHtmlResult(trimmed, bindings);
+};
 
-    return {
-      __bindings: bindings,
-      __html: trimmed,
-      toString() {
-        return (this as HTMLResult).__html;
-      },
-    };
+/* ========== Template Engine — html & raw ========== */
+export const html = Object.assign(
+  (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => {
+    return htmlTemplate(strings, values, true);
   },
   {
-    /* --- helpers: choose, classes, each, log, portal, show, style, until, when --- */
-    choose: <T, V extends string | HTMLResult>(
-      value: T | Signal<T>,
+    /** Two-way binding shorthand — use as a prop value: html`<my-input ${html.bind(mySignal)} />` */
+    bind: (sig: Signal<string | number | boolean>) => ({ __model: sig }),
+    /* --- helpers: classes, escape, log, style --- */
+    classes: (
+      classes:
+        | Record<string, boolean | Signal<boolean> | (() => boolean) | undefined>
+        | (string | false | undefined | null | Record<string, boolean | undefined>)[],
+    ): string | Signal<string> => {
+      if (!Array.isArray(classes)) {
+        const entries = Object.entries(classes);
+        const hasReactive = entries.some(([, v]) => v instanceof Signal || typeof v === 'function');
+
+        if (hasReactive) {
+          return computed(() =>
+            entries
+              .filter(([, v]) => (v instanceof Signal ? v.value : typeof v === 'function' ? (v as () => boolean)() : v))
+              .map(([k]) => k)
+              .join(' '),
+          );
+        }
+      }
+
+      return Array.isArray(classes)
+        ? classes
+            .map((c) => (typeof c === 'string' ? c : c && typeof c === 'object' ? String(html.classes(c)) : ''))
+            .filter(Boolean)
+            .join(' ')
+        : Object.entries(classes)
+            .filter(([, v]) => v)
+            .map(([k]) => k)
+            .join(' ');
+    },
+    // Loop rendering - renamed from 'for' to 'each' for clarity
+    each: <T>(
+      source: T[] | Signal<T[]> | (() => T[]),
+      ...args:
+        | [(item: T, index: number) => string | HTMLResult]
+        | [
+            (item: T, index: number) => string | number,
+            (item: T, index: number) => string | HTMLResult,
+            (() => string | HTMLResult)?,
+          ]
+        | [
+            {
+              empty?: () => string | HTMLResult;
+              key?: (item: T, index: number) => string | number;
+              template: (item: T, index: number) => string | HTMLResult;
+            },
+          ]
+    ) => {
+      // Convert function source to Signal for reactivity
+      let sourceSignal: T[] | Signal<T[]>;
+      if (typeof source === 'function') {
+        sourceSignal = computed(() => (source as () => T[])());
+      } else {
+        sourceSignal = source;
+      }
+
+      if (args.length === 1) {
+        const first = args[0];
+        if (typeof first === 'function') {
+          // Simple form: html.each(items, item => html`...`)
+          return eachHelper(sourceSignal, (_, i) => i, first);
+        }
+        // Advanced form with options object: html.each(items, { key, template, empty })
+        return eachHelper(sourceSignal, first.key ?? ((_, i) => i), first.template, first.empty);
+      }
+      // Three-argument form: html.each(items, keyFn, templateFn, emptyFn?)
+      const [keyFn, templateFn, emptyFn] = args as [
+        (item: T, index: number) => string | number,
+        (item: T, index: number) => string | HTMLResult,
+        (() => string | HTMLResult)?,
+      ];
+      return eachHelper(sourceSignal, keyFn, templateFn, emptyFn);
+    },
+    // Match/case helper — pattern-matching style switch for reactive values
+    // Overloaded: static value → returns V directly; Signal/function → returns () => V for reactive re-evaluation.
+    match: (<T, V extends string | HTMLResult>(
+      value: T | Signal<T> | (() => T),
       cases: Array<[T, () => V]>,
       defaultCase?: () => V,
     ): V | (() => V) => {
       const resolveCase = (val: T): V => {
         const found = cases.find(([caseValue]) => Object.is(caseValue, val));
-
-        if (found) return found[1]();
-
-        return defaultCase ? defaultCase() : ('' as V);
+        return found ? found[1]() : defaultCase ? defaultCase() : ('' as V);
       };
 
+      // Handle Signal
       if (value instanceof Signal) {
         return () => resolveCase(value.value);
       }
 
+      // Handle function (reactive)
+      if (typeof value === 'function') {
+        return () => resolveCase((value as () => T)());
+      }
+
+      // Handle static value
       return resolveCase(value as T);
-    },
-    classes: (
-      classes:
-        | Record<string, boolean | undefined>
-        | (string | false | undefined | null | Record<string, boolean | undefined>)[],
-    ): string => {
-      if (Array.isArray(classes)) {
-        return classes
-          .map((item) => {
-            if (!item) return '';
+    }) as (<T, V extends string | HTMLResult>(value: T, cases: Array<[T, () => V]>, defaultCase?: () => V) => V) &
+      (<T, V extends string | HTMLResult>(
+        value: Signal<T> | (() => T),
+        cases: Array<[T, () => V]>,
+        defaultCase?: () => V,
+      ) => () => V),
+    // Conditional visibility — keeps the DOM mounted, only toggles display.
+    // Use instead of html.when when the content has expensive setup or local state
+    // that must survive visibility changes (e.g. a video player, a form with inputs).
+    show: <V extends string | HTMLResult>(
+      condition: unknown | Signal<unknown> | (() => unknown),
+      templateFn: () => V,
+    ): HTMLResult => {
+      const inner = templateFn();
+      const { html: innerHtml, bindings: innerBindings } = extractHtml(inner);
+      const condSignal =
+        condition instanceof Signal
+          ? condition
+          : typeof condition === 'function'
+            ? computed(() => resolveCondition((condition as () => unknown)()))
+            : null;
 
-            if (typeof item === 'string') return item;
-
-            if (typeof item === 'object') {
-              return Object.entries(item)
-                .filter(([, v]) => v)
-                .map(([k]) => k)
-                .join(' ');
-            }
-
-            return '';
-          })
-          .filter(Boolean)
-          .join(' ');
+      if (condSignal) {
+        // Reactive: wrap in a layout-transparent <span> and toggle display reactively.
+        // Child components remain mounted — only visibility changes.
+        const marker = `data-${MARKER_PREFIX.attr}${globalMarkerIndex++}`;
+        const styleSignal = computed(() =>
+          resolveCondition(condSignal.value) ? 'display: contents' : 'display: none',
+        );
+        return makeHtmlResult(`<span ${marker}="">${innerHtml}</span>`, [
+          { marker, mode: 'attr' as const, name: 'style', signal: styleSignal, type: 'attr' as const },
+          ...innerBindings,
+        ]);
       }
 
-      return Object.entries(classes)
-        .filter(([, v]) => v)
-        .map(([k]) => k)
-        .join(' ');
-    },
-    each: <T>(
-      source: T[] | Signal<T[]>,
-      keyFn: (item: T, index: number) => string | number,
-      template: (item: T, index: number) => string | HTMLResult,
-      empty?: () => string | HTMLResult,
-    ):
-      | EachDirective<T>
-      | {
-          __eachSignal: Signal<{
-            bindings: Binding[];
-            html: string;
-            items: Array<{ bindings: Binding[]; html: string }>;
-            keys: (string | number)[];
-          }>;
-        } => {
-      if (source instanceof Signal) {
-        const htmlSignal = computed(() => {
-          const items = source.value;
-
-          if (!items || !items.length) {
-            if (!empty) return { bindings: [], html: '', items: [], keys: [] };
-
-            const emptyResult = empty();
-
-            if (typeof emptyResult === 'string') {
-              return { bindings: [], html: emptyResult, items: [], keys: [] };
-            }
-
-            return {
-              bindings: emptyResult.__bindings,
-              html: emptyResult.__html,
-              items: [],
-              keys: [],
-            };
-          }
-
-          const allHtml: string[] = [];
-          const allBindings: Binding[] = [];
-          const allKeys: (string | number)[] = [];
-          const itemsData: Array<{ bindings: Binding[]; html: string }> = [];
-          let globalBindingCounter = 0;
-          const renumberBindingsForItem = (res: HTMLResult): { bindings: Binding[]; html: string } => {
-            const replacements = new Map<string, string>();
-            const renumberedBindings: Binding[] = [];
-
-            for (const binding of res.__bindings) {
-              const oldMarker = binding.marker;
-              const newMarker = oldMarker.replace(/(\d+)$/, () => String(globalBindingCounter++));
-
-              replacements.set(oldMarker, newMarker);
-              renumberedBindings.push({ ...binding, marker: newMarker });
-            }
-
-            let itemHtml = res.__html;
-            const tempMarkers = new Map<string, string>();
-
-            for (const [oldMarker, newMarker] of replacements) {
-              const tempMarker = `__TEMP_${Math.random().toString(36).slice(2)}__`;
-
-              tempMarkers.set(tempMarker, newMarker);
-              itemHtml = itemHtml.replace(
-                new RegExp(oldMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-                tempMarker,
-              );
-            }
-            for (const [tempMarker, newMarker] of tempMarkers) {
-              itemHtml = itemHtml.replace(new RegExp(tempMarker, 'g'), newMarker);
-            }
-
-            return { bindings: renumberedBindings, html: itemHtml };
-          };
-
-          for (let i = 0; i < items.length; i++) {
-            const key = keyFn(items[i], i);
-
-            allKeys.push(key);
-
-            const res = template(items[i], i);
-
-            if (typeof res === 'string') {
-              allHtml.push(res);
-              itemsData.push({ bindings: [], html: res });
-            } else {
-              const { bindings: itemBindings, html: itemHtml } = renumberBindingsForItem(res);
-
-              allHtml.push(itemHtml);
-              allBindings.push(...itemBindings);
-              itemsData.push({ bindings: itemBindings, html: itemHtml });
-            }
-          }
-
-          return {
-            bindings: allBindings,
-            html: allHtml.join(''),
-            items: itemsData,
-            keys: allKeys,
-          };
-        });
-
-        return { __eachSignal: htmlSignal };
-      }
-
-      return { empty, items: source, keyFn, template, type: 'each' };
-    },
-    log: (...args: unknown[]): string => {
-      console.log('[craftit]', ...args);
-
-      return '';
-    },
-    portal: (
-      template: string | HTMLResult | Signal<string>,
-      target?: string | HTMLElement,
-    ):
-      | string
-      | {
-          __portalSignal: Signal<string>;
-          __portalTarget: string | HTMLElement;
-        } => {
-      if (template instanceof Signal) {
-        return { __portalSignal: template, __portalTarget: target || 'body' };
-      }
-
-      if (!target) return '';
-
-      const targetEl = typeof target === 'string' ? document.querySelector(target) : target;
-
-      if (!targetEl) return '';
-
-      const content = typeof template === 'string' ? template : template.__html;
-      const bindings = typeof template === 'string' ? [] : template.__bindings;
-      const existing = targetEl.querySelector('[data-portal]');
-
-      if (existing) existing.remove();
-
-      if (!content || content.trim() === '') return '';
-
-      const container = document.createElement('div');
-
-      container.setAttribute('data-portal', 'true');
-      container.innerHTML = content;
-      targetEl.appendChild(container);
-
-      const registerCleanup: RegisterCleanup = () => {};
-
-      for (const binding of bindings) {
-        const el = container.querySelector<HTMLElement>(`[${binding.marker}]`);
-
-        if (!el) continue;
-
-        if (binding.type === 'event') {
-          applyEventBinding(el, binding, registerCleanup, true);
-        } else if (binding.type === 'attr') {
-          applyAttrBinding(el, binding, registerCleanup);
-        }
-      }
-
-      return '';
-    },
-    show: (
-      condition: unknown,
-      template: string | HTMLResult,
-    ): string | { __showSignal: Signal<{ bindings: Binding[]; html: string }> } => {
-      if (condition instanceof Signal) {
-        const showSignal = computed(() => {
-          const isShown = resolveCondition(condition);
-          const styledContent = applyDisplayWrapper(!!isShown, template);
-          const bindings = typeof template === 'string' ? [] : template.__bindings;
-
-          return { bindings, html: styledContent };
-        });
-
-        return { __showSignal: showSignal };
-      }
-
-      return applyDisplayWrapper(!!condition, template);
+      // Static condition: render once or skip entirely
+      return resolveCondition(condition)
+        ? typeof inner === 'string'
+          ? makeHtmlResult(inner)
+          : (inner as HTMLResult)
+        : EMPTY_RESULT;
     },
     style: (styles: Partial<CSSStyleDeclaration> | Record<string, string | number | null | undefined>): string =>
       Object.entries(styles)
@@ -1085,95 +1341,109 @@ export const html = Object.assign(
           return `${cssKey}: ${value}`;
         })
         .join('; '),
-    until: (...values: unknown[]): (() => string | HTMLResult) => {
-      const current = signal<unknown>(undefined);
+    // Conditional rendering
+    // Two forms:
+    //   html.when(cond, thenFn, elseFn?)                    — single condition
+    //   html.when([cond1, fn1], [cond2, fn2], ..., fallback?) — multi-branch else-if chain
+    when: <V extends string | HTMLResult>(...args: unknown[]): V | WhenDirective | string => {
+      // Multi-branch form: each positional arg is a [condition, fn] tuple
+      if (Array.isArray(args[0])) {
+        type Branch = [unknown | Signal<unknown> | (() => unknown), () => V];
+        const lastArg = args[args.length - 1];
+        const fallback = !Array.isArray(lastArg) && typeof lastArg === 'function' ? (lastArg as () => V) : undefined;
+        const branches = (fallback ? args.slice(0, -1) : args) as Branch[];
+        const isReactive = branches.some(([cond]) => cond instanceof Signal || typeof cond === 'function');
 
-      type Wrapped = {
-        index: number;
-        isPromise: boolean;
-        resolved: boolean;
-        value: unknown;
-      };
-
-      const wrapped: Wrapped[] = values.map((v, index) => ({
-        index,
-        isPromise: v instanceof Promise,
-        resolved: !(v instanceof Promise),
-        value: v,
-      }));
-      const pickBestResolved = (): unknown => {
-        const candidates = wrapped.filter((w) => w.resolved);
-
-        if (!candidates.length) return undefined;
-
-        candidates.sort((a, b) => a.index - b.index);
-
-        return candidates[0]!.value;
-      };
-
-      for (const w of wrapped) {
-        if (!w.isPromise) continue;
-
-        (w.value as Promise<unknown>)
-          .then((res) => {
-            w.value = res;
-            w.resolved = true;
-            current.value = pickBestResolved();
-          })
-          .catch((err) => {
-            console.error('[craftit] until() promise rejected', err);
-          });
-      }
-      current.value = pickBestResolved();
-
-      return () => {
-        const v = current.value;
-
-        if (v == null) return '';
-
-        if (v && typeof v === 'object' && '__html' in v && '__bindings' in v) {
-          return v as HTMLResult;
+        if (!isReactive) {
+          for (const [cond, fn] of branches) {
+            if (resolveCondition(cond as unknown)) return fn();
+          }
+          return fallback ? fallback() : ('' as V);
         }
 
-        if (typeof v === 'function') {
-          return (v as () => string | HTMLResult)();
-        }
-
-        return String(v);
-      };
-    },
-    when: (
-      condition: unknown,
-      arg:
-        | string
-        | HTMLResult
-        | (() => string | HTMLResult)
-        | { else?: () => string | HTMLResult; then: () => string | HTMLResult },
-      fallback?: string | HTMLResult | (() => string | HTMLResult),
-    ): WhenDirective | string | HTMLResult => {
-      const resolve = (v: string | HTMLResult | (() => string | HTMLResult)) => (typeof v === 'function' ? v() : v);
-
-      if (typeof arg === 'object' && arg !== null && 'then' in arg && !('__html' in arg)) {
-        const { else: elseFn, then } = arg as {
-          else?: () => string | HTMLResult;
-          then: () => string | HTMLResult;
-        };
-
-        if (condition instanceof Signal) {
-          return { condition, else: elseFn, then, type: 'when' };
-        }
-
-        return resolveCondition(condition) ? resolve(then) : elseFn ? resolve(elseFn) : '';
+        // Reactive multi-branch: a computed signal that is truthy when any branch matches,
+        // driving re-evaluation whenever branch conditions change.
+        const conditionSignal = computed(() =>
+          branches.some(([cond]) =>
+            resolveCondition(
+              cond instanceof Signal ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond,
+            ),
+          ),
+        );
+        return {
+          condition: conditionSignal,
+          elseBranch: undefined,
+          thenBranch: () => {
+            for (const [cond, fn] of branches) {
+              const val =
+                cond instanceof Signal ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond;
+              if (resolveCondition(val)) return fn();
+            }
+            return fallback ? fallback() : ('' as V);
+          },
+          type: 'when' as const,
+        } as WhenDirective;
       }
 
-      if (resolveCondition(condition)) return resolve(arg as string | HTMLResult | (() => string | HTMLResult));
-
-      if (fallback != null) return resolve(fallback);
-
-      return '';
+      // Single-condition form: html.when(condition, thenFn, elseFn?)
+      const [condition, thenFn, elseFn] = args as [unknown | Signal<unknown>, () => V, (() => V) | undefined];
+      if (condition instanceof Signal) {
+        return { condition, elseBranch: elseFn, thenBranch: thenFn, type: 'when' };
+      }
+      if (typeof condition === 'function') {
+        const conditionSignal = computed(() => resolveCondition((condition as () => unknown)()));
+        return { condition: conditionSignal, elseBranch: elseFn, thenBranch: thenFn, type: 'when' };
+      }
+      return resolveCondition(condition) ? thenFn() : elseFn ? elseFn() : ('' as V);
     },
   },
 );
+
+/* ========== Template Engine — raw (no escaping) ========== */
+export const raw = (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => {
+  return htmlTemplate(strings, values, false);
+};
+
+/* ========== Runtime Helpers — suspense & bind ========== */
+export const suspense = <T>(
+  asyncFn: (signal?: AbortSignal) => Promise<T>,
+  options: {
+    error?: (error: Error, retry: () => void) => string | HTMLResult;
+    fallback: () => string | HTMLResult;
+    template: (data: T) => string | HTMLResult;
+  },
+): (() => string | HTMLResult) => {
+  const state = signal<{ data?: T; error?: Error; loading: boolean }>({ loading: true });
+  let controller: AbortController | null = null;
+
+  const run = () => {
+    // Abort any in-flight request before starting a new one (handles retry and unmount races)
+    controller?.abort();
+    controller = new AbortController();
+    const ac = controller;
+    state.value = { loading: true };
+    asyncFn(ac.signal)
+      .then((data) => {
+        if (!ac.signal.aborted) state.value = { data, loading: false };
+      })
+      .catch((error) => {
+        if (!ac.signal.aborted) state.value = { error, loading: false };
+      });
+  };
+
+  run();
+
+  return () => {
+    const current = state.value;
+    if (current.loading) return options.fallback();
+    if (current.error) {
+      const retry = () => run();
+      return options.error ? options.error(current.error, retry) : html`<div>Error loading</div>`;
+    }
+    return options.template(current.data!);
+  };
+};
+
 /* ========== CSS Helper ========== */
 export type CSSResult = {
   content: string;
@@ -1181,7 +1451,7 @@ export type CSSResult = {
 };
 type ThemeVars<T extends Record<string, string | number>> = {
   [K in keyof T]: string;
-};
+} & { toString(): string };
 export const css = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): CSSResult => {
     const content = strings.reduce((out, str, i) => out + str + (values[i] ?? ''), '').trim();
@@ -1236,18 +1506,15 @@ export const css = Object.assign(
     },
   },
 );
-export const createStyleElement = (cssContent: string): HTMLStyleElement => {
-  const el = document.createElement('style');
 
-  el.textContent = cssContent;
-
-  return el;
-};
 /* ========== Component Runtime & Lifecycle ========== */
 type ComponentRuntime = {
   cleanups: CleanupFn[];
   el: HTMLElement;
-  onMount: (() => CleanupFn | void)[];
+  /** Scoped error handler set by onError() — catches render & lifecycle errors in this component only */
+  errorHandler?: (error: Error, info?: { componentStack?: string }) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
+  onMount: (() => CleanupFn | undefined | void)[];
   onUnmount: CleanupFn[];
   onUpdated: (() => void)[];
 };
@@ -1256,25 +1523,114 @@ const runtimeStack: ComponentRuntime[] = [];
 const currentRuntime = (): ComponentRuntime => {
   const rt = runtimeStack[runtimeStack.length - 1];
 
-  if (!rt) throw new Error('[craftit] lifecycle/prop/ref called outside of define()');
+  if (!rt) throw new Error('[craftit] lifecycle API used outside of component setup/instance');
 
   return rt;
 };
 
-export const onMount = (fn: () => CleanupFn | void): void => {
+// biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
+export const onMount = (fn: () => CleanupFn | undefined | void): void => {
   currentRuntime().onMount.push(fn);
 };
+/** Runs when the element disconnects from the DOM. Use for external subscriptions or resources tied to component lifetime. */
 export const onUnmount = (fn: CleanupFn): void => {
   currentRuntime().onUnmount.push(fn);
 };
 export const onUpdated = (fn: () => void): void => {
   currentRuntime().onUpdated.push(fn);
 };
+/**
+ * Registers a cleanup function alongside reactive effect teardowns.
+ * Runs on unmount. Prefer {@link onUnmount} for explicit lifecycle callbacks;
+ * use `onCleanup` when registering cleanup inside a reactive context.
+ */
 export const onCleanup = (fn: CleanupFn): void => {
   currentRuntime().cleanups.push(fn);
 };
 
+/**
+ * Registers an event listener on `target` and automatically removes it via {@link onCleanup} on unmount.
+ * Must be called within an active lifecycle context — typically inside an {@link onMount} callback.
+ *
+ * @example
+ * onMount(() => {
+ *   handle(host, 'click', onClick);
+ *   handle(host, 'keydown', onKeydown);
+ *   // no return/cleanup needed
+ * });
+ */
+export const handle = <K extends keyof HTMLElementEventMap>(
+  target: EventTarget,
+  event: K,
+  listener: (e: HTMLElementEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void => {
+  target.addEventListener(event, listener as EventListener, options);
+  onCleanup(() => target.removeEventListener(event, listener as EventListener, options));
+};
+
+// Error boundary support — scoped to this component's render & lifecycle, NOT a global window error listener
+export const onError = (fn: (error: Error, info?: { componentStack?: string }) => void): void => {
+  currentRuntime().errorHandler = fn;
+};
+
+/** Value type accepted per ARIA attribute key: a getter function (for reactive tracking), a plain value, or null/undefined to remove. */
+type AriaAttrValue =
+  | (() => string | boolean | number | null | undefined)
+  | string
+  | boolean
+  | number
+  | null
+  | undefined;
+
+/**
+ * Reactively sets ARIA attributes on the host element.
+ * Pass getter functions to make individual attributes reactive — they will be tracked as signal dependencies.
+ * Plain primitive values are set once. `null` / `undefined` / `false` remove the attribute.
+ *
+ * Must be called synchronously during component setup.
+ *
+ * @example
+ * aria({
+ *   role: 'checkbox',
+ *   checked: () => checkedSignal.value,
+ *   disabled: () => props.disabled.value,
+ * });
+ */
+export const aria = (attrs: Record<string, AriaAttrValue>): void => {
+  const host = currentRuntime().el;
+  const applyAttr = (name: string, raw: AriaAttrValue) => {
+    const attrName = `aria-${name}`;
+    const value = typeof raw === 'function' ? (raw as () => AriaAttrValue)() : raw;
+    if (value === null || value === undefined || value === false) {
+      host.removeAttribute(attrName);
+    } else {
+      host.setAttribute(attrName, String(value === true ? 'true' : value));
+    }
+  };
+
+  for (const [name, value] of Object.entries(attrs)) {
+    if (typeof value === 'function') {
+      // Wrap in a reactive effect so getter-functions are re-evaluated on signal changes
+      effect(() => applyAttr(name, value));
+    } else {
+      applyAttr(name, value);
+    }
+  }
+};
+
 /* ========== Context (provide/inject) ========== */
+
+/** WeakMap-based logical parent tracking — let's inject() traverse through portaled components */
+const _logicalParents = new WeakMap<HTMLElement, HTMLElement>();
+const componentRegistry = {
+  clearLogicalParent: (el: HTMLElement) => _logicalParents.delete(el),
+  getLogicalParent: (el: HTMLElement): HTMLElement | null => _logicalParents.get(el) ?? null,
+  setLogicalParent: (child: HTMLElement, parent: HTMLElement | null) => {
+    if (parent) _logicalParents.set(child, parent);
+  },
+};
+
 const contextKey = Symbol('craftit.context');
 
 export type InjectionKey<T> = symbol & {
@@ -1287,13 +1643,30 @@ export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): vo
   const rt = currentRuntime();
   const el = rt.el as ContextHost;
 
-  if (!el[contextKey]) el[contextKey] = new Map();
-
-  el[contextKey]!.set(key, value);
+  // biome-ignore lint/suspicious/noAssignInExpressions: -
+  (el[contextKey] ??= new Map()).set(key, value);
 };
 export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T): T | undefined {
+  const result = injectInternal(key, fallback);
+  if (result === undefined && fallback === undefined) {
+    const keyStr = typeof key === 'symbol' ? key.toString() : String(key);
+    console.warn(
+      `[craftit] Injection key not found: ${keyStr}\n\nPossible causes:
+  • No parent component calls provide() with this key
+  • inject() called outside component setup
+  • Component hierarchy doesn't include provider
+Solutions:
+  • Ensure a parent component calls provide(key, value)
+  • Provide a fallback: inject(key, defaultValue)
+  • Check component nesting in your template`,
+    );
+  }
+  return result;
+}
+
+function injectInternal<T>(key: InjectionKey<T> | string | symbol, fallback?: T): T | undefined {
   const rt = currentRuntime();
   let node: Node | null = rt.el;
 
@@ -1306,6 +1679,16 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T):
       }
     }
 
+    // Try logical parent first (for portaled components)
+    const logicalParent: HTMLElement | null =
+      node instanceof HTMLElement ? componentRegistry.getLogicalParent(node) : null;
+
+    if (logicalParent) {
+      node = logicalParent;
+      continue;
+    }
+
+    // Fall back to DOM traversal
     const rootNode: Node = node.getRootNode() as Node;
     const parentElement: HTMLElement | null = (node as HTMLElement).parentElement;
     const hostElement: Element | null = rootNode instanceof ShadowRoot ? rootNode.host : null;
@@ -1315,6 +1698,65 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T):
 
   return fallback;
 }
+
+// Create strongly-typed injection key
+export const createContext = <T>(): InjectionKey<T> => Symbol() as InjectionKey<T>;
+
+/* ========== Slots API ========== */
+export type SlotsAPI<T extends Record<string, unknown> = Record<string, unknown>> = {
+  has(name: keyof T): boolean;
+  render<K extends keyof T>(name: K, props?: T[K], fallback?: () => HTMLResult | string): HTMLResult | string;
+  default(props?: T['default'], fallback?: () => HTMLResult | string): HTMLResult | string;
+};
+
+export const defineSlots = <T extends Record<string, unknown> = Record<string, unknown>>(): SlotsAPI<T> => {
+  const rt = currentRuntime();
+  const el = rt.el;
+
+  return {
+    default(_props?: T['default'], fallback?: () => HTMLResult | string): HTMLResult | string {
+      // If there's a fallback and slot is empty, return fallback
+      if (fallback && !this.has('default')) {
+        return fallback();
+      }
+      return html`<slot />`;
+    },
+    has(name: keyof T): boolean {
+      const slotName = name === 'default' ? '' : String(name);
+      const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(
+        slotName ? `slot[name="${slotName}"]` : 'slot:not([name])',
+      );
+      return (slot?.assignedNodes().length ?? 0) > 0;
+    },
+    render<K extends keyof T>(name: K, _props?: T[K], fallback?: () => HTMLResult | string): HTMLResult | string {
+      const slotName = name === 'default' ? '' : String(name);
+      // If there's a fallback and the slot is empty, return fallback
+      if (fallback && !this.has(name)) {
+        return fallback();
+      }
+      return html`<slot ${slotName ? `name="${slotName}"` : ''} />`;
+    },
+  };
+};
+
+/* ========== Type-safe Event Emitter ========== */
+export type EmitFn<T extends Record<string, unknown>> = <K extends keyof T>(event: K, detail: T[K]) => void;
+
+export const defineEmits = <T extends Record<string, unknown>>(): EmitFn<T> => {
+  const rt = currentRuntime();
+  const el = rt.el;
+
+  return <K extends keyof T>(event: K, detail: T[K]) => {
+    el.dispatchEvent(
+      new CustomEvent(String(event), {
+        bubbles: true,
+        composed: true,
+        detail,
+      }),
+    );
+  };
+};
+
 /* ========== Form-associated custom elements ========== */
 type FormAssociatedCallbacks = {
   formAssociated?: (form: HTMLFormElement | null) => void;
@@ -1374,13 +1816,10 @@ export const field = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandl
   };
 
   if (!('attachInternals' in host) || typeof host.attachInternals !== 'function') {
-    const noop = () => true;
-    const noopSetValidity: ElementInternals['setValidity'] = () => {};
-
     return {
       internals: null,
-      reportValidity: noop,
-      setValidity: noopSetValidity,
+      reportValidity: () => true,
+      setValidity: () => {},
     };
   }
 
@@ -1389,106 +1828,204 @@ export const field = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandl
   host._internals = internals;
 
   const toFormValue = options.toFormValue ?? ((v: T) => (v == null ? '' : String(v)));
-  const stopValue = effect(() => {
-    const v = options.value.value;
 
-    internals.setFormValue(toFormValue(v));
-  });
-
-  rt.cleanups.push(stopValue);
+  rt.cleanups.push(
+    effect(() => {
+      internals.setFormValue(toFormValue(options.value.value));
+    }),
+  );
 
   if (options.disabled) {
-    const stopDisabled = effect(() => {
-      const isDisabled = Boolean(options.disabled!.value);
-
-      if (isDisabled) internals.states.add('disabled');
-      else internals.states.delete('disabled');
-    });
-
-    rt.cleanups.push(stopDisabled);
+    rt.cleanups.push(
+      effect(() => {
+        options.disabled!.value ? internals.states.add('disabled') : internals.states.delete('disabled');
+      }),
+    );
   }
 
-  const setValidity: ElementInternals['setValidity'] = (...args) => (internals.setValidity as any)(...args);
-  const reportValidity = () => internals.reportValidity();
-
-  return { internals, reportValidity, setValidity };
+  return {
+    internals,
+    reportValidity: () => internals.reportValidity(),
+    setValidity: (...args: Parameters<ElementInternals['setValidity']>) => internals.setValidity(...args),
+  };
 };
 
-/* ========== Props / Attributes ========== */
+/* ========== Props & defineProps ========== */
 const propsKey = Symbol('craftit.props');
 
-type PropOptions<T> = {
+type PropType<T> = T extends string
+  ? StringConstructor
+  : T extends number
+    ? NumberConstructor
+    : T extends boolean
+      ? BooleanConstructor
+      : T extends unknown[]
+        ? ArrayConstructor
+        : ObjectConstructor;
+
+export type PropOptions<T> = {
   parse?: (value: string | null) => T;
   reflect?: boolean;
+  type?: PropType<T>;
+  validator?: (value: T) => boolean;
+  required?: boolean;
+  default?: T;
 };
 type PropMeta<T = unknown> = {
   name: string;
   parse?: (value: string | null) => T;
   reflect: boolean;
+  required?: boolean;
   signal: Signal<T>;
+  validator?: (value: T) => boolean;
 };
 interface PropHost extends HTMLElement {
-  [propsKey]?: Map<string, PropMeta>;
+  [propsKey]?: Map<string, PropMeta<unknown>>;
 }
+
+/** Signal subclass that validates writes against a predicate, logging a warning on failure.
+ * Lighter than a full Proxy — only the `value` setter is intercepted. */
+class ValidatedSignal<T> extends Signal<T> {
+  readonly #validator: (v: T) => boolean;
+  readonly #propName: string;
+
+  constructor(defaultValue: T, validator: (v: T) => boolean, propName: string) {
+    super(defaultValue);
+    this.#validator = validator;
+    this.#propName = propName;
+  }
+
+  override get value(): T {
+    return super.value;
+  }
+
+  override set value(next: T) {
+    if (!this.#validator(next)) {
+      console.warn(`[craftit] Prop "${this.#propName}" validation failed for value:`, next);
+      return;
+    }
+    super.value = next;
+  }
+}
+
 export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
   const rt = currentRuntime();
   const el = rt.el as PropHost;
 
   el[propsKey] ??= new Map();
 
-  const parse = options?.parse ?? ((v: string | null): T => (v == null ? defaultValue : (v as unknown as T)));
-  const s = signal<T>(defaultValue);
+  const parse =
+    options?.parse ??
+    ((v: string | null): T => {
+      // Explicit Boolean type: string values 'true' / '' → boolean
+      if (options?.type === Boolean) return (v === '' || v === 'true') as T;
+      // Boolean default: HTML attribute-presence semantics (absent = false, present = true)
+      if (typeof defaultValue === 'boolean') return (v !== null) as T;
+      if (v == null) return defaultValue;
+      // Numeric — inferred from an explicit type option or default value type
+      if (options?.type === Number || typeof defaultValue === 'number') return Number(v) as T;
+      if (options?.type === Array || options?.type === Object) {
+        try {
+          return JSON.parse(v) as T;
+        } catch {
+          return defaultValue;
+        }
+      }
+      return v as unknown as T;
+    });
+  const validator = options?.validator;
+  const s: Signal<T> = validator ? new ValidatedSignal<T>(defaultValue, validator, name) : signal<T>(defaultValue);
 
   el[propsKey]!.set(name, {
     name,
     parse,
     reflect: options?.reflect ?? false,
-    signal: s,
+    required: options?.required,
+    signal: s as Signal<unknown>,
+    validator: validator as ((value: unknown) => boolean) | undefined,
   });
   Object.defineProperty(el, name, {
     configurable: true,
     enumerable: true,
-    get() {
-      return s.value;
-    },
-    set(value: T) {
+    get: () => s.value,
+    set: (value: T) => {
       s.value = value;
     },
   });
 
   if (options?.reflect) {
     rt.onMount.push(() => {
-      const stop = effect(() => {
-        const v = s.value;
+      rt.cleanups.push(
+        effect(() => {
+          const v = s.value;
 
-        if (v == null || v === false) el.removeAttribute(name);
-        else el.setAttribute(name, v === true ? '' : String(v));
-      });
-
-      rt.cleanups.push(stop);
+          v == null || v === false ? el.removeAttribute(name) : el.setAttribute(name, v === true ? '' : String(v));
+        }),
+      );
     });
   }
 
   return s;
 };
-/* ========== define(tag, setup) ========== */
+/**
+ * Shape accepted by {@link defineProps} — the prop's default value plus any PropOptions.
+ * Use inline object literals directly: `{ default: 0, type: Number }` or just `{ default: '' }`.
+ */
+export type PropDef<T> = PropOptions<T> & { default: T };
+export type InferPropsSignals<T extends Record<string, PropDef<unknown>>> = {
+  [K in keyof T]: Signal<T[K]['default']>;
+};
+/**
+ * Declares multiple props at once, deriving attribute names from object keys.
+ * Pass an inline object literal instead of calling a wrapper function:
+ *
+ * @example
+ * const props = defineProps({
+ *   count: { default: 0, type: Number },
+ *   label: { default: '' },
+ * });
+ * // props.count → Signal<number>, props.label → Signal<string>
+ */
+export const defineProps = <T extends Record<string, PropDef<unknown>>>(defs: T): InferPropsSignals<T> => {
+  const result = {} as Record<string, Signal<unknown>>;
+
+  for (const [name, def] of Object.entries(defs)) {
+    // Map camelCase keys to kebab-case attribute names (HTML spec convention).
+    // e.g. defineProps({ myProp: { default: '' } }) registers the "my-prop" attribute
+    // but the signal is accessed as props.myProp.
+    result[name] = prop(toKebab(name), def.default, def as PropOptions<unknown>);
+  }
+
+  return result as InferPropsSignals<T>;
+};
+/* ========== Component Definition ========== */
+/** Context object passed as the first argument to every `define()` setup function. */
+export type SetupContext = {
+  /** The host `HTMLElement` instance for this component. */
+  host: HTMLElement;
+};
 export type SetupResult =
   | string
   | HTMLResult
   | {
-      styles?: (string | CSSStyleSheet)[];
+      styles?: (string | CSSStyleSheet | CSSResult)[];
       template: string | HTMLResult;
-    };
+    }
+  | Promise<unknown>; // Async setup functions are not supported, but we detect them at runtime
 export type DefineOptions = {
+  /** Indicates if this should be a form-associated element */
   formAssociated?: boolean;
+  /** Mount this component to a specific DOM location */
+  target?: string | HTMLElement;
 };
 
-const loadStylesheet = async (style: string | CSSStyleSheet): Promise<CSSStyleSheet> => {
+const loadStylesheet = async (style: string | CSSStyleSheet | CSSResult): Promise<CSSStyleSheet> => {
   if (style instanceof CSSStyleSheet) return style;
 
+  const cssText = typeof style === 'string' ? style : style.content;
   const sheet = new CSSStyleSheet();
 
-  await sheet.replace(style);
+  await sheet.replace(cssText);
 
   return sheet;
 };
@@ -1502,323 +2039,333 @@ type KeyedNode = {
   key: string | number;
   nodes: Node[];
 };
-export const define = (name: string, setup: () => SetupResult, options?: DefineOptions): void => {
-  if (customElements.get(name)) {
-    console.warn(`[craftit] Element "${name}" already defined`);
 
-    return;
+/* Helper to apply bindings for a keyed list item */
+/** Searches a shallow node list for an element carrying `markerAttr`, then falls back to querySelector. */
+const queryWithinNodes = (nodes: Node[], markerAttr: string): HTMLElement | null => {
+  for (const node of nodes) {
+    if (node instanceof HTMLElement && node.hasAttribute(markerAttr)) return node;
+    if (node instanceof Element) {
+      const found = node.querySelector<HTMLElement>(`[${markerAttr}]`);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyed item binding requires handling multiple binding types
+const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], container: ParentNode): CleanupFn[] => {
+  const itemCleanups: CleanupFn[] = [];
+  const itemRegisterCleanup: RegisterCleanup = (fn) => itemCleanups.push(fn);
+
+  for (const binding of itemBindings) {
+    const el = queryWithinNodes(nodes, binding.marker);
+    if (!el && binding.type !== 'ref') continue;
+
+    if (binding.type === 'prop') {
+      applyPropBinding(el!, binding, itemRegisterCleanup, true);
+    } else if (binding.type === 'event') {
+      applyEventBinding(el!, binding, itemRegisterCleanup, false, true);
+    } else if (binding.type === 'attr') {
+      applyAttrBinding(el!, binding, itemRegisterCleanup, true);
+    } else if (binding.type === 'ref') {
+      const refEl = el ?? (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
+      if (refEl) {
+        const bindingRef = binding.ref;
+        if (typeof bindingRef !== 'function' && !('values' in bindingRef)) {
+          bindingRef.value = refEl as never;
+        }
+      }
+    }
   }
 
-  class CraftitElement extends HTMLElement implements PropHost, ContextHost, FormHost {
-    static formAssociated = !!options?.formAssociated;
-    [contextKey]?: Map<InjectionKey<unknown> | string | symbol, unknown>;
-    [formCallbacksKey]?: FormAssociatedCallbacks;
-    [propsKey]?: Map<string, PropMeta>;
-    shadow: ShadowRoot;
-    private _attrObserver: MutationObserver | null = null;
-    private _styles?: (string | CSSStyleSheet)[];
-    private _template: string | HTMLResult | null = null;
-    private appliedHtmlBindings = new Set<string>();
-    private runtime: ComponentRuntime;
-    constructor() {
-      super();
-      this.shadow = this.attachShadow({ mode: 'open' });
-      this.runtime = {
-        cleanups: [],
-        el: this,
-        onMount: [],
-        onUnmount: [],
-        onUpdated: [],
-      };
+  return itemCleanups;
+};
+class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, FormHost {
+  /** The component's setup function — assigned as a static on each subclass by define() */
+  static _setup: (ctx: SetupContext) => SetupResult;
+  /** The component's define options — assigned as a static on each subclass by define() */
+  static _options?: DefineOptions;
+  static formAssociated = false;
+  [contextKey]?: Map<InjectionKey<unknown> | string | symbol, unknown>;
+  [formCallbacksKey]?: FormAssociatedCallbacks;
+  [propsKey]?: Map<string, PropMeta>;
+  shadow: ShadowRoot;
+  private _attrObserver: MutationObserver | null = null;
+  private _mounted = false;
+  private _styles?: (string | CSSStyleSheet | CSSResult)[];
+  private _template: string | HTMLResult | null = null;
+  private appliedHtmlBindings = new Set<string>();
+  private runtime: ComponentRuntime;
+  private _portalTarget: HTMLElement | null = null;
+  private _originalParent: { parent: Node; nextSibling: Node | null } | null = null;
+  private _isPortaling = false;
+  /** Guards setup execution — setup runs exactly once even when the element is moved in the DOM */
+  private _setupDone = false;
+  constructor() {
+    super();
+    this.shadow = this.attachShadow({ mode: 'open' });
+    this.runtime = {
+      cleanups: [],
+      el: this,
+      onMount: [],
+      onUnmount: [],
+      onUpdated: [],
+    };
+  }
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Lifecycle method manages portal setup, attribute observation, setup execution, and component initialization
+  connectedCallback(): void {
+    const options = (this.constructor as typeof CraftitBaseElement)._options;
+
+    if (options?.target && !this._isPortaling && !this._portalTarget) {
+      const target = typeof options.target === 'string' ? document.querySelector(options.target) : options.target;
+      if (target instanceof HTMLElement) {
+        this._portalTarget = target;
+        this._originalParent = {
+          nextSibling: this.nextSibling,
+          parent: this.parentNode!,
+        };
+
+        // Register logical parent BEFORE moving the element.
+        // This preserves the component hierarchy for provide/inject.
+        // When the element is a direct child of a ShadowRoot, parentElement is null
+        // (ShadowRoot is not an Element), so we fall back to the shadow host.
+        const rootNode = this.getRootNode();
+        const logicalParent =
+          this.parentElement ?? (rootNode instanceof ShadowRoot ? (rootNode.host as HTMLElement) : null);
+        if (logicalParent) {
+          componentRegistry.setLogicalParent(this, logicalParent);
+        }
+
+        this._isPortaling = true;
+        target.appendChild(this);
+        this._isPortaling = false;
+        // appendChild triggers another connectedCallback where initialization will happen
+        return;
+      }
+      if (typeof options.target === 'string') {
+        console.warn(
+          `[craftit] Portal target element "${options.target}" not found\n\n` +
+            'Possible causes:\n' +
+            "  • Target element doesn't exist in the DOM yet\n" +
+            '  • Selector is incorrect\n' +
+            '  • Target element was removed\n\n' +
+            'Solutions:\n' +
+            '  • Ensure target exists before component renders\n' +
+            '  • Use a valid CSS selector\n' +
+            "  • Try: document.body or document.querySelector('...')",
+        );
+      }
+    }
+
+    // Run setup exactly once — connectedCallback fires again when the element is moved in the DOM
+    if (!this._setupDone) {
+      this._setupDone = true;
       runtimeStack.push(this.runtime);
 
       let res: SetupResult;
 
       try {
-        res = setup();
+        res = (this.constructor as typeof CraftitBaseElement)._setup({ host: this });
       } finally {
         runtimeStack.pop();
       }
 
-      if (typeof res === 'string' || '__html' in res) {
+      // Async setup breaks the runtimeStack context — lifecycle APIs called in await continuations will throw.
+      // Use onMount() with an async body for deferred async work instead.
+      if (res instanceof Promise) {
+        console.warn(
+          `[craftit] <${this.localName}> setup() must be synchronous — async functions break lifecycle context.\n` +
+            'Use onMount() with an async body if you need async operations on mount.',
+        );
+      }
+
+      if (typeof res === 'string' || (typeof res === 'object' && res !== null && '__html' in res)) {
         this._template = res as string | HTMLResult;
+      } else if (typeof res === 'object' && res !== null && 'template' in res) {
+        const r = res as { template: string | HTMLResult; styles?: (string | CSSStyleSheet | CSSResult)[] };
+
+        this._template = r.template;
+        this._styles = r.styles;
+      }
+    }
+
+    this._attrObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName) {
+          this.handleAttributeChange(
+            mutation.attributeName,
+            mutation.oldValue,
+            this.getAttribute(mutation.attributeName),
+          );
+        }
+      }
+    });
+    this._attrObserver.observe(this, {
+      attributeOldValue: true,
+      attributes: true,
+    });
+
+    if (this[propsKey]) {
+      for (const [attrName, meta] of this[propsKey]) {
+        if (this.hasAttribute(attrName)) {
+          meta.signal.value = (meta.parse ?? ((v: string | null) => v))(this.getAttribute(attrName)) as never;
+        } else if (meta.required) {
+          console.warn(`[craftit] <${this.localName}> missing required prop "${attrName}"`);
+        }
+      }
+    }
+
+    this.init();
+  }
+  disconnectedCallback(): void {
+    // Skip cleanup if we're in the middle of portaling
+    if (this._isPortaling) {
+      return;
+    }
+
+    if (this._attrObserver) {
+      this._attrObserver.disconnect();
+      this._attrObserver = null;
+    }
+
+    runAll([...this.runtime.cleanups, ...this.runtime.onUnmount]);
+    this.runtime.cleanups = [];
+    this.runtime.onUnmount = [];
+
+    // Clean up logical parent reference
+    componentRegistry.clearLogicalParent(this);
+
+    // Restore element to original position if it was portaled
+    if (this._originalParent && this._portalTarget && !this._isPortaling) {
+      this._isPortaling = true;
+      if (this._originalParent.nextSibling) {
+        this._originalParent.parent.insertBefore(this, this._originalParent.nextSibling);
       } else {
-        this._template = res.template;
-        this._styles = res.styles;
+        this._originalParent.parent.appendChild(this);
       }
+      this._isPortaling = false;
+      this._portalTarget = null;
+      this._originalParent = null;
     }
-    connectedCallback(): void {
-      this._attrObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes' && mutation.attributeName) {
-            const oldValue = mutation.oldValue;
-            const newValue = this.getAttribute(mutation.attributeName);
+  }
+  formAssociatedCallback(form: HTMLFormElement | null): void {
+    this[formCallbacksKey]?.formAssociated?.(form);
+  }
+  formDisabledCallback(disabled: boolean): void {
+    this[formCallbacksKey]?.formDisabled?.(disabled);
+  }
+  formResetCallback(): void {
+    this[formCallbacksKey]?.formReset?.();
+  }
+  formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
+    this[formCallbacksKey]?.formStateRestore?.(state, mode);
+  }
+  private applyBindings(bindings: Binding[]) {
+    if (!bindings.length) return;
 
-            this.handleAttributeChange(mutation.attributeName, oldValue, newValue);
-          }
+    const root = this.shadow;
+    const registerCleanup: RegisterCleanup = (fn) => this.runtime.cleanups.push(fn);
+
+    // Single-pass: non-HTML bindings handled by helper, HTML bindings via onHtml callback.
+    applyBindingsInContainer(root, bindings, registerCleanup, {
+      onHtml: (b) => {
+        if (!this.appliedHtmlBindings.has(b.marker)) {
+          this.appliedHtmlBindings.add(b.marker);
+          this.applyHtmlBinding(root, b);
         }
-      });
-      this._attrObserver.observe(this, {
-        attributeOldValue: true,
-        attributes: true,
-      });
+      },
+    });
+  }
+  private applyHtmlBinding(root: Node, b: HtmlBinding, registerCleanup?: RegisterCleanup) {
+    const found = findCommentMarker(root, b.marker);
 
-      if (this[propsKey]) {
-        for (const [attrName, meta] of this[propsKey]) {
-          if (this.hasAttribute(attrName)) {
-            const attrValue = this.getAttribute(attrName);
-            const parser = meta.parse ?? ((v: string | null) => v);
+    if (!found) return;
 
-            meta.signal.value = parser(attrValue) as never;
-          }
+    const marker = document.createComment('html-binding');
+
+    found.replaceWith(marker);
+
+    let currentCleanups: CleanupFn[] = [];
+    const registerInnerCleanup: RegisterCleanup = (fn) => currentCleanups.push(fn);
+    const runCurrentCleanups = () => {
+      runAll(currentCleanups);
+      currentCleanups = [];
+    };
+    const clearNodesAfterMarker = () => htmlBindingClearAfter(marker);
+    const createNodesFromHTML = (htmlString: string) => htmlBindingCreateNodes(htmlString);
+    const removeKeyedNode = (keyedNode: KeyedNode) => htmlBindingRemoveKeyed(keyedNode);
+    const insertNodesBefore = (nodes: Node[], before: Node | null) => htmlBindingInsertBefore(marker, nodes, before);
+    let lastDataHash: string | null = null;
+    const stop = effect(() => {
+      batch(() => {
+        const data = b.signal.value;
+
+        const dataHash = JSON.stringify({
+          html: data.html,
+          keys: data.keys,
+        });
+
+        if (dataHash === lastDataHash && !b.keyed) {
+          return;
         }
-      }
 
-      this.init();
-    }
-    disconnectedCallback(): void {
-      if (this._attrObserver) {
-        this._attrObserver.disconnect();
-        this._attrObserver = null;
-      }
+        lastDataHash = dataHash;
 
-      for (const fn of this.runtime.cleanups) fn();
-      for (const fn of this.runtime.onUnmount) fn();
-      this.runtime.cleanups = [];
-      this.runtime.onUnmount = [];
-    }
-    formAssociatedCallback(form: HTMLFormElement | null): void {
-      this[formCallbacksKey]?.formAssociated?.(form);
-    }
-    formDisabledCallback(disabled: boolean): void {
-      this[formCallbacksKey]?.formDisabled?.(disabled);
-    }
-    formResetCallback(): void {
-      this[formCallbacksKey]?.formReset?.();
-    }
-    formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
-      this[formCallbacksKey]?.formStateRestore?.(state, mode);
-    }
-    private applyBindings(bindings: Binding[]) {
-      if (!bindings.length) return;
+        runCurrentCleanups();
 
-      const root = this.shadow;
-      const registerCleanup: RegisterCleanup = (fn) => this.runtime.cleanups.push(fn);
+        const { bindings, html, keys } = data;
+        const keyedState = b.keyed
+          ? (globalKeyedStates.get(b.marker) ??
+            (() => {
+              const newMap = new Map();
 
-      for (const b of bindings) {
-        if (b.type === 'text') {
-          const found = findCommentMarker(root, b.marker);
+              globalKeyedStates.set(b.marker, newMap);
 
-          if (!found) continue;
-
-          const textNode = document.createTextNode('');
-
-          found.replaceWith(textNode);
-
-          const stop = effect(() => {
-            textNode.textContent = String(b.signal.value);
-          });
-
-          registerCleanup(stop);
-        } else if (b.type === 'html') {
-          if (!this.appliedHtmlBindings.has(b.marker)) {
-            this.appliedHtmlBindings.add(b.marker);
-            this.applyHtmlBinding(root, b);
-          }
-        } else if (b.type === 'portal') {
-          this.applyPortalBinding(b);
-        } else if (b.type === 'attr') {
-          const el = root.querySelector<HTMLElement>(`[${b.marker}]`);
-
-          if (!el) continue;
-
-          applyAttrBinding(el, b, registerCleanup);
-        } else if (b.type === 'prop') {
-          const el = root.querySelector<HTMLElement>(`[${b.marker}]`);
-
-          if (!el) continue;
-
-          applyPropBinding(el, b, registerCleanup);
-        } else if (b.type === 'event') {
-          const el = root.querySelector<HTMLElement>(`[${b.marker}]`);
-
-          if (!el) continue;
-
-          applyEventBinding(el, b, registerCleanup, true);
-        } else if (b.type === 'ref') {
-          const el = root.querySelector<HTMLElement>(`[${b.marker}]`);
-
-          if (!el) continue;
-
-          el.removeAttribute(b.marker);
-          b.ref.value = el;
-          registerCleanup(() => {
-            b.ref.value = null;
-          });
-        }
-      }
-    }
-    private applyHtmlBinding(root: Node, b: HtmlBinding, registerCleanup?: RegisterCleanup) {
-      const found = findCommentMarker(root, b.marker);
-
-      if (!found) return;
-
-      const marker = document.createComment('html-binding');
-
-      found.replaceWith(marker);
-
-      let currentCleanups: CleanupFn[] = [];
-      const registerInnerCleanup: RegisterCleanup = (fn) => currentCleanups.push(fn);
-      const runCurrentCleanups = () => {
-        currentCleanups.forEach((cleanup) => cleanup());
-        currentCleanups = [];
-      };
-      const clearNodesAfterMarker = () => {
-        let node = marker.nextSibling;
-
-        while (node) {
-          const next = node.nextSibling;
-
-          node.parentNode?.removeChild(node);
-          node = next;
-        }
-      };
-      const createNodesFromHTML = (htmlString: string): Node[] => {
-        const container = document.createElement('div');
-
-        container.innerHTML = htmlString;
-
-        return Array.from(container.childNodes);
-      };
-      const removeKeyedNode = (keyedNode: KeyedNode) => {
-        keyedNode.cleanups.forEach((cleanup) => cleanup());
-        keyedNode.nodes.forEach((node) => node.parentNode?.removeChild(node));
-      };
-      let lastDataHash: string | null = null;
-      const stop = effect(() => {
-        batch(() => {
-          const data = b.signal.value;
-
-          // Deduplicate: skip if data hasn't changed
-          // Include items data which contains bindings with their values
-          const dataHash = JSON.stringify({
-            html: data.html,
-            keys: data.keys,
-            items: data.items?.map(item => ({
-              html: item.html,
-              bindings: item.bindings.map(b => ({
-                type: b.type,
-                name: (b as PropBinding).name,
-                value: (b as PropBinding).value,
-              }))
-            }))
-          });
-          if (dataHash === lastDataHash) {
-            return;
-          }
-          lastDataHash = dataHash;
-
-          runCurrentCleanups();
-
-          const { bindings, html, keys } = data;
-        const keyedState = b.keyed ? (globalKeyedStates.get(b.marker) ?? new Map()) : null;
-
-        if (b.keyed && !globalKeyedStates.has(b.marker)) {
-          globalKeyedStates.set(b.marker, keyedState!);
-        }
+              return newMap;
+            })())
+          : null;
+        const container = (marker.parentElement || root) as ParentNode;
 
         let bindingsAlreadyApplied = false;
 
         untrack(() => {
+          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Reconciliation logic requires multiple conditional paths
           batch(() => {
             if (keyedState && keys?.length && data.items?.length === keys.length) {
               bindingsAlreadyApplied = true;
-
               if (keyedState.size === 0) clearNodesAfterMarker();
 
               const newKeyedState = new Map<string | number, KeyedNode>();
 
+              // Reconcile each keyed item
               for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
                 const itemData = data.items[i];
                 const existing = keyedState.get(key);
 
-                const insertPoint = (() => {
-                  if (i === 0) return marker.nextSibling;
+                // Calculate insert position (after previous item or after marker)
+                const prevNodes = i > 0 ? newKeyedState.get(keys[i - 1])?.nodes : null;
+                const insertPoint = prevNodes?.length
+                  ? prevNodes[prevNodes.length - 1].nextSibling
+                  : marker.nextSibling;
 
-                  const prevKey = keys[i - 1];
-                  const prevNodes = newKeyedState.get(prevKey)?.nodes;
-
-                  return prevNodes?.length ? prevNodes[prevNodes.length - 1].nextSibling : marker.nextSibling;
-                })();
-                const applyItemBindings = (nodes: Node[], itemBindings: Binding[]): CleanupFn[] => {
-                  const itemCleanups: CleanupFn[] = [];
-                  const itemRegisterCleanup: RegisterCleanup = (fn) => itemCleanups.push(fn);
-                  const container = marker.parentElement || root;
-                  const queryWithinNodes = (markerAttr: string): HTMLElement | null => {
-                    for (const node of nodes) {
-                      if (node instanceof HTMLElement && node.hasAttribute(markerAttr)) return node;
-
-                      if (node instanceof Element) {
-                        const found = node.querySelector<HTMLElement>(`[${markerAttr}]`);
-
-                        if (found) return found;
-                      }
-                    }
-
-                    return null;
-                  };
-
-                  for (const binding of itemBindings) {
-                    const el = queryWithinNodes(binding.marker);
-
-                    if (!el && binding.type !== 'ref') continue;
-
-                    if (binding.type === 'prop' && el) {
-                      applyPropBinding(el, binding, itemRegisterCleanup, true);
-                    } else if (binding.type === 'event' && el) {
-                      applyEventBinding(el, binding, itemRegisterCleanup, false, true);
-                    } else if (binding.type === 'attr' && el) {
-                      applyAttrBinding(el, binding, itemRegisterCleanup, true);
-                    } else if (binding.type === 'ref') {
-                      const refEl = el ?? (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
-
-                      if (refEl) {
-                        binding.ref.value = refEl as never;
-                      }
-                    }
-                  }
-
-                  return itemCleanups;
-                };
-
-                if (existing && existing.html === itemData.html) {
-                  if (marker.parentNode && existing.nodes[0]) {
-                    existing.nodes.forEach((node: Node) => marker.parentNode!.insertBefore(node, insertPoint));
-                  }
-
-                  existing.cleanups.forEach((cleanup: CleanupFn) => cleanup());
-                  const itemCleanups = applyItemBindings(existing.nodes, itemData.bindings);
-
+                if (existing?.html === itemData.html) {
+                  // UPDATE: Same HTML - reuse nodes, reapply bindings
+                  if (existing.nodes[0]) insertNodesBefore(existing.nodes, insertPoint);
+                  runAll(existing.cleanups);
+                  const itemCleanups = applyKeyedItemBindings(existing.nodes, itemData.bindings, container);
                   newKeyedState.set(key, {
                     ...existing,
                     bindings: itemData.bindings,
                     cleanups: itemCleanups,
                   });
-                  continue;
-                }
-
-                if (existing) {
-                  existing.cleanups.forEach((cleanup: CleanupFn) => cleanup());
-
+                } else if (existing) {
+                  // REPLACE: Different HTML - create new nodes, remove old
+                  runAll(existing.cleanups);
                   const newNodes = createNodesFromHTML(itemData.html);
-
-                  if (marker.parentNode) {
-                    newNodes.forEach((node) => marker.parentNode!.insertBefore(node, insertPoint));
-                  }
-
-                  const itemCleanups = applyItemBindings(newNodes, itemData.bindings);
-
+                  insertNodesBefore(newNodes, insertPoint);
+                  const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
                   newKeyedState.set(key, {
                     bindings: itemData.bindings,
                     cleanups: itemCleanups,
@@ -1826,156 +2373,83 @@ export const define = (name: string, setup: () => SetupResult, options?: DefineO
                     key,
                     nodes: newNodes,
                   });
-
-                  // Remove old nodes AFTER inserting new ones
-                  existing.nodes.forEach((node: Node) => node.parentNode?.removeChild(node));
-                  continue;
+                  existing.nodes.forEach((n: Node) => {
+                    n.parentNode?.removeChild(n);
+                  });
+                } else {
+                  // CREATE: New item
+                  const newNodes = createNodesFromHTML(itemData.html);
+                  insertNodesBefore(newNodes, insertPoint);
+                  const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
+                  newKeyedState.set(key, {
+                    bindings: itemData.bindings,
+                    cleanups: itemCleanups,
+                    html: itemData.html,
+                    key,
+                    nodes: newNodes,
+                  });
                 }
-
-                // CREATE case - new item
-                const newNodes = createNodesFromHTML(itemData.html);
-
-                if (marker.parentNode) {
-                  newNodes.forEach((node) => marker.parentNode!.insertBefore(node, insertPoint));
-                }
-
-                const itemCleanups = applyItemBindings(newNodes, itemData.bindings);
-
-                newKeyedState.set(key, {
-                  bindings: itemData.bindings,
-                  cleanups: itemCleanups,
-                  html: itemData.html,
-                  key,
-                  nodes: newNodes,
-                });
               }
-              const removedKeys = [];
+
+              // DELETE: Remove old items not in new state
               for (const [oldKey, oldNode] of keyedState) {
                 if (!newKeyedState.has(oldKey)) {
-                  removedKeys.push(oldKey);
                   removeKeyedNode(oldNode);
                 }
               }
 
-              if (b.keyed) globalKeyedStates.set(b.marker, newKeyedState);
+              globalKeyedStates.set(b.marker, newKeyedState);
             } else {
+              // Non-keyed or empty list
               clearNodesAfterMarker();
               marker.after(parseHTML(html));
-
               if (b.keyed) globalKeyedStates.set(b.marker, new Map());
             }
           });
 
-          const container = marker.parentElement || root;
-
           if (!bindingsAlreadyApplied) {
-            for (const binding of bindings) {
-              if (binding.type === 'text') {
-                const textFound = findCommentMarker(container, binding.marker);
-
-                if (!textFound) continue;
-
-                const textNode = document.createTextNode('');
-
-                textFound.replaceWith(textNode);
-
-                const textStop = effect(() => {
-                  textNode.textContent = String(binding.signal.value);
-                });
-
-                registerInnerCleanup(textStop);
-              } else if (binding.type === 'html') {
-                this.applyHtmlBinding(container, binding, registerInnerCleanup);
-              } else if (binding.type === 'prop') {
-                const el = (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
-
-                if (!el) continue;
-
-                applyPropBinding(el, binding, registerInnerCleanup);
-              } else if (binding.type === 'event') {
-                const el = (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
-
-                if (!el) continue;
-
-                applyEventBinding(el, binding, registerInnerCleanup, false);
-              } else if (binding.type === 'attr') {
-                const el = (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
-
-                if (!el) continue;
-
-                applyAttrBinding(el, binding, registerInnerCleanup);
-              } else if (binding.type === 'ref') {
-                const el = (container as ParentNode).querySelector<Element>(`[${binding.marker}]`);
-
-                if (!el) continue;
-
-                el.removeAttribute(binding.marker);
-                binding.ref.value = el as never;
-              }
-            }
+            // Single-pass: non-HTML and HTML bindings handled together.
+            applyBindingsInContainer(container, bindings, registerInnerCleanup, {
+              eventModifiers: false,
+              onHtml: (binding) => this.applyHtmlBinding(container, binding, registerInnerCleanup),
+            });
           }
         });
-        }); // end batch
-      }); // end effect
+      }); // end batch
+    }); // end effect
 
-      if (registerCleanup) {
-        registerCleanup(stop);
-        registerCleanup(runCurrentCleanups);
-      } else {
-        this.runtime.cleanups.push(stop);
-        this.runtime.cleanups.push(runCurrentCleanups);
-      }
-    }
-    private applyPortalBinding(b: PortalBinding) {
-      const targetEl = typeof b.target === 'string' ? document.querySelector(b.target) : (b.target as HTMLElement);
-
-      if (!targetEl) return;
-
-      const stop = effect(() => {
-        const content = b.signal.value;
-        const existing = targetEl.querySelector('[data-portal]');
-
-        if (existing) existing.remove();
-
-        if (!content || content.trim() === '') return;
-
-        const container = document.createElement('div');
-
-        container.setAttribute('data-portal', 'true');
-        container.innerHTML = content;
-        targetEl.appendChild(container);
-      });
-
+    if (registerCleanup) {
+      registerCleanup(stop);
+      registerCleanup(runCurrentCleanups);
+      if (b.keyed) registerCleanup(() => globalKeyedStates.delete(b.marker));
+    } else {
       this.runtime.cleanups.push(stop);
-      this.runtime.cleanups.push(() => {
-        const existing = targetEl.querySelector('[data-portal]');
-
-        if (existing) existing.remove();
-      });
+      this.runtime.cleanups.push(runCurrentCleanups);
+      if (b.keyed) this.runtime.cleanups.push(() => globalKeyedStates.delete(b.marker));
     }
-    private handleAttributeChange(name: string, oldValue: string | null, newValue: string | null) {
-      if (oldValue === newValue) return;
+  }
+  private handleAttributeChange(name: string, oldValue: string | null, newValue: string | null) {
+    if (oldValue === newValue) return;
 
-      const props = this[propsKey];
+    const props = this[propsKey];
 
-      if (!props) return;
+    if (!props) return;
 
-      const meta = props.get(name);
+    const meta = props.get(name);
 
-      if (!meta) return;
+    if (!meta) return;
 
-      const parser = meta.parse ?? ((v: string | null) => v as unknown);
-      const parsedValue = parser(newValue);
+    const parser = meta.parse ?? ((v: string | null) => v as unknown);
+    const parsedValue = parser(newValue);
 
-      if (!Object.is(meta.signal.peek(), parsedValue)) {
-        meta.signal.value = parsedValue as never;
-      }
+    if (!Object.is(meta.signal.peek(), parsedValue)) {
+      meta.signal.value = parsedValue as never;
     }
-    private async init() {
+  }
+  private async init() {
+    try {
       if (this._styles?.length) {
-        const sheets = await Promise.all(this._styles.map(loadStylesheet));
-
-        this.shadow.adoptedStyleSheets = sheets;
+        this.shadow.adoptedStyleSheets = await Promise.all(this._styles.map(loadStylesheet));
       }
 
       if (this._template) this.render(this._template);
@@ -1993,102 +2467,79 @@ export const define = (name: string, setup: () => SetupResult, options?: DefineO
       }
 
       this.runtime.onMount = [];
+      this._mounted = true;
+      for (const fn of this.runtime.onUpdated) fn();
+    } catch (error) {
+      if (this.runtime.errorHandler && error instanceof Error) {
+        this.runtime.errorHandler(error, {
+          componentStack: `  at <${this.localName}>\n${error.stack ?? ''}`,
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+  private render(tpl: string | HTMLResult) {
+    const htmlResult: HTMLResult = typeof tpl === 'string' ? makeHtmlResult(tpl) : tpl;
+
+    this.shadow.innerHTML = '';
+
+    const frag = parseHTML(htmlResult.__html);
+
+    this.shadow.appendChild(frag);
+    this.applyBindings(htmlResult.__bindings);
+    if (this._mounted) {
       for (const fn of this.runtime.onUpdated) fn();
     }
-    private render(tpl: string | HTMLResult) {
-      const htmlResult: HTMLResult =
-        typeof tpl === 'string'
-          ? {
-              __bindings: [],
-              __html: tpl,
-              toString() {
-                return this.__html;
-              },
-            }
-          : tpl;
+  }
+}
 
-      this.shadow.innerHTML = '';
+export const define = (name: string, setup: (ctx: SetupContext) => SetupResult, options?: DefineOptions): string => {
+  if (customElements.get(name)) {
+    console.warn(`[craftit] Element "${name}" already defined`);
 
-      const frag = parseHTML(htmlResult.__html);
+    return name;
+  }
 
-      this.shadow.appendChild(frag);
-      this.applyBindings(htmlResult.__bindings);
-      for (const fn of this.runtime.onUpdated) fn();
-    }
+  // Each call creates a thin subclass that carries the setup function and options as statics.
+  // All instances share the CraftitBaseElement prototype, so methods are not duplicated per-tag.
+  class CraftitElement extends CraftitBaseElement {
+    static override _setup = setup;
+    static override _options = options;
+    static override formAssociated = !!options?.formAssociated;
   }
 
   customElements.define(name, CraftitElement);
+  return name;
 };
 
-/*  Error Boundary / Lazy =================== */
+// ─── withRuntime ──────────────────────────────────────────────────────────────
 
-type ErrorBoundaryOptions = {
-  fallback: (error: Error) => string | HTMLResult;
-  onError?: (error: Error) => void;
-};
-export const errorBoundary = (
-  component: () => string | HTMLResult,
-  options: ErrorBoundaryOptions,
-): string | HTMLResult => {
+/**
+ * Run a function within an isolated component runtime context.
+ *
+ * Lets you call any composable API (`prop`, `ref`, `onMount`, `inject`, `field`,
+ * etc.) outside of a real mounted component — useful for unit-testing composables
+ * in isolation without defining + mounting a full element.
+ *
+ * @example
+ * const count = withRuntime(() => prop('count', 0));
+ * expect(count.value).toBe(0);
+ *
+ * @example
+ * const { slots } = withRuntime(() => {
+ *   const slots = defineSlots();
+ *   return { slots };
+ * });
+ * expect(slots.has('header')).toBe(false);
+ */
+export function withRuntime<T>(fn: () => T): T {
+  const el = document.createElement('div');
+  const rt: ComponentRuntime = { cleanups: [], el, onMount: [], onUnmount: [], onUpdated: [] };
+  runtimeStack.push(rt);
   try {
-    return component();
-  } catch (err: unknown) {
-    const error = err instanceof Error ? err : new Error(String(err));
-
-    options.onError?.(error);
-
-    return options.fallback(error);
+    return fn();
+  } finally {
+    runtimeStack.pop();
   }
-};
-
-let globalErrorHandler: ((error: Error) => void) | null = null;
-
-export const setGlobalErrorHandler = (handler: (error: Error) => void): void => {
-  globalErrorHandler = handler;
-};
-export const createErrorBoundary = (
-  component: () => string | HTMLResult,
-  options: ErrorBoundaryOptions,
-): (() => string | HTMLResult) => {
-  return () => {
-    try {
-      return component();
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-
-      options.onError?.(error);
-      globalErrorHandler?.(error);
-
-      return options.fallback(error);
-    }
-  };
-};
-
-type LazyOptions = {
-  fallback?: () => string | HTMLResult;
-};
-
-export const lazy = <T extends { default: () => string | HTMLResult }>(
-  factory: () => Promise<T>,
-  options?: LazyOptions,
-): (() => string | HTMLResult) => {
-  let loaded: (() => string | HTMLResult) | null = null;
-  let loading = false;
-
-  return () => {
-    if (loaded) return loaded();
-
-    if (!loading) {
-      loading = true;
-      factory()
-        .then((mod) => {
-          loaded = mod.default;
-        })
-        .catch((err) => {
-          console.error('[craftit] lazy component load failed', err);
-        });
-    }
-
-    return options?.fallback ? options.fallback() : '';
-  };
-};
+}

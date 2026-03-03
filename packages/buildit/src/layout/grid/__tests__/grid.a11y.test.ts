@@ -1,5 +1,5 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for bit-grid component using axe-core
@@ -12,7 +12,7 @@ describe('bit-grid accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations for default grid', async () => {
-      const fixture = await createFixture('bit-grid');
+      const fixture = await mount('bit-grid');
       fixture.element.innerHTML = `
         <div>Item 1</div>
         <div>Item 2</div>
@@ -28,7 +28,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations for multi-column grid', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '3', gap: 'md' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '3', gap: 'md' } });
       fixture.element.innerHTML = `
         <div>Item 1</div>
         <div>Item 2</div>
@@ -47,7 +47,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations for responsive grid', async () => {
-      const fixture = await createFixture('bit-grid', { gap: 'lg', responsive: true });
+      const fixture = await mount('bit-grid', { attrs: { gap: 'lg', responsive: true } });
       fixture.element.innerHTML = `
         <div>Item 1</div>
         <div>Item 2</div>
@@ -63,7 +63,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations with interactive content', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '2', gap: 'md' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '2', gap: 'md' } });
       fixture.element.innerHTML = `
         <button>Button 1</button>
         <button>Button 2</button>
@@ -80,11 +80,13 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations with various alignment options', async () => {
-      const fixture = await createFixture('bit-grid', {
-        align: 'center',
-        cols: '3',
-        gap: 'md',
-        justify: 'between',
+      const fixture = await mount('bit-grid', {
+        attrs: {
+          align: 'center',
+          cols: '3',
+          gap: 'md',
+          justify: 'between',
+        },
       });
       fixture.element.innerHTML = `
         <div>Item 1</div>
@@ -101,7 +103,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should have no violations with dense packing', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '3', dense: true, gap: 'sm' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '3', dense: true, gap: 'sm' } });
       fixture.element.innerHTML = `
         <div>Item 1</div>
         <div>Item 2</div>
@@ -120,7 +122,7 @@ describe('bit-grid accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('should maintain proper document structure', async () => {
-      const fixture = await createFixture('bit-grid');
+      const fixture = await mount('bit-grid');
       fixture.element.innerHTML = `
         <article>
           <h2>Title 1</h2>
@@ -141,7 +143,7 @@ describe('bit-grid accessibility', () => {
     });
 
     it('should work with landmark regions', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '2' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '2' } });
       fixture.element.innerHTML = `
         <nav aria-label="Primary navigation">
           <a href="#">Nav Link</a>
@@ -162,7 +164,7 @@ describe('bit-grid accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('should preserve tab order for focusable elements', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '3' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '3' } });
       fixture.element.innerHTML = `
         <button>Button 1</button>
         <button>Button 2</button>
@@ -186,7 +188,7 @@ describe('bit-grid accessibility', () => {
 
   describe('Screen Reader Support', () => {
     it('should have proper text alternatives for content', async () => {
-      const fixture = await createFixture('bit-grid', { cols: '2' });
+      const fixture = await mount('bit-grid', { attrs: { cols: '2' } });
       fixture.element.innerHTML = `
         <img src="placeholder.jpg" alt="Description 1" />
         <img src="placeholder.jpg" alt="Description 2" />

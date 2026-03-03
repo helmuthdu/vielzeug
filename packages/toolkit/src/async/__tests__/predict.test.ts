@@ -14,7 +14,7 @@ describe('predict', () => {
       (_signal: AbortSignal) => new Promise((resolve) => setTimeout(() => resolve('success'), 1000)),
     );
 
-    await expect(predict(mockFn, { timeout: 500 })).rejects.toThrow('Operation aborted');
+    await expect(predict(mockFn, { timeout: 500 })).rejects.toMatchObject({ name: 'TimeoutError' });
     expect(mockFn).toHaveBeenCalled();
   });
 
@@ -26,7 +26,9 @@ describe('predict', () => {
 
     setTimeout(() => controller.abort(), 100);
 
-    await expect(predict(mockFn, { signal: controller.signal, timeout: 500 })).rejects.toThrow('Operation aborted');
+    await expect(predict(mockFn, { signal: controller.signal, timeout: 500 })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     expect(mockFn).toHaveBeenCalled();
   });
 });

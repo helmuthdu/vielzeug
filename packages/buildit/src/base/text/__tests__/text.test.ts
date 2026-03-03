@@ -1,8 +1,8 @@
+import { type Fixture, mount } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-text', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../text');
@@ -14,7 +14,7 @@ describe('bit-text', () => {
 
   describe('Rendering', () => {
     it('should render with shadow DOM structure', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
       fixture.element.textContent = 'Hello World';
 
       const slot = fixture.query('slot');
@@ -23,7 +23,7 @@ describe('bit-text', () => {
     });
 
     it('should default to inline display', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
       const computed = window.getComputedStyle(fixture.element);
       expect(computed.display).toBe('inline');
@@ -34,23 +34,23 @@ describe('bit-text', () => {
     const variants = ['body', 'heading', 'label', 'caption', 'overline', 'code'] as const;
 
     it('should default to body variant', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
       expect(fixture.element.hasAttribute('variant')).toBe(false);
     });
 
     variants.forEach((variant) => {
       it(`should apply ${variant} variant`, async () => {
-        fixture = await createFixture('bit-text', { variant });
+        fixture = await mount('bit-text', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
       });
     });
 
     it('should update variant dynamically', async () => {
-      fixture = await createFixture('bit-text', { variant: 'body' });
+      fixture = await mount('bit-text', { attrs: { variant: 'body' } });
 
-      await fixture.setAttribute('variant', 'heading');
+      await fixture.attr('variant', 'heading');
       expect(fixture.element.getAttribute('variant')).toBe('heading');
     });
   });
@@ -60,16 +60,16 @@ describe('bit-text', () => {
 
     sizes.forEach((size) => {
       it(`should apply ${size} size`, async () => {
-        fixture = await createFixture('bit-text', { size });
+        fixture = await mount('bit-text', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
     });
 
     it('should update size dynamically', async () => {
-      fixture = await createFixture('bit-text', { size: 'sm' });
+      fixture = await mount('bit-text', { attrs: { size: 'sm' } });
 
-      await fixture.setAttribute('size', 'xl');
+      await fixture.attr('size', 'xl');
       expect(fixture.element.getAttribute('size')).toBe('xl');
     });
   });
@@ -79,16 +79,16 @@ describe('bit-text', () => {
 
     weights.forEach((weight) => {
       it(`should apply ${weight} weight`, async () => {
-        fixture = await createFixture('bit-text', { weight });
+        fixture = await mount('bit-text', { attrs: { weight } });
 
         expect(fixture.element.getAttribute('weight')).toBe(weight);
       });
     });
 
     it('should update weight dynamically', async () => {
-      fixture = await createFixture('bit-text', { weight: 'normal' });
+      fixture = await mount('bit-text', { attrs: { weight: 'normal' } });
 
-      await fixture.setAttribute('weight', 'bold');
+      await fixture.attr('weight', 'bold');
       expect(fixture.element.getAttribute('weight')).toBe('bold');
     });
   });
@@ -108,16 +108,16 @@ describe('bit-text', () => {
 
     colors.forEach((color) => {
       it(`should apply ${color} color`, async () => {
-        fixture = await createFixture('bit-text', { color });
+        fixture = await mount('bit-text', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
 
     it('should update color dynamically', async () => {
-      fixture = await createFixture('bit-text', { color: 'body' });
+      fixture = await mount('bit-text', { attrs: { color: 'body' } });
 
-      await fixture.setAttribute('color', 'primary');
+      await fixture.attr('color', 'primary');
       expect(fixture.element.getAttribute('color')).toBe('primary');
     });
   });
@@ -127,44 +127,44 @@ describe('bit-text', () => {
 
     alignments.forEach((align) => {
       it(`should apply ${align} alignment`, async () => {
-        fixture = await createFixture('bit-text', { align });
+        fixture = await mount('bit-text', { attrs: { align } });
 
         expect(fixture.element.getAttribute('align')).toBe(align);
       });
     });
 
     it('should update alignment dynamically', async () => {
-      fixture = await createFixture('bit-text', { align: 'left' });
+      fixture = await mount('bit-text', { attrs: { align: 'left' } });
 
-      await fixture.setAttribute('align', 'center');
+      await fixture.attr('align', 'center');
       expect(fixture.element.getAttribute('align')).toBe('center');
     });
   });
 
   describe('Truncate', () => {
     it('should not truncate by default', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
       expect(fixture.element.hasAttribute('truncate')).toBe(false);
     });
 
     it('should apply truncate attribute', async () => {
-      fixture = await createFixture('bit-text', { truncate: true });
+      fixture = await mount('bit-text', { attrs: { truncate: true } });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
     });
 
     it('should apply truncate styles', async () => {
-      fixture = await createFixture('bit-text', { truncate: true });
+      fixture = await mount('bit-text', { attrs: { truncate: true } });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
     });
 
     it('should toggle truncate mode', async () => {
-      fixture = await createFixture('bit-text', { truncate: true });
+      fixture = await mount('bit-text', { attrs: { truncate: true } });
 
       fixture.element.removeAttribute('truncate');
-      await fixture.update();
+      await fixture.flush();
 
       expect(fixture.element.hasAttribute('truncate')).toBe(false);
     });
@@ -172,22 +172,22 @@ describe('bit-text', () => {
 
   describe('Italic', () => {
     it('should not be italic by default', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
       expect(fixture.element.hasAttribute('italic')).toBe(false);
     });
 
     it('should apply italic attribute', async () => {
-      fixture = await createFixture('bit-text', { italic: true });
+      fixture = await mount('bit-text', { attrs: { italic: true } });
 
       expect(fixture.element.hasAttribute('italic')).toBe(true);
     });
 
     it('should toggle italic mode', async () => {
-      fixture = await createFixture('bit-text', { italic: true });
+      fixture = await mount('bit-text', { attrs: { italic: true } });
 
       fixture.element.removeAttribute('italic');
-      await fixture.update();
+      await fixture.flush();
 
       expect(fixture.element.hasAttribute('italic')).toBe(false);
     });
@@ -199,7 +199,7 @@ describe('bit-text', () => {
 
     blockTags.forEach((tag) => {
       it(`should apply "${tag}" tag attribute`, async () => {
-        fixture = await createFixture('bit-text', { as: tag });
+        fixture = await mount('bit-text', { attrs: { as: tag } });
 
         expect(fixture.element.getAttribute('as')).toBe(tag);
       });
@@ -207,28 +207,30 @@ describe('bit-text', () => {
 
     inlineTags.forEach((tag) => {
       it(`should support "${tag}" tag`, async () => {
-        fixture = await createFixture('bit-text', { as: tag });
+        fixture = await mount('bit-text', { attrs: { as: tag } });
 
         expect(fixture.element.getAttribute('as')).toBe(tag);
       });
     });
 
     it('should update as attribute dynamically', async () => {
-      fixture = await createFixture('bit-text', { as: 'span' });
+      fixture = await mount('bit-text', { attrs: { as: 'span' } });
 
-      await fixture.setAttribute('as', 'p');
+      await fixture.attr('as', 'p');
       expect(fixture.element.getAttribute('as')).toBe('p');
     });
   });
 
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
-      fixture = await createFixture('bit-text', {
-        align: 'center',
-        color: 'primary',
-        size: '2xl',
-        variant: 'heading',
-        weight: 'bold',
+      fixture = await mount('bit-text', {
+        attrs: {
+          align: 'center',
+          color: 'primary',
+          size: '2xl',
+          variant: 'heading',
+          weight: 'bold',
+        },
       });
 
       expect(fixture.element.getAttribute('variant')).toBe('heading');
@@ -239,9 +241,11 @@ describe('bit-text', () => {
     });
 
     it('should handle truncate with alignment', async () => {
-      fixture = await createFixture('bit-text', {
-        align: 'center',
-        truncate: true,
+      fixture = await mount('bit-text', {
+        attrs: {
+          align: 'center',
+          truncate: true,
+        },
       });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
@@ -249,10 +253,12 @@ describe('bit-text', () => {
     });
 
     it('should handle italic with weight and size', async () => {
-      fixture = await createFixture('bit-text', {
-        italic: true,
-        size: 'lg',
-        weight: 'bold',
+      fixture = await mount('bit-text', {
+        attrs: {
+          italic: true,
+          size: 'lg',
+          weight: 'bold',
+        },
       });
 
       expect(fixture.element.hasAttribute('italic')).toBe(true);
@@ -263,14 +269,14 @@ describe('bit-text', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty content', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
       expect(fixture.element).toBeTruthy();
       expect(fixture.element.textContent).toBe('');
     });
 
     it('should handle HTML content in slot', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
       fixture.element.innerHTML = '<strong>Bold</strong> and <em>italic</em>';
 
       const strong = fixture.element.querySelector('strong');
@@ -281,7 +287,7 @@ describe('bit-text', () => {
     });
 
     it('should handle long text content', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
       const longText = 'Lorem ipsum '.repeat(100);
       fixture.element.textContent = longText;
 
@@ -289,7 +295,7 @@ describe('bit-text', () => {
     });
 
     it('should handle special characters', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
       fixture.element.textContent = '< > & " \' ™ © ® €';
 
       expect(fixture.element.textContent).toContain('™');
@@ -297,9 +303,9 @@ describe('bit-text', () => {
     });
 
     it('should update multiple attributes at once', async () => {
-      fixture = await createFixture('bit-text');
+      fixture = await mount('bit-text');
 
-      await fixture.setAttributes({
+      await fixture.attrs({
         color: 'primary',
         size: 'xl',
         variant: 'heading',
@@ -315,7 +321,7 @@ describe('bit-text', () => {
 
   describe('Hidden Attribute', () => {
     it('should support hidden attribute', async () => {
-      fixture = await createFixture('bit-text', { hidden: true });
+      fixture = await mount('bit-text', { attrs: { hidden: true } });
 
       expect(fixture.element.hasAttribute('hidden')).toBe(true);
     });

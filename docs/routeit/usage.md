@@ -1,32 +1,47 @@
+---
+title: Routeit — Usage Guide
+description: Route definition, middleware, navigation, and testing for Routeit.
+---
+
 # Routeit Usage Guide
 
-Complete guide to installing and using Routeit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Routeit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Routeit?
 
-::: code-group
+Client-side routing doesn't need to be complex. Routeit handles hash/history modes, dynamic params, and middleware in ~2 kB with no framework lock-in.
 
-```sh [pnpm]
-pnpm add @vielzeug/routeit
+```ts
+// Before — manual hash routing
+window.addEventListener('hashchange', () => {
+  const path = location.hash.slice(1);
+  if (path === '/') renderHome();
+  else if (path.startsWith('/users/')) renderUser(path.split('/')[2]);
+});
+
+// After — Routeit
+const router = createRouter();
+router.routes([
+  { path: '/',          handler: () => renderHome() },
+  { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
+]);
+router.start();
 ```
 
-```sh [npm]
-npm install @vielzeug/routeit
-```
+| Feature | Routeit | page.js | navigo |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="routeit" type="size" /> | ~4 kB | ~6 kB |
+| Middleware | ✅ | ✅ | ✅ |
+| View Transitions | ✅ Built-in | ❌ | ❌ |
+| TypeScript | ✅ | ⚠️ | ✅ |
+| Zero dependencies | ✅ | ✅ | ✅ |
 
-```sh [yarn]
-yarn add @vielzeug/routeit
-```
+**Use Routeit when** you need a simple client-side router with TypeScript support and View Transitions API.
 
-:::
 
 ## Import
 
@@ -155,8 +170,9 @@ const requireAuth: Middleware = async (ctx, next) => {
   await next(); // Continue to handler
 };
 
-// Apply to specific route
-router.get('/dashboard', {
+// Apply to specific route using router.route()
+router.route({
+  path: '/dashboard',
   middleware: requireAuth,
   handler: () => {
     // Only accessible when authenticated
@@ -169,11 +185,11 @@ router.get('/dashboard', {
 Access rich routing information in handlers:
 
 ```ts
-router.get('/users/:id', ({ params, query, pathname, search }) => {
+router.get('/users/:id', ({ params, query, pathname, hash }) => {
   console.log('User ID:', params.id);
   console.log('Query params:', query);
   console.log('Full path:', pathname);
-  console.log('Query string:', search);
+  console.log('Hash:', hash);
 });
 ```
 
@@ -217,20 +233,6 @@ router.navigate('/profile', {
 router.get('/old-page', ({ navigate }) => {
   navigate('/new-page');
 });
-```
-
-### History Navigation
-
-```ts
-// Go back one page
-router.back();
-
-// Go forward one page
-router.forward();
-
-// Go to specific position
-router.go(-2); // Back 2 pages
-router.go(1); // Forward 1 page
 ```
 
 ### Building URLs
@@ -405,18 +407,20 @@ router.route({
 Integrate with @vielzeug/permit for role-based access control:
 
 ```ts
-import { Permit } from '@vielzeug/permit';
+import { createPermit } from '@vielzeug/permit';
 import type { BaseUser, PermissionAction } from '@vielzeug/permit';
 
+const permit = createPermit();
+
 // Define permissions
-Permit.register('admin', 'posts', {
+permit.set('admin', 'posts', {
   read: true,
   create: true,
   update: true,
   delete: true,
 });
 
-Permit.register('user', 'posts', {
+permit.set('user', 'posts', {
   read: true,
   create: true,
   update: (user, data) => user.id === data.authorId,
@@ -428,7 +432,7 @@ function requirePermission(resource: string, action: PermissionAction): Middlewa
   return async (ctx, next) => {
     const user = ctx.user as BaseUser;
 
-    if (!user || !Permit.check(user, resource, action)) {
+    if (!user || !permit.check(user, resource, action)) {
       ctx.navigate('/forbidden');
       return;
     }
@@ -521,9 +525,6 @@ router.get('/users/:id', (context) => {
   // Custom route data
   console.log(context.data);
 
-  // User (set by middleware)
-  console.log(context.user);
-
   // Metadata (set by middleware)
   console.log(context.meta);
 
@@ -561,8 +562,9 @@ React to route changes:
 ```ts
 // Subscribe to route changes
 const unsubscribe = router.subscribe(() => {
+  const { pathname, params, query } = router.getState();
   console.log('Route changed!');
-  console.log('Current path:', router.getCurrentPath());
+  console.log('Current path:', pathname);
 });
 
 // Later... unsubscribe
@@ -655,30 +657,12 @@ if (router.isActive('/admin/*')) {
 ### Get Current Route Info
 
 ```ts
-const pathname = router.getCurrentPath();
-const query = router.getCurrentQuery();
-const hash = router.getCurrentHash();
+const { pathname, params, query, hash } = router.getState();
 
 console.log('Current:', pathname); // '/users/123'
+console.log('Params:', params); // { id: '123' }
 console.log('Query:', query); // { tab: 'profile' }
 console.log('Hash:', hash); // 'section-1'
-```
-
-### Create Links
-
-```ts
-// Create anchor element
-const link = router.link('/about', 'About Page');
-document.body.appendChild(link);
-
-// With attributes
-const styledLink = router.link('/about', 'About', {
-  class: 'nav-link',
-  'data-section': 'main',
-});
-
-// Named route link
-const userLink = router.linkTo('userDetail', { id: '123' }, 'View User');
 ```
 
 ### Debug Info

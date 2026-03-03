@@ -1,11 +1,11 @@
 /**
- * Adds two numbers with precision handling for financial calculations.
+ * Adds two numbers.
  * Supports both regular numbers and bigint for exact precision.
  *
  * @example
  * ```ts
  * add(10, 20); // 30
- * add(0.1, 0.2); // 0.3 (precision-safe)
+ * add(0.1, 0.2); // 0.30000000000000004 (use bigint for exact precision)
  * add(100n, 200n); // 300n
  * ```
  *

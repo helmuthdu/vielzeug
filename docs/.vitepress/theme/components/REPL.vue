@@ -67,7 +67,7 @@ const LIBRARY_DESCRIPTIONS = {
   craftit: 'Lightweight, type-safe web components with reactive state.',
   deposit: 'Type-safe local storage with schemas, expiration, and query building.',
   fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
-  formit: 'Type-safe form state and validation for React and beyond.',
+  formit: 'Type-safe form state and validation with reactive fields.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
@@ -94,15 +94,20 @@ const LIBRARY_LOADERS = {
 } as const;
 
 const LIBRARY_EXPORTS = {
-  craftit: ['defineElement', 'createComponent', 'html', 'css', 'classMap', 'styleMap', 'attach', 'destroy'],
-  deposit: ['Deposit'],
+  craftit: [
+    'define', 'signal', 'computed', 'effect', 'watch', 'batch', 'untrack', 'readonly', 'isSignal', 'toValue',
+    'html', 'css', 'prop', 'defineProps', 'ref', 'refs',
+    'provide', 'inject', 'createContext', 'defineSlots', 'defineEmits',
+    'onMount', 'onUnmount', 'onUpdated', 'onCleanup', 'handle', 'aria', 'field', 'withRuntime',
+  ],
+  deposit: ['createDeposit'],
   fetchit: ['createHttpClient', 'createQueryClient'],
   formit: ['createForm'],
   i18nit: ['createI18n'],
   logit: ['Logit'],
-  permit: ['Permit'],
+  permit: ['createPermit', 'Permit', 'WILDCARD', 'ANONYMOUS'],
   routeit: ['createRouter', 'Router'],
-  snapit: ['createSnapshot', 'createTestState', 'withMock', 'shallowEqual', 'shallowMerge', 'Store'],
+  snapit: ['createSnapshot', 'createTestState', 'withStateMock', 'shallowEqual', 'shallowMerge'],
   toolkit: [],
   validit: ['v'],
   wireit: [

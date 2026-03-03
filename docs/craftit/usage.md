@@ -1,31 +1,51 @@
+---
+title: Craftit — Usage Guide
+description: Signals, templates, lifecycle, props, and patterns for Craftit.
+---
+
 # Craftit Usage Guide
 
-Complete guide to using Craftit for creating type-safe, reactive web components with signals.
-::: tip 💡 Quick Reference
-This guide covers detailed usage patterns. For complete examples, see [Examples](./examples.md). For API documentation, see [API Reference](./api.md).
+::: tip New to Craftit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Craftit?
 
-::: code-group
+Vanilla Web Components (Custom Elements API) require significant boilerplate for state management, event handling, and cleanup. Craftit adds signals-based reactivity with a minimal, functional API.
 
-```sh [pnpm]
-pnpm add @vielzeug/craftit
+```ts
+// Before — vanilla Custom Elements
+class MyCounter extends HTMLElement {
+  #count = 0;
+  connectedCallback() {
+    this.innerHTML = '<button>0</button>';
+    this.querySelector('button')?.addEventListener('click', () => {
+      this.#count++;
+      this.querySelector('button')!.textContent = String(this.#count);
+    });
+  }
+}
+customElements.define('my-counter', MyCounter);
+
+// After — Craftit
+define('my-counter', () => {
+  const count = signal(0);
+  return html`<button @click=${() => count.value++}>${count}</button>`;
+});
 ```
 
-```sh [npm]
-npm install @vielzeug/craftit
-```
+| Feature | Craftit | Lit | Stencil |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="craftit" type="size" /> | ~7 kB | ~50 kB (compiler) |
+| Signals | ✅ Built-in | ✅ @lit-labs | ❌ |
+| Decorators | ❌ | ✅ | ✅ |
+| SSR | ❌ | ✅ | ✅ |
+| Zero dependencies | ✅ | ✅ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/craftit
-```
+**Use Craftit when** you want signals-based web components without decorators or a build compiler step.
 
-:::
 
 ## Import
 
@@ -34,25 +54,41 @@ import {
   define,
   signal,
   computed,
+  writable,
   effect,
   watch,
   batch,
   untrack,
   readonly,
+  isSignal,
+  toValue,
   html,
+  raw,
+  rawHtml,
   css,
+  suspense,
+  escapeHtml,
+  createId,
+  guard,
+  handle,
   onMount,
   onUnmount,
   onUpdated,
   onCleanup,
+  onError,
   prop,
+  defineProps,
   ref,
+  refs,
   provide,
   inject,
+  createContext,
+  defineSlots,
+  defineEmits,
   field,
 } from '@vielzeug/craftit';
 // Optional: Import types
-import type { Signal, ComputedSignal, Ref, InjectionKey, HTMLResult, CSSResult, FormFieldHandle } from '@vielzeug/craftit';
+import type { Signal, ReadonlySignal, Ref, RefList, InjectionKey, HTMLResult, CSSResult, FormFieldHandle } from '@vielzeug/craftit';
 ```
 
 ## Basic Usage
@@ -148,6 +184,16 @@ user.value = { ...user.value, age: 31 };
 
 ### Signal Utilities
 
+#### subscribe() — Watch shorthand
+
+```ts
+// Shorthand for watch(signal, cb) — returns a cleanup fn
+const stop = count.subscribe((value, prev) => {
+  console.log(`changed ${prev} → ${value}`);
+});
+stop(); // unsubscribe
+```
+
 #### peek() - Read Without Tracking
 
 ```ts
@@ -167,6 +213,52 @@ items.update((list) => [...list, newItem]);
 ```ts
 const numbers = signal([1, 2, 3]);
 const doubled = numbers.map((n, index) => n * 2);
+```
+
+#### derive() — Shorthand computed
+
+```ts
+const doubled = count.derive((v) => v * 2); // same as computed(() => count.value * 2)
+```
+
+#### assign() — Partial object update
+
+```ts
+const user = signal({ name: 'Alice', age: 30 });
+user.assign({ age: 31 }); // merges, same as user.value = { ...user.value, age: 31 }
+```
+
+## Writable (Bi-directional Computed)
+
+`writable` creates a bi-directional signal: reads track the getter reactively, writes are forwarded to the setter:
+
+```ts
+import { signal, writable } from '@vielzeug/craftit';
+const count = signal(0);
+// doubled.value reads count * 2; setting doubled.value writes back to count
+const doubled = writable(
+  () => count.value * 2,
+  (v) => (count.value = v / 2),
+);
+console.log(doubled.value); // 0
+doubled.value = 10; // count.value → 5
+console.log(count.value); // 5
+```
+
+Useful for form adapters, unit converters, and any derived state that needs to write back.
+
+## Signal Helpers
+
+### isSignal / toValue
+
+```ts
+import { isSignal, toValue, signal } from '@vielzeug/craftit';
+const s = signal(42);
+console.log(isSignal(s));    // true
+console.log(isSignal(42));   // false
+// toValue unwraps a Signal or returns a plain value as-is
+console.log(toValue(s));     // 42
+console.log(toValue(42));    // 42
 ```
 
 ## Computed Signals
@@ -300,6 +392,22 @@ count.value = 10;
 console.log(readonlyCount.value); // 10
 ```
 
+## Template System — Raw HTML
+
+By default `html` auto-escapes text interpolations. Use `raw` or `rawHtml` when you trust the content:
+
+```ts
+import { html, raw, rawHtml } from '@vielzeug/craftit';
+const trustedContent = '<strong>Bold</strong>';
+// raw tag — no escaping for the entire template
+raw`<div>${trustedContent}</div>`;
+// rawHtml() — bypass escaping for a single interpolated value
+html`<div>${rawHtml(trustedContent)}</div>`;
+// escapeHtml() — explicit escape a value
+import { escapeHtml } from '@vielzeug/craftit';
+console.log(escapeHtml('<script>')); // &lt;script&gt;
+```
+
 ## Template System
 
 Craftit uses tagged template literals for HTML with powerful binding syntax.
@@ -394,7 +502,9 @@ Available modifiers:
 - `.passive` - passive listener
 - `.enter`, `.tab`, `.esc`, `.space`, `.up`, `.down`, `.left`, `.right` - keyboard keys
 
-### Element References (ref)
+## Element References
+
+### `ref()` — single element
 
 Get references to DOM elements:
 
@@ -409,6 +519,26 @@ define('focus-input', () => {
 });
 ```
 
+### `refs()` — multiple elements
+
+```ts
+define('item-list', () => {
+  const itemRefs = refs<HTMLLIElement>();
+  onMount(() => {
+    console.log('items:', itemRefs.values.length);
+  });
+  return html`
+    <ul>
+      <li ref=${itemRefs}>Item 1</li>
+      <li ref=${itemRefs}>Item 2</li>
+      <li ref=${itemRefs}>Item 3</li>
+    </ul>
+  `;
+});
+```
+
+`refs().values` is a live `ReadonlyArray<T>` (no defensive copy).
+
 ### Arrays and Lists
 
 ```ts
@@ -419,6 +549,20 @@ html`
   </ul>
 `;
 ```
+
+### Two-Way Binding (`html.bind`)
+
+`html.bind(signal)` is a shorthand that attaches both `:value` and the `input`/`change` listener in one step:
+
+```ts
+const name = signal('');
+// Long form
+html`<input :value=${name} @input=${(e: Event) => name.value = (e.target as HTMLInputElement).value} />`;
+// Short form — same result
+html`<input ${html.bind(name)} />`;
+```
+
+Works with text inputs, textareas, selects, checkboxes, and radio buttons.
 
 ### Reactive Functions
 
@@ -454,86 +598,119 @@ html`<p>${() => count.value}</p>`;
 
 ## Control Flow
 
-### Conditional Rendering (html.when)
+### Conditional Rendering (`html.when`)
+
+Removes/inserts DOM nodes based on a condition.
 
 ```ts
 const isLoggedIn = signal(false);
 // Simple conditional
-html` ${html.when(isLoggedIn, () => html` <p>Welcome back!</p> `)} `;
+html`${html.when(isLoggedIn, () => html`<p>Welcome back!</p>`)}`;
 // With else branch
 html`
-  ${html.when(isLoggedIn, {
-    then: () => html`<p>Welcome!</p>`,
-    else: () => html`<p>Please log in</p>`,
-  })}
+  ${html.when(
+    isLoggedIn,
+    () => html`<p>Welcome!</p>`,
+    () => html`<p>Please log in</p>`,
+  )}
+`;
+// Multi-branch else-if chain (each arg is a [condition, fn] tuple)
+const role = signal('guest');
+html`
+  ${html.when(
+    [() => role.value === 'admin',  () => html`<admin-panel />`],
+    [() => role.value === 'editor', () => html`<editor-panel />`],
+    () => html`<guest-panel />`,
+  )}
 `;
 ```
 
-### Show/Hide (html.show)
+### Visibility Toggle (`html.show`)
 
-Toggles display property instead of removing from DOM:
+Keeps DOM **mounted**, only toggles `display`. Use this for components with expensive setup or local state (e.g. a `<video>`, a form with user input):
 
 ```ts
-const isVisible = signal(true);
-html` ${html.show(isVisible, html` <div>I can be hidden!</div> `)} `;
+const panelOpen = signal(true);
+html`
+  ${html.show(panelOpen, () => html`
+    <div class="panel">
+      <heavy-chart />
+    </div>
+  `)}
+`;
 ```
 
-### Lists (html.each)
+### Lists (`html.each`)
 
-Efficient list rendering with keys:
+Efficient keyed list rendering. Three call signatures:
 
 ```ts
 const todos = signal([
   { id: 1, text: 'Learn Craftit', done: false },
   { id: 2, text: 'Build app', done: false },
 ]);
+// Three-arg form: source, keyFn, templateFn, emptyFn?
 html`
   ${html.each(
     todos,
-    (todo) => todo.id, // key function
+    (todo) => todo.id,
     (todo, index) => html`
-      <li>
-        ${index + 1}. ${todo.text}
-        <input type="checkbox" ?checked=${todo.done} />
-      </li>
+      <li>${index + 1}. ${todo.text}</li>
     `,
-    () => html`<p>No todos yet!</p>`, // empty state
+    () => html`<p>No todos yet!</p>`,
   )}
+`;
+// Simple form (index as key, no empty):
+html`${html.each(todos, (todo) => html`<li>${todo.text}</li>`)}`;
+// Options object form:
+html`
+  ${html.each(todos, {
+    key: (todo) => todo.id,
+    template: (todo, i) => html`<li>${i + 1}. ${todo.text}</li>`,
+    empty: () => html`<p>No todos</p>`,
+  })}
+`;
+// Function source (reactive computed list):
+html`${html.each(() => todos.value.filter(t => !t.done), (t) => t.id, (t) => html`<li>${t.text}</li>`)}`;
+```
+
+### Pattern Matching (`html.match`)
+
+Switch/case style. Returns `V` for static values; returns `() => V` for `Signal`/function values (reactive):
+
+```ts
+const status = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
+html`
+  ${html.match(status, [
+    ['idle',    () => html`<p>Ready</p>`],
+    ['loading', () => html`<p>Loading…</p>`],
+    ['success', () => html`<p>Done!</p>`],
+    ['error',   () => html`<p>Something went wrong</p>`],
+  ], () => html`<p>Unknown</p>`)}
 `;
 ```
 
-### Switch/Case (html.choose)
+### Async Content (`suspense`)
 
-Pattern matching for multiple conditions:
-
-```ts
-const status = signal('loading');
-html`
-  ${html.choose(
-    status,
-    [
-      ['idle', () => html`<p>Ready</p>`],
-      ['loading', () => html`<p>Loading...</p>`],
-      ['success', () => html`<p>Success!</p>`],
-      ['error', () => html`<p>Error occurred</p>`],
-    ],
-    () => html`<p>Unknown status</p>`, // default
-  )}
-`;
-```
-
-### Suspense (html.until)
-
-Handle async operations:
+Handle async data loading with fallback and retry:
 
 ```ts
-html`
-  ${html.until(
-    fetchData(), // Promise
-    () => html`<p>Loading...</p>`, // loading state
-    (data) => html`<p>${data}</p>`, // success
-  )}
-`;
+import { suspense } from '@vielzeug/craftit';
+const loadUser = suspense(
+  async (signal) => {
+    const res = await fetch('/api/user', { signal });
+    return res.json();
+  },
+  {
+    fallback: () => html`<p>Loading…</p>`,
+    template: (user) => html`<p>Hello, ${user.name}!</p>`,
+    error: (err, retry) => html`
+      <p>Error: ${err.message}</p>
+      <button @click=${retry}>Retry</button>
+    `,
+  },
+);
+html`${loadUser()}`;
 ```
 
 ## Styling
@@ -676,19 +853,17 @@ Runs after the component is mounted:
 ```ts
 import { define, signal, html, onMount } from '@vielzeug/craftit';
 define('my-component', () => {
-  const data = signal(null);
+  const data = signal<string | null>(null);
   onMount(() => {
     console.log('Component mounted!');
-    // Fetch data
-    fetch('/api/data')
+    const ctrl = new AbortController();
+    fetch('/api/data', { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => (data.value = d));
-    // Return cleanup
-    return () => {
-      console.log('Cleanup on unmount');
-    };
+    // Return cleanup — runs on unmount
+    return () => ctrl.abort();
   });
-  return html`<div>${data.value}</div>`;
+  return html`<div>${data}</div>`;
 });
 ```
 
@@ -720,6 +895,41 @@ Register cleanup functions:
 ```ts
 onCleanup(() => {
   console.log('Cleaning up...');
+});
+```
+
+### handle
+
+Registers an event listener and **automatically removes it** on unmount — no need to return a cleanup function from `onMount`:
+
+```ts
+import { define, onMount, handle, html } from '@vielzeug/craftit';
+define('my-button', () => {
+  onMount(() => {
+    const host = /* ... */;
+    handle(host, 'click', onClick);
+    handle(host, 'keydown', onKeydown);
+    // no return needed — cleanup is automatic
+  });
+  return html`<slot></slot>`;
+});
+```
+
+Equivalent to the manual `addEventListener` + `return () => removeEventListener` pattern, but shorter and impossible to forget the cleanup.
+
+### onError
+
+Scoped error handler — catches render and lifecycle errors within this component only. Use instead of a global try/catch:
+
+```ts
+import { define, html, onError } from '@vielzeug/craftit';
+define('safe-component', () => {
+  onError((error, info) => {
+    console.error('Component error:', error.message);
+    console.error('Stack:', info?.componentStack);
+    // send to your error tracker
+  });
+  return html`<risky-child></risky-child>`;
 });
 ```
 
@@ -935,9 +1145,7 @@ formField.setValidity(
 const isValid = formField.reportValidity(); // boolean
 ```
 
-### File Upload Control
-
-Custom file input with form integration:
+## File Upload Control
 
 ```ts
 define('file-uploader', () => {
@@ -946,33 +1154,19 @@ define('file-uploader', () => {
   const formField = field({
     value: files,
     toFormValue: (fileList) => {
-      if (!fileList || fileList.length === 0) return '';
-
-      // Return first file or FormData with all files
-      if (fileList.length === 1) {
-        return fileList[0];
-      }
-
-      const formData = new FormData();
-      for (let i = 0; i < fileList.length; i++) {
-        formData.append('files[]', fileList[i]);
-      }
-      return formData;
-    }
+      if (!fileList?.length) return null;
+      if (fileList.length === 1) return fileList[0];
+      const fd = new FormData();
+      for (let i = 0; i < fileList.length; i++) fd.append('files[]', fileList[i]);
+      return fd;
+    },
   });
 
   return html`
-    <input
-      type="file"
-      multiple
-      @change=${(e) => {
-        const target = e.target as HTMLInputElement;
-        files.value = target.files;
-      }}
-    />
-    ${html.when(files, () => html`
-      <p>Selected: ${files.value?.length || 0} file(s)</p>
-    `)}
+    <input type="file" multiple @change=${(e: Event) => {
+      files.value = (e.target as HTMLInputElement).files;
+    }} />
+    ${html.when(files, () => html`<p>Selected: ${() => files.value?.length ?? 0} file(s)</p>`)}
   `;
 }, { formAssociated: true });
 ```
@@ -983,6 +1177,8 @@ The `field()` helper gracefully degrades in browsers without ElementInternals su
 
 ## Props and Attributes
 
+### Single prop
+
 Define reactive props that sync with HTML attributes:
 
 ```ts
@@ -991,14 +1187,13 @@ define('user-badge', () => {
   // Basic prop
   const name = prop('name', 'Guest');
   // With custom parser
-  const count = prop('count', 0, {
-    parse: (v) => Number(v) || 0,
-  });
-  // With reflection (syncs back to attribute)
+  const count = prop('count', 0, { parse: (v) => Number(v) || 0 });
+  // With reflection (syncs back to attribute) + validator
   const status = prop('status', 'offline', {
     reflect: true,
+    validator: (v) => ['online', 'offline', 'away'].includes(v),
   });
-  // Boolean prop
+  // Boolean prop (attribute presence = true)
   const disabled = prop('disabled', false, {
     parse: (v) => v !== null,
     reflect: true,
@@ -1019,6 +1214,84 @@ Use in HTML:
 <user-badge name="Alice" count="5" status="online"></user-badge>
 ```
 
+### `defineProps` — multiple props at once
+
+Declare all props with a single call; keys are automatically converted to kebab-case attribute names:
+
+```ts
+import { define, defineProps, html } from '@vielzeug/craftit';
+define('product-card', () => {
+  // defineProps({ camelKey: { default, ...options } })
+  const props = defineProps({
+    title:    { default: '' },
+    price:    { default: 0,     type: Number },
+    inStock:  { default: true,  type: Boolean },
+    category: { default: 'all', reflect: true },
+  });
+  // props.title → Signal<string>,  attribute: "title"
+  // props.price → Signal<number>,  attribute: "price"
+  // props.inStock → Signal<boolean>, attribute: "in-stock"
+  // props.category → Signal<string>, attribute: "category" (reflected)
+  return html`
+    <div>
+      <h2>${props.title}</h2>
+      <p>$${props.price}</p>
+      ${html.when(props.inStock,
+        () => html`<span class="badge">In stock</span>`,
+        () => html`<span class="badge out">Out of stock</span>`,
+      )}
+    </div>
+  `;
+});
+```
+
+## Slots
+
+Render named or default slots with optional fallback content:
+
+```ts
+import { define, defineSlots, html } from '@vielzeug/craftit';
+define('card-component', () => {
+  const s = defineSlots<{ default: unknown; footer: unknown }>();
+  return html`
+    <div class="card">
+      <div class="body">
+        ${s.default({}, () => html`<p>No content provided</p>`)}
+      </div>
+      ${s.has('footer') ? html`<div class="footer">${s.render('footer')}</div>` : ''}
+    </div>
+  `;
+});
+```
+
+## Typed Events (`defineEmits`)
+
+Dispatch strongly-typed custom events:
+
+```ts
+import { define, signal, html, defineEmits } from '@vielzeug/craftit';
+
+type ButtonEvents = { clicked: { count: number }; reset: void };
+
+define('counter-button', () => {
+  const count = signal(0);
+  const fire = defineEmits<ButtonEvents>();
+
+  return html`
+    <button @click=${() => {
+      count.value++;
+      fire('clicked', { count: count.value });
+    }}>Clicked ${count} times</button>
+  `;
+});
+```
+
+Consumer:
+
+```ts
+html`<counter-button @clicked=${(e: CustomEvent) => console.log(e.detail.count)}></counter-button>`;
+```
+
 ## Context (Dependency Injection)
 
 Share data between parent and child components:
@@ -1026,8 +1299,8 @@ Share data between parent and child components:
 ```ts
 import { define, provide, inject, signal, html } from '@vielzeug/craftit';
 import type { InjectionKey } from '@vielzeug/craftit';
-// Create typed injection key
-const ThemeKey: InjectionKey<{ mode: Signal<'light' | 'dark'> }> = Symbol('theme');
+// Create typed injection key (preferred over raw `Symbol()`)
+const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
 // Parent provides
 define('app-root', () => {
   const mode = signal<'light' | 'dark'>('light');
@@ -1042,7 +1315,7 @@ define('app-root', () => {
 // Child injects
 define('themed-card', () => {
   const theme = inject(ThemeKey);
-  return html` <div class="card theme-${theme?.mode.value}">Card content</div> `;
+  return html` <div class=${() => `card theme-${theme?.mode.value}`}>Card content</div> `;
 });
 ```
 
@@ -1054,82 +1327,57 @@ define('themed-card', () => {
 
 ## Portals
 
-Render content to a different location in the DOM:
+Render components to different DOM locations using the `target` option in `define()`:
 
 ```ts
-import { define, signal, html } from '@vielzeug/craftit';
-define('modal-component', () => {
-  const isOpen = signal(false);
-  return html`
-    <button @click=${() => (isOpen.value = true)}>Open Modal</button>
-    ${html.portal(
-      html.when(
-        isOpen,
-        () => html`
-          <div class="modal-overlay">
-            <div class="modal">
-              <h2>Modal Title</h2>
-              <button @click=${() => (isOpen.value = false)}>Close</button>
-            </div>
-          </div>
-        `,
-      ),
-      'body', // target selector or element
-    )}
-  `;
-});
-```
+import { define, prop, html } from '@vielzeug/craftit';
 
-## Error Boundaries
-
-Handle errors gracefully in components:
-
-```ts
-import { define, html, errorBoundary } from '@vielzeug/craftit';
-define('safe-component', () => {
-  return errorBoundary(() => html`<risky-component></risky-component>`, {
-    fallback: (error) => html`
-      <div class="error">
-        <h3>Something went wrong</h3>
-        <p>${error.message}</p>
-      </div>
-    `,
-    onError: (error) => {
-      console.error('Component error:', error);
-      // Send to error tracking service
-    },
+// Define a modal component that renders to body
+define('modal-dialog', () => {
+  const isOpen = prop('open', false, {
+    parse: (v) => v === '' || v === 'true',
   });
-});
-```
 
-### Reusable Error Boundaries
-
-```ts
-import { createErrorBoundary } from '@vielzeug/craftit';
-const SafeComponent = createErrorBoundary(() => html`<risky-component></risky-component>`, {
-  fallback: (error) => html`<p>Error: ${error.message}</p>`,
-});
-define('app', () => html` <div>${SafeComponent()}</div> `);
-```
-
-## Lazy Loading
-
-Lazy load components on demand:
-
-```ts
-import { define, html, lazy } from '@vielzeug/craftit';
-const HeavyChart = lazy(() => import('./chart-component'), {
-  fallback: () => html`<div class="loading">Loading chart...</div>`,
-});
-define('dashboard', () => {
   return html`
-    <div class="dashboard">
-      <h1>Dashboard</h1>
-      ${HeavyChart()}
-    </div>
+    ${html.when(isOpen, () => html`
+      <div class="modal-overlay">
+        <div class="modal">
+          <h2>Modal Title</h2>
+          <button @click=${() => { isOpen.value = false; }}>Close</button>
+        </div>
+      </div>
+    `)}
+  `;
+}, { target: 'body' }); // Component renders to body instead of parent
+
+// Use the modal component
+define('app-component', () => {
+  const showModal = signal(false);
+  return html`
+    <button @click=${() => (showModal.value = true)}>Open Modal</button>
+    <modal-dialog ?open=${showModal}></modal-dialog>
   `;
 });
 ```
+
+## Error Handling
+
+Use `onError` in setup to add a scoped error handler for this component's render and lifecycle errors:
+
+```ts
+import { define, html, onError } from '@vielzeug/craftit';
+define('safe-component', () => {
+  onError((error, info) => {
+    console.error('Component error:', error.message, info?.componentStack);
+    // forward to your error-tracking service
+  });
+  return html`<risky-child></risky-child>`;
+});
+```
+
+::: tip
+`onError` only catches errors thrown during **render** and **lifecycle hooks** in the current component's subtree. It does not replace proper `try/catch` in async code.
+:::
 
 ## Testing
 
@@ -1194,27 +1442,23 @@ await userEvent.upload(fileInput, file);
 
 ## TypeScript
 
-Craftit provides excellent TypeScript support:
+Craftit is built with TypeScript and provides excellent type inference:
 
 ```ts
-import type { Signal, ComputedSignal, Ref, InjectionKey } from '@vielzeug/craftit';
+import type { Signal, ReadonlySignal, Ref, RefList, InjectionKey } from '@vielzeug/craftit';
 // Typed signals
 const count: Signal<number> = signal(0);
 const name: Signal<string> = signal('Alice');
-const user: Signal<{ name: string; age: number }> = signal({
-  name: 'Bob',
-  age: 30,
-});
-// Typed computed
-const doubled: ComputedSignal<number> = computed(() => count.value * 2);
+// computed() returns Signal<T> (not a separate type)
+const doubled: Signal<number> = computed(() => count.value * 2);
 // Typed refs
 const inputRef: Ref<HTMLInputElement> = ref<HTMLInputElement>();
+const inputRefs: RefList<HTMLInputElement> = refs<HTMLInputElement>();
 // Typed injection keys
-interface AppTheme {
-  mode: 'light' | 'dark';
-  primaryColor: string;
-}
-const ThemeKey: InjectionKey<AppTheme> = Symbol('theme');
+const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
+// Typed event emitter
+const fire = defineEmits<{ submitted: { value: string } }>();
+fire('submitted', { value: name.value });
 ```
 
 ## Best Practices
@@ -1257,6 +1501,11 @@ name.value = 'Alice';
 onMount(() => {
   const timer = setInterval(() => {}, 1000);
   return () => clearInterval(timer);
+});
+// Or use handle() for event listeners — cleanup is automatic:
+onMount(() => {
+  handle(host, 'click', handleClick);
+  // no return needed
 });
 // ❌ Avoid (memory leak)
 onMount(() => {

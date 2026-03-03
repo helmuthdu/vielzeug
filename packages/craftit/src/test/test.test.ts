@@ -2,67 +2,38 @@
  * Testing - Render Utilities Tests
  * Tests for the testing utilities themselves
  */
-import { define, html, signal } from '..';
-import {
-  cleanup,
-  createMockComponent,
-  fireEvent,
-  mount,
-  userEvent,
-  waitFor,
-  waitForElement,
-  waitForElementToBeRemoved,
-} from '../trial/trial';
-
-// Counter for unique component names
-let componentCounter = 0;
-const uniqueName = (base: string) => `${base}-c${++componentCounter}`;
+import { html, signal } from '@vielzeug/craftit';
+import { cleanup, fire, mock, mount, user, waitFor } from './';
 
 describe('Testing: Render Utilities', () => {
-  afterEach(() => cleanup());
-
   describe('mount()', () => {
-    it('should mount component', () => {
-      const name = uniqueName('test-mount');
-      define(name, () => html`<div>Test</div>`);
-      const { element, shadow } = mount(name);
-
+    it('should mount component', async () => {
+      const { element, shadow } = await mount(() => html`<div>Test</div>`);
       expect(element).toBeInstanceOf(HTMLElement);
       expect(shadow).not.toBeNull();
     });
 
-    it('should set props', () => {
-      const name = uniqueName('test-props');
-      define(name, () => html`<div>Test</div>`);
-      const { element } = mount(name, {
-        props: { disabled: true, variant: 'primary' },
+    it('should set attrs', async () => {
+      const { element } = await mount(() => html`<div>Test</div>`, {
+        attrs: { disabled: true, variant: 'primary' },
       });
-
       expect(element.getAttribute('variant')).toBe('primary');
       expect(element.hasAttribute('disabled')).toBe(true);
     });
 
-    it('should set innerHTML', () => {
-      const name = uniqueName('slot-test');
-      define(name, () => html`<slot></slot>`);
-      const { element } = mount(name, {
-        innerHTML: '<span>Content</span>',
+    it('should set innerHTML', async () => {
+      const { element } = await mount(() => html`<slot></slot>`, {
+        html: '<span>Content</span>',
       });
-
       expect(element.innerHTML).toContain('Content');
     });
   });
 
-  describe('fireEvent', () => {
-    it('should fire click events', () => {
+  describe('fire', () => {
+    it('should fire click events', async () => {
       const spy = vi.fn();
-      const name = uniqueName('test-click');
-      define(name, () => {
-        return html`<button @click=${spy}>Click</button>`;
-      });
-
-      const { query } = mount(name);
-      fireEvent.click(query('button')!);
+      const { query } = await mount(() => html`<button @click=${spy}>Click</button>`);
+      fire.click(query('button')!);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -70,8 +41,7 @@ describe('Testing: Render Utilities', () => {
       const spy = vi.fn();
       const input = document.createElement('input');
       input.addEventListener('input', spy);
-
-      fireEvent.input(input);
+      fire.input(input);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -79,20 +49,26 @@ describe('Testing: Render Utilities', () => {
       const spy = vi.fn();
       const div = document.createElement('div');
       div.addEventListener('custom', spy);
-
-      fireEvent.custom(div, 'custom', { detail: { value: 123 } });
+      fire.custom(div, 'custom', { value: 123 });
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('userEvent', () => {
+  describe('user', () => {
     it('should type text', async () => {
       const input = document.createElement('input');
       document.body.appendChild(input);
-
-      await userEvent.type(input, 'Hello');
+      await user.type(input, 'Hello');
       expect(input.value).toBe('Hello');
+      input.remove();
+    });
 
+    it('should fill input (clear then type)', async () => {
+      const input = document.createElement('input');
+      input.value = 'old';
+      document.body.appendChild(input);
+      await user.fill(input, 'new');
+      expect(input.value).toBe('new');
       input.remove();
     });
 
@@ -100,10 +76,8 @@ describe('Testing: Render Utilities', () => {
       const input = document.createElement('input');
       input.value = 'initial';
       document.body.appendChild(input);
-
-      await userEvent.clear(input);
+      await user.clear(input);
       expect(input.value).toBe('');
-
       input.remove();
     });
 
@@ -111,21 +85,25 @@ describe('Testing: Render Utilities', () => {
       const select = document.createElement('select');
       select.innerHTML = '<option value="1">One</option><option value="2">Two</option>';
       document.body.appendChild(select);
-
-      await userEvent.selectOption(select, '2');
+      await user.select(select, '2');
       expect(select.value).toBe('2');
-
       select.remove();
     });
   });
 
   describe('waitFor', () => {
-    it('should wait for condition', async () => {
+    it('should wait for boolean condition', async () => {
       let ready = false;
       setTimeout(() => (ready = true), 50);
-
       await waitFor(() => ready);
       expect(ready).toBe(true);
+    });
+
+    it('should wait for expect() assertion', async () => {
+      let count = 0;
+      setTimeout(() => count++, 50);
+      await waitFor(() => expect(count).toBeGreaterThan(0));
+      expect(count).toBeGreaterThan(0);
     });
 
     it('should timeout if condition not met', async () => {
@@ -133,81 +111,58 @@ describe('Testing: Render Utilities', () => {
     });
   });
 
-  describe('waitForElement', () => {
+  describe('waitFor (element appearance)', () => {
     it('should wait for element to appear', async () => {
       const container = document.createElement('div');
       document.body.appendChild(container);
-
       setTimeout(() => {
         const el = document.createElement('button');
         container.appendChild(el);
       }, 50);
-
-      const button = await waitForElement(() => container.querySelector('button'));
-      expect(button).not.toBeNull();
-
+      await waitFor(() => container.querySelector('button'));
+      expect(container.querySelector('button')).not.toBeNull();
       container.remove();
     });
   });
 
-  describe('waitForElementToBeRemoved', () => {
+  describe('waitFor (element removal)', () => {
     it('should wait for element removal', async () => {
       const container = document.createElement('div');
       const el = document.createElement('div');
       container.appendChild(el);
       document.body.appendChild(container);
-
       setTimeout(() => el.remove(), 50);
-
-      await waitForElementToBeRemoved(() => container.querySelector('div'));
+      await waitFor(() => !container.querySelector('div'));
       expect(container.querySelector('div')).toBeNull();
-
       container.remove();
     });
   });
 
-  describe('createMockComponent', () => {
-    it('should create mock component', () => {
+  describe('mock()', () => {
+    it('should register a stub custom element', () => {
       const mockName = 'mock-test-component';
-
-      createMockComponent(mockName, () => html`<div class="mocked">Mocked</div>`);
-
-      // Verify the component is registered
+      mock(mockName, '<div class="mocked">Mocked</div>');
       expect(customElements.get(mockName)).toBeDefined();
-
-      // Verify it can be created and used
       const element = document.createElement(mockName);
       document.body.appendChild(element);
-
-      // The mock component should have rendered content in its shadow root
-      expect(element.shadowRoot).toBeTruthy();
-
+      expect(element.innerHTML).toContain('Mocked');
       element.remove();
     });
   });
 
-  describe('cleanup', () => {
-    it('should cleanup all mounted components', () => {
-      const name1 = uniqueName('test-cleanup-1');
-      const name2 = uniqueName('test-cleanup-2');
-
-      define(name1, () => html`<div>1</div>`);
-      define(name2, () => html`<div>2</div>`);
-
-      mount(name1);
-      mount(name2);
-
+  describe('cleanup()', () => {
+    it('should remove all mounted components', async () => {
+      await mount(() => html`<div>1</div>`);
+      await mount(() => html`<div>2</div>`);
       expect(document.body.children.length).toBeGreaterThan(0);
-
       cleanup();
-      expect(document.body.innerHTML).toBe('');
+      expect(document.body.children.length).toBe(0);
     });
   });
 
   describe('Integration', () => {
     it('should work with real component workflow', async () => {
-      const name = uniqueName('test-workflow');
-      define(name, () => {
+      const { query, act } = await mount(() => {
         const count = signal(0);
         return html`
           <div>
@@ -217,17 +172,8 @@ describe('Testing: Render Utilities', () => {
         `;
       });
 
-      const { query, waitForUpdates } = mount(name);
-
       expect(query('.count')?.textContent).toBe('0');
-
-      fireEvent.click(query('button')!);
-      await waitForUpdates();
-
-      // Wait for the count to update - return boolean condition
-      await waitFor(() => query('.count')?.textContent === '1');
-
-      // Now verify the final state
+      await act(() => fire.click(query('button')!));
       expect(query('.count')?.textContent).toBe('1');
     });
   });

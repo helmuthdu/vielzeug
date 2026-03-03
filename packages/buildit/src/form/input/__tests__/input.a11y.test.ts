@@ -1,5 +1,5 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for bit-input component using axe-core
@@ -12,9 +12,13 @@ describe('bit-input accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations', async () => {
-      const fixture = await createFixture('bit-input', {
-        name: 'test-input',
-        placeholder: 'Enter text',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Test input',
+          'label-placement': 'outside',
+          name: 'test-input',
+          placeholder: 'Enter text',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -24,11 +28,15 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with all states', async () => {
-      const fixture = await createFixture('bit-input', {
-        disabled: true,
-        placeholder: 'Enter text',
-        required: true,
-        value: 'Test value',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          disabled: true,
+          label: 'Test input',
+          'label-placement': 'outside',
+          placeholder: 'Enter text',
+          required: true,
+          value: 'Test value',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -38,10 +46,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with inset label', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Email Address',
-        'label-placement': 'inset',
-        placeholder: 'you@example.com',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email Address',
+          'label-placement': 'outside',
+          placeholder: 'you@example.com',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -51,10 +61,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with outside label', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Username',
-        'label-placement': 'outside',
-        placeholder: 'Enter username',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Username',
+          'label-placement': 'outside',
+          placeholder: 'Enter username',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -64,10 +76,13 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with helper text', async () => {
-      const fixture = await createFixture('bit-input', {
-        helper: 'Must be at least 8 characters',
-        label: 'Password',
-        type: 'password',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          helper: 'Must be at least 8 characters',
+          label: 'Password',
+          'label-placement': 'outside',
+          type: 'password',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -79,7 +94,7 @@ describe('bit-input accessibility', () => {
 
   describe('Keyboard Accessibility', () => {
     it('should be keyboard accessible', async () => {
-      const fixture = await createFixture('bit-input');
+      const fixture = await mount('bit-input', { attrs: { 'aria-label': 'Test input' } });
       const input = fixture.query('input') as HTMLInputElement;
 
       // Input should not have tabindex -1 (should be naturally focusable)
@@ -89,7 +104,7 @@ describe('bit-input accessibility', () => {
     });
 
     it('should not be focusable when disabled', async () => {
-      const fixture = await createFixture('bit-input', { disabled: true });
+      const fixture = await mount('bit-input', { attrs: { 'aria-label': 'Test input', disabled: true } });
       const input = fixture.query('input') as HTMLInputElement;
 
       expect(input.disabled).toBe(true);
@@ -98,10 +113,13 @@ describe('bit-input accessibility', () => {
     });
 
     it('should handle readonly state accessibly', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Read-only Field',
-        readonly: true,
-        value: 'Read-only value',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Read-only Field',
+          'label-placement': 'outside',
+          readonly: true,
+          value: 'Read-only value',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -116,9 +134,14 @@ describe('bit-input accessibility', () => {
       const types = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'];
 
       for (const type of types) {
-        const fixture = await createFixture('bit-input', {
-          placeholder: `Enter ${type}`,
-          type,
+        const fixture = await mount('bit-input', {
+          attrs: {
+            'aria-label': `Enter ${type}`,
+            label: `Enter ${type}`,
+            'label-placement': 'outside',
+            placeholder: `Enter ${type}`,
+            type,
+          },
         });
 
         const results = await axe.run(fixture.element);
@@ -134,9 +157,13 @@ describe('bit-input accessibility', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'];
 
       for (const variant of variants) {
-        const fixture = await createFixture('bit-input', {
-          placeholder: 'Test input',
-          variant,
+        const fixture = await mount('bit-input', {
+          attrs: {
+            label: 'Test input',
+            'label-placement': 'outside',
+            placeholder: 'Test input',
+            variant,
+          },
         });
 
         const results = await axe.run(fixture.element);
@@ -150,9 +177,13 @@ describe('bit-input accessibility', () => {
       const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
 
       for (const color of colors) {
-        const fixture = await createFixture('bit-input', {
-          color,
-          placeholder: 'Test input',
+        const fixture = await mount('bit-input', {
+          attrs: {
+            color,
+            label: 'Test input',
+            'label-placement': 'outside',
+            placeholder: 'Test input',
+          },
         });
 
         const results = await axe.run(fixture.element);
@@ -166,9 +197,13 @@ describe('bit-input accessibility', () => {
       const sizes = ['sm', 'md', 'lg'];
 
       for (const size of sizes) {
-        const fixture = await createFixture('bit-input', {
-          placeholder: 'Test input',
-          size,
+        const fixture = await mount('bit-input', {
+          attrs: {
+            label: 'Test input',
+            'label-placement': 'outside',
+            placeholder: 'Test input',
+            size,
+          },
         });
 
         const results = await axe.run(fixture.element);
@@ -181,9 +216,12 @@ describe('bit-input accessibility', () => {
 
   describe('Prefix and Suffix Icons', () => {
     it('should have no violations with prefix icon', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Search',
-        placeholder: 'Search...',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Search',
+          'label-placement': 'outside',
+          placeholder: 'Search...',
+        },
       });
       fixture.element.innerHTML = `
         <span slot="prefix" class="material-symbols-rounded" aria-hidden="true">search</span>
@@ -196,9 +234,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with suffix icon', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Amount',
-        placeholder: 'Enter amount',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Amount',
+          'label-placement': 'outside',
+          placeholder: 'Enter amount',
+        },
       });
       fixture.element.innerHTML = `
         <span slot="suffix" aria-hidden="true">USD</span>
@@ -211,9 +252,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('should have no violations with both prefix and suffix', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Price',
-        placeholder: 'Enter amount',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Price',
+          'label-placement': 'outside',
+          placeholder: 'Enter amount',
+        },
       });
       fixture.element.innerHTML = `
         <span slot="prefix" aria-hidden="true">$</span>
@@ -229,10 +273,13 @@ describe('bit-input accessibility', () => {
 
   describe('Rounded Attribute', () => {
     it('should have no violations with rounded (default full)', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Search',
-        placeholder: 'Search...',
-        rounded: '',
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Search',
+          'label-placement': 'outside',
+          placeholder: 'Search...',
+          rounded: '',
+        },
       });
 
       const results = await axe.run(fixture.element);
@@ -245,10 +292,13 @@ describe('bit-input accessibility', () => {
       const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
 
       for (const value of values) {
-        const fixture = await createFixture('bit-input', {
-          label: 'Test Input',
-          placeholder: 'Test input',
-          rounded: value,
+        const fixture = await mount('bit-input', {
+          attrs: {
+            label: 'Test Input',
+            'label-placement': 'outside',
+            placeholder: 'Test input',
+            rounded: value,
+          },
         });
 
         const results = await axe.run(fixture.element);
@@ -261,10 +311,13 @@ describe('bit-input accessibility', () => {
 
   describe('Required Fields', () => {
     it('should properly indicate required fields', async () => {
-      const fixture = await createFixture('bit-input', {
-        label: 'Email',
-        placeholder: 'you@example.com',
-        required: true,
+      const fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email',
+          'label-placement': 'outside',
+          placeholder: 'you@example.com',
+          required: true,
+        },
       });
 
       const input = fixture.query('input') as HTMLInputElement;

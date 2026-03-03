@@ -1,4 +1,6 @@
-const styles = /* css */ `
+import { css, define, html } from '@vielzeug/craftit';
+
+const styles = /* css */ css`
   /* ========================================
      Base Styles & Defaults
      ======================================== */
@@ -208,28 +210,12 @@ export interface TextProps {
  * <bit-text variant="code">npm install</bit-text>
  * ```
  */
-class BitText extends HTMLElement {
-  static observedAttributes = ['variant', 'size', 'weight', 'color', 'align', 'truncate', 'italic', 'as'] as const;
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  connectedCallback() {
-    this.render();
-  }
-
-  render() {
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <span part="text"><slot></slot></span>
-    `;
-  }
-}
-
-if (!customElements.get('bit-text')) {
-  customElements.define('bit-text', BitText);
-}
+define('bit-text', () => {
+  return {
+    styles: [styles],
+    template: html`<slot></slot>`,
+  };
+});
 
 export default {};

@@ -1,9 +1,26 @@
+import {
+  aria,
+  computed,
+  createId,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  defineSlots,
+  field,
+  guard,
+  handle,
+  html,
+  onFormReset,
+  onMount,
+  ref,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
-import { setupLabelAssociation } from '../../utils/common';
-import { CheckedStateController, FormFieldController } from '../../utils/controllers';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     :host {
       --_width: var(--switch-width, var(--size-10));
@@ -187,118 +204,85 @@ export interface SwitchProps {
  * <bit-switch size="lg">Large toggle</bit-switch>
  * ```
  */
-class BitSwitch extends HTMLElement {
-  static formAssociated = true;
-  static observedAttributes = ['checked', 'disabled', 'value', 'name', 'color', 'size'] as const;
-
-  private formField = new FormFieldController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-  });
-
-  private checkedState = new CheckedStateController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-    onToggle: (checked, value) => {
-      this.formField.setFormValue(checked ? value : null, checked ? 'on' : 'off');
-    },
-    type: 'switch',
-  });
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  // ============================================
-  // Constraint Validation API (delegated to controller)
-  // ============================================
-
-  setCustomValidity(message: string): void {
-    this.formField.setCustomValidity(message);
-  }
-
-  checkValidity(): boolean {
-    return this.formField.checkValidity();
-  }
-
-  reportValidity(): boolean {
-    return this.formField.reportValidity();
-  }
-
-  get validity(): ValidityState {
-    return this.formField.validity;
-  }
-
-  get validationMessage(): string {
-    return this.formField.validationMessage;
-  }
-
-  connectedCallback() {
-    this.render();
-    this.formField.hostConnected();
-    this.checkedState.syncState();
-
-    // Setup label association
-    setupLabelAssociation(this.shadowRoot, this, 'switch');
-
-    // Toggle on click
-    this.addEventListener('click', (e) => {
-      this.checkedState.toggle(e);
+define(
+  'bit-switch',
+  ({ host }) => {
+    const slots = defineSlots();
+    const emit = defineEmits<{ change: { checked: boolean } }>();
+    const props = defineProps({
+      checked: { default: false },
+      color: { default: undefined as ThemeColor | undefined },
+      disabled: { default: false },
+      name: { default: '' },
+      size: { default: undefined as ComponentSize | undefined },
+      value: { default: 'on' },
     });
 
-    // Toggle on Space/Enter
-    this.addEventListener('keydown', (keyEvent) => {
-      const kbEvent = keyEvent as KeyboardEvent;
-      if (kbEvent.key === ' ' || kbEvent.key === 'Enter') {
-        kbEvent.preventDefault();
-        this.checkedState.toggle(keyEvent);
+    const checkedSignal = signal(false);
+
+    field({
+      disabled: computed(() => props.disabled.value),
+      toFormValue: (v: string | null) => v,
+      value: computed(() => (checkedSignal.value ? props.value.value : null)),
+    });
+
+    onFormReset(() => {
+      checkedSignal.value = props.checked.value;
+    });
+
+    const labelRef = ref<HTMLSpanElement>();
+
+    watch(
+      props.checked,
+      (v) => {
+        checkedSignal.value = v;
+      },
+      { immediate: true },
+    );
+
+    const toggle = guard(
+      () => !props.disabled.value,
+      (e: Event) => {
+        e.preventDefault();
+        checkedSignal.value = !checkedSignal.value;
+        const isChecked = checkedSignal.value;
+        isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
+        emit('change', { checked: isChecked });
+      },
+    );
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggle(e);
+      }
+    };
+
+    handle(host, 'click', toggle);
+    handle(host, 'keydown', handleKeydown);
+
+    onMount(() => {
+      // labelRef.value is only available after the template has been rendered
+      const label = labelRef.value;
+      if (slots.has('default') && label) {
+        const labelId = createId('switch-label');
+        label.id = labelId;
+        aria({ labelledby: labelId });
       }
     });
-  }
 
-  disconnectedCallback() {
-    this.formField.hostDisconnected();
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    if (name === 'checked' || name === 'disabled') {
-      this.checkedState.syncState();
-      if (name === 'checked') {
-        const isChecked = newValue !== null;
-        const value = this.getAttribute('value') || 'on';
-        this.formField.setFormValue(isChecked ? value : null, isChecked ? 'on' : 'off');
-      }
-    }
-  }
-
-  render() {
-    const isChecked = this.hasAttribute('checked');
-    const isDisabled = this.hasAttribute('disabled');
-    const name = this.getAttribute('name') || '';
-    const value = this.getAttribute('value') || 'on';
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="switch-wrapper" part="switch">
-        <input
-          type="checkbox"
-          ${isChecked ? 'checked' : ''}
-          ${isDisabled ? 'disabled' : ''}
-          name="${name}"
-          value="${value}"
-          aria-hidden="true"
-          tabindex="-1" />
-        <div class="switch-track" part="track">
-          <div class="switch-thumb" part="thumb"></div>
+    return {
+      styles: [styles],
+      template: html` <div class="switch-wrapper" part="switch">
+          <input type="checkbox" aria-hidden="true" tabindex="-1" />
+          <div class="switch-track" part="track">
+            <div class="switch-thumb" part="thumb"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label"><slot></slot></span>
-    `;
-    this.formField.setFormValue(isChecked ? value : null, isChecked ? 'on' : 'off');
-  }
-}
-
-if (!customElements.get('bit-switch')) {
-  customElements.define('bit-switch', BitSwitch);
-}
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+    };
+  },
+  { formAssociated: true },
+);
 
 export default {};

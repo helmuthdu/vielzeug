@@ -36,14 +36,9 @@ export function average<T>(array: T[], callback?: (item: T) => number | Date): n
 
   // Handle numbers
   try {
-    const total = sum(array, callback as (item: T) => number);
-    if (typeof total === 'number') {
-      return total / array.length;
-    }
+    return (sum(array, callback as (item: T) => number) as number) / array.length;
   } catch (err) {
     if (err instanceof TypeError) return undefined;
     throw err;
   }
-
-  return undefined;
 }

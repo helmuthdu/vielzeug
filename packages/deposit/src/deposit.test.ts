@@ -2,8 +2,8 @@
 
 import { Logit } from '@vielzeug/logit';
 import {
-  Deposit,
-  type DepositStorageAdapter,
+  createDeposit,
+  type DepositBaseAdapter,
   defineSchema,
   IndexedDBAdapter,
   LocalStorageAdapter,
@@ -35,7 +35,7 @@ describe('QueryBuilder', () => {
   let builder: QueryBuilder<(typeof sampleData)[0]>;
 
   beforeEach(() => {
-    builder = new QueryBuilder<(typeof sampleData)[0]>(mockAdapter as unknown as DepositStorageAdapter<any>, 'users');
+    builder = new QueryBuilder<(typeof sampleData)[0]>(mockAdapter, 'users');
   });
 
   describe('Filtering', () => {
@@ -61,22 +61,12 @@ describe('QueryBuilder', () => {
     });
 
     test('and combines multiple predicates', async () => {
-      const result = await builder
-        .and(
-          (item) => item.city === 'Paris',
-          (item) => item.age > 30,
-        )
-        .toArray();
+      const result = await builder.filter((item) => item.city === 'Paris' && (item.age ?? 0) > 30).toArray();
       expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
     });
 
     test('or combines predicates with OR logic', async () => {
-      const result = await builder
-        .or(
-          (item) => item.city === 'Berlin',
-          (item) => item.age === 35,
-        )
-        .toArray();
+      const result = await builder.filter((item) => item.city === 'Berlin' || item.age === 35).toArray();
       expect(result).toHaveLength(2);
     });
   });
@@ -127,21 +117,21 @@ describe('QueryBuilder', () => {
   });
 
   describe('Transformations', () => {
-    test('modify', async () => {
-      const result = await builder.modify((item) => ({ ...item, age: item.age + 1 })).toArray();
+    test('map', async () => {
+      const result = await builder.map((item) => ({ ...item, age: item.age + 1 })).toArray();
       expect(result.map((r) => r.age)).toEqual([26, 31, 36]);
     });
 
-    test('groupBy', async () => {
-      const result = await builder.groupBy('city').toArray();
-      expect(result).toEqual(
-        expect.objectContaining({
-          Berlin: [{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }],
-          Paris: expect.arrayContaining([
-            { age: 25, city: 'Paris', id: 1, name: 'Alice' },
-            { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-          ]),
-        }),
+    test('toGrouped', async () => {
+      const result = await builder.toGrouped('city');
+      const berlinGroup = result.find((g) => g.key === 'Berlin');
+      const parisGroup = result.find((g) => g.key === 'Paris');
+      expect(berlinGroup?.values).toEqual([{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }]);
+      expect(parisGroup?.values).toEqual(
+        expect.arrayContaining([
+          { age: 25, city: 'Paris', id: 1, name: 'Alice' },
+          { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
+        ]),
       );
     });
 
@@ -166,14 +156,8 @@ describe('QueryBuilder', () => {
       expect(result).toHaveLength(3);
     });
 
-    test('build applies multiple conditions', async () => {
-      const result = await builder
-        .build([
-          { field: 'city', type: 'equals', value: 'Paris' },
-          { field: 'age', type: 'orderBy', value: 'desc' },
-          { type: 'limit', value: 1 },
-        ])
-        .toArray();
+    test('fluent chaining applies multiple conditions', async () => {
+      const result = await builder.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
       expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
     });
   });
@@ -184,7 +168,7 @@ describe('LocalStorageAdapter', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    adapter = new LocalStorageAdapter('TestDB', 1, userSchema);
+    adapter = new LocalStorageAdapter('TestDB', userSchema);
   });
 
   describe('CRUD Operations', () => {
@@ -243,7 +227,7 @@ describe('LocalStorageAdapter', () => {
     });
 
     test('corrupted JSON is skipped gracefully', async () => {
-      const key = 'TestDB:1:users:1';
+      const key = 'TestDB:users:1';
       localStorage.setItem(key, '{invalid json');
       expect(await adapter.get('users', 1)).toBeUndefined();
       expect(localStorage.getItem(key)).toBeNull();
@@ -261,7 +245,7 @@ describe('LocalStorageAdapter', () => {
   describe('Schema Validation', () => {
     test('throws on missing key field in schema', () => {
       const badSchema = { users: { record: {} as User } } as any;
-      expect(() => new LocalStorageAdapter('TestDB', 1, badSchema)).toThrow('missing required "key" field');
+      expect(() => new LocalStorageAdapter('TestDB', badSchema)).toThrow('missing required "key" field');
     });
   });
 });
@@ -346,11 +330,11 @@ describe('IndexedDBAdapter', () => {
 });
 
 describe('Depot', () => {
-  let deposit: Deposit<typeof userSchema>;
+  let deposit: DepositBaseAdapter<typeof userSchema>;
 
   beforeEach(() => {
     localStorage.clear();
-    deposit = new Deposit({
+    deposit = createDeposit({
       dbName: 'TestDB',
       schema: userSchema,
       type: 'localStorage',
@@ -493,7 +477,7 @@ describe('Depot', () => {
       },
     });
 
-    const idbDeposit = new Deposit({
+    const idbDeposit = createDeposit({
       dbName: 'AtomicTestDB',
       schema: idbSchema,
       type: 'indexedDB',
@@ -548,14 +532,13 @@ describe('Depot', () => {
   });
 
   test('Depot constructor throws on unknown adapter type', () => {
-    expect(
-      () =>
-        new Deposit({
-          dbName: 'TestDB',
-          schema: userSchema,
-          type: 'unknown' as any,
-          version: 1,
-        }),
+    expect(() =>
+      createDeposit({
+        dbName: 'TestDB',
+        schema: userSchema,
+        type: 'unknown' as any,
+        version: 1,
+      }),
     ).toThrow('Unknown adapter type: unknown');
   });
 
@@ -563,16 +546,16 @@ describe('Depot', () => {
     // Spy on console since Logit outputs to console
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const depositWithLogger = new Deposit({
+    const depositWithLogger = createDeposit({
       dbName: 'LoggerTestDB',
-      logger: Logit.scope('Deposit'),
+      logger: Logit.scope('createDeposit'),
       schema: userSchema,
       type: 'localStorage',
       version: 1,
     });
 
     // Test that logger is used when handling corrupted data
-    const key = 'LoggerTestDB:1:users:1';
+    const key = 'LoggerTestDB:users:1';
     localStorage.setItem(key, '{invalid json');
 
     await depositWithLogger.get('users', 1);
@@ -580,7 +563,7 @@ describe('Depot', () => {
     // Verify Logit logged the warning (Logit outputs to the console with its own formatting)
     expect(consoleWarnSpy).toHaveBeenCalled();
     const warnCall = consoleWarnSpy.mock.calls.find((call) =>
-      call.some((arg) => typeof arg === 'string' && arg.includes('Deposit')),
+      call.some((arg) => typeof arg === 'string' && arg.includes('createDeposit')),
     );
     expect(warnCall).toBeDefined();
 
@@ -595,7 +578,7 @@ describe('Depot', () => {
     // Spy on console.warn to verify default logger behavior
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const depositNoLogger = new Deposit({
+    const depositNoLogger = createDeposit({
       dbName: 'NoLoggerDB',
       schema: userSchema,
       type: 'localStorage',
@@ -604,7 +587,7 @@ describe('Depot', () => {
     });
 
     // Test that the console is used when handling corrupted data
-    const key = 'NoLoggerDB:1:users:1';
+    const key = 'NoLoggerDB:users:1';
     localStorage.setItem(key, '{invalid json');
 
     await depositNoLogger.get('users', 1);

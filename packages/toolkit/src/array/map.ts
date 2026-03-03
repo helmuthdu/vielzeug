@@ -26,13 +26,8 @@ export function map<T, R, C extends CallbackDynamic<T, R>>(array: T[], callback:
     type: TypeError,
   });
 
-  const result = Array(array.length);
-
-  for (let index = 0; index < array.length; index++) {
-    result[index] = callback(array[index], index, array);
-  }
-
-  return (isPromise(callback) ? Promise.all(result) : result) as ResultArray<C>;
+  const results = array.map(callback);
+  return (results.length > 0 && isPromise(results[0]) ? Promise.all(results) : results) as ResultArray<C>;
 }
 
 map.fp = true;

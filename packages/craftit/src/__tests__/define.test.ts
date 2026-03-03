@@ -2,12 +2,11 @@
  * Core - Component Definition Tests
  * Tests for the define() function and component lifecycle
  */
+
 import { define, html, signal } from '..';
-import { cleanup, mount } from '../trial/trial';
+import { mount } from '../test';
 
 describe('Core: Component Definition', () => {
-  afterEach(() => cleanup());
-
   describe('define()', () => {
     it('should define a custom element', () => {
       define('test-basic', () => {
@@ -18,33 +17,27 @@ describe('Core: Component Definition', () => {
       expect(el).toBeInstanceOf(HTMLElement);
     });
 
-    it('should render template to shadow root', () => {
-      define('test-shadow', () => {
-        return html`<div class="content">Content</div>`;
-      });
-
-      const { query } = mount('test-shadow');
+    it('should render template to shadow root', async () => {
+      const { query } = await mount(() => html`<div class="content">Content</div>`);
       expect(query('.content')?.textContent).toBe('Content');
     });
 
     it('should support reactive templates', async () => {
-      define('test-reactive', () => {
+      const { query } = await mount(() => {
         const count = signal(0);
         return html`<div>${count}</div>`;
       });
-
-      const { query } = mount('test-reactive');
       expect(query('div')?.textContent).toBe('0');
     });
 
-    it('should isolate component state', () => {
-      define('test-isolated', () => {
+    it('should isolate component state', async () => {
+      const setup = () => {
         const count = signal(0);
         return html`<div>${count}</div>`;
-      });
+      };
 
-      const { query: query1 } = mount('test-isolated');
-      const { query: query2 } = mount('test-isolated');
+      const { query: query1 } = await mount(setup);
+      const { query: query2 } = await mount(setup);
 
       expect(query1('div')?.textContent).toBe('0');
       expect(query2('div')?.textContent).toBe('0');
@@ -52,13 +45,9 @@ describe('Core: Component Definition', () => {
   });
 
   describe('Component Props', () => {
-    it('should receive attributes as props', () => {
-      define('test-props-basic', () => {
-        return html`<div>Component</div>`;
-      });
-
-      const { element } = mount('test-props-basic', {
-        props: { size: 'large', variant: 'primary' },
+    it('should receive attributes as props', async () => {
+      const { element } = await mount(() => html`<div>Component</div>`, {
+        attrs: { size: 'large', variant: 'primary' },
       });
 
       expect(element.getAttribute('variant')).toBe('primary');
@@ -67,56 +56,43 @@ describe('Core: Component Definition', () => {
   });
 
   describe('Shadow DOM', () => {
-    it('should create shadow root', () => {
-      define('test-shadow-root', () => {
-        return html`<div>Shadow Content</div>`;
-      });
-
-      const { shadow } = mount('test-shadow-root');
+    it('should create shadow root', async () => {
+      const { shadow } = await mount(() => html`<div>Shadow Content</div>`);
       expect(shadow).not.toBeNull();
       expect(shadow?.querySelector('div')?.textContent).toBe('Shadow Content');
     });
 
-    it('should encapsulate styles', () => {
-      define('test-encapsulation', () => {
-        return html`<div class="unique-class">Test</div>`;
-      });
-
-      const { query } = mount('test-encapsulation');
+    it('should encapsulate styles', async () => {
+      const { query } = await mount(() => html`<div class="unique-class">Test</div>`);
       const div = query('.unique-class');
       expect(div).not.toBeNull();
     });
   });
 
   describe('Slots', () => {
-    it('should support default slot', () => {
-      define('test-default-slot', () => {
-        return html`<div><slot></slot></div>`;
-      });
-
-      const { element } = mount('test-default-slot', {
-        innerHTML: '<span>Slotted Content</span>',
+    it('should support default slot', async () => {
+      const { element } = await mount(() => html`<div><slot></slot></div>`, {
+        html: '<span>Slotted Content</span>',
       });
 
       expect(element.innerHTML).toContain('Slotted Content');
     });
 
-    it('should support named slots', () => {
-      define('test-named-slots', () => {
-        return html`
+    it('should support named slots', async () => {
+      const { element } = await mount(
+        () => html`
           <div>
             <slot name="header"></slot>
             <slot></slot>
           </div>
-        `;
-      });
-
-      const { element } = mount('test-named-slots', {
-        innerHTML: `
+        `,
+        {
+          html: `
           <div slot="header">Header</div>
           <div>Content</div>
         `,
-      });
+        },
+      );
 
       expect(element.innerHTML).toContain('Header');
       expect(element.innerHTML).toContain('Content');
@@ -124,39 +100,27 @@ describe('Core: Component Definition', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle empty template', () => {
-      define('test-empty', () => {
-        return html``;
-      });
-
-      const { shadow } = mount('test-empty');
+    it('should handle empty template', async () => {
+      const { shadow } = await mount(() => html``);
       expect(shadow).not.toBeNull();
     });
 
-    it('should handle undefined return', () => {
-      define('test-undefined', () => {
-        return html`<div>Test</div>`;
-      });
-
-      const { query } = mount('test-undefined');
+    it('should handle undefined return', async () => {
+      const { query } = await mount(() => html`<div>Test</div>`);
       expect(query('div')).not.toBeNull();
     });
   });
 
   describe('Re-rendering', () => {
     it('should update DOM when signals change', async () => {
-      define('test-rerender', () => {
-        const count = signal(0);
-        setTimeout(() => count.value++, 10);
+      let count!: ReturnType<typeof signal<number>>;
+      const { query, act } = await mount(() => {
+        count = signal(0);
         return html`<div>${count}</div>`;
       });
 
-      const { query, waitForUpdates } = mount('test-rerender');
       expect(query('div')?.textContent).toBe('0');
-
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      await waitForUpdates();
-
+      await act(() => count.value++);
       expect(query('div')?.textContent).toBe('1');
     });
   });

@@ -1,6 +1,6 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createFixture } from '../../../utils/trial';
 
 describe('bit-accordion-item accessibility', () => {
   beforeAll(async () => {
@@ -8,22 +8,22 @@ describe('bit-accordion-item accessibility', () => {
   });
 
   it('should have no accessibility violations', async () => {
-    const fixture = await createFixture('bit-accordion-item');
-    fixture.element.innerHTML = '<span slot="title">Title</span>Content';
+    const { element, destroy } = await mount('bit-accordion-item');
+    element.innerHTML = '<span slot="title">Title</span>Content';
 
-    const results = await axe.run(fixture.element);
+    const results = await axe.run(element);
     expect(results.violations).toHaveLength(0);
 
-    fixture.destroy();
+    destroy();
   });
 
   it('should be keyboard accessible', async () => {
-    const fixture = await createFixture('bit-accordion-item');
-    fixture.element.innerHTML = '<span slot="title">Title</span>Content';
+    const { query, element, destroy } = await mount('bit-accordion-item');
+    element.innerHTML = '<span slot="title">Title</span>Content';
 
-    const summary = fixture.query<HTMLElement>('summary');
+    const summary = query<HTMLElement>('summary');
     expect(summary?.tabIndex).toBe(0);
 
-    fixture.destroy();
+    destroy();
   });
 });

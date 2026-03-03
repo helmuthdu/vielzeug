@@ -1,8 +1,8 @@
+import { type Fixture, mount } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-button-group', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../button-group');
@@ -15,7 +15,7 @@ describe('bit-button-group', () => {
 
   describe('Rendering', () => {
     it('should render with shadow DOM structure', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       const group = fixture.query('.button-group');
       const slot = fixture.query('slot');
@@ -26,7 +26,7 @@ describe('bit-button-group', () => {
     });
 
     it('should render child buttons', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -40,21 +40,21 @@ describe('bit-button-group', () => {
 
   describe('Orientation', () => {
     it('should default to horizontal orientation', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       expect(fixture.element.hasAttribute('orientation')).toBe(false);
     });
 
     it('should apply vertical orientation', async () => {
-      fixture = await createFixture('bit-button-group', { orientation: 'vertical' });
+      fixture = await mount('bit-button-group', { attrs: { orientation: 'vertical' } });
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     });
 
     it('should update orientation dynamically', async () => {
-      fixture = await createFixture('bit-button-group', { orientation: 'horizontal' });
+      fixture = await mount('bit-button-group', { attrs: { orientation: 'horizontal' } });
 
-      await fixture.setAttribute('orientation', 'vertical');
+      await fixture.attr('orientation', 'vertical');
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     });
@@ -62,21 +62,21 @@ describe('bit-button-group', () => {
 
   describe('Attached Mode', () => {
     it('should not be attached by default', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       expect(fixture.element.hasAttribute('attached')).toBe(false);
     });
 
     it('should apply attached mode', async () => {
-      fixture = await createFixture('bit-button-group', { attached: true });
+      fixture = await mount('bit-button-group', { attrs: { attached: true } });
 
       expect(fixture.element.hasAttribute('attached')).toBe(true);
     });
 
     it('should toggle attached mode', async () => {
-      fixture = await createFixture('bit-button-group', { attached: true });
+      fixture = await mount('bit-button-group', { attrs: { attached: true } });
 
-      await fixture.setAttribute('attached', false);
+      await fixture.attr('attached', false);
 
       expect(fixture.element.hasAttribute('attached')).toBe(false);
     });
@@ -84,21 +84,21 @@ describe('bit-button-group', () => {
 
   describe('Full Width', () => {
     it('should not be fullwidth by default', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(false);
     });
 
     it('should apply fullwidth mode', async () => {
-      fixture = await createFixture('bit-button-group', { fullwidth: true });
+      fixture = await mount('bit-button-group', { attrs: { fullwidth: true } });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
     });
 
     it('should toggle fullwidth mode', async () => {
-      fixture = await createFixture('bit-button-group', { fullwidth: true });
+      fixture = await mount('bit-button-group', { attrs: { fullwidth: true } });
 
-      await fixture.setAttribute('fullwidth', false);
+      await fixture.attr('fullwidth', false);
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(false);
     });
@@ -106,13 +106,13 @@ describe('bit-button-group', () => {
 
   describe('Size Propagation', () => {
     it('should propagate size to child buttons on init', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'lg' });
+      fixture = await mount('bit-button-group', { attrs: { size: 'lg' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -121,14 +121,14 @@ describe('bit-button-group', () => {
     });
 
     it('should update child button sizes when group size changes', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'sm' });
+      fixture = await mount('bit-button-group', { attrs: { size: 'sm' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
-      await fixture.setAttribute('size', 'lg');
+      await fixture.flush();
+      await fixture.attr('size', 'lg');
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -140,10 +140,10 @@ describe('bit-button-group', () => {
       const sizes = ['sm', 'md', 'lg'] as const;
 
       for (const size of sizes) {
-        fixture = await createFixture('bit-button-group', { size });
+        fixture = await mount('bit-button-group', { attrs: { size } });
         fixture.element.innerHTML = '<bit-button>Test</bit-button>';
 
-        await fixture.update();
+        await fixture.flush();
 
         const button = fixture.element.querySelector('bit-button');
         expect(button?.getAttribute('size')).toBe(size);
@@ -155,13 +155,13 @@ describe('bit-button-group', () => {
 
   describe('Variant Propagation', () => {
     it('should propagate variant to child buttons on init', async () => {
-      fixture = await createFixture('bit-button-group', { variant: 'outline' });
+      fixture = await mount('bit-button-group', { attrs: { variant: 'outline' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -170,14 +170,14 @@ describe('bit-button-group', () => {
     });
 
     it('should update child button variants when group variant changes', async () => {
-      fixture = await createFixture('bit-button-group', { variant: 'solid' });
+      fixture = await mount('bit-button-group', { attrs: { variant: 'solid' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
-      await fixture.setAttribute('variant', 'ghost');
+      await fixture.flush();
+      await fixture.attr('variant', 'ghost');
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -189,10 +189,10 @@ describe('bit-button-group', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
       for (const variant of variants) {
-        fixture = await createFixture('bit-button-group', { variant });
+        fixture = await mount('bit-button-group', { attrs: { variant } });
         fixture.element.innerHTML = '<bit-button>Test</bit-button>';
 
-        await fixture.update();
+        await fixture.flush();
 
         const button = fixture.element.querySelector('bit-button');
         expect(button?.getAttribute('variant')).toBe(variant);
@@ -204,13 +204,13 @@ describe('bit-button-group', () => {
 
   describe('Color Propagation', () => {
     it('should propagate color to child buttons on init', async () => {
-      fixture = await createFixture('bit-button-group', { color: 'secondary' });
+      fixture = await mount('bit-button-group', { attrs: { color: 'secondary' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -219,14 +219,14 @@ describe('bit-button-group', () => {
     });
 
     it('should update child button colors when group color changes', async () => {
-      fixture = await createFixture('bit-button-group', { color: 'primary' });
+      fixture = await mount('bit-button-group', { attrs: { color: 'primary' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
-      await fixture.setAttribute('color', 'error');
+      await fixture.flush();
+      await fixture.attr('color', 'error');
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -238,10 +238,10 @@ describe('bit-button-group', () => {
       const colors = ['primary', 'secondary', 'success', 'warning', 'error'] as const;
 
       for (const color of colors) {
-        fixture = await createFixture('bit-button-group', { color });
+        fixture = await mount('bit-button-group', { attrs: { color } });
         fixture.element.innerHTML = '<bit-button>Test</bit-button>';
 
-        await fixture.update();
+        await fixture.flush();
 
         const button = fixture.element.querySelector('bit-button');
         expect(button?.getAttribute('color')).toBe(color);
@@ -253,10 +253,12 @@ describe('bit-button-group', () => {
 
   describe('Combined Attributes', () => {
     it('should handle multiple attributes together', async () => {
-      fixture = await createFixture('bit-button-group', {
-        attached: true,
-        fullwidth: true,
-        orientation: 'vertical',
+      fixture = await mount('bit-button-group', {
+        attrs: {
+          attached: true,
+          fullwidth: true,
+          orientation: 'vertical',
+        },
       });
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
@@ -265,17 +267,19 @@ describe('bit-button-group', () => {
     });
 
     it('should propagate all attributes to children', async () => {
-      fixture = await createFixture('bit-button-group', {
-        color: 'success',
-        size: 'lg',
-        variant: 'outline',
+      fixture = await mount('bit-button-group', {
+        attrs: {
+          color: 'success',
+          size: 'lg',
+          variant: 'outline',
+        },
       });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -286,11 +290,11 @@ describe('bit-button-group', () => {
     });
 
     it('should update multiple attributes simultaneously', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
       fixture.element.innerHTML = '<bit-button>Test</bit-button>';
 
-      await fixture.update();
-      await fixture.setAttributes({
+      await fixture.flush();
+      await fixture.attrs({
         color: 'error',
         size: 'lg',
         variant: 'outline',
@@ -305,10 +309,10 @@ describe('bit-button-group', () => {
 
   describe('Dynamic Children', () => {
     it('should apply attributes to dynamically added buttons', async () => {
-      fixture = await createFixture('bit-button-group', { color: 'primary', size: 'lg' });
+      fixture = await mount('bit-button-group', { attrs: { color: 'primary', size: 'lg' } });
       fixture.element.innerHTML = '<bit-button>Button 1</bit-button>';
 
-      await fixture.update();
+      await fixture.flush();
 
       const newButton = document.createElement('bit-button');
       newButton.textContent = 'Button 2';
@@ -316,7 +320,7 @@ describe('bit-button-group', () => {
 
       const slot = fixture.query('slot');
       slot?.dispatchEvent(new Event('slotchange'));
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       expect(buttons.length).toBe(2);
@@ -327,13 +331,13 @@ describe('bit-button-group', () => {
     });
 
     it('should handle buttons removed dynamically', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'sm' });
+      fixture = await mount('bit-button-group', { attrs: { size: 'sm' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const firstButton = fixture.element.querySelector('bit-button');
       firstButton?.remove();
@@ -345,30 +349,30 @@ describe('bit-button-group', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty button group', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       const group = fixture.query('.button-group');
       expect(group).toBeTruthy();
     });
 
     it('should handle single button', async () => {
-      fixture = await createFixture('bit-button-group', { attached: true });
+      fixture = await mount('bit-button-group', { attrs: { attached: true } });
       fixture.element.innerHTML = '<bit-button>Only Button</bit-button>';
 
-      await fixture.update();
+      await fixture.flush();
 
       const button = fixture.element.querySelector('bit-button');
       expect(button).toBeTruthy();
     });
 
     it('should override individual button attributes', async () => {
-      fixture = await createFixture('bit-button-group', { color: 'error', size: 'lg' });
+      fixture = await mount('bit-button-group', { attrs: { color: 'error', size: 'lg' } });
       fixture.element.innerHTML = `
         <bit-button size="sm" color="primary">Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       buttons.forEach((button) => {
@@ -378,26 +382,26 @@ describe('bit-button-group', () => {
     });
 
     it('should not affect non-button children', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'lg' });
+      fixture = await mount('bit-button-group', { attrs: { size: 'lg' } });
 
       const div = document.createElement('div');
       div.textContent = 'Regular div';
       fixture.element.appendChild(div);
 
-      await fixture.update();
+      await fixture.flush();
 
       expect(div.hasAttribute('size')).toBe(false);
     });
 
     it('should handle mixed content', async () => {
-      fixture = await createFixture('bit-button-group', { size: 'md' });
+      fixture = await mount('bit-button-group', { attrs: { size: 'md' } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <span>Some text</span>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       expect(buttons.length).toBe(2);
@@ -409,20 +413,20 @@ describe('bit-button-group', () => {
 
   describe('Accessibility', () => {
     it('should have role="group" on container', async () => {
-      fixture = await createFixture('bit-button-group');
+      fixture = await mount('bit-button-group');
 
       const group = fixture.query('.button-group');
       expect(group?.getAttribute('role')).toBe('group');
     });
 
     it('should maintain button accessibility in attached mode', async () => {
-      fixture = await createFixture('bit-button-group', { attached: true });
+      fixture = await mount('bit-button-group', { attrs: { attached: true } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const buttons = fixture.element.querySelectorAll('bit-button');
       expect(buttons.length).toBe(2);

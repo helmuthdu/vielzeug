@@ -403,7 +403,7 @@ describe('Store - runInScope', () => {
 
 describe('createTestState', () => {
   it('creates test store with default state', () => {
-    const { state: testState, dispose } = createTestState<{ count: number }>();
+    const { state: testState, dispose } = createTestState<{ count: number }>({ count: 0 });
 
     testState.set({ count: 5 });
     expect(testState.get().count).toBe(5);

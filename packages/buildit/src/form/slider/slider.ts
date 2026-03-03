@@ -1,9 +1,26 @@
+import {
+  aria,
+  computed,
+  createId,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  defineSlots,
+  field,
+  guard,
+  handle,
+  html,
+  onFormReset,
+  onMount,
+  ref,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
-import { setupLabelAssociation } from '../../utils/common';
-import { FormFieldController } from '../../utils/controllers';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -93,7 +110,9 @@ const styles = /* css */ `
 
   /* Disable transitions during dragging for responsive feel */
   :host([data-dragging]) .slider-thumb {
-    transition: box-shadow var(--transition-normal), transform var(--transition-fast);
+    transition:
+      box-shadow var(--transition-normal),
+      transform var(--transition-fast);
   }
 
   :host(:focus-visible) .slider-thumb,
@@ -202,281 +221,183 @@ export interface SliderProps {
  * <bit-slider size="lg" value="70">Large</bit-slider>
  * ```
  */
-class BitSlider extends HTMLElement {
-  static formAssociated = true;
-  static observedAttributes = ['min', 'max', 'step', 'value', 'disabled', 'name', 'color', 'size'] as const;
+define(
+  'bit-slider',
+  ({ host }) => {
+    const slots = defineSlots();
+    const emit = defineEmits<{ change: { originalEvent?: Event; value: number } }>();
+    const props = defineProps({
+      color: { default: undefined as ThemeColor | undefined },
+      disabled: { default: false },
+      max: { default: '100' },
+      min: { default: '0' },
+      name: { default: '' },
+      size: { default: undefined as ComponentSize | undefined },
+      step: { default: '1' },
+      value: { default: '0' },
+    });
 
-  private formField = new FormFieldController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input[type="range"]') ?? null,
-  });
+    const valueSignal = signal('0');
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+    field({
+      disabled: computed(() => props.disabled.value),
+      value: valueSignal,
+    });
 
-  // ============================================
-  // Constraint Validation API (delegated to controller)
-  // ============================================
+    onFormReset(() => {
+      valueSignal.value = '0';
+    });
 
-  setCustomValidity(message: string): void {
-    this.formField.setCustomValidity(message);
-  }
+    const containerRef = ref<HTMLDivElement>();
+    const labelRef = ref<HTMLSpanElement>();
 
-  checkValidity(): boolean {
-    return this.formField.checkValidity();
-  }
+    watch(
+      props.value,
+      (v) => {
+        valueSignal.value = v;
+      },
+      { immediate: true },
+    );
 
-  reportValidity(): boolean {
-    return this.formField.reportValidity();
-  }
+    aria({
+      disabled: () => props.disabled.value,
+      valuemax: () => Number(props.max.value || 100),
+      valuemin: () => Number(props.min.value || 0),
+      valuenow: () => Number(valueSignal.value || 0),
+    });
 
-  get validity(): ValidityState {
-    return this.formField.validity;
-  }
-
-  get validationMessage(): string {
-    return this.formField.validationMessage;
-  }
-
-  connectedCallback() {
-    this.render();
-    this.formField.hostConnected();
-
-    const min = Number(this.getAttribute('min') || 0);
-    const max = Number(this.getAttribute('max') || 100);
-    const val = Number(this.getAttribute('value') || 0);
-    const isDisabled = this.hasAttribute('disabled');
-
-    // Helper to calculate progress percentage
-    const calculateProgress = (value: number, min: number, max: number): number => {
-      return ((value - min) / (max - min)) * 100;
-    };
-
-    // Helper to update UI (progress bar and ARIA)
-    const updateUI = (value: number) => {
-      const min = Number(this.getAttribute('min') || 0);
-      const max = Number(this.getAttribute('max') || 100);
-      const progress = calculateProgress(value, min, max);
-      this.style.setProperty('--_progress', `${progress}%`);
-      this.setAttribute('aria-valuenow', value.toString());
-    };
-
-    // Set initial progress
-    updateUI(val);
-
-    this.setAttribute('role', 'slider');
-    this.setAttribute('aria-valuemin', min.toString());
-    this.setAttribute('aria-valuemax', max.toString());
-    this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-
-    // Setup label association
-    setupLabelAssociation(this.shadowRoot, this, 'slider');
-
-    if (!isDisabled) {
-      this.setAttribute('tabindex', '0');
-    }
-
-    const updateValue = (clientX: number) => {
-      if (this.hasAttribute('disabled')) return;
-
-      const container = this.shadowRoot?.querySelector('.slider-container') as HTMLElement;
+    onMount(() => {
+      const container = containerRef.value;
       if (!container) return;
 
-      const rect = container.getBoundingClientRect();
-      const min = Number(this.getAttribute('min') || 0);
-      const max = Number(this.getAttribute('max') || 100);
-      const step = Number(this.getAttribute('step') || 1);
-
-      let percentage = (clientX - rect.left) / rect.width;
-      percentage = Math.max(0, Math.min(1, percentage));
-
-      let newValue = min + percentage * (max - min);
-      newValue = Math.round(newValue / step) * step;
-      newValue = Math.max(min, Math.min(max, newValue));
-
-      if (Number(this.getAttribute('value')) !== newValue) {
-        this.setAttribute('value', newValue.toString());
-        updateUI(newValue);
-        this.formField.setFormValue(newValue.toString());
-        this.dispatchEvent(
-          new CustomEvent('change', {
-            bubbles: true,
-            composed: true,
-            detail: { originalEvent: new CustomEvent('change'), value: newValue },
-          }),
-        );
+      // Label association
+      const label = labelRef.value;
+      if (slots.has('default') && label) {
+        const labelId = createId('slider-label');
+        label.id = labelId;
+        aria({ labelledby: labelId });
       }
-    };
 
-    let isDragging = false;
+      const calculateProgress = (value: number, min: number, max: number) => ((value - min) / (max - min)) * 100;
 
-    const container = this.shadowRoot?.querySelector('.slider-container') as HTMLElement;
-    if (container) {
-      container.addEventListener('pointerdown', (e) => {
-        if (this.hasAttribute('disabled')) return;
-        e.preventDefault();
-        isDragging = true;
-        updateValue(e.clientX);
-        const target = e.target as Element;
-        target.setPointerCapture(e.pointerId);
-      });
+      const updateUI = (value: number) => {
+        const min = Number(props.min.value || 0);
+        const max = Number(props.max.value || 100);
+        const progress = calculateProgress(value, min, max);
+        host.style.setProperty('--_progress', `${progress}%`);
+      };
 
-      container.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        // Set the dragging state on the first move to disable transitions
-        if (!this.hasAttribute('data-dragging')) {
-          this.setAttribute('data-dragging', '');
+      host.setAttribute('role', 'slider');
+      if (!props.disabled.value) host.setAttribute('tabindex', '0');
+      updateUI(Number(valueSignal.value));
+
+      const updateValue = (clientX: number) => {
+        if (props.disabled.value) return;
+        const rect = container.getBoundingClientRect();
+        const minN = Number(props.min.value || 0);
+        const maxN = Number(props.max.value || 100);
+        const stepN = Number(props.step.value || 1);
+
+        let percentage = (clientX - rect.left) / rect.width;
+        percentage = Math.max(0, Math.min(1, percentage));
+        let newValue = minN + percentage * (maxN - minN);
+        newValue = Math.round(newValue / stepN) * stepN;
+        newValue = Math.max(minN, Math.min(maxN, newValue));
+
+        if (Number(valueSignal.value) !== newValue) {
+          valueSignal.value = newValue.toString();
+          updateUI(newValue);
+          emit('change', { value: newValue });
         }
-        updateValue(e.clientX);
-      });
+      };
 
-      container.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        isDragging = false;
-        this.removeAttribute('data-dragging');
-        const target = e.target as Element;
-        target.releasePointerCapture(e.pointerId);
-      });
-    }
+      let isDragging = false;
 
-    this.addEventListener('keydown', (e) => {
-      const kbEvent = e as KeyboardEvent;
-      if (this.hasAttribute('disabled')) return;
+      const handlePointerDown = guard(
+        () => !props.disabled.value,
+        (e: PointerEvent) => {
+          e.preventDefault();
+          isDragging = true;
+          updateValue(e.clientX);
+          (e.target as Element).setPointerCapture(e.pointerId);
+        },
+      );
 
-      const min = Number(this.getAttribute('min') || 0);
-      const max = Number(this.getAttribute('max') || 100);
-      const step = Number(this.getAttribute('step') || 1);
-      const val = Number(this.getAttribute('value') || 0);
-      let newValue = val;
+      const handlePointerMove = guard(
+        () => isDragging,
+        (e: PointerEvent) => {
+          e.preventDefault();
+          if (!host.hasAttribute('data-dragging')) host.setAttribute('data-dragging', '');
+          updateValue(e.clientX);
+        },
+      );
 
-      switch (kbEvent.key) {
-        case 'ArrowRight':
-        case 'ArrowUp':
-          newValue = Math.min(max, val + step);
-          break;
-        case 'ArrowLeft':
-        case 'ArrowDown':
-          newValue = Math.max(min, val - step);
-          break;
-        case 'Home':
-          newValue = min;
-          break;
-        case 'End':
-          newValue = max;
-          break;
-        default:
-          return;
-      }
+      const handlePointerUp = guard(
+        () => isDragging,
+        (e: PointerEvent) => {
+          e.preventDefault();
+          isDragging = false;
+          host.removeAttribute('data-dragging');
+          (e.target as Element).releasePointerCapture(e.pointerId);
+        },
+      );
 
-      e.preventDefault();
-      if (newValue !== val) {
-        this.setAttribute('value', newValue.toString());
-        updateUI(newValue);
-        this.formField.setFormValue(newValue.toString());
-        this.dispatchEvent(
-          new CustomEvent('change', {
-            bubbles: true,
-            composed: true,
-            detail: { originalEvent: e, value: newValue },
-          }),
-        );
-      }
+      const handleKeydown = guard(
+        () => !props.disabled.value,
+        (e: KeyboardEvent) => {
+          const minN = Number(props.min.value || 0);
+          const maxN = Number(props.max.value || 100);
+          const stepN = Number(props.step.value || 1);
+          const val = Number(valueSignal.value || 0);
+          let newValue = val;
+
+          switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+              newValue = Math.min(maxN, val + stepN);
+              break;
+            case 'ArrowLeft':
+            case 'ArrowDown':
+              newValue = Math.max(minN, val - stepN);
+              break;
+            case 'Home':
+              newValue = minN;
+              break;
+            case 'End':
+              newValue = maxN;
+              break;
+            default:
+              return;
+          }
+
+          e.preventDefault();
+          if (newValue !== val) {
+            valueSignal.value = newValue.toString();
+            updateUI(newValue);
+            emit('change', { originalEvent: e, value: newValue });
+          }
+        },
+      );
+
+      handle(container, 'pointerdown', handlePointerDown);
+      handle(container, 'pointermove', handlePointerMove);
+      handle(container, 'pointerup', handlePointerUp);
+      handle(host, 'keydown', handleKeydown);
     });
-  }
 
-  disconnectedCallback() {
-    this.formField.hostDisconnected();
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    const input = this.shadowRoot?.querySelector('input[type="range"]') as HTMLInputElement | null;
-    const hiddenInput = this.shadowRoot?.querySelector('input[type="hidden"]') as HTMLInputElement | null;
-    if (!input) return;
-
-    if (name === 'value') {
-      const val = newValue || '0';
-      input.value = val;
-      if (hiddenInput) hiddenInput.value = val;
-
-      // Update progress bar and aria-valuenow
-      const min = Number(this.getAttribute('min') || 0);
-      const max = Number(this.getAttribute('max') || 100);
-      const numVal = Number(val);
-      const progress = ((numVal - min) / (max - min)) * 100;
-      this.style.setProperty('--_progress', `${progress}%`);
-      this.setAttribute('aria-valuenow', val);
-      this.formField.setFormValue(val);
-    } else if (name === 'min' || name === 'max') {
-      input.setAttribute(name, newValue || '0');
-
-      // Update aria attributes
-      if (name === 'min') {
-        this.setAttribute('aria-valuemin', newValue || '0');
-      } else {
-        this.setAttribute('aria-valuemax', newValue || '100');
-      }
-
-      // Recalculate progress
-      const min = Number(this.getAttribute('min') || 0);
-      const max = Number(this.getAttribute('max') || 100);
-      const val = Number(this.getAttribute('value') || 0);
-      const progress = ((val - min) / (max - min)) * 100;
-      this.style.setProperty('--_progress', `${progress}%`);
-    } else if (name === 'disabled') {
-      const isDisabled = newValue !== null;
-      input.disabled = isDisabled;
-
-      // Update aria-disabled and tabindex
-      this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-      if (isDisabled) {
-        this.removeAttribute('tabindex');
-      } else if (!this.hasAttribute('tabindex')) {
-        this.setAttribute('tabindex', '0');
-      }
-    } else if (name === 'step') {
-      input.step = newValue || '1';
-    } else if (name === 'name' && hiddenInput) {
-      hiddenInput.name = newValue || '';
-    }
-  }
-
-  render() {
-    const min = this.getAttribute('min') || '0';
-    const max = this.getAttribute('max') || '100';
-    const step = this.getAttribute('step') || '1';
-    const value = this.getAttribute('value') || '0';
-    const isDisabled = this.hasAttribute('disabled');
-    const name = this.getAttribute('name') || '';
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="slider-container" part="slider">
-        <input
-          type="range"
-          min="${min}"
-          max="${max}"
-          step="${step}"
-          value="${value}"
-          ${isDisabled ? 'disabled' : ''}
-          name="${name}"
-          aria-hidden="true"
-          tabindex="-1" />
-        <div class="slider-track" part="track">
-          <div class="slider-fill" part="fill"></div>
-          <div class="slider-thumb" part="thumb"></div>
+    return {
+      styles: [styles],
+      template: html` <div class="slider-container" part="slider" ref=${containerRef}>
+          <input type="range" aria-hidden="true" tabindex="-1" />
+          <div class="slider-track" part="track">
+            <div class="slider-fill" part="fill"></div>
+            <div class="slider-thumb" part="thumb"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label"><slot></slot></span>
-    `;
-    this.formField.setFormValue(value);
-  }
-}
-
-if (!customElements.get('bit-slider')) {
-  customElements.define('bit-slider', BitSlider);
-}
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+    };
+  },
+  { formAssociated: true },
+);
 
 export default {};

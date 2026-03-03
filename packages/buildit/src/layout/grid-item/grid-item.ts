@@ -1,4 +1,6 @@
-const styles = /* css */ `
+import { css, define, html } from '@vielzeug/craftit';
+
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles
@@ -319,6 +321,26 @@ const styles = /* css */ `
     }
 `;
 
+/** Grid item component properties */
+export interface GridItemProps {
+  /** Number of columns to span */
+  colSpan?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full';
+  /** Number of rows to span */
+  rowSpan?: '1' | '2' | '3' | '4' | '5' | '6' | 'full';
+  /** Column start line */
+  colStart?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13';
+  /** Column end line */
+  colEnd?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13' | 'auto';
+  /** Row start line */
+  rowStart?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto';
+  /** Row end line */
+  rowEnd?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | 'auto';
+  /** Align self vertically within the grid cell */
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  /** Justify self horizontally within the grid cell */
+  justify?: 'start' | 'center' | 'end' | 'stretch';
+}
+
 /**
  * bit-grid-item - A grid item with custom placement and span
  *
@@ -356,29 +378,11 @@ const styles = /* css */ `
  *   <bit-grid-item colStart="3">Column 3</bit-grid-item>
  * </bit-grid>
  */
-
-class BitGridItem extends HTMLElement {
-  static observedAttributes = ['colSpan', 'rowSpan', 'colStart', 'colEnd', 'rowStart', 'rowEnd', 'align', 'justify'];
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  connectedCallback() {
-    this.render();
-  }
-
-  render() {
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div part="item"><slot></slot></div>
-    `;
-  }
-}
-
-if (!customElements.get('bit-grid-item')) {
-  customElements.define('bit-grid-item', BitGridItem);
-}
+define('bit-grid-item', () => {
+  return {
+    styles: [styles],
+    template: html`<slot></slot>`,
+  };
+});
 
 export default {};

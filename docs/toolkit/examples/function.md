@@ -1,4 +1,9 @@
-# ⚙️ Function Utilities
+---
+title: Toolkit — Function Examples
+description: Function utility examples for Toolkit.
+---
+
+# Function Utilities
 
 Function utilities provide a powerful set of tools to control execution, compose logic, and enhance function behavior in a type-safe way. Use these helpers for debouncing, throttling, memoization, retries, and more.
 

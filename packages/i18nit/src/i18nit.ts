@@ -12,33 +12,39 @@ export type PluralMessages = Partial<Record<PluralForm, string>> & { other: stri
 
 export type MessageValue = string | PluralMessages;
 
-// Support nested message objects with dot notation access
-export type Messages = {
+export interface Messages {
   [key: string]: MessageValue | Messages;
-};
+}
 
 export type TranslateOptions = {
   locale?: Locale;
   escape?: boolean;
 };
 
+export type Loader = (locale: Locale) => Promise<Messages>;
+
 export type I18nConfig = {
   locale?: Locale;
   fallback?: Locale | Locale[];
   messages?: Record<Locale, Messages>;
-  loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
+  loaders?: Record<Locale, Loader>;
   escape?: boolean;
+};
+
+export type Namespace = {
+  t(key: string, vars?: Record<string, unknown>, opts?: TranslateOptions): string;
+  has(key: string, locale?: Locale): boolean;
 };
 
 /* -------------------- Path Resolution -------------------- */
 
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 /**
@@ -46,28 +52,47 @@ function escapeHtml(str: string): string {
  * Supports: 'user.name', 'items[0]', 'user.items[0].name'
  */
 function resolvePath(obj: Record<string, unknown>, path: string): unknown {
-  // Try direct access first (handles keys with dots)
+  // Try direct access first (handles keys with literal dots)
   if (path in obj) return obj[path];
 
-  // Parse path segments
-  const parts = path.match(/[^.[\]]+/g) || [];
+  const parts = path.match(/[^.[\]]+/g) ?? [];
   let value: unknown = obj;
 
   for (const part of parts) {
     if (value == null || typeof value !== 'object') return undefined;
-
-    if (Array.isArray(value)) {
-      const index = Number(part);
-      if (Number.isNaN(index) || index < 0 || index >= value.length) {
-        return undefined;
-      }
-      value = value[index];
-    } else {
-      value = (value as Record<string, unknown>)[part];
-    }
+    value = (value as Record<string, unknown>)[part];
   }
 
   return value;
+}
+
+/* -------------------- Intl Caches -------------------- */
+
+const pluralRulesCache = new Map<string, Intl.PluralRules>();
+const listFormatCache = new Map<string, Intl.ListFormat>();
+const numberFormatCache = new Map<string, Intl.NumberFormat>();
+const dateFormatCache = new Map<string, Intl.DateTimeFormat>();
+
+/* -------------------- Helpers -------------------- */
+
+function isMessageValue(value: unknown): value is MessageValue {
+  if (typeof value === 'string') return true;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  return 'other' in obj && typeof obj.other === 'string' && Object.values(obj).every((v) => typeof v === 'string');
+}
+
+function deepMerge(target: Messages, source: Messages): Messages {
+  const result = { ...target };
+  for (const [key, val] of Object.entries(source)) {
+    const existing = result[key];
+    if (!isMessageValue(val) && !isMessageValue(existing) && typeof existing === 'object' && existing !== null) {
+      result[key] = deepMerge(existing as Messages, val as Messages);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
 }
 
 /* -------------------- List Formatting -------------------- */
@@ -82,18 +107,19 @@ function formatList(items: unknown[], locale: string, type: 'conjunction' | 'dis
   const stringItems = items.map(String);
 
   try {
-    const formatter = new Intl.ListFormat(locale, { style: 'long', type });
+    const cacheKey = `${locale}:${type}`;
+    let formatter = listFormatCache.get(cacheKey);
+    if (!formatter) {
+      formatter = new Intl.ListFormat(locale, { style: 'long', type });
+      listFormatCache.set(cacheKey, formatter);
+    }
     return formatter.format(stringItems);
   } catch {
     // Fallback for environments without Intl.ListFormat
     if (stringItems.length === 1) return stringItems[0];
-    if (stringItems.length === 2) {
-      const separator = type === 'conjunction' ? 'and' : 'or';
-      return `${stringItems[0]} ${separator} ${stringItems[1]}`;
-    }
-    const separator = type === 'conjunction' ? 'and' : 'or';
-    const last = stringItems.pop()!;
-    return `${stringItems.join(', ')} ${separator} ${last}`;
+    const sep = type === 'conjunction' ? 'and' : 'or';
+    if (stringItems.length === 2) return `${stringItems[0]} ${sep} ${stringItems[1]}`;
+    return `${stringItems.slice(0, -1).join(', ')} ${sep} ${stringItems.at(-1)}`;
   }
 }
 
@@ -113,34 +139,26 @@ function formatList(items: unknown[], locale: string, type: 'conjunction' | 'dis
  * - {items.length} - Array length
  */
 function interpolate(template: string, vars: Record<string, unknown>, locale: string): string {
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   return template.replace(/\{([\w.[\]]+)(?:\|([^}]+))?\}/g, (_match, key: string, separator?: string) => {
-    // Handle .length property
-    const isLength = key.endsWith('.length');
-    const actualKey = isLength ? key.slice(0, -7) : key;
+    const value = resolvePath(vars, key);
 
-    const value = resolvePath(vars, actualKey);
-
-    // Missing variables are replaced with empty string
     if (value == null) return '';
 
-    // Handle arrays
     if (Array.isArray(value)) {
-      if (isLength) return String(value.length);
-
-      if (separator !== undefined) {
-        if (separator === 'and') return formatList(value, locale, 'conjunction');
-        if (separator === 'or') return formatList(value, locale, 'disjunction');
-        return value.map(String).join(separator);
-      }
-
+      if (separator === 'and') return formatList(value, locale, 'conjunction');
+      if (separator === 'or') return formatList(value, locale, 'disjunction');
+      if (separator !== undefined) return value.map(String).join(separator);
       return value.map(String).join(', ');
     }
 
-    // Format numbers with locale
     if (typeof value === 'number') {
       try {
-        return new Intl.NumberFormat(locale).format(value);
+        let fmt = numberFormatCache.get(locale);
+        if (!fmt) {
+          fmt = new Intl.NumberFormat(locale);
+          numberFormatCache.set(locale, fmt);
+        }
+        return fmt.format(value);
       } catch {
         return String(value);
       }
@@ -160,7 +178,11 @@ function getPluralForm(locale: Locale, count: number): PluralForm {
   const n = Math.abs(Math.floor(count));
 
   try {
-    const rules = new Intl.PluralRules(locale);
+    let rules = pluralRulesCache.get(locale);
+    if (!rules) {
+      rules = new Intl.PluralRules(locale);
+      pluralRulesCache.set(locale, rules);
+    }
     return rules.select(n) as PluralForm;
   } catch {
     // Fallback to English-like behavior
@@ -171,85 +193,80 @@ function getPluralForm(locale: Locale, count: number): PluralForm {
 /* -------------------- I18n Class -------------------- */
 
 export class I18n {
-  private locale: Locale;
-  private fallbacks: Locale[];
-  private escape: boolean;
-  private catalogs = new Map<Locale, Messages>();
-  private loaders = new Map<Locale, (locale: Locale) => Promise<Messages>>();
-  private loading = new Map<Locale, Promise<void>>();
-  private subscribers = new Set<(locale: Locale) => void>();
+  #locale: Locale;
+  #fallbacks: Locale[];
+  #escape: boolean;
+  #catalogs = new Map<Locale, Messages>();
+  #loaders = new Map<Locale, Loader>();
+  #loading = new Map<Locale, Promise<void>>();
+  #subscribers = new Set<(locale: Locale) => void>();
 
-  constructor(config: I18nConfig = {}) {
-    this.locale = config.locale ?? 'en';
-    this.fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
-    this.escape = config.escape ?? false;
-
-    if (config.messages) {
-      for (const [locale, messages] of Object.entries(config.messages)) {
-        this.catalogs.set(locale, messages);
-      }
-    }
-
-    if (config.loaders) {
-      for (const [locale, loader] of Object.entries(config.loaders)) {
-        this.loaders.set(locale, loader);
-      }
-    }
+  // biome-ignore lint/suspicious/noShadowRestrictedNames: constructor parameter shadows the global `Loader` type, but it's clear from context and doesn't cause issues.
+  constructor({ locale = 'en', fallback, messages, loaders, escape = false }: I18nConfig = {}) {
+    this.#locale = locale;
+    this.#fallbacks = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
+    this.#escape = escape;
+    if (messages) for (const [l, m] of Object.entries(messages)) this.#catalogs.set(l, m);
+    if (loaders) for (const [l, fn] of Object.entries(loaders)) this.#loaders.set(l, fn);
   }
 
   /* -------------------- Locale Management -------------------- */
 
   setLocale(locale: Locale): void {
-    if (this.locale === locale) return;
-    this.locale = locale;
-    this.notifySubscribers();
+    if (this.#locale === locale) return;
+    this.#locale = locale;
+    this.#notifySubscribers();
   }
 
   getLocale(): Locale {
-    return this.locale;
+    return this.#locale;
   }
 
   /* -------------------- Message Management -------------------- */
 
   /**
-   * Adds messages to a locale (merges with existing).
+   * Adds messages to a locale (deep-merges with existing).
    */
   add(locale: Locale, messages: Messages): void {
-    const existing = this.catalogs.get(locale) ?? {};
-    this.catalogs.set(locale, { ...existing, ...messages });
-    this.notifySubscribers();
+    const existing = this.#catalogs.get(locale) ?? {};
+    this.#catalogs.set(locale, deepMerge(existing, messages));
+    this.#notifySubscribers();
   }
 
   /**
    * Sets messages for a locale (replaces existing).
    */
   set(locale: Locale, messages: Messages): void {
-    this.catalogs.set(locale, messages);
-    this.notifySubscribers();
+    this.#catalogs.set(locale, messages);
+    this.#notifySubscribers();
   }
 
   getMessages(locale: Locale): Messages | undefined {
-    return this.catalogs.get(locale);
+    return this.#catalogs.get(locale);
   }
 
   hasLocale(locale: Locale): boolean {
-    return this.catalogs.has(locale);
+    return this.#catalogs.has(locale);
+  }
+
+  getLocales(): Locale[] {
+    return [...this.#catalogs.keys()];
   }
 
   has(key: string, locale?: Locale): boolean {
-    return this.findMessage(key, locale ?? this.locale) !== undefined;
+    return this.#findMessage(key, locale ?? this.#locale) !== undefined;
   }
 
   /* -------------------- Async Loaders -------------------- */
 
   async load(locale: Locale): Promise<void> {
     // Return existing loading promise
-    if (this.loading.has(locale)) return this.loading.get(locale);
+    if (this.#loading.has(locale)) return this.#loading.get(locale)!;
 
     // Already loaded
-    if (this.catalogs.has(locale)) return;
+    if (this.#catalogs.has(locale)) return;
 
-    const loader = this.loaders.get(locale);
+    const loader = this.#loaders.get(locale);
     if (!loader) return;
 
     const promise = (async () => {
@@ -260,24 +277,25 @@ export class I18n {
         console.warn(`[I18n] Failed to load locale '${locale}':`, error);
         throw error;
       } finally {
-        this.loading.delete(locale);
+        this.#loading.delete(locale);
       }
     })();
 
-    this.loading.set(locale, promise);
+    this.#loading.set(locale, promise);
     return promise;
   }
 
-  register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void {
-    this.loaders.set(locale, loader);
+  register(locale: Locale, loader: Loader): void {
+    this.#loaders.set(locale, loader);
   }
 
   async hasAsync(key: string, locale?: Locale): Promise<boolean> {
-    const targetLocale = locale ?? this.locale;
+    const targetLocale = locale ?? this.#locale;
+    const chain = this.#getLocaleChain(targetLocale);
 
-    if (!this.catalogs.has(targetLocale) && this.loaders.has(targetLocale)) {
-      await this.load(targetLocale);
-    }
+    await Promise.all(
+      chain.filter((loc) => !this.#catalogs.has(loc) && this.#loaders.has(loc)).map((loc) => this.load(loc)),
+    );
 
     return this.has(key, targetLocale);
   }
@@ -296,22 +314,29 @@ export class I18n {
    * Translates a key with optional variables and options.
    * Synchronous - locale must be loaded first via load() or provided in config.
    */
-  t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string {
-    const targetLocale = options?.locale ?? this.locale;
-    const shouldEscape = options?.escape ?? this.escape;
+  t(key: string, vars?: Record<string, unknown>, opts?: TranslateOptions): string {
+    const targetLocale = opts?.locale ?? this.#locale;
+    const shouldEscape = opts?.escape ?? this.#escape;
 
-    const message = this.findMessage(key, targetLocale);
+    const message = this.#findMessage(key, targetLocale);
     if (message === undefined) return key;
 
-    const result = this.formatMessage(message, vars ?? {}, targetLocale);
+    const result = this.#formatMessage(message, vars ?? {}, targetLocale);
     return shouldEscape ? escapeHtml(result) : result;
   }
 
   /* -------------------- Formatting Helpers -------------------- */
 
   number(value: number, options?: Intl.NumberFormatOptions, locale?: Locale): string {
+    const loc = locale ?? this.#locale;
+    const key = `${loc}:${JSON.stringify(options ?? null)}`;
     try {
-      return new Intl.NumberFormat(locale ?? this.locale, options).format(value);
+      let fmt = numberFormatCache.get(key);
+      if (!fmt) {
+        fmt = new Intl.NumberFormat(loc, options);
+        numberFormatCache.set(key, fmt);
+      }
+      return fmt.format(value);
     } catch {
       return String(value);
     }
@@ -319,8 +344,15 @@ export class I18n {
 
   date(value: Date | number, options?: Intl.DateTimeFormatOptions, locale?: Locale): string {
     const date = typeof value === 'number' ? new Date(value) : value;
+    const loc = locale ?? this.#locale;
+    const key = `${loc}:${JSON.stringify(options ?? null)}`;
     try {
-      return new Intl.DateTimeFormat(locale ?? this.locale, options).format(date);
+      let fmt = dateFormatCache.get(key);
+      if (!fmt) {
+        fmt = new Intl.DateTimeFormat(loc, options);
+        dateFormatCache.set(key, fmt);
+      }
+      return fmt.format(date);
     } catch {
       return date.toString();
     }
@@ -328,32 +360,32 @@ export class I18n {
 
   /* -------------------- Namespaced Translator -------------------- */
 
-  namespace(ns: string) {
+  namespace(ns: string): Namespace {
     return {
-      t: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) =>
-        this.t(`${ns}.${key}`, vars, options),
+      has: (key: string, locale?: Locale) => this.has(`${ns}.${key}`, locale),
+      t: (key: string, vars?: Record<string, unknown>, opts?: TranslateOptions) => this.t(`${ns}.${key}`, vars, opts),
     };
   }
 
   /* -------------------- Subscriptions -------------------- */
 
   subscribe(handler: (locale: Locale) => void): () => void {
-    this.subscribers.add(handler);
+    this.#subscribers.add(handler);
 
     // Call handler immediately with the current locale
     try {
-      handler(this.locale);
+      handler(this.#locale);
     } catch {
       // Ignore handler errors
     }
 
-    return () => this.subscribers.delete(handler);
+    return () => this.#subscribers.delete(handler);
   }
 
-  private notifySubscribers(): void {
-    for (const handler of this.subscribers) {
+  #notifySubscribers(): void {
+    for (const handler of this.#subscribers) {
       try {
-        handler(this.locale);
+        handler(this.#locale);
       } catch {
         // Ignore handler errors
       }
@@ -362,88 +394,44 @@ export class I18n {
 
   /* -------------------- Internal Helpers -------------------- */
 
-  private findMessage(key: string, locale: Locale): MessageValue | undefined {
-    const locales = this.getLocaleChain(locale);
+  #findMessage(key: string, locale: Locale): MessageValue | undefined {
+    const locales = this.#getLocaleChain(locale);
 
     for (const loc of locales) {
-      const messages = this.catalogs.get(loc);
+      const messages = this.#catalogs.get(loc);
       if (!messages) continue;
 
       const value = resolvePath(messages, key);
 
-      // If the value is a nested Messages object (not a MessageValue), return undefined
-      // This ensures we only return actual translatable strings, not object containers
-      if (value !== undefined && this.isMessageValue(value)) {
-        return value as MessageValue;
+      if (value !== undefined && isMessageValue(value)) {
+        return value;
       }
     }
 
     return undefined;
   }
 
-  /**
-   * Check if a value is a MessageValue (string or PluralMessages) rather than a nested Messages object
-   */
-  private isMessageValue(value: unknown): boolean {
-    if (typeof value === 'string') return true;
+  #getLocaleChain(locale: Locale): Locale[] {
+    const seen = new Set<Locale>();
+    const push = (l: Locale) => {
+      seen.add(l);
+      const lang = l.split('-')[0];
+      if (lang !== l) seen.add(lang);
+    };
 
-    // Check if it's a PluralMessages object (has 'other' key and all values are strings)
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      const obj = value as Record<string, unknown>;
+    push(locale);
+    for (const fallback of this.#fallbacks) push(fallback);
 
-      // If it has 'other' key and values are strings, it's a PluralMessages
-      if ('other' in obj && typeof obj.other === 'string') {
-        return Object.values(obj).every((v) => typeof v === 'string');
-      }
-
-      // Otherwise it's a nested Messages object
-      return false;
-    }
-
-    return false;
+    return [...seen];
   }
 
-  private getLocaleChain(locale: Locale): Locale[] {
-    const chain: Locale[] = [locale];
-
-    // Add base language (e.g., 'en' from 'en-US')
-    const lang = locale.split('-')[0];
-    if (lang !== locale) chain.push(lang);
-
-    // Add fallback locales
-    for (const fallback of this.fallbacks) {
-      chain.push(fallback);
-      const fallbackLang = fallback.split('-')[0];
-      if (fallbackLang !== fallback) chain.push(fallbackLang);
-    }
-
-    return chain;
-  }
-
-  private formatMessage(message: MessageValue, vars: Record<string, unknown>, locale: Locale): string {
-    // Plural messages
-    if (typeof message === 'object' && 'other' in message) {
+  #formatMessage(message: MessageValue, vars: Record<string, unknown>, locale: Locale): string {
+    if (typeof message !== 'string') {
       const count = Number(vars.count ?? 0);
-      const pluralMsg = message as PluralMessages;
-
-      // Prefer an explicit 'zero' form
-      let form: PluralForm;
-      if (count === 0 && pluralMsg.zero !== undefined) {
-        form = 'zero';
-      } else {
-        form = getPluralForm(locale, count);
-      }
-
-      const template = pluralMsg[form] ?? pluralMsg.other;
-      return interpolate(template, vars, locale);
+      const form = count === 0 && message.zero !== undefined ? 'zero' : getPluralForm(locale, count);
+      return interpolate(message[form] ?? message.other, vars, locale);
     }
-
-    // String messages
-    if (typeof message === 'string') {
-      return interpolate(message, vars, locale);
-    }
-
-    return '';
+    return interpolate(message, vars, locale);
   }
 }
 

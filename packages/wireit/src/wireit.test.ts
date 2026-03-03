@@ -49,9 +49,9 @@ describe('Container - Basic Registration', () => {
     expect(value).toBe('test-value');
   });
 
-  it('should register value with custom lifetime', () => {
+  it('should register value', () => {
     const token = createToken<string>('config');
-    container.registerValue(token, 'test-value', 'transient');
+    container.registerValue(token, 'test-value');
 
     expect(container.has(token)).toBe(true);
   });
@@ -186,7 +186,7 @@ describe('Container - Lifetimes', () => {
     let callCount = 0;
 
     const token = createToken<number>('factory');
-    container.registerFactory(token, () => ++callCount, [], { lifetime: 'singleton' });
+    container.registerFactory(token, () => ++callCount, { lifetime: 'singleton' });
 
     const value1 = container.get(token);
     const value2 = container.get(token);
@@ -246,7 +246,9 @@ describe('Container - Dependencies', () => {
     const ServiceToken = createToken<string>('Service');
 
     container.registerValue(ConfigToken, { apiUrl: 'https://api.example.com' });
-    container.registerFactory(ServiceToken, (config: { apiUrl: string }) => `Service: ${config.apiUrl}`, [ConfigToken]);
+    container.registerFactory(ServiceToken, (config: { apiUrl: string }) => `Service: ${config.apiUrl}`, {
+      deps: [ConfigToken],
+    });
 
     const service = container.get(ServiceToken);
 
@@ -380,7 +382,7 @@ describe('Container - Error Handling', () => {
   it('should throw AsyncProviderError for async factory in sync get', () => {
     const token = createToken<string>('AsyncService');
 
-    container.registerFactory(token, async () => 'value', [], { async: true });
+    container.registerFactory(token, async () => 'value');
 
     expect(() => container.get(token)).toThrow(AsyncProviderError);
     expect(() => container.get(token)).toThrow(/is async.*Use getAsync/);
@@ -409,7 +411,7 @@ describe('Container - Async Resolution', () => {
   it('should resolve async factory', async () => {
     const token = createToken<string>('AsyncService');
 
-    container.registerFactory(token, async () => 'async-value', [], { async: true });
+    container.registerFactory(token, async () => 'async-value');
 
     const value = await container.getAsync(token);
 
@@ -426,8 +428,7 @@ describe('Container - Async Resolution', () => {
         callCount++;
         return 42;
       },
-      [],
-      { async: true, lifetime: 'singleton' },
+      { lifetime: 'singleton' },
     );
 
     const value1 = await container.getAsync(token);
@@ -449,8 +450,7 @@ describe('Container - Async Resolution', () => {
         callCount++;
         return 42;
       },
-      [],
-      { async: true, lifetime: 'singleton' },
+      { lifetime: 'singleton' },
     );
 
     const [value1, value2, value3] = await Promise.all([
@@ -469,10 +469,8 @@ describe('Container - Async Resolution', () => {
     const ConfigToken = createToken<{ value: string }>('Config');
     const ServiceToken = createToken<string>('Service');
 
-    container.registerFactory(ConfigToken, async () => ({ value: 'config' }), [], { async: true });
-    container.registerFactory(ServiceToken, async (config: { value: string }) => config.value, [ConfigToken], {
-      async: true,
-    });
+    container.registerFactory(ConfigToken, async () => ({ value: 'config' }));
+    container.registerFactory(ServiceToken, async (config: { value: string }) => config.value, { deps: [ConfigToken] });
 
     const value = await container.getAsync(ServiceToken);
 
@@ -490,7 +488,7 @@ describe('Container - Async Resolution', () => {
       }
     }
 
-    container.registerFactory(ConfigToken, async () => ({ value: 'config' }), [], { async: true });
+    container.registerFactory(ConfigToken, async () => ({ value: 'config' }));
     container.register(ServiceToken, { deps: [ConfigToken], useClass: Service });
 
     const service = await container.getAsync(ServiceToken);
@@ -502,8 +500,8 @@ describe('Container - Async Resolution', () => {
     const Token1 = createToken('Service1');
     const Token2 = createToken('Service2');
 
-    container.registerFactory(Token1, async (s2: any) => s2, [Token2], { async: true });
-    container.registerFactory(Token2, async (s1: any) => s1, [Token1], { async: true });
+    container.registerFactory(Token1, async (s2: any) => s2, { deps: [Token2] });
+    container.registerFactory(Token2, async (s1: any) => s1, { deps: [Token1] });
 
     await expect(container.getAsync(Token1)).rejects.toThrow(CircularDependencyError);
   });
@@ -535,7 +533,7 @@ describe('Container - Optional Resolution', () => {
 
   it('should throw non-ProviderNotFoundError in getOptional', () => {
     const token = createToken<string>('AsyncService');
-    container.registerFactory(token, async () => 'value', [], { async: true });
+    container.registerFactory(token, async () => 'value');
 
     expect(() => container.getOptional(token)).toThrow(AsyncProviderError);
   });
@@ -555,15 +553,6 @@ describe('Container - Optional Resolution', () => {
     const value = await container.getOptionalAsync(token);
 
     expect(value).toBe('value');
-  });
-
-  it('should support allowOptional option', () => {
-    const containerWithOptional = createContainer({ allowOptional: true });
-    const token = createToken<string>('Missing');
-
-    const value = containerWithOptional.get(token);
-
-    expect(value).toBeUndefined();
   });
 });
 
@@ -620,14 +609,6 @@ describe('Container - Parent/Child Containers', () => {
 
     expect(parent.get(token)).toBe('parent-value');
     expect(child.get(token)).toBe('parent-value');
-  });
-
-  it('should inherit allowOptional from parent', () => {
-    const parentWithOptional = createContainer({ allowOptional: true });
-    const childContainer = parentWithOptional.createChild();
-    const token = createToken<string>('Missing');
-
-    expect(childContainer.get(token)).toBeUndefined();
   });
 });
 

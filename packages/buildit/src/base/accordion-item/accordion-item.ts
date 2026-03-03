@@ -1,6 +1,7 @@
+import { computed, css, define, defineEmits, defineProps, handle, html, onMount, ref, watch } from '@vielzeug/craftit';
 import type { ComponentSize, VisualVariant } from '../../types';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -166,93 +167,93 @@ const styles = /* css */ `
       --accordion-item-border-color: transparent;
       --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
       --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
-    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
-  }
+      --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
+    }
 
-  :host([variant='glass']) summary {
-    text-shadow: var(--text-shadow-xs);
-  }
+    :host([variant='glass']) summary {
+      text-shadow: var(--text-shadow-xs);
+    }
 
-  :host([variant='glass']) summary:hover {
-    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
-  }
+    :host([variant='glass']) summary:hover {
+      background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+    }
 
-  :host([variant='glass']) .content-wrapper {
-    filter: brightness(1.05);
-  }
+    :host([variant='glass']) .content-wrapper {
+      filter: brightness(1.05);
+    }
 
-  /* Frost */
-  :host([variant='frost']) {
-    --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    --accordion-item-border-color: transparent;
-  }
+    /* Frost */
+    :host([variant='frost']) {
+      --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+      --accordion-item-border-color: transparent;
+    }
 
-  :host([variant='frost']) summary {
-    text-shadow: var(--text-shadow-2xs);
-  }
+    :host([variant='frost']) summary {
+      text-shadow: var(--text-shadow-2xs);
+    }
 
-  :host([variant='frost']) summary:hover {
-    background: color-mix(in srgb, var(--color-canvas) 20%, transparent);
-  }
+    :host([variant='frost']) summary:hover {
+      background: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+    }
 
-  /* ========================================
+    /* ========================================
      Size Variants
      ======================================== */
 
-  :host([size='sm']) {
-    --accordion-item-details-padding: var(--size-2) var(--size-4);
-    --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-sm);
-    --accordion-item-subtitle-size: var(--text-xs);
-    --accordion-item-body: var(--text-xs);
-  }
+    :host([size='sm']) {
+      --accordion-item-details-padding: var(--size-2) var(--size-4);
+      --accordion-item-summary-padding: var(--size-1) var(--size-5);
+      --accordion-item-title: var(--text-sm);
+      --accordion-item-subtitle-size: var(--text-xs);
+      --accordion-item-body: var(--text-xs);
+    }
 
-  :host(:not([size])),
-  :host([size='md']) {
-    --accordion-item-details-padding: var(--size-3) var(--size-4);
-    --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-base);
-    --accordion-item-subtitle-size: var(--text-sm);
-    --accordion-item-body: var(--text-sm);
-  }
+    :host(:not([size])),
+    :host([size='md']) {
+      --accordion-item-details-padding: var(--size-3) var(--size-4);
+      --accordion-item-summary-padding: var(--size-1) var(--size-5);
+      --accordion-item-title: var(--text-base);
+      --accordion-item-subtitle-size: var(--text-sm);
+      --accordion-item-body: var(--text-sm);
+    }
 
-  :host([size='lg']) {
-    --accordion-item-details-padding: var(--size-4) var(--size-4);
-    --accordion-item-summary-padding: var(--size-1) var(--size-5);
-    --accordion-item-title: var(--text-lg);
-    --accordion-item-subtitle-size: var(--text-base);
-    --accordion-item-body: var(--text-base);
-  }
+    :host([size='lg']) {
+      --accordion-item-details-padding: var(--size-4) var(--size-4);
+      --accordion-item-summary-padding: var(--size-1) var(--size-5);
+      --accordion-item-title: var(--text-lg);
+      --accordion-item-subtitle-size: var(--text-base);
+      --accordion-item-body: var(--text-base);
+    }
 
-  /* ========================================
+    /* ========================================
      States
      ======================================== */
 
-  :host([disabled]) {
-    opacity: 0.6;
-    pointer-events: none;
-  }
+    :host([disabled]) {
+      opacity: 0.6;
+      pointer-events: none;
+    }
 
-  /* ========================================
+    /* ========================================
      Chevron Animation
      ======================================== */
 
-  .chevron {
-    width: var(--size-5);
-    height: var(--size-5);
-    transition: transform var(--accordion-item-transition);
-    margin-left: auto;
-  }
+    .chevron {
+      width: var(--size-5);
+      height: var(--size-5);
+      transition: transform var(--accordion-item-transition);
+      margin-left: auto;
+    }
 
-  details[open] .chevron {
-    transform: rotate(-90deg);
-  }
+    details[open] .chevron {
+      transform: rotate(-90deg);
+    }
 
-  /* Expanded state - adjust border radius */
-  :host([expanded]) {
-    --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
-    --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
-  }
+    /* Expanded state - adjust border radius */
+    :host([expanded]) {
+      --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
+      --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
+    }
   }
 `;
 
@@ -306,102 +307,87 @@ export interface AccordionItemProps {
  * <bit-accordion-item expanded variant="bordered"><span slot="title">Title</span><p>Content</p></bit-accordion-item>
  * ```
  */
-class BitAccordionItem extends HTMLElement {
-  static observedAttributes = ['expanded', 'disabled', 'size', 'variant'] as const;
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+define('bit-accordion-item', ({ host }) => {
+  const props = defineProps({
+    disabled: { default: false },
+    expanded: { default: false },
+    size: { default: undefined as ComponentSize | undefined },
+    variant: { default: undefined as VisualVariant | undefined },
+  });
 
-  connectedCallback() {
-    this.render();
+  const titleId = 'accordion-item-title';
+  const detailsRef = ref<HTMLDetailsElement>();
+  const summaryRef = ref<HTMLElement>();
+  const emit = defineEmits<{
+    collapse: { expanded: boolean; item: HTMLElement };
+    expand: { expanded: boolean; item: HTMLElement };
+  }>();
 
-    const details = this.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
-    if (!details) return;
+  const handleToggle = () => {
+    const isOpen = detailsRef.value?.open ?? false;
+    if (isOpen && !host.hasAttribute('expanded')) {
+      host.setAttribute('expanded', '');
+      emit('expand', { expanded: true, item: host });
+    } else if (!isOpen && host.hasAttribute('expanded')) {
+      host.removeAttribute('expanded');
+      emit('collapse', { expanded: false, item: host });
+    }
+  };
 
-    details.addEventListener('toggle', () => {
-      const isOpen = details.open;
-
-      if (isOpen && !this.hasAttribute('expanded')) {
-        this.setAttribute('expanded', '');
-        this.dispatchEvent(
-          new CustomEvent('expand', {
-            bubbles: true,
-            composed: true,
-            detail: { expanded: true, item: this },
-          }),
-        );
-      } else if (!isOpen && this.hasAttribute('expanded')) {
-        this.removeAttribute('expanded');
-        this.dispatchEvent(
-          new CustomEvent('collapse', {
-            bubbles: true,
-            composed: true,
-            detail: { expanded: false, item: this },
-          }),
-        );
-      }
-    });
-
-    // Initial sync
-    details.open = this.hasAttribute('expanded');
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    const details = this.shadowRoot?.querySelector('details') as HTMLDetailsElement | null;
-    const summary = this.shadowRoot?.querySelector('summary') as HTMLElement | null;
+  onMount(() => {
+    const details = detailsRef.value;
+    const summary = summaryRef.value;
     if (!details || !summary) return;
 
-    if (name === 'expanded') {
-      const isExpanded = newValue !== null;
-      details.open = isExpanded;
-      summary.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-    }
-  }
+    // Sync details.open when expanded prop changes (needs live DOM refs)
+    watch(
+      props.expanded,
+      (v) => {
+        details.open = v;
+        summary.setAttribute('aria-expanded', v ? 'true' : 'false');
+      },
+      { immediate: true },
+    );
 
-  render() {
-    const isExpanded = this.hasAttribute('expanded');
-    const isDisabled = this.hasAttribute('disabled');
-    const titleId = 'accordion-item-title';
+    handle(details, 'toggle', handleToggle);
+  });
 
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <details part="item" ${isExpanded ? 'open' : ''}>
-        <summary part="summary" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-disabled="${isDisabled ? 'true' : 'false'}">
-          <slot name="prefix"></slot>
-          <div class="header-content" part="header">
-            <span class="title" part="title" id="${titleId}">
-              <slot name="title"></slot>
-            </span>
-            <span class="subtitle" part="subtitle">
-              <slot name="subtitle"></slot>
-            </span>
-          </div>
-          <slot name="suffix"></slot>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="chevron"
-            part="chevron"
-            xmlns="http://www.w3.org/2000/svg">
-            <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" />
-          </svg>
-        </summary>
-        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-          <slot></slot>
+  const ariaExpanded = computed(() => (props.expanded.value ? 'true' : 'false'));
+  const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
+
+  return {
+    styles: [styles],
+    template: html` <details part="item" ?open=${props.expanded} ref=${detailsRef}>
+      <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
+        <slot name="prefix"></slot>
+        <div class="header-content" part="header">
+          <span class="title" part="title" id="${titleId}">
+            <slot name="title"></slot>
+          </span>
+          <span class="subtitle" part="subtitle">
+            <slot name="subtitle"></slot>
+          </span>
         </div>
-      </details>
-    `;
-  }
-}
-
-if (!customElements.get('bit-accordion-item')) {
-  customElements.define('bit-accordion-item', BitAccordionItem);
-}
+        <slot name="suffix"></slot>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="chevron"
+          part="chevron"
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" />
+        </svg>
+      </summary>
+      <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+        <slot></slot>
+      </div>
+    </details>`,
+  };
+});
 
 export default {};

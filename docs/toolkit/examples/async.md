@@ -1,3 +1,8 @@
+---
+title: Toolkit — Async Examples
+description: Async utility examples for Toolkit.
+---
+
 # Async Utilities Examples
 
 Comprehensive async/promise utilities for modern JavaScript applications.

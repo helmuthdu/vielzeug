@@ -1,8 +1,9 @@
+---
+title: Routeit — API Reference
+description: Complete API reference for Routeit client-side router.
+---
+
 # Routeit API Reference
-
-Complete API documentation for all methods and types.
-
-## Table of Contents
 
 [[toc]]
 
@@ -163,47 +164,6 @@ router.navigateTo('userDetail', { id: '123' });
 router.navigateTo('search', undefined, { q: 'test' });
 ```
 
-### `back()`
-
-Navigate back one page in history.
-
-**Returns:** `void`
-
-**Example:**
-
-```ts
-router.back();
-```
-
-### `forward()`
-
-Navigate forward one page in history.
-
-**Returns:** `void`
-
-**Example:**
-
-```ts
-router.forward();
-```
-
-### `go(delta)`
-
-Navigate to a specific position in history.
-
-**Parameters:**
-
-- `delta: number` – Number of pages to move (negative = back, positive = forward)
-
-**Returns:** `void`
-
-**Example:**
-
-```ts
-router.go(-2); // Go back 2 pages
-router.go(1); // Go forward 1 page
-```
-
 ## URL Building Methods
 
 ### `buildUrl(path, params?, query?)`
@@ -255,7 +215,7 @@ router.urlFor('search', undefined, { q: 'test' });
 // → '/search?q=test'
 ```
 
-## Query Methods
+## State & Query Methods
 
 ### `isActive(pattern)`
 
@@ -279,123 +239,20 @@ if (router.isActive('/admin/*')) {
 }
 ```
 
-### `getCurrentPath()`
-
-Get the current pathname.
-
-**Returns:** `string`
-
-**Example:**
-
-```ts
-const path = router.getCurrentPath();
-console.log(path); // '/users/123'
-```
-
-### `getCurrentQuery()`
-
-Get the current query parameters.
-
-**Returns:** `QueryParams`
-
-**Example:**
-
-```ts
-const query = router.getCurrentQuery();
-console.log(query); // { tab: 'profile', page: '2' }
-```
-
-### `getCurrentHash()`
-
-Get the current URL hash (without #).
-
-**Returns:** `string`
-
-**Example:**
-
-```ts
-const hash = router.getCurrentHash();
-console.log(hash); // 'section-1'
-```
-
 ### `getState()`
 
 Get the current route state.
 
-**Returns:** `{ pathname: string, params: RouteParams, query: QueryParams }`
+**Returns:** `{ pathname: string, params: RouteParams, query: QueryParams, hash: string }`
 
 **Example:**
 
 ```ts
 const state = router.getState();
 console.log(state.pathname); // '/users/123'
-console.log(state.params); // { id: '123' }
-console.log(state.query); // { tab: 'profile' }
-```
-
-### `getParams()`
-
-Get the current route parameters.
-
-**Returns:** `RouteParams`
-
-**Example:**
-
-```ts
-const params = router.getParams();
-console.log(params); // { id: '123', tab: 'posts' }
-```
-
-## Link Creation Methods
-
-### `link(href, text, attributes?)`
-
-Create an anchor element.
-
-**Parameters:**
-
-- `href: string` – Link URL
-- `text: string` – Link text
-- `attributes?: Record<string, string>` – Optional HTML attributes
-
-**Returns:** `HTMLAnchorElement`
-
-**Example:**
-
-```ts
-const link = router.link('/about', 'About Page');
-document.body.appendChild(link);
-
-const styledLink = router.link('/about', 'About', {
-  class: 'nav-link',
-  'data-section': 'main',
-});
-```
-
-### `linkTo(name, params, text, attributes?)`
-
-Create an anchor element for a named route.
-
-**Parameters:**
-
-- `name: string` – Route name
-- `params: RouteParams` – Route parameters
-- `text: string` – Link text
-- `attributes?: Record<string, string>` – Optional HTML attributes
-
-**Returns:** `HTMLAnchorElement`
-
-**Throws:** `Error` if route name not found
-
-**Example:**
-
-```ts
-const userLink = router.linkTo('userDetail', { id: '123' }, 'View User');
-document.body.appendChild(userLink);
-
-const styledLink = router.linkTo('userDetail', { id: '123' }, 'View', {
-  class: 'user-link',
-});
+console.log(state.params);   // { id: '123' }
+console.log(state.query);    // { tab: 'profile' }
+console.log(state.hash);     // 'section-1'
 ```
 
 ## Subscription Methods
@@ -414,8 +271,9 @@ Subscribe to route changes.
 
 ```ts
 const unsubscribe = router.subscribe(() => {
+  const { pathname, params, query } = router.getState();
   console.log('Route changed!');
-  console.log('Current:', router.getCurrentPath());
+  console.log('Current:', pathname);
 });
 
 // Later...
@@ -454,21 +312,12 @@ interface Router {
   stop(): void;
   navigate(path: string, options?: NavigateOptions): void;
   navigateTo(name: string, params?: RouteParams, query?: QueryParams): void;
-  back(): void;
-  forward(): void;
-  go(delta: number): void;
   buildUrl(path: string, params?: RouteParams, query?: QueryParams): string;
   urlFor(name: string, params?: RouteParams, query?: QueryParams): string;
   isActive(pattern: string): boolean;
-  getCurrentPath(): string;
-  getCurrentQuery(): QueryParams;
-  getCurrentHash(): string;
-  getState(): { pathname: string; params: RouteParams; query: QueryParams };
-  getParams(): RouteParams;
-  link(href: string, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
-  linkTo(name: string, params: RouteParams, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
+  getState(): { pathname: string; params: RouteParams; query: QueryParams; hash: string };
   subscribe(listener: () => void): () => void;
-  debug(): DebugInfo;
+  debug(): { mode: RouterMode; base: string; routes: Array<{ name?: string; path: string; params: string[] }> };
 }
 ```
 
@@ -483,8 +332,7 @@ type RouteContext<T = unknown> = {
   pathname: string; // Current pathname
   hash: string; // URL hash (without #)
   data?: T; // Custom route data
-  user?: unknown; // User object (set by middleware)
-  meta?: Record<string, unknown>; // Metadata (set by middleware)
+  meta?: Record<string, unknown>; // Metadata (populated/read by middleware)
   navigate: (path: string, options?: NavigateOptions) => void;
 };
 ```
@@ -544,6 +392,7 @@ Navigation options.
 type NavigateOptions = {
   replace?: boolean; // Replace current history entry
   state?: unknown; // State to store with navigation
+  viewTransition?: boolean; // Override router-level viewTransitions for this navigation
 };
 ```
 
@@ -565,6 +414,7 @@ type RouterOptions = {
   base?: string; // Base path (default: '/')
   notFound?: RouteHandler; // 404 handler
   middleware?: Middleware | Middleware[]; // Global middleware
+  viewTransitions?: boolean; // Wrap navigations in the View Transitions API (default: false)
 };
 ```
 

@@ -1,14 +1,19 @@
+---
+title: Validit — Examples
+description: Real-world validation recipes and framework integrations for Validit.
+---
+
 # Validit Examples
 
-Real-world examples showing how to use Validit in different scenarios.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Prerequisites
 This page assumes you've read the [Usage Guide](./usage.md). Examples focus on practical applications rather than API basics.
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 
@@ -201,10 +206,10 @@ class UserForm extends HTMLElement {
       <form>
         <input name="name" placeholder="Name">
         <span id="error-name" style="color: red;"></span>
-        
+
         <input name="email" placeholder="Email">
         <span id="error-email" style="color: red;"></span>
-        
+
         <button type="submit">Submit</button>
       </form>
     `;
@@ -1168,7 +1173,7 @@ describe('userSchema', () => {
       expect(result.error.issues).toContainEqual(
         expect.objectContaining({
           path: ['email'],
-          code: 'invalid_email',
+          code: 'invalid_string',
         }),
       );
     }

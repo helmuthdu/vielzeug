@@ -1,8 +1,9 @@
+---
+title: Wireit — API Reference
+description: Complete API reference for Wireit container and tokens.
+---
+
 # Wireit API Reference
-
-Complete API documentation for @vielzeug/wireit.
-
-## Table of Contents
 
 [[toc]]
 
@@ -46,19 +47,12 @@ Creates a new dependency injection container.
 #### Signature
 
 ```ts
-function createContainer(options?: ContainerOptions): Container;
+function createContainer(parent?: Container): Container;
 ```
 
 #### Parameters
 
-- `options?: ContainerOptions` – Optional configuration
-
-```ts
-type ContainerOptions = {
-  parent?: Container;
-  allowOptional?: boolean;
-};
-```
+- `parent?: Container` – Optional parent container for hierarchical DI
 
 #### Returns
 
@@ -70,11 +64,8 @@ A new Container instance
 // Basic container
 const container = createContainer();
 
-// Container with parent
-const child = createContainer({ parent: rootContainer });
-
-// Container that returns undefined for missing tokens
-const optional = createContainer({ allowOptional: true });
+// Container with parent (child inherits all parent registrations)
+const child = createContainer(rootContainer);
 ```
 
 ---
@@ -175,9 +166,9 @@ register<T>(token: Token<T>, provider: Provider<T>): this;
 
 ```ts
 type Provider<T> =
-  | { useValue: T; lifetime?: Lifetime }
+  | { useValue: T }
   | { useClass: new (...args: any[]) => T; deps?: Token<any>[]; lifetime?: Lifetime }
-  | { useFactory: (...deps: any[]) => T | Promise<T>; deps?: Token<any>[]; lifetime?: Lifetime; async?: boolean };
+  | { useFactory: (...deps: any[]) => T | Promise<T>; deps?: Token<any>[]; lifetime?: Lifetime };
 
 type Lifetime = 'singleton' | 'transient' | 'scoped';
 ```
@@ -206,7 +197,7 @@ container.register(Cache, {
   lifetime: 'singleton',
 });
 
-// Async factory
+// Async factory (async is detected automatically)
 container.register(Database, {
   useFactory: async (config) => {
     const db = new PrismaClient();
@@ -214,7 +205,6 @@ container.register(Database, {
     return db;
   },
   deps: [Config],
-  async: true,
   lifetime: 'singleton',
 });
 ```
@@ -226,20 +216,19 @@ Convenience method to register a value provider.
 ##### Signature
 
 ```ts
-registerValue<T>(token: Token<T>, value: T, lifetime?: Lifetime): this;
+registerValue<T>(token: Token<T>, value: T): this;
 ```
 
 ##### Parameters
 
 - `token: Token<T>` – Token to register
 - `value: T` – Value to register
-- `lifetime?: Lifetime` – Optional lifetime (default: `'singleton'`)
 
 ##### Example
 
 ```ts
 container.registerValue(Config, { apiUrl: 'https://api.example.com' });
-container.registerValue(RequestId, generateId(), 'transient');
+container.registerValue(Logger, new ConsoleLogger());
 ```
 
 #### registerFactory()
@@ -252,25 +241,26 @@ Convenience method to register a factory provider.
 registerFactory<T>(
   token: Token<T>,
   factory: (...deps: any[]) => T | Promise<T>,
-  deps?: Token<any>[],
-  options?: { lifetime?: Lifetime; async?: boolean }
+  options?: { deps?: Token<any>[]; lifetime?: Lifetime }
 ): this;
 ```
 
 ##### Parameters
 
 - `token: Token<T>` – Token to register
-- `factory: (...deps: any[]) => T | Promise<T>` – Factory function
-- `deps?: Token<any>[]` – Dependencies to inject
-- `options?: object` – Optional configuration
-  - `lifetime?: Lifetime` – Lifetime (default: `'transient'`)
-  - `async?: boolean` – Whether factory is async
+- `factory: (...deps: any[]) => T | Promise<T>` – Factory function (may be async)
+- `options?.deps?: Token<any>[]` – Dependencies to inject (default: `[]`)
+- `options?.lifetime?: Lifetime` – Lifetime (default: `'transient'`)
 
 ##### Example
 
 ```ts
-container.registerFactory(Logger, (config) => new ConsoleLogger(config.logLevel), [Config], { lifetime: 'singleton' });
+container.registerFactory(Logger, (config) => new ConsoleLogger(config.logLevel), {
+  deps: [Config],
+  lifetime: 'singleton',
+});
 
+// Async factory (async is detected automatically)
 container.registerFactory(
   Database,
   async (config) => {
@@ -278,8 +268,7 @@ container.registerFactory(
     await db.$connect();
     return db;
   },
-  [Config],
-  { async: true, lifetime: 'singleton' },
+  { deps: [Config], lifetime: 'singleton' },
 );
 ```
 
@@ -482,7 +471,7 @@ Clear all registrations.
 ##### Signature
 
 ```ts
-clear(): void;
+clear(): this;
 ```
 
 ##### Example
@@ -615,7 +604,6 @@ type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
 
 type ValueProvider<T> = {
   useValue: T;
-  lifetime?: Lifetime;
 };
 
 type ClassProvider<T> = {
@@ -628,23 +616,8 @@ type FactoryProvider<T> = {
   useFactory: (...deps: any[]) => T | Promise<T>;
   deps?: Token<any>[];
   lifetime?: Lifetime;
-  async?: boolean;
 };
 ```
-
-### ContainerOptions
-
-```ts
-type ContainerOptions = {
-  parent?: Container;
-  allowOptional?: boolean;
-};
-```
-
-Options for creating a container:
-
-- `parent` – Parent container for hierarchical DI
-- `allowOptional` – Return undefined for missing tokens instead of throwing
 
 ## Errors
 
@@ -683,7 +656,7 @@ class AsyncProviderError extends Error {
 **Example:**
 
 ```ts
-container.registerFactory(DB, async () => db, [], { async: true });
+container.registerFactory(DB, async () => db);
 
 try {
   const db = container.get(DB); // Error!
@@ -757,7 +730,7 @@ container.register(Database, {
 });
 
 // ✅ Transient for lightweight objects
-container.registerFactory(RequestId, () => generateId(), [], {
+container.registerFactory(RequestId, () => generateId(), {
   lifetime: 'transient',
 });
 

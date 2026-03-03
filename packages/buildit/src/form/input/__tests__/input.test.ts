@@ -1,8 +1,8 @@
+import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { type ComponentFixture, createFixture, userEvent } from '../../../utils/trial';
 
 describe('bit-input', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../input');
@@ -14,7 +14,7 @@ describe('bit-input', () => {
 
   describe('Rendering', () => {
     it('should render with correct structure', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
 
       const wrapper = fixture.query('.input-wrapper');
       const field = fixture.query('.field');
@@ -26,14 +26,14 @@ describe('bit-input', () => {
     });
 
     it('should render with default type text', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.type).toBe('text');
     });
 
     it('should render prefix and suffix slots', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
 
       const prefixSlot = fixture.query('slot[name="prefix"]');
       const suffixSlot = fixture.query('slot[name="suffix"]');
@@ -45,7 +45,7 @@ describe('bit-input', () => {
 
   describe('Type Attribute', () => {
     it('should set input type', async () => {
-      fixture = await createFixture('bit-input', { type: 'email' });
+      fixture = await mount('bit-input', { attrs: { type: 'email' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.type).toBe('email');
@@ -55,7 +55,7 @@ describe('bit-input', () => {
       const types = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'];
 
       for (const type of types) {
-        fixture = await createFixture('bit-input', { type });
+        fixture = await mount('bit-input', { attrs: { type } });
         const input = fixture.query<HTMLInputElement>('input');
 
         expect(input?.type).toBe(type);
@@ -64,43 +64,43 @@ describe('bit-input', () => {
     });
 
     it('should fallback to text for invalid types', async () => {
-      fixture = await createFixture('bit-input', { type: 'invalid' });
+      fixture = await mount('bit-input', { attrs: { type: 'invalid' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.type).toBe('text');
     });
 
     it('should update type dynamically', async () => {
-      fixture = await createFixture('bit-input', { type: 'text' });
+      fixture = await mount('bit-input', { attrs: { type: 'text' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.type).toBe('text');
 
-      await fixture.setAttribute('type', 'email');
+      await fixture.attr('type', 'email');
       expect(input?.type).toBe('email');
     });
   });
 
   describe('Value Attribute', () => {
     it('should set initial value', async () => {
-      fixture = await createFixture('bit-input', { value: 'test value' });
+      fixture = await mount('bit-input', { attrs: { value: 'test value' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.value).toBe('test value');
     });
 
     it('should update value when attribute changes', async () => {
-      fixture = await createFixture('bit-input', { value: 'initial' });
+      fixture = await mount('bit-input', { attrs: { value: 'initial' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.value).toBe('initial');
 
-      await fixture.setAttribute('value', 'updated');
+      await fixture.attr('value', 'updated');
       expect(input?.value).toBe('updated');
     });
 
     it('should handle empty value', async () => {
-      fixture = await createFixture('bit-input', { value: '' });
+      fixture = await mount('bit-input', { attrs: { value: '' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.value).toBe('');
@@ -109,39 +109,39 @@ describe('bit-input', () => {
 
   describe('Name and Placeholder', () => {
     it('should set name attribute', async () => {
-      fixture = await createFixture('bit-input', { name: 'email' });
+      fixture = await mount('bit-input', { attrs: { name: 'email' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.name).toBe('email');
     });
 
     it('should update name dynamically', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
-      await fixture.setAttribute('name', 'username');
+      await fixture.attr('name', 'username');
       expect(input?.name).toBe('username');
     });
 
     it('should set placeholder', async () => {
-      fixture = await createFixture('bit-input', { placeholder: 'Enter email' });
+      fixture = await mount('bit-input', { attrs: { placeholder: 'Enter email' } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.placeholder).toBe('Enter email');
     });
 
     it('should update placeholder dynamically', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
-      await fixture.setAttribute('placeholder', 'Enter username');
+      await fixture.attr('placeholder', 'Enter username');
       expect(input?.placeholder).toBe('Enter username');
     });
   });
 
   describe('States', () => {
     it('should handle disabled state', async () => {
-      fixture = await createFixture('bit-input', { disabled: true });
+      fixture = await mount('bit-input', { attrs: { disabled: true } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
@@ -149,78 +149,78 @@ describe('bit-input', () => {
     });
 
     it('should toggle disabled state', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.disabled).toBe(false);
 
-      await fixture.setAttribute('disabled', true);
+      await fixture.attr('disabled', true);
       expect(input?.disabled).toBe(true);
 
-      await fixture.setAttribute('disabled', false);
+      await fixture.attr('disabled', false);
       expect(input?.disabled).toBe(false);
     });
 
     it('should handle readonly state', async () => {
-      fixture = await createFixture('bit-input', { readonly: true });
+      fixture = await mount('bit-input', { attrs: { readonly: true } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.readOnly).toBe(true);
     });
 
     it('should toggle readonly state', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.readOnly).toBe(false);
 
-      await fixture.setAttribute('readonly', true);
+      await fixture.attr('readonly', true);
       expect(input?.readOnly).toBe(true);
     });
 
     it('should handle required state', async () => {
-      fixture = await createFixture('bit-input', { required: true });
+      fixture = await mount('bit-input', { attrs: { required: true } });
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.required).toBe(true);
     });
 
     it('should toggle required state', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       expect(input?.required).toBe(false);
 
-      await fixture.setAttribute('required', true);
+      await fixture.attr('required', true);
       expect(input?.required).toBe(true);
     });
   });
 
   describe('Sizes', () => {
     it('should apply sm size', async () => {
-      fixture = await createFixture('bit-input', { size: 'sm' });
+      fixture = await mount('bit-input', { attrs: { size: 'sm' } });
 
       expect(fixture.element.getAttribute('size')).toBe('sm');
     });
 
     it('should apply md size (default)', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
 
       expect(fixture.element.hasAttribute('size')).toBe(false);
     });
 
     it('should apply lg size', async () => {
-      fixture = await createFixture('bit-input', { size: 'lg' });
+      fixture = await mount('bit-input', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('should change size dynamically', async () => {
-      fixture = await createFixture('bit-input', { size: 'sm' });
+      fixture = await mount('bit-input', { attrs: { size: 'sm' } });
 
       expect(fixture.element.getAttribute('size')).toBe('sm');
 
-      await fixture.setAttribute('size', 'lg');
+      await fixture.attr('size', 'lg');
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
   });
@@ -230,18 +230,18 @@ describe('bit-input', () => {
 
     variants.forEach((variant) => {
       it(`should apply ${variant} variant`, async () => {
-        fixture = await createFixture('bit-input', { variant });
+        fixture = await mount('bit-input', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
       });
     });
 
     it('should change variant dynamically', async () => {
-      fixture = await createFixture('bit-input', { variant: 'solid' });
+      fixture = await mount('bit-input', { attrs: { variant: 'solid' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('solid');
 
-      await fixture.setAttribute('variant', 'outline');
+      await fixture.attr('variant', 'outline');
       expect(fixture.element.getAttribute('variant')).toBe('outline');
     });
   });
@@ -251,25 +251,25 @@ describe('bit-input', () => {
 
     colors.forEach((color) => {
       it(`should apply ${color} color`, async () => {
-        fixture = await createFixture('bit-input', { color });
+        fixture = await mount('bit-input', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
 
     it('should change color dynamically', async () => {
-      fixture = await createFixture('bit-input', { color: 'primary' });
+      fixture = await mount('bit-input', { attrs: { color: 'primary' } });
 
       expect(fixture.element.getAttribute('color')).toBe('primary');
 
-      await fixture.setAttribute('color', 'error');
+      await fixture.attr('color', 'error');
       expect(fixture.element.getAttribute('color')).toBe('error');
     });
   });
 
   describe('Rounded Mode', () => {
     it('should apply rounded attribute as boolean (default full)', async () => {
-      fixture = await createFixture('bit-input', { rounded: '' });
+      fixture = await mount('bit-input', { attrs: { rounded: '' } });
 
       expect(fixture.element.hasAttribute('rounded')).toBe(true);
       expect(fixture.element.getAttribute('rounded')).toBe('');
@@ -279,22 +279,22 @@ describe('bit-input', () => {
       const values = ['sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full'];
 
       for (const value of values) {
-        fixture = await createFixture('bit-input', { rounded: value });
+        fixture = await mount('bit-input', { attrs: { rounded: value } });
         expect(fixture.element.getAttribute('rounded')).toBe(value);
         fixture.destroy();
       }
     });
 
     it('should update rounded value dynamically', async () => {
-      fixture = await createFixture('bit-input', { rounded: 'lg' });
+      fixture = await mount('bit-input', { attrs: { rounded: 'lg' } });
 
-      await fixture.setAttribute('rounded', 'xl');
+      await fixture.attr('rounded', 'xl');
 
       expect(fixture.element.getAttribute('rounded')).toBe('xl');
     });
 
     it('should remove rounded attribute', async () => {
-      fixture = await createFixture('bit-input', { rounded: '' });
+      fixture = await mount('bit-input', { attrs: { rounded: '' } });
 
       await fixture.element.removeAttribute('rounded');
 
@@ -304,13 +304,13 @@ describe('bit-input', () => {
 
   describe('Events', () => {
     it('should emit input event with details', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       const inputHandler = vi.fn();
       fixture.element.addEventListener('input', inputHandler);
 
-      await userEvent.type(input!, 'a');
+      await user.type(input!, 'a');
 
       expect(inputHandler).toHaveBeenCalled();
       const event = inputHandler.mock.calls[0][0] as CustomEvent;
@@ -319,7 +319,7 @@ describe('bit-input', () => {
     });
 
     it('should emit change event with details', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
       const input = fixture.query<HTMLInputElement>('input');
 
       const changeHandler = vi.fn();
@@ -333,33 +333,13 @@ describe('bit-input', () => {
       expect(event.detail.value).toBe('test');
       expect(event.detail.originalEvent).toBeDefined();
     });
-
-    it('should sync host value attribute on input', async () => {
-      fixture = await createFixture('bit-input');
-      const input = fixture.query<HTMLInputElement>('input');
-
-      input!.value = 'new value';
-      input!.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(fixture.element.getAttribute('value')).toBe('new value');
-    });
-
-    it('should sync host value attribute on change', async () => {
-      fixture = await createFixture('bit-input');
-      const input = fixture.query<HTMLInputElement>('input');
-
-      input!.value = 'changed value';
-      input!.dispatchEvent(new Event('change', { bubbles: true }));
-
-      expect(fixture.element.getAttribute('value')).toBe('changed value');
-    });
   });
 
   describe('Multiple Attributes', () => {
     it('should handle multiple attributes simultaneously', async () => {
-      fixture = await createFixture('bit-input');
+      fixture = await mount('bit-input');
 
-      await fixture.setAttributes({
+      await fixture.attrs({
         placeholder: 'Enter email',
         required: true,
         size: 'lg',
@@ -374,17 +354,19 @@ describe('bit-input', () => {
     });
 
     it('should handle all attributes together', async () => {
-      fixture = await createFixture('bit-input', {
-        color: 'primary',
-        disabled: false,
-        name: 'password',
-        placeholder: 'Enter password',
-        readonly: false,
-        required: true,
-        size: 'md',
-        type: 'password',
-        value: 'secret',
-        variant: 'bordered',
+      fixture = await mount('bit-input', {
+        attrs: {
+          color: 'primary',
+          disabled: false,
+          name: 'password',
+          placeholder: 'Enter password',
+          readonly: false,
+          required: true,
+          size: 'md',
+          type: 'password',
+          value: 'secret',
+          variant: 'bordered',
+        },
       });
 
       const input = fixture.query<HTMLInputElement>('input');

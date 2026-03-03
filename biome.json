@@ -30,7 +30,8 @@
     "enabled": true,
     "indentStyle": "space",
     "lineWidth": 120,
-    "useEditorconfig": true
+    "useEditorconfig": true,
+    "indentWidth": 2
   },
   "javascript": {
     "formatter": {

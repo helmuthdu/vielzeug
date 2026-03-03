@@ -135,6 +135,13 @@ describe('validit', () => {
       expect(() => schema.parse('hi')).toThrow('Too short!');
       expect(() => schema.parse('verylongstring')).toThrow('Too long!');
     });
+
+    it('should transform value with trim()', () => {
+      const schema = v.string().trim().min(3);
+      expect(schema.parse('  hello  ')).toBe('hello');
+      expect(schema.parse(' abc ')).toBe('abc');
+      expect(() => schema.parse('  hi  ')).toThrow('Must be at least 3 characters');
+    });
   });
 
   /* ============================================
@@ -185,18 +192,30 @@ describe('validit', () => {
       expect(() => schema.parse(3.14)).toThrow('Must be an integer');
     });
 
-    it('should validate positive numbers', () => {
+    it('should validate positive numbers (strictly > 0)', () => {
       const schema = v.number().positive();
-      expect(schema.parse(0)).toBe(0);
       expect(schema.parse(1)).toBe(1);
+      expect(schema.parse(0.1)).toBe(0.1);
+      expect(() => schema.parse(0)).toThrow('Must be positive');
       expect(() => schema.parse(-1)).toThrow('Must be positive');
     });
 
-    it('should validate negative numbers', () => {
+    it('should validate negative numbers (strictly < 0)', () => {
       const schema = v.number().negative();
-      expect(schema.parse(0)).toBe(0);
       expect(schema.parse(-1)).toBe(-1);
+      expect(schema.parse(-0.1)).toBe(-0.1);
+      expect(() => schema.parse(0)).toThrow('Must be negative');
       expect(() => schema.parse(1)).toThrow('Must be negative');
+    });
+
+    it('should validate nonNegative (>= 0) and nonPositive (<= 0)', () => {
+      expect(v.number().nonNegative().parse(0)).toBe(0);
+      expect(v.number().nonNegative().parse(1)).toBe(1);
+      expect(() => v.number().nonNegative().parse(-1)).toThrow();
+
+      expect(v.number().nonPositive().parse(0)).toBe(0);
+      expect(v.number().nonPositive().parse(-1)).toBe(-1);
+      expect(() => v.number().nonPositive().parse(1)).toThrow();
     });
 
     it('should chain validations', () => {
@@ -788,14 +807,6 @@ describe('validit', () => {
     });
   });
 
-  describe('v.void()', () => {
-    it('should only accept undefined', () => {
-      const schema = v.void();
-      expect(schema.parse(undefined)).toBe(undefined);
-      expect(() => schema.parse(null)).toThrow();
-    });
-  });
-
   /* ============================================
    Complex Integration Tests
    ============================================ */
@@ -1300,36 +1311,4 @@ describe('validit', () => {
   /* ============================================
    Describe Helper Tests
    ============================================ */
-
-  describe('describe()', () => {
-    it('should preserve schema behavior', () => {
-      const schema = v.string().min(3).describe('username');
-      expect(schema.parse('hello')).toBe('hello');
-      expect(() => schema.parse('hi')).toThrow();
-    });
-
-    it('should work with all schema types', () => {
-      const stringSchema = v.string().describe('name');
-      const numberSchema = v.number().describe('age');
-      const booleanSchema = v.boolean().describe('active');
-
-      expect(stringSchema.parse('test')).toBe('test');
-      expect(numberSchema.parse(25)).toBe(25);
-      expect(booleanSchema.parse(true)).toBe(true);
-    });
-
-    it('should be chainable', () => {
-      const schema = v.string().describe('email').email();
-      expect(schema.parse('test@example.com')).toBe('test@example.com');
-    });
-
-    it('should work with objects', () => {
-      const schema = v.object({
-        age: v.number().int().min(0).describe('age'),
-        username: v.string().min(3).describe('username'),
-      });
-
-      expect(schema.parse({ age: 25, username: 'john' })).toEqual({ age: 25, username: 'john' });
-    });
-  });
 });

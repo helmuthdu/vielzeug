@@ -8,8 +8,7 @@
    have higher priority than all BuildIt layers.
    ======================================== */
 
-@layer
-  buildit.reset,
+@layer buildit.reset,
   buildit.tokens,
   buildit.base,
   buildit.variants,

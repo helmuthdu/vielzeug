@@ -42,14 +42,9 @@ export async function waitFor(
 
   return new Promise<void>((resolve, reject) => {
     const startTime = Date.now();
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let intervalId: ReturnType<typeof setTimeout> | null = null;
 
     const cleanup = () => {
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
       if (intervalId !== null) {
         clearTimeout(intervalId);
         intervalId = null;
@@ -64,14 +59,12 @@ export async function waitFor(
 
     const check = async () => {
       try {
-        // Check if aborted
         if (signal?.aborted) {
           cleanup();
           reject(new DOMException('Aborted', 'AbortError'));
           return;
         }
 
-        // Check condition
         const result = await condition();
 
         if (result) {
@@ -80,17 +73,14 @@ export async function waitFor(
           return;
         }
 
-        // Check timeout
         if (Date.now() - startTime >= timeoutMs) {
           cleanup();
           reject(new Error(`waitFor timed out after ${timeoutMs}ms`));
           return;
         }
 
-        // Schedule next check
         intervalId = setTimeout(check, interval);
       } catch (error) {
-        // If the condition throws, clean up and reject
         cleanup();
         reject(error);
       }

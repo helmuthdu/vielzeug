@@ -1,4 +1,9 @@
-# 🏷️ Object Utilities
+---
+title: Toolkit — Object Examples
+description: Object utility examples for Toolkit.
+---
+
+# Object Utilities
 
 Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for deep cloning, merging, diffing, nested path access, and more.
 

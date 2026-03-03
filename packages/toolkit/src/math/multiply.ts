@@ -1,11 +1,11 @@
 /**
- * Multiplies a number by a scalar with precision handling for financial calculations.
+ * Multiplies two numbers.
  * Supports both regular numbers and bigint for exact precision.
  *
  * @example
  * ```ts
  * multiply(10, 5); // 50
- * multiply(0.1, 3); // 0.3 (precision-safe)
+ * multiply(0.1, 3); // 0.30000000000000004 (use bigint for exact precision)
  * multiply(100n, 5n); // 500n
  * ```
  *

@@ -134,61 +134,38 @@ export interface ButtonGroupProps {
  * <bit-button-group attached color="primary"><bit-button>Left</bit-button><bit-button>Right</bit-button></bit-button-group>
  * ```
  */
-class BitButtonGroup extends HTMLElement {
-  static observedAttributes = ['size', 'variant', 'color', 'orientation', 'attached', 'fullwidth'] as const;
+import { define, defineProps, handle, html, onMount, watch } from '@vielzeug/craftit';
 
-  private applyToChildren: () => void;
+define('bit-button-group', ({ host }) => {
+  const props = defineProps({
+    color: { default: undefined as ThemeColor | undefined },
+    size: { default: undefined as ComponentSize | undefined },
+    variant: { default: undefined as Exclude<VisualVariant, 'glass'> | undefined },
+  });
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
+  const applyToChildren = () => {
+    const size = props.size.value;
+    const variant = props.variant.value;
+    const color = props.color.value;
+    host.querySelectorAll('bit-button').forEach((btn) => {
+      if (size) btn.setAttribute('size', size);
+      if (variant) btn.setAttribute('variant', variant);
+      if (color) btn.setAttribute('color', color);
+    });
+  };
 
-    // Helper to apply attributes to child buttons
-    this.applyToChildren = () => {
-      const size = this.getAttribute('size');
-      const variant = this.getAttribute('variant');
-      const color = this.getAttribute('color');
+  watch([props.size, props.variant, props.color], () => applyToChildren(), { immediate: true });
 
-      const buttons = this.querySelectorAll('bit-button');
-      buttons.forEach((button) => {
-        if (size) button.setAttribute('size', size);
-        if (variant) button.setAttribute('variant', variant);
-        if (color) button.setAttribute('color', color);
-      });
-    };
-  }
+  onMount(() => {
+    // slot is only queryable from shadow DOM after template render
+    const slot = host.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
+    if (slot) handle(slot, 'slotchange', applyToChildren);
+  });
 
-  connectedCallback() {
-    this.render();
-
-    // Initial propagation to existing children
-    this.applyToChildren();
-
-    // Re-apply when slotted children change
-    const slot = this.shadowRoot?.querySelector('slot');
-    if (slot) {
-      slot.addEventListener('slotchange', this.applyToChildren);
-    }
-  }
-
-  attributeChangedCallback(name: string) {
-    if (name === 'size' || name === 'variant' || name === 'color') {
-      this.applyToChildren();
-    }
-  }
-
-  render() {
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="button-group" part="group" role="group">
-        <slot></slot>
-      </div>
-    `;
-  }
-}
-
-if (!customElements.get('bit-button-group')) {
-  customElements.define('bit-button-group', BitButtonGroup);
-}
+  return {
+    styles: [styles],
+    template: html`<div class="button-group" part="group" role="group"><slot></slot></div>`,
+  };
+});
 
 export default {};

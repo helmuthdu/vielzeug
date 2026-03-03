@@ -1,6 +1,7 @@
+import { css, define, defineEmits, defineProps, handle, html, onCleanup, onMount, ref, watch } from '@vielzeug/craftit';
 import type { ComponentSize, VisualVariant } from '../../types';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     :host {
       display: flex;
@@ -18,6 +19,11 @@ const styles = /* css */ `
     /* ========================================
        Visual Variants
        ======================================== */
+
+    /* Bordered variant */
+    :host([variant='bordered']) {
+      gap: var(--size-2);
+    }
 
     /* Text variant - borderless with dividers */
     :host([variant='text']) {
@@ -118,75 +124,53 @@ export type AccordionProps = {
  * <bit-accordion variant="frost" size="lg"><bit-accordion-item>...</bit-accordion-item></bit-accordion>
  * ```
  */
-class BitAccordion extends HTMLElement {
-  static observedAttributes = ['selection-mode', 'size', 'variant'] as const;
 
-  private syncItems: () => void;
+define('bit-accordion', ({ host }) => {
+  const props = defineProps({
+    size: { default: undefined as ComponentSize | undefined },
+    variant: { default: undefined as VisualVariant | undefined },
+  });
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
+  const slotRef = ref<HTMLSlotElement>();
+  const emit = defineEmits<{ change: { expandedItem: HTMLElement } }>();
 
-    // Helper to sync attributes to child items
-    this.syncItems = () => {
-      const variant = this.getAttribute('variant');
-      const size = this.getAttribute('size');
-      const items = this.querySelectorAll('bit-accordion-item');
-
-      items.forEach((item) => {
-        if (variant) item.setAttribute('variant', variant);
-        if (size) item.setAttribute('size', size);
-      });
-    };
-  }
-
-  connectedCallback() {
-    this.render();
-
-    // Initial sync
-    this.syncItems();
-
-    // Update items when slotted children change
-    const slot = this.shadowRoot?.querySelector('slot');
-    if (slot) {
-      slot.addEventListener('slotchange', this.syncItems);
-    }
-
-    // Single-selection behavior
-    this.addEventListener('expand', (e) => {
-      if (this.getAttribute('selection-mode') === 'single') {
-        const expandedItem = e.target as HTMLElement;
-        const items = this.querySelectorAll('bit-accordion-item');
-
-        items.forEach((item) => {
-          if (item !== expandedItem && item.hasAttribute('expanded')) {
-            item.removeAttribute('expanded');
-          }
-        });
-
-        this.dispatchEvent(new CustomEvent('change', { detail: { expandedItem } }));
-      }
+  const syncItems = () => {
+    const variant = props.variant.value;
+    const size = props.size.value;
+    host.querySelectorAll('bit-accordion-item').forEach((item) => {
+      if (variant) item.setAttribute('variant', variant);
+      if (size) item.setAttribute('size', size);
     });
-  }
+  };
 
-  attributeChangedCallback(name: string) {
-    if (name === 'variant' || name === 'size') {
-      this.syncItems();
+  watch([props.variant, props.size], () => syncItems(), { immediate: true });
+
+  const handleExpand = (e: Event) => {
+    const selectionMode = host.getAttribute('selection-mode');
+    if (selectionMode === 'single') {
+      const expandedItem = e.target as HTMLElement;
+      host.querySelectorAll('bit-accordion-item').forEach((item) => {
+        if (item !== expandedItem && item.hasAttribute('expanded')) {
+          item.removeAttribute('expanded');
+        }
+      });
+      emit('change', { expandedItem });
     }
-  }
+  };
 
-  render() {
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div part="accordion">
-        <slot></slot>
-      </div>
-    `;
-  }
-}
+  host.addEventListener('expand', handleExpand);
+  onCleanup(() => host.removeEventListener('expand', handleExpand));
 
-if (!customElements.get('bit-accordion')) {
-  customElements.define('bit-accordion', BitAccordion);
-}
+  onMount(() => {
+    // slotRef.value is only available after template render
+    const slot = slotRef.value;
+    if (slot) handle(slot, 'slotchange', syncItems);
+  });
+
+  return {
+    styles: [styles],
+    template: html`<slot ref=${slotRef}></slot>`,
+  };
+});
 
 export default {};

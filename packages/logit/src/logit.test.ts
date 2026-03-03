@@ -17,10 +17,11 @@ describe('Logit', () => {
 
   beforeEach(() => {
     // Reset Logit to default state
-    Logit.setup({
+    Logit.config({
       environment: true,
       logLevel: 'debug',
       namespace: '',
+      remote: { logLevel: 'off' },
       timestamp: true,
       variant: 'symbol',
     });
@@ -62,7 +63,7 @@ describe('Logit', () => {
 
   describe('Log Level Filtering', () => {
     it('filters logs based on level (error, warn, off)', () => {
-      Logit.setLogLevel('error');
+      Logit.config({ logLevel: 'error' });
       Logit.debug('no');
       Logit.info('no');
       Logit.warn('no');
@@ -73,7 +74,7 @@ describe('Logit', () => {
       expect(consoleErrorSpy).toHaveBeenCalled();
 
       vi.clearAllMocks();
-      Logit.setLogLevel('warn');
+      Logit.config({ logLevel: 'warn' });
       Logit.info('no');
       Logit.warn('yes');
       Logit.error('yes');
@@ -82,7 +83,7 @@ describe('Logit', () => {
       expect(consoleErrorSpy).toHaveBeenCalled();
 
       vi.clearAllMocks();
-      Logit.setLogLevel('off');
+      Logit.config({ logLevel: 'off' });
       Logit.debug('no');
       Logit.error('no');
       expect(consoleLogSpy).not.toHaveBeenCalled();
@@ -92,42 +93,42 @@ describe('Logit', () => {
 
   describe('Configuration & Getters', () => {
     it('gets and sets all configuration options', () => {
-      Logit.setLogLevel('warn');
-      expect(Logit.getLevel()).toBe('warn');
+      Logit.config({ logLevel: 'warn' });
+      expect(Logit.getConfig().logLevel).toBe('warn');
 
-      Logit.setPrefix('App');
-      expect(Logit.getPrefix()).toBe('App');
+      Logit.config({ namespace: 'App' });
+      expect(Logit.getConfig().namespace).toBe('App');
 
       Logit.toggleTimestamp(false);
-      expect(Logit.getTimestamp()).toBe(false);
+      expect(Logit.getConfig().timestamp).toBe(false);
 
       Logit.toggleEnvironment(false);
-      expect(Logit.getEnvironment()).toBe(false);
+      expect(Logit.getConfig().environment).toBe(false);
 
-      Logit.setVariant('text');
-      expect(Logit.getVariant()).toBe('text');
+      Logit.config({ variant: 'text' });
+      expect(Logit.getConfig().variant).toBe('text');
     });
 
     it('toggles configuration without arguments', () => {
       // Toggle timestamp (starts as true from beforeEach)
       Logit.toggleTimestamp(); // Should toggle to false
-      expect(Logit.getTimestamp()).toBe(false);
+      expect(Logit.getConfig().timestamp).toBe(false);
 
       Logit.toggleTimestamp(); // Should toggle back to true
-      expect(Logit.getTimestamp()).toBe(true);
+      expect(Logit.getConfig().timestamp).toBe(true);
 
       // Toggle environment (starts as true from beforeEach)
       Logit.toggleEnvironment(); // Should toggle to false
-      expect(Logit.getEnvironment()).toBe(false);
+      expect(Logit.getConfig().environment).toBe(false);
 
       Logit.toggleEnvironment(); // Should toggle back to true
-      expect(Logit.getEnvironment()).toBe(true);
+      expect(Logit.getConfig().environment).toBe(true);
     });
 
     it('initializes with custom options and merges remote config', () => {
       const remoteHandler = vi.fn();
 
-      Logit.setup({
+      Logit.config({
         environment: false,
         logLevel: 'error',
         namespace: 'TestApp',
@@ -136,11 +137,12 @@ describe('Logit', () => {
         variant: 'icon',
       });
 
-      expect(Logit.getLevel()).toBe('error');
-      expect(Logit.getPrefix()).toBe('TestApp');
-      expect(Logit.getTimestamp()).toBe(false);
-      expect(Logit.getEnvironment()).toBe(false);
-      expect(Logit.getVariant()).toBe('icon');
+      const config = Logit.getConfig();
+      expect(config.logLevel).toBe('error');
+      expect(config.namespace).toBe('TestApp');
+      expect(config.timestamp).toBe(false);
+      expect(config.environment).toBe(false);
+      expect(config.variant).toBe('icon');
     });
   });
 
@@ -149,7 +151,7 @@ describe('Logit', () => {
       const variants: Array<'text' | 'icon' | 'symbol'> = ['text', 'icon', 'symbol'];
 
       variants.forEach((variant) => {
-        Logit.setVariant(variant);
+        Logit.config({ variant });
         Logit.info('test');
         expect(consoleInfoSpy).toHaveBeenCalled();
         vi.clearAllMocks();
@@ -159,7 +161,7 @@ describe('Logit', () => {
 
   describe('Namespace', () => {
     it('includes namespace in log output', () => {
-      Logit.setPrefix('MyApp');
+      Logit.config({ namespace: 'MyApp' });
       Logit.info('test');
 
       const formatString = consoleInfoSpy.mock.calls[0][0];
@@ -169,7 +171,7 @@ describe('Logit', () => {
 
   describe('Scoped Logger', () => {
     it('creates scoped logger without mutating global state', () => {
-      Logit.setPrefix('Global');
+      Logit.config({ namespace: 'Global' });
       const apiLogger = Logit.scope('api');
       const dbLogger = Logit.scope('database');
 
@@ -184,7 +186,7 @@ describe('Logit', () => {
       expect(formatString).toContain('Global.database');
 
       // Global namespace unchanged
-      expect(Logit.getPrefix()).toBe('Global');
+      expect(Logit.getConfig().namespace).toBe('Global');
     });
 
     it('supports all log methods in scoped logger', () => {
@@ -204,11 +206,21 @@ describe('Logit', () => {
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('creates nested scopes via scoped logger', () => {
+      const api = Logit.scope('api');
+      const auth = api.scope('auth');
+
+      auth.info('login');
+
+      const formatString = consoleInfoSpy.mock.calls[0][0];
+      expect(formatString).toContain('api.auth');
+    });
+
     it('creates nested scopes', () => {
-      Logit.setPrefix('outer');
+      Logit.config({ namespace: 'outer' });
       const inner = Logit.scope('inner');
 
-      Logit.setPrefix('');
+      Logit.config({ namespace: '' });
       inner.info('nested');
 
       const formatString = consoleInfoSpy.mock.calls[0][0];
@@ -220,12 +232,11 @@ describe('Logit', () => {
     it('sends logs with metadata to remote handler', async () => {
       const remoteHandler = vi.fn();
 
-      Logit.setRemote({
-        handler: remoteHandler,
-        logLevel: 'info',
+      Logit.config({
+        remote: { handler: remoteHandler, logLevel: 'info' },
       });
 
-      Logit.setPrefix('App');
+      Logit.config({ namespace: 'App' });
       Logit.toggleTimestamp(true);
       Logit.debug('debug'); // Below threshold
 
@@ -249,8 +260,7 @@ describe('Logit', () => {
     it('respects independent remote log level', async () => {
       const remoteHandler = vi.fn();
 
-      Logit.setLogLevel('debug');
-      Logit.setRemote({ handler: remoteHandler, logLevel: 'warn' });
+      Logit.config({ logLevel: 'debug', remote: { handler: remoteHandler, logLevel: 'warn' } });
 
       Logit.info('info');
       expect(consoleInfoSpy).toHaveBeenCalled(); // Console logs
@@ -271,12 +281,12 @@ describe('Logit', () => {
     it('updates remote log level dynamically', async () => {
       const remoteHandler = vi.fn();
 
-      Logit.setRemote({ handler: remoteHandler, logLevel: 'error' });
+      Logit.config({ remote: { handler: remoteHandler, logLevel: 'error' } });
 
       Logit.warn('warning');
       await vi.waitFor(() => expect(remoteHandler).not.toHaveBeenCalled());
 
-      Logit.setRemoteLogLevel('warn');
+      Logit.config({ remote: { handler: remoteHandler, logLevel: 'warn' } });
       Logit.warn('warning');
 
       await vi.waitFor(() =>
@@ -303,7 +313,7 @@ describe('Logit', () => {
       Logit.timeEnd('timer');
       expect(consoleTimeEndSpy).toHaveBeenCalledWith('timer');
 
-      Logit.groupCollapsed('Group', 'LABEL', Date.now() - 1000);
+      Logit.groupCollapsed('LABEL', 'details');
       expect(consoleGroupCollapsedSpy).toHaveBeenCalled();
       expect(consoleGroupCollapsedSpy.mock.calls[0][0]).toContain('LABEL');
 
@@ -314,8 +324,14 @@ describe('Logit', () => {
       expect(consoleAssertSpy).toHaveBeenCalledWith(false, 'Failed', { error: true });
     });
 
+    it('assert respects log level', () => {
+      Logit.config({ logLevel: 'off' });
+      Logit.assert(false, 'should not fire');
+      expect(consoleAssertSpy).not.toHaveBeenCalled();
+    });
+
     it('respects log level for utility methods', () => {
-      Logit.setLogLevel('off');
+      Logit.config({ logLevel: 'off' });
 
       Logit.table([{}]);
       Logit.time('t');

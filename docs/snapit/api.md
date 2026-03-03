@@ -1,8 +1,9 @@
+---
+title: Snapit — API Reference
+description: Complete API reference for snapit with type signatures and parameter documentation.
+---
+
 # Snapit API Reference
-
-Complete API documentation for snapit.
-
-## Table of Contents
 
 [[toc]]
 
@@ -122,21 +123,69 @@ const options: StateOptions<TodoState> = {
 
 ---
 
+### SubscribeOptions
+
+```ts
+type SubscribeOptions<U> = {
+  equality?: EqualityFn<U>;
+};
+```
+
+Options for selective subscriptions.
+
+**Properties:**
+
+- **equality** (optional): Custom equality function used to determine whether the selected value has changed (defaults to `shallowEqual`)
+
+**Example:**
+
+```ts
+state.subscribe(
+  (data) => data.items,
+  (items) => console.log('Items changed:', items),
+  { equality: (a, b) => a.length === b.length },
+);
+```
+
+---
+
+### Snapshot
+
+```ts
+type Snapshot<T extends object> = State<T>;
+```
+
+Type alias for `State<T>`. Use this when you want to express that a value is a snapit state instance without importing the class name directly.
+
+**Example:**
+
+```ts
+import type { Snapshot } from '@vielzeug/snapit';
+
+function useCounter(state: Snapshot<{ count: number }>) {
+  return state.get().count;
+}
+```
+
+---
+
 ### Computed
 
 ```ts
 type Computed<U> = {
   get: () => U;
   subscribe: (listener: Listener<U>) => Unsubscribe;
+  dispose: () => void;
 };
 ```
 
-Object returned by `state.computed()` containing a cached value and subscription method.
+Object returned by `state.computed()` containing a cached value, subscription method, and cleanup function.
 
 **Properties:**
 
 - **get**: Function to retrieve current computed value
 - **subscribe**: Function to subscribe to computed value changes
+- **dispose**: Cleanup function that removes the computed from the parent state and clears all listeners
 
 **Example:**
 
@@ -670,7 +719,7 @@ const merged = shallowMerge(arr, { 0: 99 });
 
 ```ts
 function createTestState<T extends object>(
-  baseState?: State<T>,
+  baseState: State<T> | T,
   patch?: Partial<T>,
 ): {
   state: State<T>;
@@ -686,23 +735,34 @@ Create isolated test state.
 
 **Parameters:**
 
-- **baseState** (optional): Base state to inherit from
-- **patch** (optional): Partial state to override
+- **baseState**: Base to inherit from — either an existing `State<T>` instance or a plain object used as the initial state
+- **patch** (optional): Partial state to override on top of `baseState`
 
 **Returns:** Object with:
 
 - **state**: Test state instance
-- **dispose**: Cleanup function
+- **dispose**: Cleanup function that resets the test state
 
 **Example:**
 
 ```ts
 describe('Counter', () => {
-  it('increments count', () => {
-    const { state, dispose } = createTestState(null, { count: 0 });
+  it('increments count from plain object', () => {
+    const { state, dispose } = createTestState({ count: 0 });
 
     state.set({ count: 1 });
     expect(state.get().count).toBe(1);
+
+    dispose();
+  });
+
+  it('inherits from existing state with patch', () => {
+    const base = createSnapshot({ count: 0, name: 'Alice' });
+    const { state, dispose } = createTestState(base, { count: 10 });
+
+    expect(state.get().count).toBe(10);
+    expect(state.get().name).toBe('Alice');
+    expect(base.get().count).toBe(0); // Base unchanged
 
     dispose();
   });
@@ -711,9 +771,10 @@ describe('Counter', () => {
 
 **Notes:**
 
-- If `baseState` is provided, test state inherits its value
-- Test state is independent of base state
-- `dispose()` resets test state (for cleanup)
+- Pass a plain object to create a completely fresh test state
+- Pass an existing `State<T>` instance to inherit its current value
+- Test state is always independent of any base state
+- `dispose()` resets the test state to its initial value
 
 ---
 
@@ -770,16 +831,12 @@ it('checks admin status with mocked state', async () => {
 
 **Notes:**
 
-- Creates a scoped child state with mocked values
+- Creates a scoped child state with mocked values merged with the original state
 - Original state is never modified
 - Scoped state is discarded after callback completes
+- Uses `runInScope` internally
 - Useful for testing functions that accept state as a parameter
 - For simpler testing, consider `createTestState` instead
-**Notes:**
-
-- Uses `runInScope` internally
-- Original state is never modified
-- Useful for testing with different state scenarios
 
 ---
 

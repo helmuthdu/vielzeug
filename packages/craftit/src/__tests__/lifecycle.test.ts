@@ -2,50 +2,35 @@
  * Core - Lifecycle Hooks Tests
  * Tests for onMount, onUnmount, and onUpdated hooks
  */
-import { define, html, onMount, onUnmount, onUpdated, signal } from '..';
-import { cleanup, mount } from '../trial/trial';
 
-// Counter for unique component names
-let componentCounter = 0;
-const uniqueName = (base: string) => `${base}-${++componentCounter}`;
+import { handle, html, onError, onMount, onUnmount, onUpdated, signal } from '..';
+import { mount } from '../test';
 
 describe('Core: Lifecycle Hooks', () => {
-  afterEach(() => cleanup());
-
   describe('onMount()', () => {
-    it('should run when component mounts', () => {
+    it('should run when component mounts', async () => {
       const spy = vi.fn();
-      const name = uniqueName('test-mount-hook');
-
-      define(name, () => {
+      await mount(() => {
         onMount(spy);
         return html`<div>Test</div>`;
       });
-
-      mount(name);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('should run after DOM is ready', () => {
+    it('should run after DOM is ready', async () => {
       let hasElement = false;
-      const name = uniqueName('test-mount-dom');
-
-      define(name, () => {
+      await mount(() => {
         onMount(() => {
           hasElement = true;
         });
         return html`<div>Test</div>`;
       });
-
-      mount(name);
       expect(hasElement).toBe(true);
     });
 
-    it('should support multiple onMount callbacks', () => {
+    it('should support multiple onMount callbacks', async () => {
       const calls: number[] = [];
-      const name = uniqueName('test-multiple-mount');
-
-      define(name, () => {
+      await mount(() => {
         onMount(() => {
           calls.push(1);
         });
@@ -54,57 +39,42 @@ describe('Core: Lifecycle Hooks', () => {
         });
         return html`<div>Test</div>`;
       });
-
-      mount(name);
       expect(calls).toEqual([1, 2]);
     });
   });
 
   describe('onUnmount()', () => {
-    it('should run when component unmounts', () => {
+    it('should run when component unmounts', async () => {
       const spy = vi.fn();
-      const name = uniqueName('test-unmount-hook');
-
-      define(name, () => {
+      const { destroy } = await mount(() => {
         onUnmount(spy);
         return html`<div>Test</div>`;
       });
-
-      const { unmount } = mount(name);
       expect(spy).not.toHaveBeenCalled();
-
-      unmount();
+      destroy();
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('should clean up resources', () => {
+    it('should clean up resources', async () => {
       let cleaned = false;
-      const name = uniqueName('test-cleanup');
-
-      define(name, () => {
+      const { destroy } = await mount(() => {
         onUnmount(() => {
           cleaned = true;
         });
         return html`<div>Test</div>`;
       });
-
-      const { unmount } = mount(name);
-      unmount();
+      destroy();
       expect(cleaned).toBe(true);
     });
 
-    it('should support multiple onUnmount callbacks', () => {
+    it('should support multiple onUnmount callbacks', async () => {
       const calls: number[] = [];
-      const name = uniqueName('test-multiple-unmount');
-
-      define(name, () => {
+      const { destroy } = await mount(() => {
         onUnmount(() => calls.push(1));
         onUnmount(() => calls.push(2));
         return html`<div>Test</div>`;
       });
-
-      const { unmount } = mount(name);
-      unmount();
+      destroy();
       expect(calls).toEqual([1, 2]);
     });
   });
@@ -112,48 +82,29 @@ describe('Core: Lifecycle Hooks', () => {
   describe('onUpdated()', () => {
     it('should run after signal updates', async () => {
       const spy = vi.fn();
-      const name = uniqueName('test-updated-hook');
-
-      define(name, () => {
-        const count = signal(0);
+      let count!: ReturnType<typeof signal<number>>;
+      const { act } = await mount(() => {
+        count = signal(0);
         onUpdated(spy);
-
-        // Update the signal after mount completes
-        setTimeout(() => count.value++, 10);
         return html`<div>${count}</div>`;
       });
-
-      const { waitForUpdates } = mount(name);
-      await waitForUpdates(); // Wait for initial mount
-
-      await new Promise((resolve) => setTimeout(resolve, 20)); // Wait for signal update
-      await waitForUpdates(); // Wait for re-render
-
+      await act(() => count.value++);
       expect(spy).toHaveBeenCalled();
     });
   });
 
   describe('Lifecycle Order', () => {
-    it('should execute in correct order', () => {
+    it('should execute in correct order', async () => {
       const order: string[] = [];
-      const name = uniqueName('test-lifecycle-order');
-
-      define(name, () => {
+      const { destroy } = await mount(() => {
         order.push('setup');
-
         onMount(() => {
           order.push('mount');
         });
-        onUnmount(() => {
-          order.push('unmount');
-        });
-
+        onUnmount(() => order.push('unmount'));
         return html`<div>Test</div>`;
       });
-
-      const { unmount } = mount(name);
-      unmount();
-
+      destroy();
       expect(order).toEqual(['setup', 'mount', 'unmount']);
     });
   });
@@ -161,61 +112,75 @@ describe('Core: Lifecycle Hooks', () => {
   describe('Integration with Effects', () => {
     it('should work with effects in onMount', async () => {
       const values: number[] = [];
-      const name = uniqueName('test-mount-effect');
-
-      define(name, () => {
+      const { flush } = await mount(() => {
         const count = signal(0);
-
         onMount(() => {
           count.value = 5;
         });
-
-        onUpdated(() => {
-          values.push(count.value);
-        });
-
+        onUpdated(() => values.push(count.value));
         return html`<div>${count}</div>`;
       });
-
-      const { waitForUpdates } = mount(name);
-      await waitForUpdates(); // Wait for mount and initial update
-
-      // The initial value (0) gets updated to 5 in onMount, triggering onUpdated
+      await flush();
       expect(values).toContain(5);
     });
 
     it('should cleanup effects on unmount', async () => {
       let effectRuns = 0;
-      const name = uniqueName('test-effect-cleanup');
-
-      define(name, () => {
+      const { destroy } = await mount(() => {
         const count = signal(0);
-
         onMount(() => {
           const interval = setInterval(() => {
             count.value++;
             effectRuns++;
           }, 10);
-
-          onUnmount(() => {
-            clearInterval(interval);
-          });
+          onUnmount(() => clearInterval(interval));
         });
-
         return html`<div>${count}</div>`;
       });
-
-      const { unmount } = mount(name);
-
-      // Wait for some interval executions
       await new Promise((resolve) => setTimeout(resolve, 50));
       const runsBeforeUnmount = effectRuns;
-
-      unmount();
-
-      // Wait and verify no more runs after unmount
+      destroy();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(effectRuns).toBe(runsBeforeUnmount);
+    });
+  });
+
+  describe('handle()', () => {
+    it('should attach an event listener and clean it up on unmount', async () => {
+      let clickCount = 0;
+      let btn!: HTMLButtonElement;
+
+      const { destroy } = await mount(() => {
+        onMount(() => {
+          btn = document.createElement('button');
+          document.body.appendChild(btn);
+          handle(btn, 'click', () => {
+            clickCount++;
+          });
+          return () => btn.remove();
+        });
+        return html`<div></div>`;
+      });
+
+      btn.dispatchEvent(new Event('click'));
+      expect(clickCount).toBe(1);
+
+      destroy();
+
+      btn.dispatchEvent(new Event('click'));
+      expect(clickCount).toBe(1);
+    });
+  });
+
+  describe('onError()', () => {
+    it('should register error handler', async () => {
+      let handlerRegistered = false;
+      await mount(() => {
+        onError(() => {});
+        handlerRegistered = true;
+        return html`<div>Test</div>`;
+      });
+      expect(handlerRegistered).toBe(true);
     });
   });
 });

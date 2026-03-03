@@ -1,8 +1,9 @@
+---
+title: Craftit — API Reference
+description: Complete API reference for Craftit web component framework.
+---
+
 # Craftit API Reference
-
-Complete API documentation for all Craftit functions, types, and interfaces.
-
-## Table of Contents
 
 [[toc]]
 
@@ -14,14 +15,15 @@ Define and register a custom element with a setup function.
 **Parameters:**
 
 - `name: string` – Element tag name (must contain a hyphen, e.g., 'my-component')
-- `setup: () => SetupResult` – Setup function that returns template or configuration
+- `setup: (ctx: SetupContext) => SetupResult` – Setup function called with `{ host }` context; returns template or configuration
 - `options?: DefineOptions` – Optional configuration
 
 **DefineOptions:**
 
 - `formAssociated?: boolean` – Enable form-associated custom element (required for `field()`)
+- `target?: string | HTMLElement` – Render the shadow root into this selector or element (portal)
 
-**Returns:** `void`
+**Returns:** `string` (the registered element tag name)
 **Example:**
 
 ```ts
@@ -38,20 +40,18 @@ define('my-button', () => {
 import { define, signal, html, field } from '@vielzeug/craftit';
 
 // Must set formAssociated: true to use field()
-define('custom-input', () => {
-  const value = signal('');
+define(
+  'custom-input',
+  () => {
+    const value = signal('');
 
-  // Register as form field
-  const formField = field({ value });
+    // Register as form field
+    const formField = field({ value });
 
-  return html`
-    <input
-      type="text"
-      :value=${value}
-      @input=${(e) => value.value = e.target.value}
-    />
-  `;
-}, { formAssociated: true }); // ← Required for field()
+    return html` <input type="text" :value=${value} @input=${(e) => (value.value = e.target.value)} /> `;
+  },
+  { formAssociated: true },
+); // ← Required for field()
 ```
 
 **With Styles:**
@@ -75,12 +75,13 @@ define('styled-button', () => {
 
 ## Signals
 
-### `signal(initialValue)`
+### `signal(initialValue, options?)`
 
 Create a reactive signal.
 **Parameters:**
 
 - `initialValue: T` – Initial value of the signal
+- `options?: { name?: string }` – Optional options; `name` sets `debugName` for debugging
   **Returns:** `Signal<T>`
   **Example:**
 
@@ -101,17 +102,20 @@ count.update((current) => current + 1);
 - `.value` – Get or set the signal value
 - `.peek()` – Read value without tracking dependencies
 - `.update(fn)` – Update value using a function
+- `.assign(partial)` – Shallow-merge a Partial into an object signal
+- `.derive(fn)` – Shorthand for `computed(() => fn(signal.value))`
 - `.map(fn)` – Transform array signals (TypeScript-checked)
+- `.subscribe(cb)` – Watch for changes; returns a cleanup fn
 
 ---
 
 ### `computed(compute)`
 
-Create a computed signal that derives from other signals.
+Create a read-only computed signal that derives from other signals.
 **Parameters:**
 
 - `compute: () => T` – Function that computes the derived value
-  **Returns:** `ComputedSignal<T>`
+  **Returns:** `Signal<T>`
   **Example:**
 
 ```ts
@@ -164,7 +168,10 @@ function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: 
 // Watch multiple signals
 function watch<T extends readonly Signal<unknown>[]>(
   sources: [...T],
-  cb: (values: [...T]) => void,
+  cb: (
+    values: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
+    prevValues: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
+  ) => void,
   options?: WatchOptions,
 ): CleanupFn;
 ```
@@ -185,8 +192,8 @@ watch(count, (newValue, oldValue) => {
 });
 // Watch multiple
 const name = signal('Alice');
-watch([count, name], ([c, n]) => {
-  console.log(`Count: ${c}, Name: ${n}`);
+watch([count, name], ([c, n], [prevC, prevN]) => {
+  console.log(`Count: ${c} (was ${prevC}), Name: ${n} (was ${prevN})`);
 });
 // With immediate
 watch(
@@ -200,13 +207,67 @@ watch(
 
 ---
 
+### `writable(get, set)`
+
+Create a bi-directional computed signal: reads track `get` reactively; writes call `set`.
+**Parameters:**
+
+- `get: () => T` – Getter function (reactive)
+- `set: (value: T) => void` – Setter function
+  **Returns:** `Signal<T>`
+  **Example:**
+
+```ts
+const celsius = signal(0);
+const fahrenheit = writable(
+  () => (celsius.value * 9) / 5 + 32,
+  (f) => (celsius.value = ((f - 32) * 5) / 9),
+);
+fahrenheit.value = 212; // celsius.value → 100
+```
+
+---
+
+### `isSignal(value)`
+
+Type guard — returns `true` if `value` is a `Signal`.
+**Parameters:**
+
+- `value: unknown` – Value to check
+  **Returns:** `boolean`
+  **Example:**
+
+```ts
+console.log(isSignal(signal(0))); // true
+console.log(isSignal(42)); // false
+```
+
+---
+
+### `toValue(v)`
+
+Unwrap a `Signal<T>` or return a plain value as-is.
+**Parameters:**
+
+- `v: T | Signal<T>` – Value or signal
+  **Returns:** `T`
+  **Example:**
+
+```ts
+const s = signal(42);
+console.log(toValue(s)); // 42
+console.log(toValue(10)); // 10
+```
+
+---
+
 ### `batch(fn)`
 
 Batch multiple signal updates into a single re-render.
 **Parameters:**
 
-- `fn: () => void` – Function containing updates
-  **Returns:** `void`
+- `fn: () => T` – Function containing updates
+  **Returns:** `T` (the return value of `fn`)
   **Example:**
 
 ```ts
@@ -300,14 +361,18 @@ html`
 
 ### `html.when(condition, then, else?)`
 
-Conditional rendering helper.
-**Parameters:**
+Conditional rendering — inserts/removes DOM based on truthiness.
+**Signatures:**
 
-- `condition: unknown | Signal<unknown>` – Condition to evaluate
-- `then: string | HTMLResult | (() => string | HTMLResult) | { then, else }` – Content when true
-- `else?: () => string | HTMLResult` – Content when false (optional)
-  **Returns:** `WhenDirective | string | HTMLResult`
-  **Example:**
+```ts
+// Two-branch form
+html.when(condition, then: () => V, else?: () => V): V | (() => V);
+// Multi-branch else-if chain
+html.when([cond, fn], ...[cond, fn], fallback?: () => V): V | (() => V);
+```
+
+**Returns:** `V | (() => V)` (reactive when `condition` is a Signal or function)
+**Example:**
 
 ```ts
 const isLoggedIn = signal(false);
@@ -315,10 +380,20 @@ const isLoggedIn = signal(false);
 html`${html.when(isLoggedIn, () => html`<p>Welcome!</p>`)}`;
 // With else
 html`
-  ${html.when(isLoggedIn, {
-    then: () => html`<p>Welcome!</p>`,
-    else: () => html`<p>Please log in</p>`,
-  })}
+  ${html.when(
+    isLoggedIn,
+    () => html`<p>Welcome!</p>`,
+    () => html`<p>Please log in</p>`,
+  )}
+`;
+// Multi-branch
+const role = signal('guest');
+html`
+  ${html.when(
+    [() => role.value === 'admin', () => html`<admin-panel />`],
+    [() => role.value === 'editor', () => html`<editor-panel />`],
+    () => html`<guest-panel />`,
+  )}
 `;
 ```
 
@@ -326,38 +401,61 @@ html`
 
 ### `html.show(condition, template)`
 
-Toggle visibility with display property.
+Toggle **visibility** (`display:none`) without unmounting. Prefer over `html.when` when the child has expensive setup or stateful input.
 **Parameters:**
 
-- `condition: unknown | Signal<unknown>` – Condition to evaluate
-- `template: string | HTMLResult` – Content to show/hide
-  **Returns:** `string | object`
+- `condition: unknown | Signal<unknown>` – When falsy the element is hidden
+- `template: () => string | HTMLResult` – Content (mounted once, never destroyed)
+  **Returns:** `string | HTMLResult`
   **Example:**
 
 ```ts
-const isVisible = signal(true);
-html` ${html.show(isVisible, html` <div>Toggle me!</div> `)} `;
+const open = signal(false);
+html`${html.show(open, () => html`<heavy-chart></heavy-chart>`)}`;
 ```
 
 ---
 
-### `html.each(items, keyFn, template, empty?)`
+### `html.bind(signal)`
 
-Efficient list rendering with keys.
+Two-way input binding — attaches `:value` + `input`/`change` listener in one step.
 **Parameters:**
 
-- `items: T[] | Signal<T[]>` – Array of items
-- `keyFn: (item: T) => string | number` – Key function
-- `template: (item: T, index: number) => string | HTMLResult` – Item template
-- `empty?: () => string | HTMLResult` – Empty state (optional)
-  **Returns:** `EachDirective | object`
+- `signal: Signal<T>` – Signal to bind
+  **Returns:** binding descriptor (`{ __model: Signal<T> }`)
   **Example:**
 
 ```ts
-const todos = signal([
-  { id: 1, text: 'Learn Craftit' },
-  { id: 2, text: 'Build app' },
-]);
+const name = signal('');
+html`<input ${html.bind(name)} />`; // equivalent to :value + @input
+```
+
+---
+
+### `html.each(source, ...)`
+
+Efficient keyed list rendering. Three call signatures:
+
+```ts
+// Three-arg keyed (recommended for mutable lists)
+html.each(source, keyFn, templateFn, emptyFn?);
+// Simple (index as key)
+html.each(source, templateFn);
+// Options object
+html.each(source, { key?, template, empty? });
+```
+
+**Parameters:**
+
+- `source` – `T[] | Signal<T[]> | (() => T[])` – The list (signal or function for reactivity)
+- `keyFn` – `(item: T) => Key` – Stable identity key
+- `templateFn` – `(item: T, index: number) => V` – Per-item template
+- `emptyFn?` – `() => V` – Rendered when list is empty
+  **Returns:** `V | (() => V)`
+  **Example:**
+
+```ts
+const todos = signal([{ id: 1, text: 'Learn Craftit' }]);
 html`
   ${html.each(
     todos,
@@ -366,30 +464,39 @@ html`
     () => html`<p>No todos</p>`,
   )}
 `;
+// Simple form
+html`${html.each(todos, (todo) => html`<li>${todo.text}</li>`)}`;
+// Options object
+html`${html.each(todos, { key: (t) => t.id, template: (t) => html`<li>${t.text}</li>` })}`;
 ```
 
 ---
 
-### `html.choose(value, cases, default?)`
+### `html.match(value, cases, default?)`
 
-Switch/case helper for multiple conditions.
-**Parameters:**
-
-- `value: T | Signal<T>` – Value to match
-- `cases: Array<[T, () => V]>` – Array of [value, template] pairs
-- `default?: () => V` – Default template (optional)
-  **Returns:** `V | (() => V)`
-  **Example:**
+Switch/case pattern matching.
+**Signatures:**
 
 ```ts
-const status = signal('loading');
+// Static value (returns V directly)
+html.match(value: T, cases: Array<[T, () => V]>, default?: () => V): V;
+// Reactive (Signal or function — returns () => V)
+html.match(value: Signal<T> | (() => T), cases: Array<[T, () => V]>, default?: () => V): () => V;
+```
+
+**Returns:** `V` for static values; `() => V` for reactive values
+**Example:**
+
+```ts
+const status = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
 html`
-  ${html.choose(
+  ${html.match(
     status,
     [
       ['idle', () => html`<p>Ready</p>`],
-      ['loading', () => html`<p>Loading...</p>`],
+      ['loading', () => html`<p>Loading…</p>`],
       ['success', () => html`<p>Done!</p>`],
+      ['error', () => html`<p>Something went wrong</p>`],
     ],
     () => html`<p>Unknown</p>`,
   )}
@@ -398,52 +505,84 @@ html`
 
 ---
 
-### `html.until(...values)`
+### `suspense(asyncFn, options)`
 
-Suspense-like behavior for async operations.
+Standalone function (not attached to `html`) — handles async data loading with fallback, template, and error/retry.
 **Parameters:**
 
-- `...values: unknown[]` – Values in priority order (Promises, fallbacks)
-  **Returns:** `() => string | HTMLResult`
+- `asyncFn: (signal: AbortSignal) => Promise<T>` – Async function (receives an `AbortSignal`)
+- `options: { fallback, template, error? }` – Rendering callbacks
+  **Returns:** `() => string | HTMLResult` (call it inside a template)
   **Example:**
 
 ```ts
-html`
-  ${html.until(
-    fetchData(), // Promise - highest priority
-    () => html`<p>Loading...</p>`, // Fallback while loading
-    'Error', // Final fallback
-  )}
-`;
+import { suspense } from '@vielzeug/craftit';
+const loadUser = suspense(
+  async (signal) => {
+    const res = await fetch('/api/user', { signal });
+    return res.json();
+  },
+  {
+    fallback: () => html`<p>Loading…</p>`,
+    template: (user) => html`<p>Hello, ${user.name}!</p>`,
+    error: (err, retry) => html`
+      <p>${err.message}</p>
+      <button @click=${retry}>Retry</button>
+    `,
+  },
+);
+html`${loadUser()}`;
 ```
 
 ---
 
-### `html.portal(template, target)`
+### `raw` / `rawHtml()`
 
-Render content to a different DOM location.
-**Parameters:**
-
-- `template: string | HTMLResult | Signal<string>` – Content to portal
-- `target?: string | HTMLElement` – Target selector or element (default: 'body')
-  **Returns:** `string | object`
-  **Example:**
+`raw` is a tagged template that skips escaping entirely. `rawHtml()` bypasses escaping for a single interpolated value inside an `html` template.
+**Example:**
 
 ```ts
-const isOpen = signal(false);
+const trusted = '<strong>Bold</strong>';
+raw`<div>${trusted}</div>`; // raw tag
+html`<div>${rawHtml(trusted)}</div>`; // only this value unescaped
+```
+
+---
+
+### Portals (Component Target)
+
+Render components to different DOM locations using the `target` option.
+**Example:**
+
+```ts
+define(
+  'modal-dialog',
+  () => {
+    const isOpen = prop('open', false, { parse: (v) => v === '' || v === 'true' });
+    return html`
+      ${html.when(
+        isOpen,
+        () => html`
+          <div class="modal">
+            <button
+              @click=${() => {
+                isOpen.value = false;
+              }}>
+              Close
+            </button>
+          </div>
+        `,
+      )}
+    `;
+  },
+  { target: 'body' },
+);
+
+// Usage:
+const showModal = signal(false);
 html`
-  <button @click=${() => (isOpen.value = true)}>Open Modal</button>
-  ${html.portal(
-    html.when(
-      isOpen,
-      () => html`
-        <div class="modal">
-          <button @click=${() => (isOpen.value = false)}>Close</button>
-        </div>
-      `,
-    ),
-    'body',
-  )}
+  <button @click=${() => (showModal.value = true)}>Open Modal</button>
+  <modal-dialog ?open=${showModal}></modal-dialog>
 `;
 ```
 
@@ -484,7 +623,7 @@ Generate dynamic class strings.
   **Returns:** `string`
   **Example:**
 
-```ts
+````ts
 const isActive = signal(true);
 // Object syntax
 ```ts
@@ -501,22 +640,9 @@ html`
 `;
 // Array syntax
 html` <div class=${() => html.classes(['btn', isActive.value && 'active', { primary: true }])}></div> `;
-```
+````
 
 ---
-
-### `html.log(...args)`
-
-Debug helper that logs to console and returns empty string.
-**Parameters:**
-
-- `...args: unknown[]` – Values to log
-  **Returns:** `string` (empty)
-  **Example:**
-
-```ts
-html` <div>${html.log('Debug:', someValue)} Content</div> `;
-```
 
 ---
 
@@ -665,6 +791,92 @@ onCleanup(() => {
 
 ---
 
+### `handle(target, event, listener, options?)`
+
+Registers an event listener and **automatically removes it** via `onCleanup` on unmount. Must be called within an active lifecycle context — typically inside `onMount`.
+
+**Parameters:**
+
+- `target: EventTarget` – The element to listen on
+- `event: K` – Event name (keyof `HTMLElementEventMap`)
+- `listener: (e: HTMLElementEventMap[K]) => void` – Typed event handler
+- `options?: AddEventListenerOptions` – Optional listener options
+
+**Returns:** `void`
+
+**Example:**
+
+```ts
+define('toggle-button', () => {
+  onMount(() => {
+    const host = /* ... */;
+    handle(host, 'click', onClick);
+    handle(host, 'keydown', onKeydown);
+    // no return/cleanup needed
+  });
+  return html`<slot></slot>`;
+});
+```
+
+---
+
+### `onError(fn)`
+
+Scoped error handler — catches render and lifecycle errors within the current component.
+**Parameters:**
+
+- `fn: (error: Error, info?: { componentStack?: string }) => void` – Error callback
+  **Returns:** `void`
+  **Example:**
+
+```ts
+define('safe-component', () => {
+  onError((error, info) => {
+    console.error('Component error:', error.message);
+    // send to error tracker
+  });
+  return html`<risky-child></risky-child>`;
+});
+```
+
+---
+
+### `aria(attrs)`
+
+Reactively sets ARIA attributes on the host element. Pass getter functions to make individual attributes reactive — they will be tracked as signal dependencies. Plain primitive values are set once. `null` / `undefined` / `false` removes the attribute.
+
+Must be called synchronously during component setup.
+
+**Parameters:**
+
+- `attrs: Record<string, AriaAttrValue>` – Map of ARIA attribute names (without the `aria-` prefix) to values or reactive getters
+
+**`AriaAttrValue`:**
+
+```ts
+type AriaAttrValue =
+  | (() => string | boolean | number | null | undefined) // reactive getter
+  | string | boolean | number | null | undefined;        // static value
+```
+
+**Returns:** `void`
+
+**Example:**
+
+```ts
+define('custom-checkbox', () => {
+  const checked = signal(false);
+  aria({
+    role: 'checkbox',
+    checked: () => checked.value,  // reactive — updates on signal change
+    label: 'Toggle option',        // static — set once
+  });
+  return html`<div @click=${() => (checked.value = !checked.value)}></div>`;
+});
+```
+
+---
+
 ## Props & Context
 
 ### `field(options)`
@@ -696,84 +908,109 @@ The component must be defined with `{ formAssociated: true }` option to use `fie
 **Example:**
 
 ```ts
-define('custom-input', () => {
-  const value = signal('');
+define(
+  'custom-input',
+  () => {
+    const value = signal('');
 
-  // Basic usage
-  const formField = field({ value });
+    // Basic usage
+    const formField = field({ value });
 
-  return html`
-    <input
-      :value=${value}
-      @input=${(e) => value.value = e.target.value}
-    />
-  `;
-}, { formAssociated: true }); // ← Required!
+    return html` <input :value=${value} @input=${(e) => (value.value = e.target.value)} /> `;
+  },
+  { formAssociated: true },
+); // ← Required!
 ```
 
 **With Validation:**
 
 ```ts
-define('email-input', () => {
-  const value = signal('');
-  const formField = field({ value });
+define(
+  'email-input',
+  () => {
+    const value = signal('');
+    const formField = field({ value });
 
-  const isValid = computed(() =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
-  );
+    const isValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
-  watch(value, () => {
-    if (!isValid.value && value.value) {
-      formField.setValidity(
-        { typeMismatch: true },
-        'Please enter a valid email'
-      );
-    } else {
-      formField.setValidity({}, '');
-    }
-  });
+    watch(value, () => {
+      if (!isValid.value && value.value) {
+        formField.setValidity({ typeMismatch: true }, 'Please enter a valid email');
+      } else {
+        formField.setValidity({}, '');
+      }
+    });
 
-  return html`<input type="email" :value=${value} />`;
-}, { formAssociated: true });
+    return html`<input type="email" :value=${value} />`;
+  },
+  { formAssociated: true },
+);
 ```
 
 **With Custom Form Value:**
 
 ```ts
-define('rating-input', () => {
-  const rating = signal(0);
+define(
+  'rating-input',
+  () => {
+    const rating = signal(0);
 
-  const formField = field({
-    value: rating,
-    toFormValue: (v) => String(v) // Convert number to string
-  });
+    const formField = field({
+      value: rating,
+      toFormValue: (v) => String(v), // Convert number to string
+    });
 
-  return html`
-    <div>
-      ${[1,2,3,4,5].map(n => html`
-        <button @click=${() => rating.value = n}>★</button>
-      `)}
-    </div>
-  `;
-}, { formAssociated: true });
+    return html`
+      <div>${[1, 2, 3, 4, 5].map((n) => html` <button @click=${() => (rating.value = n)}>★</button> `)}</div>
+    `;
+  },
+  { formAssociated: true },
+);
 ```
 
 **With Disabled State:**
 
 ```ts
-define('toggle-input', () => {
-  const value = signal('');
-  const disabled = signal(false);
+define(
+  'toggle-input',
+  () => {
+    const value = signal('');
+    const disabled = signal(false);
 
-  const formField = field({
-    value,
-    disabled // Syncs with internals.states
+    const formField = field({
+      value,
+      disabled, // Syncs with internals.states
+    });
+
+    return html` <input :value=${value} ?disabled=${disabled} /> `;
+  },
+  { formAssociated: true },
+);
+```
+
+---
+
+### `defineProps(defs)`
+
+Declare multiple props at once. Keys are converted to kebab-case attribute names automatically.
+**Parameters:**
+
+- `defs: Record<string, PropDef<T>>` – Object of `{ default, ...PropOptions }` per prop
+  **Returns:** `InferPropsSignals<T>` (typed object of `Signal<T>` per key)
+  **Example:**
+
+```ts
+define('product-card', () => {
+  const props = defineProps({
+    title: { default: '' },
+    price: { default: 0, type: Number },
+    inStock: { default: true, type: Boolean, reflect: true },
   });
-
-  return html`
-    <input :value=${value} ?disabled=${disabled} />
-  `;
-}, { formAssociated: true });
+  // props.title   → Signal<string>  (attribute: "title")
+  // props.price   → Signal<number>  (attribute: "price")
+  // props.inStock → Signal<boolean> (attribute: "in-stock", reflected)
+  return html`<h2>${props.title} - $${props.price}</h2>`;
+});
 ```
 
 ---
@@ -787,24 +1024,26 @@ Define a reactive prop that syncs with HTML attributes.
 - `defaultValue: T` – Default value
 - `options?: PropOptions<T>` – Configuration
   **PropOptions:**
-- `parse?: (value: string | null) => T` – Custom parser
+- `parse?: (value: string | null) => T` – Custom parser (overrides auto-inference)
 - `reflect?: boolean` – Reflect changes back to attribute
+- `required?: boolean` – Warn at runtime when the attribute is absent
+
+**Auto-inference from default value type** (no `parse` required):
+| Default type | Behavior |
+|---|---|
+| `boolean` | HTML attribute-presence: absent = `false`, present = `true` |
+| `number` | `Number(v)` |
+| `string` | raw attribute string, or `defaultValue` when absent |
+
   **Returns:** `Signal<T>`
   **Example:**
 
 ```ts
 define('user-card', () => {
   const name = prop('name', 'Guest');
-  const age = prop('age', 0, {
-    parse: (v) => Number(v) || 0,
-    reflect: true,
-  });
-  return html`
-    <div>
-      <h2>${name}</h2>
-      <p>Age: ${age}</p>
-    </div>
-  `;
+  const count = prop('count', 0);        // auto: Number(v)
+  const disabled = prop('disabled', false); // auto: v !== null
+  return html`<div>${name}</div>`;
 });
 ```
 
@@ -824,6 +1063,44 @@ define('focus-input', () => {
   });
   return html` <input ref=${inputRef} type="text" /> `;
 });
+```
+
+---
+
+### `refs()`
+
+Create a list of element references for multiple elements. `values` is a live, deduped `ReadonlyArray<T>`.
+**Returns:** `RefList<T>`
+**Example:**
+
+```ts
+define('item-list', () => {
+  const itemRefs = refs<HTMLLIElement>();
+  onMount(() => {
+    console.log('Mounted items:', itemRefs.values.length); // .values not .value
+  });
+  return html`
+    <ul>
+      <li ref=${itemRefs}>Item 1</li>
+      <li ref=${itemRefs}>Item 2</li>
+      <li ref=${itemRefs}>Item 3</li>
+    </ul>
+  `;
+});
+```
+
+---
+
+### `createContext<T>()`
+
+Create a typed injection key (preferred over `Symbol()`).
+**Returns:** `InjectionKey<T>`
+**Example:**
+
+```ts
+const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
+provide(ThemeKey, { mode: signal('light') });
+const theme = inject(ThemeKey); // typed: { mode: Signal<'light' | 'dark'> } | undefined
 ```
 
 ---
@@ -870,92 +1147,149 @@ define('themed-button', () => {
 
 ## Advanced Features
 
-### `errorBoundary(component, options)`
+## Utilities
 
-Wrap a component with error handling.
+### `createId(prefix?)`
+
+Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`, and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
+
 **Parameters:**
+- `prefix?: string` – Optional prefix for the generated ID
 
-- `component: () => string | HTMLResult` – Component function
-- `options: ErrorBoundaryOptions` – Configuration
-  **ErrorBoundaryOptions:**
-- `fallback: (error: Error) => string | HTMLResult` – Error fallback
-- `onError?: (error: Error) => void` – Error handler
-  **Returns:** `string | HTMLResult`
-  **Example:**
+**Returns:** `string`
+
+**Example:**
 
 ```ts
-define('safe-component', () => {
-  return errorBoundary(() => html`<risky-component></risky-component>`, {
-    fallback: (error) => html`<p>Error: ${error.message}</p>`,
-    onError: (error) => console.error(error),
+define('labeled-input', () => {
+  const inputRef = ref<HTMLInputElement>();
+  onMount(() => {
+    const host = inputRef.value?.getRootNode()?.host as HTMLElement;
+    const labelId = createId('input-label');
+    // labelId → 'input-label-1' (stable, unique per instance)
+    host.setAttribute('aria-labelledby', labelId);
   });
+  return html`<input ref=${inputRef} />`;
 });
 ```
 
 ---
 
-### `createErrorBoundary(component, options)`
+### `guard(condition, handler)`
 
-Create a reusable error boundary.
+Wraps an event handler with a condition. The handler is only invoked when `condition()` returns `true`. Use for disabled checks, readonly guards, or any runtime condition.
+
 **Parameters:**
+- `condition: () => boolean` – Guard predicate evaluated at call time
+- `handler: (e: E) => void` – Handler to invoke when condition passes
 
-- `component: () => string | HTMLResult` – Component function
-- `options: ErrorBoundaryOptions` – Configuration
-  **Returns:** `() => string | HTMLResult`
-  **Example:**
+**Returns:** `(e: E) => void`
+
+**Example:**
 
 ```ts
-const SafeComponent = createErrorBoundary(() => html`<risky-component></risky-component>`, {
-  fallback: (error) => html`<p>Error</p>`,
+define('guarded-button', () => {
+  const props = defineProps({ disabled: { default: false } });
+  onMount(() => {
+    const host = /* ... */;
+    const handleClick = guard(() => !props.disabled.value, (e) => {
+      e.preventDefault();
+      doSomething();
+    });
+    // Multi-condition guard:
+    const handleInput = guard(
+      () => !props.disabled.value && !props.readonly.value,
+      (e: InputEvent) => process(e),
+    );
+    handle(host, 'click', handleClick);
+  });
+  return html`<slot></slot>`;
 });
-define('app', () => html`${SafeComponent()}`);
 ```
 
 ---
 
-### `lazy(factory, options?)`
+### `defineSlots()`
 
-Lazy load a component.
-**Parameters:**
+Access slotted content from the host element. Must be called inside a `define` setup function.
+**Returns:** `SlotsAPI<T>`
 
-- `factory: () => Promise<{ default: () => string | HTMLResult }>` – Import function
-- `options?: LazyOptions` – Configuration
-  **LazyOptions:**
-- `fallback?: () => string | HTMLResult` – Loading fallback
-  **Returns:** `() => string | HTMLResult`
-  **Example:**
+**SlotsAPI methods:**
+
+- `has(name): boolean` – True if the named slot has content
+- `render(name, props?, fallback?): V` – Render a named slot (with optional fallback)
+- `default(props?, fallback?): V` – Render the default slot
+
+**Example:**
 
 ```ts
-const HeavyChart = lazy(() => import('./chart'), {
-  fallback: () => html`<div>Loading...</div>`,
-});
-define(
-  'dashboard',
-  () => html`
-    <div>
-      <h1>Dashboard</h1>
-      ${HeavyChart()}
+define('card-component', () => {
+  const s = defineSlots<{ default: unknown; footer: unknown }>();
+  return html`
+    <div class="card">
+      <div class="body">${s.default({}, () => html`<p>No content</p>`)}</div>
+      ${s.has('footer') ? html`<footer>${s.render('footer')}</footer>` : ''}
     </div>
-  `,
-);
+  `;
+});
 ```
 
 ---
 
-### `setGlobalErrorHandler(handler)`
+### `defineEmits()`
 
-Set a global error handler for all components.
-**Parameters:**
-
-- `handler: (error: Error) => void` – Global error handler
-  **Returns:** `void`
-  **Example:**
+Dispatch typed custom events from a component. Must be called inside a `define` setup function.
+**Returns:** `EmitFn<T>` where `T` is a `Record<EventName, EventDetail>`
+**Example:**
 
 ```ts
-setGlobalErrorHandler((error) => {
-  console.error('Global error:', error);
-  // Send to error tracking service
+type ButtonEvents = { clicked: { count: number }; reset: void };
+define('counter-button', () => {
+  const count = signal(0);
+  const fire = defineEmits<ButtonEvents>();
+  return html`
+    <button
+      @click=${() => {
+        count.value++;
+        fire('clicked', { count: count.value });
+      }}>
+      Clicked ${count} times
+    </button>
+  `;
 });
+// Consumer:
+html`<counter-button @clicked=${(e: CustomEvent) => console.log(e.detail.count)}></counter-button>`;
+```
+
+---
+
+### Form Lifecycle Callbacks
+
+These must be called inside a `define` setup for components with `{ formAssociated: true }`:
+
+| Function                 | Fires when                            |
+| ------------------------ | ------------------------------------- |
+| `onFormAssociated(fn)`   | Element is inserted into a form       |
+| `onFormDisabled(fn)`     | Form's `disabled` state changes       |
+| `onFormReset(fn)`        | The associated form is reset          |
+| `onFormStateRestore(fn)` | Browser restores submitted-form state |
+
+```ts
+define(
+  'custom-input',
+  () => {
+    const value = signal('');
+    const formField = field({ value });
+
+    onFormReset(() => {
+      value.value = '';
+    });
+    onFormDisabled((isDisabled) => console.log('disabled:', isDisabled));
+
+    return html`<input :value=${value} @input=${(e) => (value.value = e.target.value)} />`;
+  },
+  { formAssociated: true },
+);
 ```
 
 ---
@@ -1042,18 +1376,49 @@ await userEvent.clear(input);
 
 ---
 
+### `withRuntime(fn)`
+
+Runs `fn` with an isolated component runtime context. Use in unit tests to call composable setup functions (`prop`, `signal`, `effect`, `onMount`, etc.) outside of a real `define` lifecycle.
+
+**Parameters:**
+
+- `fn: () => T` – Function to execute within the runtime context
+
+**Returns:** `T` (the return value of `fn`)
+
+**Example:**
+
+```ts
+import { withRuntime, signal, prop } from '@vielzeug/craftit';
+import { withRuntime } from '@vielzeug/craftit/trial';
+
+test('prop defaults to provided value', () => {
+  withRuntime(() => {
+    const count = prop('count', 42);
+    expect(count.value).toBe(42);
+  });
+});
+```
+
+---
+
 ## TypeScript Types
 
 ### Signal Types
 
 ```ts
-interface Signal<T> {
+class Signal<T> {
   value: T;
   peek(): T;
   update(fn: (current: T) => T): void;
-  map<U>(fn: (item: T[number], index: number) => U): Signal<U[]>;
+  assign(partial: Partial<T>): void;
+  derive<U>(fn: (value: T) => U): Signal<U>;
+  map<U>(fn: (item: T extends (infer I)[] ? I : never, index: number) => U): Signal<U[]>;
+  subscribe(cb: (value: T, prev: T) => void): CleanupFn;
+  debugName?: string;
 }
-type ComputedSignal<T> = Signal<T>;
+// `computed()` and `writable()` return Signal<T> — there is no separate ComputedSignal type.
+type ReadonlySignal<T> = Omit<Signal<T>, 'update' | 'assign'> & { readonly value: T };
 type CleanupFn = () => void;
 type EffectFn = () => CleanupFn | void;
 ```
@@ -1075,22 +1440,28 @@ interface CSSResult {
 ### Component Types
 
 ```ts
-interface Ref<T extends Element | null> {
+interface Ref<T extends Element = Element> {
   value: T | null;
 }
-interface InjectionKey<T> extends Symbol {
-  readonly __craftit_injection_key?: T;
+interface RefList<T extends Element = Element> {
+  readonly values: ReadonlyArray<T>;
+  add(el: T | null): void;
+  clear(): void;
 }
+// Preferred over raw Symbol() for injection keys
+type InjectionKey<T> = symbol & { readonly __craftit_injection_key?: T };
 type SetupResult =
   | string
   | HTMLResult
   | {
       template: string | HTMLResult;
-      styles?: (string | CSSStyleSheet)[];
+      styles?: (string | CSSStyleSheet | CSSResult)[];
     };
 
 type DefineOptions = {
   formAssociated?: boolean;
+  /** Render the element's shadow root into this selector or element instead of itself */
+  target?: string | HTMLElement;
 };
 ```
 

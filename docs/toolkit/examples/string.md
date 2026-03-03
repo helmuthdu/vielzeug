@@ -1,4 +1,9 @@
-# 🔤 String Utilities
+---
+title: Toolkit — String Examples
+description: String utility examples for Toolkit.
+---
+
+# String Utilities
 
 String utilities provide essential tools to transform, compare, and format strings in a type-safe, ergonomic way. Use these helpers for case conversion, similarity checks, truncation, and more.
 

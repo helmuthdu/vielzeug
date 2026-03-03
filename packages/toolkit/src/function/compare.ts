@@ -19,8 +19,7 @@
  *
  * @returns 0 if equal, 1 if the first value is greater, -1 if the second value is greater.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
-export const compare = (a: any, b: any): number => {
+export const compare = (a: unknown, b: unknown): number => {
   if (a === b) return 0;
   if (a === undefined) return 1;
   if (b === undefined) return -1;

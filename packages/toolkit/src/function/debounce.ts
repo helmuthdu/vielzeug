@@ -24,7 +24,6 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
-  let lastResult: ReturnType<T> | undefined;
 
   const clearTimer = () => {
     if (timer !== undefined) {
@@ -41,8 +40,7 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
     lastArgs = undefined;
     lastThis = undefined;
     // biome-ignore lint/suspicious/noExplicitAny: -
-    lastResult = fn.apply(ctx as any, args);
-    return lastResult;
+    return fn.apply(ctx as any, args) as ReturnType<T>;
   };
 
   const debounced = function (this: ThisParameterType<T>, ...args: Parameters<T>) {

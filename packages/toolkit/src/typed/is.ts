@@ -17,6 +17,27 @@ import { le } from './le';
 import { lt } from './lt';
 import { type ArgType, typeOf } from './typeOf';
 
+// biome-ignore lint/suspicious/noExplicitAny: runtime type dispatch
+const COMPARE: Record<string, (...args: any[]) => boolean> = {
+  defined: isDefined,
+  empty: isEmpty,
+  eq: isEqual,
+  even: isEven,
+  ge,
+  gt,
+  le,
+  lt,
+  match: isMatch,
+  ne: (a: unknown, b: unknown) => !isEqual(a, b),
+  negative: isNegative,
+  nil: isNil,
+  odd: isOdd,
+  positive: isPositive,
+  regex: isRegex,
+  within: isWithin,
+  zero: isZero,
+};
+
 type isType =
   | ArgType
   | 'defined'
@@ -95,28 +116,7 @@ export function is(type: 'object', arg: unknown): arg is object;
 export function is(type: 'nil', arg: unknown): arg is null | undefined;
 export function is(type: 'primitive', arg: unknown): arg is string | number | boolean;
 export function is(type: isType, arg: unknown): boolean;
-export function is(type: string, arg: unknown): boolean {
+export function is(type: string, ...args: unknown[]): boolean {
   assert(Boolean(type), 'Type must be provided', { args: { type }, type: Error });
-
-  const compare = {
-    defined: isDefined,
-    empty: isEmpty,
-    eq: (args: Parameters<typeof isEqual>) => isEqual(...args),
-    even: isEven,
-    ge: (args: Parameters<typeof ge>) => ge(...args),
-    gt: (args: Parameters<typeof gt>) => gt(...args),
-    le: (args: Parameters<typeof le>) => le(...args),
-    lt: (args: Parameters<typeof lt>) => lt(...args),
-    match: (args: Parameters<typeof isMatch>) => isMatch(...args),
-    ne: (args: Parameters<typeof isEqual>) => !isEqual(...args),
-    negative: isNegative,
-    nil: isNil,
-    odd: isOdd,
-    positive: isPositive,
-    regex: isRegex,
-    within: (args: Parameters<typeof isWithin>) => isWithin(...args),
-    zero: isZero,
-  };
-
-  return compare[type as keyof typeof compare]?.(arg) ?? typeOf(arg) === type;
+  return COMPARE[type]?.(...args) ?? typeOf(args[0]) === type;
 }

@@ -36,9 +36,7 @@ export function cache<T>() {
   }
 
   function clear(): void {
-    gcTimers.forEach((timer) => {
-      clearTimeout(timer);
-    });
+    for (const timer of gcTimers.values()) clearTimeout(timer);
     store.clear();
     gcTimers.clear();
     metadata.clear();
@@ -62,7 +60,7 @@ export function cache<T>() {
   }
 
   function setMeta(key: readonly unknown[], meta: Record<string, unknown>): void {
-    metadata.set(hash(key), { lastUsedAt: Date.now(), ...meta });
+    metadata.set(hash(key), { ...meta, lastUsedAt: Date.now() });
   }
 
   function getMeta(key: readonly unknown[]): Record<string, unknown> | undefined {
@@ -78,11 +76,8 @@ export function cache<T>() {
   }
 
   function clearGc(keyHash: string): void {
-    const timer = gcTimers.get(keyHash);
-    if (timer) {
-      clearTimeout(timer);
-      gcTimers.delete(keyHash);
-    }
+    clearTimeout(gcTimers.get(keyHash));
+    gcTimers.delete(keyHash);
   }
 
   return {

@@ -4,7 +4,7 @@ export type TimeDirection = 'FUTURE' | 'PAST';
 export type TimeResult = { unit: TimeUnit; value: number };
 // #endregion TimeDiffTypes
 
-let defaultUnits: TimeUnit[] = ['YEAR', 'MONTH', 'WEEK', 'DAY', 'HOUR', 'MINUTE', 'SECOND'];
+const ALL_UNITS: TimeUnit[] = ['YEAR', 'MONTH', 'WEEK', 'DAY', 'HOUR', 'MINUTE', 'SECOND'];
 
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60 * MS_PER_SECOND;
@@ -44,7 +44,7 @@ const TIME_UNITS = [
 export function timeDiff(
   a: Date | string,
   b: Date | string = new Date(),
-  allowedUnits: TimeUnit[] = defaultUnits,
+  allowedUnits: TimeUnit[] = ALL_UNITS,
 ): TimeResult {
   const aDate = typeof a === 'string' ? Date.parse(a) : a.getTime();
   const bDate = typeof b === 'string' ? Date.parse(b) : b.getTime();
@@ -70,7 +70,3 @@ export function timeDiff(
 
   return { unit: smallestUnit, value: 0 };
 }
-
-timeDiff.defaultUnits = (units: TimeUnit[]) => {
-  defaultUnits = units;
-};

@@ -1,39 +1,47 @@
+---
+title: Deposit — Usage Guide
+description: Schema definition, adapters, query builder, and testing for createDeposit.
+---
+
 # Deposit Usage Guide
 
-Complete guide to installing and using Deposit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Deposit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Deposit?
 
-::: code-group
+Persistent client-side storage with structured queries is essential for offline-capable apps. Deposit gives you a typed query builder on top of LocalStorage or IndexedDB.
 
-```sh [pnpm]
-pnpm add @vielzeug/deposit
+```ts
+// Before — manual localStorage
+const raw = localStorage.getItem('users');
+const users = raw ? JSON.parse(raw) as User[] : [];
+const adults = users.filter(u => u.age >= 18).sort((a, b) => a.name.localeCompare(b.name));
+
+// After — Deposit
+const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
 ```
 
-```sh [npm]
-npm install @vielzeug/deposit
-```
+| Feature | Deposit | localforage | dexie |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="deposit" type="size" /> | ~8 kB | ~23 kB |
+| Query builder | ✅ Rich | ❌ | ✅ |
+| TypeScript | ✅ First-class | ⚠️ | ✅ |
+| Multiple adapters | ✅ | ✅ | IndexedDB only |
+| Zero dependencies | ✅ | ❌ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/deposit
-```
+**Use Deposit when** you need typed storage with querying capability and don't need full IndexedDB power of Dexie.
 
-:::
 
 ## Import
 
 ```ts
-import { Deposit, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
+import { createDeposit, defineSchema, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
 // Optional: Import types
-import type { DepositDataSchema, DepositMigrationFn } from '@vielzeug/deposit';
+import type { DepositDataSchema, DepositMigrationFn, DepositBaseAdapter } from '@vielzeug/deposit';
 ```
 
 ## Basic Usage
@@ -83,11 +91,11 @@ const schema = defineSchema<{ users: User; posts: Post }>()({
 LocalStorage is simpler but has a smaller storage limit (~5-10MB):
 
 ```ts
-const adapter = new LocalStorageAdapter('my-app-db', 1, schema);
-const db = new Deposit(adapter);
+const adapter = new LocalStorageAdapter('my-app-db', schema);
+const db = createDeposit(adapter);
 
 // Or use the shorthand config
-const db = new Deposit({
+const db = createDeposit({
   type: 'localStorage',
   dbName: 'my-app-db',
   version: 1,
@@ -101,15 +109,15 @@ IndexedDB is more powerful with larger storage and index support:
 
 ```ts
 const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 
 // With migration function
-const adapter = new IndexedDBAdapter('my-app-db', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
+const adapterWithMigration = new IndexedDBAdapter('my-app-db', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
   // Migration logic here
 });
 
 // Or use the shorthand config
-const db = new Deposit({
+const db = createDeposit({
   type: 'indexedDB',
   dbName: 'my-app-db',
   version: 1,
@@ -265,11 +273,7 @@ const oldest = await db.query('users').max('age');
 const youngest = await db.query('users').min('age');
 const totalUsers = await db.query('users').count();
 
-// Grouping (type-unsafe – returns object)
-const byRole = await db.query('users').groupBy('role').toArray();
-// Result: { admin: User[], user: User[] }
-
-// Type-safe grouping (recommended)
+// Type-safe grouping
 const byRoleTyped = await db.query('users').toGrouped('role');
 // Result: Array<{ key: 'admin' | 'user', values: User[] }>
 for (const group of byRoleTyped) {
@@ -278,7 +282,7 @@ for (const group of byRoleTyped) {
 ```
 
 ::: tip 💡 Type-Safe Grouping
-Use `toGrouped()` instead of `groupBy().toArray()` for better type safety. The `toGrouped()` method returns `Array<{ key: T[K], values: T[] }>` with correct typing, while `groupBy()` returns an object that requires manual type casting.
+Use `toGrouped()` for type-safe grouping. It returns `Array<{ key: T[K], values: T[] }>` with full type inference.
 :::
 
 ### Transactions
@@ -344,28 +348,21 @@ Deposit automatically validates your schema on initialization to catch configura
 
 ```ts
 // ✅ Valid schema
-const validSchema = {
-  users: {
-    key: 'id', // Required: primary key field
-    indexes: ['email'], // Optional: indexed fields
-    record: {} as User, // Required: type definition
-  },
-};
+const validSchema = defineSchema<{ users: User }>()({
+  users: { key: 'id', indexes: ['email'] },
+});
 
 // ❌ Invalid schema – missing key field
 const invalidSchema = {
-  users: {
-    record: {} as User, // Missing 'key' field
-  },
+  users: {}, // Missing 'key' field
 };
 
 // This will throw immediately with a clear error message:
 // "Invalid schema: table "users" missing required "key" field.
-//  Schema entries must have shape: { key: K, record: T, indexes?: K[] }"
-const db = new Deposit({
+//  Schema entries must have shape: { key: K; indexes?: K[] }"
+const db = createDeposit({
   type: 'localStorage',
   dbName: 'my-app',
-  version: 1,
   schema: invalidSchema, // ❌ Throws error
 });
 ```
@@ -380,10 +377,9 @@ Deposit uses `encodeURIComponent` for storage keys, safely handling special char
 
 ```ts
 // These all work correctly, even with special characters
-const db1 = new Deposit({
+const db1 = createDeposit({
   type: 'localStorage',
   dbName: 'my:app:db', // ✅ Colons are safely encoded
-  version: 1,
   schema,
 });
 
@@ -391,7 +387,6 @@ const schema2 = {
   'user:data': {
     // ✅ Colons in table names work too
     key: 'id',
-    record: {} as User,
   },
 };
 ```
@@ -451,7 +446,7 @@ const migrationFn: DepositMigrationFn<typeof schema> = (db, oldVersion, newVersi
 };
 
 const adapter = new IndexedDBAdapter('my-app-db', 3, schema, migrationFn);
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 ```
 
 ## Environment-Specific Configuration
@@ -459,7 +454,7 @@ const db = new Deposit(adapter);
 ### Development
 
 ```ts
-const db = new Deposit({
+const db = createDeposit({
   type: 'localStorage', // Faster for development
   dbName: 'my-app-dev',
   version: 1,
@@ -470,7 +465,7 @@ const db = new Deposit({
 ### Production
 
 ```ts
-const db = new Deposit({
+const db = createDeposit({
   type: 'indexedDB', // More robust for production
   dbName: 'my-app-prod',
   version: 1,
@@ -483,7 +478,7 @@ const db = new Deposit({
 
 ```ts
 beforeEach(async () => {
-  const db = new Deposit({
+  const db = createDeposit({
     type: 'localStorage',
     dbName: `test-${Date.now()}`, // Unique per test
     version: 1,

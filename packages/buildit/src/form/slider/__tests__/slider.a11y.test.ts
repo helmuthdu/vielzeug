@@ -1,6 +1,6 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createFixture } from '../../../utils/trial';
 
 describe('bit-slider accessibility', () => {
   beforeAll(async () => {
@@ -9,7 +9,7 @@ describe('bit-slider accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
       fixture.element.setAttribute('aria-label', 'Volume');
 
       // The hidden input is intentionally nested for form compatibility
@@ -25,7 +25,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have no violations with value set', async () => {
-      const fixture = await createFixture('bit-slider', { value: '50' });
+      const fixture = await mount('bit-slider', { attrs: { value: '50' } });
       fixture.element.setAttribute('aria-label', 'Brightness: 50%');
 
       const results = await axe.run(fixture.element, {
@@ -39,7 +39,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have no violations when disabled', async () => {
-      const fixture = await createFixture('bit-slider', { disabled: true });
+      const fixture = await mount('bit-slider', { attrs: { disabled: true } });
       fixture.element.setAttribute('aria-label', 'Volume (disabled)');
 
       const results = await axe.run(fixture.element, {
@@ -53,7 +53,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have no violations with custom range', async () => {
-      const fixture = await createFixture('bit-slider', { max: '200', min: '0', value: '100' });
+      const fixture = await mount('bit-slider', { attrs: { max: '200', min: '0', value: '100' } });
       fixture.element.setAttribute('aria-label', 'Temperature');
 
       const results = await axe.run(fixture.element, {
@@ -69,7 +69,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('should be keyboard accessible', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
 
@@ -77,7 +77,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should not be keyboard accessible when disabled', async () => {
-      const fixture = await createFixture('bit-slider', { disabled: true });
+      const fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
 
@@ -85,7 +85,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should support arrow key navigation', async () => {
-      const fixture = await createFixture('bit-slider', { value: '50' });
+      const fixture = await mount('bit-slider', { attrs: { value: '50' } });
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
@@ -96,7 +96,7 @@ describe('bit-slider accessibility', () => {
 
   describe('ARIA Attributes', () => {
     it('should have proper ARIA role', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
 
@@ -104,7 +104,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have aria-valuemin, aria-valuemax, and aria-valuenow', async () => {
-      const fixture = await createFixture('bit-slider', { max: '90', min: '10', value: '50' });
+      const fixture = await mount('bit-slider', { attrs: { max: '90', min: '10', value: '50' } });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('10');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('90');
@@ -114,7 +114,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should have aria-disabled when disabled', async () => {
-      const fixture = await createFixture('bit-slider', { disabled: true });
+      const fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
 
@@ -124,7 +124,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Focus Management', () => {
     it('should be focusable when enabled', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
 
@@ -132,7 +132,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should not be focusable when disabled', async () => {
-      const fixture = await createFixture('bit-slider', { disabled: true });
+      const fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
 
@@ -140,7 +140,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should show focus ring on focus', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
       const thumb = fixture.query('.slider-thumb');
 
       expect(thumb).toBeTruthy();
@@ -151,7 +151,7 @@ describe('bit-slider accessibility', () => {
 
   describe('Screen Reader Support', () => {
     it('should provide value information to screen readers', async () => {
-      const fixture = await createFixture('bit-slider', { max: '100', min: '0', value: '75' });
+      const fixture = await mount('bit-slider', { attrs: { max: '100', min: '0', value: '75' } });
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('75');
@@ -162,7 +162,7 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should hide internal input from screen readers', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
       const input = fixture.query('input');
 
       expect(input?.getAttribute('aria-hidden')).toBe('true');
@@ -172,9 +172,9 @@ describe('bit-slider accessibility', () => {
     });
 
     it('should support label content via slot', async () => {
-      const fixture = await createFixture('bit-slider');
+      const fixture = await mount('bit-slider');
       fixture.element.textContent = 'Volume Control';
-      await fixture.update();
+      await fixture.flush();
 
       const label = fixture.query('.label');
       expect(label).toBeTruthy();

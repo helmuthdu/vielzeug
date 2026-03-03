@@ -1,4 +1,9 @@
-# 🎲 Random Utilities
+---
+title: Toolkit — Random Examples
+description: Random utility examples for Toolkit.
+---
+
+# Random Utilities
 
 Random utilities provide tools to generate random values, shuffle data, and create unique identifiers. These helpers are designed for everyday tasks like sampling, randomization, and unique key generation.
 

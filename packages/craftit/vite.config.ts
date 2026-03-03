@@ -9,7 +9,7 @@ export default defineConfig(
   getConfig(__dirname, {
     entry: {
       index: resolve(__dirname, 'src/index.ts'),
-      trial: resolve(__dirname, 'src/trial/index.ts'),
+      test: resolve(__dirname, 'src/test/index.ts'),
     },
     name: 'craftit',
   }),

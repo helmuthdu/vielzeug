@@ -1,32 +1,44 @@
-# Usage Guide
+---
+title: Formit — Usage Guide
+description: Field validation, form validation, async validators, and testing for Formit.
+---
 
-Complete guide to installing and using Formit in your projects.
+# Formit Usage Guide
 
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Formit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Formit?
 
-::: code-group
+FormData is the native browser API for form state. Formit builds on it with validators, error tracking, and async support — without framework lock-in.
 
-```sh [pnpm]
-pnpm add @vielzeug/formit
+```ts
+// Before — manual validation
+function handleSubmit(e: SubmitEvent) {
+  e.preventDefault();
+  const data = new FormData(e.target as HTMLFormElement);
+  const errors = new Map();
+  if (!data.get('email')) errors.set('email', 'Required');
+  // ...
+}
+
+// After — Formit
+const form = createForm({ fields: { email: { value: '', validators: v => !v ? 'Required' : undefined } } });
+form.subscribe(setState);
 ```
 
-```sh [npm]
-npm install @vielzeug/formit
-```
+| Feature | Formit | React Hook Form | Formik |
+|---|---|---|---|
+| Framework | Agnostic | React | React |
+| Based on | FormData | Refs | State |
+| Async validators | ✅ | ✅ | ✅ |
+| Zero dependencies | ✅ | ❌ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/formit
-```
+**Use Formit when** you want form validation without a framework, or in web components and vanilla JS projects.
 
-:::
 
 ## Basic Usage
 
@@ -96,8 +108,8 @@ form.set({
 // Get all values
 const all = form.values();
 
-// Get FormData
-const formData = form.data();
+// Clone FormData (for safe external use)
+const formData = form.clone();
 ```
 
 ## Advanced Patterns
@@ -195,15 +207,15 @@ form.subscribe((state) => {
   if (accountType === 'business') {
     // Add business field validation
     if (!form.get('companyName')) {
-      form.error('companyName', 'Company name required');
+      form.setError('companyName', 'Company name required');
     }
     if (!form.get('vatNumber')) {
-      form.error('vatNumber', 'VAT number required');
+      form.setError('vatNumber', 'VAT number required');
     }
   } else {
     // Clear business field errors
-    form.error('companyName', '');
-    form.error('vatNumber', '');
+    form.setError('companyName');
+    form.setError('vatNumber');
   }
 });
 ```
@@ -301,7 +313,7 @@ form.subscribe(setState);
   name="email"
   value={form.get('email')}
   onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.touch('email', true)}
+  onBlur={() => form.setTouched('email')}
 />
 ```
 

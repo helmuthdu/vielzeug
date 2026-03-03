@@ -1,5 +1,5 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for bit-grid-item component using axe-core
@@ -13,7 +13,7 @@ describe('bit-grid-item accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations for default grid item', async () => {
-      const fixture = await createFixture('bit-grid-item');
+      const fixture = await mount('bit-grid-item');
       fixture.element.innerHTML = 'Grid item content';
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -25,7 +25,7 @@ describe('bit-grid-item accessibility', () => {
     });
 
     it('should have no violations with column span', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '4' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '4' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item colSpan="2">Spans 2 columns</bit-grid-item>
         <bit-grid-item>Single column</bit-grid-item>
@@ -41,7 +41,7 @@ describe('bit-grid-item accessibility', () => {
     });
 
     it('should have no violations with row span', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '3' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '3' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item rowSpan="2">Spans 2 rows</bit-grid-item>
         <bit-grid-item>Item 1</bit-grid-item>
@@ -58,7 +58,7 @@ describe('bit-grid-item accessibility', () => {
     });
 
     it('should have no violations with alignment', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '2' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '2' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item align="center" justify="center">Centered</bit-grid-item>
         <bit-grid-item align="start">Top aligned</bit-grid-item>
@@ -73,7 +73,7 @@ describe('bit-grid-item accessibility', () => {
     });
 
     it('should have no violations with custom placement', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '4' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '4' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item colStart="1" colEnd="3">Columns 1-2</bit-grid-item>
         <bit-grid-item colStart="3" colEnd="5">Columns 3-4</bit-grid-item>
@@ -88,7 +88,7 @@ describe('bit-grid-item accessibility', () => {
     });
 
     it('should have no violations with interactive content', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '2' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '2' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item colSpan="2">
           <button>Action Button</button>
@@ -112,7 +112,7 @@ describe('bit-grid-item accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('should maintain proper document structure', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '2' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '2' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item>
           <article>
@@ -139,7 +139,7 @@ describe('bit-grid-item accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('should preserve tab order for nested focusable elements', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '3' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '3' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item colSpan="2">
           <button>Button 1</button>
@@ -164,7 +164,7 @@ describe('bit-grid-item accessibility', () => {
 
   describe('Screen Reader Support', () => {
     it('should have proper text alternatives for media', async () => {
-      const gridFixture = await createFixture('bit-grid', { cols: '2' });
+      const gridFixture = await mount('bit-grid', { attrs: { cols: '2' } });
       gridFixture.element.innerHTML = `
         <bit-grid-item>
           <img src="placeholder1.jpg" alt="Description 1" />

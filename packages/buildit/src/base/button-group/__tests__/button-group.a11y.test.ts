@@ -1,5 +1,5 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
-import { createFixture } from '../../../utils/trial';
 
 /**
  * Accessibility tests for bit-button-group component using axe-core
@@ -13,7 +13,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations for default group', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -29,7 +29,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have no violations for horizontal group', async () => {
-      const fixture = await createFixture('bit-button-group', { orientation: 'horizontal' });
+      const fixture = await mount('bit-button-group', { attrs: { orientation: 'horizontal' } });
       fixture.element.innerHTML = `
         <bit-button>Left</bit-button>
         <bit-button>Center</bit-button>
@@ -45,7 +45,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have no violations for vertical group', async () => {
-      const fixture = await createFixture('bit-button-group', { orientation: 'vertical' });
+      const fixture = await mount('bit-button-group', { attrs: { orientation: 'vertical' } });
       fixture.element.innerHTML = `
         <bit-button>Top</bit-button>
         <bit-button>Middle</bit-button>
@@ -61,7 +61,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have no violations for attached mode', async () => {
-      const fixture = await createFixture('bit-button-group', { attached: true });
+      const fixture = await mount('bit-button-group', { attrs: { attached: true } });
       fixture.element.innerHTML = `
         <bit-button variant="bordered">Day</bit-button>
         <bit-button variant="solid">Week</bit-button>
@@ -79,7 +79,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('ARIA Attributes', () => {
     it('should have role="group"', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -93,7 +93,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should respect aria-label on the group', async () => {
-      const fixture = await createFixture('bit-button-group', { 'aria-label': 'View options' });
+      const fixture = await mount('bit-button-group', { attrs: { 'aria-label': 'View options' } });
       fixture.element.innerHTML = `
         <bit-button>List</bit-button>
         <bit-button>Grid</bit-button>
@@ -113,7 +113,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have valid ARIA attributes', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -135,7 +135,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('should allow keyboard navigation between buttons', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -156,7 +156,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should maintain keyboard navigation in attached mode', async () => {
-      const fixture = await createFixture('bit-button-group', { attached: true });
+      const fixture = await mount('bit-button-group', { attrs: { attached: true } });
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -178,7 +178,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Button States', () => {
     it('should have no violations with disabled buttons', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Active</bit-button>
         <bit-button disabled>Disabled</bit-button>
@@ -194,7 +194,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have no violations with loading buttons', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button loading>Loading...</bit-button>
@@ -212,7 +212,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Different Sizes', () => {
     it('should have no violations for small size', async () => {
-      const fixture = await createFixture('bit-button-group', { size: 'sm' });
+      const fixture = await mount('bit-button-group', { attrs: { size: 'sm' } });
       fixture.element.innerHTML = `
         <bit-button>Small 1</bit-button>
         <bit-button>Small 2</bit-button>
@@ -227,7 +227,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should have no violations for large size', async () => {
-      const fixture = await createFixture('bit-button-group', { size: 'lg' });
+      const fixture = await mount('bit-button-group', { attrs: { size: 'lg' } });
       fixture.element.innerHTML = `
         <bit-button>Large 1</bit-button>
         <bit-button>Large 2</bit-button>
@@ -247,7 +247,7 @@ describe('bit-button-group accessibility', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text'];
 
       for (const variant of variants) {
-        const fixture = await createFixture('bit-button-group', { variant });
+        const fixture = await mount('bit-button-group', { attrs: { variant } });
         fixture.element.innerHTML = `
           <bit-button>Button 1</bit-button>
           <bit-button>Button 2</bit-button>
@@ -265,7 +265,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Icon Buttons in Group', () => {
     it('should have no violations with icon-only buttons', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button icon-only aria-label="Bold">
           <strong>B</strong>
@@ -287,7 +287,7 @@ describe('bit-button-group accessibility', () => {
     });
 
     it('should fail if icon-only buttons lack labels', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button icon-only>
           <svg width="16" height="16"><rect width="16" height="16"/></svg>
@@ -310,7 +310,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Semantic HTML', () => {
     it('should not have nested interactive elements', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>
@@ -332,7 +332,7 @@ describe('bit-button-group accessibility', () => {
 
   describe('Color Contrast', () => {
     it('should have sufficient color contrast', async () => {
-      const fixture = await createFixture('bit-button-group');
+      const fixture = await mount('bit-button-group');
       fixture.element.innerHTML = `
         <bit-button>Button 1</bit-button>
         <bit-button>Button 2</bit-button>

@@ -134,13 +134,12 @@ export default defineConfig({
         { link: '/craftit/', text: 'Overview' },
         {
           items: [
-            { link: '/craftit/usage#installation', text: 'Installation' },
             { link: '/craftit/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/craftit/usage#advanced-features', text: 'Advanced Features' },
-            { link: '/craftit/usage#reactive-state', text: 'Reactive State' },
-            { link: '/craftit/usage#event-handling', text: 'Event Handling' },
+            { link: '/craftit/usage#signals', text: 'Signals' },
+            { link: '/craftit/usage#computed-signals', text: 'Computed Signals' },
+            { link: '/craftit/usage#effects', text: 'Effects' },
             { link: '/craftit/usage#lifecycle-hooks', text: 'Lifecycle' },
-            { link: '/craftit/usage#form-associated-elements', text: 'Forms' },
+            { link: '/craftit/usage#form-integration', text: 'Forms' },
           ],
           link: '/craftit/usage',
           text: 'Usage Guide',
@@ -148,8 +147,8 @@ export default defineConfig({
         {
           items: [
             { link: '/craftit/api#core-functions', text: 'Core Functions' },
-            { link: '/craftit/api#web-component-instance', text: 'Component API' },
-            { link: '/craftit/api#type-definitions', text: 'Types' },
+            { link: '/craftit/api#signals', text: 'Signals API' },
+            { link: '/craftit/api#typescript-types', text: 'Types' },
           ],
           link: '/craftit/api',
           text: 'API Reference',
@@ -160,7 +159,6 @@ export default defineConfig({
         { link: '/deposit/', text: 'Overview' },
         {
           items: [
-            { link: '/deposit/usage#installation', text: 'Installation' },
             { link: '/deposit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/deposit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/deposit/usage#bulk-operations', text: 'Bulk Operations' },
@@ -184,7 +182,6 @@ export default defineConfig({
         { link: '/fetchit/', text: 'Overview' },
         {
           items: [
-            { link: '/fetchit/usage#installation', text: 'Installation' },
             { link: '/fetchit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/fetchit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/fetchit/usage#configuration-options', text: 'Configuration' },
@@ -207,7 +204,6 @@ export default defineConfig({
         { link: '/formit/', text: 'Overview' },
         {
           items: [
-            { link: '/formit/usage#installation', text: 'Installation' },
             { link: '/formit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/formit/usage#advanced-patterns', text: 'Advanced Patterns' },
             { link: '/formit/usage#validation', text: 'Validation' },
@@ -221,7 +217,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/formit/api#createform', text: 'createForm()' },
+            { link: '/formit/api#createform-init', text: 'createForm()' },
             { link: '/formit/api#form-instance-methods', text: 'Form Instance Methods' },
             { link: '/formit/api#types', text: 'Types' },
           ],
@@ -234,7 +230,6 @@ export default defineConfig({
         { link: '/i18nit/', text: 'Overview' },
         {
           items: [
-            { link: '/i18nit/usage#installation', text: 'Installation' },
             { link: '/i18nit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/i18nit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/i18nit/usage#pluralization', text: 'Pluralization' },
@@ -259,9 +254,8 @@ export default defineConfig({
         { link: '/logit/', text: 'Overview' },
         {
           items: [
-            { link: '/logit/usage#installation', text: 'Installation' },
-            { link: '/logit/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/logit/usage#advanced-features', text: 'Advanced Features' },
+            { link: '/logit/usage#configuration', text: 'Configuration' },
+            { link: '/logit/usage#logging-methods', text: 'Logging Methods' },
             { link: '/logit/usage#scoped-loggers', text: 'Scoped Loggers' },
             { link: '/logit/usage#remote-logging', text: 'Remote Logging' },
           ],
@@ -270,8 +264,8 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/logit/api#core-logging-methods', text: 'Logging Methods' },
-            { link: '/logit/api#scoped-logger-methods', text: 'Scoped Loggers' },
+            { link: '/logit/api#logit-object', text: 'Logit Object' },
+            { link: '/logit/api#types', text: 'Types' },
           ],
           link: '/logit/api',
           text: 'API Reference',
@@ -282,17 +276,17 @@ export default defineConfig({
         { link: '/permit/', text: 'Overview' },
         {
           items: [
-            { link: '/permit/usage#installation', text: 'Installation' },
-            { link: '/permit/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/permit/usage#advanced-features', text: 'Advanced Features' },
-            { link: '/permit/usage#permission-patterns', text: 'Patterns' },
+            { link: '/permit/usage#basic-setup', text: 'Basic Setup' },
+            { link: '/permit/usage#registering-permissions-with-set', text: 'Using set()' },
+            { link: '/permit/usage#wildcards', text: 'Wildcards' },
           ],
           link: '/permit/usage',
           text: 'Usage Guide',
         },
         {
           items: [
-            { link: '/permit/api#core-methods', text: 'Core Methods' },
+            { link: '/permit/api#createpermit', text: 'createPermit()' },
+            { link: '/permit/api#permit-t-d-class', text: 'Permit Class' },
             { link: '/permit/api#constants', text: 'Constants' },
             { link: '/permit/api#types', text: 'Types' },
           ],
@@ -305,7 +299,6 @@ export default defineConfig({
         { link: '/routeit/', text: 'Overview' },
         {
           items: [
-            { link: '/routeit/usage#installation', text: 'Installation' },
             { link: '/routeit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/routeit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/routeit/usage#middleware', text: 'Middleware' },
@@ -330,7 +323,6 @@ export default defineConfig({
         { link: '/snapit/', text: 'Overview' },
         {
           items: [
-            { link: '/snapit/usage#installation', text: 'Installation' },
             { link: '/snapit/usage#state-creation', text: 'State Creation' },
             { link: '/snapit/usage#reading-state', text: 'Reading State' },
             { link: '/snapit/usage#updating-state', text: 'Updating State' },
@@ -360,7 +352,6 @@ export default defineConfig({
         { link: '/toolkit/', text: 'Overview' },
         {
           items: [
-            { link: '/toolkit/usage#installation', text: 'Installation' },
             { link: '/toolkit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/toolkit/usage#advanced-usage', text: 'Advanced Usage' },
             { link: '/toolkit/usage#performance-tips', text: 'Performance' },
@@ -579,7 +570,6 @@ export default defineConfig({
         { link: '/validit/', text: 'Overview' },
         {
           items: [
-            { link: '/validit/usage#installation', text: 'Installation' },
             { link: '/validit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/validit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/validit/usage#primitive-schemas', text: 'Primitives' },
@@ -603,7 +593,6 @@ export default defineConfig({
         { link: '/wireit/', text: 'Overview' },
         {
           items: [
-            { link: '/wireit/usage#installation', text: 'Installation' },
             { link: '/wireit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/wireit/usage#advanced-features', text: 'Advanced Features' },
             { link: '/wireit/usage#tokens', text: 'Tokens' },

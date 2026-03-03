@@ -1,32 +1,44 @@
+---
+title: Wireit — Usage Guide
+description: Tokens, lifetimes, async providers, and child containers for Wireit.
+---
+
 # Wireit Usage Guide
 
-Complete guide to installing and using Wireit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Wireit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Wireit?
 
-::: code-group
+Dependency injection decouples your code from its dependencies, making testing and composition easier — without the decorator/reflect-metadata ceremony of NestJS or InversifyJS.
 
-```sh [pnpm]
-pnpm add @vielzeug/wireit
+```ts
+// Before — manual instantiation
+const db = new Database(process.env.DB_URL!);
+const repo = new UserRepository(db);
+const svc = new UserService(repo);
+
+// After — Wireit container
+const c = createContainer();
+c.registerFactory(DbToken, () => new Database(process.env.DB_URL!), { lifetime: 'singleton' });
+c.register(RepoToken, { useClass: UserRepository, deps: [DbToken] });
+c.register(SvcToken, { useClass: UserService, deps: [RepoToken] });
 ```
 
-```sh [npm]
-npm install @vielzeug/wireit
-```
+| Feature | Wireit | InversifyJS | tsyringe |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="wireit" type="size" /> | ~7 kB | ~5 kB |
+| Decorators required | ❌ | ✅ | ✅ |
+| reflect-metadata | ❌ | ✅ | ✅ |
+| Async providers | ✅ | ✅ | ✅ |
+| Child containers | ✅ | ✅ | ✅ |
+| Zero dependencies | ✅ | ❌ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/wireit
-```
+**Use Wireit when** you want DI without decorators or reflect-metadata, or you need test isolation via child containers.
 
-:::
 
 ## Import
 
@@ -34,7 +46,7 @@ yarn add @vielzeug/wireit
 import { createContainer, createToken } from '@vielzeug/wireit';
 
 // Optional: Import types
-import type { Container, Token, Provider, Lifetime, ContainerOptions } from '@vielzeug/wireit';
+import type { Container, Token, Provider, Lifetime } from '@vielzeug/wireit';
 ```
 
 ## Basic Usage
@@ -46,11 +58,8 @@ import { createContainer } from '@vielzeug/wireit';
 
 const container = createContainer();
 
-// With options
-const container = createContainer({
-  parent: parentContainer,
-  allowOptional: true,
-});
+// With a parent container
+const child = createContainer(parentContainer);
 ```
 
 ### Basic Registration and Resolution
@@ -127,9 +136,6 @@ container.registerValue(Config, config);
 // Existing instance
 const logger = new ConsoleLogger();
 container.registerValue(Logger, logger);
-
-// With custom lifetime
-container.registerValue(RequestId, generateId(), 'transient');
 ```
 
 ### Class Provider
@@ -162,14 +168,15 @@ Register a factory function for custom creation logic:
 
 ```ts
 // Simple factory
-container.registerFactory(Logger, () => new ConsoleLogger(), [], { lifetime: 'singleton' });
+container.registerFactory(Logger, () => new ConsoleLogger(), { lifetime: 'singleton' });
 
 // Factory with dependencies
-container.registerFactory(Database, (config) => new PrismaClient({ url: config.dbUrl }), [Config], {
+container.registerFactory(Database, (config) => new PrismaClient({ url: config.dbUrl }), {
+  deps: [Config],
   lifetime: 'singleton',
 });
 
-// Async factory
+// Async factory (async is detected automatically)
 container.registerFactory(
   Database,
   async (config) => {
@@ -177,8 +184,7 @@ container.registerFactory(
     await db.$connect();
     return db;
   },
-  [Config],
-  { async: true, lifetime: 'singleton' },
+  { deps: [Config], lifetime: 'singleton' },
 );
 ```
 
@@ -336,8 +342,7 @@ container.registerFactory(
     await db.$connect();
     return db;
   },
-  [Config],
-  { async: true, lifetime: 'singleton' },
+  { deps: [Config], lifetime: 'singleton' },
 );
 
 // Must use getAsync
@@ -360,16 +365,6 @@ if (logger) {
 
 // Async version
 const db = await container.getOptionalAsync(Database);
-```
-
-### Allow Optional Mode
-
-Configure container to return undefined for missing tokens:
-
-```ts
-const container = createContainer({ allowOptional: true });
-
-const missing = container.get(UnknownToken); // undefined instead of error
 ```
 
 ### Token Aliasing
@@ -613,7 +608,7 @@ container.register(ServiceA, { useClass: A, deps: [Shared] });
 container.register(ServiceB, { useClass: B, deps: [Shared] });
 
 // ❌ Async provider with sync resolution
-container.registerFactory(DB, async () => db, [], { async: true });
+container.registerFactory(DB, async () => db);
 const db = container.get(DB); // Error!
 
 // ✅ Use getAsync

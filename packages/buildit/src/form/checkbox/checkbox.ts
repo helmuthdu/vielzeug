@@ -1,9 +1,26 @@
+import {
+  aria,
+  computed,
+  createId,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  defineSlots,
+  field,
+  guard,
+  handle,
+  html,
+  onFormReset,
+  onMount,
+  ref,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
-import { setupLabelAssociation } from '../../utils/common';
-import { CheckedStateController, FormFieldController } from '../../utils/controllers';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -187,152 +204,138 @@ export interface CheckboxProps {
  * <bit-checkbox indeterminate>Select all</bit-checkbox>
  * ```
  */
-class BitCheckbox extends HTMLElement {
-  static formAssociated = true;
-  static observedAttributes = ['checked', 'disabled', 'indeterminate', 'value', 'name', 'color', 'size'] as const;
-
-  private formField = new FormFieldController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-  });
-
-  private checkedState = new CheckedStateController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-    onToggle: (checked, value) => {
-      this.formField.setFormValue(checked ? value : null, checked ? 'checked' : undefined);
-    },
-    type: 'checkbox',
-  });
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  setCustomValidity(message: string): void {
-    this.formField.setCustomValidity(message);
-  }
-
-  checkValidity(): boolean {
-    return this.formField.checkValidity();
-  }
-
-  reportValidity(): boolean {
-    return this.formField.reportValidity();
-  }
-
-  get validity(): ValidityState {
-    return this.formField.validity;
-  }
-
-  get validationMessage(): string {
-    return this.formField.validationMessage;
-  }
-
-  connectedCallback() {
-    this.render();
-    this.formField.hostConnected();
-
-    const isIndeterminate = this.hasAttribute('indeterminate');
-    this.checkedState.syncState(isIndeterminate);
-
-    // Setup label association
-    setupLabelAssociation(this.shadowRoot, this, 'checkbox');
-
-    // Toggle on click
-    this.addEventListener('click', (e) => {
-      this.checkedState.toggle(e);
+define(
+  'bit-checkbox',
+  ({ host }) => {
+    const slots = defineSlots();
+    const emit = defineEmits<{ change: { checked: boolean } }>();
+    const props = defineProps({
+      checked: { default: false },
+      color: { default: undefined as ThemeColor | undefined },
+      disabled: { default: false },
+      indeterminate: { default: false },
+      name: { default: '' },
+      size: { default: undefined as ComponentSize | undefined },
+      value: { default: 'on' },
     });
 
-    // Toggle on Space/Enter
-    this.addEventListener('keydown', (keyEvent) => {
-      const kbEvent = keyEvent as KeyboardEvent;
-      if (kbEvent.key === ' ' || kbEvent.key === 'Enter') {
-        kbEvent.preventDefault();
-        this.checkedState.toggle(keyEvent);
+    const checkedSignal = signal(false);
+    const indeterminateSignal = signal(false);
+
+    // Sync props → signals
+    field({
+      disabled: computed(() => props.disabled.value),
+      toFormValue: (v: string | null) => v,
+      value: computed(() => {
+        if (checkedSignal.value) return props.value.value;
+        return null;
+      }),
+    });
+
+    onFormReset(() => {
+      checkedSignal.value = props.checked.value;
+      indeterminateSignal.value = props.indeterminate.value;
+    });
+
+    const inputRef = ref<HTMLInputElement>();
+    const labelRef = ref<HTMLSpanElement>();
+
+    watch(
+      props.checked,
+      (v) => {
+        checkedSignal.value = v;
+      },
+      { immediate: true },
+    );
+    watch(
+      props.indeterminate,
+      (v) => {
+        indeterminateSignal.value = v;
+      },
+      { immediate: true },
+    );
+
+    const toggle = guard(
+      () => !props.disabled.value,
+      (e: Event) => {
+        e.preventDefault();
+
+        const wasIndeterminate = indeterminateSignal.value;
+        indeterminateSignal.value = false;
+        if (inputRef.value) inputRef.value.indeterminate = false;
+
+        if (!wasIndeterminate) {
+          checkedSignal.value = !checkedSignal.value;
+        }
+
+        const isChecked = checkedSignal.value;
+        isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
+        host.removeAttribute('indeterminate');
+
+        if (inputRef.value) inputRef.value.checked = isChecked;
+
+        emit('change', { checked: isChecked });
+      },
+    );
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggle(e);
+      }
+    };
+
+    handle(host, 'click', toggle);
+    handle(host, 'keydown', handleKeydown);
+
+    onMount(() => {
+      // labelRef.value and inputRef.value are only populated after template render
+      const label = labelRef.value;
+      if (slots.has('default') && label) {
+        const labelId = createId('checkbox-label');
+        label.id = labelId;
+        aria({ labelledby: labelId });
+      }
+
+      if (inputRef.value) {
+        inputRef.value.checked = checkedSignal.value;
+        inputRef.value.indeterminate = indeterminateSignal.value;
       }
     });
-  }
 
-  disconnectedCallback() {
-    this.formField.hostDisconnected();
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    if (!this.isConnected) return;
-
-    if (name === 'checked' || name === 'indeterminate' || name === 'disabled') {
-      const isIndeterminate = this.hasAttribute('indeterminate');
-      this.checkedState.syncState(isIndeterminate);
-    }
-
-    if (name === 'checked') {
-      const isChecked = newValue !== null;
-      const value = this.getAttribute('value') || 'on';
-      this.formField.setFormValue(isChecked ? value : null, isChecked ? 'checked' : undefined);
-    }
-  }
-
-  render() {
-    const isChecked = this.hasAttribute('checked');
-    const isDisabled = this.hasAttribute('disabled');
-    const isIndeterminate = this.hasAttribute('indeterminate');
-    const name = this.getAttribute('name') || '';
-    const value = this.getAttribute('value') || 'on';
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="checkbox-wrapper" part="checkbox">
-        <input
-          type="checkbox"
-          ${isChecked ? 'checked' : ''}
-          ${isDisabled ? 'disabled' : ''}
-          name="${name}"
-          value="${value}"
-          style="display: none;"
-          aria-hidden="true"
-          tabindex="-1" />
-        <div class="box" part="box">
-          <svg
-            class="checkmark"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            xmlns="http://www.w3.org/2000/svg">
-            <path d="M 20,6 9,17 4,12" />
-          </svg>
-          <svg
-            class="dash"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            xmlns="http://www.w3.org/2000/svg">
-            <path d="M 5,12 H 19" />
-          </svg>
+    return {
+      styles: [styles],
+      template: html` <div class="checkbox-wrapper" part="checkbox">
+          <input type="checkbox" ref=${inputRef} aria-hidden="true" tabindex="-1" />
+          <div class="box" part="box">
+            <svg
+              class="checkmark"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M 20,6 9,17 4,12" />
+            </svg>
+            <svg
+              class="dash"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M 5,12 H 19" />
+            </svg>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label"><slot></slot></span>
-    `;
-
-    this.formField.setFormValue(isChecked ? value : null, isChecked ? 'checked' : undefined);
-
-    // Set indeterminate after render since it's a property, not an attribute
-    if (isIndeterminate) {
-      const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-      if (input) {
-        input.indeterminate = true;
-      }
-    }
-  }
-}
-
-if (!customElements.get('bit-checkbox')) {
-  customElements.define('bit-checkbox', BitCheckbox);
-}
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+    };
+  },
+  { formAssociated: true },
+);
 
 export default {};

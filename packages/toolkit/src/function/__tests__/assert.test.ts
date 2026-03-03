@@ -1,16 +1,8 @@
-import { Logit } from '@vielzeug/logit';
 import { assert } from '../assert';
-
-vi.mock('@vielzeug/logit', () => ({
-  Logit: {
-    error: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
 
 describe('assert', () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should do nothing if the condition is true', () => {
@@ -26,8 +18,9 @@ describe('assert', () => {
   });
 
   it('should log a warning if bypass is true', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     assert(false, 'Test warning', { bypass: true });
-    expect(Logit.warn).toHaveBeenCalledWith('Test warning');
+    expect(console.warn).toHaveBeenCalledWith('Test warning');
   });
 
   it('should include context in the error message', () => {

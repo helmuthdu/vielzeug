@@ -1,4 +1,20 @@
 import {
+  computed,
+  createId,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  effect,
+  field,
+  handle,
+  html,
+  onFormReset,
+  onMount,
+  ref,
+  signal,
+} from '@vielzeug/craftit';
+import {
   colorThemeMixin,
   disabledLoadingMixin,
   frostVariantMixin,
@@ -6,10 +22,8 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import type { ComponentSize, InputType, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-import { generateId } from '../../utils/common';
-import { FormFieldController } from '../../utils/controllers';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -203,7 +217,6 @@ const styles = /* css */ `
   })}
 
   @layer buildit.variants {
-
     /* ========================================
        Visual Variants
        ======================================== */
@@ -218,7 +231,6 @@ const styles = /* css */ `
 
     /* Flat - Minimal with subtle color hint */
     :host([variant='flat']) .field {
-      background: color-mix(in srgb, var(--_theme-base) 4%, var(--color-contrast-100));
       border-color: var(--_theme-border);
       box-shadow: var(--inset-shadow-2xs);
     }
@@ -439,214 +451,156 @@ const validateInputType = (type: string | null): string => {
  * <bit-input variant="frost" helper="Must be at least 8 characters" />
  * ```
  */
-class BitInput extends HTMLElement {
-  static formAssociated = true;
-  static observedAttributes = [
-    'type',
-    'value',
-    'name',
-    'placeholder',
-    'label',
-    'label-placement',
-    'helper',
-    'error',
-    'disabled',
-    'readonly',
-    'required',
-    'size',
-    'variant',
-    'color',
-    'rounded',
-  ] as const;
+define(
+  'bit-input',
+  () => {
+    const emit = defineEmits<{
+      change: { originalEvent: Event; value: string };
+      input: { originalEvent: Event; value: string };
+    }>();
+    const props = defineProps({
+      color: { default: undefined as ThemeColor | undefined },
+      disabled: { default: false },
+      error: { default: '' },
+      helper: { default: '' },
+      label: { default: '' },
+      'label-placement': { default: 'inset' },
+      name: { default: '' },
+      placeholder: { default: '' },
+      readonly: { default: false },
+      required: { default: false },
+      rounded: { default: undefined as RoundedSize | undefined },
+      size: { default: undefined as ComponentSize | undefined },
+      type: { default: 'text' as InputType },
+      value: { default: '' },
+      variant: { default: undefined as Exclude<VisualVariant, 'glass'> | undefined },
+    });
 
-  private formField = new FormFieldController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-  });
+    const valueSignal = signal('');
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+    field({
+      disabled: computed(() => props.disabled.value),
+      value: valueSignal,
+    });
 
-  // ============================================
-  // Constraint Validation API (delegated to controller)
-  // ============================================
+    onFormReset(() => {
+      valueSignal.value = '';
+    });
 
-  /**
-   * Sets a custom validation message
-   * @param message - The validation message (empty string to clear)
-   */
-  setCustomValidity(message: string): void {
-    this.formField.setCustomValidity(message);
-    if (message) {
-      this.setAttribute('error', message);
-    } else {
-      this.removeAttribute('error');
-    }
-  }
+    // Stable accessibility IDs (generated once)
+    const inputId = props.name.value ? `input-${props.name.value}` : createId('input');
+    const labelId = `label-${inputId}`;
+    const helperId = `helper-${inputId}`;
+    const errorId = `error-${inputId}`;
 
-  /**
-   * Checks if the input is valid
-   * @returns true if valid, false otherwise
-   */
-  checkValidity(): boolean {
-    return this.formField.checkValidity();
-  }
+    // Refs
+    const inputRef = ref<HTMLInputElement>();
+    const labelInsetRef = ref<HTMLLabelElement>();
+    const labelOutsideRef = ref<HTMLLabelElement>();
+    const helperRef = ref<HTMLDivElement>();
+    const errorRef = ref<HTMLDivElement>();
 
-  /**
-   * Checks validity and reports issues to the user
-   * @returns true if valid, false otherwise
-   */
-  reportValidity(): boolean {
-    return this.formField.reportValidity();
-  }
+    onMount(() => {
+      valueSignal.value = props.value.value;
 
-  /**
-   * Gets the validity state
-   */
-  get validity(): ValidityState {
-    return this.formField.validity;
-  }
+      const stopEffects = effect(() => {
+        const inp = inputRef.value;
+        if (!inp) return;
 
-  /**
-   * Gets the validation message
-   */
-  get validationMessage(): string {
-    return this.formField.validationMessage;
-  }
-
-  connectedCallback() {
-    this.render();
-    this.formField.hostConnected();
-
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (!input) return;
-
-    // Helper to update value and emit event
-    const handleValueChange = (e: Event, eventName: 'input' | 'change') => {
-      const target = e.target as HTMLInputElement;
-      this.setAttribute('value', target.value);
-      this.formField.setFormValue(target.value);
-      this.dispatchEvent(
-        new CustomEvent(eventName, {
-          bubbles: true,
-          composed: true,
-          detail: { originalEvent: e, value: target.value },
-        }),
-      );
-    };
-
-    input.addEventListener('input', (e) => handleValueChange(e, 'input'));
-    input.addEventListener('change', (e) => handleValueChange(e, 'change'));
-  }
-
-  disconnectedCallback() {
-    this.formField.hostDisconnected();
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (!input) return;
-
-    switch (name) {
-      case 'value':
-        input.value = newValue ?? '';
-        this.formField.setFormValue(newValue ?? '');
-        break;
-      case 'name':
-        input.name = newValue ?? '';
-        break;
-      case 'placeholder':
-        input.placeholder = newValue ?? '';
-        break;
-      case 'type':
-        input.type = validateInputType(newValue);
-        break;
-      case 'disabled':
-        input.disabled = newValue !== null;
-        break;
-      case 'readonly':
-        input.readOnly = newValue !== null;
-        break;
-      case 'required':
-        input.required = newValue !== null;
-        break;
-    }
-  }
-
-  render() {
-    const type = validateInputType(this.getAttribute('type'));
-    const labelText = this.getAttribute('label');
-    const labelPlacement = this.getAttribute('label-placement') || 'inset';
-    const helperText = this.getAttribute('helper');
-    const errorText = this.getAttribute('error');
-    const name = this.getAttribute('name');
-
-    // Generate IDs for accessibility
-    const inputId = name ? `input-${name}` : generateId('input');
-    const labelId = labelText ? `label-${inputId}` : '';
-    const helperId = helperText ? `helper-${inputId}` : '';
-    const errorId = errorText ? `error-${inputId}` : '';
-
-    const value = this.getAttribute('value') || '';
-    const placeholder = this.getAttribute('placeholder') || '';
-    const isDisabled = this.hasAttribute('disabled');
-    const isReadonly = this.hasAttribute('readonly');
-    const isRequired = this.hasAttribute('required');
-    const hasError = !!errorText;
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="input-wrapper" part="wrapper">
-        ${
-          labelText && labelPlacement === 'outside'
-            ? `<label class="label-outside" for="${inputId}" id="${labelId}" part="label">${labelText}</label>`
-            : ''
+        inp.type = validateInputType(props.type.value);
+        inp.value = props.value.value;
+        inp.name = props.name.value;
+        inp.placeholder = props.placeholder.value;
+        inp.disabled = props.disabled.value;
+        inp.readOnly = props.readonly.value;
+        inp.required = props.required.value;
+        inp.setAttribute('aria-invalid', props.error.value ? 'true' : 'false');
+        inp.setAttribute('aria-describedby', props.error.value ? errorId : helperId);
+        if (props.error.value) {
+          inp.setAttribute('aria-errormessage', errorId);
+        } else {
+          inp.removeAttribute('aria-errormessage');
         }
+
+        // Label visibility
+        const placement = props['label-placement'].value;
+        const labelText = props.label.value;
+        if (labelInsetRef.value) {
+          labelInsetRef.value.textContent = labelText;
+          labelInsetRef.value.hidden = !labelText || placement !== 'inset';
+        }
+        if (labelOutsideRef.value) {
+          labelOutsideRef.value.textContent = labelText;
+          labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
+        }
+
+        // Helper / error
+        if (helperRef.value) {
+          helperRef.value.textContent = props.helper.value;
+          helperRef.value.hidden = !!props.error.value || !props.helper.value;
+        }
+        if (errorRef.value) {
+          errorRef.value.textContent = props.error.value;
+          errorRef.value.hidden = !props.error.value;
+        }
+      });
+
+      const handleInput = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        valueSignal.value = target.value;
+        emit('input', { originalEvent: e, value: target.value });
+      };
+
+      const handleChange = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        valueSignal.value = target.value;
+        emit('change', { originalEvent: e, value: target.value });
+      };
+
+      if (inputRef.value) {
+        handle(inputRef.value, 'input', handleInput);
+        handle(inputRef.value, 'change', handleChange);
+      }
+
+      return () => stopEffects();
+    });
+
+    return {
+      styles: [styles],
+      template: html` <div class="input-wrapper" part="wrapper">
+        <label
+          class="label-outside"
+          for="${inputId}"
+          id="${labelId}"
+          part="label"
+          ref=${labelOutsideRef}
+          hidden></label>
         <div class="field" part="field">
-          ${
-            labelText && labelPlacement === 'inset'
-              ? `<label class="label-inset" for="${inputId}" id="${labelId}" part="label">${labelText}</label>`
-              : ''
-          }
+          <label class="label-inset" for="${inputId}" id="${labelId}" part="label" ref=${labelInsetRef} hidden></label>
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
               part="input"
               id="${inputId}"
-              type="${type}"
-              name="${name || ''}"
-              value="${value}"
-              placeholder="${placeholder}"
               aria-labelledby="${labelId}"
-              aria-describedby="${hasError ? errorId : helperId}"
-              aria-invalid="${hasError ? 'true' : 'false'}"
-              ${hasError ? `aria-errormessage="${errorId}"` : ''}
-              ${isDisabled ? 'disabled' : ''}
-              ${isReadonly ? 'readonly' : ''}
-              ${isRequired ? 'required aria-required="true"' : ''} />
+              aria-describedby="${helperId}"
+              ref=${inputRef} />
             <slot name="suffix"></slot>
           </div>
         </div>
-        ${
-          errorText
-            ? `<div class="helper-text" id="${errorId}" role="alert" style="color: var(--color-error);" part="helper">
-                ${errorText}
-              </div>`
-            : helperText
-              ? `<div class="helper-text" id="${helperId}" part="helper">
-                  <slot name="helper">${helperText}</slot>
-                </div>`
-              : ''
-        }
-      </div>
-    `;
-    this.formField.setFormValue(this.getAttribute('value') || '');
-  }
-}
-
-if (!customElements.get('bit-input')) {
-  customElements.define('bit-input', BitInput);
-}
+        <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
+        <div
+          class="helper-text"
+          id="${errorId}"
+          role="alert"
+          style="color: var(--color-error);"
+          part="error"
+          ref=${errorRef}
+          hidden></div>
+      </div>`,
+    };
+  },
+  { formAssociated: true },
+);
 
 export default {};

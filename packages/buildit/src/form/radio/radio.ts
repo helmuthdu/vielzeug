@@ -1,9 +1,26 @@
+import {
+  aria,
+  computed,
+  createId,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  defineSlots,
+  field,
+  guard,
+  handle,
+  html,
+  onFormReset,
+  onMount,
+  ref,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
-import { setupLabelAssociation } from '../../utils/common';
-import { CheckedStateController, FormFieldController } from '../../utils/controllers';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -175,188 +192,144 @@ export interface RadioProps {
  * <bit-radio name="size" value="large">Large</bit-radio>
  * ```
  */
-class BitRadio extends HTMLElement {
-  static formAssociated = true;
-  static observedAttributes = ['checked', 'disabled', 'value', 'name', 'color', 'size'] as const;
+define(
+  'bit-radio',
+  ({ host }) => {
+    const slots = defineSlots();
+    const emit = defineEmits<{ change: { checked: boolean; originalEvent: Event } }>();
+    const props = defineProps({
+      checked: { default: false },
+      color: { default: undefined as ThemeColor | undefined },
+      disabled: { default: false },
+      name: { default: '' },
+      size: { default: undefined as ComponentSize | undefined },
+      value: { default: '' },
+    });
 
-  private formField = new FormFieldController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-  });
+    const checkedSignal = signal(false);
 
-  private checkedState = new CheckedStateController(this, {
-    getInput: () => this.shadowRoot?.querySelector('input') ?? null,
-    onToggle: (checked, value) => {
-      this.formField.setFormValue(checked ? value : null, checked ? 'on' : undefined);
-    },
-    type: 'radio',
-  });
+    field({
+      disabled: computed(() => props.disabled.value),
+      toFormValue: (v: string | null) => v,
+      value: computed(() => (checkedSignal.value ? props.value.value : null)),
+    });
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+    onFormReset(() => {
+      checkedSignal.value = props.checked.value;
+    });
 
-  // ============================================
-  // Constraint Validation API (delegated to controller)
-  // ============================================
+    const labelRef = ref<HTMLSpanElement>();
 
-  setCustomValidity(message: string): void {
-    this.formField.setCustomValidity(message);
-  }
+    watch(
+      props.checked,
+      (v) => {
+        checkedSignal.value = v;
+      },
+      { immediate: true },
+    );
 
-  checkValidity(): boolean {
-    return this.formField.checkValidity();
-  }
-
-  reportValidity(): boolean {
-    return this.formField.reportValidity();
-  }
-
-  get validity(): ValidityState {
-    return this.formField.validity;
-  }
-
-  get validationMessage(): string {
-    return this.formField.validationMessage;
-  }
-
-  // ============================================
-  // Public API for radio group coordination
-  // ============================================
-
-  /**
-   * Updates the form value from radio group coordination.
-   * Used when another radio in the same group is selected.
-   * @internal
-   */
-  updateFormValue(value: string | null, state?: string): void {
-    this.formField.setFormValue(value, state);
-  }
-
-  connectedCallback() {
-    this.render();
-    this.formField.hostConnected();
-    this.checkedState.syncState();
-
-    // Setup label association
-    setupLabelAssociation(this.shadowRoot, this, 'radio');
-
-    // Helper to get all enabled radios in the same group
     const getRadioGroup = (): HTMLElement[] => {
-      const radioName = this.getAttribute('name');
+      const radioName = props.name.value;
       if (!radioName) return [];
       return Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
         (r) => !r.hasAttribute('disabled'),
       );
     };
 
-    const selectRadio = (target: HTMLElement, originalEvent: Event | KeyboardEvent) => {
+    const selectRadio = (target: HTMLElement, originalEvent: Event) => {
       const radios = getRadioGroup();
       if (radios.length === 0) return;
 
-      // Uncheck all radios in the group, then check the target
       radios.forEach((radio) => {
-        if (radio instanceof BitRadio) {
-          if (radio === target) {
-            // Check the target radio
-            radio.checkedState.setChecked(true, originalEvent);
-          } else if (radio.hasAttribute('checked')) {
-            // Uncheck other radios (without event to avoid duplicate events)
-            radio.removeAttribute('checked');
-            radio.checkedState.syncState();
+        if (radio === target) {
+          if (!radio.hasAttribute('checked')) {
+            radio.setAttribute('checked', '');
+            // Sync local signal if this is our host
+            if (radio === host) {
+              checkedSignal.value = true;
+              emit('change', { checked: true, originalEvent });
+            } else {
+              radio.dispatchEvent(
+                new CustomEvent('change', {
+                  bubbles: true,
+                  composed: true,
+                  detail: { checked: true, originalEvent },
+                }),
+              );
+            }
           }
+        } else if (radio.hasAttribute('checked')) {
+          radio.removeAttribute('checked');
+          radio.dispatchEvent(
+            new CustomEvent('change', { bubbles: true, composed: true, detail: { checked: false, originalEvent } }),
+          );
         }
       });
     };
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling multiple arrow keys and radio group coordination
-    this.addEventListener('keydown', (keyEvent) => {
-      const kbEvent = keyEvent as KeyboardEvent;
-      if (this.hasAttribute('disabled')) return;
+    const handleClick = guard(
+      () => !props.disabled.value && !host.hasAttribute('checked'),
+      (e: Event) => {
+        selectRadio(host, e);
+      },
+    );
 
-      const radios = getRadioGroup();
-      if (radios.length === 0) return;
+    const handleKeydown = guard(
+      () => !props.disabled.value,
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling multiple arrow keys and radio group coordination
+      (e: KeyboardEvent) => {
+        const radios = getRadioGroup();
+        if (radios.length === 0) return;
 
-      const currentIndex = radios.indexOf(this);
-      if (currentIndex === -1) return;
+        const currentIndex = radios.indexOf(host);
+        if (currentIndex === -1) return;
 
-      if (kbEvent.key === ' ' || kbEvent.key === 'Enter') {
-        kbEvent.preventDefault();
-        if (!this.hasAttribute('checked')) {
-          selectRadio(this, keyEvent);
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          if (!host.hasAttribute('checked')) {
+            selectRadio(host, e);
+          }
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const nextIndex = (currentIndex + 1) % radios.length;
+          const nextRadio = radios[nextIndex];
+          nextRadio.focus();
+          selectRadio(nextRadio, e);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
+          const prevRadio = radios[prevIndex];
+          prevRadio.focus();
+          selectRadio(prevRadio, e);
         }
-      } else if (kbEvent.key === 'ArrowDown' || kbEvent.key === 'ArrowRight') {
-        kbEvent.preventDefault();
-        const nextIndex = (currentIndex + 1) % radios.length;
-        const nextRadio = radios[nextIndex];
-        nextRadio.focus();
-        selectRadio(nextRadio, keyEvent);
-      } else if (kbEvent.key === 'ArrowUp' || kbEvent.key === 'ArrowLeft') {
-        kbEvent.preventDefault();
-        const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
-        const prevRadio = radios[prevIndex];
-        prevRadio.focus();
-        selectRadio(prevRadio, keyEvent);
+      },
+    );
+
+    handle(host, 'click', handleClick);
+    handle(host, 'keydown', handleKeydown);
+
+    onMount(() => {
+      // labelRef.value is only populated after template render
+      const label = labelRef.value;
+      if (slots.has('default') && label) {
+        const labelId = createId('radio-label');
+        label.id = labelId;
+        aria({ labelledby: labelId });
       }
     });
 
-    // Click interaction
-    this.addEventListener('click', (e) => {
-      if (this.hasAttribute('disabled')) return;
-      if (this.hasAttribute('checked')) return; // Already checked
-
-      selectRadio(this, e);
-    });
-  }
-
-  disconnectedCallback() {
-    this.formField.hostDisconnected();
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    const input = this.shadowRoot?.querySelector('input') as HTMLInputElement | null;
-    if (!input) return;
-
-    if (name === 'checked' || name === 'disabled') {
-      this.checkedState.syncState();
-    } else if (name === 'name') {
-      input.name = newValue || '';
-    } else if (name === 'value') {
-      input.value = newValue || '';
-    }
-  }
-
-  render() {
-    const isChecked = this.hasAttribute('checked');
-    const isDisabled = this.hasAttribute('disabled');
-    const name = this.getAttribute('name') || '';
-    const value = this.getAttribute('value') || '';
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="radio-wrapper" part="radio">
-        <input
-          type="radio"
-          ${isChecked ? 'checked' : ''}
-          ${isDisabled ? 'disabled' : ''}
-          name="${name}"
-          value="${value}"
-          style="display: none;"
-          aria-hidden="true"
-          tabindex="-1" />
-        <div class="circle" part="circle">
-          <div class="dot"></div>
+    return {
+      styles: [styles],
+      template: html` <div class="radio-wrapper" part="radio">
+          <input type="radio" aria-hidden="true" tabindex="-1" />
+          <div class="circle" part="circle">
+            <div class="dot"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label"><slot></slot></span>
-    `;
-
-    this.formField.setFormValue(isChecked ? value : null, isChecked ? 'checked' : undefined);
-  }
-}
-
-if (!customElements.get('bit-radio')) {
-  customElements.define('bit-radio', BitRadio);
-}
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+    };
+  },
+  { formAssociated: true },
+);
 
 export default {};

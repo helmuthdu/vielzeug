@@ -1,8 +1,13 @@
+---
+title: Snapit — Examples
+description: Real-world recipes and framework integrations for snapit state management.
+---
+
 # Snapit Examples
 
-Real-world examples and framework integrations.
-
-## Table of Contents
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
 
 [[toc]]
 

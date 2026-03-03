@@ -562,7 +562,7 @@ export const formUtils = {
    */
   getValidationMessage(element: HTMLElement): string {
     if ('validationMessage' in element) {
-      return (element as any).validationMessage || '';
+      return (element as unknown as { validationMessage?: string }).validationMessage || '';
     }
     return '';
   },
@@ -576,14 +576,14 @@ export const formUtils = {
    */
   hasValidityState(element: HTMLElement, state: keyof ValidityState): boolean {
     if ('validity' in element) {
-      const validity = (element as any).validity as ValidityState;
+      const validity = (element as unknown as { validity?: ValidityState }).validity;
       return validity?.[state] === true;
     }
     return false;
   },
 
   /**
-   * Check if element is form-associated
+   * Check if the element is form-associated
    * @param element - Element to check
    * @example
    * expect(formUtils.isFormAssociated(input)).toBe(true);
@@ -593,14 +593,14 @@ export const formUtils = {
   },
 
   /**
-   * Check if form field is valid
+   * Check if the form field is valid
    * @param element - Form field element
    * @example
    * expect(formUtils.isValid(input)).toBe(true);
    */
   isValid(element: HTMLElement): boolean {
     if ('validity' in element) {
-      return (element as any).validity?.valid === true;
+      return (element as unknown as { validity?: ValidityState }).validity?.valid === true;
     }
     return true;
   },
@@ -615,8 +615,11 @@ export const formUtils = {
   async reportValidity(element: HTMLElement): Promise<boolean> {
     let result = true;
 
-    if ('reportValidity' in element && typeof (element as any).reportValidity === 'function') {
-      result = (element as any).reportValidity();
+    if (
+      'reportValidity' in element &&
+      typeof (element as unknown as { reportValidity?: () => boolean }).reportValidity === 'function'
+    ) {
+      result = (element as unknown as { reportValidity: () => boolean }).reportValidity();
     }
 
     await waitForRender();
@@ -642,8 +645,11 @@ export const formUtils = {
    * formUtils.setValidity(input, 'Username is taken');
    */
   setValidity(element: HTMLElement, message: string): void {
-    if ('setCustomValidity' in element && typeof (element as any).setCustomValidity === 'function') {
-      (element as any).setCustomValidity(message);
+    if (
+      'setCustomValidity' in element &&
+      typeof (element as unknown as { setCustomValidity?: (message: string) => void }).setCustomValidity === 'function'
+    ) {
+      (element as unknown as { setCustomValidity: (message: string) => void }).setCustomValidity(message);
     }
   },
 
@@ -670,8 +676,11 @@ export const formUtils = {
   async validate(element: HTMLElement): Promise<boolean> {
     let result = true;
 
-    if ('checkValidity' in element && typeof (element as any).checkValidity === 'function') {
-      result = (element as any).checkValidity();
+    if (
+      'checkValidity' in element &&
+      typeof (element as unknown as { checkValidity?: () => boolean }).checkValidity === 'function'
+    ) {
+      result = (element as unknown as { checkValidity: () => boolean }).checkValidity();
     }
 
     await waitForRender();

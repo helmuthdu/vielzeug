@@ -1,4 +1,3 @@
-import { Logit } from '@vielzeug/logit';
 import { isNil } from '../typed/isNil';
 import { isString } from '../typed/isString';
 
@@ -11,7 +10,7 @@ type ParseJSONOptions<T> = {
   reviver?: (key: string, value: any) => any;
   // biome-ignore lint/suspicious/noExplicitAny: -
   validator?: (value: any) => boolean;
-  silent?: boolean;
+  onError?: (err: unknown) => void;
 };
 // #endregion ParseJSONOptions
 
@@ -24,8 +23,7 @@ type ParseJSONOptions<T> = {
  * const result = parseJSON<Record<string, number>>(json, {
  *   defaultValue: { a: 0, b: 0, c: 0 },
  *   validator: (value) => Object.values(value).every(v => typeof v === 'number'),
- *   errorHandler: (err) => console.warn('Parsing failed:', err.message),
- *   silent: true
+ *   onError: (err) => console.warn('Parsing failed:', err),
  * });
  * console.log(result); // { a: 1, b: 2, c: 3 }
  * ```
@@ -37,7 +35,7 @@ type ParseJSONOptions<T> = {
  * @returns The parsed object if successful, otherwise the default value.
  */
 export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSONOptions<T> = {}): T | undefined {
-  const { defaultValue, reviver, validator, silent = false } = options;
+  const { defaultValue, reviver, validator, onError } = options;
 
   if (!isString(json)) return isNil(json) ? defaultValue : (json as T);
 
@@ -50,10 +48,7 @@ export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSON
 
     return parsed ?? defaultValue;
   } catch (err) {
-    if (!silent) {
-      Logit.error('parseJSON() -> failed to parse object', err);
-    }
-
+    onError ? onError(err) : console.error('parseJSON() -> failed to parse object', err);
     return defaultValue;
   }
 }

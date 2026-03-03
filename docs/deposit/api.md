@@ -1,40 +1,35 @@
+---
+title: Deposit — API Reference
+description: Complete API reference for Deposit storage and query builder.
+---
+
 # Deposit API Reference
-
-Complete API documentation for `@vielzeug/deposit`.
-
-## Table of Contents
 
 [[toc]]
 
-## Core Classes
+## `createDeposit()` factory
 
-### `Deposit<S>`
-
-Main class for interacting with browser storage. Provides a unified, type-safe API for both IndexedDB and LocalStorage.
-
-**Type Parameters:**
-
-- `S extends DepositDataSchema` – Your schema type defining all tables and their records
+The `createDeposit()` function is a factory (not a class) that returns a `DepositBaseAdapter<S>`. Pass either an adapter instance or a configuration object.
 
 ## Deposit Methods
 
-### `new Deposit(adapterOrConfig)`
+### `createDeposit(config)`
 
-Creates a new Deposit instance.
+Creates a createDeposit adapter.
 
 **Parameters:**
 
-- `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` – Either a custom adapter or configuration object
+- `config: DepositBaseAdapter<S> | AdapterConfig<S>` – Either an adapter instance or a configuration object
 
 **Example:**
 
 ```ts
 // With adapter instance
 const adapter = new IndexedDBAdapter('my-db', 1, schema);
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 
 // With configuration object
-const db = new Deposit({
+const db = createDeposit({
   type: 'indexedDB',
   dbName: 'my-db',
   version: 1,
@@ -386,25 +381,34 @@ const special = await db
 
 ---
 
-### `not(fn)`, `and(...fns)`, `or(...fns)`
+### `not(fn)`
 
-Logical operators for combining predicates.
+Excludes records where the predicate returns `true`.
 
 **Example:**
 
 ```ts
-const result = await db
+const nonAdmins = await db
   .query('users')
-  .and(
-    (u) => u.age >= 18,
-    (u) => u.verified === true,
-  )
+  .not((u) => u.role === 'admin')
   .toArray();
 ```
 
----
+::: tip Combining conditions
+For AND-like behaviour, chain multiple `.filter()` calls. For OR-like behaviour, use a single `.filter()` with `||`:
+```ts
+// AND
+const seniors = await db.query('users')
+  .filter((u) => u.role === 'admin')
+  .filter((u) => u.age >= 30)
+  .toArray();
 
-### `orderBy(field, direction)`
+// OR
+const either = await db.query('users')
+  .filter((u) => u.role === 'admin' || u.age >= 50)
+  .toArray();
+```
+:::
 
 Sorts results by field.
 
@@ -481,16 +485,20 @@ const totalAge = await db.query('users').sum('age');
 
 ---
 
-### `modify(callback, context?)`
+### `map(callback)`
 
-Transforms records in the query.
+Transforms each record in the result set. Returns `this` for chaining.
+
+**Parameters:**
+
+- `callback: (record: T) => T` – Transformation function applied to each record
 
 **Example:**
 
 ```ts
 const uppercased = await db
   .query('users')
-  .modify((user) => ({
+  .map((user) => ({
     ...user,
     name: user.name.toUpperCase(),
   }))
@@ -499,32 +507,9 @@ const uppercased = await db
 
 ---
 
-### `groupBy(field)`
-
-Groups records by a field value. Returns an object where keys are the field values.
-
-**Parameters:**
-
-- `field: K` – Field to group by
-
-**Returns:** `this` (for chaining)
-
-**Example:**
-
-```ts
-const byRole = await db.query('users').groupBy('role').toArray();
-// Result: { admin: User[], user: User[] }
-```
-
-::: warning Type Safety
-`groupBy()` changes the result structure but returns `T[]` for chaining. You'll need to cast the result manually. For better type safety, use `toGrouped()` instead.
-:::
-
----
-
 ### `toGrouped(field)`
 
-Type-safe alternative to `groupBy().toArray()`. Returns an array of grouped results with proper typing.
+Type-safe grouping. Returns an array of grouped results with proper typing.
 
 **Parameters:**
 
@@ -594,24 +579,6 @@ const results = await db
   .toArray();
 ```
 
----
-
-### `build(conditions)`
-
-Builds query from condition objects (useful for dynamic queries).
-
-**Example:**
-
-```ts
-const conditions = [
-  { type: 'equals', field: 'role', value: 'admin' },
-  { type: 'orderBy', field: 'name', value: 'asc' },
-  { type: 'limit', value: 10 },
-];
-
-const results = await db.query('users').build(conditions).toArray();
-```
-
 ## Adapters
 
 ### `LocalStorageAdapter<S>`
@@ -621,14 +588,14 @@ Storage adapter using browser LocalStorage with schema validation and safe key e
 **Constructor:**
 
 ```ts
-new LocalStorageAdapter(dbName: string, version: number, schema: S)
+new LocalStorageAdapter(dbName: string, schema: S, logger?: Logger)
 ```
 
 **Example:**
 
 ```ts
-const adapter = new LocalStorageAdapter('my-app', 1, schema);
-const db = new Deposit(adapter);
+const adapter = new LocalStorageAdapter('my-app', schema);
+const db = createDeposit(adapter);
 ```
 
 **Characteristics:**
@@ -646,13 +613,11 @@ const db = new Deposit(adapter);
 
 ```ts
 // ✅ Valid – will work
-const validSchema = {
-  users: { key: 'id', record: {} as User },
-};
+const validSchema = defineSchema<{ users: User }>()({ users: { key: 'id' } });
 
 // ❌ Invalid – will throw immediately
 const invalidSchema = {
-  users: { record: {} as User }, // Missing 'key' field
+  users: {}, // Missing 'key' field
 };
 // Error: "Invalid schema: table "users" missing required "key" field..."
 ```
@@ -661,7 +626,7 @@ const invalidSchema = {
 
 ```ts
 // Special characters in dbName and table names are safely encoded
-const adapter = new LocalStorageAdapter('my:app:db', 1, schema); // ✅ Works
+const adapter = new LocalStorageAdapter('my:app:db', schema); // ✅ Works
 ```
 
 ---
@@ -687,7 +652,7 @@ new IndexedDBAdapter(
 const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
   // Optional migration logic
 });
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 ```
 
 **Characteristics:**
@@ -704,22 +669,10 @@ const db = new Deposit(adapter);
 **Index Creation:**
 
 ```ts
-const schema = {
-  users: {
-    key: 'id',
-    indexes: ['email', 'role', 'email'], // Duplicate 'email' detected and skipped
-    record: {} as User,
-  },
-};
-// Logs warning: "Duplicate index "email" in table "users" – skipping"
+const schema = defineSchema<{ users: User }>()({ users: { key: 'id', indexes: ['email', 'role', 'email'] } });
+// Logs warning: "Duplicate index \"email\" in table \"users\" – skipping"
 
-const schema2 = {
-  users: {
-    key: 'id',
-    indexes: ['id'], // Redundant – key path is already indexed
-    record: {} as User,
-  },
-};
+const schema2 = defineSchema<{ users: User }>()({ users: { key: 'id', indexes: ['id'] } });
 // Logs warning: "Skipping index on key path "id" – redundant"
 ```
 
@@ -730,7 +683,7 @@ const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVe
   }
 });
 
-const db = new Deposit(adapter);
+const db = createDeposit(adapter);
 ```
 
 **Characteristics:**
@@ -871,37 +824,7 @@ Operation types for `patch()` method.
 type PatchOperation<T, K> = { type: 'put'; value: T; ttl?: number } | { type: 'delete'; key: K } | { type: 'clear' };
 ```
 
-## Utility Functions
-
-### `runSafe(fn, label?)`
-
-Wraps a function to catch and log errors without throwing.
-
-**Example:**
-
-```ts
-import { runSafe } from '@vielzeug/deposit';
-
-const safeFetch = runSafe(async () => {
-  const data = await fetch('/api/data').then((r) => r.json());
-  return data;
-}, 'FETCH_FAILED');
-
-const result = await safeFetch(); // Returns undefined on error
-```
-
 ## Advanced Usage
-
-### Memoization
-
-QueryBuilder automatically memoizes results for performance:
-
-```ts
-const query = db.query('users').equals('role', 'admin');
-
-const result1 = await query.toArray(); // Executes query
-const result2 = await query.toArray(); // Returns cached result
-```
 
 ### TTL (Time-To-Live)
 
@@ -929,42 +852,24 @@ const users = await db
   .toArray();
 ```
 
-Implements all DepositStorageAdapter methods and `connect()`.
+Implements all `DepositBaseAdapter` methods and `connect()`.
 
 ## Types
 
-### DepotDataRecord\<T, K\>
+### `DepositDataRecord<T, K>`
 
-Defines a table schema record.
+Defines a table schema entry.
 
-- `key`: The primary key field name.
+- `key`: Primary key field name.
 - `indexes`: Optional array of index field names.
 - `record`: The record type.
 
-### DepositDataSchema\<S\>
+### `DepositDataSchema<S>`
 
-Maps table names to DepotDataRecord definitions.
+Maps table names to `DepositDataRecord` definitions.
 
-### DepositMigrationFn\<S\>
+### `DepositBaseAdapter<S>`
 
-Migration function signature for IndexedDB upgrades.
+Abstract base class for storage adapters. Both `LocalStorageAdapter` and `IndexedDBAdapter` extend this. Methods:
 
-### DepositStorageAdapter\<S\>
-
-Interface for storage adapters. Methods:
-
-- `bulkDelete`, `bulkPut`, `clear`, `count`, `delete`, `get`, `getAll`, `put`, `connect?`
-
-## Utility Functions
-
-### runSafe(fn, label?)
-
-Wraps a function to suppress and log errors.
-
-### wrapWithExpiry(value, ttl?)
-
-Wraps a value with an expiry timestamp.
-
-### unwrapWithExpiry(value, now, onExpire?)
-
-Unwraps a value, deleting it if expired.
+- `get`, `getAll`, `put`, `delete`, `clear`, `count`, `bulkPut`, `bulkDelete`, `transaction`, `query`, `patch`

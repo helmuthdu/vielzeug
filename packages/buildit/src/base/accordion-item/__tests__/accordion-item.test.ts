@@ -1,8 +1,8 @@
+import { type Fixture, mount } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-accordion-item', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../accordion-item');
@@ -14,7 +14,7 @@ describe('bit-accordion-item', () => {
 
   describe('Rendering', () => {
     it('should render with details and summary elements', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       const details = fixture.query('details');
       const summary = fixture.query('summary');
@@ -25,7 +25,7 @@ describe('bit-accordion-item', () => {
     });
 
     it('should render all slots', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       fixture.element.innerHTML = `
         <span slot="prefix">📌</span>
         <span slot="title">Title</span>
@@ -42,7 +42,7 @@ describe('bit-accordion-item', () => {
     });
 
     it('should render chevron icon', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       const chevron = fixture.query('.chevron');
       expect(chevron).toBeTruthy();
@@ -52,7 +52,7 @@ describe('bit-accordion-item', () => {
 
   describe('Expanded State', () => {
     it('should be collapsed by default', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       const details = fixture.query<HTMLDetailsElement>('details');
       expect(details?.open).toBe(false);
@@ -60,7 +60,7 @@ describe('bit-accordion-item', () => {
     });
 
     it('should expand when expanded attribute is set', async () => {
-      fixture = await createFixture('bit-accordion-item', { expanded: true });
+      fixture = await mount('bit-accordion-item', { attrs: { expanded: true } });
 
       const details = fixture.query<HTMLDetailsElement>('details');
       const summary = fixture.query('summary');
@@ -70,7 +70,7 @@ describe('bit-accordion-item', () => {
     });
 
     it('should sync expanded attribute with details state', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       const details = fixture.query<HTMLDetailsElement>('details');
 
       details!.open = true;
@@ -83,10 +83,10 @@ describe('bit-accordion-item', () => {
     });
 
     it('should update details when expanded attribute changes', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       const details = fixture.query<HTMLDetailsElement>('details');
 
-      await fixture.setAttribute('expanded', true);
+      await fixture.attr('expanded', true);
       expect(details?.open).toBe(true);
       expect(fixture.element.hasAttribute('expanded')).toBe(true);
 
@@ -101,13 +101,13 @@ describe('bit-accordion-item', () => {
 
   describe('Disabled State', () => {
     it('should not be disabled by default', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       expect(fixture.element.hasAttribute('disabled')).toBe(false);
     });
 
     it('should apply disabled attribute', async () => {
-      fixture = await createFixture('bit-accordion-item', { disabled: true });
+      fixture = await mount('bit-accordion-item', { attrs: { disabled: true } });
 
       const summary = fixture.query('summary');
       expect(summary?.getAttribute('aria-disabled')).toBe('true');
@@ -116,27 +116,27 @@ describe('bit-accordion-item', () => {
 
   describe('Sizes', () => {
     it('should default to medium size', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       expect(fixture.element.getAttribute('size')).toBeNull();
     });
 
     it('should apply small size', async () => {
-      fixture = await createFixture('bit-accordion-item', { size: 'sm' });
+      fixture = await mount('bit-accordion-item', { attrs: { size: 'sm' } });
 
       expect(fixture.element.getAttribute('size')).toBe('sm');
     });
 
     it('should apply large size', async () => {
-      fixture = await createFixture('bit-accordion-item', { size: 'lg' });
+      fixture = await mount('bit-accordion-item', { attrs: { size: 'lg' } });
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
     it('should update size dynamically', async () => {
-      fixture = await createFixture('bit-accordion-item', { size: 'sm' });
+      fixture = await mount('bit-accordion-item', { attrs: { size: 'sm' } });
 
-      await fixture.setAttribute('size', 'lg');
+      await fixture.attr('size', 'lg');
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
   });
@@ -146,23 +146,23 @@ describe('bit-accordion-item', () => {
 
     variants.forEach((variant) => {
       it(`should apply ${variant} variant`, async () => {
-        fixture = await createFixture('bit-accordion-item', { variant });
+        fixture = await mount('bit-accordion-item', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
       });
     });
 
     it('should update variant dynamically', async () => {
-      fixture = await createFixture('bit-accordion-item', { variant: 'solid' });
+      fixture = await mount('bit-accordion-item', { attrs: { variant: 'solid' } });
 
-      await fixture.setAttribute('variant', 'ghost');
+      await fixture.attr('variant', 'ghost');
       expect(fixture.element.getAttribute('variant')).toBe('ghost');
     });
   });
 
   describe('Events', () => {
     it('should emit expand event when opened', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       const details = fixture.query<HTMLDetailsElement>('details');
 
       const expandSpy = vi.fn();
@@ -179,7 +179,7 @@ describe('bit-accordion-item', () => {
     });
 
     it('should emit collapse event when closed', async () => {
-      fixture = await createFixture('bit-accordion-item', { expanded: true });
+      fixture = await mount('bit-accordion-item', { attrs: { expanded: true } });
       const details = fixture.query<HTMLDetailsElement>('details');
 
       const collapseSpy = vi.fn();
@@ -197,8 +197,8 @@ describe('bit-accordion-item', () => {
 
     it('should bubble events', async () => {
       const container = document.createElement('div');
-      fixture = await createFixture('bit-accordion-item');
-      container.appendChild(fixture.element);
+      document.body.appendChild(container);
+      fixture = await mount('bit-accordion-item', { container });
 
       const expandSpy = vi.fn();
       container.addEventListener('expand', expandSpy);
@@ -208,10 +208,11 @@ describe('bit-accordion-item', () => {
       details!.dispatchEvent(new Event('toggle'));
 
       expect(expandSpy).toHaveBeenCalledOnce();
+      container.remove();
     });
 
     it('should not emit events when already in the same state', async () => {
-      fixture = await createFixture('bit-accordion-item', { expanded: true });
+      fixture = await mount('bit-accordion-item', { attrs: { expanded: true } });
       const details = fixture.query<HTMLDetailsElement>('details');
 
       const expandSpy = vi.fn();
@@ -226,7 +227,7 @@ describe('bit-accordion-item', () => {
 
   describe('Accessibility', () => {
     it('should have proper ARIA attributes', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       const summary = fixture.query('summary');
       const contentWrapper = fixture.query('.content-wrapper');
@@ -238,15 +239,15 @@ describe('bit-accordion-item', () => {
     });
 
     it('should update aria-expanded when state changes', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       const summary = fixture.query('summary');
 
-      await fixture.setAttribute('expanded', true);
+      await fixture.attr('expanded', true);
       expect(summary?.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('should link content region to title', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       const title = fixture.query('.title');
       const contentWrapper = fixture.query('.content-wrapper');
@@ -259,13 +260,13 @@ describe('bit-accordion-item', () => {
 
   describe('Edge Cases', () => {
     it('should handle missing title slot', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
 
       expect(fixture.query('slot[name="title"]')).toBeTruthy();
     });
 
     it('should handle rapid toggle', async () => {
-      fixture = await createFixture('bit-accordion-item');
+      fixture = await mount('bit-accordion-item');
       const details = fixture.query<HTMLDetailsElement>('details');
 
       details!.open = true;

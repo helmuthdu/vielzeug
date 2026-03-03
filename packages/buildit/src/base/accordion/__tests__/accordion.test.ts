@@ -1,8 +1,8 @@
+import { type Fixture, mount } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { type ComponentFixture, createFixture } from '../../../utils/trial';
 
 describe('bit-accordion', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../accordion');
@@ -15,14 +15,14 @@ describe('bit-accordion', () => {
 
   describe('Rendering', () => {
     it('should render with slot', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
 
       const slot = fixture.query('slot');
       expect(slot).toBeTruthy();
     });
 
     it('should render multiple accordion items', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
       fixture.element.innerHTML = `
         <bit-accordion-item>Item 1</bit-accordion-item>
         <bit-accordion-item>Item 2</bit-accordion-item>
@@ -36,19 +36,19 @@ describe('bit-accordion', () => {
 
   describe('Selection Mode', () => {
     it('should default to multiple mode', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
 
       expect(fixture.element.getAttribute('selection-mode')).toBeNull();
     });
 
     it('should allow multiple items expanded in multiple mode', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
       fixture.element.innerHTML = `
         <bit-accordion-item id="item1" expanded>Item 1</bit-accordion-item>
         <bit-accordion-item id="item2" expanded>Item 2</bit-accordion-item>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const items = fixture.element.querySelectorAll('bit-accordion-item');
       expect(items[0].hasAttribute('expanded')).toBe(true);
@@ -56,7 +56,7 @@ describe('bit-accordion', () => {
     });
 
     it('should collapse other items in single mode', async () => {
-      fixture = await createFixture('bit-accordion', { 'selection-mode': 'single' });
+      fixture = await mount('bit-accordion', { attrs: { 'selection-mode': 'single' } });
 
       const item1 = document.createElement('bit-accordion-item');
       item1.id = 'item1';
@@ -65,7 +65,7 @@ describe('bit-accordion', () => {
 
       fixture.element.appendChild(item1);
       fixture.element.appendChild(item2);
-      await fixture.update();
+      await fixture.flush();
 
       item1.setAttribute('expanded', '');
       item1.dispatchEvent(new CustomEvent('expand', { bubbles: true, composed: true }));
@@ -81,11 +81,11 @@ describe('bit-accordion', () => {
     });
 
     it('should emit change event in single mode', async () => {
-      fixture = await createFixture('bit-accordion', { 'selection-mode': 'single' });
+      fixture = await mount('bit-accordion', { attrs: { 'selection-mode': 'single' } });
 
       const item1 = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item1);
-      await fixture.update();
+      await fixture.flush();
 
       const changeSpy = vi.fn();
       fixture.element.addEventListener('change', changeSpy);
@@ -98,11 +98,11 @@ describe('bit-accordion', () => {
     });
 
     it('should not emit change event in multiple mode', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
 
       const item1 = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item1);
-      await fixture.update();
+      await fixture.flush();
 
       const changeSpy = vi.fn();
       fixture.element.addEventListener('change', changeSpy);
@@ -116,13 +116,13 @@ describe('bit-accordion', () => {
 
   describe('Size Propagation', () => {
     it('should propagate size to all items on init', async () => {
-      fixture = await createFixture('bit-accordion', { size: 'sm' });
+      fixture = await mount('bit-accordion', { attrs: { size: 'sm' } });
       fixture.element.innerHTML = `
         <bit-accordion-item>Item 1</bit-accordion-item>
         <bit-accordion-item>Item 2</bit-accordion-item>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const items = fixture.element.querySelectorAll('bit-accordion-item');
       items.forEach((item) => {
@@ -131,14 +131,14 @@ describe('bit-accordion', () => {
     });
 
     it('should update item sizes when accordion size changes', async () => {
-      fixture = await createFixture('bit-accordion', { size: 'sm' });
+      fixture = await mount('bit-accordion', { attrs: { size: 'sm' } });
       fixture.element.innerHTML = `
         <bit-accordion-item>Item 1</bit-accordion-item>
         <bit-accordion-item>Item 2</bit-accordion-item>
       `;
 
-      await fixture.update();
-      await fixture.setAttribute('size', 'lg');
+      await fixture.flush();
+      await fixture.attr('size', 'lg');
 
       const items = fixture.element.querySelectorAll('bit-accordion-item');
       items.forEach((item) => {
@@ -147,7 +147,7 @@ describe('bit-accordion', () => {
     });
 
     it('should apply size to dynamically added items', async () => {
-      fixture = await createFixture('bit-accordion', { size: 'lg' });
+      fixture = await mount('bit-accordion', { attrs: { size: 'lg' } });
 
       const item = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item);
@@ -155,7 +155,7 @@ describe('bit-accordion', () => {
       const slot = fixture.query('slot');
       slot?.dispatchEvent(new Event('slotchange'));
 
-      await fixture.update();
+      await fixture.flush();
 
       expect(item.getAttribute('size')).toBe('lg');
     });
@@ -163,26 +163,26 @@ describe('bit-accordion', () => {
 
   describe('Variant Propagation', () => {
     it('should propagate variant to all items on init', async () => {
-      fixture = await createFixture('bit-accordion', { variant: 'ghost' });
+      fixture = await mount('bit-accordion', { attrs: { variant: 'ghost' } });
 
       const item1 = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item1);
 
-      await fixture.update();
+      await fixture.flush();
 
       expect(item1.getAttribute('variant')).toBe('ghost');
     });
 
     it('should update item variants when accordion variant changes', async () => {
-      fixture = await createFixture('bit-accordion', { variant: 'solid' });
+      fixture = await mount('bit-accordion', { attrs: { variant: 'solid' } });
 
       const item1 = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item1);
 
-      await fixture.update();
+      await fixture.flush();
       expect(item1.getAttribute('variant')).toBe('solid');
 
-      await fixture.setAttribute('variant', 'bordered');
+      await fixture.attr('variant', 'bordered');
       expect(item1.getAttribute('variant')).toBe('bordered');
     });
 
@@ -190,11 +190,11 @@ describe('bit-accordion', () => {
       const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'glass', 'frost'];
 
       for (const variant of variants) {
-        fixture = await createFixture('bit-accordion', { variant });
+        fixture = await mount('bit-accordion', { attrs: { variant } });
 
         const item = document.createElement('bit-accordion-item');
         fixture.element.appendChild(item);
-        await fixture.update();
+        await fixture.flush();
 
         expect(item.getAttribute('variant')).toBe(variant);
         fixture.destroy();
@@ -204,28 +204,30 @@ describe('bit-accordion', () => {
 
   describe('Combined Attributes', () => {
     it('should propagate both size and variant', async () => {
-      fixture = await createFixture('bit-accordion', { size: 'lg', variant: 'ghost' });
+      fixture = await mount('bit-accordion', { attrs: { size: 'lg', variant: 'ghost' } });
 
       const item = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item);
-      await fixture.update();
+      await fixture.flush();
 
       expect(item.getAttribute('size')).toBe('lg');
       expect(item.getAttribute('variant')).toBe('ghost');
     });
 
     it('should handle multiple attributes with selection mode', async () => {
-      fixture = await createFixture('bit-accordion', {
-        'selection-mode': 'single',
-        size: 'sm',
-        variant: 'bordered',
+      fixture = await mount('bit-accordion', {
+        attrs: {
+          'selection-mode': 'single',
+          size: 'sm',
+          variant: 'bordered',
+        },
       });
 
       const item1 = document.createElement('bit-accordion-item');
       const item2 = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item1);
       fixture.element.appendChild(item2);
-      await fixture.update();
+      await fixture.flush();
 
       expect(item1.getAttribute('size')).toBe('sm');
       expect(item1.getAttribute('variant')).toBe('bordered');
@@ -235,18 +237,18 @@ describe('bit-accordion', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty accordion', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
 
       const slot = fixture.query('slot');
       expect(slot).toBeTruthy();
     });
 
     it('should handle single item', async () => {
-      fixture = await createFixture('bit-accordion', { 'selection-mode': 'single' });
+      fixture = await mount('bit-accordion', { attrs: { 'selection-mode': 'single' } });
 
       const item = document.createElement('bit-accordion-item');
       fixture.element.appendChild(item);
-      await fixture.update();
+      await fixture.flush();
 
       item.setAttribute('expanded', '');
       item.dispatchEvent(new CustomEvent('expand', { bubbles: true, composed: true }));
@@ -255,25 +257,25 @@ describe('bit-accordion', () => {
     });
 
     it('should handle items without attributes', async () => {
-      fixture = await createFixture('bit-accordion');
+      fixture = await mount('bit-accordion');
       fixture.element.innerHTML = `
         <bit-accordion-item>Item without attributes</bit-accordion-item>
       `;
 
-      await fixture.update();
+      await fixture.flush();
 
       const item = fixture.element.querySelector('bit-accordion-item');
       expect(item).toBeTruthy();
     });
 
     it('should not affect non-accordion-item children', async () => {
-      fixture = await createFixture('bit-accordion', { size: 'lg' });
+      fixture = await mount('bit-accordion', { attrs: { size: 'lg' } });
 
       const div = document.createElement('div');
       div.textContent = 'Regular div';
       fixture.element.appendChild(div);
 
-      await fixture.update();
+      await fixture.flush();
 
       expect(div.hasAttribute('size')).toBe(false);
     });

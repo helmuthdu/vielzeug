@@ -1,14 +1,19 @@
-# i18nit Examples
+---
+title: I18nit — Examples
+description: Real-world i18n patterns and framework integrations for I18nit.
+---
 
-Real-world examples demonstrating common use cases and patterns with i18nit.
+# I18nit Examples
+
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 

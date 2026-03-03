@@ -12,7 +12,7 @@ import { compareBy } from '../function/compareBy';
  *   { name: 'Alice', age: 25 },
  *   { name: 'Bob', age: 30 },
  *   { name: 'Charlie', age: 30 },
- * ].arrange(data, { name: 'asc', age: 'desc' }); // [ { name: 'Alice', age: 30 }, { name: 'Alice', age: 25 }, { name: 'Bob', age: 30 }, { name: 'Bob', age: 25 }, { name: 'Charlie', age: 35 }, { name: 'Charlie', age: 30 } ]
+ * ); // [ { name: 'Alice', age: 30 }, { name: 'Alice', age: 25 }, { name: 'Bob', age: 30 }, { name: 'Bob', age: 25 }, { name: 'Charlie', age: 35 }, { name: 'Charlie', age: 30 } ]
  * ```
  *
  * @param array - The array to sort.

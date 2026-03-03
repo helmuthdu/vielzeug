@@ -40,6 +40,8 @@ export type FieldConfig<TValue = any> = {
  */
 export type FormFields = Record<string, any>;
 
+export type ValidateOptions = { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] };
+
 export type FormInit = {
   fields?: FormFields;
   validate?: FormValidator;
@@ -78,6 +80,55 @@ export class ValidationError extends Error {
   }
 }
 
+/* -------------------- Pure Utilities -------------------- */
+
+function isFileValue(value: unknown): value is File | Blob | FileList {
+  return value instanceof File || value instanceof Blob || value instanceof FileList;
+}
+
+function isFieldConfigObject(v: unknown): v is FieldConfig {
+  return (
+    v !== null &&
+    typeof v === 'object' &&
+    !Array.isArray(v) &&
+    !(v instanceof Date) &&
+    !isFileValue(v) &&
+    'validators' in v
+  );
+}
+
+function normalizeForComparison(value: any): string {
+  if (value === null || value === undefined) return '';
+  if (value instanceof File) return `File:${value.name}:${value.size}`;
+  if (value instanceof Blob) return `Blob:${value.size}`;
+  if (value instanceof FileList) {
+    const parts: string[] = [];
+    for (let i = 0; i < value.length; i++) parts.push(`File:${value[i].name}:${value[i].size}`);
+    return parts.join('|');
+  }
+  if (Array.isArray(value)) return value.map(normalizeForComparison).join('|');
+  return String(value);
+}
+
+function flattenObject(obj: any, prefix = ''): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (value === null || value === undefined) {
+      result[path] = value;
+    } else if (isFileValue(value)) {
+      result[path] = value;
+    } else if (Array.isArray(value)) {
+      result[path] = value;
+    } else if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+      Object.assign(result, flattenObject(value, path));
+    } else {
+      result[path] = value;
+    }
+  }
+  return result;
+}
+
 /* -------------------- Form Creation -------------------- */
 export function createForm(init: FormInit = {}) {
   const rawFields = init.fields ?? {};
@@ -91,28 +142,15 @@ export function createForm(init: FormInit = {}) {
   const arrayFields = new Set<string>();
 
   for (const [key, fieldValue] of Object.entries(rawFields)) {
-    // Check if this is a FieldConfig MUST have 'validators' property
-    const isFieldConfig =
-      fieldValue !== null &&
-      typeof fieldValue === 'object' &&
-      !Array.isArray(fieldValue) &&
-      !(fieldValue instanceof Date) &&
-      !(fieldValue instanceof File) &&
-      !(fieldValue instanceof Blob) &&
-      !(fieldValue instanceof FileList) &&
-      'validators' in fieldValue; // Must have validators to be a FieldConfig
-
-    if (isFieldConfig) {
-      // It's a FieldConfig - store validators and value separately
-      fieldConfigs[key] = fieldValue as FieldConfig;
-      if ('value' in fieldValue) {
-        initialValues[key] = fieldValue.value;
-      }
+    if (isFieldConfigObject(fieldValue)) {
+      fieldConfigs[key] = fieldValue;
+      if ('value' in fieldValue) initialValues[key] = fieldValue.value;
     } else {
-      // It's a plain value or nested object
       initialValues[key] = fieldValue;
     }
   }
+
+  const flatInitialValues = flattenObject(initialValues);
 
   // Core FormData (native browser API)
   const formData = new FormData();
@@ -141,56 +179,16 @@ export function createForm(init: FormInit = {}) {
 
   /* -------------------- Internal Helpers -------------------- */
 
-  /**
-   * Flatten nested objects into dot notation paths.
-   * E.g., { user: { name: 'Alice' } } -> { 'user.name': 'Alice' }
-   */
-
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
-  function flattenObject(obj: any, prefix = ''): Record<string, any> {
-    const result: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      const path = prefix ? `${prefix}.${key}` : key;
-
-      if (value === null || value === undefined) {
-        result[path] = value;
-      } else if (value instanceof File || value instanceof Blob || value instanceof FileList) {
-        result[path] = value;
-      } else if (Array.isArray(value)) {
-        result[path] = value;
-      } else if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-        // Only flatten plain objects, not class instances
-        Object.assign(result, flattenObject(value, path));
-      } else {
-        result[path] = value;
-      }
-    }
-
-    return result;
+  function buildSnapshot(): FormState {
+    return {
+      dirty: new Set(dirty),
+      errors: new Map(errors),
+      isSubmitting,
+      isValidating,
+      submitCount,
+      touched: new Set(touched),
+    };
   }
-
-  /**
-   * Normalize value to string for dirty comparison.
-   * Files are compared by name + size, others by string representation.
-   */
-  function normalizeForComparison(value: any): string {
-    if (value === null || value === undefined) return '';
-    if (value instanceof File) return `File:${value.name}:${value.size}`;
-    if (value instanceof Blob) return `Blob:${value.size}`;
-    if (value instanceof FileList) {
-      const names: string[] = [];
-      for (let i = 0; i < value.length; i++) {
-        names.push(`File:${value[i].name}:${value[i].size}`);
-      }
-      return names.join('|');
-    }
-    if (Array.isArray(value)) {
-      return value.map(normalizeForComparison).join('|');
-    }
-    return String(value);
-  }
-
   function scheduleNotify() {
     if (scheduled) return;
     scheduled = true;
@@ -200,54 +198,37 @@ export function createForm(init: FormInit = {}) {
     });
   }
   function notifyListeners() {
-    const snapshot: FormState = {
-      dirty: new Set(dirty),
-      errors: new Map(errors),
-      isSubmitting,
-      isValidating,
-      submitCount,
-      touched: new Set(touched),
-    };
-    // Notify form listeners
+    const snap = buildSnapshot();
     for (const listener of listeners) {
       try {
-        listener(snapshot);
+        listener(snap);
       } catch {
-        // Swallow errors
+        /* swallow */
       }
     }
-    // Notify field listeners
     for (const [name, listenerSet] of fieldListeners.entries()) {
-      const value = get(name);
-      const error = errors.get(name);
-      const isTouched = touched.has(name);
-      const isDirty = dirty.has(name);
+      const fieldTouched = touched.has(name);
+      const fieldDirty = dirty.has(name);
+      const payload = { dirty: fieldDirty, error: errors.get(name), touched: fieldTouched, value: get(name) };
       for (const fieldListener of listenerSet) {
         try {
-          fieldListener({ dirty: isDirty, error, touched: isTouched, value });
+          fieldListener(payload);
         } catch {
-          // Swallow errors
+          /* swallow */
         }
       }
     }
-  }
-  function resultToErrorMessage(result: any): string | undefined {
-    if (!result) return undefined;
-    if (typeof result === 'string') return result;
-    return undefined;
   }
   async function runFieldValidators(name: string, signal?: AbortSignal): Promise<string | undefined> {
     const config = fieldConfigs[name];
     if (!config?.validators) return undefined;
     const validators = Array.isArray(config.validators) ? config.validators : [config.validators];
-    const fieldValue = get(name) ?? ''; // Use get() to properly handle arrays
+    const fieldValue = get(name) ?? '';
     for (const validator of validators) {
-      if (signal?.aborted) {
-        throw new Error('Validation aborted');
-      }
+      if (signal?.aborted) throw new Error('Validation aborted');
       const result = await validator(fieldValue);
-      const errorMessage = resultToErrorMessage(result);
-      if (errorMessage) return errorMessage;
+      const msg = typeof result === 'string' ? result : undefined;
+      if (msg) return msg;
     }
     return undefined;
   }
@@ -263,8 +244,31 @@ export function createForm(init: FormInit = {}) {
   /* -------------------- Value Management -------------------- */
 
   /**
+   * Append a value to FormData, handling File, Blob, FileList, arrays, and primitives.
+   */
+  function appendValue(name: string, value: any): void {
+    if (value === null || value === undefined) return;
+    if (value instanceof File || value instanceof Blob) {
+      formData.append(name, value);
+    } else if (value instanceof FileList) {
+      for (let i = 0; i < value.length; i++) formData.append(name, value[i]);
+    } else if (Array.isArray(value)) {
+      arrayFields.add(name);
+      if (value.length === 0) {
+        formData.append(name, ''); // empty-array marker
+      } else {
+        for (const item of value) {
+          formData.append(name, item instanceof File || item instanceof Blob ? item : String(item));
+        }
+      }
+    } else {
+      arrayFields.delete(name);
+      formData.append(name, String(value));
+    }
+  }
+
+  /**
    * Get field value. Returns array if multiple values exist for same name.
-   * Returns empty array if field is tracked as array and value is single empty string.
    */
   function get(name: string): any {
     const all = formData.getAll(name);
@@ -272,13 +276,6 @@ export function createForm(init: FormInit = {}) {
     // Empty array marker: single empty string for fields tracked as arrays
     if (all.length === 1 && all[0] === '' && arrayFields.has(name)) return [];
     return all.length > 1 ? all : all[0];
-  }
-
-  /**
-   * Get all form data as native FormData.
-   */
-  function data(): FormData {
-    return formData;
   }
 
   /**
@@ -297,80 +294,38 @@ export function createForm(init: FormInit = {}) {
     return result;
   }
 
-  /**
-   * Set field value(s). Supports primitives, Files, FileList, arrays, objects, and FormData.
-   */
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   function set(
     nameOrEntries: string | Record<string, any> | FormData,
     valueOrOptions?: any,
-    optionsWhenString?: { replace?: boolean; markDirty?: boolean; markTouched?: boolean },
+    optionsWhenString?: { replace?: boolean; setDirty?: boolean; setTouched?: boolean },
   ) {
-    // Detect if we're in single-field or bulk mode
     const isSingleField = typeof nameOrEntries === 'string';
     const value = isSingleField ? valueOrOptions : undefined;
     const options = isSingleField ? optionsWhenString || {} : valueOrOptions || {};
 
-    // Handle bulk operations
     if (!isSingleField) {
-      const { replace = false, markDirty = false } = options;
+      const { replace = false, setDirty = false } = options;
 
       if (replace) {
-        for (const key of Array.from(formData.keys())) {
-          formData.delete(key);
-        }
-        // Also clear initial snapshot and dirty state when replacing
+        for (const key of [...formData.keys()]) formData.delete(key);
         initialSnapshot.clear();
         dirty.clear();
       }
 
-      if (nameOrEntries instanceof FormData) {
-        for (const [name, val] of nameOrEntries.entries()) {
-          if (!replace) formData.delete(name);
-          formData.append(name, val);
-          if (replace) {
-            // Store new initial values when replacing
-            initialSnapshot.set(name, normalizeForComparison(val));
-          }
-          if (markDirty) dirty.add(name);
-        }
-      } else {
-        for (const [name, val] of Object.entries(nameOrEntries)) {
-          // For single field operations, don't pass markDirty if replace is true
-          // because we want to set new initial snapshot
-          const singleName = name;
-          const singleValue = val;
+      const entries: [string, any][] =
+        nameOrEntries instanceof FormData ? Array.from(nameOrEntries.entries()) : Object.entries(nameOrEntries);
 
-          formData.delete(singleName);
-
-          if (singleValue === null || singleValue === undefined) {
-            // Don't append anything
-          } else if (singleValue instanceof File || singleValue instanceof Blob) {
-            formData.append(singleName, singleValue);
-          } else if (singleValue instanceof FileList) {
-            for (let i = 0; i < singleValue.length; i++) {
-              formData.append(singleName, singleValue[i]);
-            }
-          } else if (Array.isArray(singleValue)) {
-            for (const item of singleValue) {
-              formData.append(singleName, item instanceof File || item instanceof Blob ? item : String(item));
-            }
+      for (const [name, val] of entries) {
+        if (!replace) formData.delete(name);
+        appendValue(name, val);
+        if (replace) {
+          initialSnapshot.set(name, normalizeForComparison(val));
+        } else if (setDirty) {
+          if (initialSnapshot.get(name) !== normalizeForComparison(val)) {
+            dirty.add(name);
           } else {
-            formData.append(singleName, String(singleValue));
-          }
-
-          if (replace) {
-            // Store new initial values when replacing
-            initialSnapshot.set(singleName, normalizeForComparison(singleValue));
-          } else if (markDirty) {
-            const initialValue = initialSnapshot.get(singleName);
-            const currentNormalized = normalizeForComparison(singleValue);
-
-            if (initialValue !== currentNormalized) {
-              dirty.add(singleName);
-            } else {
-              dirty.delete(singleName);
-            }
+            dirty.delete(name);
           }
         }
       }
@@ -379,48 +334,20 @@ export function createForm(init: FormInit = {}) {
       return;
     }
 
-    // Handle single field
+    // Single field
     const name = nameOrEntries;
     formData.delete(name);
+    appendValue(name, value);
 
-    if (value === null || value === undefined) {
-      // Don't append anything
-    } else if (value instanceof File || value instanceof Blob) {
-      formData.append(name, value);
-    } else if (value instanceof FileList) {
-      for (let i = 0; i < value.length; i++) {
-        formData.append(name, value[i]);
-      }
-    } else if (Array.isArray(value)) {
-      arrayFields.add(name); // Mark this field as an array
-      if (value.length === 0) {
-        // Empty array - store marker so get() returns [] instead of undefined
-        formData.append(name, '');
-      } else {
-        for (const item of value) {
-          formData.append(name, item instanceof File || item instanceof Blob ? item : String(item));
-        }
-      }
-    } else {
-      arrayFields.delete(name); // Not an array
-      formData.append(name, String(value));
-    }
-
-    // Update dirty state
-    if (options.markDirty ?? true) {
-      const initialValue = initialSnapshot.get(name);
-      const currentNormalized = normalizeForComparison(value);
-
-      if (initialValue !== currentNormalized) {
+    if (options.setDirty ?? true) {
+      if (initialSnapshot.get(name) !== normalizeForComparison(value)) {
         dirty.add(name);
       } else {
         dirty.delete(name);
       }
     }
 
-    if (options.markTouched) {
-      touched.add(name);
-    }
+    if (options.setTouched) touched.add(name);
 
     scheduleNotify();
   }
@@ -428,43 +355,29 @@ export function createForm(init: FormInit = {}) {
   /* -------------------- Error Management -------------------- */
 
   // Initialize with flattened initial values
-  if (Object.keys(initialValues).length > 0) {
-    const flattened = flattenObject(initialValues);
-    for (const [name, value] of Object.entries(flattened)) {
-      set(name, value, { markDirty: false });
-      initialSnapshot.set(name, normalizeForComparison(value));
-    }
+  for (const [name, value] of Object.entries(flatInitialValues)) {
+    set(name, value, { setDirty: false });
+    initialSnapshot.set(name, normalizeForComparison(value));
   }
 
-  /**
-   * Get or set errors. If called with no args, returns all errors.
-   * If called with name only, returns that error. If called with name and message, sets error.
-   */
-  function error(name?: string, message?: string): string | undefined | Errors {
-    // Get all errors
-    if (name === undefined) {
-      return new Map(errors);
-    }
-
-    // Set error
-    if (message !== undefined) {
-      if (message) {
-        errors.set(name, message);
-      } else {
-        errors.delete(name);
-      }
-      scheduleNotify();
-      return;
-    }
-
-    // Get specific error
+  function getError(name: string): string | undefined {
     return errors.get(name);
   }
 
-  /**
-   * Set multiple errors at once.
-   */
-  function errors$(nextErrors: Errors | Record<string, string>) {
+  function setError(name: string, message?: string): void {
+    if (message) {
+      errors.set(name, message);
+    } else {
+      errors.delete(name);
+    }
+    scheduleNotify();
+  }
+
+  function getErrors(): Errors {
+    return new Map(errors);
+  }
+
+  function setErrors(nextErrors: Errors | Record<string, string>): void {
     errors.clear();
     if (nextErrors instanceof Map) {
       for (const [name, message] of nextErrors.entries()) {
@@ -480,22 +393,16 @@ export function createForm(init: FormInit = {}) {
 
   /* -------------------- Touch/Dirty Management -------------------- */
 
-  /**
-   * Check if field is touched, or mark it as touched.
-   */
-  function touch(name: string, mark?: boolean): boolean {
-    if (mark) {
-      touched.add(name);
-      scheduleNotify();
-      return true;
-    }
+  function isTouched(name: string): boolean {
     return touched.has(name);
   }
 
-  /**
-   * Check if field is dirty (changed from initial value).
-   */
-  function dirty$(name: string): boolean {
+  function setTouched(name: string): void {
+    touched.add(name);
+    scheduleNotify();
+  }
+
+  function isDirty(name: string): boolean {
     return dirty.has(name);
   }
 
@@ -505,10 +412,10 @@ export function createForm(init: FormInit = {}) {
    * Validate field(s). If called with name string, validates that field.
    * If called with options or no args, validates all fields.
    */
+  function validate(name: string): Promise<string | undefined>;
+  function validate(options?: ValidateOptions): Promise<Errors>;
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for unified validation API
-  async function validate(
-    nameOrOptions?: string | { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] },
-  ): Promise<string | undefined | Errors> {
+  async function validate(nameOrOptions?: string | ValidateOptions): Promise<string | undefined | Errors> {
     // Validate single field
     if (typeof nameOrOptions === 'string') {
       const name = nameOrOptions;
@@ -539,7 +446,7 @@ export function createForm(init: FormInit = {}) {
       const nextErrors: Errors = new Map();
 
       // Collect fields to validate
-      let fieldsToValidate = new Set<string>([...Object.keys(fieldConfigs), ...Array.from(formData.keys())]);
+      let fieldsToValidate = new Set<string>([...Object.keys(fieldConfigs), ...formData.keys()]);
       if (options?.onlyTouched) {
         fieldsToValidate = new Set(Array.from(fieldsToValidate).filter((name) => touched.has(name)));
       }
@@ -566,7 +473,7 @@ export function createForm(init: FormInit = {}) {
         nextErrors.set('', err instanceof Error ? err.message : String(err));
       }
 
-      errors$(nextErrors);
+      setErrors(nextErrors);
       return nextErrors;
     } finally {
       isValidating = false;
@@ -579,9 +486,7 @@ export function createForm(init: FormInit = {}) {
     onSubmit: (formData: FormData) => MaybePromise<any>,
     options?: { signal?: AbortSignal; validate?: boolean },
   ) {
-    if (isSubmitting) {
-      return Promise.reject(new Error('Form is already being submitted'));
-    }
+    if (isSubmitting) throw new Error('Form is already being submitted');
 
     submitCount += 1;
     isSubmitting = true;
@@ -594,21 +499,14 @@ export function createForm(init: FormInit = {}) {
         await validate({ signal });
       }
 
-      const hasErrors = errors.size > 0;
-      if (hasErrors) {
-        isSubmitting = false;
-        scheduleNotify();
-        return Promise.reject(new ValidationError(errors));
+      if (errors.size > 0) {
+        throw new ValidationError(errors);
       }
 
-      const result = await onSubmit(formData);
+      return await onSubmit(formData);
+    } finally {
       isSubmitting = false;
       scheduleNotify();
-      return result;
-    } catch (error) {
-      isSubmitting = false;
-      scheduleNotify();
-      throw error;
     }
   }
 
@@ -616,16 +514,9 @@ export function createForm(init: FormInit = {}) {
   function subscribe(listener: Listener) {
     listeners.add(listener);
     try {
-      listener({
-        dirty: new Set(dirty),
-        errors: new Map(errors),
-        isSubmitting,
-        isValidating,
-        submitCount,
-        touched: new Set(touched),
-      });
+      listener(buildSnapshot());
     } catch {
-      // Swallow errors
+      /* swallow */
     }
     return () => listeners.delete(listener);
   }
@@ -645,13 +536,12 @@ export function createForm(init: FormInit = {}) {
         value: get(name),
       });
     } catch {
-      // Swallow errors
+      /* swallow */
     }
     return () => {
-      listenerSet!.delete(listener);
-      if (listenerSet!.size === 0) {
-        fieldListeners.delete(name);
-      }
+      const set = fieldListeners.get(name);
+      set?.delete(listener);
+      if (set?.size === 0) fieldListeners.delete(name);
     };
   }
 
@@ -665,7 +555,7 @@ export function createForm(init: FormInit = {}) {
     const setter = (newValue: any | ((prev: any) => any)) => {
       const previousValue = get(name);
       const nextValue = typeof newValue === 'function' ? (newValue as (prev: any) => any)(previousValue) : newValue;
-      set(name, nextValue, { markDirty: true, markTouched: true });
+      set(name, nextValue, { setDirty: true, setTouched: true });
     };
 
     const onChange = (event: any) => {
@@ -674,7 +564,7 @@ export function createForm(init: FormInit = {}) {
 
     const onBlur = () => {
       if (markTouchedOnBlur) {
-        touch(name, true);
+        setTouched(name);
       }
     };
 
@@ -695,35 +585,26 @@ export function createForm(init: FormInit = {}) {
   /* -------------------- Reset -------------------- */
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   function reset(newFormData?: FormData | Record<string, any>) {
-    // Clear everything
-    for (const key of Array.from(formData.keys())) {
-      formData.delete(key);
-    }
+    for (const key of [...formData.keys()]) formData.delete(key);
     errors.clear();
     touched.clear();
     dirty.clear();
     initialSnapshot.clear();
 
-    // Reinitialize
     if (newFormData instanceof FormData) {
       for (const [name, value] of newFormData.entries()) {
         formData.append(name, value);
         initialSnapshot.set(name, normalizeForComparison(value));
       }
     } else if (newFormData) {
-      const flattened = flattenObject(newFormData);
-      for (const [name, value] of Object.entries(flattened)) {
-        set(name, value, { markDirty: false });
+      for (const [name, value] of Object.entries(flattenObject(newFormData))) {
+        set(name, value, { setDirty: false });
         initialSnapshot.set(name, normalizeForComparison(value));
       }
     } else {
-      // Reset to initial values extracted from fields
-      if (Object.keys(initialValues).length > 0) {
-        const flattened = flattenObject(initialValues);
-        for (const [name, value] of Object.entries(flattened)) {
-          set(name, value, { markDirty: false });
-          initialSnapshot.set(name, normalizeForComparison(value));
-        }
+      for (const [name, value] of Object.entries(flatInitialValues)) {
+        set(name, value, { setDirty: false });
+        initialSnapshot.set(name, normalizeForComparison(value));
       }
     }
 
@@ -731,18 +612,13 @@ export function createForm(init: FormInit = {}) {
   }
 
   /* -------------------- State Snapshot -------------------- */
-  function snapshot(): FormState {
-    return {
-      dirty: new Set(dirty),
-      errors: new Map(errors),
-      isSubmitting,
-      isValidating,
-      submitCount,
-      touched: new Set(touched),
-    };
-  }
 
   /* -------------------- Utility Helpers -------------------- */
+
+  function dispose(): void {
+    listeners.clear();
+    fieldListeners.clear();
+  }
 
   /**
    * Clone the FormData for safe external mutation.
@@ -758,20 +634,23 @@ export function createForm(init: FormInit = {}) {
   /* -------------------- Return Public API -------------------- */
   return {
     bind,
-    clone, // Clone FormData
-    data, // Get FormData
-    dirty: dirty$, // Check dirty
-    error, // Get/set a single error
-    errors: errors$, // Set multiple errors
-    get, // Get a single field value
+    clone,
+    dispose,
+    get,
+    getError,
+    getErrors,
+    isDirty,
+    isTouched,
     reset,
-    set, // Set field value(s) - unified API
-    snapshot,
+    set,
+    setError,
+    setErrors,
+    setTouched,
+    snapshot: buildSnapshot,
     submit,
     subscribe,
     subscribeField,
-    touch, // Check/mark touched
-    validate, // Validate field(s) - unified API
-    values, // Get as a plain object
+    validate,
+    values,
   };
 }

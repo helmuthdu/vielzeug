@@ -1,14 +1,19 @@
+---
+title: Fetchit — Examples
+description: Real-world HTTP patterns and framework integrations for Fetchit.
+---
+
 # Fetchit Examples
 
-Practical examples showing common use cases and patterns with the new separate client architecture.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 

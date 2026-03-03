@@ -39,16 +39,10 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
   visited.set(a as object, b as object);
 
   // Array comparison
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let idx = 0; idx < a.length; idx++) {
-      if (!safeIsEqual(a[idx], b[idx], visited)) return false;
-    }
-    return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item, idx) => safeIsEqual(item, b[idx], visited));
   }
-
-  // Ensure both are arrays or neither is
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
 
   // Date comparison
   if (a instanceof Date && b instanceof Date) {

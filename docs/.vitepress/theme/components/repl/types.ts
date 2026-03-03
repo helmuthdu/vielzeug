@@ -148,48 +148,15 @@ declare module '@vielzeug/deposit' {
   export type AdapterConfig<S extends DepositDataSchema> = {
     type: 'localStorage' | 'indexedDB';
     dbName: string;
-    version: number;
+    version?: number;
     schema: S;
     migrationFn?: DepositMigrationFn<S>;
   };
 
   export type DataSchemaDef = Record<string, Record<string, unknown>>;
 
-  export class Deposit<S extends DepositDataSchema> {
-    constructor(adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>);
-    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
-    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
-    clear<K extends keyof S>(table: K): Promise<void>;
-    count<K extends keyof S>(table: K): Promise<number>;
-    delete<K extends keyof S>(table: K, key: any): Promise<void>;
-    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
-    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
-    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
-    query<K extends keyof S>(table: K): any;
-    patch<K extends keyof S>(table: K, patches: any[]): Promise<void>;
-    transaction<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
-      tables: K[],
-      fn: (stores: T) => Promise<void>,
-      ttl?: number
-    ): Promise<void>;
-  }
-
   export type DepositDataSchema<S = DataSchemaDef> = {
     [K in keyof S]: DepositDataRecord<S[K], keyof S[K]>;
-  };
-
-  export type DepositMigrationFn<S extends DepositDataSchema> = (db: IDBDatabase, oldVersion: number, newVersion: number | null, transaction: IDBTransaction, schema: S) => void | Promise<void>;
-
-  export type DepositStorageAdapter<S extends DepositDataSchema> = {
-    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
-    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
-    clear<K extends keyof S>(table: K): Promise<void>;
-    count<K extends keyof S>(table: K): Promise<number>;
-    delete<K extends keyof S>(table: K, key: any): Promise<void>;
-    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
-    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
-    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
-    connect?(): Promise<void>;
   };
 
   export type DepositDataRecord<T, K extends keyof T = keyof T> = {
@@ -198,32 +165,73 @@ declare module '@vielzeug/deposit' {
     record: T;
   };
 
-  export function defineSchema<S extends DataSchemaDef>(): <Schema extends { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }>(
-    schema: Schema
-  ) => DepositDataSchema<S>;
+  export type DepositMigrationFn<S extends DepositDataSchema> = (
+    db: IDBDatabase,
+    oldVersion: number,
+    newVersion: number | null,
+    transaction: IDBTransaction,
+    schema: S
+  ) => void | Promise<void>;
 
-  export class LocalStorageAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
-    constructor(dbName: string, version: number, schema: S);
-    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
-    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
-    clear<K extends keyof S>(table: K): Promise<void>;
-    count<K extends keyof S>(table: K): Promise<number>;
-    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+  /** Factory — pass an AdapterConfig or an existing adapter instance. */
+  export function createDeposit<S extends DepositDataSchema>(
+    adapterOrConfig: DepositBaseAdapter<S> | AdapterConfig<S>
+  ): DepositBaseAdapter<S>;
+
+  export abstract class DepositBaseAdapter<S extends DepositDataSchema> {
     get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
     getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
     put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+    clear<K extends keyof S>(table: K): Promise<void>;
+    count<K extends keyof S>(table: K): Promise<number>;
+    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
+    patch<K extends keyof S>(table: K, patches: any[]): Promise<void>;
+    transaction<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
+      tables: K[],
+      fn: (stores: T) => Promise<void>,
+      ttl?: number
+    ): Promise<void>;
+    query<K extends keyof S>(table: K): QueryBuilder<S[K]['record']>;
   }
 
-  export class IndexedDBAdapter<S extends DepositDataSchema> implements DepositStorageAdapter<S> {
-    constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>);
-    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
-    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
-    clear<K extends keyof S>(table: K): Promise<void>;
-    count<K extends keyof S>(table: K): Promise<number>;
-    delete<K extends keyof S>(table: K, key: any): Promise<void>;
-    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
-    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
-    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+  export class QueryBuilder<T extends Record<string, unknown>> {
+    where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): this;
+    equals<K extends keyof T>(field: K, value: T[K]): this;
+    between<K extends keyof T>(field: K, lower: number, upper: number): this;
+    startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase?: boolean): this;
+    filter(fn: (record: T) => boolean): this;
+    not(fn: (record: T) => boolean): this;
+    orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): this;
+    limit(n: number): this;
+    offset(n: number): this;
+    page(pageNumber: number, pageSize: number): this;
+    reverse(): this;
+    map(callback: (record: T) => T): this;
+    search(query: string, tone?: number): this;
+    reset(): this;
+    count(): Promise<number>;
+    first(): Promise<T | undefined>;
+    last(): Promise<T | undefined>;
+    average<K extends keyof T>(field: K): Promise<number>;
+    min<K extends keyof T>(field: K): Promise<T | undefined>;
+    max<K extends keyof T>(field: K): Promise<T | undefined>;
+    sum<K extends keyof T>(field: K): Promise<number>;
+    toArray(): Promise<T[]>;
+    toGrouped<K extends keyof T>(field: K): Promise<Array<{ key: T[K]; values: T[] }>>;
+  }
+
+  export function defineSchema<S extends DataSchemaDef>(): <
+    Schema extends { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }
+  >(schema: Schema) => DepositDataSchema<S>;
+
+  export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
+    constructor(dbName: string, schema: S, logger?: any);
+  }
+
+  export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
+    constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>, logger?: any);
     connect(): Promise<void>;
   }
 }
@@ -231,98 +239,185 @@ declare module '@vielzeug/deposit' {
 
 export const craftitTypes = `
 declare module '@vielzeug/craftit' {
-  export type Template<T = HTMLElement, S extends object = object> =
+  export type CleanupFn = () => void;
+
+  export class Signal<T> {
+    get value(): T;
+    set value(next: T);
+    peek(): T;
+    update(fn: (current: T) => T): void;
+    assign(partial: T extends object ? Partial<T> : never): void;
+    derive<U>(fn: (value: T) => U): Signal<U>;
+    map<U>(fn: (item: T extends readonly (infer I)[] ? I : never, index: number) => U): Signal<U[]>;
+    subscribe(cb: (value: T, prev: T) => void): CleanupFn;
+    get debugName(): string | undefined;
+  }
+
+  export type ReadonlySignal<T> = Omit<Signal<T>, 'value' | 'update' | 'assign'> & {
+    readonly value: T;
+  };
+
+  export type WatchOptions = { immediate?: boolean };
+
+  export type HTMLResult = { strings: TemplateStringsArray; values: unknown[] };
+
+  export type CSSResult = { strings: TemplateStringsArray; values: unknown[] };
+
+  export type SetupContext = { host: HTMLElement };
+
+  export type SetupResult =
     | string
-    | Node
-    | ((el: WebComponent<T, S>) => string | Node | DocumentFragment);
+    | HTMLResult
+    | {
+        template: string | HTMLResult;
+        styles?: (string | CSSStyleSheet | CSSResult)[];
+      }
+    | Promise<unknown>;
 
-  export type LifecycleHook<T = HTMLElement, S extends object = object> = (
-    el: WebComponent<T, S>
-  ) => void;
-
-  export type AttributeChangeHook<T = HTMLElement, S extends object = object> = (
-    name: string,
-    oldValue: string | null,
-    newValue: string | null,
-    el: WebComponent<T, S>
-  ) => void;
-
-  export type FormCallbacks<T = HTMLElement, S extends object = object> = {
-    onFormDisabled?: (disabled: boolean, el: WebComponent<T, S>) => void;
-    onFormReset?: (el: WebComponent<T, S>) => void;
-    onFormStateRestore?: (
-      state: string | File | FormData | null,
-      mode: 'restore' | 'autocomplete',
-      el: WebComponent<T, S>
-    ) => void;
-  };
-
-  export type ComponentOptions<T = HTMLElement, S extends object = object> = {
-    template: Template<T, S>;
-    state?: S;
-    styles?: (string | CSSStyleSheet)[];
-    observedAttributes?: readonly string[];
+  export type DefineOptions = {
     formAssociated?: boolean;
-    onConnected?: LifecycleHook<T, S>;
-    onDisconnected?: LifecycleHook<T, S>;
-    onUpdated?: LifecycleHook<T, S>;
-    onAttributeChanged?: AttributeChangeHook<T, S>;
-  } & FormCallbacks<T, S>;
-
-  export type FormHelpers = {
-    value: (value: string) => void;
-    valid: (flags?: ValidityStateFlags, message?: string) => void;
+    target?: string | HTMLElement;
   };
 
-  export type WebComponent<T = HTMLElement, S extends object = object> = HTMLElement & {
-    readonly state: S;
-    readonly shadow: ShadowRoot;
-    readonly root: T;
-    readonly internals?: ElementInternals;
-    readonly form?: FormHelpers;
-    value?: string;
-    render(): void;
-    flush(): Promise<void>;
-    set(patch: Partial<S> | ((state: S) => S | Promise<S>), options?: { replace?: boolean; silent?: boolean }): Promise<void>;
-    watch<U>(selector: (state: S) => U, callback: (value: U, prev: U) => void): () => void;
-    find<E extends HTMLElement = HTMLElement>(selector: string): E | null;
-    findAll<E extends HTMLElement = HTMLElement>(selector: string): E[];
-    on(target: string | EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void;
-    emit(name: string, detail?: unknown, options?: CustomEventInit): void;
-    delay(callback: () => void, ms: number): number;
-    clear(id: number): void;
+  export type PropDescriptor<T> = {
+    default?: T;
+    reflect?: boolean;
+    attribute?: string;
   };
 
-  export function defineElement<T = HTMLElement, S extends object = object>(
+  /** Create and register a web component. */
+  export function define(
     name: string,
-    options: ComponentOptions<T, S>
+    setup: (ctx: SetupContext) => SetupResult,
+    options?: DefineOptions
   ): void;
 
-  export function createComponent<T = HTMLElement, S extends object = object>(
-    options: ComponentOptions<T, S>
-  ): CustomElementConstructor;
+  /** Create a reactive signal. */
+  export function signal<T>(initial: T, options?: { name?: string }): Signal<T>;
 
-  export function html(strings: TemplateStringsArray, ...values: unknown[]): string;
-  
-  type ThemeVars<T extends Record<string, string | number>> = {
-    [K in keyof T]: string;
+  /** Create a derived (read-only) computed signal. */
+  export function computed<T>(fn: () => T): Signal<T>;
+
+  /** Run a side effect whenever its signal dependencies change. Returns cleanup. */
+  export function effect(fn: () => CleanupFn | void): CleanupFn;
+
+  /** Watch a signal or selector for changes. Returns cleanup. */
+  export function watch<T>(
+    source: Signal<T> | (() => T),
+    cb: (value: T, prev: T) => void,
+    options?: WatchOptions
+  ): CleanupFn;
+
+  /** Batch multiple signal writes into a single update flush. */
+  export function batch(fn: () => void): void;
+
+  /** Read a signal value without tracking it as a dependency. */
+  export function untrack<T>(fn: () => T): T;
+
+  /** Wrap a signal as read-only. */
+  export function readonly<T>(sig: Signal<T>): ReadonlySignal<T>;
+
+  /** Returns true if the value is a Signal instance. */
+  export function isSignal<T>(value: unknown): value is Signal<T>;
+
+  /** Unwrap a signal value or return the plain value as-is. */
+  export function toValue<T>(value: Signal<T> | T): T;
+
+  /** Tagged template for reactive HTML. Returned value is used as the component template. */
+  export const html: {
+    (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult;
+    when(condition: Signal<boolean> | boolean, thenTpl: HTMLResult | string, elseTpl?: HTMLResult | string): HTMLResult;
+    each<T>(list: Signal<T[]> | T[], keyFn: (item: T) => unknown, render: (item: T, index: number) => HTMLResult): HTMLResult;
+    show(condition: Signal<boolean> | boolean, tpl: HTMLResult | string): HTMLResult;
+    match<T>(value: Signal<T> | T, cases: Record<string, HTMLResult | string>): HTMLResult;
+    bind(signal: Signal<string>): Record<string, unknown>;
+    classes(map: Record<string, Signal<boolean> | boolean>): string;
+    style(map: Record<string, Signal<string | number> | string | number>): string;
   };
-  
+
+  /** Tagged template for component-scoped CSS. */
   export const css: {
-    (strings: TemplateStringsArray, ...values: unknown[]): string;
-    var(name: string, fallback?: string | number): string;
+    (strings: TemplateStringsArray, ...values: unknown[]): CSSResult;
     theme<T extends Record<string, string | number>>(
       light: T,
       dark?: T,
       options?: { selector?: string; attribute?: string }
-    ): ThemeVars<T>;
+    ): { vars: { [K in keyof T]: string }; sheet: CSSResult };
   };
 
-  export function classMap(classes: Record<string, boolean | undefined>): string;
-  export function styleMap(styles: Partial<CSSStyleDeclaration>): string;
+  /** Declare a reflected DOM property/attribute. */
+  export function prop<T>(descriptor?: PropDescriptor<T>): Signal<T>;
 
-  export function attach<T extends HTMLElement>(element: T, container?: HTMLElement): Promise<T>;
-  export function destroy(element: HTMLElement): void;
+  /** Declare multiple props at once. */
+  export function defineProps<T extends Record<string, unknown>>(
+    descriptors: { [K in keyof T]: PropDescriptor<T[K]> }
+  ): { [K in keyof T]: Signal<T[K]> };
+
+  /** Get a reactive ref to the first matching element in shadow DOM. */
+  export function ref<E extends HTMLElement = HTMLElement>(selector: string): Signal<E | null>;
+
+  /** Get a reactive ref to all matching elements in shadow DOM. */
+  export function refs<E extends HTMLElement = HTMLElement>(selector: string): Signal<E[]>;
+
+  /** Provide a value to descendant components via context. */
+  export function provide<T>(context: { id: symbol }, value: T): void;
+
+  /** Inject a value provided by an ancestor component. */
+  export function inject<T>(context: { id: symbol }): T | undefined;
+
+  /** Create a typed context key. */
+  export function createContext<T>(defaultValue?: T): { id: symbol; defaultValue?: T };
+
+  /** Declare the slots this component accepts. */
+  export function defineSlots<T extends Record<string, boolean>>(slots: T): void;
+
+  /** Declare the custom events this component can emit. */
+  export function defineEmits<T extends Record<string, unknown>>(): {
+    emit<K extends keyof T>(name: K, detail: T[K], options?: CustomEventInit): void;
+  };
+
+  /** Run a callback when the component is first connected to the DOM. */
+  export function onMount(cb: () => CleanupFn | void): void;
+
+  /** Run a callback when the component is disconnected from the DOM. */
+  export function onUnmount(cb: () => void): void;
+
+  /** Run a callback whenever the component's template re-renders. */
+  export function onUpdated(cb: () => void): void;
+
+  /** Register a cleanup callback that runs on unmount. */
+  export function onCleanup(cb: () => void): void;
+
+  /** Add a delegated event listener on shadow DOM elements. */
+  export function handle<E extends Event = Event>(
+    selector: string,
+    event: string,
+    handler: (e: E, target: Element) => void,
+    options?: AddEventListenerOptions
+  ): void;
+
+  /** Set ARIA attributes on the component host. */
+  export function aria(attrs: Record<string, string | boolean | null>): void;
+
+  /** Attach an alternative runtime renderer (e.g. Lit). */
+  export function withRuntime(runtime: unknown): void;
+
+  /** Associate a form field with this element (used inside form-associated components). */
+  export function field(options?: { name?: string }): ElementInternals;
+
+  /** Callback: fired when element is associated with a form. */
+  export function onFormAssociated(cb: (form: HTMLFormElement | null) => void): void;
+
+  /** Callback: fired when the containing form is disabled/enabled. */
+  export function onFormDisabled(cb: (disabled: boolean) => void): void;
+
+  /** Callback: fired when the containing form is reset. */
+  export function onFormReset(cb: () => void): void;
+
+  /** Callback: fired when the browser restores form state (e.g. back navigation). */
+  export function onFormStateRestore(
+    cb: (state: string | File | FormData | null, mode: 'restore' | 'autocomplete') => void
+  ): void;
 }
 `;
 
@@ -380,17 +475,17 @@ declare module '@vielzeug/formit' {
   export type MaybePromise<T> = T | Promise<T>;
   export type FieldValidator = (value: FormDataEntryValue) => MaybePromise<string | undefined | null>;
   export type FormValidator = (formData: FormData) => MaybePromise<Errors | undefined | null>;
-  
+
   export type FieldConfig<TValue = any> = {
-    initialValue?: TValue;
+    value: TValue;
     validators?: FieldValidator | Array<FieldValidator>;
   };
-  
+
   export type FormInit = {
     fields?: Record<string, FieldConfig>;
     validate?: FormValidator;
   };
-  
+
   export type FormState = {
     errors: Errors;
     touched: Set<string>;
@@ -399,43 +494,43 @@ declare module '@vielzeug/formit' {
     isSubmitting: boolean;
     submitCount: number;
   };
-  
+
   export type BindConfig = {
     valueExtractor?: (event: any) => any;
     markTouchedOnBlur?: boolean;
   };
-  
+
   export class ValidationError extends Error {
     readonly errors: Errors;
     readonly type: 'validation';
   }
-  
+
   export function createForm(init?: FormInit): {
     // Value management
     get(name: string): any;
-    set(name: string, value: any, options?: { markDirty?: boolean; markTouched?: boolean }): void;
-    set(entries: Record<string, any> | FormData, options?: { replace?: boolean; markDirty?: boolean }): void;
+    set(name: string, value: any, options?: { setDirty?: boolean; setTouched?: boolean }): void;
+    set(entries: Record<string, any> | FormData, options?: { replace?: boolean; setDirty?: boolean }): void;
     values(): Record<string, any>;
     data(): FormData;
     clone(): FormData;
-    
+
     // Error management
     error(name?: string): string | undefined | Errors;
     error(name: string, message: string): void;
     errors(nextErrors: Errors | Record<string, string>): void;
-    
+
     // Touch/Dirty management
     touch(name: string): boolean;
     touch(name: string, mark: boolean): void;
     dirty(name: string): boolean;
-    
+
     // Validation
     validate(name: string): Promise<string | undefined>;
     validate(options?: { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] }): Promise<Errors>;
-    
+
     // Submission
     submit(onSubmit: (formData: FormData) => MaybePromise<any>, options?: { signal?: AbortSignal; validate?: boolean }): Promise<any>;
-    
+
     // Subscriptions
     subscribe(listener: (state: FormState) => void): () => void;
     subscribeField<TValue>(name: string, listener: (payload: {
@@ -444,7 +539,7 @@ declare module '@vielzeug/formit' {
       touched: boolean;
       dirty: boolean;
     }) => void): () => void;
-    
+
     // Field binding
     bind(name: string, config?: BindConfig): {
       name: string;
@@ -453,7 +548,7 @@ declare module '@vielzeug/formit' {
       onBlur: () => void;
       set: (newValue: any | ((prev: any) => any)) => void;
     };
-    
+
     // State management
     reset(newFormData?: FormData | Record<string, any>): void;
     snapshot(): FormState;
@@ -464,22 +559,22 @@ declare module '@vielzeug/formit' {
 export const i18nitTypes = `
 declare module '@vielzeug/i18nit' {
   export type Locale = string;
-  
+
   export type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
-  
+
   export type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
-  
+
   export type MessageValue = string | PluralMessages;
-  
+
   export type Messages = {
     [key: string]: MessageValue | Messages;
   };
-  
+
   export type TranslateOptions = {
     locale?: Locale;
     escape?: boolean;
   };
-  
+
   export type I18nConfig = {
     locale?: Locale;
     fallback?: Locale | Locale[];
@@ -487,39 +582,39 @@ declare module '@vielzeug/i18nit' {
     loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
     escape?: boolean;
   };
-  
+
   export class I18n {
     // Translation Methods
     t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string;
-    
+
     // Locale Management
     getLocale(): Locale;
     setLocale(locale: Locale): void;
-    
+
     // Message Management
     add(locale: Locale, messages: Messages): void;
     set(locale: Locale, messages: Messages): void;
     getMessages(locale: Locale): Messages | undefined;
     hasLocale(locale: Locale): boolean;
     has(key: string, locale?: Locale): boolean;
-    
+
     // Async Loaders
     load(locale: Locale): Promise<void>;
     loadAll(locales: Locale[]): Promise<void>;
     register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void;
     hasAsync(key: string, locale?: Locale): Promise<boolean>;
-    
+
     // Formatting Helpers
     number(value: number, options?: Intl.NumberFormatOptions, locale?: Locale): string;
     date(value: Date | number, options?: Intl.DateTimeFormatOptions, locale?: Locale): string;
-    
+
     // Namespaced Translator
     namespace(ns: string): { t: (key: string, vars?: Record<string, unknown>, options?: TranslateOptions) => string };
-    
+
     // Subscriptions
     subscribe(handler: (locale: Locale) => void): () => void;
   }
-  
+
   export function createI18n(config?: I18nConfig): I18n;
 }
 `;
@@ -561,15 +656,40 @@ declare module '@vielzeug/permit' {
   export const ANONYMOUS = "anonymous";
   export const WILDCARD = "*";
 
-  export const Permit: {
-    check<T, D>(user: T, resource: string, action: string, data?: D): boolean;
-    clear(): void;
-    hasRole(user: any, role: string): boolean;
-    register<T, D>(role: string, resource: string, actions: any): void;
-    readonly roles: any;
-    set<T, D>(role: string, resource: string, actions: any, replace?: boolean): void;
-    unregister(role: string, resource: string, action?: string): void;
+  export type PermissionData = Record<string, unknown>;
+
+  export type BaseUser = {
+    id: string;
+    roles: string[];
   };
+
+  export type PermissionAction = 'create' | 'read' | 'update' | 'delete';
+
+  export type PermissionCheck<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> =
+    | boolean
+    | ((user: T, data?: D) => boolean);
+
+  export type PermissionActions<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> = Partial<
+    Record<PermissionAction, PermissionCheck<T, D>>
+  >;
+
+  export class Permit<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData> {
+    /** Check if a user can perform an action on a resource. */
+    check(user: T, resource: string, action: PermissionAction, data?: D): boolean;
+    /** Register or merge permissions for a role+resource. Pass replace=true to overwrite. */
+    set(role: string, resource: string, actions: PermissionActions<T, D>, replace?: boolean): void;
+    /** Remove permissions for a role+resource (or a single action). */
+    remove(role: string, resource: string, action?: PermissionAction): void;
+    /** Check if a user has a specific role (case-insensitive). */
+    hasRole(user: BaseUser, role: string): boolean;
+    /** Clear all registered permissions. */
+    clear(): void;
+    /** Deep copy of all registered permissions. */
+    readonly roles: Map<string, Map<string, PermissionActions<T, D>>>;
+  }
+
+  /** Create a new, isolated permit instance. */
+  export function createPermit<T extends BaseUser = BaseUser, D extends PermissionData = PermissionData>(): Permit<T, D>;
 }
 `;
 

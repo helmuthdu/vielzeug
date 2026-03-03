@@ -1,17 +1,12 @@
-import { Logit } from '@vielzeug/logit';
 import { attempt } from '../attempt';
-
-vi.mock('@vielzeug/logit', () => ({
-  Logit: {
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
 
 describe('attempt', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should execute the function and return the result', async () => {
@@ -35,27 +30,29 @@ describe('attempt', () => {
     expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
-  it('should log an error if no error handler is provided and silent is false', async () => {
+  it('should log an error if no error handler is provided', async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error('Failure'));
-    await attempt(mockFn, { retries: 1, silent: false });
-    expect(Logit.error).toHaveBeenCalledTimes(1);
-    expect(Logit.error).toHaveBeenCalledWith(
+    await attempt(mockFn, { retries: 1 });
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('all attempts failed'),
       expect.objectContaining({ cause: expect.any(Error) }),
     );
   });
 
-  it('should not log an error if silent is true', async () => {
+  it('should not log if onError is provided', async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error('Failure'));
-    await attempt(mockFn, { retries: 1, silent: true });
-    expect(Logit.error).not.toHaveBeenCalled();
+    const onError = vi.fn();
+    await attempt(mockFn, { onError, retries: 1 });
+    expect(console.error).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
   });
 
   it('should timeout if the function takes too long', async () => {
     const mockFn = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 2000)));
     const result = await attempt(mockFn, { timeout: 1000 });
     expect(result).toBeUndefined();
-    expect(Logit.error).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('all attempts failed'),
       expect.objectContaining({ cause: expect.anything() }),
     );
@@ -64,7 +61,7 @@ describe('attempt', () => {
   it('should use the identifier in logs if provided', async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error('Failure'));
     await attempt(mockFn, { identifier: 'testFunction', retries: 1 });
-    expect(Logit.error).toHaveBeenCalledWith(expect.stringContaining('attempt(testFunction)'), expect.any(Object));
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('attempt(testFunction)'), expect.any(Object));
   });
 
   it('should handle functions that throw non-error values', async () => {
@@ -73,7 +70,7 @@ describe('attempt', () => {
     });
     const result = await attempt(mockFn);
     expect(result).toBeUndefined();
-    expect(Logit.error).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('all attempts failed'),
       expect.objectContaining({
         cause: expect.stringContaining('Non-error value'),

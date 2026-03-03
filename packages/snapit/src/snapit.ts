@@ -10,16 +10,21 @@ export type StateOptions<T> = {
   equals?: EqualityFn<T>;
 };
 
+export type SubscribeOptions<U> = {
+  equality?: EqualityFn<U>;
+};
+
 export type Computed<U> = {
   get: () => U;
   subscribe: (listener: Listener<U>) => Unsubscribe;
+  dispose: () => void;
 };
 
 /** -------------------- Equality Utilities -------------------- **/
 
 export function shallowEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
-  if (a === null || a === undefined || b === null || b === undefined) return a === b;
+  if (a == null || b == null) return a === b;
   if (typeof a !== 'object' || typeof b !== 'object') return false;
 
   const keysA = Object.keys(a);
@@ -37,27 +42,21 @@ export function shallowEqual(a: unknown, b: unknown): boolean {
 }
 
 export function shallowMerge<T extends object>(state: T, patch: Partial<T>): T {
-  const base = Array.isArray(state) ? [...state] : { ...state };
-  return Object.assign(base, patch) as T;
+  return (Array.isArray(state) ? Object.assign([...state], patch) : { ...state, ...patch }) as T;
 }
 
 /** -------------------- Store Implementation -------------------- **/
 
-type Subscription<T, U> = {
-  id: number;
-  selector?: Selector<T, U>;
-  equality: EqualityFn<U>;
-  listener: Listener<U>;
-  lastValue: U;
+type Subscription<T> = {
+  dispatch: (current: T) => void;
 };
 
-let nextId = 0;
-
 export class State<T extends object> {
+  private static nextId = 0;
   private state: T;
   private readonly initialState: T;
   private readonly name?: string;
-  private readonly subscriptions = new Map<number, Subscription<T, unknown>>();
+  private readonly subscriptions = new Map<number, Subscription<T>>();
   private readonly equals: EqualityFn<T>;
   private scheduled = false;
   private transacting = false;
@@ -84,7 +83,6 @@ export class State<T extends object> {
   set(patchOrUpdater: Partial<T> | ((data: T) => T | Promise<T>)): void | Promise<void> {
     const prevState = this.state;
 
-    // Handle partial object merge
     if (typeof patchOrUpdater !== 'function') {
       const nextState = shallowMerge(prevState, patchOrUpdater);
       if (this.equals(prevState, nextState)) return;
@@ -93,97 +91,86 @@ export class State<T extends object> {
       return;
     }
 
-    // Handle updater function (sync or async)
     const result = patchOrUpdater(prevState);
 
-    // Check if a result is a Promise (async updater)
     if (result instanceof Promise) {
       return result.then((nextState) => {
-        if (this.equals(prevState, nextState)) return;
+        if (this.equals(this.state, nextState)) return;
         this.state = nextState;
         this.notify();
       });
     }
 
-    // Sync updater
     if (this.equals(prevState, result)) return;
     this.state = result;
     this.notify();
   }
 
   reset(): void {
-    this.set(this.initialState);
+    if (this.equals(this.state, this.initialState)) return;
+    this.state = this.initialState;
+    this.notify();
   }
 
   /** -------------------- Subscriptions -------------------- **/
 
   subscribe(listener: Listener<T>): Unsubscribe;
-  subscribe<U>(selector: Selector<T, U>, listener: Listener<U>, options?: { equality?: EqualityFn<U> }): Unsubscribe;
+  subscribe<U>(selector: Selector<T, U>, listener: Listener<U>, options?: SubscribeOptions<U>): Unsubscribe;
   subscribe<U>(
     selectorOrListener: Selector<T, U> | Listener<T>,
-    listenerOrOptions?: Listener<U> | { equality?: EqualityFn<U> },
-    options?: { equality?: EqualityFn<U> },
+    listenerArg?: Listener<U> | SubscribeOptions<U>,
+    options?: SubscribeOptions<U>,
   ): Unsubscribe {
     let selector: Selector<T, U> | undefined;
     let listener: Listener<U>;
     let equality: EqualityFn<U>;
 
-    if (typeof selectorOrListener === 'function' && listenerOrOptions === undefined) {
+    if (typeof selectorOrListener === 'function' && listenerArg === undefined) {
       // Full state subscription
-      selector = undefined;
       listener = selectorOrListener as unknown as Listener<U>;
       equality = this.equals as unknown as EqualityFn<U>;
     } else {
       // Selective subscription
       selector = selectorOrListener as Selector<T, U>;
-      listener = listenerOrOptions as Listener<U>;
+      listener = listenerArg as Listener<U>;
       equality = options?.equality ?? (shallowEqual as EqualityFn<U>);
     }
 
-    const id = ++nextId;
-    const initialValue = selector ? selector(this.state) : (this.state as unknown as U);
+    const id = ++State.nextId;
+    let lastValue = selector ? selector(this.state) : (this.state as unknown as U);
 
-    const subscription: Subscription<T, U> = {
-      equality,
-      id,
-      lastValue: initialValue,
-      listener,
-      selector,
-    };
-
-    this.subscriptions.set(id, subscription as Subscription<T, unknown>);
+    this.subscriptions.set(id, {
+      dispatch: (current: T) => {
+        const next = (selector ? selector(current) : current) as U;
+        if (!equality(lastValue, next)) {
+          listener(next, lastValue);
+          lastValue = next;
+        }
+      },
+    });
 
     // Call listener immediately with the current value
     try {
-      listener(initialValue, initialValue);
+      listener(lastValue, lastValue);
     } catch {
       // Swallow errors
     }
 
-    return () => {
-      this.subscriptions.delete(id);
-    };
+    return () => this.subscriptions.delete(id);
   }
 
   /** -------------------- Computed Values -------------------- **/
 
-  computed<U>(selector: Selector<T, U>, options?: { equality?: EqualityFn<U> }): Computed<U> {
+  computed<U>(selector: Selector<T, U>, options?: SubscribeOptions<U>): Computed<U> {
     let cachedValue = selector(this.state);
     let cachedState = this.state;
     const equality = (options?.equality ?? shallowEqual) as EqualityFn<U>;
     const listeners = new Set<Listener<U>>();
-    let isInitialCall = true;
 
-    // Subscribe to state changes
-    this.subscribe((current) => {
-      // Skip the initial call from subscribe
-      if (isInitialCall) {
-        isInitialCall = false;
-        return;
-      }
-
+    // Use _addSubscription to avoid the eager listener invocation that this.subscribe() triggers
+    const unsubscribe = this._addSubscription((current) => {
       const newValue = selector(current);
-      if (!equality(cachedValue as never, newValue as never)) {
+      if (!equality(cachedValue, newValue)) {
         const prev = cachedValue;
         cachedValue = newValue;
         cachedState = current;
@@ -199,6 +186,10 @@ export class State<T extends object> {
     });
 
     return {
+      dispose: () => {
+        unsubscribe();
+        listeners.clear();
+      },
       get: () => {
         // If state changed, recompute
         if (this.state !== cachedState) {
@@ -224,7 +215,6 @@ export class State<T extends object> {
 
   transaction(fn: () => void): void {
     if (this.transacting) {
-      // Already in a transaction, just run the function
       fn();
       return;
     }
@@ -241,56 +231,35 @@ export class State<T extends object> {
   /** -------------------- Scoped Stores -------------------- **/
 
   createChild(patch?: Partial<T>): State<T> {
-    const childInitialState = patch ? shallowMerge(this.state, patch) : this.state;
-    const childName = this.name ? `${this.name}.child` : undefined;
-
-    return new State<T>(childInitialState, {
+    return new State<T>(patch ? shallowMerge(this.state, patch) : this.state, {
       equals: this.equals,
-      name: childName,
+      name: this.name ? `${this.name}.child` : undefined,
     });
   }
 
   async runInScope<R>(fn: (scopedState: State<T>) => R | Promise<R>, patch?: Partial<T>): Promise<R> {
-    const childStore = this.createChild(patch);
-    try {
-      return fn(childStore);
-    } finally {
-      // Child store will be garbage collected
-    }
+    return fn(this.createChild(patch));
   }
 
   /** -------------------- Internal Helpers -------------------- **/
 
+  private _addSubscription(dispatch: (current: T) => void): Unsubscribe {
+    const id = ++State.nextId;
+    this.subscriptions.set(id, { dispatch });
+    return () => this.subscriptions.delete(id);
+  }
+
   private notify(): void {
     if (this.scheduled || this.transacting) return;
-
     this.scheduled = true;
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
     Promise.resolve().then(() => {
       this.scheduled = false;
-      const currentState = this.state;
-
-      for (const subscription of this.subscriptions.values()) {
+      const current = this.state;
+      for (const sub of this.subscriptions.values()) {
         try {
-          if (!subscription.selector) {
-            // Full state subscription
-            const lastState = subscription.lastValue as T;
-            if (!subscription.equality(lastState as never, currentState as never)) {
-              subscription.listener(currentState as never, lastState as never);
-              (subscription as Subscription<T, T>).lastValue = currentState;
-            }
-          } else {
-            // Selective subscription
-            const selectedValue = subscription.selector(currentState);
-            if (!subscription.equality(subscription.lastValue as never, selectedValue as never)) {
-              subscription.listener(selectedValue as never, subscription.lastValue as never);
-              subscription.lastValue = selectedValue;
-            }
-          }
-        } catch {
-          // Swallow errors to prevent breaking other subscribers
-        }
+          sub.dispatch(current);
+        } catch {}
       }
     });
   }
@@ -302,11 +271,15 @@ export function createSnapshot<T extends object>(initialState: T, options?: Stat
   return new State<T>(initialState, options);
 }
 
+export type Snapshot<T extends object> = State<T>;
+
 /** -------------------- Testing Helpers -------------------- **/
 
-export function createTestState<T extends object>(baseState?: State<T>, patch?: Partial<T>) {
-  const root = baseState ?? new State<T>({} as T);
-  const testState = root.createChild(patch);
+export function createTestState<T extends object>(baseState: State<T> | T, patch?: Partial<T>) {
+  const testState =
+    baseState instanceof State
+      ? baseState.createChild(patch)
+      : new State<T>(patch ? shallowMerge(baseState as T, patch) : (baseState as T));
 
   return {
     dispose: () => {
@@ -316,10 +289,10 @@ export function createTestState<T extends object>(baseState?: State<T>, patch?: 
   };
 }
 
-export async function withStateMock<T extends object, R>(
-  baseStore: State<T>,
+export function withStateMock<T extends object, R>(
+  state: State<T>,
   patch: Partial<T>,
   fn: (scopedState: State<T>) => R | Promise<R>,
 ): Promise<R> {
-  return baseStore.runInScope(fn, patch);
+  return state.runInScope(fn, patch);
 }

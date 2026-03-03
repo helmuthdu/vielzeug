@@ -1,7 +1,8 @@
+import { aria, css, define, defineEmits, defineProps, guard, handle, html, watch } from '@vielzeug/craftit';
 import { colorThemeMixin, frostVariantMixin } from '../../styles';
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   /* Color themes - mixin already defines @layer buildit.themes */
   ${colorThemeMixin()}
 
@@ -89,24 +90,24 @@ const styles = /* css */ `
       flex-wrap: wrap;
     }
 
-    /* Hidden state for empty sections */
-    .card-media[hidden],
-    .card-header[hidden],
-    .card-footer[hidden],
-    .card-actions[hidden] {
+    /* Hide sections when no content is slotted */
+    :host:not(:has([slot='media'])) .card-media,
+    :host:not(:has([slot='header'])) .card-header,
+    :host:not(:has([slot='footer'])) .card-footer,
+    :host:not(:has([slot='actions'])) .card-actions {
       display: none;
     }
 
-    /* Adjust content padding when siblings are visible */
-    .card-header:not([hidden]) + .card-content {
+    /* Adjust content padding when adjacent sections are visible */
+    :host(:has([slot='header'])) .card-header + .card-content {
       padding-top: calc(var(--_padding) / 2);
     }
 
-    .card-content:has(+ .card-footer:not([hidden])) {
+    :host(:has([slot='footer'])) .card-content:has(+ .card-footer) {
       padding-bottom: calc(var(--_padding) / 2);
     }
 
-    .card-content:has(+ .card-actions:not([hidden])) {
+    :host(:has([slot='actions'])) .card-content:has(+ .card-actions) {
       padding-bottom: calc(var(--_padding) / 2);
     }
   }
@@ -358,171 +359,87 @@ export interface CardProps {
  * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
  * ```
  */
-class BitCard extends HTMLElement {
-  static observedAttributes = [
-    'variant',
-    'color',
-    'padding',
-    'elevation',
-    'orientation',
-    'hoverable',
-    'clickable',
-    'disabled',
-    'loading',
-  ] as const;
+define('bit-card', ({ host }) => {
+  const props = defineProps({
+    clickable: { default: false },
+    color: { default: undefined as ThemeColor | undefined },
+    disabled: { default: false },
+    elevation: { default: undefined as `${ElevationLevel}` | undefined },
+    hoverable: { default: false },
+    loading: { default: false },
+    orientation: { default: undefined as 'vertical' | 'horizontal' | undefined },
+    padding: { default: undefined as PaddingSize | undefined },
+    variant: { default: undefined as 'solid' | 'flat' | 'frost' | undefined },
+  });
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+  const emit = defineEmits<{
+    cardclick: { color: ThemeColor | undefined; originalEvent: Event; variant: string | undefined };
+  }>();
 
-  connectedCallback() {
-    this.render();
+  aria({ disabled: () => (props.clickable.value ? props.disabled.value : null) });
 
-    const shadowRoot = this.shadowRoot;
-    if (!shadowRoot) return;
-
-    // Get references to slots and containers
-    const mediaSlot = shadowRoot.querySelector('slot[name="media"]') as HTMLSlotElement;
-    const headerSlot = shadowRoot.querySelector('slot[name="header"]') as HTMLSlotElement;
-    const footerSlot = shadowRoot.querySelector('slot[name="footer"]') as HTMLSlotElement;
-    const actionsSlot = shadowRoot.querySelector('slot[name="actions"]') as HTMLSlotElement;
-
-    const cardMedia = shadowRoot.querySelector('.card-media') as HTMLElement;
-    const cardHeader = shadowRoot.querySelector('.card-header') as HTMLElement;
-    const cardFooter = shadowRoot.querySelector('.card-footer') as HTMLElement;
-    const cardActions = shadowRoot.querySelector('.card-actions') as HTMLElement;
-
-    // Helper to update section visibility
-    const updateSectionVisibility = () => {
-      if (mediaSlot && cardMedia) {
-        const hasMediaContent = mediaSlot.assignedElements().length > 0;
-        cardMedia.toggleAttribute('hidden', !hasMediaContent);
-      }
-
-      if (headerSlot && cardHeader) {
-        const hasHeaderContent = headerSlot.assignedElements().length > 0;
-        cardHeader.toggleAttribute('hidden', !hasHeaderContent);
-      }
-
-      if (footerSlot && cardFooter) {
-        const hasFooterContent = footerSlot.assignedElements().length > 0;
-        cardFooter.toggleAttribute('hidden', !hasFooterContent);
-      }
-
-      if (actionsSlot && cardActions) {
-        const hasActionsContent = actionsSlot.assignedElements().length > 0;
-        cardActions.toggleAttribute('hidden', !hasActionsContent);
-      }
-    };
-
-    // Initial sync
-    requestAnimationFrame(() => {
-      updateSectionVisibility();
-    });
-
-    // Listen for slot changes
-    if (mediaSlot) mediaSlot.addEventListener('slotchange', updateSectionVisibility);
-    if (headerSlot) headerSlot.addEventListener('slotchange', updateSectionVisibility);
-    if (footerSlot) footerSlot.addEventListener('slotchange', updateSectionVisibility);
-    if (actionsSlot) actionsSlot.addEventListener('slotchange', updateSectionVisibility);
-
-    // Setup ARIA and keyboard handling for clickable cards
-    const isClickable = this.hasAttribute('clickable');
-    const isDisabled = this.hasAttribute('disabled');
-
-    if (isClickable) {
-      this.setAttribute('role', 'button');
-      this.setAttribute('tabindex', isDisabled ? '-1' : '0');
-      this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-    }
-
-    // Handle click events for clickable cards
-    if (isClickable) {
-      this.addEventListener('click', (e) => {
-        if (this.hasAttribute('disabled')) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-
-        // Emit custom cardclick event with card details
-        this.dispatchEvent(
-          new CustomEvent('cardclick', {
-            bubbles: true,
-            composed: true,
-            detail: {
-              color: this.getAttribute('color'),
-              originalEvent: e,
-              variant: this.getAttribute('variant'),
-            },
-          }),
-        );
-      });
-
-      // Keyboard support
-      this.addEventListener('keydown', (e) => {
-        const kbEvent = e as KeyboardEvent;
-        if (this.hasAttribute('disabled')) return;
-
-        if (kbEvent.key === 'Enter' || kbEvent.key === ' ') {
-          kbEvent.preventDefault();
-          this.click();
-        }
-      });
-    }
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
-    // Update ARIA attributes for clickable/disabled states
-    if (name === 'clickable') {
-      if (newValue !== null) {
-        this.setAttribute('role', 'button');
-        this.setAttribute('tabindex', this.hasAttribute('disabled') ? '-1' : '0');
+  // Role/tabindex for clickable cards
+  watch(
+    [props.clickable, props.disabled],
+    () => {
+      if (props.clickable.value) {
+        host.setAttribute('role', 'button');
+        host.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
       } else {
-        this.removeAttribute('role');
-        this.removeAttribute('tabindex');
+        host.removeAttribute('role');
+        host.removeAttribute('tabindex');
       }
-    }
+    },
+    { immediate: true },
+  );
 
-    if (name === 'disabled') {
-      const isDisabled = newValue !== null;
-      this.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
-
-      if (this.hasAttribute('clickable')) {
-        this.setAttribute('tabindex', isDisabled ? '-1' : '0');
+  const handleClick = guard(
+    () => props.clickable.value,
+    (e: MouseEvent) => {
+      if (props.disabled.value) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
       }
-    }
-  }
+      emit('cardclick', { color: props.color.value, originalEvent: e, variant: props.variant.value });
+    },
+  );
 
-  render() {
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <div class="card" part="card">
-        <div class="card-media" part="media">
-          <slot name="media"></slot>
+  const handleKeydown = guard(
+    () => props.clickable.value && !props.disabled.value,
+    (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        host.click();
+      }
+    },
+  );
+
+  handle(host, 'click', handleClick);
+  handle(host, 'keydown', handleKeydown);
+
+  return {
+    styles: [styles],
+    template: html` <div class="card" part="card">
+      <div class="card-media" part="media">
+        <slot name="media"></slot>
+      </div>
+      <div class="card-body" part="body">
+        <div class="card-header" part="header">
+          <slot name="header"></slot>
         </div>
-        <div class="card-body" part="body">
-          <div class="card-header" part="header">
-            <slot name="header"></slot>
-          </div>
-          <div class="card-content" part="content">
-            <slot></slot>
-          </div>
-          <div class="card-footer" part="footer">
-            <slot name="footer"></slot>
-          </div>
-          <div class="card-actions" part="actions">
-            <slot name="actions"></slot>
-          </div>
+        <div class="card-content" part="content">
+          <slot></slot>
+        </div>
+        <div class="card-footer" part="footer">
+          <slot name="footer"></slot>
+        </div>
+        <div class="card-actions" part="actions">
+          <slot name="actions"></slot>
         </div>
       </div>
-    `;
-  }
-}
-
-if (!customElements.get('bit-card')) {
-  customElements.define('bit-card', BitCard);
-}
+    </div>`,
+  };
+});
 
 export default {};

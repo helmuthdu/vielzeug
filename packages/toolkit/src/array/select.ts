@@ -39,7 +39,7 @@ export function select<T, R, C extends CallbackDynamic<T, R>>(
     }
   }
 
-  return (isPromise(callback) ? Promise.all(result) : result) as ResultArray<C>;
+  return (result.length > 0 && isPromise(result[0]) ? Promise.all(result) : result) as ResultArray<C>;
 }
 
 select.fp = true;

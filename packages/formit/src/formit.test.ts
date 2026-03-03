@@ -118,18 +118,18 @@ describe('formit', () => {
       form.subscribe((state) => {
         if (state.dirty.has('a') && state.touched.has('a')) resolve();
       });
-      form.set('a', 10, { markTouched: true });
+      form.set('a', 10, { setTouched: true });
     });
 
-    form.set('b', 20, { markDirty: false });
+    form.set('b', 20, { setDirty: false });
     await new Promise((r) => setTimeout(r, 10));
     expect(form.snapshot().dirty.has('b')).toBe(false);
 
-    form.set({ a: 100 }, { markDirty: true });
+    form.set({ a: 100 }, { setDirty: true });
     await new Promise((r) => setTimeout(r, 10));
     expect(form.snapshot().dirty.has('a')).toBe(true);
 
-    form.touch('b', true);
+    form.setTouched('b');
     await new Promise((r) => setTimeout(r, 10));
     expect(form.snapshot().touched.has('b')).toBe(true);
   });
@@ -193,23 +193,23 @@ describe('formit', () => {
   test('error management - get, set, clear', () => {
     const form = createForm({});
 
-    form.error('email', 'Invalid');
-    expect(form.error('email')).toBe('Invalid');
+    form.setError('email', 'Invalid');
+    expect(form.getError('email')).toBe('Invalid');
 
-    const allErrors = form.error();
+    const allErrors = form.getErrors();
     expect(allErrors instanceof Map).toBe(true);
     expect((allErrors as Map<string, string>).get('email')).toBe('Invalid');
 
-    form.error('email', '');
-    expect(form.error('email')).toBeUndefined();
+    form.setError('email', '');
+    expect(form.getError('email')).toBeUndefined();
 
-    form.errors({ age: 'Invalid', name: 'Required' });
-    const errors2 = form.error();
+    form.setErrors({ age: 'Invalid', name: 'Required' });
+    const errors2 = form.getErrors();
     expect((errors2 as Map<string, string>).get('age')).toBe('Invalid');
     expect((errors2 as Map<string, string>).get('name')).toBe('Required');
 
-    form.errors(new Map());
-    expect((form.error() as Map<string, string>).size).toBe(0);
+    form.setErrors(new Map());
+    expect((form.getErrors() as Map<string, string>).size).toBe(0);
   });
 
   test('successful form submission with validation', async () => {
@@ -342,20 +342,20 @@ describe('formit', () => {
   test('touch and dirty helper functions', () => {
     const form = createForm({ fields: { email: '', name: 'Alice' } });
 
-    expect(form.dirty('name')).toBe(false);
-    expect(form.touch('name')).toBe(false);
+    expect(form.isDirty('name')).toBe(false);
+    expect(form.isTouched('name')).toBe(false);
 
     form.set('name', 'Bob');
-    expect(form.dirty('name')).toBe(true);
-    expect(form.touch('name')).toBe(false);
+    expect(form.isDirty('name')).toBe(true);
+    expect(form.isTouched('name')).toBe(false);
 
-    form.touch('email', true);
-    expect(form.touch('email')).toBe(true);
-    expect(form.dirty('email')).toBe(false);
+    form.setTouched('email');
+    expect(form.isTouched('email')).toBe(true);
+    expect(form.isDirty('email')).toBe(false);
 
-    form.set('email', 'test@example.com', { markTouched: true });
-    expect(form.dirty('email')).toBe(true);
-    expect(form.touch('email')).toBe(true);
+    form.set('email', 'test@example.com', { setTouched: true });
+    expect(form.isDirty('email')).toBe(true);
+    expect(form.isTouched('email')).toBe(true);
   });
 
   test('bind with onBlur and custom value extractor', () => {
@@ -368,7 +368,7 @@ describe('formit', () => {
     expect(form.get('name')).toBe('Test');
 
     nameBinding.onBlur();
-    expect(form.touch('name')).toBe(true);
+    expect(form.isTouched('name')).toBe(true);
 
     const categoryBinding = form.bind('category', {
       valueExtractor: (e) => e.selected || e,
@@ -378,11 +378,11 @@ describe('formit', () => {
     expect(form.get('category')).toBe('books');
 
     const noTouchBinding = form.bind('name', { markTouchedOnBlur: false });
-    form.touch('name', true);
+    form.setTouched('name');
     form.set('name', '');
 
     noTouchBinding.onBlur();
-    expect(form.touch('name')).toBe(true);
+    expect(form.isTouched('name')).toBe(true);
   });
 
   test('validate with onlyTouched option', async () => {
@@ -394,7 +394,7 @@ describe('formit', () => {
       },
     });
 
-    form.touch('name', true);
+    form.setTouched('name');
 
     const errors = await form.validate({ onlyTouched: true });
 

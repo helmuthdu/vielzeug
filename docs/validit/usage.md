@@ -1,32 +1,47 @@
+---
+title: Validit — Usage Guide
+description: Schema types, chaining, coercion, and advanced validation patterns for Validit.
+---
+
 # Validit Usage Guide
 
-Complete guide to installing and using Validit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Validit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Validit?
 
-::: code-group
+Runtime validation is essential for forms, API responses, and environment config. Validit gives you schema-first validation without adding Zod (~14 kB) or Yup (~22 kB) to your bundle.
 
-```sh [pnpm]
-pnpm add @vielzeug/validit
+```ts
+// Before — manual type narrowing
+function validateUser(raw: unknown): User {
+  if (typeof raw !== 'object' || !raw) throw new Error('Not an object');
+  if (typeof (raw as any).name !== 'string') throw new Error('name must be string');
+  // ... 20 more lines
+  return raw as User;
+}
+
+// After — Validit
+import { v } from '@vielzeug/validit';
+const UserSchema = v.object({ name: v.string(), email: v.email(), age: v.number().min(0) });
+const user = UserSchema.parse(raw);
 ```
 
-```sh [npm]
-npm install @vielzeug/validit
-```
+| Feature | Validit | Zod | Yup |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="validit" type="size" /> | ~14 kB | ~22 kB |
+| TypeScript inference | ✅ | ✅ | ⚠️ |
+| Async validation | ✅ | ✅ | ✅ |
+| Coercion | ✅ | ✅ | ✅ |
+| Zero dependencies | ✅ | ✅ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/validit
-```
+**Use Validit when** you want schema validation with full TS inference and minimal bundle size.
 
-:::
+**Consider Zod** if you need its ecosystem (trpc, drizzle, react-hook-form integration) or its error formatting API.
+
 
 ## Import
 
@@ -160,7 +175,7 @@ v.string()
   .pattern(/^[a-z]+$/) // Regex pattern
   .email() // Email format
   .url() // URL format
-  .trim(); // Must be trimmed
+  .trim(); // Trim whitespace before validation
 
 // Convenience helpers
 v.email(); // Shorthand for v.string().email()
@@ -180,7 +195,9 @@ v.number()
   .max(100) // Maximum value
   .int() // Must be integer
   .positive() // Must be > 0
-  .negative(); // Must be < 0
+  .negative() // Must be < 0
+  .nonNegative() // Must be >= 0 (alias for .min(0))
+  .nonPositive(); // Must be <= 0 (alias for .max(0))
 
 // Convenience helpers
 v.int().positive(); // Shorthand for v.number().int().positive()
@@ -448,17 +465,6 @@ v.object({
 });
 ```
 
-### describe()
-
-Adds a description for better error messages.
-
-```ts
-v.number().int().min(0).describe('age');
-
-// Errors will show: "age: Must be at least 0"
-// Instead of: "value: Must be at least 0"
-```
-
 ## Custom Refinements
 
 ### refine() – Sync
@@ -528,13 +534,13 @@ try {
     error.issues.forEach((issue) => {
       console.log(issue.path); // ['user', 'email']
       console.log(issue.message); // 'Invalid email'
-      console.log(issue.code); // 'invalid_email'
-      console.log(issue.params); // { expected: 'email' }
+      console.log(issue.code); // e.g. 'invalid_string', 'too_small'
+      console.log(issue.params); // additional parameters
     });
 
     // Formatted message
     console.log(error.message);
-    // "user.email: Invalid email [invalid_email]"
+    // "user.email: Invalid email address [invalid_string]"
   }
 }
 ```
@@ -651,7 +657,6 @@ type Data = Infer<typeof schema>;
 - Add custom error messages for better UX
 - Use `safeParse()` for user input
 - Leverage type inference with `Infer<typeof schema>`
-- Use `describe()` for complex nested schemas
 
 ### ❌ Don't
 

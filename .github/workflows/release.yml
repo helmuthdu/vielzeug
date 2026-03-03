@@ -8,6 +8,7 @@ on:
         required: true
         type: choice
         options:
+          - '@vielzeug/buildit'
           - '@vielzeug/craftit'
           - '@vielzeug/deposit'
           - '@vielzeug/fetchit'
@@ -54,7 +55,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.30.2
+          version: 10.30.3
 
       - name: Get pnpm store directory
         id: pnpm-cache

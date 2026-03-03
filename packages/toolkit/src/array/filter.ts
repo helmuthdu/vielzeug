@@ -21,16 +21,7 @@ import type { Predicate } from '../types';
  */
 export function filter<T>(array: T[], predicate: Predicate<T>) {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
-
-  const result: T[] = [];
-
-  for (let index = 0; index < array.length; index++) {
-    if (predicate(array[index], index, array)) {
-      result.push(array[index]);
-    }
-  }
-
-  return result;
+  return array.filter(predicate);
 }
 
 filter.fp = true;

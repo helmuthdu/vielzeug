@@ -1,6 +1,6 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createFixture } from '../../../utils/trial';
 
 describe('bit-card accessibility', () => {
   beforeAll(async () => {
@@ -9,7 +9,7 @@ describe('bit-card accessibility', () => {
 
   describe('WCAG 2.1 Compliance', () => {
     it('should have no accessibility violations', async () => {
-      const fixture = await createFixture('bit-card');
+      const fixture = await mount('bit-card');
       fixture.element.textContent = 'Card content';
 
       const results = await axe.run(fixture.element);
@@ -19,7 +19,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with header and footer', async () => {
-      const fixture = await createFixture('bit-card');
+      const fixture = await mount('bit-card');
 
       const header = document.createElement('div');
       header.slot = 'header';
@@ -42,7 +42,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations when hoverable', async () => {
-      const fixture = await createFixture('bit-card', { hoverable: true });
+      const fixture = await mount('bit-card', { attrs: { hoverable: true } });
       fixture.element.textContent = 'Hoverable card';
 
       const results = await axe.run(fixture.element);
@@ -52,7 +52,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations when clickable', async () => {
-      const fixture = await createFixture('bit-card', { clickable: true });
+      const fixture = await mount('bit-card', { attrs: { clickable: true } });
       fixture.element.textContent = 'Clickable card';
 
       const results = await axe.run(fixture.element);
@@ -62,7 +62,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with solid variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'solid' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'solid' } });
       fixture.element.textContent = 'Solid card';
 
       const results = await axe.run(fixture.element);
@@ -72,7 +72,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with outline variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'outline' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'outline' } });
       fixture.element.textContent = 'Outline card';
 
       const results = await axe.run(fixture.element);
@@ -82,7 +82,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with flat variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'flat' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'flat' } });
       fixture.element.textContent = 'Flat card';
 
       const results = await axe.run(fixture.element);
@@ -92,7 +92,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with bordered variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'bordered' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'bordered' } });
       fixture.element.textContent = 'Bordered card';
 
       const results = await axe.run(fixture.element);
@@ -102,7 +102,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with ghost variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'ghost' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'ghost' } });
       fixture.element.textContent = 'Ghost card';
 
       const results = await axe.run(fixture.element);
@@ -112,7 +112,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with text variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'text' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'text' } });
       fixture.element.textContent = 'Text card';
 
       const results = await axe.run(fixture.element);
@@ -122,7 +122,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with glass variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'glass' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'glass' } });
       fixture.element.textContent = 'Glass card';
 
       const results = await axe.run(fixture.element);
@@ -132,7 +132,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should have no violations with frost variant', async () => {
-      const fixture = await createFixture('bit-card', { variant: 'frost' });
+      const fixture = await mount('bit-card', { attrs: { variant: 'frost' } });
       fixture.element.textContent = 'Frost card';
 
       const results = await axe.run(fixture.element);
@@ -145,7 +145,7 @@ describe('bit-card accessibility', () => {
       const paddings = ['none', 'sm', 'md', 'lg'] as const;
 
       for (const padding of paddings) {
-        const fixture = await createFixture('bit-card', { padding });
+        const fixture = await mount('bit-card', { attrs: { padding } });
         fixture.element.textContent = `${padding} padding card`;
 
         const results = await axe.run(fixture.element);
@@ -158,7 +158,7 @@ describe('bit-card accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('should properly structure content with slots', async () => {
-      const fixture = await createFixture('bit-card');
+      const fixture = await mount('bit-card');
 
       const header = document.createElement('h2');
       header.slot = 'header';
@@ -181,7 +181,7 @@ describe('bit-card accessibility', () => {
     });
 
     it('should maintain proper heading hierarchy', async () => {
-      const fixture = await createFixture('bit-card');
+      const fixture = await mount('bit-card');
 
       const header = document.createElement('h3');
       header.slot = 'header';
@@ -201,7 +201,7 @@ describe('bit-card accessibility', () => {
 
   describe('Interactive Accessibility', () => {
     it('should be accessible when clickable', async () => {
-      const fixture = await createFixture('bit-card', { clickable: true });
+      const fixture = await mount('bit-card', { attrs: { clickable: true } });
 
       const header = document.createElement('h2');
       header.slot = 'header';

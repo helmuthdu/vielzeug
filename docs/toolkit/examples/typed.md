@@ -1,4 +1,9 @@
-# 🧪 Typed Utilities
+---
+title: Toolkit — Type Guard Examples
+description: Type guard utility examples for Toolkit.
+---
+
+# Typed Utilities
 
 Typed utilities provide a comprehensive set of type guards and comparison helpers. These tools ensure your code remains type-safe by providing robust checks for all common JavaScript data types and values.
 

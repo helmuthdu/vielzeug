@@ -1,5 +1,4 @@
 import { assert } from '../function/assert';
-import { isArray } from '../typed/isArray';
 import { isNil } from '../typed/isNil';
 import { IS_OBJECT_ERROR_MSG, isObject } from '../typed/isObject';
 import type { Obj } from '../types';
@@ -15,7 +14,6 @@ type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
 // #region PathOptions
 type PathOptions = {
   throwOnMissing?: boolean;
-  allowArrayIndex?: boolean;
 };
 // #endregion PathOptions
 
@@ -28,7 +26,7 @@ type PathOptions = {
  *
  * getValue(obj, 'a.b.c'); // 3
  * getValue(obj, 'a.b.d', 'default'); // 'default'
- * getValue(obj, 'd[1]', undefined, { allowArrayIndex: true }); // 2
+ * getValue(obj, 'd[1]'); // 2
  * getValue(obj, 'e.f.g', 'default', { throwOnMissing: true }); // throws Error
  * ```
  *
@@ -51,7 +49,7 @@ export function path<T extends Obj, P extends string>(
 ): PathValue<T, P> | undefined {
   assert(isObject(item), IS_OBJECT_ERROR_MSG, { args: { item }, type: TypeError });
 
-  const { throwOnMissing = false, allowArrayIndex = false } = options;
+  const { throwOnMissing = false } = options;
 
   const fragments = path.split(/[.[\]]+/).filter(Boolean);
   // biome-ignore lint/suspicious/noExplicitAny: -
@@ -59,25 +57,17 @@ export function path<T extends Obj, P extends string>(
 
   for (const fragment of fragments) {
     if (isNil(current) || typeof current !== 'object') {
-      return handleError(`Cannot read property '${fragment}' of ${current}`, throwOnMissing, defaultValue);
+      if (throwOnMissing) throw new Error(`Cannot read property '${fragment}' of ${current}`);
+      return defaultValue as PathValue<T, P>;
     }
 
-    current =
-      allowArrayIndex && isArray(current) && /^\d+$/.test(fragment) ? current[Number(fragment)] : current[fragment];
+    current = current[fragment];
 
     if (current === undefined) {
-      return handleError(`Property '${fragment}' does not exist`, throwOnMissing, defaultValue);
+      if (throwOnMissing) throw new Error(`Property '${fragment}' does not exist`);
+      return defaultValue as PathValue<T, P>;
     }
   }
 
   return current as PathValue<T, P>;
-}
-
-function handleError<T extends Obj, P extends string>(
-  message: string,
-  throwOnMissing: boolean,
-  defaultValue?: unknown,
-): PathValue<T, P> | undefined {
-  if (throwOnMissing) throw new Error(message);
-  return defaultValue as PathValue<T, P>;
 }

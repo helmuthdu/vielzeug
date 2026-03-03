@@ -1,7 +1,7 @@
-import { type ComponentFixture, createFixture, userEvent, waitForEvent } from '../../../utils/trial';
+import { type Fixture, mount, user, waitForEvent } from '@vielzeug/craftit/test';
 
 describe('bit-slider', () => {
-  let fixture: ComponentFixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await import('../slider');
@@ -13,7 +13,7 @@ describe('bit-slider', () => {
 
   describe('Rendering', () => {
     it('should render with required shadow DOM elements', async () => {
-      fixture = await createFixture('bit-slider');
+      fixture = await mount('bit-slider');
 
       expect(fixture.query('.slider-container')).toBeTruthy();
       expect(fixture.query('.slider-track')).toBeTruthy();
@@ -23,18 +23,17 @@ describe('bit-slider', () => {
     });
 
     it('should render with label content', async () => {
-      fixture = await createFixture('bit-slider');
+      fixture = await mount('bit-slider');
       fixture.element.textContent = 'Volume';
 
       expect(fixture.element.textContent).toBe('Volume');
     });
 
     it('should render hidden input for form integration', async () => {
-      fixture = await createFixture('bit-slider', { name: 'volume', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { name: 'volume', value: '50' } });
       const input = fixture.query('input');
 
       expect(input).toBeTruthy();
-      expect(input?.getAttribute('name')).toBe('volume');
       expect(input?.getAttribute('aria-hidden')).toBe('true');
       expect(input?.getAttribute('tabindex')).toBe('-1');
     });
@@ -42,7 +41,7 @@ describe('bit-slider', () => {
 
   describe('Value Management', () => {
     it('should have default min, max, and value', async () => {
-      fixture = await createFixture('bit-slider');
+      fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('0');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('100');
@@ -50,28 +49,28 @@ describe('bit-slider', () => {
     });
 
     it('should set initial value', async () => {
-      fixture = await createFixture('bit-slider', { value: '50' });
+      fixture = await mount('bit-slider', { attrs: { value: '50' } });
 
       expect(fixture.element.getAttribute('value')).toBe('50');
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
     });
 
     it('should set custom min and max', async () => {
-      fixture = await createFixture('bit-slider', { max: '90', min: '10' });
+      fixture = await mount('bit-slider', { attrs: { max: '90', min: '10' } });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('10');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('90');
     });
 
     it('should update progress CSS variable on initial render', async () => {
-      fixture = await createFixture('bit-slider', { max: '100', min: '0', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { max: '100', min: '0', value: '50' } });
 
       const progress = fixture.element.style.getPropertyValue('--_progress');
       expect(progress).toBe('50%');
     });
 
     it('should update progress for different value ranges', async () => {
-      fixture = await createFixture('bit-slider', { max: '200', min: '0', value: '100' });
+      fixture = await mount('bit-slider', { attrs: { max: '200', min: '0', value: '100' } });
 
       const progress = fixture.element.style.getPropertyValue('--_progress');
       expect(progress).toBe('50%');
@@ -80,86 +79,86 @@ describe('bit-slider', () => {
 
   describe('Keyboard Interaction', () => {
     it('should increase value with ArrowRight', async () => {
-      fixture = await createFixture('bit-slider', { step: '10', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
-      expect(fixture.element.getAttribute('value')).toBe('60');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('60');
       expect(changeHandler).toHaveBeenCalled();
     });
 
     it('should increase value with ArrowUp', async () => {
-      fixture = await createFixture('bit-slider', { step: '5', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { step: '5', value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowUp');
+      await user.press(fixture.element, 'ArrowUp');
 
-      expect(fixture.element.getAttribute('value')).toBe('55');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('55');
     });
 
     it('should decrease value with ArrowLeft', async () => {
-      fixture = await createFixture('bit-slider', { step: '10', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowLeft');
+      await user.press(fixture.element, 'ArrowLeft');
 
-      expect(fixture.element.getAttribute('value')).toBe('40');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('40');
     });
 
     it('should decrease value with ArrowDown', async () => {
-      fixture = await createFixture('bit-slider', { step: '5', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { step: '5', value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowDown');
+      await user.press(fixture.element, 'ArrowDown');
 
-      expect(fixture.element.getAttribute('value')).toBe('45');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('45');
     });
 
     it('should set to min with Home key', async () => {
-      fixture = await createFixture('bit-slider', { max: '100', min: '10', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { max: '100', min: '10', value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'Home');
+      await user.press(fixture.element, 'Home');
 
-      expect(fixture.element.getAttribute('value')).toBe('10');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('10');
     });
 
     it('should set to max with End key', async () => {
-      fixture = await createFixture('bit-slider', { max: '90', min: '0', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { max: '90', min: '0', value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'End');
+      await user.press(fixture.element, 'End');
 
-      expect(fixture.element.getAttribute('value')).toBe('90');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('90');
     });
 
     it('should respect step size', async () => {
-      fixture = await createFixture('bit-slider', { step: '25', value: '0' });
+      fixture = await mount('bit-slider', { attrs: { step: '25', value: '0' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
-      expect(fixture.element.getAttribute('value')).toBe('25');
+      await user.press(fixture.element, 'ArrowRight');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('25');
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
-      expect(fixture.element.getAttribute('value')).toBe('50');
+      await user.press(fixture.element, 'ArrowRight');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
     });
 
     it('should not exceed max with keyboard', async () => {
-      fixture = await createFixture('bit-slider', { max: '100', step: '10', value: '95' });
+      fixture = await mount('bit-slider', { attrs: { max: '100', step: '10', value: '95' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
-      expect(fixture.element.getAttribute('value')).toBe('100');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('100');
     });
 
     it('should not go below min with keyboard', async () => {
-      fixture = await createFixture('bit-slider', { min: '0', step: '10', value: '5' });
+      fixture = await mount('bit-slider', { attrs: { min: '0', step: '10', value: '5' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowLeft');
+      await user.press(fixture.element, 'ArrowLeft');
 
-      expect(fixture.element.getAttribute('value')).toBe('0');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('0');
     });
   });
 
   describe('Disabled State', () => {
     it('should apply disabled state', async () => {
-      fixture = await createFixture('bit-slider', { disabled: true });
+      fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
       expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
@@ -167,18 +166,18 @@ describe('bit-slider', () => {
     });
 
     it('should prevent keyboard interaction when disabled', async () => {
-      fixture = await createFixture('bit-slider', { disabled: true, value: '50' });
+      fixture = await mount('bit-slider', { attrs: { disabled: true, value: '50' } });
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
       expect(changeHandler).not.toHaveBeenCalled();
-      expect(fixture.element.getAttribute('value')).toBe('50');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
     });
 
     it('should sync disabled state with ARIA', async () => {
-      fixture = await createFixture('bit-slider', { disabled: true });
+      fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
       expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
@@ -188,11 +187,11 @@ describe('bit-slider', () => {
 
   describe('Events', () => {
     it('should emit change event with correct detail', async () => {
-      fixture = await createFixture('bit-slider', { value: '50' });
+      fixture = await mount('bit-slider', { attrs: { value: '50' } });
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
       expect(changeHandler).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -205,10 +204,10 @@ describe('bit-slider', () => {
     });
 
     it('should emit event asynchronously', async () => {
-      fixture = await createFixture('bit-slider', { value: '20' });
+      fixture = await mount('bit-slider', { attrs: { value: '20' } });
 
       const eventPromise = waitForEvent(fixture.element, 'change');
-      await userEvent.keyboard(fixture.element, 'ArrowUp');
+      await user.press(fixture.element, 'ArrowUp');
       const event = (await eventPromise) as CustomEvent;
 
       expect(event.type).toBe('change');
@@ -216,11 +215,11 @@ describe('bit-slider', () => {
     });
 
     it('should not emit event if value does not change', async () => {
-      fixture = await createFixture('bit-slider', { max: '100', value: '100' });
+      fixture = await mount('bit-slider', { attrs: { max: '100', value: '100' } });
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
       expect(changeHandler).not.toHaveBeenCalled();
     });
@@ -231,7 +230,7 @@ describe('bit-slider', () => {
 
     colors.forEach((color) => {
       it(`should apply ${color} color`, async () => {
-        fixture = await createFixture('bit-slider', { color });
+        fixture = await mount('bit-slider', { attrs: { color } });
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
     });
@@ -242,7 +241,7 @@ describe('bit-slider', () => {
 
     sizes.forEach((size) => {
       it(`should apply ${size} size`, async () => {
-        fixture = await createFixture('bit-slider', { size });
+        fixture = await mount('bit-slider', { attrs: { size } });
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
     });
@@ -250,25 +249,25 @@ describe('bit-slider', () => {
 
   describe('Accessibility', () => {
     it('should have proper ARIA role', async () => {
-      fixture = await createFixture('bit-slider');
+      fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
     });
 
     it('should be keyboard accessible', async () => {
-      fixture = await createFixture('bit-slider');
+      fixture = await mount('bit-slider');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
     });
 
     it('should not be keyboard accessible when disabled', async () => {
-      fixture = await createFixture('bit-slider', { disabled: true });
+      fixture = await mount('bit-slider', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
     });
 
     it('should have proper ARIA attributes', async () => {
-      fixture = await createFixture('bit-slider', { max: '95', min: '5', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { max: '95', min: '5', value: '50' } });
 
       expect(fixture.element.getAttribute('role')).toBe('slider');
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('5');
@@ -279,53 +278,42 @@ describe('bit-slider', () => {
 
   describe('Form Integration', () => {
     it('should include name attribute for form submission', async () => {
-      fixture = await createFixture('bit-slider', { name: 'volume', value: '50' });
-      const input = fixture.query('input') as HTMLInputElement;
+      fixture = await mount('bit-slider', { attrs: { name: 'volume', value: '50' } });
 
-      expect(input?.getAttribute('name')).toBe('volume');
-      expect(input?.value).toBe('50');
-    });
-
-    it('should sync value with hidden input', async () => {
-      fixture = await createFixture('bit-slider', { name: 'brightness', value: '25' });
-
-      await fixture.setAttribute('value', '75');
-      await fixture.update();
-      const input = fixture.query('input') as HTMLInputElement;
-
-      expect(input?.value).toBe('75');
+      expect(fixture.element.getAttribute('name')).toBe('volume');
+      expect(fixture.element.getAttribute('value')).toBe('50');
     });
   });
 
   describe('Step Attribute', () => {
     it('should use default step of 1', async () => {
-      fixture = await createFixture('bit-slider', { value: '50' });
+      fixture = await mount('bit-slider', { attrs: { value: '50' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
-      expect(fixture.element.getAttribute('value')).toBe('51');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('51');
     });
 
     it('should respect custom step', async () => {
-      fixture = await createFixture('bit-slider', { step: '5', value: '0' });
+      fixture = await mount('bit-slider', { attrs: { step: '5', value: '0' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
-      expect(fixture.element.getAttribute('value')).toBe('5');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('5');
     });
 
     it('should work with decimal steps', async () => {
-      fixture = await createFixture('bit-slider', { step: '0.5', value: '0' });
+      fixture = await mount('bit-slider', { attrs: { step: '0.5', value: '0' } });
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
-      expect(fixture.element.getAttribute('value')).toBe('0.5');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('0.5');
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle negative min values', async () => {
-      fixture = await createFixture('bit-slider', { max: '50', min: '-50', value: '0' });
+      fixture = await mount('bit-slider', { attrs: { max: '50', min: '-50', value: '0' } });
 
       expect(fixture.element.getAttribute('aria-valuemin')).toBe('-50');
       expect(fixture.element.getAttribute('aria-valuemax')).toBe('50');
@@ -333,20 +321,20 @@ describe('bit-slider', () => {
     });
 
     it('should handle large value ranges', async () => {
-      fixture = await createFixture('bit-slider', { max: '10000', min: '0', value: '5000' });
+      fixture = await mount('bit-slider', { attrs: { max: '10000', min: '0', value: '5000' } });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('5000');
     });
 
     it('should handle min equals max', async () => {
-      fixture = await createFixture('bit-slider', { max: '50', min: '50', value: '50' });
+      fixture = await mount('bit-slider', { attrs: { max: '50', min: '50', value: '50' } });
       const changeHandler = vi.fn();
       fixture.element.addEventListener('change', changeHandler);
 
-      await userEvent.keyboard(fixture.element, 'ArrowRight');
+      await user.press(fixture.element, 'ArrowRight');
 
       expect(changeHandler).not.toHaveBeenCalled();
-      expect(fixture.element.getAttribute('value')).toBe('50');
+      expect(fixture.element.getAttribute('aria-valuenow')).toBe('50');
     });
   });
 });

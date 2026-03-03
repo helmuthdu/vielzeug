@@ -1,41 +1,57 @@
+---
+title: Snapit — Usage Guide
+description: Core concepts, patterns, and testing strategies for snapit reactive state management.
+---
+
 # Snapit Usage Guide
 
-Complete guide to using snapit in your projects.
-
-::: tip 💡 API Reference
-This guide covers usage patterns and examples. For complete type definitions, see [API Reference](./api.md).
+::: tip New to Snapit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Snapit?
 
-::: code-group
+Snapit gives you reactive state without the ceremony of larger stores like Redux or Zustand:
 
-```sh [pnpm]
-pnpm add @vielzeug/snapit
+```ts
+// Before — manual event emitter approach
+let state = { count: 0 };
+const listeners = new Set();
+function setState(patch) {
+  state = { ...state, ...patch };
+  listeners.forEach(fn => fn(state));
+}
+
+// After — snapit
+import { createSnapshot } from '@vielzeug/snapit';
+const counter = createSnapshot({ count: 0 });
+counter.subscribe((curr, prev) => console.log(curr.count));
+counter.set({ count: 1 });
 ```
 
-```sh [npm]
-npm install @vielzeug/snapit
-```
+| | Snapit | Redux | Zustand | MobX |
+|---|---|---|---|---|
+| Bundle size | ~1 kB | ~16 kB | ~3 kB | ~22 kB |
+| Boilerplate | Minimal | High | Low | Moderate |
+| Async support | Built-in | Middleware | Built-in | Built-in |
+| Computed values | Built-in | Selectors | Manual | Built-in |
+| Transactions | Built-in | Manual | Manual | Built-in |
+| Framework | Agnostic | Agnostic | React | Agnostic |
 
-```sh [yarn]
-yarn add @vielzeug/snapit
-```
+**Use snapit when** you want reactive state with zero dependencies, need testing helpers out of the box, or prefer plain function calls over reducers and actions.
 
-:::
+**Consider alternatives when** you need Redux DevTools ecosystem, time-travel debugging, or already depend on a framework's built-in state.
 
 ## Import
 
 ```ts
-import { createSnapshot } from '@vielzeug/snapit';
-
-// Optional: Import types and utilities
-import type { State, StateOptions, Listener, Selector } from '@vielzeug/snapit';
+import { createSnapshot, createTestState, withStateMock } from '@vielzeug/snapit';
 import { shallowEqual, shallowMerge } from '@vielzeug/snapit';
+
+// Optional: Import types
+import type { State, Snapshot, StateOptions, SubscribeOptions, Listener, Selector } from '@vielzeug/snapit';
 ```
 
 ## State Creation
@@ -387,8 +403,8 @@ const state = createSnapshot({ count: 0 });
 
 const result = await state.runInScope(
   async (scopedState) => {
-    // Scoped state starts with parent value
-    console.log(scopedState.get().count); // 0
+    // Scoped state starts with the patch merged into parent state
+    console.log(scopedState.get().count); // 42
 
     // Modify scoped state
     scopedState.set({ count: 999 });
@@ -399,7 +415,7 @@ const result = await state.runInScope(
 
     return 'completed';
   },
-  { isTemporary: true }, // Optional override
+  { count: 42 }, // Optional starting patch merged into parent state
 );
 
 // Original state unchanged
@@ -562,7 +578,7 @@ import { createTestState } from '@vielzeug/snapit';
 
 describe('Counter', () => {
   it('increments count', () => {
-    const { state, dispose } = createTestState(null, { count: 0 });
+    const { state, dispose } = createTestState({ count: 0 });
 
     state.set({ count: 1 });
     expect(state.get().count).toBe(1);
@@ -616,7 +632,7 @@ it('shows admin panel for admin users', async () => {
       // The scoped state has the mocked values
       const result = checkAdminStatus(scopedState);
       expect(result).toBe('Admin Panel');
-      
+
       // You can read the mocked values
       expect(scopedState.get().isAdmin).toBe(true);
       expect(scopedState.get().count).toBe(0);
@@ -714,9 +730,9 @@ function renderAdminPanel(): string {
 it('shows admin panel', () => {
   // Set the state directly
   appState.set({ isAdmin: true });
-  
+
   expect(renderAdminPanel()).toBe('Admin Panel');
-  
+
   // Clean up
   appState.reset();
 });

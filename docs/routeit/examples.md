@@ -1,14 +1,19 @@
+---
+title: Routeit — Examples
+description: Real-world routing patterns and framework integrations for Routeit.
+---
+
 # Routeit Examples
 
-Real-world examples demonstrating common use cases and patterns with Routeit.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 
@@ -221,19 +226,11 @@ const RouterContext = createContext<Router>(router);
 // Custom hook
 function useRouter() {
   const router = useContext(RouterContext);
-  const [state, setState] = useState({
-    pathname: router.getCurrentPath(),
-    params: router.getParams(),
-    query: router.getCurrentQuery(),
-  });
+  const [state, setState] = useState(() => router.getState());
 
   useEffect(() => {
     return router.subscribe(() => {
-      setState({
-        pathname: router.getCurrentPath(),
-        params: router.getParams(),
-        query: router.getCurrentQuery(),
-      });
+      setState(router.getState());
     });
   }, [router]);
 
@@ -302,16 +299,18 @@ const router = createRouter();
 // Composable
 function useRouter() {
   const router = inject<Router>('router');
-  const pathname = ref(router.getCurrentPath());
-  const params = ref(router.getParams());
-  const query = ref(router.getCurrentQuery());
+  const { pathname: p, params: r, query: q } = router.getState();
+  const pathname = ref(p);
+  const params = ref(r);
+  const query = ref(q);
 
   let unsubscribe;
   onMounted(() => {
     unsubscribe = router.subscribe(() => {
-      pathname.value = router.getCurrentPath();
-      params.value = router.getParams();
-      query.value = router.getCurrentQuery();
+      const state = router.getState();
+      pathname.value = state.pathname;
+      params.value = state.params;
+      query.value = state.query;
     });
   });
 
@@ -362,18 +361,10 @@ const { pathname, params, navigate, isActive } = useRouter();
   const router = createRouter();
 
   function createRouterStore() {
-    const { subscribe, set } = writable({
-      pathname: router.getCurrentPath(),
-      params: router.getParams(),
-      query: router.getCurrentQuery(),
-    });
+    const { subscribe, set } = writable(router.getState());
 
     router.subscribe(() => {
-      set({
-        pathname: router.getCurrentPath(),
-        params: router.getParams(),
-        query: router.getCurrentQuery(),
-      });
+      set(router.getState());
     });
 
     return {
@@ -439,11 +430,7 @@ class AdvancedRouter extends HTMLElement {
   }
 
   static getState() {
-    return {
-      pathname: this.#router.getCurrentPath(),
-      params: this.#router.getParams(),
-      query: this.#router.getCurrentQuery(),
-    };
+    return this.#router.getState();
   }
 
   static navigate(path) {
@@ -649,26 +636,28 @@ Using @vielzeug/permit for fine-grained access control.
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
-import { Permit } from '@vielzeug/permit';
+import { createPermit } from '@vielzeug/permit';
 import type { Middleware, RouteContext } from '@vielzeug/routeit';
 import type { BaseUser, PermissionAction } from '@vielzeug/permit';
 
+const permit = createPermit();
+
 // Define permissions
-Permit.register('admin', 'posts', {
+permit.set('admin', 'posts', {
   read: true,
   create: true,
   update: true,
   delete: true,
 });
 
-Permit.register('editor', 'posts', {
+permit.set('editor', 'posts', {
   read: true,
   create: true,
   update: (user, data) => user.id === data.authorId,
   delete: false,
 });
 
-Permit.register('viewer', 'posts', {
+permit.set('viewer', 'posts', {
   read: true,
   create: false,
   update: false,
@@ -685,7 +674,7 @@ function requirePermission(resource: string, action: PermissionAction): Middlewa
       return;
     }
 
-    if (!Permit.check(user, resource, action)) {
+    if (!permit.check(user, resource, action)) {
       ctx.navigate('/forbidden');
       return;
     }

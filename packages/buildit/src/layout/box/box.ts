@@ -1,7 +1,8 @@
+import { css, define, html } from '@vielzeug/craftit';
 import { colorThemeMixin, frostVariantMixin, rainbowEffectMixin } from '../../styles';
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   /* Color themes - mixin already defines @layer buildit.themes */
   ${colorThemeMixin()}
 
@@ -146,7 +147,8 @@ const styles = /* css */ `
     :host([rounded='3xl']) {
       --_radius: var(--rounded-3xl);
     }
-    :host([rounded='full']), :host([rounded='']) {
+    :host([rounded='full']),
+    :host([rounded='']) {
       --_radius: var(--rounded-full);
     }
   }
@@ -205,27 +207,11 @@ export interface BoxProps {
  * <bit-box as="section" color="primary">Semantic section</bit-box>
  * ```
  */
-class BitBox extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  connectedCallback() {
-    this.render();
-  }
-
-  render() {
-    const tagName = this.getAttribute('as') || 'div';
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
-      <${tagName} class="box" part="box"><slot></slot></${tagName}>
-    `;
-  }
-}
-
-if (!customElements.get('bit-box')) {
-  customElements.define('bit-box', BitBox);
-}
+define('bit-box', () => {
+  return {
+    styles: [styles],
+    template: html`<div class="box" part="box"><slot></slot></div>`,
+  };
+});
 
 export default {};

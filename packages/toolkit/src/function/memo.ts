@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import type { Fn } from '../types';
 
 // #region MemoizeOptions
@@ -41,20 +40,10 @@ export function memo<T extends Fn>(
 ): (...args: Parameters<T>) => ReturnType<T> {
   const cache = new Map<string, CacheEntry<T>>();
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   const keyGen = (args: Parameters<T>): string => {
     if (resolver) return resolver(...args);
-    if (args.length === 0) return '__empty__';
-    if (args.length === 1) {
-      const arg = args[0];
-      const argType = typeof arg;
-      if (argType === 'string' || argType === 'number' || argType === 'boolean') {
-        return `${argType}:${arg}`;
-      }
-      if (arg === null) return 'null';
-      if (arg === undefined) return 'undefined';
-    }
-    return JSON.stringify(args);
+    // Use a replacer to distinguish undefined from null (JSON.stringify collapses both to null)
+    return JSON.stringify(args, (_, v) => (v === undefined ? '__undefined__' : v));
   };
 
   return (...args: Parameters<T>): ReturnType<T> => {

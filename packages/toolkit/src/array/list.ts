@@ -208,9 +208,9 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
       update();
     },
     search(q, opts) {
-      query = q;
-      offset = 0;
       if (opts?.immediate) {
+        query = q;
+        offset = 0;
         update();
       } else {
         debouncedSearch(q, cfg.debounceMs ?? DEFAULTS.debounceMs);

@@ -26,7 +26,6 @@ export type Lifetime = 'singleton' | 'transient' | 'scoped';
 
 export type ValueProvider<T> = {
   useValue: T;
-  lifetime?: Lifetime;
 };
 
 export type ClassProvider<T> = {
@@ -39,15 +38,9 @@ export type FactoryProvider<T> = {
   useFactory: (...deps: any[]) => T | Promise<T>;
   deps?: Token<any>[];
   lifetime?: Lifetime;
-  async?: boolean;
 };
 
 export type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
-
-export type ContainerOptions = {
-  parent?: Container;
-  allowOptional?: boolean;
-};
 
 /** -------------------- Token Creation -------------------- **/
 
@@ -61,24 +54,27 @@ export function createToken<T = unknown>(description?: string): Token<T> {
 
 /** -------------------- Errors -------------------- **/
 
+function tokenName(token: Token<any>): string {
+  return token.description ?? 'anonymous';
+}
+
 export class CircularDependencyError extends Error {
   constructor(path: Token<any>[]) {
-    const cycle = path.map((t) => t.description || 'anonymous').join(' → ');
-    super(`Circular dependency detected: ${cycle}`);
+    super(`Circular dependency detected: ${path.map(tokenName).join(' → ')}`);
     this.name = 'CircularDependencyError';
   }
 }
 
 export class ProviderNotFoundError extends Error {
   constructor(token: Token<any>) {
-    super(`No provider registered for token: ${token.description || 'anonymous'}`);
+    super(`No provider registered for token: ${tokenName(token)}`);
     this.name = 'ProviderNotFoundError';
   }
 }
 
 export class AsyncProviderError extends Error {
   constructor(token: Token<any>) {
-    super(`Provider for token "${token.description || 'anonymous'}" is async. Use getAsync() instead.`);
+    super(`Provider for token "${tokenName(token)}" is async. Use getAsync() instead.`);
     this.name = 'AsyncProviderError';
   }
 }
@@ -91,31 +87,15 @@ type Registration<T = unknown> = {
   promise?: Promise<T>;
 };
 
-/** -------------------- Type Guards -------------------- **/
-
-function isValueProvider<T>(p: Provider<T>): p is ValueProvider<T> {
-  return 'useValue' in p;
-}
-
-function isClassProvider<T>(p: Provider<T>): p is ClassProvider<T> {
-  return 'useClass' in p;
-}
-
-function isFactoryProvider<T>(p: Provider<T>): p is FactoryProvider<T> {
-  return 'useFactory' in p;
-}
-
 /** -------------------- Container -------------------- **/
 
 export class Container {
   #registry = new Map<Token<any>, Registration<any>>();
   #aliases = new Map<Token<any>, Token<any>>();
   #parent?: Container;
-  #allowOptional: boolean;
 
-  constructor(options?: ContainerOptions) {
-    this.#parent = options?.parent;
-    this.#allowOptional = options?.allowOptional ?? false;
+  constructor(parent?: Container) {
+    this.#parent = parent;
   }
 
   /**
@@ -136,8 +116,8 @@ export class Container {
    * @example
    * container.registerValue(Config, { apiUrl: 'https://api.example.com' });
    */
-  registerValue<T>(token: Token<T>, value: T, lifetime: Lifetime = 'singleton'): this {
-    return this.register(token, { lifetime, useValue: value });
+  registerValue<T>(token: Token<T>, value: T): this {
+    return this.register(token, { useValue: value });
   }
 
   /**
@@ -153,12 +133,10 @@ export class Container {
   registerFactory<T>(
     token: Token<T>,
     factory: (...deps: any[]) => T | Promise<T>,
-    deps: Token<any>[] = [],
-    options?: { lifetime?: Lifetime; async?: boolean },
+    options?: { deps?: Token<any>[]; lifetime?: Lifetime },
   ): this {
     return this.register(token, {
-      async: options?.async,
-      deps,
+      deps: options?.deps ?? [],
       lifetime: options?.lifetime ?? 'transient',
       useFactory: factory,
     });
@@ -200,9 +178,10 @@ export class Container {
   /**
    * Clear all registrations in this container
    */
-  clear(): void {
+  clear(): this {
     this.#registry.clear();
     this.#aliases.clear();
+    return this;
   }
 
   /**
@@ -265,10 +244,7 @@ export class Container {
    * ]);
    */
   createChild(overrides?: Array<[Token<any>, Provider<any>]>): Container {
-    const child = new Container({
-      allowOptional: this.#allowOptional,
-      parent: this,
-    });
+    const child = new Container(this);
 
     if (overrides) {
       child.registerMany(overrides);
@@ -304,11 +280,8 @@ export class Container {
    */
   debug(): { tokens: string[]; aliases: Array<[string, string]> } {
     return {
-      aliases: Array.from(this.#aliases.entries()).map(([alias, source]) => [
-        alias.description || 'anonymous',
-        source.description || 'anonymous',
-      ]),
-      tokens: Array.from(this.#registry.keys()).map((t) => t.description || 'anonymous'),
+      aliases: Array.from(this.#aliases.entries()).map(([alias, source]) => [tokenName(alias), tokenName(source)]),
+      tokens: Array.from(this.#registry.keys()).map(tokenName),
     };
   }
 
@@ -320,7 +293,7 @@ export class Container {
 
     while (this.#aliases.has(current)) {
       if (visited.has(current)) {
-        throw new Error(`Alias cycle detected for token: ${token.description || 'anonymous'}`);
+        throw new Error(`Alias cycle detected for token: ${tokenName(token)}`);
       }
       visited.add(current);
       current = this.#aliases.get(current)!;
@@ -348,79 +321,56 @@ export class Container {
     const registration = this.#getRegistration(resolved);
 
     if (!registration) {
-      if (this.#allowOptional) {
-        return undefined as T;
-      }
       throw new ProviderNotFoundError(resolved);
     }
 
     // Value provider
-    if (isValueProvider(registration.provider)) {
-      return registration.provider.useValue;
+    if ('useValue' in registration.provider) {
+      return (registration.provider as ValueProvider<T>).useValue;
     }
 
     // Class provider
-    if (isClassProvider(registration.provider)) {
+    if ('useClass' in registration.provider) {
       return this.#resolveClass(resolved, registration, stack);
     }
 
     // Factory provider
-    if (isFactoryProvider(registration.provider)) {
+    if ('useFactory' in registration.provider) {
       return this.#resolveFactory(resolved, registration, stack);
     }
 
     throw new Error('Invalid provider type');
   }
 
+  #getCached<T>(reg: Registration<T>, lifetime: Lifetime): T | undefined {
+    if (reg.instance && (lifetime === 'singleton' || (lifetime === 'scoped' && !this.#parent)))
+      return reg.instance as T;
+  }
+
+  #setCached<T>(reg: Registration<T>, instance: T, lifetime: Lifetime): void {
+    if (lifetime === 'singleton' || (lifetime === 'scoped' && !this.#parent)) reg.instance = instance;
+  }
+
   #resolveClass<T>(token: Token<T>, registration: Registration<T>, stack: Token<any>[]): T {
     const provider = registration.provider as ClassProvider<T>;
     const lifetime = provider.lifetime ?? 'singleton';
-
-    if (lifetime === 'singleton' && registration.instance) {
-      return registration.instance;
-    }
-
-    if (lifetime === 'scoped' && registration.instance && !this.#parent) {
-      return registration.instance;
-    }
-
+    const cached = this.#getCached<T>(registration, lifetime);
+    if (cached) return cached;
     const deps = (provider.deps ?? []).map((dep) => this.#resolve(dep, [...stack, token]));
     const instance = new provider.useClass(...deps);
-
-    if (lifetime === 'singleton') {
-      registration.instance = instance;
-    } else if (lifetime === 'scoped' && !this.#parent) {
-      registration.instance = instance;
-    }
-
+    this.#setCached(registration, instance, lifetime);
     return instance;
   }
 
   #resolveFactory<T>(token: Token<T>, registration: Registration<T>, stack: Token<any>[]): T {
     const provider = registration.provider as FactoryProvider<T>;
     const lifetime = provider.lifetime ?? 'transient';
-
-    if (provider.async) {
-      throw new AsyncProviderError(token);
-    }
-
-    if (lifetime === 'singleton' && registration.instance) {
-      return registration.instance;
-    }
-
-    if (lifetime === 'scoped' && registration.instance && !this.#parent) {
-      return registration.instance;
-    }
-
+    const cached = this.#getCached<T>(registration, lifetime);
+    if (cached) return cached;
     const deps = (provider.deps ?? []).map((dep) => this.#resolve(dep, [...stack, token]));
     const instance = provider.useFactory(...deps) as T;
-
-    if (lifetime === 'singleton') {
-      registration.instance = instance;
-    } else if (lifetime === 'scoped' && !this.#parent) {
-      registration.instance = instance;
-    }
-
+    if (instance instanceof Promise) throw new AsyncProviderError(token);
+    this.#setCached(registration, instance, lifetime);
     return instance;
   }
 
@@ -434,24 +384,21 @@ export class Container {
     const registration = this.#getRegistration(resolved);
 
     if (!registration) {
-      if (this.#allowOptional) {
-        return undefined as T;
-      }
       throw new ProviderNotFoundError(resolved);
     }
 
     // Value provider
-    if (isValueProvider(registration.provider)) {
-      return registration.provider.useValue;
+    if ('useValue' in registration.provider) {
+      return (registration.provider as ValueProvider<T>).useValue;
     }
 
     // Class provider
-    if (isClassProvider(registration.provider)) {
+    if ('useClass' in registration.provider) {
       return this.#resolveClassAsync(resolved, registration, stack);
     }
 
     // Factory provider
-    if (isFactoryProvider(registration.provider)) {
+    if ('useFactory' in registration.provider) {
       return this.#resolveFactoryAsync(resolved, registration, stack);
     }
 
@@ -521,8 +468,8 @@ export class Container {
  * const container = createContainer();
  * const container = createContainer({ parent: rootContainer });
  */
-export function createContainer(options?: ContainerOptions): Container {
-  return new Container(options);
+export function createContainer(parent?: Container): Container {
+  return new Container(parent);
 }
 
 /** -------------------- Testing Helpers -------------------- **/
@@ -559,32 +506,16 @@ export async function withMock<T, R>(
   mock: T,
   fn: () => Promise<R> | R,
 ): Promise<R> {
-  // Create a child container with the mock
-  const child = container.createChild([[token, { useValue: mock }]]);
-
+  const hadOriginal = container.has(token);
+  const originalValue = hadOriginal ? container.getOptional(token) : undefined;
+  container.register(token, { useValue: mock });
   try {
-    // Temporarily replace the original container's registration
-    const hadOriginal = container.has(token);
-    let originalValue: T | undefined;
-
-    if (hadOriginal) {
-      originalValue = container.getOptional(token);
-    }
-
-    // Override with mock
-    container.register(token, { useValue: mock });
-
-    try {
-      return await fn();
-    } finally {
-      // Restore original or unregister
-      if (hadOriginal && originalValue !== undefined) {
-        container.register(token, { useValue: originalValue });
-      } else if (!hadOriginal) {
-        container.unregister(token);
-      }
-    }
+    return await fn();
   } finally {
-    child.clear();
+    if (hadOriginal && originalValue !== undefined) {
+      container.register(token, { useValue: originalValue });
+    } else if (!hadOriginal) {
+      container.unregister(token);
+    }
   }
 }

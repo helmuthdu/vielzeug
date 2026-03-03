@@ -6,6 +6,8 @@ import { retry } from '@vielzeug/toolkit';
 
 /* -------------------- Core Types -------------------- */
 
+export type LogLevel = 'info' | 'error';
+
 export type QueryKey = readonly unknown[];
 
 export type QueryStatus = 'idle' | 'pending' | 'success' | 'error';
@@ -35,7 +37,7 @@ export type QueryOptions<T> = {
   onError?: (err: Error) => void;
 };
 
-export type MutationOptions<TData, TVariables> = {
+export type MutationOptions<TData, TVariables = void> = {
   mutationFn: (variables: TVariables) => Promise<TData>;
   onSuccess?: (data: TData, variables: TVariables) => void;
   onError?: (err: Error, variables: TVariables) => void;
@@ -44,10 +46,13 @@ export type MutationOptions<TData, TVariables> = {
   retryDelay?: number | ((attempt: number) => number);
 };
 
-export type HttpRequestConfig = Omit<RequestInit, 'body'> & {
+export type ParamValue = string | number | boolean | undefined;
+export type Params = Record<string, ParamValue>;
+
+export type HttpRequestConfig = Omit<RequestInit, 'body' | 'method'> & {
   body?: unknown;
-  params?: Record<string, string | number | boolean | undefined>;
-  query?: Record<string, string | number | boolean | undefined>;
+  params?: Params;
+  query?: Params;
   dedupe?: boolean;
 };
 
@@ -56,7 +61,7 @@ export type HttpClientOptions = {
   headers?: Record<string, string>;
   timeout?: number;
   dedupe?: boolean;
-  logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void;
+  logger?: (level: LogLevel, msg: string, meta?: unknown) => void;
 };
 
 export type QueryClientOptions = {
@@ -66,17 +71,16 @@ export type QueryClientOptions = {
 
 /* -------------------- Constants -------------------- */
 
-const DEFAULT_STALE = 0;
 const DEFAULT_GC = 5 * 60_000;
 const DEFAULT_TIMEOUT = 30_000;
 const DEFAULT_RETRY = 3;
-const DEFAULT_DEDUPE = true;
 const CONTENT_TYPE_JSON = 'application/json';
 const HEADER_CONTENT_TYPE = 'content-type';
 
 /* -------------------- Errors -------------------- */
 
 export class HttpError extends Error {
+  readonly name = 'HttpError';
   readonly url: string;
   readonly method: string;
   readonly status?: number;
@@ -84,7 +88,6 @@ export class HttpError extends Error {
 
   constructor(msg: string, url: string, method: string, status?: number, original?: unknown) {
     super(msg);
-    this.name = 'HttpError';
     this.url = url;
     this.method = method;
     this.status = status;
@@ -106,13 +109,8 @@ function toError(e: unknown): Error {
  * @param query - Query string parameters (e.g., { page: 1, limit: 10 } -> '?page=1&limit=10')
  * @returns Full URL with path parameters replaced and query string appended
  */
-function buildUrl(
-  base: string,
-  path: string,
-  params?: Record<string, string | number | boolean | undefined>,
-  query?: Record<string, string | number | boolean | undefined>,
-) {
-  const baseClean = (base || '').replace(/\/+$/, '');
+function buildUrl(base: string, path: string, params?: Params, query?: Params) {
+  const baseClean = base.replace(/\/+$/, '');
   let pathClean = path.replace(/^\/+/, '');
 
   // Replace path parameters (supports both :param and {param} syntax)
@@ -143,17 +141,15 @@ function buildUrl(
 }
 
 function isBodyInit(value: unknown): value is BodyInit {
-  if (typeof FormData !== 'undefined' && value instanceof FormData) return true;
-  if (typeof Blob !== 'undefined' && value instanceof Blob) return true;
-  if (typeof URLSearchParams !== 'undefined' && value instanceof URLSearchParams) return true;
+  if (value instanceof FormData) return true;
+  if (value instanceof Blob) return true;
+  if (value instanceof URLSearchParams) return true;
   if (typeof value === 'string') return true;
-
   if (value instanceof ArrayBuffer) return true;
   if (value && typeof value === 'object' && Object.prototype.toString.call(value) === '[object ArrayBuffer]') {
     return true;
   }
-
-  return !!ArrayBuffer.isView?.(value);
+  return !!ArrayBuffer.isView(value);
 }
 
 /**
@@ -173,33 +169,14 @@ function stableStringify(value: unknown): string {
   return `{${pairs.join(',')}}`;
 }
 
-/**
- * Safely serialize the body for dedupe key generation.
- */
 function serializeBodyForDedupeKey(body: unknown): string {
-  if (body === undefined || body === null) {
-    return 'null';
-  }
-
-  if (typeof FormData !== 'undefined' && body instanceof FormData) {
-    return '[FormData]';
-  }
-  if (typeof Blob !== 'undefined' && body instanceof Blob) {
-    return `[Blob:${body.size}:${body.type}]`;
-  }
-  if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
-    return `[URLSearchParams:${body.toString()}]`;
-  }
-  if (body instanceof ArrayBuffer) {
-    return `[ArrayBuffer:${body.byteLength}]`;
-  }
-  if (ArrayBuffer.isView?.(body)) {
-    return `[ArrayBufferView:${body.byteLength}]`;
-  }
-  if (typeof body === 'string') {
-    return body;
-  }
-
+  if (body === undefined || body === null) return 'null';
+  if (body instanceof FormData) return '[FormData]';
+  if (body instanceof Blob) return `[Blob:${body.size}:${body.type}]`;
+  if (body instanceof URLSearchParams) return `[URLSearchParams:${body.toString()}]`;
+  if (body instanceof ArrayBuffer) return `[ArrayBuffer:${body.byteLength}]`;
+  if (ArrayBuffer.isView(body)) return `[ArrayBufferView:${(body as ArrayBufferView).byteLength}]`;
+  if (typeof body === 'string') return body;
   if (typeof body === 'object') {
     try {
       return stableStringify(body);
@@ -207,28 +184,18 @@ function serializeBodyForDedupeKey(body: unknown): string {
       return '[Object]';
     }
   }
-
-  try {
-    return JSON.stringify(body);
-  } catch {
-    return '[Unknown]';
-  }
+  return String(body);
 }
 
 /* -------------------- Signal & Timeout -------------------- */
 
 function timeoutSignal(timeoutMs: number, external?: AbortSignal | null) {
   if (timeoutMs === 0 || timeoutMs === Number.POSITIVE_INFINITY) {
-    if (external) {
-      return { clear: () => {}, signal: external };
-    }
-    const controller = new AbortController();
-    return { clear: () => {}, signal: controller.signal };
+    return { clear: () => {}, signal: external ?? undefined };
   }
 
-  if (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal && !external) {
-    const signal = (AbortSignal as { timeout(ms: number): AbortSignal }).timeout(timeoutMs);
-    return { clear: () => {}, signal };
+  if ('timeout' in AbortSignal && !external) {
+    return { clear: () => {}, signal: AbortSignal.timeout(timeoutMs) };
   }
 
   const controller = new AbortController();
@@ -253,18 +220,16 @@ function timeoutSignal(timeoutMs: number, external?: AbortSignal | null) {
 /* -------------------- Response Parsing -------------------- */
 
 async function parseResponse(res: Response): Promise<unknown> {
-  if (res.status === 204) {
-    return undefined;
-  }
+  if (res.status === 204) return;
 
   const contentType = res.headers.get(HEADER_CONTENT_TYPE) ?? '';
 
   if (contentType.includes(CONTENT_TYPE_JSON)) {
-    return await res.json();
+    return res.json();
   }
 
   if (contentType.startsWith('text/')) {
-    return await res.text();
+    return res.text();
   }
 
   try {
@@ -280,37 +245,21 @@ async function parseResponse(res: Response): Promise<unknown> {
  * Creates an HTTP client for making requests.
  */
 export function createHttpClient(opts: HttpClientOptions = {}) {
-  const {
-    baseUrl = '',
-    headers: initialHeaders = {},
-    timeout = DEFAULT_TIMEOUT,
-    dedupe = DEFAULT_DEDUPE,
-    logger,
-  } = opts;
+  const { baseUrl = '', headers: initialHeaders = {}, timeout = DEFAULT_TIMEOUT, dedupe = true, logger } = opts;
 
   const globalHeaders: Record<string, string> = { ...initialHeaders };
   const inFlight = new Map<string, Promise<unknown>>();
 
-  function log(level: 'info' | 'error', msg: string, meta?: unknown) {
-    if (logger) logger(level, msg, meta);
-  }
-
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: HTTP request handling requires complexity for deduplication, timeout, retry, and error handling
   async function request<T>(method: string, url: string, config: HttpRequestConfig = {}) {
     const full = buildUrl(baseUrl, url, config.params, config.query);
-    const m = (method || 'GET').toUpperCase();
+    const m = method.toUpperCase();
     const { body, headers, dedupe: cfgDedupe, signal: extSignal, params, query, ...rest } = config;
     const shouldDedupe = cfgDedupe !== false && dedupe;
 
-    const dedupeKey = shouldDedupe
-      ? JSON.stringify({
-          body: serializeBodyForDedupeKey(body),
-          full,
-          m,
-        })
-      : '';
+    const dedupeKey = shouldDedupe ? `${m}:${full}:${serializeBodyForDedupeKey(body)}` : '';
 
-    if (shouldDedupe && dedupeKey) {
+    if (shouldDedupe) {
       const existing = inFlight.get(dedupeKey);
       if (existing) return existing as Promise<T>;
     }
@@ -318,9 +267,9 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
     const { signal, clear } = timeoutSignal(timeout, extSignal ?? null);
 
     const init: RequestInit = {
-      method: m,
       ...rest,
       headers: { ...globalHeaders, ...(headers as Record<string, string> | undefined) },
+      method: m,
       signal,
     };
 
@@ -337,12 +286,12 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
         const res = await fetch(full, init);
         const parsed = await parseResponse(res);
 
-        log('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`, { req: init, res: parsed });
+        logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`, { req: init, res: parsed });
 
         if (!res.ok) throw new HttpError('Non-OK response', full, m, res.status, parsed);
         return parsed as T;
       } catch (err) {
-        log('error', `${m} ${full} - ERROR`, err);
+        logger?.('error', `${m} ${full} - ERROR`, err);
         if (err instanceof HttpError) throw err;
         throw new HttpError(toError(err).message, full, m, undefined, err);
       } finally {
@@ -356,11 +305,11 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
   }
 
   return {
-    delete: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('DELETE', url, cfg),
-    get: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('GET', url, cfg),
-    patch: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('PATCH', url, cfg),
-    post: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('POST', url, cfg),
-    put: (url: string, cfg?: Omit<HttpRequestConfig, 'method'>) => request('PUT', url, cfg),
+    delete: (url: string, cfg?: HttpRequestConfig) => request('DELETE', url, cfg),
+    get: (url: string, cfg?: HttpRequestConfig) => request('GET', url, cfg),
+    patch: (url: string, cfg?: HttpRequestConfig) => request('PATCH', url, cfg),
+    post: (url: string, cfg?: HttpRequestConfig) => request('POST', url, cfg),
+    put: (url: string, cfg?: HttpRequestConfig) => request('PUT', url, cfg),
     request,
     setHeaders(headers: Record<string, string | undefined>) {
       for (const [key, value] of Object.entries(headers)) {
@@ -393,11 +342,10 @@ type CacheEntry<T = unknown> = {
  * Creates a query client for managing cached queries.
  */
 export function createQueryClient(opts?: QueryClientOptions) {
-  const staleTimeDefault = opts?.staleTime ?? DEFAULT_STALE;
+  const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
 
   const cache = new Map<string, CacheEntry>();
-  const keyMap = new Map<string, string>();
 
   function keyToStr(k: QueryKey) {
     return stableStringify(k);
@@ -420,13 +368,12 @@ export function createQueryClient(opts?: QueryClientOptions) {
         status: 'idle',
       } as CacheEntry<T>;
       cache.set(id, e as CacheEntry<unknown>);
-      keyMap.set(id, id);
     }
     return e;
   }
 
-  function notify<T>(entry: CacheEntry<T>) {
-    const state: QueryState<T> = {
+  function toState<T>(entry: CacheEntry<T>): QueryState<T> {
+    return {
       data: entry.data,
       dataUpdatedAt: entry.dataUpdatedAt,
       error: entry.error,
@@ -438,6 +385,10 @@ export function createQueryClient(opts?: QueryClientOptions) {
       isSuccess: entry.status === 'success',
       status: entry.status,
     };
+  }
+
+  function notify<T>(entry: CacheEntry<T>) {
+    const state = toState(entry);
 
     entry.observers.forEach((fn) => {
       try {
@@ -448,7 +399,7 @@ export function createQueryClient(opts?: QueryClientOptions) {
     });
   }
 
-  function scheduleGc<T = unknown>(id: string, entry: CacheEntry<T>, gcTime: number) {
+  function scheduleGc(id: string, entry: { gcTimer?: CacheEntry['gcTimer'] }, gcTime: number) {
     if (entry.gcTimer) {
       clearTimeout(entry.gcTimer);
       entry.gcTimer = null;
@@ -456,18 +407,16 @@ export function createQueryClient(opts?: QueryClientOptions) {
 
     if (gcTime > 0) {
       entry.gcTimer = setTimeout(() => {
+        entry.gcTimer = null;
         cache.delete(id);
-        keyMap.delete(id);
       }, gcTime);
     }
   }
 
   function cleanupEntry(entry: CacheEntry) {
     entry.abortController?.abort();
-    if (entry.gcTimer) {
-      clearTimeout(entry.gcTimer);
-      entry.gcTimer = null;
-    }
+    clearTimeout(entry.gcTimer ?? undefined);
+    entry.gcTimer = null;
   }
 
   function getRetryConfig(
@@ -481,11 +430,9 @@ export function createQueryClient(opts?: QueryClientOptions) {
     let backoff: ((attempt: number, currentDelay: number) => number) | undefined;
 
     if (typeof retryDelay === 'function') {
-      delay = undefined;
       backoff = (attempt) => retryDelay(attempt - 1);
     } else if (typeof retryDelay === 'number') {
       delay = retryDelay;
-      backoff = undefined;
     } else {
       delay = 1000;
       backoff = (_a, cur) => Math.min(cur * 2, 30_000);
@@ -540,7 +487,7 @@ export function createQueryClient(opts?: QueryClientOptions) {
         entry.promise = null;
         entry.abortController = null;
 
-        scheduleGc(id, entry as CacheEntry<unknown>, gcTime);
+        scheduleGc(id, entry, gcTime);
 
         try {
           onSuccess?.(data);
@@ -564,11 +511,10 @@ export function createQueryClient(opts?: QueryClientOptions) {
         entry.promise = null;
         entry.abortController = null;
 
-        try {
-          if (!isAborted) {
+        if (!isAborted)
+          try {
             onError?.(error);
-          }
-        } catch {}
+          } catch {}
 
         notify(entry);
         throw error;
@@ -579,8 +525,8 @@ export function createQueryClient(opts?: QueryClientOptions) {
     return p;
   }
 
-  async function prefetch<T>(opts: QueryOptions<T>) {
-    return fetchQuery({ ...opts, enabled: true }).catch(() => {});
+  async function prefetch<T>(options: QueryOptions<T>) {
+    return fetchQuery({ ...options, enabled: true }).catch(() => {});
   }
 
   function invalidate(key: QueryKey) {
@@ -590,92 +536,54 @@ export function createQueryClient(opts?: QueryClientOptions) {
     if (exactEntry) {
       cleanupEntry(exactEntry);
       cache.delete(keyStr);
-      keyMap.delete(keyStr);
       return;
     }
 
-    const toDelete: string[] = [];
-    const prefixPattern = keyStr.slice(0, -1);
+    const prefix = `${keyStr.slice(0, -1)},`;
 
-    for (const [id, storedKeyStr] of keyMap.entries()) {
-      const matches = storedKeyStr === keyStr || storedKeyStr.startsWith(`${prefixPattern},`);
-
-      if (matches) {
+    for (const id of [...cache.keys()]) {
+      if (id.startsWith(prefix)) {
         const entry = cache.get(id);
-        if (entry) {
-          cleanupEntry(entry);
-        }
-        toDelete.push(id);
+        if (entry) cleanupEntry(entry);
+        cache.delete(id);
       }
-    }
-
-    for (const id of toDelete) {
-      cache.delete(id);
-      keyMap.delete(id);
     }
   }
 
   function clearCache() {
     cache.forEach(cleanupEntry);
     cache.clear();
-    keyMap.clear();
   }
 
   function setData<T>(key: QueryKey, dataOrUpdater: T | ((old?: T) => T)) {
     const id = keyToStr(key);
     const entry = ensureEntry<T>(key);
 
+    const now = Date.now();
     entry.data = typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old?: T) => T)(entry.data) : dataOrUpdater;
-    entry.dataUpdatedAt = Date.now();
-    entry.fetchedAt = entry.fetchedAt || Date.now();
+    entry.dataUpdatedAt = now;
+    entry.fetchedAt = entry.fetchedAt || now;
     entry.status = 'success';
 
-    scheduleGc(id, entry as CacheEntry<unknown>, gcTimeDefault);
+    scheduleGc(id, entry, gcTimeDefault);
     notify(entry);
   }
 
   function getData<T>(key: QueryKey): T | undefined {
     const id = keyToStr(key);
-    return (cache.get(id)?.data as T) ?? undefined;
+    return cache.get(id)?.data as T | undefined;
   }
 
   function getState<T>(key: QueryKey): QueryState<T> | null {
     const id = keyToStr(key);
     const entry = cache.get(id) as CacheEntry<T> | undefined;
-    if (!entry) return null;
-
-    return {
-      data: entry.data,
-      dataUpdatedAt: entry.dataUpdatedAt,
-      error: entry.error,
-      errorUpdatedAt: entry.errorUpdatedAt,
-      fetchedAt: entry.fetchedAt,
-      isError: entry.status === 'error',
-      isIdle: entry.status === 'idle',
-      isLoading: entry.status === 'pending',
-      isSuccess: entry.status === 'success',
-      status: entry.status,
-    };
+    return entry ? toState(entry) : null;
   }
 
   function subscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void) {
     const entry = ensureEntry<T>(key);
     entry.observers.add(listener);
-
-    const state: QueryState<T> = {
-      data: entry.data,
-      dataUpdatedAt: entry.dataUpdatedAt,
-      error: entry.error,
-      errorUpdatedAt: entry.errorUpdatedAt,
-      fetchedAt: entry.fetchedAt,
-      isError: entry.status === 'error',
-      isIdle: entry.status === 'idle',
-      isLoading: entry.status === 'pending',
-      isSuccess: entry.status === 'success',
-      status: entry.status,
-    };
-
-    listener(state);
+    listener(toState(entry));
     return () => entry.observers.delete(listener);
   }
 
@@ -721,3 +629,6 @@ export function createQueryClient(opts?: QueryClientOptions) {
     subscribe,
   };
 }
+
+export type HttpClient = ReturnType<typeof createHttpClient>;
+export type QueryClient = ReturnType<typeof createQueryClient>;

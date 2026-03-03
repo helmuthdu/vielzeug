@@ -396,7 +396,7 @@ describe('I18nit', () => {
   });
 
   describe('Message Management', () => {
-    test('adds messages (merge) and sets messages (replace)', () => {
+    test('adds messages (deep-merge) and sets messages (replace)', () => {
       const i18n = createI18n({
         messages: { en: { goodbye: 'Goodbye', hello: 'Hello' } },
       });
@@ -408,6 +408,18 @@ describe('I18nit', () => {
       i18n.set('en', { greeting: 'Greetings' });
       expect(i18n.t('hello')).toBe('hello'); // Removed
       expect(i18n.t('greeting')).toBe('Greetings');
+    });
+
+    test('add() deep-merges nested message objects', () => {
+      const i18n = createI18n({
+        messages: { en: { user: { farewell: 'Goodbye', greeting: 'Hello' } } },
+      });
+
+      // Adding a sibling key must not wipe existing siblings
+      i18n.add('en', { user: { title: 'Profile' } });
+      expect(i18n.t('user.greeting')).toBe('Hello');
+      expect(i18n.t('user.farewell')).toBe('Goodbye');
+      expect(i18n.t('user.title')).toBe('Profile');
     });
 
     test('gets messages for locale', () => {
@@ -622,7 +634,7 @@ describe('I18nit', () => {
       expect(i18n.t('b')).toBe('B (de)');
       expect(i18n.t('c')).toBe('C (en)');
 
-      // Cache should be cleared on locale change
+      // Locale chain is recomputed fresh on each call
       i18n.setLocale('en');
       expect(i18n.t('a')).toBe('A (en)');
     });

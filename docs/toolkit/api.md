@@ -1,10 +1,15 @@
+---
+title: Toolkit — API Reference
+description: Complete API reference for Toolkit utility functions.
+---
+
 # Toolkit API Reference
 
-Complete reference for all utilities available in `@vielzeug/toolkit`.
+[[toc]]
 
 ## Overview
 
-Toolkit provides **110+ utilities** organized into 9 categories. All utilities are:
+Toolkit provides **120+ utilities** organized into 10 categories. All utilities are:
 
 - ✅ **Type-safe** with full TypeScript inference
 - ✅ **Tree-shakeable** for minimal bundle sizes
@@ -16,7 +21,8 @@ Toolkit provides **110+ utilities** organized into 9 categories. All utilities a
 - [Array Utilities](#array-utilities) – Transform, filter, group, and sort arrays
 - [Object Utilities](#object-utilities) – Deep operations, merging, and traversal
 - [String Utilities](#string-utilities) – Formatting, casing, and manipulation
-- [Function Utilities](#function-utilities) – Debounce, throttle, memoize, and retry
+- [Function Utilities](#function-utilities) – Debounce, throttle, memoize, and more
+- [Async Utilities](#async-utilities) – Async control flow, retry, and concurrency
 - [Math Utilities](#math-utilities) – Statistics, calculations, and ranges
 - [Money Utilities](#money-utilities) – Currency formatting and conversion
 - [Date Utilities](#date-utilities) – Time intervals and differences
@@ -132,22 +138,47 @@ See [String Examples](./examples/string.md) for detailed usage.
 
 ## Function Utilities
 
-**Control execution timing and behavior.**
+**Control execution flow, composition, and assertions.**
 
 See [Function Examples](./examples/function.md) for detailed usage.
 
-| Utility                                       | Description                               | Example                                 |
-| --------------------------------------------- | ----------------------------------------- | --------------------------------------- |
-| [`debounce`](./examples/function/debounce.md) | Delay execution until idle                | `debounce(fn, 300)`                     |
-| [`throttle`](./examples/function/throttle.md) | Limit execution rate                      | `throttle(fn, 100)`                     |
-| [`memo`](./examples/function/memo.md)         | Memoize/cache function results            | `memo(expensiveFn)`                     |
-| [`retry`](./examples/function/retry.md)       | Retry failed operations                   | `retry(asyncFn, {attempts: 3})`         |
-| [`parallel`](./examples/function/parallel.md) | Process array with controlled concurrency | `parallel(5, items, asyncFn)`           |
-| [`compose`](./examples/function/compose.md)   | Compose functions right-to-left           | `compose(f, g, h)`                      |
-| [`pipe`](./examples/function/pipe.md)         | Compose functions left-to-right           | `pipe(f, g, h)`                         |
-| [`once`](./examples/function/once.md)         | Execute function only once                | `once(fn)`                              |
-| [`delay`](./examples/function/delay.md)       | Delay execution                           | `await delay(1000)`                     |
-| [`prune`](./examples/function/prune.md)       | Remove nullable/empty values              | `prune({ a: 1, b: null })` → `{ a: 1 }` |
+| Utility                                                   | Description                                     | Example                                              |
+| --------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| [`assert`](./examples/function/assert.md)                 | Assert condition (throws or warns)              | `assert(x > 0, 'Must be positive')`                  |
+| [`assertParams`](./examples/function/assertParams.md)     | Assert required object keys are present         | `assertParams(params, ['id', 'name'])`               |
+| [`compare`](./examples/function/compare.md)               | Compare two values → -1, 0, or 1               | `compare('a', 'b')` → `-1`                           |
+| [`compareBy`](./examples/function/compareBy.md)           | Multi-key object comparator                     | `compareBy({ name: 'asc', age: 'desc' })`            |
+| [`compose`](./examples/function/compose.md)               | Compose functions right-to-left                 | `compose(f, g, h)`                                   |
+| [`curry`](./examples/function/curry.md)                   | Curry function with partial application         | `curry(add)(1)(2)` → `3`                             |
+| [`debounce`](./examples/function/debounce.md)             | Delay execution until idle                      | `debounce(fn, 300)`                                  |
+| [`fp`](./examples/function/fp.md)                         | Functional programming pipeline wrapper         | `fp(map, double)([1,2,3])`                           |
+| [`memo`](./examples/function/memo.md)                     | Memoize/cache function results                  | `memo(expensiveFn)`                                  |
+| [`once`](./examples/function/once.md)                     | Execute function only once                      | `once(fn)`                                           |
+| [`pipe`](./examples/function/pipe.md)                     | Compose functions left-to-right                 | `pipe(f, g, h)`                                      |
+| [`prune`](./examples/function/prune.md)                   | Remove nullable/empty values                    | `prune({ a: 1, b: null })` → `{ a: 1 }`              |
+| [`proxy`](./examples/function/proxy.md)                   | Object proxy with get/set hooks                 | `proxy(obj, { set: logger })`                        |
+| [`throttle`](./examples/function/throttle.md)             | Limit execution rate                            | `throttle(fn, 100)`                                  |
+| [`worker`](./examples/function/worker.md)                 | Run callback in Web Worker                      | `worker(fn, [depUrls])`                              |
+
+## Async Utilities
+
+**Async control flow, retry strategies, and concurrency primitives.**
+
+See [Async Examples](./examples/async.md) for detailed usage.
+
+| Utility                                             | Description                                      | Example                                              |
+| --------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| [`attempt`](./examples/async/attempt.md)            | Execute fn with retry and error handling         | `attempt(fetchFn, { retries: 3, timeout: 5000 })`    |
+| [`defer`](./examples/async/defer.md)                | Create deferred promise with external control    | `const { promise, resolve } = defer()`               |
+| [`delay`](./examples/async/delay.md)                | Delay execution of a function                    | `await delay(() => save(), 700)`                     |
+| [`parallel`](./examples/async/parallel.md)          | Process array with controlled concurrency        | `await parallel(5, items, asyncFn)`                  |
+| [`pool`](./examples/async/pool.md)                  | Concurrency-limited promise pool                 | `const slot = pool(3); await slot(fn)`               |
+| [`predict`](./examples/async/predict.md)            | Abortable promise with timeout                   | `predict(fn, { timeout: 7000 })`                     |
+| [`queue`](./examples/async/queue.md)                | Sequential queue with concurrency control        | `const q = queue(); q.add(task)`                     |
+| [`race`](./examples/async/race.md)                  | Race promises with minimum delay                 | `race([p1, p2], 500)`                                |
+| [`retry`](./examples/async/retry.md)                | Retry async fn with backoff                      | `retry(asyncFn, { times: 3, delay: 250 })`           |
+| [`sleep`](./examples/async/sleep.md)                | Wait milliseconds                                | `await sleep(1000)`                                  |
+| [`waitFor`](./examples/async/waitFor.md)            | Poll condition until true                        | `await waitFor(() => isReady, { timeout: 5000 })`    |
 
 ## Math Utilities
 
@@ -286,21 +317,11 @@ See [Typed Examples](./examples/typed.md) for detailed usage.
 ### Individual Imports (Recommended)
 
 ```ts
-// Best for tree-shaking
+// Best for tree-shaking — all utilities come from the main package
 import { map, filter, group } from '@vielzeug/toolkit';
-```
-
-### Category Imports
-
-```ts
-import { chunk, map } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { camelCase } from '@vielzeug/toolkit/string';
-import { debounce } from '@vielzeug/toolkit/function';
-import { sum, average } from '@vielzeug/toolkit/math';
-import { interval } from '@vielzeug/toolkit/date';
-import { random, uuid } from '@vielzeug/toolkit/random';
-import { isString, isArray } from '@vielzeug/toolkit/typed';
+import { retry, sleep, parallel } from '@vielzeug/toolkit';
+import { debounce, throttle, memo } from '@vielzeug/toolkit';
+import { merge, clone, diff } from '@vielzeug/toolkit';
 ```
 
 ## See Also

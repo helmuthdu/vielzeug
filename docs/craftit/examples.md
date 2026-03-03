@@ -1,13 +1,19 @@
+---
+title: Craftit — Examples
+description: Real-world component recipes for Craftit.
+---
+
 # Craftit Examples
 
-Real-world examples demonstrating common use cases and patterns with Craftit.
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
+
 ::: tip 💡 Complete Applications
 These are complete, production-ready examples. For API reference, see [API Documentation](./api.md). For basic usage patterns, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Basic Examples
 
@@ -97,17 +103,13 @@ define('todo-list', () => {
         <button @click=${addTodo}>Add</button>
       </div>
       <ul class="todo-list">
-        ${html.each(
-          todos,
-          (todo) => todo.id,
-          (todo) => html`
+        ${html.each(todos, (todo) => todo.id, (todo) => html`
             <li class=${() => html.classes({ done: todo.done })}>
               <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
               <span>${todo.text}</span>
               <button @click=${() => removeTodo(todo.id)}>×</button>
             </li>
-          `,
-        )}
+          `)}
       </ul>
     </div>
   `;
@@ -916,31 +918,23 @@ define('modal-dialog', () => {
       height: 2rem;
     }
   `;
-  return {
-    template: html`
-      ${html.portal(
-        html.when(
-          isOpen,
-          () => html`
-            <div class="modal-overlay" @click.self=${handleClose}>
-              <div class="modal">
-                <div class="modal-header">
-                  <h2><slot name="title">Modal</slot></h2>
-                  <button class="close-button" @click=${handleClose} aria-label="Close">×</button>
-                </div>
-                <div class="modal-content">
-                  <slot></slot>
-                </div>
-              </div>
-            </div>
-          `,
-        ),
-        'body',
-      )}
-    `,
-    styles: [styles.content],
-  };
-});
+
+  return html`
+    ${html.when(isOpen, () => html`
+      <div class="modal-overlay" @click.self=${handleClose}>
+        <div class="modal">
+          <div class="modal-header">
+            <h2><slot name="title">Modal</slot></h2>
+            <button class="close-button" @click=${handleClose} aria-label="Close">×</button>
+          </div>
+          <div class="modal-content">
+            <slot></slot>
+          </div>
+        </div>
+      </div>
+    `)}
+  `;
+}, { styles: [styles.content], target: 'body' });
 ```
 
 Usage:

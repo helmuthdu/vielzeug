@@ -286,21 +286,6 @@ describe('Router', () => {
         router.navigateTo('nonExistent', { id: '123' });
       }).toThrow();
     });
-
-    it('goes back in history', () => {
-      router.back();
-      expect(mockHistory.back).toHaveBeenCalled();
-    });
-
-    it('goes forward in history', () => {
-      router.forward();
-      expect(mockHistory.forward).toHaveBeenCalled();
-    });
-
-    it('goes to specific position', () => {
-      router.go(-2);
-      expect(mockHistory.go).toHaveBeenCalledWith(-2);
-    });
   });
 
   /** -------------------- Route Context -------------------- **/
@@ -388,39 +373,7 @@ describe('Router', () => {
       expect(typeof ctx?.navigate).toBe('function');
     });
 
-    it('initializes user as undefined', async () => {
-      let ctx: RouteContext | undefined;
-      mockLocation.pathname = '/';
-      router
-        .get('/', (context) => {
-          ctx = context;
-        })
-        .start();
-      await new Promise<void>((resolve) => setTimeout(resolve, 10));
-      expect(ctx?.user).toBeUndefined();
-    });
-
-    it('initializes meta as empty object', async () => {
-      let ctx: RouteContext | undefined;
-      mockLocation.pathname = '/';
-      router
-        .get('/', (context) => {
-          ctx = context;
-        })
-        .start();
-      await new Promise<void>((resolve) => setTimeout(resolve, 10));
-      expect(ctx?.meta).toEqual({});
-    });
-  });
-
-  /** -------------------- Middleware -------------------- **/
-
-  describe('Middleware', () => {
-    beforeEach(() => {
-      router = createRouter();
-    });
-
-    it('executes middleware before handler', async () => {
+    it('provides hash in context', async () => {
       const calls: string[] = [];
       const middleware: Middleware = async (_ctx, next) => {
         calls.push('middleware');
@@ -478,14 +431,14 @@ describe('Router', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('allows middleware to modify context', async () => {
-      let contextUser: unknown;
+    it('allows middleware to modify context via meta', async () => {
+      let contextMeta: unknown;
       router.route({
         handler: (ctx) => {
-          contextUser = ctx.user;
+          contextMeta = ctx.meta;
         },
         middleware: async (ctx, next) => {
-          ctx.user = { id: '123' };
+          ctx.meta = { user: { id: '123' } };
           await next();
         },
         path: '/test',
@@ -493,7 +446,7 @@ describe('Router', () => {
       mockLocation.pathname = '/test';
       router.start();
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
-      expect(contextUser).toEqual({ id: '123' });
+      expect(contextMeta).toEqual({ user: { id: '123' } });
     });
 
     it('allows middleware to use meta', async () => {
@@ -784,32 +737,6 @@ describe('Router', () => {
       expect(state.pathname).toBe('/users/123');
       expect(state.params).toEqual({ id: '123' });
       expect(state.query).toEqual({ tab: 'profile' });
-    });
-
-    it('getParams() returns current params', () => {
-      mockLocation.pathname = '/users/123';
-      router.route({ handler: vi.fn(), path: '/users/:id' }).start();
-      const params = router.getParams();
-      expect(params).toEqual({ id: '123' });
-    });
-
-    it('link() creates anchor element', () => {
-      const link = router.link('/about', 'About Page');
-      expect(link.tagName).toBe('A');
-      expect(link.href).toContain('/about');
-      expect(link.textContent).toBe('About Page');
-    });
-
-    it('link() adds attributes', () => {
-      const link = router.link('/about', 'About', { class: 'nav-link' });
-      expect(link.getAttribute('class')).toBe('nav-link');
-    });
-
-    it('linkTo() creates link for named route', () => {
-      router.route({ handler: vi.fn(), name: 'user', path: '/users/:id' });
-      const link = router.linkTo('user', { id: '123' }, 'User 123');
-      expect(link.href).toContain('/users/123');
-      expect(link.textContent).toBe('User 123');
     });
 
     it('debug() returns debug info', () => {

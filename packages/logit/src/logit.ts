@@ -4,7 +4,7 @@
 
 export type LogLevel = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'warn' | 'error' | 'off';
 export type LogType = Exclude<LogLevel, 'off'>;
-export type ColorType = Exclude<LogType, 'table'> | 'group' | 'ns';
+type ColorType = Exclude<LogType, 'table'> | 'group' | 'ns';
 export type Variant = 'text' | 'symbol' | 'icon';
 
 export type RemoteOptions = {
@@ -32,20 +32,13 @@ export type ScopedLogger = {
   debug: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
   info: (...args: unknown[]) => void;
+  scope: (name: string) => ScopedLogger;
   success: (...args: unknown[]) => void;
   trace: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
 };
 
 /* -------------------- Constants -------------------- */
-
-const ENV_PROD = '🅿';
-const ENV_DEV = '🅳';
-
-const CONSOLE_METHOD_MAP: Partial<Record<LogType, keyof Console>> = {
-  debug: 'log',
-  success: 'log',
-};
 
 // biome-ignore assist/source/useSortedKeys: -
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -90,61 +83,38 @@ const NAMESPACE_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; 
 
 /* -------------------- Environment Detection -------------------- */
 
-/**
- * Detects if running in a production environment.
- * Checks both browser (import.meta.env) and Node.js (process.env).
- */
-function isProduction(): boolean {
-  // Browser environment (Vite, Webpack, etc.)
-  if (typeof window !== 'undefined' && (import.meta as any)?.env?.NODE_ENV === 'production') {
-    return true;
-  }
+const IS_PROD =
+  (typeof window !== 'undefined' && (import.meta as any)?.env?.NODE_ENV === 'production') ||
+  // @ts-expect-error - process.env is Node.js-only
+  (typeof process !== 'undefined' && (process as any).env?.NODE_ENV === 'production');
 
-  // @ts-expect-error - process.env exists in Node.js but not in a browser
-  return typeof process !== 'undefined' && (process as any).env?.NODE_ENV === 'production';
-}
-
-const IS_PROD = isProduction();
+const ENV_INDICATOR = IS_PROD ? '🅿' : '🅳';
 
 /* -------------------- State -------------------- */
 
-const state: Required<LogitOptions> & { remote: Required<RemoteOptions> } = {
+export type LogitConfig = Required<Omit<LogitOptions, 'remote'>> & { remote: RemoteOptions };
+
+const state: LogitConfig = {
   environment: true,
   logLevel: 'debug',
   namespace: '',
-  remote: { handler: undefined as any, logLevel: 'off' },
+  remote: { logLevel: 'off' },
   timestamp: true,
   variant: 'symbol',
 };
 
 /* -------------------- Helper Functions -------------------- */
 
-/**
- * Checks if a log should be displayed based on the current log level.
- */
 function shouldLog(type: LogType): boolean {
   return LOG_LEVEL_PRIORITY[state.logLevel] <= LOG_LEVEL_PRIORITY[type];
 }
 
-/**
- * Gets the current timestamp in HH:MM:SS.mmm format.
- */
 function getTimestamp(): string {
   return new Date().toISOString().slice(11, 23);
 }
 
-/**
- * Gets environment indicator emoji.
- */
-function getEnvIndicator(): string {
-  return IS_PROD ? ENV_PROD : ENV_DEV;
-}
-
-/**
- * Sends log to remote handler if configured.
- */
 function sendRemote(type: LogType, args: unknown[]): void {
-  const { handler, logLevel } = state.remote;
+  const { handler, logLevel = 'off' } = state.remote;
 
   if (handler && LOG_LEVEL_PRIORITY[logLevel] <= LOG_LEVEL_PRIORITY[type]) {
     // Use microtask to make async without setTimeout overhead
@@ -159,22 +129,13 @@ function sendRemote(type: LogType, args: unknown[]): void {
   }
 }
 
-/**
- * Gets the console method for a log type.
- */
-function getConsoleMethod(type: LogType): keyof Console {
-  return (CONSOLE_METHOD_MAP[type] || type) as keyof Console;
-}
-
-/**
- * Generates CSS style for a log type.
- */
 function getStyle(type: ColorType, extra = ''): string {
   const { bg, color, border } = THEME[type];
   const baseStyle = `border: 1px solid ${border}; border-radius: 4px`;
 
   switch (state.variant) {
     case 'symbol':
+      return `color: ${bg}; ${baseStyle}; padding: 0 1px${extra}`;
     case 'icon':
       return `color: ${bg}; ${baseStyle}; padding: 0 3px${extra}`;
     default:
@@ -182,42 +143,25 @@ function getStyle(type: ColorType, extra = ''): string {
   }
 }
 
-/**
- * Gets display value for a log type based on variant.
- */
 function getDisplayValue(type: LogType): string {
-  // Table doesn't have a theme, return uppercase
-  if (type === 'table') {
-    return type.toUpperCase();
-  }
-
   const theme = THEME[type as ColorType];
-  const { variant } = state;
-
-  if (variant === 'text' || !theme[variant]) {
-    return type.toUpperCase();
-  }
-
-  return theme[variant]!;
+  if (!theme || state.variant === 'text' || !theme[state.variant]) return type.toUpperCase();
+  return theme[state.variant]!;
 }
 
-/**
- * Builds browser console format string and style parts.
- */
-function buildLogParts(type: LogType): { format: string; parts: string[] } {
-  const { namespace, timestamp, environment } = state;
+function buildLogParts(type: LogType, ns: string): { format: string; parts: string[] } {
+  const { timestamp, environment } = state;
 
   let format = `%c${getDisplayValue(type)}%c`;
-  // Table doesn't have styling, but this is only called for types that do
   const parts: string[] = [getStyle(type as ColorType), ''];
 
-  if (namespace) {
-    format += ` %c${namespace}%c`;
+  if (ns) {
+    format += ` %c${ns}%c`;
     parts.push(getStyle('ns', `; ${NAMESPACE_STYLE}`), '');
   }
 
   if (environment) {
-    format += ` %c${getEnvIndicator()}%c`;
+    format += ` %c${ENV_INDICATOR}%c`;
     parts.push('color: darkgray', '');
   }
 
@@ -229,48 +173,32 @@ function buildLogParts(type: LogType): { format: string; parts: string[] } {
   return { format, parts };
 }
 
-/**
- * Core logging function.
- */
-function log(type: LogType, ...args: unknown[]): void {
-  // Node.js logging (simplified)
-  if (typeof window === 'undefined') {
-    const method = console[getConsoleMethod(type)] as (...a: unknown[]) => void;
-    method(`${getDisplayValue(type)} | ${getEnvIndicator()} |`, ...args);
-    return;
-  }
-
-  // Check the log level
+function log(type: LogType, ns: string, ...args: unknown[]): void {
   if (!shouldLog(type)) return;
 
-  // Browser logging with styles
-  const { format, parts } = buildLogParts(type);
-  const method = console[getConsoleMethod(type)] as (...a: unknown[]) => void;
+  const method = console[type === 'debug' || type === 'success' ? 'log' : type] as (...a: unknown[]) => void;
 
-  method(format, ...parts, ...args);
+  if (typeof window === 'undefined') {
+    method(`${getDisplayValue(type)} | ${ENV_INDICATOR} |`, ...args);
+  } else {
+    const { format, parts } = buildLogParts(type, ns);
+    method(format, ...parts, ...args);
+  }
+
   sendRemote(type, args);
 }
 
-/**
- * Creates a scoped logger without mutating global state.
- */
-function createScopedLogger(scopeName: string): ScopedLogger {
-  const originalNamespace = state.namespace;
-  const fullNamespace = originalNamespace ? `${originalNamespace}.${scopeName}` : scopeName;
-
-  const createMethod = (type: LogType) => {
-    return (...args: unknown[]) => {
-      const prev = state.namespace;
-      state.namespace = fullNamespace;
-      log(type, ...args);
-      state.namespace = prev;
-    };
-  };
+function createScopedLogger(namespace: string): ScopedLogger {
+  const createMethod =
+    (type: LogType) =>
+    (...args: unknown[]) =>
+      log(type, namespace, ...args);
 
   return {
     debug: createMethod('debug'),
     error: createMethod('error'),
     info: createMethod('info'),
+    scope: (name: string) => createScopedLogger(`${namespace}.${name}`),
     success: createMethod('success'),
     trace: createMethod('trace'),
     warn: createMethod('warn'),
@@ -284,60 +212,58 @@ export const Logit = {
    * Asserts a condition and logs if false.
    */
   assert: (condition: boolean, message: string, context?: Record<string, unknown>): void => {
-    console.assert(condition, message, context);
+    if (shouldLog('error')) console.assert(condition, message, context);
+  },
+
+  /**
+   * Configures Logit with options.
+   *
+   * @example
+   * ```ts
+   * Logit.config({
+   *   logLevel: 'info',
+   *   variant: 'text',
+   *   timestamp: false
+   * });
+   * ```
+   */
+  config: ({ remote, ...rest }: LogitOptions): void => {
+    if (remote !== undefined) state.remote = remote;
+    Object.assign(state, rest);
   },
   /**
    * Logs a debug message.
    */
-  debug: (...args: unknown[]): void => log('debug', ...args),
+  debug: (...args: unknown[]): void => log('debug', state.namespace, ...args),
 
   /**
    * Logs an error message.
    */
-  error: (...args: unknown[]): void => log('error', ...args),
+  error: (...args: unknown[]): void => log('error', state.namespace, ...args),
 
   /**
-   * Gets environment indicator visibility.
+   * Returns a readonly snapshot of the current configuration.
+   *
+   * @example
+   * ```ts
+   * const { logLevel, namespace } = Logit.getConfig();
+   * ```
    */
-  getEnvironment: (): boolean => state.environment,
-
-  /**
-   * Gets the current log level.
-   */
-  getLevel: (): LogLevel => state.logLevel,
-
-  /**
-   * Gets the current namespace.
-   */
-  getPrefix: (): string => state.namespace,
-
-  /**
-   * Gets timestamp visibility.
-   */
-  getTimestamp: (): boolean => state.timestamp,
-
-  /**
-   * Gets the current variant.
-   */
-  getVariant: (): Variant => state.variant,
+  getConfig: (): Readonly<LogitConfig> => ({ ...state, remote: { ...state.remote } }),
 
   /**
    * Creates a collapsed console group.
    */
-  groupCollapsed: (text: string, label = 'GROUP', startTime = Date.now()): void => {
+  groupCollapsed: (label = 'GROUP', text = ''): void => {
     if (!shouldLog('success')) return;
 
-    const elapsed = Date.now() - startTime;
-    const elapsedStr = elapsed ? `${elapsed}ms` : '';
-    const env = getEnvIndicator();
     const timestamp = state.timestamp ? getTimestamp() : '';
 
     console.groupCollapsed(
-      `%c${label}%c${state.namespace}%c${env}%c${timestamp}%c${elapsedStr}%c${text}`,
+      `%c${label}%c${state.namespace}%c${ENV_INDICATOR}%c${timestamp}%c${text}`,
       getStyle('group', '; margin-right: 6px; padding: 1px 3px 0'),
       getStyle('ns', `; ${NAMESPACE_STYLE}; margin-right: 6px`),
       'color: darkgray; margin-right: 6px',
-      'color: gray; font-weight: lighter; margin-right: 6px',
       'color: gray; font-weight: lighter; margin-right: 6px',
       'color: inherit; font-weight: lighter',
     );
@@ -347,92 +273,40 @@ export const Logit = {
    * Ends the current console group.
    */
   groupEnd: (): void => {
-    if (shouldLog('success')) console.groupEnd();
+    if (shouldLog('debug')) console.groupEnd();
   },
 
   /**
    * Logs an info message.
    */
-  info: (...args: unknown[]): void => log('info', ...args),
+  info: (...args: unknown[]): void => log('info', state.namespace, ...args),
 
   /**
    * Creates a scoped logger with a namespace.
+   * Scoped loggers can be nested via their own `.scope()` method.
    *
    * @example
    * ```ts
    * const apiLogger = Logit.scope('api');
-   * apiLogger.info('Request received'); // [api] Request received
+   * const authLogger = apiLogger.scope('auth');
+   * authLogger.info('Token validated'); // namespace: api.auth
    * ```
    */
-  scope: (namespace: string): ScopedLogger => createScopedLogger(namespace),
-
-  /**
-   * Sets the minimum log level.
-   */
-  setLogLevel: (level: LogLevel): void => {
-    state.logLevel = level;
-  },
-
-  /**
-   * Sets the global namespace prefix.
-   */
-  setPrefix: (namespace: string): void => {
-    state.namespace = namespace;
-  },
-
-  /**
-   * Sets the remote logging options.
-   */
-  setRemote: (remote: RemoteOptions): void => {
-    state.remote = { ...state.remote, ...remote };
-  },
-
-  /**
-   * Sets the remote log level.
-   */
-  setRemoteLogLevel: (level: LogLevel): void => {
-    state.remote.logLevel = level;
-  },
-
-  /**
-   * Configures Logit with options.
-   *
-   * @example
-   * ```ts
-   * Logit.setup({
-   *   logLevel: 'info',
-   *   variant: 'text',
-   *   timestamp: false
-   * });
-   * ```
-   */
-  setup: (options: LogitOptions): void => {
-    if (options.remote) {
-      state.remote = { ...state.remote, ...options.remote };
-      const { remote, ...rest } = options;
-      Object.assign(state, rest);
-    } else {
-      Object.assign(state, options);
-    }
-  },
-
-  /**
-   * Sets the display variant.
-   */
-  setVariant: (variant: Variant): void => {
-    state.variant = variant;
+  scope: (name: string): ScopedLogger => {
+    const ns = state.namespace ? `${state.namespace}.${name}` : name;
+    return createScopedLogger(ns);
   },
 
   /**
    * Logs a success message.
    */
-  success: (...args: unknown[]): void => log('success', ...args),
+  success: (...args: unknown[]): void => log('success', state.namespace, ...args),
 
   /**
    * Displays data in a table format.
    */
-  table: (...args: unknown[]): void => {
-    if (shouldLog('table')) console.table(...args);
+  table: (data: unknown, properties?: string[]): void => {
+    if (shouldLog('table')) properties ? console.table(data, properties) : console.table(data);
   },
 
   /**
@@ -450,14 +324,14 @@ export const Logit = {
   },
 
   /**
-   * Toggles or sets environment indicator visibility.
+   * Toggles or explicitly sets environment indicator visibility.
    */
   toggleEnvironment: (value?: boolean): void => {
     state.environment = value ?? !state.environment;
   },
 
   /**
-   * Toggles or sets timestamp visibility.
+   * Toggles or explicitly sets timestamp visibility.
    */
   toggleTimestamp: (value?: boolean): void => {
     state.timestamp = value ?? !state.timestamp;
@@ -466,10 +340,10 @@ export const Logit = {
   /**
    * Logs a trace message.
    */
-  trace: (...args: unknown[]): void => log('trace', ...args),
+  trace: (...args: unknown[]): void => log('trace', state.namespace, ...args),
 
   /**
    * Logs a warning message.
    */
-  warn: (...args: unknown[]): void => log('warn', ...args),
+  warn: (...args: unknown[]): void => log('warn', state.namespace, ...args),
 };

@@ -1,8 +1,9 @@
-# i18nit API Reference
+---
+title: I18nit — API Reference
+description: Complete API reference for I18nit internationalization.
+---
 
-Complete API documentation for i18nit.
-
-## Table of Contents
+# I18nit API Reference
 
 [[toc]]
 
@@ -30,26 +31,6 @@ Plural category used for pluralization rules. These categories are determined au
 - **Complex (zero/one/two/few/many/other)**: Arabic
 - **Complex (one/few/many)**: Russian, Polish, Czech
 - **No plurals (other only)**: Chinese, Japanese, Korean
-
-### PluralMessages
-
-```ts
-type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
-```
-
-Object defining plural forms for a message. The `other` form is required.
-
-**Example:**
-
-```ts
-const messages = {
-  items: {
-    zero: 'No items',
-    one: 'One item',
-    other: '{count} items',
-  },
-};
-```
 
 ### PluralMessages
 
@@ -118,6 +99,15 @@ Both structures can be accessed with dot notation:
 - `i18n.t('greeting')` → "Hello!"
 - `i18n.t('user.name')` → "User Name"
 - `i18n.t('user.profile.title')` → "Profile"
+
+### TranslateOptions
+
+```ts
+type TranslateOptions = {
+  locale?: Locale;
+  escape?: boolean;
+};
+```
 
 Options for translation methods.
 
@@ -203,7 +193,7 @@ const i18n = createI18n({
 Translate a message key with optional variables and options.
 
 ```ts
-t(key: string, vars?: Record<string, unknown>, options?: TranslateParams): string
+t(key: string, vars?: Record<string, unknown>, options?: TranslateOptions): string
 ```
 
 **Parameters:**
@@ -373,6 +363,31 @@ hasLocale(locale: Locale): boolean
 if (i18n.hasLocale('es')) {
   console.log('Spanish is loaded');
 }
+```
+
+---
+
+#### getLocales()
+
+Get all loaded locale identifiers.
+
+```ts
+getLocales(): Locale[]
+```
+
+**Returns:** Array of locale strings that have messages loaded
+
+**Example:**
+
+```ts
+const i18n = createI18n({
+  messages: {
+    en: { greeting: 'Hello' },
+    es: { greeting: 'Hola' },
+  },
+});
+
+i18n.getLocales(); // ['en', 'es']
 ```
 
 ---
@@ -606,8 +621,8 @@ Create a namespaced translator.
 
 ```ts
 namespace(ns: string): {
-  t: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) => string;
-  tl: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) => Promise<string>;
+  t: (key: string, vars?: Record<string, unknown>, opts?: TranslateOptions) => string;
+  has: (key: string, locale?: Locale) => boolean;
 }
 ```
 
@@ -615,7 +630,7 @@ namespace(ns: string): {
 
 - **ns**: Namespace prefix
 
-**Returns:** Object with `t` method
+**Returns:** Object with `t` and `has` methods
 
 **Example:**
 
@@ -751,23 +766,26 @@ createI18n({
 ### loaders
 
 ```ts
-loaders?: Record<Locale, () => Promise<Messages>>
+loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>
 ```
 
 **Default:** `{}`
 
-Async loader functions for lazy-loading translations.
+Async loader functions for lazy-loading translations. Each loader receives the locale string as its argument, allowing a single reusable loader to serve multiple locales.
 
 **Example:**
 
 ```ts
+const loadLocale = async (locale: string) => {
+  const response = await fetch(`/locales/${locale}.json`);
+  return response.json();
+};
+
 createI18n({
   loaders: {
-    es: async () => {
-      const response = await fetch('/locales/es.json');
-      return response.json();
-    },
-    fr: () => import('./locales/fr.json'),
+    es: loadLocale, // receives 'es'
+    fr: loadLocale, // receives 'fr'
+    de: async (locale) => import(`./locales/${locale}.json`).then((m) => m.default),
   },
 });
 ```
@@ -977,52 +995,26 @@ i18n.t('items', { count: 5 }); // "5 items"
 
 ---
 
-### Function Messages
 
-Dynamic messages with custom logic.
-
-```ts
-const messages = {
-  greeting: (vars) => {
-    const hour = new Date().getHours();
-    const name = vars.name as string;
-    if (hour < 12) return `Good morning, ${name}!`;
-    if (hour < 18) return `Good afternoon, ${name}!`;
-    return `Good evening, ${name}!`;
-  },
-
-  price: (vars, helpers) => {
-    const amount = vars.amount as number;
-    return helpers.number(amount, { style: 'currency', currency: 'USD' });
-  },
-
-  timestamp: (vars, helpers) => {
-    const date = vars.date as Date;
-    return `Posted ${helpers.date(date, { dateStyle: 'medium' })}`;
-  },
-};
-
-i18n.t('greeting', { name: 'Alice' }); // "Good morning, Alice!"
-i18n.t('price', { amount: 99.99 }); // "$99.99"
-i18n.t('timestamp', { date: new Date() }); // "Posted Feb 9, 2026"
-```
 
 ## Best Practices
 
 ### 1. Type Safety
 
 ```ts
-// Define message keys as types
-type MessageKeys = 'greeting' | 'farewell';
+// Use TypeScript types for message objects
+type EnMessages = {
+  greeting: string;
+  farewell: string;
+};
 
-// Use with TypeScript
-const i18n = createI18n<Record<MessageKeys, string>>({
-  messages: {
-    en: {
-      greeting: 'Hello',
-      farewell: 'Goodbye',
-    },
-  },
+const en: EnMessages = {
+  greeting: 'Hello',
+  farewell: 'Goodbye',
+};
+
+const i18n = createI18n({
+  messages: { en },
 });
 ```
 

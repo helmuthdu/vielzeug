@@ -11,8 +11,8 @@ export type RouteHandler<T = unknown> = (context: RouteContext<T>) => void | Pro
  *
  * @example
  * const authMiddleware: Middleware = async (ctx, next) => {
- *   if (!ctx.user) {
- *     router.navigate('/login');
+ *   if (!ctx.meta?.user) {
+ *     ctx.navigate('/login');
  *     return; // Don't call next()
  *   }
  *   await next(); // Continue to next middleware or handler
@@ -31,8 +31,6 @@ export type RouteContext<T = unknown> = {
   hash: string;
   /** Custom route data */
   data?: T;
-  /** User object (can be set by auth middleware) */
-  user?: unknown;
   /** Custom metadata that can be passed between middlewares */
   meta?: Record<string, unknown>;
   /** Navigate to a new path */
@@ -59,6 +57,11 @@ export type NavigateOptions = {
   replace?: boolean;
   /** Additional state to store with history entry */
   state?: unknown;
+  /**
+   * Override the router-level `viewTransitions` setting for this navigation.
+   * `true` opts in, `false` opts out even when globally enabled.
+   */
+  viewTransition?: boolean;
 };
 
 export type RouterMode = 'history' | 'hash';
@@ -72,6 +75,13 @@ export type RouterOptions = {
   notFound?: RouteHandler;
   /** Global middleware applied to all routes */
   middleware?: Middleware | Middleware[];
+  /**
+   * Wrap route handler execution in the View Transition API when available.
+   * Falls back to a plain execution when the API is not supported by the browser.
+   * Can be overridden per navigation via `NavigateOptions.viewTransition`.
+   * (default: false)
+   */
+  viewTransitions?: boolean;
 };
 
 /** Current route state */
@@ -84,111 +94,72 @@ export type RouteState = {
 
 /** -------------------- Internal Types -------------------- **/
 
+// View Transition API — not yet included in all TS lib.dom versions
+type ViewTransition = {
+  finished: Promise<void>;
+  ready: Promise<void>;
+  updateCallbackDone: Promise<void>;
+};
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (callback: () => void | Promise<void>) => ViewTransition;
+};
+
 type RouteRecord<T = unknown> = {
   def: RouteDefinition<T>;
   fullPath: string;
   regex: RegExp;
   paramNames: string[];
+  middleware: Middleware[];
 };
 
 /** -------------------- Path Utilities -------------------- **/
 
-/**
- * Normalizes a path by removing trailing slashes and ensuring leading slash.
- */
 function normalizePath(path: string): string {
   if (!path) return '/';
-  let normalized = path.trim();
-
-  // Ensure leading slash
-  if (!normalized.startsWith('/')) {
-    normalized = `/${normalized}`;
-  }
-
-  // Replace multiple consecutive slashes with single slash
-  normalized = normalized.replace(/\/+/g, '/');
-
-  // Remove trailing slashes except for root
-  if (normalized !== '/' && normalized.endsWith('/')) {
-    normalized = normalized.slice(0, -1);
-  }
-
-  return normalized;
+  const normalized = `/${path.trim()}`.replace(/\/+/g, '/');
+  return normalized !== '/' && normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
-/**
- * Compiles a route pattern to a regex and extracts parameter names.
- * Supports: '/users/:id' and '/docs/*' (wildcard)
- */
 function compilePattern(pattern: string): { regex: RegExp; paramNames: string[] } {
   const paramNames: string[] = [];
-
-  // Escape special regex characters except : and *
-  let regexPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*'); // Wildcard matches anything
-
-  // Replace :param with named capture group
-  regexPattern = regexPattern.replace(/:(\w+)/g, (_, paramName) => {
-    paramNames.push(paramName);
-    return '([^/]+)'; // Match anything except slash
-  });
-
-  // Exact match (unless ends with wildcard)
-  const anchored = pattern.endsWith('*') ? `^${regexPattern}` : `^${regexPattern}$`;
-
+  const regexStr = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/:(\w+)/g, (_, name) => {
+      paramNames.push(name);
+      return '([^/]+)';
+    });
+  const anchored = pattern.endsWith('*') ? `^${regexStr}` : `^${regexStr}$`;
   return { paramNames, regex: new RegExp(anchored) };
 }
 
-/**
- * Attempts to match a pathname against a compiled route record.
- */
-function matchRecord(pathname: string, record: RouteRecord): { params: RouteParams } | null {
+function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
   const match = pathname.match(record.regex);
   if (!match) return null;
 
   const params: RouteParams = {};
-  record.paramNames.forEach((name, index) => {
-    params[name] = decodeURIComponent(match[index + 1] || '');
-  });
-
-  return { params };
-}
-
-/**
- * Parses query string into object.
- * Supports array values (multiple same-name params).
- */
-function parseQuery(search: string): QueryParams {
-  const params: QueryParams = {};
-  if (!search) return params;
-
-  const queryString = search.startsWith('?') ? search.slice(1) : search;
-  const urlParams = new URLSearchParams(queryString);
-
-  for (const [key, value] of urlParams.entries()) {
-    const existing = params[key];
-    if (existing === undefined) {
-      params[key] = value;
-    } else if (Array.isArray(existing)) {
-      existing.push(value);
-    } else {
-      params[key] = [existing, value];
-    }
+  for (const [i, name] of record.paramNames.entries()) {
+    params[name] = decodeURIComponent(match[i + 1] || '');
   }
 
   return params;
 }
 
-/**
- * Combines base path with a route path.
- */
+function parseQuery(search: string): QueryParams {
+  const params: QueryParams = {};
+  for (const [key, value] of new URLSearchParams(search)) {
+    const existing = params[key];
+    if (Array.isArray(existing)) existing.push(value);
+    else params[key] = existing === undefined ? value : [existing, value];
+  }
+  return params;
+}
+
 function joinPaths(base: string, path: string): string {
-  const normalizedBase = normalizePath(base);
-  const normalizedPath = normalizePath(path);
-
-  if (normalizedBase === '/') return normalizedPath;
-  if (normalizedPath === '/') return normalizedBase;
-
-  return (normalizedBase + normalizedPath).replace(/\/+/g, '/');
+  const a = normalizePath(base);
+  const b = normalizePath(path);
+  return a === '/' ? b : b === '/' ? a : `${a}${b}`;
 }
 
 /** -------------------- Router Implementation -------------------- **/
@@ -199,23 +170,21 @@ export class Router {
   private readonly records: RouteRecord[] = [];
   private readonly routesByName = new Map<string, RouteRecord>();
   private readonly notFoundHandler?: RouteHandler;
-  private readonly globalMiddleware: Middleware[] = [];
+  private readonly globalMiddleware: Middleware[];
+  private readonly viewTransitions: boolean;
   private readonly listeners = new Set<() => void>();
   private isStarted = false;
-  private readonly handleRouteCallback: () => void;
+  private currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
+  private readonly handleRouteCallback = (): void => {
+    void this.handleRoute();
+  };
 
   constructor(options: RouterOptions = {}) {
     this.mode = options.mode ?? 'history';
     this.base = normalizePath(options.base ?? '/');
     this.notFoundHandler = options.notFound;
-
-    // Store global middleware
-    if (options.middleware) {
-      this.globalMiddleware = Array.isArray(options.middleware) ? options.middleware : [options.middleware];
-    }
-
-    // Bind the handler once to avoid creating new functions
-    this.handleRouteCallback = () => void this.handleRoute();
+    this.viewTransitions = options.viewTransitions ?? false;
+    this.globalMiddleware = [options.middleware ?? []].flat() as Middleware[];
   }
 
   /** -------------------- Route Registration -------------------- **/
@@ -230,17 +199,16 @@ export class Router {
     return this;
   }
 
-  /**
-   * Compiles a route definition into route records (recursive for children)
-   */
-  // biome-ignore lint/suspicious/noExplicitAny: Internal method needs type flexibility for recursive compilation
+  // biome-ignore lint/suspicious/noExplicitAny: RouteDefinition needs type flexibility for recursive compilation
   private compileRoute(def: RouteDefinition<any>, parentPath = ''): void {
     const fullPath = normalizePath(`${parentPath}/${def.path}`);
     const { regex, paramNames } = compilePattern(fullPath);
+    const middleware = [def.middleware ?? []].flat() as Middleware[];
 
     const record: RouteRecord = {
       def,
       fullPath,
+      middleware,
       paramNames,
       regex,
     };
@@ -330,7 +298,7 @@ export class Router {
       }
     } else {
       // Hash mode
-      const hash = destination.startsWith('#') ? destination : `#${destination}`;
+      const hash = `#${destination}`;
       if (options.replace) {
         window.location.replace(hash);
       } else {
@@ -338,36 +306,12 @@ export class Router {
       }
     }
 
-    this.handleRoute();
-  }
-
-  /**
-   * Goes back in history.
-   */
-  back(): void {
-    window.history.back();
-  }
-
-  /**
-   * Goes forward in history.
-   */
-  forward(): void {
-    window.history.forward();
-  }
-
-  /**
-   * Goes to a specific position in history.
-   */
-  go(delta: number): void {
-    window.history.go(delta);
+    void this.handleRoute(options.viewTransition);
   }
 
   /** -------------------- Current Route Info -------------------- **/
 
-  /**
-   * Gets the current pathname.
-   */
-  getCurrentPath(): string {
+  private getCurrentPath(): string {
     if (this.mode === 'history') {
       const path = window.location.pathname || '/';
       // Remove base path if present
@@ -383,10 +327,7 @@ export class Router {
     return normalizePath(path || '/');
   }
 
-  /**
-   * Gets current query parameters.
-   */
-  getCurrentQuery(): QueryParams {
+  private getCurrentQuery(): QueryParams {
     if (this.mode === 'history') {
       return parseQuery(window.location.search);
     }
@@ -397,10 +338,7 @@ export class Router {
     return queryStart >= 0 ? parseQuery(hash.slice(queryStart)) : {};
   }
 
-  /**
-   * Gets current hash (without #).
-   */
-  getCurrentHash(): string {
+  private getCurrentHash(): string {
     if (this.mode === 'history') {
       return window.location.hash.slice(1);
     }
@@ -409,53 +347,76 @@ export class Router {
 
   /** -------------------- Route Handling -------------------- **/
 
+  /** -------------------- View Transitions -------------------- **/
+
+  private async runWithTransition(useTransition: boolean | undefined, run: () => Promise<void>): Promise<void> {
+    const shouldTransition =
+      (useTransition ?? this.viewTransitions) &&
+      typeof document !== 'undefined' &&
+      typeof (document as ViewTransitionDocument).startViewTransition === 'function';
+
+    if (shouldTransition) {
+      await (document as ViewTransitionDocument).startViewTransition!(run).finished;
+    } else {
+      await run();
+    }
+  }
+
+  /** -------------------- Route Handling -------------------- **/
+
   /**
    * Handles the current route by matching and executing handlers.
    */
-  private async handleRoute(): Promise<void> {
-    const pathname = this.getCurrentPath();
-
-    // Find a matching route record
-    const matchingRecord = this.records.find((record) => matchRecord(pathname, record));
-
-    if (!matchingRecord) {
-      // No route matched - call notFound handler
-      if (this.notFoundHandler) {
-        const context: RouteContext = {
-          hash: this.getCurrentHash(),
-          meta: {},
-          navigate: (path, opts) => this.navigate(path, opts),
-          params: {},
-          pathname,
-          query: this.getCurrentQuery(),
-        };
-        await this.notFoundHandler(context);
-      }
-      this.notifyListeners();
-      return;
-    }
-
-    // Extract params
-    const match = matchRecord(pathname, matchingRecord);
-    if (!match) return; // Should never happen
-
-    const context: RouteContext = {
-      data: matchingRecord.def.data,
-      hash: this.getCurrentHash(),
+  private buildContext(
+    pathname: string,
+    params: RouteParams,
+    hash: string,
+    query: QueryParams,
+    data?: unknown,
+  ): RouteContext {
+    return {
+      data,
+      hash,
       meta: {},
       navigate: (path, opts) => this.navigate(path, opts),
-      params: match.params,
+      params,
       pathname,
-      query: this.getCurrentQuery(),
+      query,
     };
+  }
+
+  private async handleRoute(useTransition?: boolean): Promise<void> {
+    const pathname = this.getCurrentPath();
+    const hash = this.getCurrentHash();
+    const query = this.getCurrentQuery();
+
+    let matchedRecord: RouteRecord | undefined;
+    let matchedParams: RouteParams = {};
+    for (const record of this.records) {
+      const params = matchRecord(pathname, record);
+      if (params) {
+        matchedRecord = record;
+        matchedParams = params;
+        break;
+      }
+    }
+
+    this.currentState = { hash, params: matchedParams, pathname, query };
 
     try {
-      // Execute middleware chain
-      await this.executeMiddlewareChain(context, matchingRecord);
-      this.notifyListeners();
+      await this.runWithTransition(useTransition, async () => {
+        if (!matchedRecord) {
+          if (this.notFoundHandler) await this.notFoundHandler(this.buildContext(pathname, {}, hash, query));
+        } else {
+          await this.executeMiddlewareChain(
+            this.buildContext(pathname, matchedParams, hash, query, matchedRecord.def.data),
+            matchedRecord,
+          );
+        }
+      });
     } catch (error) {
-      // Middleware or handler threw an error
       console.error('[Router] Route handling error:', error);
+    } finally {
       this.notifyListeners();
     }
   }
@@ -464,29 +425,15 @@ export class Router {
    * Executes the middleware chain for a route.
    */
   private async executeMiddlewareChain(context: RouteContext, record: RouteRecord): Promise<void> {
-    // Collect all middleware: global + route-specific
-    const routeMiddleware = record.def.middleware
-      ? Array.isArray(record.def.middleware)
-        ? record.def.middleware
-        : [record.def.middleware]
-      : [];
-
-    const allMiddleware = [...this.globalMiddleware, ...routeMiddleware];
-
-    // Build middleware execution chain
+    const allMiddleware = [...this.globalMiddleware, ...record.middleware];
     let index = 0;
-
     const next = async (): Promise<void> => {
       if (index < allMiddleware.length) {
-        const middleware = allMiddleware[index++];
-        await middleware(context, next);
+        await allMiddleware[index++](context, next);
       } else {
-        // All middleware executed - run the handler
         await record.def.handler(context);
       }
     };
-
-    // Start the chain
     await next();
   }
 
@@ -556,23 +503,7 @@ export class Router {
    * Gets the current route state (pathname, params, query, hash).
    */
   getState(): RouteState {
-    const pathname = this.getCurrentPath();
-    const matchingRecord = this.records.find((record) => matchRecord(pathname, record));
-    const params = matchingRecord ? (matchRecord(pathname, matchingRecord)?.params ?? {}) : {};
-
-    return {
-      hash: this.getCurrentHash(),
-      params,
-      pathname,
-      query: this.getCurrentQuery(),
-    };
-  }
-
-  /**
-   * Gets current route parameters.
-   */
-  getParams(): RouteParams {
-    return this.getState().params;
+    return { ...this.currentState };
   }
 
   /**
@@ -582,13 +513,7 @@ export class Router {
    * router.navigateTo('userDetail', { id: '123' }, { tab: 'profile' });
    */
   navigateTo(name: string, params?: RouteParams, query?: QueryParams): void {
-    const record = this.routesByName.get(name);
-    if (!record) {
-      throw new Error(`[Router] Route with name "${name}" not found`);
-    }
-
-    const url = this.buildUrl(record.fullPath, params, query);
-    this.navigate(url);
+    this.navigate(this.urlFor(name, params, query));
   }
 
   /**
@@ -599,54 +524,8 @@ export class Router {
    */
   urlFor(name: string, params?: RouteParams, query?: QueryParams): string {
     const record = this.routesByName.get(name);
-    if (!record) {
-      throw new Error(`[Router] Route with name "${name}" not found`);
-    }
-
+    if (!record) throw new Error(`[Router] Route with name "${name}" not found`);
     return this.buildUrl(record.fullPath, params, query);
-  }
-
-  /**
-   * Creates an anchor element for a route.
-   *
-   * @example
-   * const link = router.link('/users/123', 'View User');
-   * document.body.appendChild(link);
-   */
-  link(path: string, text: string, attributes?: Record<string, string>): HTMLAnchorElement {
-    const anchor = document.createElement('a');
-    anchor.href = joinPaths(this.base, path);
-    anchor.textContent = text;
-
-    if (attributes) {
-      for (const [key, value] of Object.entries(attributes)) {
-        anchor.setAttribute(key, value);
-      }
-    }
-
-    anchor.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.navigate(path);
-    });
-
-    return anchor;
-  }
-
-  /**
-   * Creates an anchor element for a named route.
-   *
-   * @example
-   * const link = router.linkTo('userDetail', { id: '123' }, 'View User');
-   */
-  linkTo(
-    name: string,
-    params?: RouteParams,
-    text?: string,
-    query?: QueryParams,
-    attributes?: Record<string, string>,
-  ): HTMLAnchorElement {
-    const url = this.urlFor(name, params, query);
-    return this.link(url, text ?? name, attributes);
   }
 
   /**

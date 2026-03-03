@@ -1,17 +1,9 @@
-import { Logit } from '@vielzeug/logit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assertParams } from '../assertParams';
 
-vi.mock('@vielzeug/logit', () => ({
-  Logit: {
-    error: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
-
 describe('assertParams', () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should not throw if all keys are present and not empty', () => {
@@ -51,9 +43,10 @@ describe('assertParams', () => {
   });
 
   it('should support bypass mode', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     const params = { id: '' };
     assertParams(params, ['id'], 'Context', { bypass: true });
-    expect(Logit.warn).toHaveBeenCalledWith('Missing required parameter: "id" in "Context"');
+    expect(console.warn).toHaveBeenCalledWith('Missing required parameter: "id" in "Context"');
   });
 
   it('should handle empty keys array', () => {

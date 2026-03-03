@@ -1,4 +1,3 @@
-import { Logit } from '@vielzeug/logit';
 import { sleep } from './sleep';
 
 /**
@@ -37,19 +36,13 @@ export async function retry<T>(
   let currentDelay = delay;
 
   for (let attempt = 1; attempt <= times; attempt++) {
-    if (signal?.aborted) {
-      Logit.warn(`retry() -> Aborted after ${attempt - 1} attempts`);
-      throw new Error('Retry aborted');
-    }
+    if (signal?.aborted) throw new Error('Retry aborted');
 
     try {
       return await fn();
     } catch (err) {
       if (attempt === times) throw err;
-
-      Logit.warn(`retry() -> ${err}, attempt ${attempt}/${times}, retrying in ${currentDelay}ms`);
       if (currentDelay > 0) await sleep(currentDelay);
-
       currentDelay = typeof backoff === 'function' ? backoff(attempt, currentDelay) : currentDelay * backoff;
     }
   }

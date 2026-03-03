@@ -1,4 +1,9 @@
-# 📅 Date Utilities
+---
+title: Toolkit — Date Examples
+description: Date utility examples for Toolkit.
+---
+
+# Date Utilities
 
 Date utilities provide a set of helpers to work with dates and times in a type-safe, ergonomic way. Use these tools for checking expiration, calculating intervals, and finding precise time differences without the weight of large date libraries.
 

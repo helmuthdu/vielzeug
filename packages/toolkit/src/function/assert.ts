@@ -1,4 +1,3 @@
-import { Logit } from '@vielzeug/logit';
 import type { Obj } from '../types';
 
 /**
@@ -32,6 +31,6 @@ export function assert(
   const errorDetails = args ? `\nArguments: ${JSON.stringify(args, null, 2)}` : '';
   const fullMessage = `${message}${errorDetails}`;
 
-  if (bypass) Logit.warn(fullMessage);
+  if (bypass) console.warn(fullMessage);
   else throw new type(fullMessage);
 }

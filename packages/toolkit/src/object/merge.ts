@@ -79,9 +79,7 @@ function deepMerge<T extends Obj, U extends Obj>(target: T, source: U, strategy:
 
   const result = { ...target } as DeepMerge<T, U>;
 
-  for (const key in source) {
-    if (!Object.hasOwn(source, key)) continue; // Prevent prototype pollution
-
+  for (const key of Object.keys(source)) {
     const sourceValue = source[key];
     const targetValue = result[key];
 

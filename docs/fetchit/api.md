@@ -1,8 +1,9 @@
+---
+title: Fetchit — API Reference
+description: Complete API reference for Fetchit HTTP client and query client.
+---
+
 # Fetchit API Reference
-
-Complete API documentation for `@vielzeug/fetchit`.
-
-## Table of Contents
 
 [[toc]]
 
@@ -233,8 +234,10 @@ Makes a GET request and returns the data directly.
 
 **Config Options:**
 
-- `params?: Record<string, string | number | undefined>` – Query parameters
-- `dedupe?: boolean` – Enable/disable deduplication (default: true)
+- `params?: Record<string, string | number | boolean | undefined>` – Path parameters (replace `:id` or `{id}` in URL)
+- `query?: Record<string, string | number | boolean | undefined>` – Query string parameters appended to the URL
+- `body?: unknown` – Request body (auto-serialized to JSON for plain objects)
+- `dedupe?: boolean` – Enable/disable deduplication for this request (default: true)
 - `signal?: AbortSignal` – AbortSignal for request cancellation
 
 **Example:**
@@ -437,99 +440,7 @@ if (state) {
 }
 ```
 
-#### `prefetchQuery<T>(options)`
-
-Prefetch a query to warm up the cache without consuming the result. Useful for loading data before it's needed. Errors are silently ignored.
-
-**Parameters:**
-
-- `options: QueryOptions<T>` – Same as `query()` options
-
-**Returns:** `Promise<void>`
-
-**Example:**
-
-```ts
-import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-// Prefetch user data when hovering over a link
-onMouseEnter={() => {
-  queryClient.prefetch({
-    queryKey: ['users', userId],
-    queryFn: () => http.get<User>(`/users/${userId}`),
-  });
-});
-
-// Later when navigating, data is already cached
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
-});
-```
-
-#### `subscribe(queryKey, listener)`
-
-Subscribe to changes in a query's cache entry. The listener receives the full query state on every change.
-
-**Parameters:**
-
-- `queryKey: QueryKey` – The query key to watch
-- `listener: (state: QueryState<T>) => void` – Callback function called with state on changes
-
-**State Object:**
-
-```ts
-{
-  data: T | undefined;
-  error: Error | null;
-  status: 'idle' | 'pending' | 'success' | 'error';
-  httpStatus?: number;
-  httpOk?: boolean;
-  isLoading: boolean;
-  isSuccess: boolean;
-  isError: boolean;
-  isIdle: boolean;
-  dataUpdatedAt: number;
-  errorUpdatedAt: number;
-  fetchedAt: number;
-}
-```
-
-**Returns:** `() => void` – Unsubscribe function
-
-**Example:**
-
-````ts
-import { createQueryClient } from '@vielzeug/fetchit';
-
-const queryClient = createQueryClient();
-
-// Subscriber receives state automatically
-const unsubscribe = queryClient.subscribe(['users', 1], (state) => {
-  if (state.isLoading) {
-    showSpinner();
-  } else if (state.isSuccess) {
-    console.log('User:', state.data);
-    console.log('HTTP Status:', state.httpStatus);
-  } else if (state.isError) {
-    showError(state.error);
-  }
-});
-
-// Later, unsubscribe
-unsubscribe();
-
-// React example
-useEffect(() => {
-  return queryClient.subscribe(['users', userId], (state) => {
-    setUser(state.data);
-    setLoading(state.isLoading);
-  });
-}, [userId]);
-```### `subscribe<T>(queryKey, listener)`
+### `subscribe<T>(queryKey, listener)`
 
 Subscribe to query state changes. Returns an unsubscribe function.
 
@@ -620,12 +531,10 @@ type QueryOptions<T> = {
   queryKey: QueryKey;
   queryFn: () => Promise<T>;
   staleTime?: number;
-  cacheTime?: number;
+  gcTime?: number;
   enabled?: boolean;
   retry?: number | false;
-  retryDelay?: number | ((attemptIndex: number) => number);
-  refetchOnFocus?: boolean;
-  refetchOnReconnect?: boolean;
+  retryDelay?: number | ((attempt: number) => number);
   onSuccess?: (data: T) => void;
   onError?: (error: Error) => void;
 };
@@ -654,8 +563,8 @@ type HttpClientOptions = {
   baseUrl?: string;
   headers?: Record<string, string>;
   timeout?: number;
-  defaultStaleTime?: number;
-  defaultCacheTime?: number;
+  dedupe?: boolean;
+  logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void;
 };
 ```
 
@@ -699,28 +608,17 @@ await http.get('/users/:userId/posts', {
 // → GET /users/123/posts?status=published&limit=10
 ```
 
-### `RequestResponse<T>`
-
-Response object returned by all REST HTTP methods.
-
-```ts
-type RequestResponse<T> = {
-  data: T; // Parsed response data
-  ok: boolean; // True if status is 2xx
-  status: number; // HTTP status code
-};
-```
-
 ### `HttpError`
 
 Custom error class with request context.
 
 ```ts
 class HttpError extends Error {
+  readonly name = 'HttpError';
   readonly url: string;
   readonly method: string;
   readonly status?: number;
-  readonly originalError?: unknown;
+  readonly original?: unknown;
 }
 ```
 

@@ -10,14 +10,15 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./trial": {
-      "types": "./dist/trial.d.ts",
-      "import": "./dist/trial.js",
-      "require": "./dist/trial.cjs"
+    "./test": {
+      "types": "./dist/test.d.ts",
+      "import": "./dist/test.js",
+      "require": "./dist/test.cjs"
     }
   },
   "scripts": {
@@ -33,6 +34,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@types/node": "^25.3.3",
+    "jsdom": "^28.1.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",

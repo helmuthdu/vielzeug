@@ -1,14 +1,19 @@
-# Examples
+---
+title: Formit — Examples
+description: Real-world form patterns and framework integrations for Formit.
+---
 
-Real-world examples demonstrating common use cases and patterns with Formit.
+# Formit Examples
+
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+:::
+
+[[toc]]
 
 ::: tip 💡 Complete Applications
 These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
 :::
-
-## Table of Contents
-
-[[toc]]
 
 ## Framework Integration
 
@@ -254,7 +259,7 @@ async function handleLogin() {
     } else {
       // Server error
       console.error('Login failed:', error);
-      loginForm.error('email', 'Invalid credentials');
+      loginForm.setError('email', 'Invalid credentials');
     }
   }
 }
@@ -552,19 +557,19 @@ dynamicForm.subscribe((state) => {
 
   // Clear previous member errors
   for (let i = 0; i < members.length; i++) {
-    dynamicForm.error(`members.${i}.name`, '');
-    dynamicForm.error(`members.${i}.email`, '');
+    dynamicForm.setError(`members.${i}.name`);
+    dynamicForm.setError(`members.${i}.email`);
   }
 
   // Validate each member
   members.forEach((member, index) => {
     if (!member.name) {
-      dynamicForm.error(`members.${index}.name`, 'Name is required');
+      dynamicForm.setError(`members.${index}.name`, 'Name is required');
     }
     if (!member.email) {
-      dynamicForm.error(`members.${index}.email`, 'Email is required');
+      dynamicForm.setError(`members.${index}.email`, 'Email is required');
     } else if (!member.email.includes('@')) {
-      dynamicForm.error(`members.${index}.email`, 'Invalid email');
+      dynamicForm.setError(`members.${index}.email`, 'Invalid email');
     }
   });
 });
@@ -671,30 +676,30 @@ profileForm.subscribe((state) => {
   if (accountType === 'business') {
     // Validate business fields
     if (!profileForm.get('companyName')) {
-      profileForm.error('companyName', 'Company name is required');
+      profileForm.setError('companyName', 'Company name is required');
     } else {
-      profileForm.error('companyName', '');
+      profileForm.setError('companyName');
     }
 
     if (!profileForm.get('vatNumber')) {
-      profileForm.error('vatNumber', 'VAT number is required');
+      profileForm.setError('vatNumber', 'VAT number is required');
     } else {
-      profileForm.error('vatNumber', '');
+      profileForm.setError('vatNumber');
     }
 
     const businessEmail = profileForm.get('businessEmail');
     if (!businessEmail) {
-      profileForm.error('businessEmail', 'Business email is required');
+      profileForm.setError('businessEmail', 'Business email is required');
     } else if (!String(businessEmail).includes('@')) {
-      profileForm.error('businessEmail', 'Invalid email');
+      profileForm.setError('businessEmail', 'Invalid email');
     } else {
-      profileForm.error('businessEmail', '');
+      profileForm.setError('businessEmail');
     }
   } else {
     // Clear business field errors for personal accounts
-    profileForm.error('companyName', '');
-    profileForm.error('vatNumber', '');
-    profileForm.error('businessEmail', '');
+    profileForm.setError('companyName');
+    profileForm.setError('vatNumber');
+    profileForm.setError('businessEmail');
   }
 });
 
@@ -753,7 +758,7 @@ form.subscribe(setState);
   name="email"
   value={form.get('email')}
   onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.touch('email', true)}
+  onBlur={() => form.setTouched('email')}
 />
 ```
 

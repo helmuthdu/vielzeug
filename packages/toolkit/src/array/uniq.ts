@@ -31,7 +31,7 @@ export function uniq<T>(array: T[], selector?: Selector<T>): T[] {
     return [...new Set(array)];
   }
 
-  const seen = new Map<Primitive, T>();
+  const seen = new Set<Primitive>();
   const getKey = typeof selector === 'function' ? selector : (item: T) => item[selector];
 
   return array.filter((item) => {
@@ -39,7 +39,7 @@ export function uniq<T>(array: T[], selector?: Selector<T>): T[] {
     if (seen.has(key)) {
       return false;
     }
-    seen.set(key, item);
+    seen.add(key);
     return true;
   });
 }

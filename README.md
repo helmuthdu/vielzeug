@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/helmuthdu/vielzeug/pulls)
 
-[Documentation](https://helmuthdu.github.io/vielzeug/) • [Examples](https://helmuthdu.github.io/vielzeug/examples/) • [Contributing](#contributing)
+[Documentation](https://vielzeug.dev/) • [Examples](https://vielzeug.dev/examples/) • [Contributing](#contributing)
 
 </div>
 
@@ -43,7 +43,7 @@ npm install @vielzeug/craftit
 - Form-associated custom elements
 - Event handling and lifecycle hooks (5 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/craftit/) • [Examples](https://helmuthdu.github.io/vielzeug/craftit/examples)
+[📖 Documentation](https://vielzeug.dev/craftit/) • [Examples](https://vielzeug.dev/craftit/examples)
 
 ---
 
@@ -62,7 +62,7 @@ npm install @vielzeug/deposit
 - Schema migrations with versioning
 - TTL (Time-To-Live) support (4.5 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/deposit/) • [Examples](https://helmuthdu.github.io/vielzeug/deposit/examples)
+[📖 Documentation](https://vielzeug.dev/deposit/) • [Examples](https://vielzeug.dev/deposit/examples)
 
 ---
 
@@ -81,7 +81,7 @@ npm install @vielzeug/fetchit
 - Request deduplication
 - Automatic retry with exponential backoff (3.4 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/fetchit/) • [Examples](https://helmuthdu.github.io/vielzeug/fetchit/examples)
+[📖 Documentation](https://vielzeug.dev/fetchit/) • [Examples](https://vielzeug.dev/fetchit/examples)
 
 ---
 
@@ -100,7 +100,7 @@ npm install @vielzeug/formit
 - Reactive subscriptions
 - Framework agnostic (3 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/formit/) • [Examples](https://helmuthdu.github.io/vielzeug/formit/examples)
+[📖 Documentation](https://vielzeug.dev/formit/) • [Examples](https://vielzeug.dev/formit/examples)
 
 ---
 
@@ -119,7 +119,7 @@ npm install @vielzeug/i18nit
 - Async translation loading
 - Framework agnostic with React hooks (1.6 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/i18nit/) • [Examples](https://helmuthdu.github.io/vielzeug/i18nit/examples)
+[📖 Documentation](https://vielzeug.dev/i18nit/) • [Examples](https://vielzeug.dev/i18nit/examples)
 
 ---
 
@@ -138,7 +138,7 @@ npm install @vielzeug/logit
 - Remote logging support
 - Scoped loggers (2.7 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/logit/) • [Examples](https://helmuthdu.github.io/vielzeug/logit/examples)
+[📖 Documentation](https://vielzeug.dev/logit/) • [Examples](https://vielzeug.dev/logit/examples)
 
 ---
 
@@ -157,7 +157,7 @@ npm install @vielzeug/permit
 - Wildcard support
 - Type-safe permission checks (2.0 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/permit/) • [Examples](https://helmuthdu.github.io/vielzeug/permit/examples)
+[📖 Documentation](https://vielzeug.dev/permit/) • [Examples](https://vielzeug.dev/permit/examples)
 
 ---
 
@@ -176,7 +176,7 @@ npm install @vielzeug/routeit
 - Hash and History mode support
 - Nested routes and layouts (3.1 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/routeit/) • [Examples](https://helmuthdu.github.io/vielzeug/routeit/examples)
+[📖 Documentation](https://vielzeug.dev/routeit/) • [Examples](https://vielzeug.dev/routeit/examples)
 
 ---
 
@@ -195,7 +195,7 @@ npm install @vielzeug/snapit
 - Async state updates
 - Custom equality checks (2.4 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/snapit/) • [Examples](https://helmuthdu.github.io/vielzeug/snapit/examples)
+[📖 Documentation](https://vielzeug.dev/snapit/) • [Examples](https://vielzeug.dev/snapit/examples)
 
 ---
 
@@ -215,7 +215,7 @@ npm install @vielzeug/toolkit
 - Tree-shakeable by design (0.1-0.5 KB per utility)
 - Zero dependencies
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/toolkit/) • [Examples](https://helmuthdu.github.io/vielzeug/toolkit/examples)
+[📖 Documentation](https://vielzeug.dev/toolkit/) • [Examples](https://vielzeug.dev/toolkit/examples)
 
 ---
 
@@ -234,7 +234,7 @@ npm install @vielzeug/validit
 - Custom refinements and transforms
 - Comprehensive error handling (2.8 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/validit/) • [Examples](https://helmuthdu.github.io/vielzeug/validit/examples)
+[📖 Documentation](https://vielzeug.dev/validit/) • [Examples](https://vielzeug.dev/validit/examples)
 
 ---
 
@@ -253,7 +253,7 @@ npm install @vielzeug/wireit
 - Scoped lifetimes (singleton, transient, scoped)
 - Testing helpers (2.1 KB gzipped)
 
-[📖 Documentation](https://helmuthdu.github.io/vielzeug/wireit/) • [Examples](https://helmuthdu.github.io/vielzeug/wireit/examples)
+[📖 Documentation](https://vielzeug.dev/wireit/) • [Examples](https://vielzeug.dev/wireit/examples)
 
 ## 🏁 Quick Start
 
@@ -441,7 +441,7 @@ Each package is individually licensed under the MIT License. See the LICENSE fil
 
 ## 🔗 Links
 
-- [Documentation](https://helmuthdu.github.io/vielzeug/)
+- [Documentation](https://vielzeug.dev/)
 - [GitHub Repository](https://github.com/helmuthdu/vielzeug)
 - [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 - [Discussions](https://github.com/helmuthdu/vielzeug/discussions)
@@ -478,7 +478,7 @@ Yes! All packages are battle-tested in production applications with comprehensiv
 
 ### Where can I get help?
 
-- 📖 [Documentation](https://helmuthdu.github.io/vielzeug/)
+- 📖 [Documentation](https://vielzeug.dev/)
 - 💬 [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions)
 - 🐛 [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
 

@@ -1,3 +1,4 @@
+import { computed, css, define, defineEmits, defineProps, guard, html } from '@vielzeug/craftit';
 import {
   colorThemeMixin,
   disabledLoadingMixin,
@@ -8,7 +9,7 @@ import {
 } from '../../styles';
 import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-const styles = /* css */ `
+const styles = /* css */ css`
   @layer buildit.base {
     :host {
       --_bg: var(--button-bg, var(--color-contrast-50));
@@ -83,7 +84,6 @@ const styles = /* css */ `
   }
 
   @layer buildit.variants {
-
     :host([icon-only]) button {
       padding: 0;
       aspect-ratio: 1;
@@ -235,7 +235,6 @@ const styles = /* css */ `
      Other Variants & States
      ======================================== */
 
-
   ${sizeVariantMixin({
     lg: {
       fontSize: 'var(--text-base)',
@@ -319,10 +318,6 @@ export type ButtonProps = {
   rounded?: RoundedSize;
 };
 
-const isDisabledOrLoading = (el: HTMLElement): boolean => {
-  return el.hasAttribute('disabled') || el.hasAttribute('loading');
-};
-
 /**
  * A customizable button component with multiple variants, sizes, and states.
  * Supports icons, loading states, and special effects like frost and rainbow.
@@ -369,103 +364,49 @@ const isDisabledOrLoading = (el: HTMLElement): boolean => {
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-class BitButton extends HTMLElement {
-  static observedAttributes = [
-    'variant',
-    'color',
-    'size',
-    'disabled',
-    'loading',
-    'rainbow',
-    'type',
-    'icon-only',
-    'fullwidth',
-    'rounded',
-  ] as const;
+define('bit-button', () => {
+  const props = defineProps({
+    color: { default: undefined as ThemeColor | undefined },
+    disabled: { default: false },
+    fullwidth: { default: false },
+    iconOnly: { default: false },
+    loading: { default: false },
+    rainbow: { default: false },
+    rounded: { default: undefined as RoundedSize | undefined },
+    size: { default: undefined as ComponentSize | undefined },
+    type: { default: 'button' as ButtonType },
+    variant: { default: 'solid' as Exclude<VisualVariant, 'glass'> },
+  });
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
+  const isDisabled = computed(() => props.disabled.value || props.loading.value);
 
-  connectedCallback() {
-    this.render();
+  const fire = defineEmits<{ click: { originalEvent: MouseEvent } }>();
 
-    const button = this.shadowRoot?.querySelector('button') as HTMLButtonElement | null;
-    if (button) {
-      button.addEventListener('click', (e) => {
-        if (isDisabledOrLoading(this)) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
+  const handleClick = guard(
+    () => !isDisabled.value,
+    (e: MouseEvent) => {
+      fire('click', { originalEvent: e });
+      e.stopPropagation();
+    },
+  );
 
-        this.dispatchEvent(
-          new CustomEvent('click', {
-            bubbles: true,
-            composed: true,
-            detail: { originalEvent: e },
-          }),
-        );
-        e.stopPropagation();
-      });
-    }
-  }
-
-  attributeChangedCallback(name: string, _oldValue: string | null, _newValue: string | null) {
-    const innerButton = this.shadowRoot?.querySelector('button') as HTMLButtonElement | null;
-    if (!innerButton) return;
-
-    if (name === 'disabled' || name === 'loading') {
-      const disabled = isDisabledOrLoading(this);
-      const loading = this.hasAttribute('loading');
-
-      innerButton.disabled = disabled;
-      innerButton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-      innerButton.setAttribute('aria-busy', loading ? 'true' : 'false');
-
-      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-      this.setAttribute('aria-busy', loading ? 'true' : 'false');
-
-      // Handle loader visibility
-      const existingLoader = this.shadowRoot?.querySelector('.loader');
-      if (loading && !existingLoader) {
-        const loader = document.createElement('span');
-        loader.className = 'loader';
-        loader.setAttribute('aria-label', 'Loading');
-        innerButton.insertBefore(loader, innerButton.firstChild);
-      } else if (!loading && existingLoader) {
-        existingLoader.remove();
-      }
-    } else if (name === 'type') {
-      innerButton.type = (_newValue || 'button') as 'button' | 'submit' | 'reset';
-    }
-  }
-
-  render() {
-    const disabled = isDisabledOrLoading(this);
-    const loading = this.hasAttribute('loading');
-    const type = this.getAttribute('type') || 'button';
-
-    this.shadowRoot!.innerHTML = /* html */ `
-      <style>${styles}</style>
+  return {
+    styles: [styles],
+    template: html`
       <button
         part="button"
-        type="${type}"
-        ${disabled ? 'disabled' : ''}
-        aria-disabled="${disabled ? 'true' : 'false'}"
-        aria-busy="${loading ? 'true' : 'false'}">
-        ${loading ? '<span class="loader" part="loader" aria-label="Loading"></span>' : ''}
+        type=${props.type}
+        ?disabled=${isDisabled}
+        aria-disabled=${() => String(isDisabled.value)}
+        aria-busy=${() => String(props.loading.value)}
+        @click=${handleClick}>
+        <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
         <slot name="prefix"></slot>
         <span class="content" part="content"><slot></slot></span>
         <slot name="suffix"></slot>
       </button>
-    `;
-  }
-}
-
-if (!customElements.get('bit-button')) {
-  customElements.define('bit-button', BitButton);
-}
+    `,
+  };
+});
 
 export default {};

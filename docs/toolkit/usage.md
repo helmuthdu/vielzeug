@@ -1,43 +1,48 @@
+---
+title: Toolkit — Usage Guide
+description: Array, async, object, string, math, and function utilities for Toolkit.
+---
+
 # Toolkit Usage Guide
 
-Complete guide to installing and using Toolkit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Toolkit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Toolkit?
 
-::: code-group
+Lodash ships ~70 kB even tree-shaken. Toolkit provides modern, tree-shakeable utilities with full TypeScript inference at a fraction of the size.
 
-```sh [pnpm]
-pnpm add @vielzeug/toolkit
+```ts
+// Before — verbose native JS
+const groups = items.reduce((acc, item) => {
+  const key = item.category;
+  (acc[key] = acc[key] || []).push(item);
+  return acc;
+}, {} as Record<string, typeof items>);
+
+// After — Toolkit
+import { group } from '@vielzeug/toolkit';
+const groups = group(items, item => item.category);
 ```
 
-```sh [npm]
-npm install @vielzeug/toolkit
-```
+| Feature | Toolkit | Lodash | Radash |
+|---|---|---|---|
+| Tree-shakeable | ✅ Always | ✅ lodash-es | ✅ |
+| TypeScript | ✅ First-class | ⚠️ Via @types | ✅ |
+| Async utilities | ✅ | ⚠️ Limited | ✅ |
+| Zero dependencies | ✅ | ✅ | ✅ |
 
-```sh [yarn]
-yarn add @vielzeug/toolkit
-```
+**Use Toolkit when** you want utility functions with strong TypeScript types and minimal bundle impact.
 
-:::
 
 ## Import
 
 ```ts
 // Named imports (recommended for tree-shaking)
 import { chunk, group, debounce } from '@vielzeug/toolkit';
-
-// Category-specific imports
-import { chunk, map, filter } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { debounce, throttle } from '@vielzeug/toolkit/function';
 
 // Optional: Import types
 import type { ChunkOptions } from '@vielzeug/toolkit';
@@ -59,17 +64,6 @@ const byRole = group(users, (u) => u.role);
 const search = debounce((query) => fetchResults(query), 300);
 ```
 
-### Category-Specific Imports
-
-Import from specific modules for better code organization:
-
-```ts
-import { chunk, map, filter } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { camelCase } from '@vielzeug/toolkit/string';
-import { debounce, throttle } from '@vielzeug/toolkit/function';
-```
-
 ### Namespace Imports (Not Recommended)
 
 ⚠️ **Avoid** importing the entire library—this prevents tree-shaking:
@@ -82,7 +76,7 @@ import * as toolkit from '@vielzeug/toolkit';
 import { chunk, group } from '@vielzeug/toolkit';
 ```
 
-## Basic Usage
+## Common Patterns
 
 ### Arrays
 
@@ -271,7 +265,7 @@ app.get('/api/products', async (req, res) => {
 });
 ```
 
-> **💡 Tip**: See [Examples](./examples.md) for complete application examples.
+> **💡 Tip**: See [Examples](./examples/array.md) for complete category examples.
 
 ## TypeScript Configuration
 

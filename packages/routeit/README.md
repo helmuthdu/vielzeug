@@ -1,713 +1,157 @@
 # @vielzeug/routeit
 
-## What is Routeit?
+> Fast, type-safe client-side router with history and hash modes, middleware, and URL builder
 
-**Routeit** is a lightweight, type-safe client-side routing library for building powerful SPAs with minimal code and maximum flexibility—all in just 3.1 KB.
+[![npm version](https://img.shields.io/npm/v/@vielzeug/routeit)](https://www.npmjs.com/package/@vielzeug/routeit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-### The Problem
+**Routeit** is a lightweight, framework-agnostic client-side router: define routes with handlers, support history or hash routing, apply middleware, and build type-safe URLs — all with a minimal API.
 
-Client-side routing libraries are often complex and heavy:
+## Installation
 
-- **React Router** is React-specific and adds 10KB+
-- **Vue Router** is Vue-specific
-- **Universal Router** lacks type safety
-- Manual routing leads to bugs and repetition
-- Middleware and guards require custom code
-
-### The Solution
-
-Routeit provides a clean, framework-agnostic routing API:
-
-```typescript
-import { createRouter } from '@vielzeug/routeit';
-
-const router = createRouter({ mode: 'history', base: '/' });
-
-router
-  .get('/', () => renderHome())
-  .get('/users/:id', ({ params }) => renderUser(params.id))
-  .get('/posts', () => renderPosts())
-  .start();
-
-// Navigate programmatically
-router.navigate('/users/123');
-```
-
-## ✨ Features
-
-- ✅ **Type-Safe** – Full TypeScript support with parameter extraction
-- ✅ **Framework Agnostic** – Works with React, Vue, Svelte, or vanilla JS  
-- ✅ **Route Parameters** – Extract params from dynamic routes (`/users/:id`)
-- ✅ **Query Parameters** – Automatic query string parsing
-- ✅ **Middleware System** – Powerful middleware for auth, logging, and more
-- ✅ **Nested Routes** – Support for child routes and layouts
-- ✅ **Hash & History Mode** – Choose between hash-based or HTML5 History API
-- ✅ **Permission Integration** – Works seamlessly with @vielzeug/permit
-- ✅ **Lightweight** – ~3.1 KB gzipped, zero dependencies
-- ✅ **Developer Experience** – Intuitive API with comprehensive utilities
-
-## 🆚 Comparison with Alternatives
-
-| Feature              | Routeit       | React Router | Vue Router  | Universal Router |
-| -------------------- | ------------- | ------------ | ----------- | ---------------- |
-| Bundle Size (gzip)   | **~3.1 KB**   | ~10KB        | ~7KB        | ~2KB             |
-| TypeScript Support   | ✅ First-class| ✅ Good      | ✅ Good     | ⚠️ Limited       |
-| Framework Agnostic   | ✅ Yes        | ❌ React only| ❌ Vue only | ✅ Yes           |
-| Middleware System    | ✅ Built-in   | ⚠️ Manual    | ✅ Guards   | ✅ Yes           |
-| Nested Routes        | ✅ Yes        | ✅ Yes       | ✅ Yes      | ✅ Yes           |
-| Hash & History Mode  | ✅ Both       | ✅ Both      | ✅ Both     | ⚠️ Manual        |
-| Dependencies         | 0             | 2            | 0           | 1                |
-
-## 📦 Installation
-
-```bash
-# pnpm
+```sh
 pnpm add @vielzeug/routeit
-# npm
-npm install @vielzeug/routeit
-# yarn
-yarn add @vielzeug/routeit
+# npm install @vielzeug/routeit
+# yarn add @vielzeug/routeit
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ```typescript
 import { createRouter } from '@vielzeug/routeit';
 
-// Create a router
-const router = createRouter({
-  mode: 'history', // or 'hash'
-  base: '/',
-});
+const router = createRouter({ mode: 'history' });
 
-// Register routes
-router
-  .get('/', ({ navigate }) => {
-    console.log('Home page');
-    document.getElementById('app').innerHTML = '<h1>Home</h1>';
-  })
-  .get('/about', () => {
-    console.log('About page');
-    document.getElementById('app').innerHTML = '<h1>About</h1>';
-  })
-  .get('/users/:id', ({ params }) => {
-    console.log('User ID:', params.id);
-    document.getElementById('app').innerHTML = `<h1>User ${params.id}</h1>`;
-  })
-  .start(); // Start listening for route changes
+router.get('/', () => render('<Home />'));
+router.get('/users', () => render('<Users />'));
+router.get('/users/:id', ({ params }) => render(`<User id="${params.id}" />`));
 
-// Navigate programmatically
-router.navigate('/users/123');
+router.start();
 ```
 
-## 🎓 Core Concepts
+## Features
 
-### Router Creation
+- ✅ **History and hash modes** — `history` (default) or `hash`
+- ✅ **Dynamic params** — `/users/:id`, `/posts/:slug`
+- ✅ **Query string access** — `context.query`
+- ✅ **Middleware** — intercept every navigation
+- ✅ **Programmatic navigation** — `navigate()`, `back()`, `forward()`, `go(n)`
+- ✅ **URL builder** — `buildUrl(path, params?, query?)`
+- ✅ **Not-found handler** — catch-all for unmatched routes
+- ✅ **Framework-agnostic** — works with any UI library
+
+## Usage
+
+### Defining Routes
 
 ```typescript
 import { createRouter } from '@vielzeug/routeit';
 
-// Basic router with defaults
-const router = createRouter();
+const router = createRouter({ mode: 'history', base: '/app' });
 
-// Router with options
-const router = createRouter({
-  mode: 'history', // 'history' or 'hash'
-  base: '/app', // Base path for all routes
-  notFound: ({ pathname }) => {
-    console.log('404:', pathname);
-    document.getElementById('app').innerHTML = '<h1>404 Not Found</h1>';
-  },
-  middleware: async (ctx, next) => {
-    // Global middleware – runs for every route
-    console.log('Navigating to:', ctx.pathname);
-    await next();
-  },
-});
-```
+// Inline handler
+router.get('/', (ctx) => console.log('Home', ctx));
 
-### Route Registration
-
-```typescript
-// Single route
-router.route({
-  path: '/products/:id',
-  handler: ({ params, query }) => {
-    console.log('Product:', params.id);
-    console.log('Search:', query.q);
-  },
-});
+// Route definition object
+router.route({ path: '/about', handler: () => showAbout() });
 
 // Multiple routes at once
 router.routes([
-  { path: '/', handler: homeHandler },
-  { path: '/about', handler: aboutHandler },
-  { path: '/contact', handler: contactHandler },
+  { path: '/login',  handler: showLogin },
+  { path: '/logout', handler: doLogout },
 ]);
 
-// Convenience method for GET-like routes
-router.get('/blog', ({ pathname }) => {
-  console.log('Blog page:', pathname);
-});
-
-// Method chaining
-router
-  .get('/', homeHandler)
-  .get('/about', aboutHandler)
-  .get('/users/:id', userHandler)
-  .start();
-```
-
-### Route Parameters
-
-```typescript
-// Dynamic segments
-router.get('/users/:userId', ({ params }) => {
-  console.log('User ID:', params.userId);
-  // GET /users/123 → params.userId = '123'
-});
-
-// Multiple parameters
-router.get('/users/:userId/posts/:postId', ({ params }) => {
-  console.log('User:', params.userId);
-  console.log('Post:', params.postId);
-  // GET /users/123/posts/456
-  // → params.userId = '123', params.postId = '456'
-});
-
-// Wildcard routes
-router.get('/docs/*', ({ pathname }) => {
-  console.log('Docs path:', pathname);
-  // GET /docs/guide/intro → matches
-  // GET /docs/api/reference → matches
-});
-```
-
-### Query Parameters
-
-```typescript
-router.get('/search', ({ query }) => {
-  console.log('Query:', query.q);
-  console.log('Page:', query.page);
-  // GET /search?q=test&page=2
-  // → query.q = 'test', query.page = '2'
-});
-
-// Array query parameters
-router.get('/filter', ({ query }) => {
-  console.log('Tags:', query.tags);
-  // GET /filter?tags=a&tags=b&tags=c
-  // → query.tags = ['a', 'b', 'c']
-});
-
-// Mixed parameters
-router.get('/products/:category', ({ params, query }) => {
-  console.log('Category:', params.category);
-  console.log('Sort:', query.sort);
-  console.log('Filters:', query.filter);
-  // GET /products/electronics?sort=price&filter=new&filter=sale
-  // → params.category = 'electronics'
-  // → query.sort = 'price'
-  // → query.filter = ['new', 'sale']
-});
-```
-
-### Navigation
-
-```typescript
-// Navigate to path
-router.navigate('/about');
-
-// Navigate with query parameters
-router.navigate('/search?q=test');
-
-// Replace current entry (doesn't create history entry)
-router.navigate('/login', { replace: true });
-
-// Navigate with state
-router.navigate('/profile', {
-  state: { from: '/settings' },
-});
-
-// Build URLs programmatically
-const url = router.buildUrl('/users/:id', { id: '123' });
-console.log(url); // '/users/123'
-
-const searchUrl = router.buildUrl('/search', undefined, {
-  q: 'test',
-  page: '2',
-});
-console.log(searchUrl); // '/search?q=test&page=2'
-
-// Navigate from within route handler
-router.get('/old-page', ({ navigate }) => {
-  navigate('/new-page');
-});
-
-// History navigation
-router.back(); // Go back one page
-router.forward(); // Go forward one page
-router.go(-2); // Go back 2 pages
-router.go(1); // Go forward 1 page
+router.start();
 ```
 
 ### Route Context
 
-Every route handler receives a context object:
+```typescript
+router.get('/users/:id', (ctx) => {
+  ctx.params.id;      // dynamic segment
+  ctx.query.page;     // ?page=2
+  ctx.path;           // full path string
+  ctx.state;          // history.state value
+});
+```
+
+### Programmatic Navigation
 
 ```typescript
-router.get('/users/:id', (context) => {
-  // Route parameters
-  console.log(context.params.id);
+// Navigate to path
+router.navigate('/users/42');
+router.navigate('/users/42', { state: { from: '/' } });
 
-  // Query parameters
-  console.log(context.query);
+// History controls
+router.back();
+router.forward();
+router.go(-2);
 
-  // Full pathname
-  console.log(context.pathname);
-
-  // Hash (without #)
-  console.log(context.hash);
-
-  // Custom data (if provided in route definition)
-  console.log(context.data);
-
-  // Navigate function
-  context.navigate('/another-page');
-});
-
-// TypeScript: Type the context
-type RouteData = { requiresAuth: boolean };
-
-router.route<RouteData>({
-  path: '/admin',
-  handler: (context) => {
-    // context.data is typed as RouteData
-    if (context.data?.requiresAuth) {
-      console.log('Auth required');
-    }
-  },
-  data: { requiresAuth: true },
-});
+// Build a URL without navigating
+const url = router.buildUrl('/users/:id', { id: '42' }, { tab: 'profile' });
+// → '/users/42?tab=profile'
 ```
 
 ### Middleware
 
-Middleware allows you to execute code before route handlers, modify context, or block navigation.
-
 ```typescript
-import type { Middleware } from '@vielzeug/routeit';
-
-// Basic middleware
-const loggerMiddleware: Middleware = async (ctx, next) => {
-  console.log('Navigating to:', ctx.pathname);
-  await next(); // Continue to next middleware or handler
-  console.log('Navigation complete');
-};
-
-// Authentication middleware
-const requireAuth: Middleware = async (ctx, next) => {
-  const user = await getCurrentUser();
-  
-  if (!user) {
-    ctx.navigate('/login');
-    return; // Don't call next() – blocks execution
-  }
-  
-  ctx.user = user; // Add user to context
-  await next();
-};
-
-// Route-specific middleware
-router.route({
-  path: '/dashboard',
-  middleware: requireAuth,
-  handler: (ctx) => {
-    console.log('User:', ctx.user);
-  }
-});
-
-// Multiple middleware (executed in order)
-router.route({
-  path: '/admin',
-  middleware: [requireAuth, requireAdmin],
-  handler: () => {
-    console.log('Admin page');
-  }
-});
-
-// Global middleware (runs for all routes)
-const router = createRouter({
-  middleware: [loggerMiddleware, errorHandler]
-});
-```
-
-**Middleware Execution Order:**
-```
-Global Middleware 1
-  ↓
-Global Middleware 2
-  ↓
-Route Middleware 1
-  ↓
-Route Middleware 2
-  ↓
-Route Handler
-```
-
-**Context Enhancement:**
-```typescript
-// Middleware can modify the context
-const dataLoader: Middleware = async (ctx, next) => {
-  // Add metadata
-  ctx.meta = { 
-    loadedAt: Date.now(),
-    environment: 'production' 
-  };
-  
-  // Load user data
-  ctx.user = await fetchUser();
-  
-  await next();
-};
-
-// Handler can access enhanced context
-router.route({
-  path: '/profile',
-  middleware: dataLoader,
-  handler: (ctx) => {
-    console.log('User:', ctx.user);
-    console.log('Meta:', ctx.meta);
-  }
-});
-```
-
-**Integration with @vielzeug/permit:**
-```typescript
-import { Permit } from '@vielzeug/permit';
-import type { BaseUser, PermissionAction } from '@vielzeug/permit';
-
-// Permission middleware factory
-function requirePermission(
-  resource: string, 
-  action: PermissionAction
-): Middleware {
-  return async (ctx, next) => {
-    const user = ctx.user as BaseUser;
-    
-    if (!user || !Permit.check(user, resource, action)) {
-      ctx.navigate('/forbidden');
-      return;
-    }
-    
-    await next();
-  };
-}
-
-// Usage
-router.route({
-  path: '/posts',
-  middleware: [requireAuth, requirePermission('posts', 'read')],
-  handler: () => console.log('Posts page')
-});
-
-router.route({
-  path: '/posts/:id/edit',
-  middleware: [requireAuth, requirePermission('posts', 'update')],
-  handler: ({ params }) => console.log('Edit post:', params.id)
-});
-```
-
-### Nested Routes
-
-```typescript
-router.route({
-  path: '/users',
-  handler: () => {
-    console.log('Users section');
-  },
-  children: [
-    {
-      path: '/list',
-      handler: () => {
-        console.log('User list');
-        // GET /users/list
-      },
-    },
-    {
-      path: '/:id',
-      handler: ({ params }) => {
-        console.log('User details:', params.id);
-        // GET /users/123
-      },
-    },
-    {
-      path: '/:id/edit',
-      handler: ({ params }) => {
-        console.log('Edit user:', params.id);
-        // GET /users/123/edit
-      },
-    },
-  ],
-});
-
-// Nested routes with parameters
-router.route({
-  path: '/organizations/:orgId',
-  handler: ({ params }) => {
-    console.log('Organization:', params.orgId);
-  },
-  children: [
-    {
-      path: '/projects/:projectId',
-      handler: ({ params }) => {
-        // Both orgId and projectId are available
-        console.log('Org:', params.orgId);
-        console.log('Project:', params.projectId);
-        // GET /organizations/abc/projects/xyz
-      },
-    },
-  ],
-});
-```
-
-### Subscriptions
-
-```typescript
-// Subscribe to route changes
-const unsubscribe = router.subscribe(() => {
-  console.log('Route changed!');
-  console.log('Current path:', router.getCurrentPath());
-  console.log('Query params:', router.getCurrentQuery());
-});
-
-// Later... unsubscribe
-unsubscribe();
-
-// React integration
-import { useEffect, useState } from 'react';
-
-function useRouter(router) {
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    return router.subscribe(() => {
-      setTick((t) => t + 1); // Force re-render
-    });
-  }, [router]);
-
-  return {
-    pathname: router.getCurrentPath(),
-    query: router.getCurrentQuery(),
-    navigate: router.navigate.bind(router),
-  };
-}
-
-// Usage
-function App() {
-  const { pathname, query, navigate } = useRouter(router);
-
-  return (
-    <div>
-      <p>Current path: {pathname}</p>
-      <button onClick={() => navigate('/about')}>Go to About</button>
-    </div>
-  );
-}
-```
-
-### Utilities
-
-```typescript
-// Check if route is active
-if (router.isActive('/users/:id')) {
-  console.log('On user page');
-}
-
-if (router.isActive('/admin/*')) {
-  console.log('In admin section');
-}
-
-// Get current route info
-const pathname = router.getCurrentPath();
-const query = router.getCurrentQuery();
-const hash = router.getCurrentHash();
-
-console.log('Current:', pathname); // '/users/123'
-console.log('Query:', query); // { tab: 'profile' }
-console.log('Hash:', hash); // 'section-1'
-
-// Build URLs
-const userUrl = router.buildUrl('/users/:id', { id: '123' });
-console.log(userUrl); // '/users/123'
-
-const searchUrl = router.buildUrl(
-  '/search',
-  undefined,
-  { q: 'test', filter: ['new', 'sale'] }
-);
-console.log(searchUrl); // '/search?q=test&filter=new&filter=sale'
-
-const fullUrl = router.buildUrl(
-  '/users/:id',
-  { id: '123' },
-  { tab: 'posts', page: '2' }
-);
-console.log(fullUrl); // '/users/123?tab=posts&page=2'
-```
-
-## 🔥 Advanced Usage
-
-### Custom 404 Handler
-
-```typescript
-const router = createRouter({
-  notFound: ({ pathname, navigate }) => {
-    console.log('404:', pathname);
-    
-    // Render 404 page
-    document.getElementById('app').innerHTML = `
-      <div>
-        <h1>404 – Page Not Found</h1>
-        <p>The page "${pathname}" does not exist.</p>
-        <button onclick="router.navigate('/')">Go Home</button>
-      </div>
-    `;
-    
-    // Or redirect
-    // navigate('/', { replace: true });
-  },
-});
-```
-
-### Route Data & Metadata
-
-```typescript
-type RouteMetadata = {
-  title: string;
-  requiresAuth?: boolean;
-  roles?: string[];
-};
-
-router.route<RouteMetadata>({
-  path: '/admin',
-  handler: ({ data }) => {
-    document.title = data?.title || 'App';
-    console.log('Required roles:', data?.roles);
-  },
-  data: {
-    title: 'Admin Dashboard',
-    requiresAuth: true,
-    roles: ['admin'],
-  },
-  middleware: async ({ data }, next) => {
-    if (data?.requiresAuth && !isAuthenticated()) {
-      router.navigate('/login');
-      return;
-    }
-    if (data?.roles && !hasRole(data.roles)) {
-      router.navigate('/forbidden');
-      return;
-    }
-    await next();
-  },
-});
-```
-
-### Hash Mode
-
-```typescript
-// Use hash-based routing for GitHub Pages or static hosting
-const router = createRouter({
-  mode: 'hash',
-  base: '/',
-});
-
-router
-  .get('/', () => {
-    console.log('Home');
-    // URL: https://example.com/#/
-  })
-  .get('/about', () => {
-    console.log('About');
-    // URL: https://example.com/#/about
-  })
-  .get('/users/:id', ({ params }) => {
-    console.log('User:', params.id);
-    // URL: https://example.com/#/users/123
-  })
-  .start();
-```
-
-### Base Path
-
-```typescript
-// App deployed at /my-app/ instead of root
 const router = createRouter({
   mode: 'history',
-  base: '/my-app',
+  middleware: [
+    async (ctx, next) => {
+      if (!isLoggedIn() && ctx.path !== '/login') {
+        router.navigate('/login');
+        return;
+      }
+      await next();
+    },
+  ],
 });
-
-router.get('/about', () => {
-  console.log('About');
-  // Full URL: https://example.com/my-app/about
-});
-
-router.navigate('/contact');
-// Navigates to: https://example.com/my-app/contact
 ```
 
-## TypeScript Support
-
-Fully typed with comprehensive type definitions:
+### Not Found
 
 ```typescript
-import type {
-  Router,
-  RouteContext,
-  RouteDefinition,
-  RouteHandler,
-  Middleware,
-  RouteParams,
-  QueryParams,
-  NavigateOptions,
-  RouterMode,
-  RouterOptions,
-} from '@vielzeug/routeit';
+const router = createRouter({
+  notFound: (ctx) => renderNotFound(ctx.path),
+});
 ```
 
-## Browser Support
+## API
 
-Works in all modern browsers that support:
-- ES6 (ES2015)
-- URL API
-- URLSearchParams
-- History API (for history mode)
-- hashchange event (for hash mode)
+### `createRouter(options?)`
 
-## 📖 Documentation
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `mode` | `'history' \| 'hash'` | `'history'` | Routing mode |
+| `base` | `string` | `''` | Base path prefix |
+| `notFound` | `(ctx) => void` | — | Handler for unmatched routes |
+| `middleware` | `Middleware[]` | `[]` | Array of middleware functions |
 
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/routeit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/routeit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/routeit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/routeit/examples)
+### Router Methods
 
-## 📄 License
+| Method | Description |
+|---|---|
+| `get(path, handler)` | Register a route handler |
+| `route(def)` | Register a route definition object |
+| `routes(defs)` | Register multiple route definitions |
+| `start()` | Start listening for navigation |
+| `stop()` | Stop the router |
+| `navigate(path, options?)` | Navigate to a path |
+| `back()` | Go back in history |
+| `forward()` | Go forward in history |
+| `go(n)` | Move n steps in history |
+| `buildUrl(path, params?, query?)` | Build a URL string |
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
+## Documentation
 
-## 🤝 Contributing
+Full docs at **[vielzeug.dev/routeit](https://vielzeug.dev/routeit)**
 
-Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+| | |
+|---|---|
+| [Usage Guide](https://vielzeug.dev/routeit/usage) | Routes, navigation, middleware |
+| [API Reference](https://vielzeug.dev/routeit/api) | Complete type signatures |
+| [Examples](https://vielzeug.dev/routeit/examples) | Real-world routing patterns |
 
-## 🔗 Links
+## License
 
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
-
----
-
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
-
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

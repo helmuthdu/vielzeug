@@ -29,11 +29,11 @@ export function worker<T extends (...args: any) => any, R = Awaited<ReturnType<T
       }
     };
   `;
-  const blob = new Blob([workerScript], { type: 'application/javascript' });
-  const workerUrl = URL.createObjectURL(blob);
 
   return (...args: Parameters<T>): Promise<R> =>
     new Promise((resolve, reject) => {
+      const blob = new Blob([workerScript], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
       const workerInstance = new Worker(workerUrl);
 
       const cleanup = () => {

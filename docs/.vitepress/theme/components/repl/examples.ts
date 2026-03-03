@@ -1,777 +1,432 @@
 export const examples = {
   craftit: {
-    'async-data': {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
-
-defineElement('user-profile', {
-  state: {
-    userId: 1,
-    user: null as any,
-    loading: false,
-    error: null as string | null
-  },
-  
-  template: (el) => html\`
-    <div style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; max-width: 400px;">
-      \${el.state.loading ? \`
-        <div style="text-align: center; padding: 2rem; color: #667eea;">Loading...</div>
-      \` : el.state.error ? \`
-        <div style="color: #f56565; padding: 1rem;">\${el.state.error}</div>
-      \` : el.state.user ? \`
-        <div>
-          <h3 style="margin-top: 0;">\${el.state.user.name}</h3>
-          <p style="color: #718096;"><strong>Email:</strong> \${el.state.user.email}</p>
-          <p style="color: #718096;"><strong>Company:</strong> \${el.state.user.company.name}</p>
-          <button class="load-next" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Load Next User
-          </button>
-        </div>
-      \` : ''}
-    </div>
-  \`,
-  
-  async onConnected(el) {
-    await loadUser(el)
-    
-    el.on('.load-next', 'click', async () => {
-      el.state.userId++
-      await loadUser(el)
-    })
-  }
-})
-
-async function loadUser(el: any) {
-  await el.set(async (state: any) => {
-    try {
-      const response = await fetch(\`https://jsonplaceholder.typicode.com/users/\${state.userId}\`)
-      const user = await response.json()
-      return { ...state, user, loading: false, error: null }
-    } catch (error) {
-      return {
-        ...state,
-        user: null,
-        loading: false,
-        error: 'Failed to load user'
-      }
-    }
-  })
-}
-
-const profile = document.createElement('user-profile')
-document.getElementById('output').appendChild(profile)
-
-console.log('✓ Async data loading component created!')`,
-      name: 'Async Data - API Integration',
-    },
     'basic-component': {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
+      code: `import { define, html, css } from '@vielzeug/craftit'
 
-defineElement('hello-world', {
-  template: html\`
-    <div style="padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
-      <h2>Hello from Craftit!</h2>
-      <p>A lightweight web component library</p>
-    </div>
+define('hello-world', () => {
+  const styles = css\`
+    :host {
+      display: block;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      font-family: sans-serif;
+    }
+    h2 { margin: 0 0 0.5rem; }
+    p { margin: 0; opacity: 0.9; }
   \`
-})
-
-// Create and mount the element
-const el = document.createElement('hello-world')
-document.getElementById('output').appendChild(el)
-
-console.log('✓ Component mounted successfully!')`,
-      name: 'Basic Component - Simple Element',
-    },
-    'boolean-attributes': {
-      code: `import { defineElement, html, css } from '@vielzeug/craftit'
-
-defineElement('submit-button', {
-  state: {
-    isSubmitting: false,
-    isValid: true
-  },
-  
-  template: (el) => html\`
-    <div style="padding: 1.5rem;">
-      <h3 style="margin-top: 0;">Boolean Attributes Demo</h3>
-      <p style="color: #64748b;">Toggle states to see ?disabled syntax in action</p>
-      
-      <div style="margin: 1rem 0;">
-        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <input type="checkbox" class="toggle-submitting" />
-          <span>Simulate submitting</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 0.5rem;">
-          <input type="checkbox" class="toggle-valid" checked />
-          <span>Form is valid</span>
-        </label>
-      </div>
-      
-      <button 
-        class="submit-btn"
-        type="submit"
-        ?disabled="\${!el.state.isValid || el.state.isSubmitting}"
-        ?aria-busy="\${el.state.isSubmitting}"
-        style="padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer; transition: all 0.2s;">
-        \${el.state.isSubmitting ? '⏳ Submitting...' : '✓ Submit Form'}
-      </button>
-      
-      <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 6px; font-family: monospace; font-size: 0.875rem;">
-        <strong>Rendered HTML:</strong>
-        <pre style="margin: 0.5rem 0 0 0; white-space: pre-wrap;">&lt;button ?disabled="\${!el.state.isValid || el.state.isSubmitting}"&gt;</pre>
-        <pre style="margin: 0.5rem 0 0 0; color: #059669;">→ \${!el.state.isValid || el.state.isSubmitting ? '&lt;button disabled&gt;' : '&lt;button&gt;'}</pre>
-      </div>
-    </div>
-  \`,
-  
-  styles: [
-    css\`
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        background: #94a3b8 !important;
-      }
-      
-      button:hover:not(:disabled) {
-        background: #2563eb;
-      }
-    \`
-  ],
-  
-  onConnected(el) {
-    el.on('.toggle-submitting', 'change', (e) => {
-      el.state.isSubmitting = (e.target as HTMLInputElement).checked
-    })
-    
-    el.on('.toggle-valid', 'change', (e) => {
-      el.state.isValid = (e.target as HTMLInputElement).checked
-    })
-    
-    el.on('.submit-btn', 'click', () => {
-      if (!el.state.isSubmitting && el.state.isValid) {
-        console.log('✓ Form submitted!')
-      }
-    })
+  return {
+    template: html\`
+      <h2>Hello from Craftit!</h2>
+      <p>A lightweight, signals-based web component library.</p>
+    \`,
+    styles: [styles],
   }
 })
 
-const btn = document.createElement('submit-button')
-document.getElementById('output').appendChild(btn)
-
-console.log('✓ Boolean attribute demo created!')
-console.log('')
-console.log('💡 Boolean Attribute Syntax:')
-console.log('  ?disabled="\${condition}" → <button disabled> (when true)')
-console.log('  ?disabled="\${condition}" → <button> (when false)')
-console.log('')
-console.log('Benefits:')
-console.log('  • Clean, Lit-style syntax')
-console.log('  • Works with any boolean HTML attribute')
-console.log('  • Automatic attribute inclusion/omission')`,
-      name: 'Boolean Attributes - ?disabled Syntax',
+const el = document.createElement('hello-world')
+document.getElementById('output')?.appendChild(el)
+console.log('✓ Component mounted!')`,
+      name: 'Basic Component',
     },
     'counter-component': {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
+      code: `import { define, signal, html, css } from '@vielzeug/craftit'
 
-defineElement('simple-counter', {
-  state: { count: 0 },
-  
-  template: (el) => html\`
-    <div style="padding: 1rem; text-align: center;">
-      <h2 style="margin: 0 0 1rem 0;">Count: \${el.state.count}</h2>
-      <button class="btn btn-decrement" style="margin: 0 0.5rem;">-</button>
-      <button class="btn btn-reset" style="margin: 0 0.5rem;">Reset</button>
-      <button class="btn btn-increment" style="margin: 0 0.5rem;">+</button>
-    </div>
-  \`,
-  
-  styles: [\`
-    .btn {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-      border: none;
-      border-radius: 4px;
-      background: #667eea;
-      color: white;
+define('simple-counter', () => {
+  const count = signal(0)
+
+  const styles = css\`
+    :host { display: block; padding: 1rem; text-align: center; font-family: sans-serif; }
+    h2 { margin: 0 0 1rem; }
+    button {
+      padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer;
+      border: none; border-radius: 4px; background: #667eea; color: white; margin: 0 0.25rem;
     }
-    .btn:hover {
-      background: #5a67d8;
+    button:hover { background: #5a67d8; }
+  \`
+
+  return {
+    template: html\`
+      <h2>Count: \${count}</h2>
+      <button @click=\${() => count.value--}>-</button>
+      <button @click=\${() => (count.value = 0)}>Reset</button>
+      <button @click=\${() => count.value++}>+</button>
+    \`,
+    styles: [styles],
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('simple-counter'))
+console.log('✓ Counter component mounted!')`,
+      name: 'Interactive Counter',
+    },
+    'computed-signals': {
+      code: `import { define, signal, computed, html } from '@vielzeug/craftit'
+
+define('price-calculator', () => {
+  const price = signal(100)
+  const quantity = signal(1)
+  const taxRate = signal(0.1)
+
+  const subtotal = computed(() => price.value * quantity.value)
+  const tax = computed(() => subtotal.value * taxRate.value)
+  const total = computed(() => subtotal.value + tax.value)
+
+  return {
+    template: html\`
+      <div style="padding:1rem;font-family:sans-serif;max-width:300px">
+        <h3 style="margin:0 0 1rem">Price Calculator</h3>
+        <label>Price: <input type="number" .value=\${price} @input=\${(e: Event) => (price.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
+        <label>Qty:   <input type="number" .value=\${quantity} @input=\${(e: Event) => (quantity.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
+        <hr/>
+        <p>Subtotal: $\${subtotal}</p>
+        <p>Tax (10%): $\${tax}</p>
+        <p><strong>Total: $\${total}</strong></p>
+      </div>
+    \`,
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('price-calculator'))`,
+      name: 'Computed Signals',
+    },
+    'watchers': {
+      code: `import { define, signal, watch, effect, html } from '@vielzeug/craftit'
+
+define('watcher-demo', () => {
+  const count = signal(0)
+  const log = signal<string[]>([])
+
+  // watch fires whenever count changes
+  watch(count, (next, prev) => {
+    log.update((l) => [...l.slice(-4), \`\${prev} → \${next}\`])
+  })
+
+  // effect re-runs whenever its deps change
+  effect(() => {
+    console.log('count is now:', count.value)
+  })
+
+  return {
+    template: html\`
+      <div style="padding:1rem;font-family:sans-serif">
+        <h3 style="margin:0 0 .5rem">Count: \${count}</h3>
+        <button @click=\${() => count.value++} style="padding:.4rem .9rem;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer">Increment</button>
+        <ul style="margin-top:1rem;padding-left:1.2rem">
+          \${html.each(log, (_, i) => i, (entry) => html\`<li>\${entry}</li>\`)}
+        </ul>
+      </div>
+    \`,
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('watcher-demo'))`,
+      name: 'Watchers & Effects',
+    },
+    'async-data': {
+      code: `import { define, signal, html } from '@vielzeug/craftit'
+
+define('user-profile', () => {
+  const user = signal<any>(null)
+  const loading = signal(false)
+  const error = signal<string | null>(null)
+  const userId = signal(1)
+
+  async function loadUser() {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await fetch(\`https://jsonplaceholder.typicode.com/users/\${userId.value}\`)
+      user.value = await res.json()
+    } catch {
+      error.value = 'Failed to load user'
+    } finally {
+      loading.value = false
     }
-  \`],
-  
-  onConnected(el) {
-    el.on('.btn-increment', 'click', () => el.state.count++)
-    el.on('.btn-decrement', 'click', () => el.state.count--)
-    el.on('.btn-reset', 'click', () => el.state.count = 0)
   }
-})
 
-const counter = document.createElement('simple-counter')
-document.getElementById('output').appendChild(counter)
+  loadUser()
 
-console.log('✓ Interactive counter component created!')`,
-      name: 'Interactive Counter - State & Events',
-    },
-    'css-theming': {
-      code: `import { defineElement, html, css } from '@vielzeug/craftit'
-
-// Create light/dark theme - same variable references!
-const theme = css.theme(
-  // Light theme
-  {
-    primaryColor: '#3b82f6',
-    backgroundColor: '#ffffff',
-    textColor: '#1f2937',
-    borderColor: '#e5e7eb',
-    spacing: '1.5rem',
-    borderRadius: '12px',
-    buttonBg: '#f3f4f6',
-    buttonText: '#374151',
-  },
-  // Dark theme
-  {
-    primaryColor: '#60a5fa',
-    backgroundColor: '#1f2937',
-    textColor: '#f9fafb',
-    borderColor: '#374151',
-    buttonBg: '#374151',
-    buttonText: '#f9fafb',
-  }
-)
-
-defineElement('themed-card', {
-  state: {
-    mode: 'auto' as 'auto' | 'light' | 'dark'
-  },
-  
-  template: (el) => html\`
-    <div class="card">
-      <h2>✨ Light/Dark Theme with Autocomplete</h2>
-      <p>Automatic theme switching via <code>prefers-color-scheme</code></p>
-      <p><small>Mode: \${el.state.mode.charAt(0).toUpperCase() + el.state.mode.slice(1)}</small></p>
-      <div class="theme-buttons">
-        <button class="btn-auto">Auto</button>
-        <button class="btn-light">Light</button>
-        <button class="btn-dark">Dark</button>
+  return {
+    template: html\`
+      <div style="padding:1rem;border:1px solid #e2e8f0;border-radius:8px;max-width:360px;font-family:sans-serif">
+        \${html.when(loading, html\`<p>Loading…</p>\`)}
+        \${html.when(error.derive(Boolean), html\`<p style="color:#f56565">\${error}</p>\`)}
+        \${html.when(user.derive(Boolean),
+          html\`
+            <h3 style="margin-top:0">\${user.derive((u) => u?.name)}</h3>
+            <p><strong>Email:</strong> \${user.derive((u) => u?.email)}</p>
+            <p><strong>Company:</strong> \${user.derive((u) => u?.company?.name)}</p>
+            <button @click=\${() => { userId.update((id) => (id % 10) + 1); loadUser() }}
+              style="padding:.4rem .9rem;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer">
+              Next User
+            </button>
+          \`
+        )}
       </div>
-      <div class="info">
-        <p>💡 Use the same variable names - CSS handles light/dark!</p>
-        <p>Try: <code>theme.primaryColor</code> works for both themes</p>
-      </div>
-    </div>
-  \`,
-  
-  styles: [
-    css\`
-      /* Inject both light and dark themes */
-      \${theme}
-      
-      .card {
-        /* Same variable references - CSS handles which theme applies! */
-        background: \${theme.backgroundColor};
-        color: \${theme.textColor};
-        border: 2px solid \${theme.borderColor};
-        border-radius: \${theme.borderRadius};
-        padding: \${theme.spacing};
-        transition: all 0.3s ease;
-      }
-      
-      h2 {
-        margin-top: 0;
-        color: \${theme.primaryColor};
-      }
-      
-      code {
-        background: rgba(0, 0, 0, 0.05);
-        padding: 0.125rem 0.375rem;
-        border-radius: 4px;
-        font-size: 0.9em;
-      }
-      
-      small {
-        opacity: 0.7;
-      }
-      
-      .theme-buttons {
-        display: flex;
-        gap: 0.5rem;
-        margin: 1rem 0;
-      }
-      
-      button {
-        flex: 1;
-        background: \${theme.buttonBg};
-        color: \${theme.buttonText};
-        border: 1px solid \${theme.borderColor};
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        transition: all 0.2s;
-      }
-      
-      button:hover {
-        opacity: 0.8;
-        transform: translateY(-1px);
-      }
-      
-      button:active {
-        transform: translateY(0);
-      }
-      
-      .info {
-        margin-top: 1rem;
-        padding: 0.75rem;
-        background: rgba(59, 130, 246, 0.05);
-        border-left: 3px solid \${theme.primaryColor};
-        border-radius: 4px;
-      }
-      
-      .info p {
-        margin: 0.25rem 0;
-        font-size: 0.875rem;
-      }
-    \`
-  ],
-  
-  onConnected(el) {
-    el.on('.btn-auto', 'click', () => {
-      el.state.mode = 'auto'
-      el.removeAttribute('data-theme')
-    })
-    
-    el.on('.btn-light', 'click', () => {
-      el.state.mode = 'light'
-      el.setAttribute('data-theme', 'light')
-    })
-    
-    el.on('.btn-dark', 'click', () => {
-      el.state.mode = 'dark'
-      el.setAttribute('data-theme', 'dark')
-    })
+    \`,
   }
 })
 
-const card = document.createElement('themed-card')
-document.getElementById('output').appendChild(card)
-
-console.log('✓ Light/dark themed card created!')
-console.log('')
-console.log('🎯 Real-World Usage:')
-console.log('  • Same variable names for both themes')
-console.log('  • CSS handles which theme applies')
-console.log('  • Autocomplete: theme.primaryColor')
-console.log('  • No .light or .dark needed!')
-console.log('')
-console.log('Theme behavior:')
-console.log('  • Auto: System preference (prefers-color-scheme)')
-console.log('  • Light: Force light mode')
-console.log('  • Dark: Force dark mode')`,
-      name: 'CSS Theming - Light/Dark with Autocomplete',
-    },
-    'form-component': {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
-
-defineElement('custom-input', {
-  state: {
-    value: '',
-    error: ''
-  },
-  
-  template: (el) => html\`
-    <div style="margin-bottom: 1rem;">
-      <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-        Email Address
-      </label>
-      <input
-        type="email"
-        value="\${el.state.value}"
-        placeholder="Enter your email"
-        style="width: 100%; padding: 0.5rem; border: 1px solid \${el.state.error ? '#f56565' : '#e2e8f0'}; border-radius: 4px;"
-      />
-      \${el.state.error ? \`
-        <span style="color: #f56565; font-size: 0.875rem; margin-top: 0.25rem; display: block;">
-          \${el.state.error}
-        </span>
-      \` : ''}
-    </div>
-  \`,
-  
-  formAssociated: true,
-  
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const value = (e.currentTarget as HTMLInputElement).value
-      el.state.value = value
-      
-      // Validation
-      if (!value) {
-        el.state.error = 'Email is required'
-        el.form?.valid({ valueMissing: true }, 'Required')
-      } else if (!value.includes('@')) {
-        el.state.error = 'Invalid email address'
-        el.form?.valid({ typeMismatch: true }, 'Invalid email')
-      } else {
-        el.state.error = ''
-        el.form?.valid()
-      }
-      
-      el.form?.value(value)
-    })
-  }
-})
-
-const input = document.createElement('custom-input')
-document.getElementById('output').appendChild(input)
-
-console.log('✓ Form-associated custom input created!')
-console.log('Try typing to see validation in action')`,
-      name: 'Form Component - Custom Input',
+document.getElementById('output')?.appendChild(document.createElement('user-profile'))`,
+      name: 'Async Data – API Integration',
     },
     'todo-list': {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
+      code: `import { define, signal, html, css } from '@vielzeug/craftit'
 
-defineElement('todo-list', {
-  state: {
-    todos: ['Learn Craftit', 'Build components'],
-    input: ''
-  },
-  
-  template: (el) => html\`
-    <div style="max-width: 400px; margin: 0 auto; padding: 1rem;">
-      <h2 style="margin-top: 0;">My Todos</h2>
-      <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
-        <input
-          type="text"
-          placeholder="New todo..."
-          value="\${el.state.input}"
-          style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
-        />
-        <button class="add" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Add
+define('todo-list', () => {
+  const todos = signal<string[]>(['Learn Craftit', 'Build components'])
+  const input = signal('')
+
+  function addTodo() {
+    const text = input.value.trim()
+    if (text) {
+      todos.update((list) => [...list, text])
+      input.value = ''
+    }
+  }
+
+  function removeTodo(index: number) {
+    todos.update((list) => list.filter((_, i) => i !== index))
+  }
+
+  const styles = css\`
+    :host { display: block; max-width: 400px; padding: 1rem; font-family: sans-serif; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; justify-content: space-between; align-items: center;
+         padding: .6rem; margin-bottom: .4rem; background: #f7fafc; border-radius: 4px; }
+    .row { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    input { flex: 1; padding: .4rem; border: 1px solid #ddd; border-radius: 4px; }
+    .add { background: #667eea; color: white; border: none; border-radius: 4px; padding: .4rem .9rem; cursor: pointer; }
+    .del { background: #f56565; color: white; border: none; border-radius: 4px; padding: .2rem .5rem; cursor: pointer; }
+  \`
+
+  return {
+    template: html\`
+      <h2 style="margin-top:0">My Todos</h2>
+      <div class="row">
+        <input .value=\${input} @input=\${(e: Event) => (input.value = (e.target as HTMLInputElement).value)}
+               placeholder="New todo…" @keydown=\${(e: KeyboardEvent) => e.key === 'Enter' && addTodo()} />
+        <button class="add" @click=\${addTodo}>Add</button>
+      </div>
+      <ul>
+        \${html.each(todos, (t, i) => i, (todo, idx) => html\`
+          <li><span>\${todo}</span><button class="del" @click=\${() => removeTodo(idx)}>×</button></li>
+        \`)}
+      </ul>
+    \`,
+    styles: [styles],
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('todo-list'))`,
+      name: 'Todo List',
+    },
+    'css-theming': {
+      code: `import { define, signal, html, css } from '@vielzeug/craftit'
+
+const { vars, sheet } = css.theme(
+  { primary: '#3b82f6', bg: '#ffffff', text: '#1f2937', border: '#e5e7eb' },
+  { primary: '#60a5fa', bg: '#1f2937', text: '#f9fafb', border: '#374151' },
+)
+
+define('themed-card', () => {
+  const dark = signal(false)
+
+  return {
+    template: html\`
+      <div style="padding:1.5rem;font-family:sans-serif" ?data-theme=\${'dark'} .dataset=\${dark.derive((d) => ({ theme: d ? 'dark' : '' }))}>
+        <h2 style="margin:0 0 .5rem;color:\${vars.primary}">Themed Card</h2>
+        <p style="color:\${vars.text}">Automatic light/dark variables.</p>
+        <button @click=\${() => (dark.value = !dark.value)}
+          style="padding:.4rem .9rem;background:\${vars.primary};color:white;border:none;border-radius:4px;cursor:pointer">
+          Toggle theme
         </button>
       </div>
-      <ul style="list-style: none; padding: 0;">
-        \${el.state.todos.map((todo, i) => \`
-          <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; background: #f7fafc; border-radius: 4px;">
-            <span>\${todo}</span>
-            <button class="delete" data-index="\${i}" style="background: #f56565; color: white; border: none; border-radius: 4px; padding: 0.25rem 0.5rem; cursor: pointer;">
-              ×
-            </button>
-          </li>
-        \`).join('')}
-      </ul>
-    </div>
-  \`,
-  
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      el.state.input = (e.currentTarget as HTMLInputElement).value
-    })
-    
-    el.on('.add', 'click', () => {
-      if (el.state.input.trim()) {
-        el.state.todos.push(el.state.input)
-        el.state.input = ''
-      }
-    })
-    
-    el.on('.delete', 'click', (e) => {
-      const index = +(e.currentTarget as HTMLElement).dataset.index!
-      el.state.todos.splice(index, 1)
-    })
+    \`,
+    styles: [
+      sheet,
+      css\`
+        :host { display: block; border: 1px solid \${vars.border}; border-radius: 8px; background: \${vars.bg}; }
+      \`,
+    ],
   }
 })
 
-const todoList = document.createElement('todo-list')
-document.getElementById('output').appendChild(todoList)
-
-console.log('✓ Todo list component created!')
-console.log('Try adding and removing todos!')`,
-      name: 'Todo List - Dynamic Content',
+document.getElementById('output')?.appendChild(document.createElement('themed-card'))`,
+      name: 'CSS Theming – Light/Dark',
     },
-    watchers: {
-      code: `import { defineElement, html } from '@vielzeug/craftit'
+    'form-associated': {
+      code: `import { define, signal, field, onFormAssociated, onFormReset, html } from '@vielzeug/craftit'
 
-defineElement('watcher-demo', {
-  state: {
-    count: 0,
-    doubled: 0,
-    history: [] as number[]
-  },
-  
-  template: (el) => html\`
-    <div style="padding: 1rem;">
-      <h3>State Watchers</h3>
-      <p><strong>Count:</strong> \${el.state.count}</p>
-      <p><strong>Doubled:</strong> \${el.state.doubled}</p>
-      <p><strong>History:</strong> [\${el.state.history.join(', ')}]</p>
-      <button class="increment" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Increment
-      </button>
-    </div>
-  \`,
-  
-  onConnected(el) {
-    // Watch count changes
-    el.watch(
-      (state) => state.count,
-      (count, prevCount) => {
-        console.log(\`Count changed from \${prevCount} to \${count}\`)
-        
-        // Update doubled value
-        el.state.doubled = count * 2
-        
-        // Add to history
-        el.state.history.push(count)
-        
-        // Keep only last 5
-        if (el.state.history.length > 5) {
-          el.state.history.shift()
-        }
-      }
-    )
-    
-    el.on('.increment', 'click', () => {
-      el.state.count++
-    })
+define('custom-input', () => {
+  const value = signal('')
+  const error = signal('')
+  const internals = field()
+
+  onFormAssociated((form) => {
+    console.log('Associated with form:', form?.id)
+  })
+
+  onFormReset(() => {
+    value.value = ''
+    error.value = ''
+    internals.setFormValue('')
+  })
+
+  function validate(v: string) {
+    if (!v) return 'Required'
+    if (!v.includes('@')) return 'Invalid email'
+    return ''
   }
-})
 
-const demo = document.createElement('watcher-demo')
-document.getElementById('output').appendChild(demo)
+  return {
+    template: html\`
+      <div style="padding:.5rem;font-family:sans-serif">
+        <label style="display:block;font-weight:bold;margin-bottom:.25rem">Email</label>
+        <input
+          type="email"
+          .value=\${value}
+          placeholder="you@example.com"
+          style="padding:.4rem;border:1px solid \${error.derive((e) => (e ? '#f56565' : '#cbd5e0'))};border-radius:4px;width:100%"
+          @input=\${(e: Event) => {
+            const v = (e.target as HTMLInputElement).value
+            value.value = v
+            error.value = validate(v)
+            internals.setFormValue(v)
+            internals.setValidity(error.value ? { customError: true } : {}, error.value || '')
+          }}
+        />
+        \${html.when(error.derive(Boolean), html\`<p style="color:#f56565;font-size:.8rem;margin:.25rem 0 0">\${error}</p>\`)}
+      </div>
+    \`,
+  }
+}, { formAssociated: true })
 
-console.log('✓ Watcher demo created!')
-console.log('Click increment to see watchers in action')`,
-      name: 'State Watchers - Reactive Side Effects',
+document.getElementById('output')?.appendChild(document.createElement('custom-input'))`,
+      name: 'Form-Associated Component',
     },
   },
   deposit: {
     'basic-setup': {
       code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-type User = { id: number; name: string; email: string }
-type Post = { id: number; userId: number; title: string; content: string }
-
-const schema = defineSchema<{ users: User; posts: Post }>()({
-  users: {
-    key: 'id',
-    indexes: ['email']
-  },
-  posts: {
-    key: 'id'
-  }
+const schema = defineSchema()({
+  users: { key: 'id', indexes: ['email'] },
 })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'myapp',
-  version: 1,
-  schema
-})
+const db = createDeposit({ type: 'localStorage', dbName: 'demo', schema })
 
-console.log('Deposit initialized!')
-console.log('Tables:', Object.keys(schema))`,
+await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com' })
+await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com' })
+
+console.log('Get user 1:', await db.get('users', 1))
+console.log('All users:', await db.getAll('users'))
+console.log('Count:', await db.count('users'))`,
       name: 'Basic Setup - Initialize Deposit',
     },
     'bulk-operations': {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
-  items: {
-    key: 'id',
-    record: { id: 0, value: 0 }
-  }
-}
+const schema = defineSchema()({ items: { key: 'id' } })
+const db = createDeposit({ type: 'localStorage', dbName: 'bulk-demo', schema })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'bulk-demo',
-  version: 1,
-  schema
-})
-
-// Bulk insert
-const items = Array.from({ length: 100 }, (_, i) => ({
+const items = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
-  value: Math.random() * 1000
+  value: +(Math.random() * 1000).toFixed(2)
 }))
 
 await db.bulkPut('items', items)
-console.log('Inserted 100 items')
+console.log('Inserted', items.length, 'items')
 
-// Bulk delete
-const idsToDelete = [1, 2, 3, 4, 5]
-await db.bulkDelete('items', idsToDelete)
-console.log('Deleted 5 items')
-
-const remaining = await db.count('items')
-console.log('Remaining items:', remaining)`,
+await db.bulkDelete('items', [1, 2, 3])
+console.log('Deleted 3 items')
+console.log('Remaining:', await db.count('items'))`,
       name: 'Bulk Operations',
     },
     'crud-operations': {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
-  users: {
-    key: 'id',
-    record: { id: 0, name: '', email: '', age: 0 }
-  }
-}
+const schema = defineSchema()({ users: { key: 'id', indexes: ['email'] } })
+const db = createDeposit({ type: 'localStorage', dbName: 'demo', schema })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'demo',
-  version: 1,
-  schema
-})
-
-// Create
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com', age: 25 })
 await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com', age: 30 })
-
 console.log('Created 2 users')
 
-// Read
-const user = await db.get('users', 1)
-console.log('Retrieved user:', user)
+console.log('Get user 1:', await db.get('users', 1))
+console.log('All users:', await db.getAll('users'))
 
-// Read all
-const allUsers = await db.getAll('users')
-console.log('All users:', allUsers)
-
-// Update
-await db.put('users', { id: 1, name: 'Alice Updated', email: 'alice@example.com', age: 26 })
+await db.put('users', { id: 1, name: 'Alice Smith', email: 'alice@example.com', age: 26 })
 console.log('Updated user 1')
 
-// Delete
 await db.delete('users', 2)
-console.log('Deleted user 2')
-
-// Count
-const count = await db.count('users')
-console.log('Remaining users:', count)`,
+console.log('Count after delete:', await db.count('users'))`,
       name: 'CRUD Operations',
     },
     'query-builder': {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
-  products: {
-    key: 'id',
-    record: { id: 0, name: '', price: 0, category: '', inStock: false }
-  }
-}
+const schema = defineSchema()({ products: { key: 'id', indexes: ['category'] } })
+const db = createDeposit({ type: 'localStorage', dbName: 'shop', schema })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'shop',
-  version: 1,
-  schema
-})
-
-// Seed data
 await db.bulkPut('products', [
   { id: 1, name: 'Laptop', price: 999, category: 'electronics', inStock: true },
   { id: 2, name: 'Mouse', price: 29, category: 'electronics', inStock: true },
   { id: 3, name: 'Desk', price: 299, category: 'furniture', inStock: false },
   { id: 4, name: 'Chair', price: 199, category: 'furniture', inStock: true },
-  { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true }
+  { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },
 ])
 
-// Query: Find electronics in stock under $500
-const results = await db.query('products')
+const affordable = await db.query('products')
   .equals('category', 'electronics')
   .filter(p => p.inStock && p.price < 500)
   .orderBy('price', 'asc')
   .toArray()
+console.log('Affordable electronics in stock:', affordable.map(p => p.name))
 
-console.log('Affordable electronics in stock:', results)
-
-// Query: Count products by category
-const byCategory = await db.query('products')
-  .toGrouped('category')
-
-console.log('Products by category:', byCategory)`,
+const grouped = await db.query('products').toGrouped('category')
+console.log('By category:')
+for (const { key, values } of grouped) {
+  console.log(\`  \${key}: \${values.length} items\`)
+}`,
       name: 'Query Builder - Advanced Queries',
     },
     transactions: {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
-  accounts: {
-    key: 'id',
-    record: { id: '', balance: 0 }
-  }
-}
+const schema = defineSchema()({ accounts: { key: 'id' } })
+const db = createDeposit({ type: 'localStorage', dbName: 'bank', schema })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'bank',
-  version: 1,
-  schema
-})
-
-// Setup accounts
 await db.bulkPut('accounts', [
   { id: 'alice', balance: 1000 },
-  { id: 'bob', balance: 500 }
+  { id: 'bob', balance: 500 },
 ])
+console.log('Before:', await db.getAll('accounts'))
 
-console.log('Initial balances:', await db.getAll('accounts'))
-
-// Transfer money with transaction
-// For IndexedDB: Atomic (all succeed or all fail)
-// For LocalStorage: Optimistic (not atomic across tables)
 await db.transaction(['accounts'], async (stores) => {
   const alice = stores.accounts.find(a => a.id === 'alice')
   const bob = stores.accounts.find(a => a.id === 'bob')
-  
-  const amount = 200
-  alice.balance -= amount
-  bob.balance += amount
-  
-  console.log('Transfer executed!')
+  alice.balance -= 200
+  bob.balance += 200
 })
 
-console.log('Final balances:', await db.getAll('accounts'))`,
+console.log('After transfer of 200:', await db.getAll('accounts'))`,
       name: 'Transactions - Atomic for IndexedDB',
     },
     'ttl-expiration': {
-      code: `import { Deposit } from '@vielzeug/deposit'
+      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
 
-const schema = {
-  cache: {
-    key: 'id',
-    record: { id: 0, data: '' }
-  }
-}
+const schema = defineSchema()({ cache: { key: 'id' } })
+const db = createDeposit({ type: 'localStorage', dbName: 'cache-demo', schema })
 
-const db = new Deposit({
-  type: 'localStorage',
-  dbName: 'cache-demo',
-  version: 1,
-  schema
-})
+await db.put('cache', { id: 1, data: 'Temporary data' }, 1000) // 1s TTL
+console.log('Stored with 1s TTL')
+console.log('Immediate read:', await db.get('cache', 1))
 
-// Store with TTL (expires in 2 seconds)
-await db.put('cache', 
-  { id: 1, data: 'This will expire' },
-  2000 // 2 seconds
-)
-
-console.log('Item stored with 2s TTL')
-
-// Immediately retrieve
-const item1 = await db.get('cache', 1)
-console.log('Immediate get:', item1)
-
-// Wait and try again
-await new Promise(r => setTimeout(r, 3000))
-
-const item2 = await db.get('cache', 1)
-console.log('After expiration:', item2) // undefined`,
+await new Promise(r => setTimeout(r, 1500))
+console.log('After 1.5s:', await db.get('cache', 1)) // undefined — expired`,
       name: 'TTL & Expiration',
     },
   },
@@ -1065,9 +720,9 @@ console.log('Form values:', form.values())
 
 // Check dirty state
 console.log('Dirty fields:', {
-  firstName: form.dirty('firstName'),
-  lastName: form.dirty('lastName'),
-  email: form.dirty('email')
+  firstName: form.isDirty('firstName'),
+  lastName: form.isDirty('lastName'),
+  email: form.isDirty('email')
 })`,
       name: 'Field Binding for Inputs',
     },
@@ -1134,7 +789,7 @@ try {
     await new Promise(r => setTimeout(r, 500))
     return { success: true, id: 123 }
   })
-  
+
   console.log('✓ Form submitted successfully!', result)
 } catch (error) {
   if (error.type === 'validation') {
@@ -1216,11 +871,11 @@ const form = createForm({
     const password = formData.get('password')
     const confirm = formData.get('confirmPassword')
     const errors = new Map()
-    
+
     if (password !== confirm) {
       errors.set('confirmPassword', 'Passwords must match')
     }
-    
+
     return errors
   }
 })
@@ -1342,17 +997,17 @@ console.log(i18n.t('or', { flavors: ['vainilla', 'chocolate'] }))`,
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 // Reusable loader function that receives locale as parameter
-const loadLocale = async (locale: string) => {
+const loadLocale = async (locale) => {
   console.log(\`Loading locale: \${locale}\`)
   // Simulate loading translations from API
   await new Promise(r => setTimeout(r, 500))
-  
-  const translations: Record<string, any> = {
+
+  const translations = {
     es: { greeting: 'Hola', farewell: 'Adiós' },
     fr: { greeting: 'Bonjour', farewell: 'Au revoir' },
     de: { greeting: 'Hallo', farewell: 'Auf Wiedersehen' }
   }
-  
+
   return translations[locale]
 }
 
@@ -1392,12 +1047,12 @@ const i18n = createI18n({
   locale: 'en',
   fallback: 'en',
   messages: {
-    en: { 
+    en: {
       hello: 'Hello',
       goodbye: 'Goodbye',
       welcome: 'Welcome, {name}!'
     },
-    es: { 
+    es: {
       hello: 'Hola',
       goodbye: 'Adiós',
       welcome: '¡Bienvenido, {name}!'
@@ -1423,7 +1078,7 @@ const i18n = createI18n({
     en: {
       // Flat key
       welcome: 'Welcome!',
-      
+
       // Nested objects for better organization
       user: {
         greeting: 'Hello, {name}!',
@@ -1433,7 +1088,7 @@ const i18n = createI18n({
           bio: 'Biography'
         }
       },
-      
+
       // Deep nesting
       app: {
         navigation: {
@@ -1506,7 +1161,7 @@ console.log('Percent:', i18n.number(0.75, {
 const date = new Date('2024-03-15T10:30:00')
 console.log('\\nDate:', i18n.date(date))
 console.log('Short:', i18n.date(date, { dateStyle: 'short' }))
-console.log('Long:', i18n.date(date, { 
+console.log('Long:', i18n.date(date, {
   dateStyle: 'long',
   timeStyle: 'short'
 }))
@@ -1576,10 +1231,10 @@ console.log(i18n.t('cats', { count: 3 }))`,
       code: `import { createI18n } from '@vielzeug/i18nit'
 
 // Reusable loader function
-const loadTranslations = async (locale: string) => {
+const loadTranslations = async (locale) => {
   // Simulate API call
   await new Promise(r => setTimeout(r, 300))
-  const translations: Record<string, any> = {
+  const translations = {
     en: { greeting: 'Hello', welcome: 'Welcome!' },
     es: { greeting: 'Hola', welcome: '¡Bienvenido!' },
     fr: { greeting: 'Bonjour', welcome: 'Bienvenue!' }
@@ -1637,7 +1292,7 @@ const i18n = createI18n({
 
 console.log(i18n.t('greeting', { name: 'Bob' }))
 console.log(i18n.t('info', { age: 30 }))
-console.log(i18n.t('path', { 
+console.log(i18n.t('path', {
   user: { name: 'Alice', address: { city: 'NYC' } }
 }))
 console.log(i18n.t('count', { items: ['a', 'b', 'c'] }))`,
@@ -1745,187 +1400,151 @@ console.log('Check browser console for scoped output!')`,
   },
   permit: {
     'basic-setup': {
-      code: `import { Permit } from '@vielzeug/permit'
+      code: `import { createPermit } from '@vielzeug/permit'
+
+const permit = createPermit()
 
 // Register permissions for different roles
-Permit.register('admin', 'users', {
-  read: true, 
-  create: true, 
-  update: true, 
-  delete: true
-})
-
-Permit.register('user', 'profile', {
+permit.set('admin', 'users', {
   read: true,
-  update: true
+  create: true,
+  update: true,
+  delete: true,
 })
 
-Permit.register('guest', 'posts', {
-  read: true
+permit.set('user', 'profile', {
+  read: true,
+  update: true,
+})
+
+permit.set('guest', 'posts', {
+  read: true,
 })
 
 console.log('Permissions registered!')
-console.log('Roles:', Permit.roles)`,
+console.log('Roles map:', permit.roles)`,
       name: 'Basic Setup - Role Permissions',
     },
     'dynamic-permissions': {
-      code: `import { Permit } from '@vielzeug/permit'
+      code: `import { createPermit } from '@vielzeug/permit'
 
-// Register function-based permissions
-Permit.register('user', 'posts', {
+const permit = createPermit()
+
+// Function-based permissions — receives user + optional data
+permit.set('user', 'posts', {
   read: true,
   create: true,
-  update: (user, data) => user.id === data.authorId,
-  delete: (user, data) => user.id === data.authorId
+  update: (user, data) => user.id === data?.authorId,
+  delete: (user, data) => user.id === data?.authorId,
 })
 
 const user1 = { id: 'user1', roles: ['user'] }
 const user2 = { id: 'user2', roles: ['user'] }
+const post = { id: 'post1', authorId: 'user1', title: 'My Post' }
 
-const post = {
-  id: 'post1',
-  authorId: 'user1',
-  title: 'My Post'
-}
+console.log('Author can update:', permit.check(user1, 'posts', 'update', post))
+console.log('Author can delete:', permit.check(user1, 'posts', 'delete', post))
 
-// User 1 (author) can update and delete
-console.log('Author can update:', 
-  Permit.check(user1, 'posts', 'update', post))
-console.log('Author can delete:', 
-  Permit.check(user1, 'posts', 'delete', post))
-
-// User 2 (not author) cannot update or delete
-console.log('\\nNon-author can update:', 
-  Permit.check(user2, 'posts', 'update', post))
-console.log('Non-author can delete:', 
-  Permit.check(user2, 'posts', 'delete', post))`,
+console.log('\\nNon-author can update:', permit.check(user2, 'posts', 'update', post))
+console.log('Non-author can delete:', permit.check(user2, 'posts', 'delete', post))`,
       name: 'Dynamic Permissions - Functions',
     },
     'permission-checks': {
-      code: `import { Permit } from '@vielzeug/permit'
+      code: `import { createPermit } from '@vielzeug/permit'
 
-// Setup permissions
-Permit.register('editor', 'articles', {
+const permit = createPermit()
+
+permit.set('editor', 'articles', {
   read: true,
   create: true,
   update: true,
-  delete: false
+  delete: false,
 })
 
-Permit.register('viewer', 'articles', {
-  read: true
+permit.set('viewer', 'articles', {
+  read: true,
 })
 
-// Define users
 const editor = { id: '1', roles: ['editor'] }
 const viewer = { id: '2', roles: ['viewer'] }
 
-// Check permissions
-console.log('Editor can read:', Permit.check(editor, 'articles', 'read'))
-console.log('Editor can create:', Permit.check(editor, 'articles', 'create'))
-console.log('Editor can delete:', Permit.check(editor, 'articles', 'delete'))
+console.log('Editor can read:', permit.check(editor, 'articles', 'read'))
+console.log('Editor can create:', permit.check(editor, 'articles', 'create'))
+console.log('Editor can delete:', permit.check(editor, 'articles', 'delete'))
 
-console.log('\\nViewer can read:', Permit.check(viewer, 'articles', 'read'))
-console.log('Viewer can create:', Permit.check(viewer, 'articles', 'create'))`,
+console.log('\\nViewer can read:', permit.check(viewer, 'articles', 'read'))
+console.log('Viewer can create:', permit.check(viewer, 'articles', 'create'))`,
       name: 'Permission Checks',
     },
     'permission-management': {
-      code: `import { Permit } from '@vielzeug/permit'
+      code: `import { createPermit } from '@vielzeug/permit'
 
-// Register initial permissions
-Permit.register('user', 'comments', {
-  read: true,
-  create: true
-})
+const permit = createPermit()
 
-console.log('Initial permissions registered')
+// Set initial permissions
+permit.set('user', 'comments', { read: true, create: true })
+console.log('Initial permissions set')
 
-// Update permissions (merge)
-Permit.set('user', 'comments', {
-  update: true
-}, false) // false = merge
-
+// Merge more actions (replace=false is default)
+permit.set('user', 'comments', { update: true })
 console.log('Permissions updated (merged)')
 
-// Replace permissions
-Permit.set('user', 'comments', {
-  read: true,
-  delete: true
-}, true) // true = replace
-
+// Replace entirely
+permit.set('user', 'comments', { read: true, delete: true }, true)
 console.log('Permissions replaced')
 
-// Unregister specific action
-Permit.unregister('user', 'comments', 'delete')
+// Remove a specific action
+permit.remove('user', 'comments', 'delete')
 console.log('Delete permission removed')
 
-// Clear all
-Permit.clear()
+// Remove all actions for a resource
+permit.remove('user', 'comments')
+console.log('All comment permissions removed')
+
+// Clear everything
+permit.clear()
 console.log('All permissions cleared')`,
       name: 'Permission Management',
     },
     'role-hierarchy': {
-      code: `import { Permit } from '@vielzeug/permit'
+      code: `import { createPermit } from '@vielzeug/permit'
 
-// Setup role hierarchy
-Permit.register('admin', 'users', {
-  read: true, create: true, update: true, delete: true
-})
+const permit = createPermit()
 
-Permit.register('moderator', 'posts', {
-  read: true, update: true, delete: true
-})
+permit.set('admin', 'users', { read: true, create: true, update: true, delete: true })
+permit.set('moderator', 'posts', { read: true, update: true, delete: true })
+permit.set('editor', 'posts', { read: true, update: true })
 
-Permit.register('editor', 'posts', {
-  read: true, update: true
-})
+// User with multiple roles — any matching role grants access
+const multiRoleUser = { id: '1', roles: ['editor', 'moderator'] }
 
-// User with multiple roles
-const userWithMultipleRoles = {
-  id: '1',
-  roles: ['editor', 'moderator']
-}
+console.log('Can read posts:', permit.check(multiRoleUser, 'posts', 'read'))
+console.log('Can delete posts:', permit.check(multiRoleUser, 'posts', 'delete'))
 
-// Check permission (any role grants access)
-console.log('Can read posts:', 
-  Permit.check(userWithMultipleRoles, 'posts', 'read'))
-console.log('Can delete posts:', 
-  Permit.check(userWithMultipleRoles, 'posts', 'delete'))
-
-// Check role membership
-console.log('\\nHas editor role:', 
-  Permit.hasRole(userWithMultipleRoles, 'editor'))
-console.log('Has admin role:', 
-  Permit.hasRole(userWithMultipleRoles, 'admin'))`,
+console.log('\\nHas editor role:', permit.hasRole(multiRoleUser, 'editor'))
+console.log('Has admin role:', permit.hasRole(multiRoleUser, 'admin'))`,
       name: 'Role Hierarchy & Multiple Roles',
     },
     'wildcard-permissions': {
-      code: `import { Permit, WILDCARD } from '@vielzeug/permit'
+      code: `import { createPermit, WILDCARD } from '@vielzeug/permit'
 
-// Admin has access to all resources
-Permit.register('admin', WILDCARD, {
-  read: true,
-  create: true,
-  update: true,
-  delete: true
-})
+const permit = createPermit()
+
+// Admin has access to every resource via wildcard
+permit.set('admin', WILDCARD, { read: true, create: true, update: true, delete: true })
 
 // Regular user has limited access
-Permit.register('user', 'posts', {
-  read: true
-})
+permit.set('user', 'posts', { read: true })
 
 const admin = { id: '1', roles: ['admin'] }
 const user = { id: '2', roles: ['user'] }
 
-// Admin can access any resource
-console.log('Admin on users:', Permit.check(admin, 'users', 'delete'))
-console.log('Admin on posts:', Permit.check(admin, 'posts', 'delete'))
-console.log('Admin on comments:', Permit.check(admin, 'comments', 'delete'))
+console.log('Admin on users:', permit.check(admin, 'users', 'delete'))
+console.log('Admin on posts:', permit.check(admin, 'posts', 'delete'))
+console.log('Admin on comments:', permit.check(admin, 'comments', 'delete'))
 
-// User has limited access
-console.log('\\nUser on posts read:', Permit.check(user, 'posts', 'read'))
-console.log('User on posts delete:', Permit.check(user, 'posts', 'delete'))`,
+console.log('\\nUser can read posts:', permit.check(user, 'posts', 'read'))
+console.log('User can delete posts:', permit.check(user, 'posts', 'delete'))`,
       name: 'Wildcard Permissions',
     },
   },
@@ -1974,7 +1593,7 @@ const requireAuth = async (ctx, next) => {
     ctx.navigate('/login')
     return
   }
-  
+
   ctx.user = authService.currentUser
   console.log('✅ Authenticated as:', ctx.user.name)
   await next()
@@ -2106,9 +1725,9 @@ router.navigateTo('postComment', { postId: '5', commentId: '12' })
 // Build URLs
 console.log('\\n--- Building URLs ---')
 console.log('User 123 URL:', router.urlFor('userDetail', { id: '123' }))
-console.log('Comment URL:', router.urlFor('postComment', { 
-  postId: '10', 
-  commentId: '50' 
+console.log('Comment URL:', router.urlFor('postComment', {
+  postId: '10',
+  commentId: '50'
 }))`,
       name: 'Named Routes - Type-Safe Navigation',
     },
@@ -2233,15 +1852,15 @@ router
         startTime: Date.now(),
         environment: 'production'
       }
-      
+
       // Simulate user loading
       ctx.user = {
         id: parseInt(ctx.params.userId),
         name: 'Alice'
       }
-      
+
       await next()
-      
+
       // Log after handler
       const elapsed = Date.now() - ctx.meta.startTime
       console.log(\`\\n⏱️ Took \${elapsed}ms\`)
@@ -2421,7 +2040,7 @@ data.subscribe(
 // Async fetch with loading states
 async function fetchItems() {
   data.set({ loading: true, error: null })
-  
+
   try {
     // Use async updater
     await data.set(async (current) => {
@@ -2433,7 +2052,7 @@ async function fetchItems() {
       ]
       return { ...current, items, loading: false }
     })
-    
+
     console.log('Success! Items:', data.get().items)
   } catch (error) {
     data.set({ error: error.message, loading: false })
@@ -2685,7 +2304,7 @@ const byType = group(items, item => item.type)
 console.log('Grouped by type:', byType)
 
 // Group by price range
-const byPriceRange = group(items, item => 
+const byPriceRange = group(items, item =>
   item.price < 1 ? 'cheap' : 'expensive'
 )
 console.log('Grouped by price:', byPriceRange)`,
@@ -2798,11 +2417,11 @@ let attempts = 0
 const unreliableOperation = async () => {
   attempts++
   console.log(\`Attempt #\${attempts}\`)
-  
+
   if (attempts < 3) {
     throw new Error('Failed!')
   }
-  
+
   return 'Success!'
 }
 
@@ -2929,8 +2548,8 @@ console.log('Average grade:', average(grades).toFixed(2))`,
     'object-clone': {
       code: `import { clone } from '@vielzeug/toolkit'
 
-const original = { 
-  a: 1, 
+const original = {
+  a: 1,
   b: { c: 2, d: [3, 4] },
   date: new Date(),
   regex: /test/g
@@ -3013,7 +2632,7 @@ formats.forEach(str => {
       name: 'camelCase - Convert to camelCase',
     },
     'typed-is': {
-      code: `import { 
+      code: `import {
   isString, isNumber, isBoolean, isArray, isObject,
   isFunction, isDate, isRegex, isNil, isEmpty
 } from '@vielzeug/toolkit'
@@ -3055,7 +2674,7 @@ console.log('Users:', userSchema.safeParse([
 
 // Invalid arrays
 console.log('\\nEmpty tags:', tagSchema.safeParse([]).success)
-console.log('Too many tags:', 
+console.log('Too many tags:',
   tagSchema.safeParse(['a', 'b', 'c', 'd', 'e', 'f']).success)
 console.log('Invalid user:', userSchema.safeParse([
   { id: 'invalid', name: 'Alice' }
@@ -3321,7 +2940,7 @@ const RequestId = createToken('RequestId')
 
 // Parent container
 const parent = createContainer()
-parent.registerValue(GlobalConfig, { 
+parent.registerValue(GlobalConfig, {
   appName: 'MyApp',
   version: '1.0.0'
 })
@@ -3376,9 +2995,9 @@ class UserServiceImpl {
 const container = createContainer()
 container
   .register(Database, { useClass: DatabaseImpl })
-  .register(UserService, { 
-    useClass: UserServiceImpl, 
-    deps: [Database] 
+  .register(UserService, {
+    useClass: UserServiceImpl,
+    deps: [Database]
   })
 
 // Use the service
@@ -3395,7 +3014,7 @@ const Logger = createToken('Logger')
 const container = createContainer()
 
 // Register config
-container.registerValue(Config, { 
+container.registerValue(Config, {
   environment: 'production',
   logLevel: 'info'
 })
@@ -3410,8 +3029,7 @@ container.registerFactory(
       }
     }
   }),
-  [Config],
-  { lifetime: 'singleton' }
+  { deps: [Config], lifetime: 'singleton' }
 )
 
 const logger = container.get(Logger)
@@ -3434,7 +3052,6 @@ const container = createContainer()
 container.registerFactory(
   SingletonService,
   () => ({ id: ++singletonCount }),
-  [],
   { lifetime: 'singleton' }
 )
 
@@ -3442,7 +3059,6 @@ container.registerFactory(
 container.registerFactory(
   TransientService,
   () => ({ id: ++transientCount }),
-  [],
   { lifetime: 'transient' }
 )
 

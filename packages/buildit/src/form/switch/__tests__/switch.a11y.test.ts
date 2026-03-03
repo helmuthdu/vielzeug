@@ -1,6 +1,6 @@
+import { mount } from '@vielzeug/craftit/test';
 import axe from 'axe-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createFixture } from '../../../utils/trial';
 
 describe('bit-switch accessibility', () => {
   beforeAll(async () => {
@@ -8,7 +8,7 @@ describe('bit-switch accessibility', () => {
   });
 
   it('should have no accessibility violations', async () => {
-    const fixture = await createFixture('bit-switch');
+    const fixture = await mount('bit-switch');
     fixture.element.textContent = 'Enable notifications';
 
     // The hidden input is intentionally nested for form compatibility
@@ -24,10 +24,10 @@ describe('bit-switch accessibility', () => {
   });
 
   it('should have no violations when checked', async () => {
-    const fixture = await createFixture('bit-switch', { checked: true });
+    const fixture = await mount('bit-switch', { attrs: { checked: true } });
     fixture.element.textContent = 'Enable notifications';
 
-    expect(fixture.element.getAttribute('aria-checked')).toBe('true');
+    expect(fixture.element.hasAttribute('checked')).toBe(true);
 
     const results = await axe.run(fixture.element, {
       rules: {
@@ -40,10 +40,10 @@ describe('bit-switch accessibility', () => {
   });
 
   it('should have no violations when disabled', async () => {
-    const fixture = await createFixture('bit-switch', { disabled: true });
+    const fixture = await mount('bit-switch', { attrs: { disabled: true } });
     fixture.element.textContent = 'Enable notifications';
 
-    expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
+    expect(fixture.element.hasAttribute('disabled')).toBe(true);
 
     const results = await axe.run(fixture.element, {
       rules: {
@@ -59,7 +59,7 @@ describe('bit-switch accessibility', () => {
     const colors = ['primary', 'secondary', 'success', 'warning', 'error'];
 
     for (const color of colors) {
-      const fixture = await createFixture('bit-switch', { checked: true, color });
+      const fixture = await mount('bit-switch', { attrs: { checked: true, color } });
       fixture.element.textContent = `${color} switch`;
 
       const results = await axe.run(fixture.element, {
@@ -77,7 +77,7 @@ describe('bit-switch accessibility', () => {
     const sizes = ['sm', 'md', 'lg'];
 
     for (const size of sizes) {
-      const fixture = await createFixture('bit-switch', { size });
+      const fixture = await mount('bit-switch', { attrs: { size } });
       fixture.element.textContent = `${size} switch`;
 
       const results = await axe.run(fixture.element, {

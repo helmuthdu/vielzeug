@@ -1,8 +1,9 @@
+---
+title: Validit — API Reference
+description: Complete API reference for Validit schemas and methods.
+---
+
 # Validit API Reference
-
-Complete API documentation for all Validit schemas and methods.
-
-## Table of Contents
 
 [[toc]]
 
@@ -42,7 +43,7 @@ v.string(); // string
 - `.email(message?: string)` – Email validation
 - `.url(message?: string)` – URL validation
 - `.uuid(message?: string)` – UUID format
-- `.trim()` – Must be trimmed (validation only, doesn't transform)
+- `.trim()` – Trims whitespace from the string before validation (preprocessor)
 
 #### `v.number()`
 
@@ -59,6 +60,8 @@ v.number(); // number
 - `.int(message?: string)` – Must be integer
 - `.positive(message?: string)` – Must be > 0
 - `.negative(message?: string)` – Must be < 0
+- `.nonNegative(message?: string)` – Must be >= 0 (alias for `.min(0)`)
+- `.nonPositive(message?: string)` – Must be <= 0 (alias for `.max(0)`)
 
 #### `v.boolean()`
 
@@ -249,14 +252,6 @@ Matches `undefined` exactly.
 v.undefined(); // undefined
 ```
 
-#### `v.void()`
-
-Alias for `v.undefined()`.
-
-```ts
-v.void(); // undefined
-```
-
 ---
 
 ### Coercion (Experimental)
@@ -439,20 +434,6 @@ Schemas with async validators must use `parseAsync()` or `safeParseAsync()`. Cal
 
 ### Utilities
 
-#### `describe(description: string): this`
-
-Adds a description for better error messages.
-
-```ts
-v.number().int().min(0).describe('age');
-
-// Errors will show: "age: Must be at least 0"
-```
-
-**Parameters:**
-
-- `description: string` – Field description
-
 #### `transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>`
 
 Applies a transformation after validation.
@@ -559,16 +540,20 @@ type ParseResult<T> = { success: true; data: T } | { success: false; error: Vali
 
 Built-in error codes for internationalization:
 
-| Code             | Description              |
-| ---------------- | ------------------------ |
-| `invalid_type`   | Wrong type               |
-| `invalid_email`  | Invalid email format     |
-| `invalid_url`    | Invalid URL format       |
-| `invalid_string` | Pattern mismatch         |
-| `invalid_length` | Wrong length             |
-| `too_small`      | Below minimum            |
-| `too_big`        | Above maximum            |
-| `custom`         | Custom refinement failed |
+| Code             | Description                     |
+| ---------------- | ------------------------------- |
+| `invalid_type`   | Wrong type                      |
+| `invalid_date`   | Invalid Date object             |
+| `invalid_literal`| Value does not match literal    |
+| `invalid_enum`   | Value not in enum               |
+| `invalid_union`  | Does not match any union type   |
+| `invalid_url`    | Invalid URL format              |
+| `invalid_string` | Pattern/email/uuid mismatch     |
+| `invalid_length` | Wrong length                    |
+| `not_integer`    | Not an integer                  |
+| `too_small`      | Below minimum                   |
+| `too_big`        | Above maximum                   |
+| `custom`         | Custom refinement failed        |
 
 ## Performance Tips
 

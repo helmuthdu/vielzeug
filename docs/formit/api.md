@@ -1,8 +1,9 @@
-# API Reference
+---
+title: Formit — API Reference
+description: Complete API reference for Formit form management.
+---
 
-Complete API documentation for Formit.
-
-## Table of Contents
+# Formit API Reference
 
 [[toc]]
 
@@ -62,8 +63,8 @@ Set a single field value.
 
 ```typescript
 set(name: string, value: any, options?: {
-  markDirty?: boolean;    // default: true
-  markTouched?: boolean;  // default: false
+  setDirty?: boolean;    // default: true
+  setTouched?: boolean;  // default: false
 }): void
 ```
 
@@ -71,7 +72,7 @@ set(name: string, value: any, options?: {
 
 ```typescript
 form.set('email', 'user@example.com');
-form.set('age', 25, { markDirty: false });
+form.set('age', 25, { setDirty: false });
 form.set('tags', ['js', 'ts']);
 form.set('avatar', fileInput.files[0]);
 ```
@@ -85,7 +86,7 @@ Set multiple fields at once.
 ```typescript
 set(entries: Record<string, any> | FormData, options?: {
   replace?: boolean;   // default: false
-  markDirty?: boolean; // default: false
+  setDirty?: boolean; // default: false
 }): void
 ```
 
@@ -121,23 +122,6 @@ const allValues = form.values();
 
 ---
 
-### `data()`
-
-Get the native FormData instance.
-
-```typescript
-data(): FormData
-```
-
-**Example:**
-
-```typescript
-const formData = form.data();
-await fetch('/api/submit', { method: 'POST', body: formData });
-```
-
----
-
 ### `clone()`
 
 Clone the FormData for safe external mutation.
@@ -148,20 +132,54 @@ clone(): FormData
 
 ---
 
-### `error(name?)`
+### `dispose()`
 
-Get error(s).
+Clean up all subscribers. Call this when the form instance is no longer needed.
 
 ```typescript
-error(): Map<string, string>         // Get all errors
-error(name: string): string | undefined  // Get specific error
+dispose(): void
 ```
 
-**Examples:**
+**Example:**
 
 ```typescript
-const emailError = form.error('email');
-const allErrors = form.error();
+// In a framework cleanup/unmount callback
+form.dispose();
+```
+
+---
+
+### `getError(name)`
+
+Get the error for a specific field.
+
+```typescript
+getError(name: string): string | undefined
+```
+
+**Example:**
+
+```typescript
+const emailError = form.getError('email');
+if (emailError) {
+  console.log('Email error:', emailError);
+}
+```
+
+---
+
+### `getErrors()`
+
+Get all current errors as a Map.
+
+```typescript
+getErrors(): Map<string, string>
+```
+
+**Example:**
+
+```typescript
+const allErrors = form.getErrors();
 
 // Iterate over all errors
 for (const [field, message] of allErrors) {
@@ -171,98 +189,98 @@ for (const [field, message] of allErrors) {
 
 ---
 
-### `error(name, message)`
+### `setError(name, message?)`
 
-Set or clear a single error.
+Set or clear a single field error. Omitting `message` (or passing `undefined`) clears the error.
 
 ```typescript
-error(name: string, message: string): void
+setError(name: string, message?: string): void
 ```
 
 **Examples:**
 
 ```typescript
 // Set error
-form.error('email', 'This email is already taken');
+form.setError('email', 'This email is already taken');
 
 // Clear error
-form.error('email', '');
+form.setError('email');
 ```
 
 ---
 
-### `errors(nextErrors)`
+### `setErrors(nextErrors)`
 
-Set multiple errors at once.
+Replace all errors at once.
 
 ```typescript
-errors(nextErrors: Map<string, string> | Record<string, string>): void
+setErrors(nextErrors: Map<string, string> | Record<string, string>): void
 ```
 
 **Examples:**
 
 ```typescript
 // Set from object
-form.errors({ email: 'Invalid', password: 'Too short' });
+form.setErrors({ email: 'Invalid', password: 'Too short' });
 
 // Set from Map
-form.errors(new Map([['email', 'Invalid']]));
+form.setErrors(new Map([['email', 'Invalid']]));
 
 // Clear all errors
-form.errors({});
-form.errors(new Map());
+form.setErrors({});
+form.setErrors(new Map());
 ```
 
 ---
 
-### `dirty(name)`
+### `isDirty(name)`
 
 Check if a field has been modified from its initial value.
 
 ```typescript
-dirty(name: string): boolean
+isDirty(name: string): boolean
 ```
 
 **Example:**
 
 ```typescript
-if (form.dirty('email')) {
+if (form.isDirty('email')) {
   console.log('Email has been changed');
 }
 ```
 
 ---
 
-### `touch(name)`
+### `isTouched(name)`
 
-Check if a field has been touched (user interacted with it).
+Check if a field has been interacted with by the user.
 
 ```typescript
-touch(name: string): boolean
+isTouched(name: string): boolean
 ```
 
 **Example:**
 
 ```typescript
-if (form.touch('email')) {
-  console.log('User has focused on email field');
+if (form.isTouched('email')) {
+  console.log('User has interacted with the email field');
 }
 ```
 
 ---
 
-### `touch(name, mark)`
+### `setTouched(name)`
 
 Mark a field as touched.
 
 ```typescript
-touch(name: string, mark: true): void
+setTouched(name: string): void
 ```
 
 **Example:**
 
 ```typescript
-form.touch('email', true);
+form.setTouched('email');
 ```
 
 ---

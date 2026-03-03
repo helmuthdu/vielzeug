@@ -18,12 +18,6 @@ export type ArgType =
   | 'weakset'
   | 'undefined';
 
-// biome-ignore lint/suspicious/noExplicitAny: -
-const specialCases = new Map<any, ArgType>([
-  [null, 'null'],
-  [undefined, 'undefined'],
-]);
-
 /**
  * Returns the type of the given argument.
  *
@@ -52,10 +46,11 @@ const specialCases = new Map<any, ArgType>([
  * @returns The type of the argument.
  */
 export function typeOf(arg: unknown): ArgType {
-  if (specialCases.has(arg)) return specialCases.get(arg)!;
+  if (arg === null) return 'null';
+  if (arg === undefined) return 'undefined';
   if (typeof arg === 'number' && Number.isNaN(arg)) return 'nan';
 
   const type = Object.prototype.toString.call(arg).slice(8, -1);
 
-  return type === 'AsyncFunction' ? 'promise' : (type.toLowerCase() as ArgType);
+  return (type === 'AsyncFunction' ? 'function' : type.toLowerCase()) as ArgType;
 }

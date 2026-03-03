@@ -1,32 +1,41 @@
+---
+title: Fetchit — Usage Guide
+description: HTTP methods, error handling, query client, and interceptors for Fetchit.
+---
+
 # Fetchit Usage Guide
 
-Complete guide to installing and using Fetchit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Fetchit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
+## Why Fetchit?
 
-::: code-group
+Native `fetch` is excellent but low-level. Fetchit adds base URL, typed responses, path parameters, and error wrapping with virtually no overhead.
 
-```sh [pnpm]
-pnpm add @vielzeug/fetchit
+```ts
+// Before — raw fetch
+const res = await fetch(`https://api.example.com/users/${userId}`);
+if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const user: User = await res.json();
+
+// After — Fetchit
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const user = await http.get<User>('/users/:id', { params: { id: userId } });
 ```
 
-```sh [npm]
-npm install @vielzeug/fetchit
-```
+| Feature | Fetchit | axios | ky |
+|---|---|---|---|
+| Bundle size | <PackageInfo package="fetchit" type="size" /> | ~30 kB | ~5 kB |
+| Built on | fetch | XMLHttpRequest | fetch |
+| Path params | ✅ | Manual | Manual |
+| Query client | ✅ | ❌ | ❌ |
+| Zero dependencies | ✅ | ❌ | ❌ |
 
-```sh [yarn]
-yarn add @vielzeug/fetchit
-```
+**Use Fetchit when** you want lightweight typed HTTP with path parameter templating and a simple query cache.
 
-:::
 
 ## Import
 
@@ -356,8 +365,6 @@ const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
   console.log('Error:', state.error);
   console.log('Loading:', state.isLoading);
   console.log('Success:', state.isSuccess);
-  console.log('HTTP Status:', state.httpStatus);
-  console.log('HTTP OK:', state.httpOk);
 });
 
 // Don't forget to cleanup
@@ -565,10 +572,6 @@ await queryClient.fetch({
   retry: 3, // Number of retries (or false)
   retryDelay: 1000, // Delay between retries (or function)
 
-  // Refetching
-  refetchOnFocus: false, // Refetch when window gains focus
-  refetchOnReconnect: false, // Refetch when going online
-
   // Callbacks
   onSuccess: (data) => {
     console.log('Success:', data);
@@ -636,15 +639,17 @@ queryClient.clear();
 
 ### URL Building
 
-```ts
-import { buildUrl } from '@vielzeug/fetchit';
+Use the `query` option to append query string parameters to URLs:
 
-const url = buildUrl('/api/users', {
-  page: 1,
-  limit: 10,
-  active: true,
+```ts
+import { createHttpClient } from '@vielzeug/fetchit';
+
+const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+
+const users = await http.get('/api/users', {
+  query: { page: 1, limit: 10, active: true },
 });
-// Result: "/api/users?page=1&limit=10&active=true"
+// Calls: /api/users?page=1&limit=10&active=true
 ```
 
 ### Error Handling
@@ -703,28 +708,37 @@ await http.post('/form', { body: params });
 
 ## Configuration Options
 
-### ContextProps
+### `HttpClientOptions`
 
 ```ts
 {
-  url: string;                   // Base URL (required)
-  timeout?: number;              // Request timeout in ms (default: 5000)
-  headers?: Record<string, string | undefined>; // Default headers
-  expiresIn?: number;            // Cache expiration in ms (default: 120000)
-  params?: Record<string, string | number | undefined>; // Default query params
+  baseUrl?: string;          // Base URL for all requests
+  headers?: Record<string, string>; // Default headers
+  timeout?: number;          // Request timeout in ms (default: 30000)
+  dedupe?: boolean;          // Enable request deduplication (default: true)
+  logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void; // Optional debug logger
 }
 ```
 
-### RequestConfig
+### `HttpRequestConfig`
 
 ```ts
 {
-  id?: string;           // Custom cache key
-  cancelable?: boolean;  // Cancel pending requests with same ID
-  invalidate?: boolean;  // Force bypass cache
-  body?: unknown;        // Request body
-  headers?: HeadersInit; // Per-request headers
+  body?: unknown;            // Request body (auto-serialized to JSON for plain objects)
+  params?: Record<string, string | number | boolean | undefined>; // Path parameters
+  query?: Record<string, string | number | boolean | undefined>; // Query string parameters
+  dedupe?: boolean;          // Enable/disable deduplication for this request
+  signal?: AbortSignal;      // AbortSignal for request cancellation
   // ...all standard RequestInit options
+}
+```
+
+### `QueryClientOptions`
+
+```ts
+{
+  staleTime?: number;  // Time before data is stale in ms (default: 0)
+  gcTime?: number;     // Garbage collection time in ms (default: 300000)
 }
 ```
 

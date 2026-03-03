@@ -1,3 +1,8 @@
+---
+title: Toolkit — Money Examples
+description: Money utility examples for Toolkit.
+---
+
 # Money Utilities
 
 Utilities for handling monetary amounts with precision and proper formatting.

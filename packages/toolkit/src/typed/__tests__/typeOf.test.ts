@@ -14,10 +14,10 @@ describe('typeOf', () => {
     expect(typeOf(Number('not-a-number'))).toBe<ArgType>('nan');
   });
 
-  it('returns "Promise" for async functions', () => {
-    expect(typeOf(async () => {})).toBe<ArgType>('promise');
+  it('returns "function" for async functions', () => {
+    expect(typeOf(async () => {})).toBe<ArgType>('function');
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    expect(typeOf(new AsyncFunction('return 1'))).toBe<ArgType>('promise');
+    expect(typeOf(new AsyncFunction('return 1'))).toBe<ArgType>('function');
   });
 
   it('returns "Number" for numbers', () => {

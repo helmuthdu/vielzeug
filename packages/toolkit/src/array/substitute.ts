@@ -29,4 +29,4 @@ export function substitute<T>(array: T[], predicate: Predicate<T>, value: T): T[
   return [...array.slice(0, index), value, ...array.slice(index + 1)];
 }
 
-substitute.fn = true;
+substitute.fp = true;

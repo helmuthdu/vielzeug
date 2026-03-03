@@ -11,8 +11,7 @@
 /* Import all external stylesheets first (LightningCSS requirement) */
 @import url('animation.css');
 
-@layer
-  buildit.reset,
+@layer buildit.reset,
   buildit.tokens,
   buildit.base,
   buildit.variants,
@@ -30,4 +29,3 @@
 @layer buildit.tokens {
   @import url('./theme.css');
 }
-

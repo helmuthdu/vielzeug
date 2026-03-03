@@ -9,18 +9,21 @@ export type Issue = {
   params?: Record<string, unknown>;
 };
 
+function formatIssues(issues: Issue[]): string {
+  return issues
+    .map(({ path, message, code }) => {
+      const pathStr = path.length ? path.join('.') : 'value';
+      const codeStr = code ? ` [${code}]` : '';
+      return `${pathStr}: ${message}${codeStr}`;
+    })
+    .join('\n');
+}
+
 export class ValidationError extends Error {
   readonly issues: Issue[];
 
   constructor(issues: Issue[]) {
-    const formatted = issues
-      .map(({ path, message, code }) => {
-        const pathStr = path.length ? path.join('.') : 'value';
-        const codeStr = code ? ` [${code}]` : '';
-        return `${pathStr}: ${message}${codeStr}`;
-      })
-      .join('\n');
-    super(formatted);
+    super(formatIssues(issues));
     this.name = 'ValidationError';
     this.issues = issues;
   }
@@ -36,16 +39,11 @@ type AsyncValidateFn = (value: unknown, path: (string | number)[]) => Promise<Is
 export class Schema<Output = unknown> {
   protected _validators: ValidateFn[] = [];
   protected _asyncValidators: AsyncValidateFn[] = [];
-  protected _description?: string;
+  protected _preprocessors: Array<(value: unknown) => unknown> = [];
+  protected _postprocessors: Array<(value: any) => any> = [];
 
   constructor(validators: ValidateFn[] = []) {
     this._validators = validators;
-  }
-
-  describe(description: string): this {
-    const cloned = this._clone();
-    cloned._description = description;
-    return cloned;
   }
 
   parse(value: unknown): Output {
@@ -53,9 +51,10 @@ export class Schema<Output = unknown> {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
 
-    const issues = this._runSync(value, []);
+    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    const issues = this._runSync(processed, []);
     if (issues.length) throw new ValidationError(issues);
-    return value as Output;
+    return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
   }
 
   safeParse(value: unknown): ParseResult<Output> {
@@ -67,12 +66,13 @@ export class Schema<Output = unknown> {
   }
 
   async parseAsync(value: unknown): Promise<Output> {
-    const syncIssues = this._runSync(value, []);
-    const asyncIssues = await this._runAsync(value, []);
+    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    const syncIssues = this._runSync(processed, []);
+    const asyncIssues = await this._runAsync(processed, []);
     const issues = [...syncIssues, ...asyncIssues];
 
     if (issues.length) throw new ValidationError(issues);
-    return value as Output;
+    return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
   }
 
   async safeParseAsync(value: unknown): Promise<ParseResult<Output>> {
@@ -109,28 +109,16 @@ export class Schema<Output = unknown> {
   }
 
   default(defaultValue: Output): this {
-    const cloned = this._clone([(value, path) => this._runSync(value === undefined ? defaultValue : value, path)]);
-
-    cloned.parse = (value: unknown) => {
-      const val = value === undefined ? defaultValue : value;
-      const issues = cloned._runSync(val, []);
-      if (issues.length) throw new ValidationError(issues);
-      return val as Output;
-    };
-
+    const cloned = this._clone();
+    cloned._preprocessors = [...this._preprocessors, (v) => (v === undefined ? defaultValue : v)];
     return cloned;
   }
 
   transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput> {
     const newSchema = new Schema<NewOutput>(this._validators);
     newSchema._asyncValidators = [...this._asyncValidators];
-
-    const originalParse = newSchema.parse.bind(newSchema);
-    newSchema.parse = (value: unknown) => fn(originalParse(value) as unknown as Output);
-
-    const originalParseAsync = newSchema.parseAsync.bind(newSchema);
-    newSchema.parseAsync = async (value: unknown) => fn((await originalParseAsync(value)) as unknown as Output);
-
+    newSchema._preprocessors = [...this._preprocessors];
+    newSchema._postprocessors = [...this._postprocessors, fn as (value: any) => any];
     return newSchema;
   }
 
@@ -144,12 +132,8 @@ export class Schema<Output = unknown> {
   }
 
   protected async _runAsync(value: unknown, path: (string | number)[]): Promise<Issue[]> {
-    const issues: Issue[] = [];
-    for (const validate of this._asyncValidators) {
-      const result = await validate(value, path);
-      if (result) issues.push(...result);
-    }
-    return issues;
+    const results = await Promise.all(this._asyncValidators.map((fn) => fn(value, path)));
+    return results.flatMap((r) => r ?? []);
   }
 
   protected _addValidator(validator: ValidateFn): this {
@@ -158,9 +142,11 @@ export class Schema<Output = unknown> {
 
   protected _clone(validators: ValidateFn[] = this._validators): this {
     const cloned = Object.create(Object.getPrototypeOf(this)) as this;
+    Object.assign(cloned, this);
     cloned._validators = validators;
     cloned._asyncValidators = [...this._asyncValidators];
-    if (this._description) cloned._description = this._description;
+    cloned._preprocessors = [...this._preprocessors];
+    cloned._postprocessors = [...this._postprocessors];
     return cloned;
   }
 }
@@ -176,41 +162,33 @@ export class StringSchema extends Schema<string> {
   }
 
   min(length: number, message = `Must be at least ${length} characters`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'string' && value.length >= length
-          ? null
-          : [{ code: 'too_small', message, params: { minimum: length, type: 'string' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'string' && value.length >= length
+        ? null
+        : [{ code: 'too_small', message, params: { minimum: length, type: 'string' }, path }],
+    );
   }
 
   max(length: number, message = `Must be at most ${length} characters`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'string' && value.length <= length
-          ? null
-          : [{ code: 'too_big', message, params: { maximum: length, type: 'string' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'string' && value.length <= length
+        ? null
+        : [{ code: 'too_big', message, params: { maximum: length, type: 'string' }, path }],
+    );
   }
 
   length(exact: number, message = `Must be exactly ${exact} characters`): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'string' && value.length === exact
-          ? null
-          : [{ code: 'invalid_length', message, params: { exact, type: 'string' }, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'string' && value.length === exact
+        ? null
+        : [{ code: 'invalid_length', message, params: { exact, type: 'string' }, path }],
+    );
   }
 
   pattern(regex: RegExp, message = 'Invalid format'): this {
-    return this._clone([
-      ...this._validators,
-      (value, path) =>
-        typeof value === 'string' && regex.test(value) ? null : [{ code: 'invalid_string', message, path }],
-    ]);
+    return this._addValidator((value, path) =>
+      typeof value === 'string' && regex.test(value) ? null : [{ code: 'invalid_string', message, path }],
+    );
   }
 
   email(message = 'Invalid email address'): this {
@@ -230,7 +208,9 @@ export class StringSchema extends Schema<string> {
   }
 
   trim(): this {
-    return this.refine((val) => val === val.trim(), 'String must be trimmed');
+    const cloned = this._clone();
+    cloned._preprocessors = [...this._preprocessors, (v) => (typeof v === 'string' ? v.trim() : v)];
+    return cloned;
   }
 
   uuid(message = 'Invalid UUID'): this {
@@ -266,15 +246,31 @@ export class NumberSchema extends Schema<number> {
 
   int(message = 'Must be an integer'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && Number.isInteger(value) ? null : [{ code: 'invalid_type', message, path }],
+      typeof value === 'number' && Number.isInteger(value) ? null : [{ code: 'not_integer', message, path }],
     );
   }
 
   positive(message = 'Must be positive'): this {
-    return this.min(0, message);
+    return this._addValidator((value, path) =>
+      typeof value === 'number' && value > 0
+        ? null
+        : [{ code: 'too_small', message, params: { exclusive: true, minimum: 0 }, path }],
+    );
   }
 
   negative(message = 'Must be negative'): this {
+    return this._addValidator((value, path) =>
+      typeof value === 'number' && value < 0
+        ? null
+        : [{ code: 'too_big', message, params: { exclusive: true, maximum: 0 }, path }],
+    );
+  }
+
+  nonNegative(message = 'Must be non-negative'): this {
+    return this.min(0, message);
+  }
+
+  nonPositive(message = 'Must be non-positive'): this {
     return this.max(0, message);
   }
 }
@@ -372,31 +368,22 @@ export class ArraySchema<T> extends Schema<T[]> {
   }
 
   override async parseAsync(value: unknown): Promise<T[]> {
-    if (!Array.isArray(value)) {
+    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    if (!Array.isArray(processed)) {
       throw new ValidationError([{ code: 'invalid_type', message: 'Expected array', path: [] }]);
     }
-
-    const issues: Issue[] = [];
-
-    // Validate items
-    for (let i = 0; i < value.length; i++) {
-      const result = await this.itemSchema.safeParseAsync(value[i]);
-      if (!result.success) {
-        issues.push(
-          ...result.error.issues.map((issue) => ({
-            ...issue,
-            path: [i, ...issue.path],
-          })),
-        );
-      }
-    }
-
-    // Run async validators on the array itself
-    const asyncIssues = await this._runAsync(value, []);
-    issues.push(...asyncIssues);
-
+    const itemResults = await Promise.all(
+      processed.map((item, i) =>
+        this.itemSchema
+          .safeParseAsync(item)
+          .then((result) =>
+            result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [i, ...issue.path] })),
+          ),
+      ),
+    );
+    const issues = [...itemResults.flat(), ...(await this._runAsync(processed, []))];
     if (issues.length) throw new ValidationError(issues);
-    return value;
+    return this._postprocessors.reduce((v, fn) => fn(v), processed) as T[];
   }
 
   min(length: number, message = `Must have at least ${length} items`): this {
@@ -459,58 +446,37 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   override async parseAsync(value: unknown): Promise<InferObject<T>> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
       throw new ValidationError([{ code: 'invalid_type', message: 'Expected object', path: [] }]);
     }
-
-    const issues: Issue[] = [];
-
-    // Validate properties
-    for (const key in this.shape) {
-      const result = await this.shape[key].safeParseAsync((value as any)[key]);
-      if (!result.success) {
-        issues.push(
-          ...result.error.issues.map((issue) => ({
-            ...issue,
-            path: [key, ...issue.path],
-          })),
-        );
-      }
-    }
-
-    // Run async validators on the object itself
-    const asyncIssues = await this._runAsync(value, []);
-    issues.push(...asyncIssues);
-
+    const obj = processed as any;
+    const keyResults = await Promise.all(
+      Object.keys(this.shape).map((key) =>
+        this.shape[key]
+          .safeParseAsync(obj[key])
+          .then((result) =>
+            result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })),
+          ),
+      ),
+    );
+    const issues = [...keyResults.flat(), ...(await this._runAsync(processed, []))];
     if (issues.length) throw new ValidationError(issues);
-    return value as InferObject<T>;
+    return this._postprocessors.reduce((v, fn) => fn(v), obj) as InferObject<T>;
   }
 
   partial(): ObjectSchema<{ [K in keyof T]: Schema<Infer<T[K]> | undefined> }> {
-    const partialShape: any = {};
-    for (const key in this.shape) {
-      partialShape[key] = this.shape[key].optional();
-    }
-    return new ObjectSchema(partialShape);
+    return new ObjectSchema(Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.optional()])) as any);
   }
 
   pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
-    const picked: any = {};
-    for (const key of keys) {
-      picked[key] = this.shape[key];
-    }
-    return new ObjectSchema(picked);
+    const keySet = new Set(keys as string[]);
+    return new ObjectSchema(Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
   omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
-    const omitted: any = {};
-    const keySet = new Set(keys);
-    for (const key in this.shape) {
-      if (!keySet.has(key as unknown as K)) {
-        omitted[key] = this.shape[key];
-      }
-    }
-    return new ObjectSchema(omitted);
+    const keySet = new Set(keys as string[]);
+    return new ObjectSchema(Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
   }
 }
 
@@ -556,7 +522,7 @@ export type Infer<T> = T extends Schema<infer U> ? U : never;
 /* -------------------- Public API -------------------- */
 
 export const v = {
-  any: () => new Schema([]),
+  any: () => new Schema<any>([]),
   array: <T>(schema: Schema<T>) => new ArraySchema(schema),
   boolean: () => new BooleanSchema(),
   coerce: {
@@ -610,5 +576,4 @@ export const v = {
   unknown: () => new Schema([]),
   url: () => new StringSchema().url(),
   uuid: () => new StringSchema().uuid(),
-  void: () => new LiteralSchema(undefined),
 };

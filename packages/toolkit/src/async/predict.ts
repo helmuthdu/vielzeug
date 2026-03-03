@@ -27,7 +27,7 @@ export function predict<T>(
   return Promise.race([
     fn(abortSignal),
     new Promise<never>((_, reject) => {
-      abortSignal.addEventListener('abort', () => reject(new Error('Operation aborted')), { once: true });
+      abortSignal.addEventListener('abort', () => reject(abortSignal.reason), { once: true });
     }),
   ]);
 }

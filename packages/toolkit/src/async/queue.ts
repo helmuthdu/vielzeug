@@ -30,15 +30,15 @@ export function queue(options: { concurrency?: number } = {}) {
   let idlePromise: Promise<void> | null = null;
   let idleResolve: (() => void) | null = null;
 
-  const queue: Array<{
+  const tasks: Array<{
     fn: () => Promise<unknown>;
     resolve: (value: unknown) => void;
     reject: (error: unknown) => void;
   }> = [];
 
   const next = (): void => {
-    if (activeCount < concurrency && queue.length > 0) {
-      const task = queue.shift()!;
+    if (activeCount < concurrency && tasks.length > 0) {
+      const task = tasks.shift()!;
       activeCount++;
 
       task
@@ -49,7 +49,7 @@ export function queue(options: { concurrency?: number } = {}) {
           activeCount--;
           next();
 
-          if (activeCount === 0 && queue.length === 0 && idleResolve) {
+          if (activeCount === 0 && tasks.length === 0 && idleResolve) {
             idleResolve();
             idlePromise = null;
             idleResolve = null;
@@ -64,7 +64,7 @@ export function queue(options: { concurrency?: number } = {}) {
      */
     add: <T>(fn: () => Promise<T>): Promise<T> => {
       return new Promise<T>((resolve, reject) => {
-        queue.push({
+        tasks.push({
           fn: fn as () => Promise<unknown>,
           reject,
           resolve: resolve as (value: unknown) => void,
@@ -77,7 +77,7 @@ export function queue(options: { concurrency?: number } = {}) {
      * Clears all pending tasks from the queue
      */
     clear: (): void => {
-      queue.length = 0;
+      tasks.length = 0;
     },
 
     /**
@@ -108,7 +108,7 @@ export function queue(options: { concurrency?: number } = {}) {
      * Returns the current size of the queue
      */
     get size(): number {
-      return queue.length;
+      return tasks.length;
     },
   };
 }
