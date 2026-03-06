@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: 'Vielzeug'
-  text: 'Many libraries. One good decision.'
+  text: 'Many tools. One good decision.'
   tagline: 'Modular TypeScript tools for routing, forms, storage, i18n, validation, logging, and more — composable by design, type-safe by default.'
   image:
     src: '/logo.svg'
