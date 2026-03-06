@@ -20,7 +20,7 @@ import {
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 
-const styles = /* css */ css`
+const componentStyles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -28,10 +28,11 @@ const styles = /* css */ css`
 
     :host {
       --_size: var(--slider-size, var(--size-5));
-      --_height: var(--slider-height, calc(var(--size-5) / 3));
+      --_height: var(--slider-height, var(--size-3));
       --_track: var(--slider-track, var(--color-contrast-300));
       --_fill: var(--slider-fill, var(--color-neutral));
       --_thumb: var(--slider-thumb, var(--color-contrast-100));
+      --_thumb-size: calc(var(--_size) - var(--size-1));
       --_font-size: var(--text-sm);
       --_shadow: var(--color-neutral-focus-shadow);
 
@@ -39,19 +40,12 @@ const styles = /* css */ css`
       cursor: pointer;
       display: inline-flex;
       gap: var(--_gap, var(--size-3));
-      min-height: var(--size-11);
       position: relative;
       touch-action: none;
       user-select: none;
       width: 100%;
     }
   }
-
-  /* ========================================
-     States (Shared Mixin)
-     ======================================== */
-
-  ${disabledStateMixin()}
 
   /* ========================================
      Track, Fill & Thumb
@@ -95,8 +89,8 @@ const styles = /* css */ css`
     border: 2px solid var(--_fill);
     border-radius: var(--rounded-full);
     box-shadow: var(--shadow-sm);
-    height: var(--_size);
-    left: var(--_progress, 0%);
+    height: var(--_thumb-size);
+    left: clamp(1%, calc(var(--_progress, 0%) - var(--size-2)), 99%);
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -104,7 +98,7 @@ const styles = /* css */ css`
       box-shadow var(--transition-normal),
       transform var(--transition-fast),
       left var(--transition-normal);
-    width: var(--_size);
+    width: var(--_thumb-size);
     z-index: 1;
   }
 
@@ -121,12 +115,6 @@ const styles = /* css */ css`
     transform: translate(-50%, -50%) scale(1.1);
   }
 
-  /* ========================================
-     Color Themes (Shared Mixin)
-     ======================================== */
-
-  ${colorThemeMixin()}
-
   @layer buildit.overrides {
     /* Map theme variables to slider-specific variables */
     :host {
@@ -134,17 +122,6 @@ const styles = /* css */ css`
       --_shadow: var(--_theme-shadow);
     }
   }
-
-  ${sizeVariantMixin({
-    lg: {
-      fontSize: 'var(--text-base)',
-      size: 'var(--size-6)',
-    },
-    sm: {
-      fontSize: 'var(--text-xs)',
-      size: 'var(--size-4)',
-    },
-  })}
 
   /* ========================================
      Label & Hidden Input
@@ -386,7 +363,28 @@ define(
     });
 
     return {
-      styles: [styles],
+      styles: [
+        disabledStateMixin(),
+        colorThemeMixin,
+        sizeVariantMixin({
+          lg: {
+            fontSize: 'var(--text-base)',
+            height: 'var(--size-5)',
+            size: 'var(--size-5)',
+          },
+          md: {
+            fontSize: 'var(--text-base)',
+            height: 'var(--size-3)',
+            size: 'var(--size-5)',
+          },
+          sm: {
+            fontSize: 'var(--text-xs)',
+            height: 'var(--size-2)',
+            size: 'var(--size-5)',
+          },
+        }),
+        componentStyles,
+      ],
       template: html` <div class="slider-container" part="slider" ref=${containerRef}>
           <input type="range" aria-hidden="true" tabindex="-1" />
           <div class="slider-track" part="track">

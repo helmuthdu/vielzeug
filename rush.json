@@ -19,14 +19,20 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/craftit",
+      "projectFolder": "packages/craftit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/deposit",
       "projectFolder": "packages/deposit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/craftit",
-      "projectFolder": "packages/craftit",
+      "packageName": "@vielzeug/eventit",
+      "projectFolder": "packages/eventit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },

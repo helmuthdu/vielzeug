@@ -14,14 +14,19 @@ All components are available as modular imports:
 ```typescript
 import '@vielzeug/buildit/accordion';
 import '@vielzeug/buildit/accordion-item';
+import '@vielzeug/buildit/alert';
+import '@vielzeug/buildit/badge';
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/card';
 import '@vielzeug/buildit/checkbox';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/radio';
+import '@vielzeug/buildit/select';
 import '@vielzeug/buildit/switch';
 import '@vielzeug/buildit/text';
+import '@vielzeug/buildit/textarea';
+import '@vielzeug/buildit/tooltip';
 ```
 
 ## Button Component
@@ -366,6 +371,211 @@ Refer to the component source for a full list of overridable CSS variables.
   </bit-accordion-item>
 </bit-accordion>
 ```
+
+## Badge Component
+
+### Tag Name
+
+`<bit-badge>`
+
+### Attributes
+
+| Attribute | Type                                                                          | Default     | Description                                        |
+| --------- | ----------------------------------------------------------------------------- | ----------- | -------------------------------------------------- |
+| `variant` | `'solid' \| 'flat' \| 'outline'`                                              | `'solid'`   | Visual style variant                               |
+| `color`   | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Badge size                                         |
+| `count`   | `number`                                                                      | —           | Display a numeric count                            |
+| `max`     | `number`                                                                      | `99`        | Max visible count (shows `{max}+` when exceeded)   |
+| `dot`     | `boolean`                                                                     | `false`     | Show as a small dot instead of a label             |
+| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                             |
+
+### Slots
+
+| Slot     | Description                           |
+| -------- | ------------------------------------- |
+| (default)| Badge text / label content            |
+| `icon`   | Icon to display inside the badge      |
+
+### CSS Custom Properties
+
+| Property               | Description          | Default         |
+| ---------------------- | -------------------- | --------------- |
+| `--badge-bg`           | Background color     | Per variant     |
+| `--badge-color`        | Text / icon color    | Per variant     |
+| `--badge-border-color` | Border color         | Per variant     |
+| `--badge-font-size`    | Font size            | Per size        |
+| `--badge-padding`      | Internal padding     | Per size        |
+| `--badge-radius`       | Border radius        | Per rounded     |
+
+## Alert Component
+
+### Tag Name
+
+`<bit-alert>`
+
+### Attributes
+
+| Attribute     | Type                                                                          | Default     | Description                                       |
+| ------------- | ----------------------------------------------------------------------------- | ----------- | ------------------------------------------------- |
+| `variant`     | `'flat' \| 'solid' \| 'outline' \| 'frost'`                                   | `'flat'`    | Visual style variant                              |
+| `color`       | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Semantic color theme                  |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Alert size                                        |
+| `title`       | `string`                                                                      | `''`        | Bold title rendered above the body                |
+| `dismissable` | `boolean`                                                                     | `false`     | Show a close button; emit `dismiss` when clicked  |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                            |
+
+### Slots
+
+| Slot      | Description                                     |
+| --------- | ----------------------------------------------- |
+| (default) | Alert body content                              |
+| `icon`    | Icon displayed to the left of the body          |
+
+### Events
+
+| Event     | Detail | Description                                    |
+| --------- | ------ | ---------------------------------------------- |
+| `dismiss` | `{}`   | Emitted when the close button is clicked       |
+
+### CSS Custom Properties
+
+| Property                 | Description         | Default     |
+| ------------------------ | ------------------- | ----------- |
+| `--alert-bg`             | Background color    | Per variant |
+| `--alert-color`          | Text color          | Per variant |
+| `--alert-border-color`   | Border color        | Per variant |
+| `--alert-font-size`      | Font size           | Per size    |
+| `--alert-padding`        | Internal padding    | Per size    |
+| `--alert-radius`         | Border radius       | Per rounded |
+| `--alert-icon-color`     | Icon color          | Per color   |
+
+## Tooltip Component
+
+### Tag Name
+
+`<bit-tooltip>`
+
+### Attributes
+
+| Attribute   | Type                                      | Default         | Description                                          |
+| ----------- | ----------------------------------------- | --------------- | ---------------------------------------------------- |
+| `content`   | `string`                                  | `''`            | Tooltip text content                                 |
+| `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges) |
+| `trigger`   | `string`                                  | `'hover,focus'` | Trigger mode(s), comma-separated                     |
+| `delay`     | `number`                                  | `0`             | Show delay in milliseconds                           |
+| `variant`   | `'dark' \| 'light'`                       | `'dark'`        | Visual style variant                                 |
+| `size`      | `'sm' \| 'md' \| 'lg'`                    | `'md'`          | Tooltip bubble size                                  |
+| `disabled`  | `boolean`                                 | `false`         | Disable the tooltip entirely                         |
+
+### Slots
+
+| Slot      | Description                                                  |
+| --------- | ------------------------------------------------------------ |
+| (default) | The trigger element the tooltip is anchored to               |
+| `content` | Rich tooltip content (overrides the `content` attribute)     |
+
+### CSS Custom Properties
+
+| Property              | Description            | Default  |
+| --------------------- | ---------------------- | -------- |
+| `--tooltip-max-width` | Max width of the bubble| `18rem`  |
+
+## Textarea Component
+
+### Tag Name
+
+`<bit-textarea>`
+
+### Attributes
+
+| Attribute         | Type                                                                          | Default     | Description                                             |
+| ----------------- | ----------------------------------------------------------------------------- | ----------- | ------------------------------------------------------- |
+| `value`           | `string`                                                                      | `''`        | Current textarea value                                  |
+| `name`            | `string`                                                                      | `''`        | Form field name                                         |
+| `label`           | `string`                                                                      | `''`        | Label text                                              |
+| `label-placement` | `'inset' \| 'outside'`                                                        | `'inset'`   | Label positioning                                       |
+| `placeholder`     | `string`                                                                      | `''`        | Placeholder text                                        |
+| `rows`            | `number`                                                                      | `3`         | Visible rows                                            |
+| `maxlength`       | `number`                                                                      | —           | Maximum character count; enables live counter           |
+| `auto-resize`     | `boolean`                                                                     | `false`     | Grow automatically with content                         |
+| `resize`          | `'none' \| 'both' \| 'horizontal' \| 'vertical'`                             | —           | CSS `resize` override                                   |
+| `no-resize`       | `boolean`                                                                     | `false`     | Disable manual resize handle                            |
+| `helper`          | `string`                                                                      | `''`        | Helper text below the control                           |
+| `error`           | `string`                                                                      | `''`        | Error message; overrides helper text                    |
+| `variant`         | `'flat' \| 'solid' \| 'outline'`                                              | `'flat'`    | Visual style variant                                    |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Control size                                            |
+| `disabled`        | `boolean`                                                                     | `false`     | Disable the control                                     |
+| `readonly`        | `boolean`                                                                     | `false`     | Make the field read-only                                |
+| `required`        | `boolean`                                                                     | `false`     | Mark as required                                        |
+
+### Events
+
+| Event    | Detail                        | Description                              |
+| -------- | ----------------------------- | ---------------------------------------- |
+| `input`  | `{ value: string }`           | Emitted on every keystroke               |
+| `change` | `{ value: string }`           | Emitted when the field loses focus       |
+
+### CSS Custom Properties
+
+| Property                       | Description                  | Default         |
+| ------------------------------ | ---------------------------- | --------------- |
+| `--textarea-border-color`      | Default border color         | `--color-border`|
+| `--textarea-focus-color`       | Focus ring / active color    | Per color theme |
+| `--textarea-bg`                | Background color             | Per variant     |
+| `--textarea-color`             | Text color                   | Per variant     |
+| `--textarea-font-size`         | Font size                    | Per size        |
+| `--textarea-counter-color`     | Character counter text color | `--color-muted` |
+
+## Select Component
+
+### Tag Name
+
+`<bit-select>`
+
+### Attributes
+
+| Attribute         | Type                                                                          | Default     | Description                                           |
+| ----------------- | ----------------------------------------------------------------------------- | ----------- | ----------------------------------------------------- |
+| `value`           | `string`                                                                      | `''`        | Currently selected value                              |
+| `name`            | `string`                                                                      | `''`        | Form field name                                       |
+| `label`           | `string`                                                                      | `''`        | Label text                                            |
+| `label-placement` | `'inset' \| 'outside'`                                                        | `'inset'`   | Label positioning                                     |
+| `placeholder`     | `string`                                                                      | `''`        | Empty-state placeholder text                          |
+| `helper`          | `string`                                                                      | `''`        | Helper text below the control                         |
+| `error`           | `string`                                                                      | `''`        | Error message; overrides helper text                  |
+| `variant`         | `'flat' \| 'solid' \| 'outline'`                                              | `'flat'`    | Visual style variant                                  |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                         |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Control size                                          |
+| `multiple`        | `boolean`                                                                     | `false`     | Allow multiple selections                             |
+| `disabled`        | `boolean`                                                                     | `false`     | Disable the control                                   |
+| `readonly`        | `boolean`                                                                     | `false`     | Prevent the dropdown from opening                     |
+| `required`        | `boolean`                                                                     | `false`     | Mark as required                                      |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                                |
+
+### Slots
+
+| Slot      | Description                                           |
+| --------- | ----------------------------------------------------- |
+| (default) | `<option>` and `<optgroup>` elements to display       |
+
+### Events
+
+| Event    | Detail                                  | Description                                |
+| -------- | --------------------------------------- | ------------------------------------------ |
+| `change` | `{ value: string, values: string[] }`   | Emitted when the selected value(s) change  |
+
+### CSS Custom Properties
+
+| Property                     | Description                   | Default          |
+| ---------------------------- | ----------------------------- | ---------------- |
+| `--select-border-color`      | Default border color          | `--color-border` |
+| `--select-focus-color`       | Focus ring / active color     | Per color theme  |
+| `--select-bg`                | Trigger background            | Per variant      |
+| `--select-dropdown-bg`       | Dropdown panel background     | `--color-surface`|
+| `--select-option-hover-bg`   | Option hover state background | `--color-hover`  |
+| `--select-height`            | Trigger height                | Per size         |
 
 ## Theme Variables
 

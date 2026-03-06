@@ -1,397 +1,313 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 /* ============================================
-   formit - Lightweight form state using native FormData
+   formit - Lightweight form state management
    ============================================ */
 
 /* -------------------- Core Types -------------------- */
+
 type MaybePromise<T> = T | Promise<T>;
 
 /**
- * Errors are stored as Map for better performance and type safety.
- * Use errorsToObject() helper to convert to a plain object if needed.
+ * Field validator receives the raw stored value (typed, not coerced to string).
+ * Return a string to signal an error, or undefined/null to signal success.
  */
-export type Errors = Map<string, string>;
+export type FieldValidator = (value: unknown) => MaybePromise<string | undefined | null>;
 
 /**
- * Field validators receive FormDataEntryValue (string | File | null).
- * Use String(value) or Number(value) to parse as needed.
+ * Form-level validator for cross-field validation.
+ * Receives the full values object and returns a map of field errors.
  */
-export type FieldValidator = (value: FormDataEntryValue) => MaybePromise<string | undefined | null>;
+export type FormValidator = (
+  values: Record<string, unknown>,
+) => MaybePromise<Record<string, string> | undefined | null>;
 
-/**
- * Form-level validator receives the entire FormData for cross-field validation.
- */
-export type FormValidator = (formData: FormData) => MaybePromise<Errors | undefined | null>;
-
-/**
- * Field configuration with value and validators.
- * Use this when you need validators for a field.
- */
-export type FieldConfig<TValue = any> = {
-  value?: TValue;
-  validators?: FieldValidator | Array<FieldValidator>;
-};
-
-/**
- * Fields can be:
- * - Plain values (string, number, boolean, Date, File, etc.)
- * - Nested objects (will be flattened)
- * - FieldConfig objects (with validators)
- */
-export type FormFields = Record<string, any>;
-
-export type ValidateOptions = { signal?: AbortSignal; onlyTouched?: boolean; fields?: string[] };
-
-export type FormInit = {
-  fields?: FormFields;
+export type FormInit<TValues extends Record<string, unknown> = Record<string, unknown>> = {
+  /** Initial field values */
+  values?: TValues;
+  /** Per-field validators, keyed by field name */
+  rules?: Record<string, FieldValidator | FieldValidator[]>;
+  /** Form-level validator for cross-field validation */
   validate?: FormValidator;
 };
+
+export type ValidateOptions = {
+  signal?: AbortSignal;
+  onlyTouched?: boolean;
+  fields?: string[];
+};
+
+export type SetOptions = {
+  /** Track dirty state. Default: true */
+  setDirty?: boolean;
+  /** Mark field as touched. Default: false */
+  setTouched?: boolean;
+};
+
+export type PatchOptions = {
+  /** Replace all values instead of merging. Default: false */
+  replace?: boolean;
+  /** Track dirty state for patched fields. Default: false */
+  setDirty?: boolean;
+};
+
 export type FormState = {
-  errors: Errors;
+  errors: Record<string, string>;
   touched: Set<string>;
   dirty: Set<string>;
+  /** true if errors is empty */
+  isValid: boolean;
+  /** true if any field is dirty */
+  isDirty: boolean;
+  /** true if any field is touched */
+  isTouched: boolean;
   isValidating: boolean;
   isSubmitting: boolean;
   submitCount: number;
 };
+
 export type BindConfig = {
-  valueExtractor?: (event: any) => any;
+  valueExtractor?: (event: unknown) => unknown;
   markTouchedOnBlur?: boolean;
 };
-type Listener = (state: FormState) => void;
-type FieldListener<TValue> = (payload: {
-  value: TValue | undefined;
-  error?: string;
-  touched: boolean;
-  dirty: boolean;
-}) => void;
 
-/* -------------------- Errors -------------------- */
+/* -------------------- Error Class -------------------- */
+
 export class ValidationError extends Error {
-  readonly errors: Errors;
+  readonly errors: Record<string, string>;
   readonly type = 'validation' as const;
-  constructor(errors: Errors) {
+  constructor(errors: Record<string, string>) {
     super('Form validation failed');
     this.name = 'ValidationError';
     this.errors = errors;
-    if (typeof (Error as any).captureStackTrace === 'function') {
-      (Error as any).captureStackTrace(this, ValidationError);
+    if (typeof (Error as { captureStackTrace?: unknown }).captureStackTrace === 'function') {
+      (Error as { captureStackTrace: (t: unknown, c: unknown) => void }).captureStackTrace(
+        this,
+        ValidationError,
+      );
     }
   }
 }
 
-/* -------------------- Pure Utilities -------------------- */
+/* -------------------- Helpers -------------------- */
 
-function isFileValue(value: unknown): value is File | Blob | FileList {
-  return value instanceof File || value instanceof Blob || value instanceof FileList;
-}
-
-function isFieldConfigObject(v: unknown): v is FieldConfig {
-  return (
-    v !== null &&
-    typeof v === 'object' &&
-    !Array.isArray(v) &&
-    !(v instanceof Date) &&
-    !isFileValue(v) &&
-    'validators' in v
-  );
-}
-
-function normalizeForComparison(value: any): string {
-  if (value === null || value === undefined) return '';
-  if (value instanceof File) return `File:${value.name}:${value.size}`;
-  if (value instanceof Blob) return `Blob:${value.size}`;
-  if (value instanceof FileList) {
-    const parts: string[] = [];
-    for (let i = 0; i < value.length; i++) parts.push(`File:${value[i].name}:${value[i].size}`);
-    return parts.join('|');
+function isSameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a instanceof File && b instanceof File) return a.name === b.name && a.size === b.size;
+  if (a instanceof Blob && b instanceof Blob) return a.size === b.size;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => isSameValue(v, b[i]));
   }
-  if (Array.isArray(value)) return value.map(normalizeForComparison).join('|');
-  return String(value);
+  return false;
 }
 
-function flattenObject(obj: any, prefix = ''): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (value === null || value === undefined) {
-      result[path] = value;
-    } else if (isFileValue(value)) {
-      result[path] = value;
+function toFormData(values: Record<string, unknown>): FormData {
+  const fd = new FormData();
+  for (const [name, value] of Object.entries(values)) {
+    if (value === null || value === undefined) continue;
+    if (value instanceof File || value instanceof Blob) {
+      fd.append(name, value);
+    } else if (value instanceof FileList) {
+      for (let i = 0; i < value.length; i++) fd.append(name, value[i]);
     } else if (Array.isArray(value)) {
-      result[path] = value;
-    } else if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-      Object.assign(result, flattenObject(value, path));
+      for (const item of value) {
+        fd.append(name, item instanceof File || item instanceof Blob ? item : String(item));
+      }
     } else {
-      result[path] = value;
+      fd.append(name, String(value));
     }
   }
-  return result;
+  return fd;
 }
 
 /* -------------------- Form Creation -------------------- */
-export function createForm(init: FormInit = {}) {
-  const rawFields = init.fields ?? {};
+
+export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
+  init: FormInit<TValues> = {},
+) {
+  const rules = init.rules ?? {};
   const formValidator = init.validate;
 
-  // Separate field configs from plain values/nested objects
-  const fieldConfigs: Record<string, FieldConfig> = {};
-  const initialValues: Record<string, any> = {};
+  // Backing store: typed values, never coerced to string
+  const store = new Map<string, unknown>(Object.entries(init.values ?? {}));
+  const initial = new Map<string, unknown>(store);
 
-  // Track which fields are arrays to distinguish [] from ''
-  const arrayFields = new Set<string>();
-
-  for (const [key, fieldValue] of Object.entries(rawFields)) {
-    if (isFieldConfigObject(fieldValue)) {
-      fieldConfigs[key] = fieldValue;
-      if ('value' in fieldValue) initialValues[key] = fieldValue.value;
-    } else {
-      initialValues[key] = fieldValue;
-    }
-  }
-
-  const flatInitialValues = flattenObject(initialValues);
-
-  // Core FormData (native browser API)
-  const formData = new FormData();
-
-  // State tracking
-  const errors: Errors = new Map();
-  const touched: Set<string> = new Set();
-  const dirty: Set<string> = new Set();
-
-  /**
-   * Stores normalized initial values for dirty tracking.
-   * Stores string representation to handle File/Blob comparisons.
-   */
-  const initialSnapshot = new Map<string, string>();
-
+  // State
+  const errors: Record<string, string> = Object.create(null);
+  const touched = new Set<string>();
+  const dirty = new Set<string>();
   let isValidating = false;
   let isSubmitting = false;
   let submitCount = 0;
 
   // Listeners
+  type Listener = (state: FormState) => void;
+  type FieldListener = (payload: { value: unknown; error?: string; touched: boolean; dirty: boolean }) => void;
+
   const listeners = new Set<Listener>();
-  const fieldListeners = new Map<string, Set<FieldListener<any>>>();
+  const fieldListeners = new Map<string, Set<FieldListener>>();
 
-  // Scheduled notification
+  // Batched notification
   let scheduled = false;
+  let changedFields = new Set<string>();
+  let notifyAllFields = false;
 
-  /* -------------------- Internal Helpers -------------------- */
+  /* -------------------- Notification -------------------- */
 
-  function buildSnapshot(): FormState {
+  function buildState(): FormState {
+    const errCopy: Record<string, string> = {};
+    for (const k of Object.keys(errors)) errCopy[k] = errors[k];
     return {
       dirty: new Set(dirty),
-      errors: new Map(errors),
+      errors: errCopy,
+      isDirty: dirty.size > 0,
+      isTouched: touched.size > 0,
       isSubmitting,
+      isValid: Object.keys(errors).length === 0,
       isValidating,
       submitCount,
       touched: new Set(touched),
     };
   }
-  function scheduleNotify() {
-    if (scheduled) return;
-    scheduled = true;
-    Promise.resolve().then(() => {
-      scheduled = false;
-      notifyListeners();
-    });
-  }
-  function notifyListeners() {
-    const snap = buildSnapshot();
+
+  function flush() {
+    scheduled = false;
+    const state = buildState();
     for (const listener of listeners) {
       try {
-        listener(snap);
+        listener(state);
       } catch {
         /* swallow */
       }
     }
-    for (const [name, listenerSet] of fieldListeners.entries()) {
-      const fieldTouched = touched.has(name);
-      const fieldDirty = dirty.has(name);
-      const payload = { dirty: fieldDirty, error: errors.get(name), touched: fieldTouched, value: get(name) };
-      for (const fieldListener of listenerSet) {
+    // Only notify field listeners for fields that actually changed
+    const toNotify = notifyAllFields ? fieldListeners.keys() : changedFields;
+    for (const name of toNotify) {
+      const set = fieldListeners.get(name);
+      if (!set?.size) continue;
+      const payload = {
+        dirty: dirty.has(name),
+        error: errors[name],
+        touched: touched.has(name),
+        value: store.get(name),
+      };
+      for (const fn of set) {
         try {
-          fieldListener(payload);
+          fn(payload);
         } catch {
           /* swallow */
         }
       }
     }
+    changedFields = new Set();
+    notifyAllFields = false;
   }
+
+  function scheduleNotify(fields?: string[]) {
+    if (fields) {
+      for (const f of fields) changedFields.add(f);
+    } else {
+      notifyAllFields = true;
+    }
+    if (scheduled) return;
+    scheduled = true;
+    Promise.resolve().then(flush);
+  }
+
+  /* -------------------- Field Validation -------------------- */
+
   async function runFieldValidators(name: string, signal?: AbortSignal): Promise<string | undefined> {
-    const config = fieldConfigs[name];
-    if (!config?.validators) return undefined;
-    const validators = Array.isArray(config.validators) ? config.validators : [config.validators];
-    const fieldValue = get(name) ?? '';
+    const fieldRules = rules[name];
+    if (!fieldRules) return undefined;
+    const validators = Array.isArray(fieldRules) ? fieldRules : [fieldRules];
+    const value = store.get(name);
     for (const validator of validators) {
       if (signal?.aborted) throw new Error('Validation aborted');
-      const result = await validator(fieldValue);
-      const msg = typeof result === 'string' ? result : undefined;
-      if (msg) return msg;
+      const result = await validator(value);
+      if (typeof result === 'string') return result;
     }
     return undefined;
   }
-  async function runFormValidator(signal?: AbortSignal): Promise<Errors> {
-    if (!formValidator) return new Map();
-    if (signal?.aborted) {
-      throw new Error('Validation aborted');
-    }
-    const result = await formValidator(formData);
-    return (result ?? new Map()) as Errors;
+
+  /* -------------------- Values -------------------- */
+
+  function get<V = unknown>(name: string): V {
+    return store.get(name) as V;
   }
 
-  /* -------------------- Value Management -------------------- */
-
-  /**
-   * Append a value to FormData, handling File, Blob, FileList, arrays, and primitives.
-   */
-  function appendValue(name: string, value: any): void {
-    if (value === null || value === undefined) return;
-    if (value instanceof File || value instanceof Blob) {
-      formData.append(name, value);
-    } else if (value instanceof FileList) {
-      for (let i = 0; i < value.length; i++) formData.append(name, value[i]);
-    } else if (Array.isArray(value)) {
-      arrayFields.add(name);
-      if (value.length === 0) {
-        formData.append(name, ''); // empty-array marker
-      } else {
-        for (const item of value) {
-          formData.append(name, item instanceof File || item instanceof Blob ? item : String(item));
-        }
-      }
-    } else {
-      arrayFields.delete(name);
-      formData.append(name, String(value));
-    }
+  function values(): Record<string, unknown> {
+    return Object.fromEntries(store);
   }
 
-  /**
-   * Get field value. Returns array if multiple values exist for same name.
-   */
-  function get(name: string): any {
-    const all = formData.getAll(name);
-    if (all.length === 0) return undefined;
-    // Empty array marker: single empty string for fields tracked as arrays
-    if (all.length === 1 && all[0] === '' && arrayFields.has(name)) return [];
-    return all.length > 1 ? all : all[0];
-  }
-
-  /**
-   * Convert form to plain object. Files/Blobs preserved as-is.
-   */
-  function values(): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const [name, value] of formData.entries()) {
-      const existing = result[name];
-      if (existing !== undefined) {
-        result[name] = Array.isArray(existing) ? [...existing, value] : [existing, value];
-      } else {
-        result[name] = value;
-      }
-    }
-    return result;
-  }
-
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
-  function set(
-    nameOrEntries: string | Record<string, any> | FormData,
-    valueOrOptions?: any,
-    optionsWhenString?: { replace?: boolean; setDirty?: boolean; setTouched?: boolean },
-  ) {
-    const isSingleField = typeof nameOrEntries === 'string';
-    const value = isSingleField ? valueOrOptions : undefined;
-    const options = isSingleField ? optionsWhenString || {} : valueOrOptions || {};
-
-    if (!isSingleField) {
-      const { replace = false, setDirty = false } = options;
-
-      if (replace) {
-        for (const key of [...formData.keys()]) formData.delete(key);
-        initialSnapshot.clear();
-        dirty.clear();
-      }
-
-      const entries: [string, any][] =
-        nameOrEntries instanceof FormData ? Array.from(nameOrEntries.entries()) : Object.entries(nameOrEntries);
-
-      for (const [name, val] of entries) {
-        if (!replace) formData.delete(name);
-        appendValue(name, val);
-        if (replace) {
-          initialSnapshot.set(name, normalizeForComparison(val));
-        } else if (setDirty) {
-          if (initialSnapshot.get(name) !== normalizeForComparison(val)) {
-            dirty.add(name);
-          } else {
-            dirty.delete(name);
-          }
-        }
-      }
-
-      scheduleNotify();
-      return;
-    }
-
-    // Single field
-    const name = nameOrEntries;
-    formData.delete(name);
-    appendValue(name, value);
-
+  function set(name: string, value: unknown, options: SetOptions = {}): void {
+    store.set(name, value);
     if (options.setDirty ?? true) {
-      if (initialSnapshot.get(name) !== normalizeForComparison(value)) {
-        dirty.add(name);
-      } else {
+      if (isSameValue(initial.get(name), value)) {
         dirty.delete(name);
+      } else {
+        dirty.add(name);
       }
     }
-
     if (options.setTouched) touched.add(name);
-
-    scheduleNotify();
+    scheduleNotify([name]);
   }
 
-  /* -------------------- Error Management -------------------- */
-
-  // Initialize with flattened initial values
-  for (const [name, value] of Object.entries(flatInitialValues)) {
-    set(name, value, { setDirty: false });
-    initialSnapshot.set(name, normalizeForComparison(value));
+  /**
+   * Set multiple fields at once.
+   * Use `replace: true` to clear all existing values first.
+   */
+  function patch(entries: Record<string, unknown>, options: PatchOptions = {}): void {
+    const { replace = false, setDirty = false } = options;
+    if (replace) {
+      store.clear();
+      initial.clear();
+      dirty.clear();
+    }
+    const changed: string[] = [];
+    for (const [name, value] of Object.entries(entries)) {
+      store.set(name, value);
+      changed.push(name);
+      if (replace) {
+        initial.set(name, value);
+      } else if (setDirty) {
+        if (isSameValue(initial.get(name), value)) {
+          dirty.delete(name);
+        } else {
+          dirty.add(name);
+        }
+      }
+    }
+    scheduleNotify(changed);
   }
+
+  /* -------------------- Errors -------------------- */
 
   function getError(name: string): string | undefined {
-    return errors.get(name);
+    return errors[name];
   }
 
   function setError(name: string, message?: string): void {
     if (message) {
-      errors.set(name, message);
+      errors[name] = message;
     } else {
-      errors.delete(name);
+      delete errors[name];
+    }
+    scheduleNotify([name]);
+  }
+
+  function getErrors(): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const k of Object.keys(errors)) result[k] = errors[k];
+    return result;
+  }
+
+  function setErrors(nextErrors: Record<string, string>): void {
+    for (const k of Object.keys(errors)) delete errors[k];
+    for (const [name, message] of Object.entries(nextErrors)) {
+      if (message) errors[name] = message;
     }
     scheduleNotify();
   }
 
-  function getErrors(): Errors {
-    return new Map(errors);
-  }
-
-  function setErrors(nextErrors: Errors | Record<string, string>): void {
-    errors.clear();
-    if (nextErrors instanceof Map) {
-      for (const [name, message] of nextErrors.entries()) {
-        errors.set(name, message);
-      }
-    } else {
-      for (const [name, message] of Object.entries(nextErrors)) {
-        errors.set(name, message);
-      }
-    }
-    scheduleNotify();
-  }
-
-  /* -------------------- Touch/Dirty Management -------------------- */
+  /* -------------------- Touch / Dirty -------------------- */
 
   function isTouched(name: string): boolean {
     return touched.has(name);
@@ -399,7 +315,7 @@ export function createForm(init: FormInit = {}) {
 
   function setTouched(name: string): void {
     touched.add(name);
-    scheduleNotify();
+    scheduleNotify([name]);
   }
 
   function isDirty(name: string): boolean {
@@ -408,69 +324,57 @@ export function createForm(init: FormInit = {}) {
 
   /* -------------------- Validation -------------------- */
 
-  /**
-   * Validate field(s). If called with name string, validates that field.
-   * If called with options or no args, validates all fields.
-   */
-  function validate(name: string): Promise<string | undefined>;
-  function validate(options?: ValidateOptions): Promise<Errors>;
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legitimate complexity for unified validation API
-  async function validate(nameOrOptions?: string | ValidateOptions): Promise<string | undefined | Errors> {
-    // Validate single field
-    if (typeof nameOrOptions === 'string') {
-      const name = nameOrOptions;
-      isValidating = true;
-      scheduleNotify();
-
-      try {
-        const errorMsg = await runFieldValidators(name);
-        if (errorMsg) {
-          errors.set(name, errorMsg);
-        } else {
-          errors.delete(name);
-        }
-        return errorMsg;
-      } finally {
-        isValidating = false;
-        scheduleNotify();
+  /** Validate a single field. Returns the error message, or undefined if valid. */
+  async function validate(name: string, signal?: AbortSignal): Promise<string | undefined> {
+    isValidating = true;
+    scheduleNotify([name]);
+    try {
+      const msg = await runFieldValidators(name, signal);
+      if (msg) {
+        errors[name] = msg;
+      } else {
+        delete errors[name];
       }
+      return msg;
+    } finally {
+      isValidating = false;
+      scheduleNotify([name]);
     }
+  }
 
-    // Validate all fields
-    const options = nameOrOptions;
+  /** Validate all fields (or a filtered subset). Returns all errors. */
+  async function validateAll(options?: ValidateOptions): Promise<Record<string, string>> {
     isValidating = true;
     scheduleNotify();
-    const signal = options?.signal;
-
+    const { signal } = options ?? {};
     try {
-      const nextErrors: Errors = new Map();
-
-      // Collect fields to validate
-      let fieldsToValidate = new Set<string>([...Object.keys(fieldConfigs), ...formData.keys()]);
+      const nextErrors: Record<string, string> = {};
+      let fieldsToValidate = new Set<string>([...Object.keys(rules), ...store.keys()]);
       if (options?.onlyTouched) {
-        fieldsToValidate = new Set(Array.from(fieldsToValidate).filter((name) => touched.has(name)));
+        fieldsToValidate = new Set([...fieldsToValidate].filter((n) => touched.has(n)));
       }
-      if (options?.fields && options.fields.length > 0) {
+      if (options?.fields?.length) {
         fieldsToValidate = new Set(options.fields);
       }
 
-      // Run field validators
       for (const name of fieldsToValidate) {
-        if (signal?.aborted) {
-          throw new Error('Validation aborted');
-        }
-        const errorMsg = await runFieldValidators(name, signal);
-        if (errorMsg) nextErrors.set(name, errorMsg);
+        if (signal?.aborted) throw new Error('Validation aborted');
+        const msg = await runFieldValidators(name, signal);
+        if (msg) nextErrors[name] = msg;
       }
 
-      // Run form-level validator
-      try {
-        const formErrors = await runFormValidator(signal);
-        for (const [name, message] of formErrors.entries()) {
-          nextErrors.set(name, message);
+      if (formValidator) {
+        if (signal?.aborted) throw new Error('Validation aborted');
+        try {
+          const formErrors = await formValidator(values());
+          if (formErrors) {
+            for (const [name, message] of Object.entries(formErrors)) {
+              if (message) nextErrors[name] = message;
+            }
+          }
+        } catch (err) {
+          nextErrors[''] = err instanceof Error ? err.message : String(err);
         }
-      } catch (err) {
-        nextErrors.set('', err instanceof Error ? err.message : String(err));
       }
 
       setErrors(nextErrors);
@@ -481,29 +385,31 @@ export function createForm(init: FormInit = {}) {
     }
   }
 
-  /* -------------------- Form Submission -------------------- */
-  async function submit(
-    onSubmit: (formData: FormData) => MaybePromise<any>,
-    options?: { signal?: AbortSignal; validate?: boolean },
-  ) {
-    if (isSubmitting) throw new Error('Form is already being submitted');
+  /* -------------------- Submit -------------------- */
 
-    submitCount += 1;
+  async function submit(
+    onSubmit: (formData: FormData) => MaybePromise<unknown>,
+    options?: { signal?: AbortSignal; validate?: boolean },
+  ): Promise<unknown> {
+    if (isSubmitting) throw new Error('Form is already being submitted');
+    submitCount++;
     isSubmitting = true;
     scheduleNotify();
 
-    const signal = options?.signal;
-
     try {
       if (options?.validate ?? true) {
-        await validate({ signal });
+        await validateAll({ signal: options?.signal });
       }
 
-      if (errors.size > 0) {
-        throw new ValidationError(errors);
+      // Mark all fields as touched so validation errors become visible in the UI
+      for (const name of store.keys()) touched.add(name);
+      for (const name of Object.keys(rules)) touched.add(name);
+
+      if (Object.keys(errors).length > 0) {
+        throw new ValidationError(getErrors());
       }
 
-      return await onSubmit(formData);
+      return await onSubmit(toFormData(values()));
     } finally {
       isSubmitting = false;
       scheduleNotify();
@@ -511,146 +417,125 @@ export function createForm(init: FormInit = {}) {
   }
 
   /* -------------------- Subscriptions -------------------- */
-  function subscribe(listener: Listener) {
+
+  function subscribe(listener: Listener): () => void {
     listeners.add(listener);
     try {
-      listener(buildSnapshot());
+      listener(buildState());
     } catch {
       /* swallow */
     }
     return () => listeners.delete(listener);
   }
 
-  function subscribeField(name: string, listener: FieldListener<any>) {
-    let listenerSet = fieldListeners.get(name);
-    if (!listenerSet) {
-      listenerSet = new Set();
-      fieldListeners.set(name, listenerSet);
+  function subscribeField<V = unknown>(
+    name: string,
+    listener: (payload: { value: V; error?: string; touched: boolean; dirty: boolean }) => void,
+  ): () => void {
+    let set = fieldListeners.get(name);
+    if (!set) {
+      set = new Set();
+      fieldListeners.set(name, set);
     }
-    listenerSet.add(listener);
+    set.add(listener as FieldListener);
     try {
       listener({
         dirty: dirty.has(name),
-        error: errors.get(name),
+        error: errors[name],
         touched: touched.has(name),
-        value: get(name),
+        value: store.get(name) as V,
       });
     } catch {
       /* swallow */
     }
     return () => {
-      const set = fieldListeners.get(name);
-      set?.delete(listener);
-      if (set?.size === 0) fieldListeners.delete(name);
+      const s = fieldListeners.get(name);
+      s?.delete(listener as FieldListener);
+      if (s?.size === 0) fieldListeners.delete(name);
     };
   }
 
-  /* -------------------- Field Binding -------------------- */
+  /* -------------------- Bind -------------------- */
+
   function bind(name: string, config?: BindConfig) {
-    const valueExtractor =
+    const extract =
       config?.valueExtractor ??
-      ((event: any) => (event && typeof event === 'object' && 'target' in event ? (event.target as any).value : event));
-    const markTouchedOnBlur = config?.markTouchedOnBlur ?? true;
+      ((event: unknown) =>
+        event && typeof event === 'object' && 'target' in event
+          ? (event as { target: { value: unknown } }).target.value
+          : event);
+    const touchOnBlur = config?.markTouchedOnBlur ?? true;
 
-    const setter = (newValue: any | ((prev: any) => any)) => {
-      const previousValue = get(name);
-      const nextValue = typeof newValue === 'function' ? (newValue as (prev: any) => any)(previousValue) : newValue;
-      set(name, nextValue, { setDirty: true, setTouched: true });
-    };
-
-    const onChange = (event: any) => {
-      setter(valueExtractor(event));
-    };
-
-    const onBlur = () => {
-      if (markTouchedOnBlur) {
-        setTouched(name);
-      }
+    const setter = (newValue: unknown) => {
+      const next =
+        typeof newValue === 'function'
+          ? (newValue as (v: unknown) => unknown)(store.get(name))
+          : newValue;
+      set(name, next, { setDirty: true, setTouched: true });
     };
 
     return {
       name,
-      onBlur,
-      onChange,
+      onBlur: () => {
+        if (touchOnBlur) setTouched(name);
+      },
+      onChange: (event: unknown) => setter(extract(event)),
       set: setter,
       get value() {
-        return get(name);
+        return store.get(name);
       },
-      set value(newValue: any) {
-        setter(newValue);
+      set value(v: unknown) {
+        setter(v);
       },
     };
   }
 
   /* -------------------- Reset -------------------- */
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
-  function reset(newFormData?: FormData | Record<string, any>) {
-    for (const key of [...formData.keys()]) formData.delete(key);
-    errors.clear();
+
+  function reset(newValues?: Record<string, unknown>): void {
+    store.clear();
+    for (const k of Object.keys(errors)) delete errors[k];
     touched.clear();
     dirty.clear();
-    initialSnapshot.clear();
+    initial.clear();
 
-    if (newFormData instanceof FormData) {
-      for (const [name, value] of newFormData.entries()) {
-        formData.append(name, value);
-        initialSnapshot.set(name, normalizeForComparison(value));
-      }
-    } else if (newFormData) {
-      for (const [name, value] of Object.entries(flattenObject(newFormData))) {
-        set(name, value, { setDirty: false });
-        initialSnapshot.set(name, normalizeForComparison(value));
-      }
-    } else {
-      for (const [name, value] of Object.entries(flatInitialValues)) {
-        set(name, value, { setDirty: false });
-        initialSnapshot.set(name, normalizeForComparison(value));
-      }
+    const source = newValues ?? (init.values as Record<string, unknown> | undefined) ?? {};
+    for (const [name, value] of Object.entries(source)) {
+      store.set(name, value);
+      initial.set(name, value);
     }
-
     scheduleNotify();
   }
 
-  /* -------------------- State Snapshot -------------------- */
-
-  /* -------------------- Utility Helpers -------------------- */
+  /* -------------------- Dispose -------------------- */
 
   function dispose(): void {
     listeners.clear();
     fieldListeners.clear();
   }
 
-  /**
-   * Clone the FormData for safe external mutation.
-   */
-  function clone(): FormData {
-    const cloned = new FormData();
-    for (const [name, value] of formData.entries()) {
-      cloned.append(name, value);
-    }
-    return cloned;
-  }
+  /* -------------------- Public API -------------------- */
 
-  /* -------------------- Return Public API -------------------- */
   return {
     bind,
-    clone,
     dispose,
     get,
     getError,
     getErrors,
     isDirty,
     isTouched,
+    patch,
     reset,
     set,
     setError,
     setErrors,
     setTouched,
-    snapshot: buildSnapshot,
+    snapshot: buildState,
     submit,
     subscribe,
     subscribeField,
     validate,
+    validateAll,
     values,
   };
 }

@@ -13,11 +13,11 @@ A flexible accordion component for organizing collapsible content sections. Buil
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/base/accordion/accordion.ts
+<<< @/../packages/buildit/src/disclosure/accordion/accordion.ts
 :::
 
 ::: details View Source Code (Accordion Item)
-<<< @/../packages/buildit/src/base/accordion-item/accordion-item.ts
+<<< @/../packages/buildit/src/disclosure/accordion-item/accordion-item.ts
 :::
 
 ## Basic Usage
@@ -137,7 +137,7 @@ Modern effects with backdrop blur for elevated UI elements.
 Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
 :::
 
-<ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
+<ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
 <bit-accordion variant="glass">

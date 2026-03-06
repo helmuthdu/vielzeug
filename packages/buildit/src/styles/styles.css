@@ -13,9 +13,9 @@
 
 @layer buildit.reset,
   buildit.tokens,
+  buildit.themes,
   buildit.base,
   buildit.variants,
-  buildit.themes,
   buildit.states,
   buildit.utilities,
   buildit.overrides;

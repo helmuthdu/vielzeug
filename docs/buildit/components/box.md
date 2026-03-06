@@ -8,7 +8,7 @@ A foundational layout primitive with theming support. Box provides a simple, sem
 
 ## Features
 
-- 🎨 **1 Special Variant**: Frost effect with smart color adaptation
+- 🎨 **2 Special Variants**: Glass and Frost effects with smart color adaptation
 - 🌈 **6 Color Themes**: Primary, secondary, success, warning, error, info
 - 🌟 **Rainbow Border**: Animated rainbow border with glow effect
 - 📏 **5 Padding Sizes**: From none to extra-large
@@ -18,7 +18,7 @@ A foundational layout primitive with theming support. Box provides a simple, sem
 - 🎨 **Customizable**: CSS custom properties for complete control
 - ⚡ **Zero JavaScript**: Pure CSS implementation for maximum performance
 
-[Source Code](https://github.com/your-repo/buildit/tree/main/src/base/box) · [Report Issue](https://github.com/your-repo/buildit/issues/new)
+[Source Code](https://github.com/your-repo/buildit/tree/main/src/layout/box) · [Report Issue](https://github.com/your-repo/buildit/issues/new)
 
 ## Basic Usage
 
@@ -75,30 +75,31 @@ Six semantic colors for different contexts.
 
 ## Variants
 
-Box supports a special variant for advanced visual effects.
+Box supports two special variants for advanced visual effects.
 
-### Frost
+### Glass & Frost Variants
 
-Translucent frost effect with backdrop blur that adapts based on color:
+Translucent effects with backdrop blur — best used over rich backgrounds.
 
-- **Without color**: Subtle canvas-based frost overlay
-- **With color**: Frosted glass effect with colored tint
+::: tip Best Used With
+Glass and frost variants look best over colorful backgrounds or images to showcase the blur and transparency effects.
+:::
 
-<ComponentPreview>
+<ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
-<bit-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="lg" style="width: 100%">
-  <bit-box variant="frost">Default</bit-box>
-  <bit-box variant="frost" color="primary">Primary</bit-box>
-  <bit-box variant="frost" color="secondary">Secondary</bit-box>
-  <bit-box variant="frost" color="info">Info</bit-box>
-  <bit-box variant="frost" color="success">Success</bit-box>
-  <bit-box variant="frost" color="warning">Warning</bit-box>
-  <bit-box variant="frost" color="error">Error</bit-box>
-</bit-grid>
+<bit-box variant="glass" fullwidth>
+  <bit-text variant="heading" size="lg">Glass Effect</bit-text>
+  <bit-text>Vibrant glass with saturated colors and brightness boost</bit-text>
+</bit-box>
+<bit-box variant="frost" fullwidth>
+  <bit-text variant="heading" size="lg">Frost Effect</bit-text>
+  <bit-text>Subtle frosted glass with muted tones</bit-text>
+</bit-box>
 ```
 
 </ComponentPreview>
+
 
 ## Elevation
 
@@ -165,10 +166,11 @@ Choose from five padding sizes.
 
 | Attribute   | Type                                                                      | Default | Description                    |
 | ----------- | ------------------------------------------------------------------------- | ------- | ------------------------------ |
-| `variant`   | `'frost'`                                                                 | -       | Style variant                  |
+| `variant`   | `'glass' \| 'frost'`                                                      | -       | Style variant                  |
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme                    |
 | `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Padding size                   |
 | `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow elevation (0-5)         |
+| `fullwidth` | `boolean`                                                                 | `false` | Expand to full width           |
 | `rainbow`   | `boolean`                                                                 | `false` | Animated rainbow border effect |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius                  |
 | `as`        | `string`                                                                  | `'div'` | HTML element to render as      |

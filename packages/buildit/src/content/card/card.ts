@@ -2,13 +2,11 @@ import { aria, css, define, defineEmits, defineProps, guard, handle, html, watch
 import { colorThemeMixin, frostVariantMixin } from '../../styles';
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-const styles = /* css */ css`
-  /* Color themes - mixin already defines @layer buildit.themes */
-  ${colorThemeMixin()}
-
+const componentStyles = /* css */ css`
+  @layer buildit.base {
   @layer buildit.base {
     :host {
-      --_bg: var(--card-bg, var(--color-contrast-50));
+      --_bg: var(--card-bg, var(--color-canvas));
       --_color: var(--card-color, var(--color-contrast-900));
       --_border: var(--card-border, var(--border));
       --_border-color: var(--card-border-color, var(--color-contrast-300));
@@ -114,7 +112,12 @@ const styles = /* css */ css`
 
   @layer buildit.variants {
     /* Variant-specific host styles */
-    :host(:not([variant])) {
+    :host(:not([variant]):not([color])) {
+      --_bg: var(--color-canvas);
+      --_border-color: var(--color-contrast-300);
+    }
+
+    :host(:not([variant])[color]) {
       --_bg: var(--_theme-backdrop);
       --_border-color: var(--_theme-border);
     }
@@ -174,7 +177,6 @@ const styles = /* css */ css`
     }
   }
 
-  ${frostVariantMixin('.card')}
 
   @layer buildit.utilities {
     /* Elevation & Padding - IN utilities layer for proper cascade */
@@ -419,7 +421,7 @@ define('bit-card', ({ host }) => {
   handle(host, 'keydown', handleKeydown);
 
   return {
-    styles: [styles],
+    styles: [colorThemeMixin, frostVariantMixin('.card'), componentStyles],
     template: html` <div class="card" part="card">
       <div class="card-media" part="media">
         <slot name="media"></slot>

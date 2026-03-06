@@ -1,3 +1,5 @@
+import { css } from '@vielzeug/craftit';
+
 /**
  * Frost Variant Mixin
  *
@@ -6,20 +8,19 @@
  * theme-aware colors, halo shadows, and elevation support.
  *
  * @param selector - CSS selector for the element (e.g., 'button', '.card', '.field')
- * @returns CSS string with complete frost variant implementation
+ * @returns CSSResult with complete frost variant implementation
  *
  * @example
  * ```ts
  * import { frostVariantMixin } from '../../styles/mixins/frost.css';
  *
- * const styles = css`
- *   // ...other styles...
- *   ${frostVariantMixin('button')}
- * `;
+ * return {
+ *   styles: [frostVariantMixin('button'), componentStyles],
+ *   template: html`...`
+ * };
  * ```
  */
-export const frostVariantMixin = (selector: string) => `
-  @layer buildit.variants {
+export const frostVariantMixin = (selector: string) => css`
   :host([variant='frost']) ${selector} {
     backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
     -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
@@ -45,9 +46,9 @@ export const frostVariantMixin = (selector: string) => `
 
   :host([variant='frost'][color]) ${selector} {
     background: color-mix(in srgb, var(--_theme-base), transparent);
-    border-color: color-mix(in srgb, var(--_theme-focus) 45%, transparent);
+    border-color: color-mix(in srgb, var(--_theme-border) 45%, transparent);
     color: var(--_theme-content);
-    border: var(--border) solid var(--_border-color);
+    border: var(--border) solid color-mix(in srgb, var(--_theme-border) 45%, transparent);
     backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
     -webkit-backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
     text-shadow: var(--text-shadow-xs);

@@ -38,12 +38,12 @@ yarn add @vielzeug/buildit
 </script>
 
 <!-- Use them in HTML -->
-<bdt-button variant="primary" @click="handleClick">Save</bdt-button>
-<bdt-input label="Email" type="email" required></bdt-input>
-<bdt-card>
-  <bdt-text slot="title">Card Title</bdt-text>
+<bit-button variant="primary" @click="handleClick">Save</bit-button>
+<bit-input label="Email" type="email" required></bit-input>
+<bit-card>
+  <bit-text slot="title">Card Title</bit-text>
   <p>Card content goes here.</p>
-</bdt-card>
+</bit-card>
 ```
 
 ```ts
@@ -53,11 +53,11 @@ import { BdtButton, BdtInput } from '@vielzeug/buildit';
 
 ## Components
 
-**Base:** `bdt-button`, `bdt-button-group`, `bdt-card`, `bdt-text`, `bdt-accordion`, `bdt-accordion-item`
+**Base:** `bit-button`, `bit-button-group`, `bit-card`, `bit-text`, `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`, `bit-badge`, `bit-alert`, `bit-tooltip`
 
-**Form:** `bdt-checkbox`, `bdt-input`, `bdt-radio`, `bdt-slider`, `bdt-switch`
+**Form:** `bit-checkbox`, `bit-input`, `bit-radio`, `bit-slider`, `bit-switch`, `bit-textarea`, `bit-select`
 
-**Layout:** `bdt-box`, `bdt-grid`, `bdt-grid-item`
+**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`
 
 ## Features
 

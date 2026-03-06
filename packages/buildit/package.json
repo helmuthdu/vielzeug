@@ -27,6 +27,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./alert": {
+      "types": "./dist/alert.d.ts",
+      "import": "./dist/alert.js",
+      "require": "./dist/alert.cjs"
+    },
     "./accordion": {
       "types": "./dist/accordion.d.ts",
       "import": "./dist/accordion.js",
@@ -36,6 +41,11 @@
       "types": "./dist/accordion-item.d.ts",
       "import": "./dist/accordion-item.js",
       "require": "./dist/accordion-item.cjs"
+    },
+    "./badge": {
+      "types": "./dist/badge.d.ts",
+      "import": "./dist/badge.js",
+      "require": "./dist/badge.cjs"
     },
     "./button": {
       "types": "./dist/button.d.ts",
@@ -62,6 +72,11 @@
       "import": "./dist/radio.js",
       "require": "./dist/radio.cjs"
     },
+    "./file-input": {
+      "types": "./dist/file-input.d.ts",
+      "import": "./dist/file-input.js",
+      "require": "./dist/file-input.cjs"
+    },
     "./input": {
       "types": "./dist/input.d.ts",
       "import": "./dist/input.js",
@@ -77,10 +92,25 @@
       "import": "./dist/switch.js",
       "require": "./dist/switch.cjs"
     },
+    "./select": {
+      "types": "./dist/select.d.ts",
+      "import": "./dist/select.js",
+      "require": "./dist/select.cjs"
+    },
+    "./textarea": {
+      "types": "./dist/textarea.d.ts",
+      "import": "./dist/textarea.js",
+      "require": "./dist/textarea.cjs"
+    },
     "./text": {
       "types": "./dist/text.d.ts",
       "import": "./dist/text.js",
       "require": "./dist/text.cjs"
+    },
+    "./tooltip": {
+      "types": "./dist/tooltip.d.ts",
+      "import": "./dist/tooltip.js",
+      "require": "./dist/tooltip.cjs"
     },
     "./bit": "./dist/bit.d.ts"
   },

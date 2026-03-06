@@ -24,4 +24,9 @@ if (typeof ElementInternals !== 'undefined') {
 
 install(afterEach);
 
+// jsdom does not implement scrollIntoView — stub it to avoid unhandled errors
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 globalThis.window.URL.createObjectURL = vi.fn();

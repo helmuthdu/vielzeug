@@ -1,10 +1,10 @@
 # @vielzeug/formit
 
-> Reactive, schema-aware form state management with validation, submission, and field subscriptions
+> Reactive form state management with field and form-level validators, async support, and fine-grained subscriptions
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/formit)](https://www.npmjs.com/package/@vielzeug/formit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Formit** is a framework-agnostic form controller: it tracks field values, errors, dirty state, and touched state — and supports synchronous and asynchronous validators, deeply nested fields, and fine-grained field subscriptions.
+**Formit** is a framework-agnostic form controller: it tracks typed field values, errors, dirty state, and touched state — with synchronous and asynchronous validators, and fine-grained field subscriptions.
 
 ## Installation
 
@@ -17,26 +17,33 @@ pnpm add @vielzeug/formit
 ## Quick Start
 
 ```typescript
-import { createForm } from '@vielzeug/formit';
+import { createForm, ValidationError } from '@vielzeug/formit';
 
 const form = createForm({
-  initialValues: { email: '', password: '' },
-  validators: {
-    email: (v) => (!v.includes('@') ? 'Invalid email' : undefined),
-    password: (v) => (v.length < 8 ? 'Min 8 characters' : undefined),
-  },
-  onSubmit: async (values) => {
-    await api.login(values);
+  values: { email: '', password: '' },
+  rules: {
+    email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
+    password: (v) => (String(v).length < 8 ? 'Min 8 characters' : undefined),
   },
 });
 
 // Read / write fields
 form.set('email', 'alice@example.com');
-console.log(form.get('email'));
+console.log(form.get('email')); // 'alice@example.com'
 
-// Validate and submit
-const ok = await form.validate();
-if (ok) await form.submit();
+// Validate all fields
+const errors = await form.validateAll();
+
+// Submit (auto-validates, throws ValidationError on failure)
+try {
+  await form.submit(async (formData) => {
+    await api.login(Object.fromEntries(formData));
+  });
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log('Errors:', error.errors); // Record<string, string>
+  }
+}
 
 // Tear down
 form.dispose();
@@ -44,13 +51,14 @@ form.dispose();
 
 ## Features
 
-- ✅ **Reactive** — subscribe to the whole form or individual fields
-- ✅ **Validators** — sync and async, per-field or cross-field
+- ✅ **Typed values** — values stay typed (`number`, `boolean`, `File`) — no string coercion
+- ✅ **Field rules** — per-field validators via the `rules` option
+- ✅ **Cross-field validation** — `validate` option for form-level errors
+- ✅ **Async validators** — validators can return `Promise<string | undefined>`
 - ✅ **Dirty & touched tracking** — know what the user has changed
-- ✅ **Nested fields** — dot-notation paths (`'address.city'`)
-- ✅ **Snapshots** — save and restore form state
-- ✅ **Clone** — fork a form with overridden values
-- ✅ **Framework-agnostic** — works with any UI library via `bind`
+- ✅ **Computed flags** — `isValid`, `isDirty`, `isTouched` on every state snapshot
+- ✅ **Fine-grained subscriptions** — `subscribeField` fires only for the changed field
+- ✅ **Zero dependencies** — framework-agnostic, works with any UI library via `bind`
 
 ## Usage
 
@@ -61,19 +69,28 @@ form.dispose();
 form.set('email', 'alice@example.com');
 const emailValue = form.get('email');
 
-// Get all current values
+// Set multiple fields at once
+form.patch({ email: 'alice@example.com', name: 'Alice' });
+
+// Get all current values as a plain object
 const allValues = form.values();
 ```
 
 ### Errors and Validation
 
 ```typescript
-// Trigger full validation
-const isValid = await form.validate();
+// Validate a single field
+const error = await form.validate('email');
+
+// Validate all fields
+const errors = await form.validateAll();
+
+// Validate with options
+const errors = await form.validateAll({ onlyTouched: true });
 
 // Read errors
 const emailError = form.getError('email');
-const allErrors  = form.getErrors();
+const allErrors = form.getErrors(); // Record<string, string>
 
 // Set errors manually
 form.setError('email', 'This email is taken');
@@ -83,9 +100,9 @@ form.setErrors({ email: 'Taken', password: 'Too short' });
 ### Dirty and Touched State
 
 ```typescript
-const changed  = form.isDirty('email');    // true if different from initialValues
-const visited  = form.isTouched('email');   // true if user interacted
-form.setTouched('email', true);
+const changed = form.isDirty('email');   // true if different from initial value
+const visited = form.isTouched('email'); // true if user interacted
+form.setTouched('email');
 ```
 
 ### Subscriptions
@@ -93,33 +110,31 @@ form.setTouched('email', true);
 ```typescript
 // Subscribe to any form change
 const unsub = form.subscribe((state) => {
-  console.log(state.values, state.errors, state.isSubmitting);
+  console.log(state.errors, state.isValid, state.isSubmitting);
 });
 
 // Subscribe to one field
-const unsubField = form.subscribeField('email', (value, error) => {
+const unsubField = form.subscribeField('email', ({ value, error, touched, dirty }) => {
   console.log(value, error);
 });
 
-unsub(); unsubField(); // unsubscribe
+unsub();
+unsubField();
 ```
 
-### Snapshots and Clone
+### Snapshots and Reset
 
 ```typescript
-const snap = form.snapshot();   // capture current state
-form.reset();                   // restore to initialValues
-form.reset(snap);               // restore to snapshot
-
-const fork = form.clone({ email: 'other@example.com' });
-fork.dispose();
+const state = form.snapshot(); // capture current state
+form.reset();                  // restore to initial values
+form.reset({ name: '', email: '' }); // reset with new initial values
 ```
 
 ### Framework Binding
 
 ```typescript
-// bind(field) returns value and onChange helpers
-const { value, onChange, onBlur } = form.bind('email');
+// bind(field) returns { name, value, onChange, onBlur, set }
+const { name, value, onChange, onBlur } = form.bind('email');
 ```
 
 ## API
@@ -127,23 +142,24 @@ const { value, onChange, onBlur } = form.bind('email');
 | Method | Description |
 |---|---|
 | `form.get(field)` | Get current value of a field |
-| `form.set(field, value)` | Set field value |
-| `form.values()` | Get all current values |
+| `form.set(field, value, options?)` | Set field value |
+| `form.patch(entries, options?)` | Set multiple fields at once |
+| `form.values()` | Get all current values as a plain object |
 | `form.getError(field)` | Get error message for a field |
-| `form.getErrors()` | Get all field errors |
-| `form.setError(field, msg)` | Set a field error |
-| `form.setErrors(map)` | Set multiple errors |
-| `form.isDirty(field?)` | Check if field (or form) has changed |
-| `form.isTouched(field?)` | Check if field has been touched |
-| `form.setTouched(field, bool)` | Mark a field as touched |
-| `form.validate()` | Run all validators — returns `Promise<boolean>` |
-| `form.submit()` | Validate then call `onSubmit` |
-| `form.reset(snapshot?)` | Reset to initial or snapshot state |
+| `form.getErrors()` | Get all errors as `Record<string, string>` |
+| `form.setError(field, msg?)` | Set or clear a single field error |
+| `form.setErrors(record)` | Replace all errors |
+| `form.isDirty(field)` | Check if field has changed from initial value |
+| `form.isTouched(field)` | Check if field has been touched |
+| `form.setTouched(field)` | Mark a field as touched |
+| `form.validate(field, signal?)` | Validate a single field |
+| `form.validateAll(options?)` | Validate all fields — returns `Promise<Record<string, string>>` |
+| `form.submit(handler, options?)` | Validate then call handler with `FormData` |
+| `form.reset(newValues?)` | Reset to initial or new values |
 | `form.snapshot()` | Capture current form state |
-| `form.clone(overrides?)` | Fork form with optional value overrides |
-| `form.bind(field)` | Get `{ value, onChange, onBlur }` binding helpers |
+| `form.bind(field, config?)` | Get `{ name, value, onChange, onBlur, set }` binding helpers |
 | `form.subscribe(listener)` | Subscribe to all form changes |
-| `form.subscribeField(field, listener)` | Subscribe to one field |
+| `form.subscribeField(field, listener)` | Subscribe to a single field |
 | `form.dispose()` | Tear down the form and remove all subscriptions |
 
 ## Documentation

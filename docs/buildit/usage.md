@@ -23,7 +23,7 @@ Every project needs UI primitives. Buildit provides accessible web components th
 </button>
 
 <!-- After — Buildit -->
-<bdt-button variant="primary" loading>Save</bdt-button>
+<bit-button variant="primary" loading>Save</bit-button>
 ```
 
 | Feature | Buildit | Shoelace | Material Web |

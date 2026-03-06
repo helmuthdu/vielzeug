@@ -32,7 +32,6 @@ Function utilities provide a powerful set of tools to control execution, compose
 | :------------------------------------------- | :---------------------------------------------------------------- |
 | [`assert`](./function/assert.md)             | Throw an error if a condition is not met (with advanced options). |
 | [`assertParams`](./function/assertParams.md) | Validate function parameters against expected types.              |
-| [`worker`](./function/worker.md)             | Easily run heavy functions in a Web Worker.                       |
 
 ## 💡 Practical Examples
 
@@ -98,6 +97,5 @@ const heavyCalc = memo((n: number) => {
 - [proxy](./function/proxy.md)
 - [prune](./function/prune.md)
 - [throttle](./function/throttle.md)
-- [worker](./function/worker.md)
 
 </div>

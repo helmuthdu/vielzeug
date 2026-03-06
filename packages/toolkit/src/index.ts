@@ -51,7 +51,6 @@ export * from './function/pipe';
 export * from './function/proxy';
 export * from './function/prune';
 export * from './function/throttle';
-export * from './function/worker';
 export * from './math/abs';
 export * from './math/add';
 export * from './math/allocate';

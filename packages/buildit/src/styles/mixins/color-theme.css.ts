@@ -1,3 +1,5 @@
+import { css } from '@vielzeug/craftit';
+
 /**
  * Color Theme Mixin
  *
@@ -6,39 +8,32 @@
  *
  * This replaces the boxBaseCss approach with a reusable mixin pattern.
  *
- * @returns CSS string with color theme definitions
- *
  * @example
  * ```ts
  * import { colorThemeMixin } from '../../styles';
  *
- * const styles = `
- *   ${colorThemeMixin()}
- *
- *   .my-element {
- *     background: var(--_theme-base);
- *     color: var(--_theme-content);
- *   }
- * `;
+ * return {
+ *   styles: [colorThemeMixin, componentStyles],
+ *   template: html`...`
+ * };
  * ```
  */
-export const colorThemeMixin = () => `
-  @layer buildit.themes {
-    /* ========================================
-       Color Themes (Default: Neutral)
-       ======================================== */
+export const colorThemeMixin = css`
+  /* ========================================
+     Color Themes (Default: Neutral)
+     ======================================== */
 
-    :host {
-      /* Default to neutral when no color is specified */
-      --_theme-base: var(--color-neutral);
-      --_theme-content: var(--color-neutral-content);
-      --_theme-contrast: var(--color-neutral-contrast);
-      --_theme-focus: var(--color-neutral-focus);
-      --_theme-backdrop: var(--color-neutral-backdrop);
-      --_theme-border: var(--color-neutral-border);
-      --_theme-shadow: var(--color-neutral-focus-shadow);
-      --_theme-halo: var(--halo-shadow-neutral);
-    }
+  :host {
+    /* Default to neutral when no color is specified */
+    --_theme-base: var(--color-neutral);
+    --_theme-content: var(--color-neutral-content);
+    --_theme-contrast: var(--color-neutral-contrast);
+    --_theme-focus: var(--color-neutral-focus);
+    --_theme-backdrop: var(--color-neutral-backdrop);
+    --_theme-border: var(--color-neutral-border);
+    --_theme-shadow: var(--color-neutral-focus-shadow);
+    --_theme-halo: var(--halo-shadow-neutral);
+  }
 
   :host([color='primary']) {
     --_theme-base: var(--color-primary);
@@ -104,6 +99,5 @@ export const colorThemeMixin = () => `
     --_theme-border: var(--color-error-border);
     --_theme-shadow: var(--color-error-focus-shadow);
     --_theme-halo: var(--halo-shadow-error);
-  }
   }
 `;

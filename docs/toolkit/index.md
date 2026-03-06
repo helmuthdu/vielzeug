@@ -58,7 +58,7 @@ const merged = merge('deep', { a: { x: 1 } }, { a: { y: 2 } });
 - **Strings** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
 - **Math** — `clamp`, `average`, `sum`, `round`, `range`, and more
 - **Dates** — `timeDiff`, `interval`, `expires`
-- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`, `worker`
+- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`
 - **Zero dependencies** — tree-shakeable; import only what you need
 
 ## Next Steps

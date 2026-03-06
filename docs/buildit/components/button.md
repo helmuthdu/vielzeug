@@ -23,11 +23,11 @@ A versatile button component with multiple variants, colors, sizes, and states. 
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/base/button/button.ts
+<<< @/../packages/buildit/src/actions/button/button.ts
 :::
 
 ::: details View Source Code (Button Group)
-<<< @/../packages/buildit/src/base/button-group/button-group.ts
+<<< @/../packages/buildit/src/actions/button-group/button-group.ts
 :::
 
 ## Basic Usage

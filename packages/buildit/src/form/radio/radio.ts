@@ -20,7 +20,7 @@ import {
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 
-const styles = /* css */ css`
+const componentStyles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -102,9 +102,6 @@ const styles = /* css */ css`
     }
   }
 
-  ${colorThemeMixin()}
-  ${disabledStateMixin()}
-
   @layer buildit.overrides {
     /* Map theme variables to radio-specific variables */
     :host {
@@ -127,19 +124,6 @@ const styles = /* css */ css`
       transform: translate(-50%, -50%) scale(1);
     }
   }
-
-  ${sizeVariantMixin({
-    lg: {
-      fontSize: 'var(--text-base)',
-      gap: 'var(--size-2-5)',
-      size: 'var(--size-6)',
-    },
-    sm: {
-      fontSize: 'var(--text-xs)',
-      gap: 'var(--size-1-5)',
-      size: 'var(--size-4)',
-    },
-  })}
 `;
 
 /** Radio component properties */
@@ -319,7 +303,23 @@ define(
     });
 
     return {
-      styles: [styles],
+      styles: [
+        colorThemeMixin,
+        disabledStateMixin(),
+        sizeVariantMixin({
+          lg: {
+            fontSize: 'var(--text-base)',
+            gap: 'var(--size-2-5)',
+            size: 'var(--size-6)',
+          },
+          sm: {
+            fontSize: 'var(--text-xs)',
+            gap: 'var(--size-1-5)',
+            size: 'var(--size-4)',
+          },
+        }),
+        componentStyles,
+      ],
       template: html` <div class="radio-wrapper" part="radio">
           <input type="radio" aria-hidden="true" tabindex="-1" />
           <div class="circle" part="circle">

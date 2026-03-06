@@ -4,7 +4,7 @@ layout: home
 hero:
   name: 'Vielzeug'
   text: 'Many tools. One good decision.'
-  tagline: 'Modular TypeScript tools for routing, forms, storage, i18n, validation, logging, and more — composable by design, type-safe by default.'
+  tagline: "Each tool does one thing well. All of them play nicely together. TypeScript-first, zero dependencies."
   image:
     src: '/logo.svg'
     alt: 'Vielzeug Logo'
@@ -17,12 +17,18 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
+  - title: '@vielzeug/buildit'
+    details: "<img src='/logo-buildit.svg' class='logo-highlight-smaller' alt='Buildit Logo' width='72'/>A library of ready-made web components, accessible, themeable, built on craftit."
+    link: /buildit/
   - title: '@vielzeug/craftit'
     details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state."
     link: /craftit/
   - title: '@vielzeug/deposit'
     details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
+  - title: '@vielzeug/eventit'
+    details: "<img src='/logo-eventit.svg' class='logo-highlight-smaller' alt='Eventit Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
+    link: /eventit/
   - title: '@vielzeug/fetchit'
     details: "<img src='/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
     link: /fetchit/
@@ -53,6 +59,9 @@ features:
   - title: '@vielzeug/wireit'
     details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
     link: /wireit/
+  - title: '@vielzeug/workit'
+    details: "<img src='/logo-workit.svg' class='logo-highlight-smaller' alt='Workit Logo' width='72'/>Typed Web Worker abstraction with pooling, queuing, timeouts, and graceful fallback."
+    link: /workit/
 ---
 
 ## 🚀 Why Vielzeug?

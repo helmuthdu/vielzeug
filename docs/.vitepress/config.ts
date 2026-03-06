@@ -1,11 +1,10 @@
-
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'vitepress';
 import type { ThemeConfig } from './theme/types';
 import { getPackagesData } from './theme/utils/packageData';
-import { browserslistToTargets } from 'lightningcss';
-import browserslist from 'browserslist';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -53,6 +52,7 @@ export default defineConfig({
           {
             items: [
               { link: '/deposit/', text: 'Deposit' },
+              { link: '/eventit/', text: 'Eventit' },
               { link: '/fetchit/', text: 'Fetchit' },
               { link: '/snapit/', text: 'Snapit' },
             ],
@@ -72,6 +72,7 @@ export default defineConfig({
               { link: '/permit/', text: 'Permit' },
               { link: '/routeit/', text: 'Routeit' },
               { link: '/wireit/', text: 'Wireit' },
+              { link: '/workit/', text: 'Workit' },
             ],
             text: 'Architecture & Security',
           },
@@ -98,29 +99,68 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/buildit/components/accordion', text: 'Accordion' },
-            { link: '/buildit/components/button', text: 'Button' },
-            { link: '/buildit/components/card', text: 'Card' },
-            { link: '/buildit/components/text', text: 'Text' },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/accordion', text: 'Accordion' },
+                { link: '/buildit/components/tabs', text: 'Tabs' },
+              ],
+              text: 'Disclosure',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/alert', text: 'Alert' },
+                { link: '/buildit/components/badge', text: 'Badge' },
+              ],
+              text: 'Feedback',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/button', text: 'Button' },
+              ],
+              text: 'Actions',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/card', text: 'Card' },
+                { link: '/buildit/components/text', text: 'Text' },
+              ],
+              text: 'Content',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/tooltip', text: 'Tooltip' },
+              ],
+              text: 'Overlay',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/checkbox', text: 'Checkbox' },
+                { link: '/buildit/components/file-input', text: 'File Input' },
+                { link: '/buildit/components/input', text: 'Input' },
+                { link: '/buildit/components/radio', text: 'Radio' },
+                { link: '/buildit/components/select', text: 'Select' },
+                { link: '/buildit/components/slider', text: 'Slider' },
+                { link: '/buildit/components/switch', text: 'Switch' },
+                { link: '/buildit/components/textarea', text: 'Textarea' },
+              ],
+              text: 'Form',
+            },
+            {
+              collapsed: true,
+              items: [
+                { link: '/buildit/components/box', text: 'Box' },
+                { link: '/buildit/components/grid', text: 'Grid' },
+              ],
+              text: 'Layout',
+            },
           ],
-          text: 'Base Components',
-        },
-        {
-          items: [
-            { link: '/buildit/components/checkbox', text: 'Checkbox' },
-            { link: '/buildit/components/input', text: 'Input' },
-            { link: '/buildit/components/radio', text: 'Radio' },
-            { link: '/buildit/components/slider', text: 'Slider' },
-            { link: '/buildit/components/switch', text: 'Switch' },
-          ],
-          text: 'Form Components',
-        },
-        {
-          items: [
-            { link: '/buildit/components/box', text: 'Box' },
-            { link: '/buildit/components/grid', text: 'Grid' },
-          ],
-          text: 'Layout Components',
+          text: 'Components',
         },
         {
           items: [
@@ -177,6 +217,32 @@ export default defineConfig({
           text: 'API Reference',
         },
         { link: '/deposit/examples', text: 'Examples' },
+      ],
+      '/eventit/': [
+        { link: '/eventit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/eventit/usage#event-maps', text: 'Event Maps' },
+            { link: '/eventit/usage#subscribing', text: 'Subscribing' },
+            { link: '/eventit/usage#emitting-events', text: 'Emitting Events' },
+            { link: '/eventit/usage#one-time-listeners', text: 'One-Time Listeners' },
+            { link: '/eventit/usage#error-handling', text: 'Error Handling' },
+            { link: '/eventit/usage#testing', text: 'Testing' },
+          ],
+          link: '/eventit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/eventit/api#types', text: 'Types' },
+            { link: '/eventit/api#createeventbus', text: 'createEventBus()' },
+            { link: '/eventit/api#eventbus-interface', text: 'EventBus Interface' },
+            { link: '/eventit/api#testing-utilities', text: 'Testing Utilities' },
+          ],
+          link: '/eventit/api',
+          text: 'API Reference',
+        },
+        { link: '/eventit/examples', text: 'Examples' },
       ],
       '/fetchit/': [
         { link: '/fetchit/', text: 'Overview' },
@@ -479,7 +545,6 @@ export default defineConfig({
                 { link: '/toolkit/examples/function/proxy', text: 'proxy' },
                 { link: '/toolkit/examples/function/prune', text: 'prune' },
                 { link: '/toolkit/examples/function/throttle', text: 'throttle' },
-                { link: '/toolkit/examples/function/worker', text: 'worker' },
               ],
               link: '/toolkit/examples/function',
               text: 'Function',
@@ -612,6 +677,33 @@ export default defineConfig({
         },
         { link: '/wireit/examples', text: 'Examples' },
       ],
+      '/workit/': [
+        { link: '/workit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/workit/usage#task-functions', text: 'Task Functions' },
+            { link: '/workit/usage#single-worker', text: 'Single Worker' },
+            { link: '/workit/usage#worker-pool', text: 'Worker Pool' },
+            { link: '/workit/usage#timeouts', text: 'Timeouts' },
+            { link: '/workit/usage#abortsignal', text: 'AbortSignal' },
+            { link: '/workit/usage#external-scripts', text: 'External Scripts' },
+            { link: '/workit/usage#testing', text: 'Testing' },
+          ],
+          link: '/workit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/workit/api#types', text: 'Types' },
+            { link: '/workit/api#createworker', text: 'createWorker()' },
+            { link: '/workit/api#createworkerpool', text: 'createWorkerPool()' },
+            { link: '/workit/api#testing-utilities', text: 'Testing Utilities' },
+          ],
+          link: '/workit/api',
+          text: 'API Reference',
+        },
+        { link: '/workit/examples', text: 'Examples' },
+      ],
     },
     socialLinks: [{ icon: 'github', link: 'https://github.com/helmuthdu/vielzeug' }],
   },
@@ -631,6 +723,7 @@ export default defineConfig({
         '@vielzeug/buildit': resolve(__dirname, '../../packages/buildit/src'),
         '@vielzeug/craftit': resolve(__dirname, '../../packages/craftit/src'),
         '@vielzeug/deposit': resolve(__dirname, '../../packages/deposit/src'),
+        '@vielzeug/eventit': resolve(__dirname, '../../packages/eventit/src'),
         '@vielzeug/fetchit': resolve(__dirname, '../../packages/fetchit/src'),
         '@vielzeug/formit': resolve(__dirname, '../../packages/formit/src'),
         '@vielzeug/i18nit': resolve(__dirname, '../../packages/i18nit/src'),
@@ -641,6 +734,14 @@ export default defineConfig({
         '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
         '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
         '@vielzeug/wireit': resolve(__dirname, '../../packages/wireit/src'),
+        '@vielzeug/workit': resolve(__dirname, '../../packages/workit/src'),
+      },
+    },
+  },
+  vue: {
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag) => tag.startsWith('bit-'),
       },
     },
   },

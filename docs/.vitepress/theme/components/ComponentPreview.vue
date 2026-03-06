@@ -7,6 +7,7 @@ const props = defineProps<{
   vertical?: boolean;
   center?: boolean;
   background?: string;
+  colorful?: boolean;
 }>();
 
 type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
@@ -169,6 +170,18 @@ function extractText(children: any): string {
 const displayCode = computed(() => {
   return extractedCode.value.trim();
 });
+
+const backgroundStyle = computed(() => {
+  if (props.background) {
+    return {
+      backgroundImage: `url(${props.background})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  }
+
+  return {};
+});
 </script>
 
 <template>
@@ -190,12 +203,9 @@ const displayCode = computed(() => {
             :class="{
               vertical,
               center,
+              colorful,
             }"
-            :style="
-              background
-                ? { backgroundImage: `url(${background})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                : {}
-            ">
+            :style="backgroundStyle">
             <ClientOnly>
               <div class="preview-demo" v-html="displayCode"></div>
             </ClientOnly>
@@ -253,7 +263,7 @@ const displayCode = computed(() => {
             <bit-button-group attached color="secondary" size="sm">
               <bit-button
                 icon-only
-                :variant="[viewportSize === 'mobile' ? 'solid' : 'flat']"
+                :variant="viewportSize === 'mobile' ? 'solid' : 'flat'"
                 @click="setViewportSize('mobile')"
                 title="Mobile view (375px)">
                 <svg
@@ -271,7 +281,7 @@ const displayCode = computed(() => {
               </bit-button>
               <bit-button
                 icon-only
-                :variant="[viewportSize === 'tablet' ? 'solid' : 'flat']"
+                :variant="viewportSize === 'tablet' ? 'solid' : 'flat'"
                 @click="setViewportSize('tablet')"
                 title="Tablet view (768px)">
                 <svg
@@ -289,7 +299,7 @@ const displayCode = computed(() => {
               </bit-button>
               <bit-button
                 icon-only
-                :variant="[viewportSize === 'desktop' ? 'solid' : 'flat']"
+                :variant="viewportSize === 'desktop' ? 'solid' : 'flat'"
                 @click="setViewportSize('desktop')"
                 title="Desktop view (1280px) - Opens maximized">
                 <svg
@@ -429,15 +439,17 @@ const displayCode = computed(() => {
 .preview-scroll-container {
   overflow: auto;
   width: var(--size-full);
-  background: var(--color-contrast-50);
-  background-image: radial-gradient(circle, var(--color-contrast-300) var(--border), transparent var(--border));
-  background-size: var(--size-4) var(--size-4);
+  background-color: var(--color-contrast-50);
+  background-image:
+    linear-gradient(to right, var(--color-contrast-100) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-contrast-100) 1px, transparent 1px);
+  background-size: 16px 16px;
   background-position: 0 0;
   height: var(--size-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--size-4);
+  padding: 0;
 }
 
 .preview-container-wrapper {
@@ -468,6 +480,21 @@ const displayCode = computed(() => {
 .preview-container.center {
   justify-content: center;
   align-items: center;
+}
+
+.preview-container.colorful {
+  position: relative;
+  background-size: 400% 400%;
+  background-position: 0% 50%;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary) 15%, transparent),
+    color-mix(in srgb, var(--color-info) 15%, transparent),
+    color-mix(in srgb, var(--color-success) 15%, transparent),
+    color-mix(in srgb, var(--color-warning) 15%, transparent),
+    color-mix(in srgb, var(--color-error) 15%, transparent)
+  );
+  animation: colorful-shift 25s ease-in-out infinite;
 }
 
 .preview-demo {
@@ -537,6 +564,19 @@ const displayCode = computed(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Colorful background animation */
+@keyframes colorful-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Responsive adjustments */

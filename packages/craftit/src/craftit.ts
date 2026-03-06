@@ -1454,7 +1454,15 @@ type ThemeVars<T extends Record<string, string | number>> = {
 } & { toString(): string };
 export const css = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): CSSResult => {
-    const content = strings.reduce((out, str, i) => out + str + (values[i] ?? ''), '').trim();
+    const content = strings
+      .reduce((out, str, i) => {
+        const value = values[i];
+        // Explicitly handle CSSResult objects
+        const stringValue =
+          value && typeof value === 'object' && 'content' in value ? (value as CSSResult).content : (value ?? '');
+        return out + str + stringValue;
+      }, '')
+      .trim();
 
     return {
       content,

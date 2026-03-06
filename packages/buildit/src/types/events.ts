@@ -122,6 +122,30 @@ export interface BitInputInputEvent extends CustomEvent<ValueChangeDetail<string
   readonly type: 'input';
 }
 
+/**
+ * Textarea change event
+ * @fires bit-textarea#change
+ */
+export interface BitTextareaChangeEvent extends CustomEvent<ValueChangeDetail<string>> {
+  readonly type: 'change';
+}
+
+/**
+ * Textarea input event (fired on every keystroke)
+ * @fires bit-textarea#input
+ */
+export interface BitTextareaInputEvent extends CustomEvent<ValueChangeDetail<string>> {
+  readonly type: 'input';
+}
+
+/**
+ * Alert dismiss event
+ * @fires bit-alert#dismiss
+ */
+export interface BitAlertDismissEvent extends CustomEvent<BaseEventDetail> {
+  readonly type: 'dismiss';
+}
+
 // ============================================
 // Button Component Events
 // ============================================
@@ -201,6 +225,27 @@ export interface BitSliderEvents {
 export interface BitInputEvents {
   change: BitInputChangeEvent;
   input: BitInputInputEvent;
+}
+
+export interface BitTextareaEvents {
+  change: BitTextareaChangeEvent;
+  input: BitTextareaInputEvent;
+}
+
+export interface BitAlertEvents {
+  dismiss: BitAlertDismissEvent;
+}
+
+/**
+ * Select change event
+ * @fires bit-select#change
+ */
+export interface BitSelectChangeEvent extends CustomEvent<{ value: string; values: string[]; originalEvent?: Event }> {
+  readonly type: 'change';
+}
+
+export interface BitSelectEvents {
+  change: BitSelectChangeEvent;
 }
 
 export interface BitButtonEvents {

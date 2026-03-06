@@ -158,7 +158,6 @@ See [Function Examples](./examples/function.md) for detailed usage.
 | [`prune`](./examples/function/prune.md)                   | Remove nullable/empty values                    | `prune({ a: 1, b: null })` → `{ a: 1 }`              |
 | [`proxy`](./examples/function/proxy.md)                   | Object proxy with get/set hooks                 | `proxy(obj, { set: logger })`                        |
 | [`throttle`](./examples/function/throttle.md)             | Limit execution rate                            | `throttle(fn, 100)`                                  |
-| [`worker`](./examples/function/worker.md)                 | Run callback in Web Worker                      | `worker(fn, [depUrls])`                              |
 
 ## Async Utilities
 

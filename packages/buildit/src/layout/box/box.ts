@@ -2,17 +2,14 @@ import { css, define, html } from '@vielzeug/craftit';
 import { colorThemeMixin, frostVariantMixin, rainbowEffectMixin } from '../../styles';
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
-const styles = /* css */ css`
-  /* Color themes - mixin already defines @layer buildit.themes */
-  ${colorThemeMixin()}
-
+const componentStyles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
        ======================================== */
 
     :host {
-      --_bg: var(--color-contrast-50);
+      --_bg: var(--color-canvas);
       --_color: var(--color-contrast-900);
       --_border: var(--border);
       --_border-color: var(--color-contrast-300);
@@ -20,11 +17,8 @@ const styles = /* css */ css`
       --_padding: var(--size-4);
       --_shadow: var(--shadow-sm);
 
-      display: block;
+      display: inline-block;
       position: relative;
-      /* Allow host to inherit layout properties from inline styles */
-      width: inherit;
-      height: inherit;
     }
 
     /* Custom properties only work with default/neutral (no color attribute) */
@@ -61,21 +55,48 @@ const styles = /* css */ css`
 
   @layer buildit.variants {
     /* Variant-specific element styles */
-    :host(:not([variant])) {
+    :host(:not([variant]):not([color])) {
+      --_bg: var(--color-canvas);
+      --_border-color: var(--color-contrast-300);
+    }
+
+    :host(:not([variant])[color]) {
       --_bg: var(--_theme-backdrop);
       --_border-color: var(--_theme-border);
+    }
+
+    /* Glass - Translucent effect with backdrop blur and saturated colors */
+    :host([variant='glass']:not([color])) {
+      --_bg: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+      --_border-color: color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+    }
+
+    :host([variant='glass'][color]) {
+      --_bg: color-mix(in srgb, var(--_theme-base) 20%, transparent);
+      --_border-color: color-mix(in srgb, var(--_theme-contrast) 15%, transparent);
+      --_color: var(--_theme-base);
+    }
+
+    :host([variant='glass']) .box {
+      backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     }
 
     /* Frost - Translucent effect with backdrop blur */
     :host([variant='frost']:not([color])) {
       --_bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-      --_border-color: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+      --_border-color: color-mix(in srgb, var(--color-contrast-300) 50%, transparent);
     }
 
     :host([variant='frost'][color]) {
       --_bg: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 10%);
       --_border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
       --_color: color-mix(in srgb, var(--color-contrast) 90%, transparent);
+    }
+
+    :host([variant='frost']) .box {
+      backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     }
 
     /* Default with color gets subtle hover effect */
@@ -85,12 +106,18 @@ const styles = /* css */ css`
     }
   }
 
-  ${rainbowEffectMixin('.box')}
-
-  ${frostVariantMixin('.box')}
 
   /* Elevation, Padding & Rounded - IN buildit.utilities layer for proper cascade */
   @layer buildit.utilities {
+    /* Full width */
+    :host([fullwidth]) {
+      width: 100%;
+    }
+
+    :host([fullwidth]) .box {
+      width: 100%;
+    }
+
     :host([elevation='0']) {
       --_shadow: none;
     }
@@ -157,7 +184,7 @@ const styles = /* css */ css`
 /** Box component properties */
 export interface BoxProps {
   /** Visual style variant */
-  variant?: 'frost';
+  variant?: 'glass' | 'frost';
   /** Theme color */
   color?: ThemeColor;
   /** Internal padding size */
@@ -170,6 +197,8 @@ export interface BoxProps {
   rainbow?: boolean;
   /** Semantic HTML element to render as */
   as?: string;
+  /** Full width mode (100% of container) */
+  fullwidth?: boolean;
 }
 
 /**
@@ -180,12 +209,13 @@ export interface BoxProps {
  *
  * @element bit-box
  *
- * @attr {string} variant - Style variant: 'frost'
+ * @attr {string} variant - Style variant: 'glass' | 'frost'
  * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {boolean} rainbow - Enable animated rainbow border effect
+ * @attr {boolean} fullwidth - Expand to full width
  * @attr {string} as - Semantic HTML element to render as (div by default)
  *
  * @slot - Default slot for content
@@ -203,13 +233,14 @@ export interface BoxProps {
  * @example
  * ```html
  * <bit-box padding="lg" elevation="2">Simple content</bit-box>
+ * <bit-box variant="glass" color="primary" padding="md">Glass effect</bit-box>
  * <bit-box variant="frost" rainbow padding="md">Frosted glass</bit-box>
  * <bit-box as="section" color="primary">Semantic section</bit-box>
  * ```
  */
 define('bit-box', () => {
   return {
-    styles: [styles],
+    styles: [colorThemeMixin, rainbowEffectMixin('.box'), frostVariantMixin('.box'), componentStyles],
     template: html`<div class="box" part="box"><slot></slot></div>`,
   };
 });

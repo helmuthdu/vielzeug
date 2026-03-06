@@ -91,22 +91,21 @@ const styles = /* css */ css`
   :host([weight='semibold']) { --_weight: var(--font-semibold); }
   :host([weight='bold']) { --_weight: var(--font-bold); }
 
-    /* ========================================
-       Color Variants
-       ======================================== */
+  /* ========================================
+     Color Variants
+     ======================================== */
 
-    :host([color='primary']) { --_color: var(--color-primary); }
-    :host([color='secondary']) { --_color: var(--color-secondary); }
-    :host([color='info']) { --_color: var(--color-info); }
-    :host([color='success']) { --_color: var(--color-success); }
-    :host([color='warning']) { --_color: var(--color-warning); }
-    :host([color='error']) { --_color: var(--color-error); }
-    :host([color='heading']) { --_color: var(--text-color-heading); }
-    :host([color='body']) { --_color: var(--text-color-body); }
-    :host([color='muted']) { --_color: var(--text-color-secondary); }
-    :host([color='disabled']) { --_color: var(--text-color-disabled); }
-    :host([color='contrast']) { --_color: var(--text-color-contrast); }
-  }
+  :host([color='primary']) { --_color: var(--color-primary); }
+  :host([color='secondary']) { --_color: var(--color-secondary); }
+  :host([color='info']) { --_color: var(--color-info); }
+  :host([color='success']) { --_color: var(--color-success); }
+  :host([color='warning']) { --_color: var(--color-warning); }
+  :host([color='error']) { --_color: var(--color-error); }
+  :host([color='heading']) { --_color: var(--text-color-heading); }
+  :host([color='body']) { --_color: var(--text-color-body); }
+  :host([color='muted']) { --_color: var(--text-color-secondary); }
+  :host([color='disabled']) { --_color: var(--text-color-disabled); }
+  :host([color='contrast']) { --_color: var(--text-color-contrast); }
 
   @layer buildit.utilities {
     /* ========================================
@@ -173,7 +172,7 @@ export interface TextProps {
     | 'contrast';
   /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
-  /** Truncate text with ellipsis */
+  /** Enable text truncation with ellipsis */
   truncate?: boolean;
   /** Italic text style */
   italic?: boolean;
@@ -191,7 +190,7 @@ export interface TextProps {
  * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
  * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
  * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
- * @attr {boolean} truncate - Truncate text with ellipsis
+ * @attr {boolean} truncate - Truncate text with ellipsis when it overflows
  * @attr {boolean} italic - Italic text style
  * @attr {string} as - Semantic HTML element: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'
  *

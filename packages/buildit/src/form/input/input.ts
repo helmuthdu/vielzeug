@@ -17,13 +17,12 @@ import {
 import {
   colorThemeMixin,
   disabledLoadingMixin,
-  frostVariantMixin,
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
 import type { ComponentSize, InputType, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-const styles = /* css */ css`
+const componentStyles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles & Defaults
@@ -174,7 +173,7 @@ const styles = /* css */ css`
       transform: translateY(-1px);
     }
 
-    :host(:not([disabled]):not([variant='frost'])) .field:focus-within .label-inset,
+    :host(:not([disabled])) .field:focus-within .label-inset,
     :host(:not([disabled])) .field:focus-within .label-outside {
       color: var(--_theme-focus);
     }
@@ -203,18 +202,6 @@ const styles = /* css */ css`
     }
   }
 
-  ${sizeVariantMixin({
-    lg: {
-      fontSize: 'var(--text-base)',
-      gap: 'var(--size-2-5)',
-      padding: 'var(--size-2) var(--size-3-5)',
-    },
-    sm: {
-      fontSize: 'var(--text-xs)',
-      gap: 'var(--size-1-5)',
-      padding: 'var(--size-1) var(--size-2)',
-    },
-  })}
 
   @layer buildit.variants {
     /* ========================================
@@ -294,69 +281,14 @@ const styles = /* css */ css`
       border-bottom: var(--border-2) solid var(--_theme-focus);
       transform: none;
     }
-
-    /* Input-specific frost customizations for text and labels */
-    :host([variant='frost']:not([color])) input {
-      color: var(--color-contrast);
-      text-shadow: var(--text-shadow-sm);
-    }
-
-    :host([variant='frost']:not([color])) .label-inset {
-      color: color-mix(in srgb, var(--color-contrast) 85%, transparent);
-    }
-
-    :host([variant='frost']:not([color])) input::placeholder {
-      color: color-mix(in srgb, var(--color-contrast) 50%, transparent);
-    }
-
-    :host([variant='frost'][color]) input {
-      color: var(--_theme-content);
-      text-shadow: var(--text-shadow-sm);
-    }
-
-    :host([variant='frost'][color]) input::placeholder {
-      color: color-mix(in srgb, var(--_theme-content) 40%, transparent);
-    }
-
-    :host([variant='frost'][color]) .label-inset {
-      color: color-mix(in srgb, var(--_theme-content) 90%, transparent);
-    }
-
-    :host([variant='frost'][color]) ::slotted([slot='prefix']),
-    :host([variant='frost'][color]) ::slotted([slot='suffix']) {
-      color: color-mix(in srgb, var(--_theme-content) 80%, transparent);
-    }
-
-    /* Input-specific hover/focus states with enhanced opacity */
-    :host([variant='frost']:not([color])) .field:hover {
-      background: color-mix(in srgb, var(--color-canvas) 80%, transparent);
-      border-color: color-mix(in srgb, var(--color-contrast-500) 30%, transparent);
-    }
-
-    :host([variant='frost']:not([color])) .field:focus-within {
-      background: color-mix(in srgb, var(--color-canvas) 85%, transparent);
-      border-color: color-mix(in srgb, var(--_theme-focus) 40%, transparent);
-    }
-
-    :host([variant='frost'][color]) .field:hover {
-      background: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 30%);
-      border-color: color-mix(in srgb, var(--_theme-focus) 50%, transparent);
-    }
-
-    :host([variant='frost'][color]) .field:focus-within {
-      background: color-mix(in srgb, var(--_theme-base) 65%, var(--color-contrast) 35%);
-      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-    }
   }
 
-  /* ========================================
-     Mixins - Order doesn't matter!
-     ======================================== */
-
-  ${roundedVariantMixin()}
-  ${colorThemeMixin()}
-  ${frostVariantMixin('.field')}
-  ${disabledLoadingMixin()}
+  @layer buildit.utilities {
+    /* Full width */
+    :host([fullwidth]) {
+      width: 100%;
+    }
+  }
 `;
 
 /** Input component properties */
@@ -390,7 +322,9 @@ export type InputProps = {
   /** Current input value */
   value?: string;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass'>;
+  variant?: Exclude<VisualVariant, 'glass' | 'frost'>;
+  /** Full width mode (100% of container) */
+  fullwidth?: boolean;
 };
 
 const VALID_INPUT_TYPES = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'] as const;
@@ -416,7 +350,7 @@ const validateInputType = (type: string | null): string => {
  * @attr {boolean} readonly - Make the input read-only
  * @attr {boolean} required - Mark the field as required
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *
@@ -448,7 +382,6 @@ const validateInputType = (type: string | null): string => {
  * ```html
  * <bit-input type="email" label="Email" placeholder="you@example.com" />
  * <bit-input label="Name" variant="bordered" color="primary" />
- * <bit-input variant="frost" helper="Must be at least 8 characters" />
  * ```
  */
 define(
@@ -462,6 +395,7 @@ define(
       color: { default: undefined as ThemeColor | undefined },
       disabled: { default: false },
       error: { default: '' },
+      fullwidth: { default: false },
       helper: { default: '' },
       label: { default: '' },
       'label-placement': { default: 'inset' },
@@ -473,7 +407,7 @@ define(
       size: { default: undefined as ComponentSize | undefined },
       type: { default: 'text' as InputType },
       value: { default: '' },
-      variant: { default: undefined as Exclude<VisualVariant, 'glass'> | undefined },
+      variant: { default: undefined as Exclude<VisualVariant, 'glass' | 'frost'> | undefined },
     });
 
     const valueSignal = signal('');
@@ -566,7 +500,16 @@ define(
     });
 
     return {
-      styles: [styles],
+      styles: [
+        sizeVariantMixin({
+          lg: { '--_padding': 'var(--size-2-5) var(--size-3-5)', fontSize: 'var(--text-base)', gap: 'var(--size-2-5)' },
+          sm: { '--_padding': 'var(--size-1) var(--size-2)', fontSize: 'var(--text-xs)', gap: 'var(--size-1-5)' },
+        }),
+        roundedVariantMixin,
+        colorThemeMixin,
+        disabledLoadingMixin(),
+        componentStyles,
+      ],
       template: html` <div class="input-wrapper" part="wrapper">
         <label
           class="label-outside"

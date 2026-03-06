@@ -9,7 +9,7 @@ import {
 } from '../../styles';
 import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-const styles = /* css */ css`
+const componentStyles = /* css */ css`
   @layer buildit.base {
     :host {
       --_bg: var(--button-bg, var(--color-contrast-50));
@@ -96,8 +96,6 @@ const styles = /* css */ css`
       width: 100%;
     }
   }
-
-  ${colorThemeMixin()}
 
   @layer buildit.variants {
     /* Solid (Default) - Full theme color background */
@@ -222,7 +220,7 @@ const styles = /* css */ css`
     /* Additional button-specific frost active states */
     :host([variant='frost']:not([color])) button:active {
       background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-      border-color: color-mix(in srgb, var(--color-contrast-500) 40%, transparent);
+      border-color: color-mix(in srgb, var(--theme-focus) 40%, transparent);
     }
 
     :host([variant='frost'][color]) button:active {
@@ -234,29 +232,6 @@ const styles = /* css */ css`
   /* ========================================
      Other Variants & States
      ======================================== */
-
-  ${sizeVariantMixin({
-    lg: {
-      fontSize: 'var(--text-base)',
-      gap: 'var(--size-2-5)',
-      height: 'var(--size-12)',
-      iconSize: 'var(--size-6)',
-      lineHeight: 'var(--leading-relaxed)',
-      padding: 'var(--size-2-5) var(--size-5)',
-    },
-    sm: {
-      fontSize: 'var(--text-sm)',
-      gap: 'var(--size-1-5)',
-      height: 'var(--size-8)',
-      iconSize: 'var(--size-4)',
-      lineHeight: 'var(--leading-tight)',
-      padding: 'var(--size-1-5) var(--size-3)',
-    },
-  })}
-  ${roundedVariantMixin()}
-  ${frostVariantMixin('button')}
-  ${rainbowEffectMixin('button')}
-  ${disabledLoadingMixin('button')}
 
   @layer buildit.overrides {
     /* Icon-only always uses perfect circle */
@@ -366,16 +341,16 @@ export type ButtonProps = {
  */
 define('bit-button', () => {
   const props = defineProps({
-    color: { default: undefined as ThemeColor | undefined },
-    disabled: { default: false },
-    fullwidth: { default: false },
-    iconOnly: { default: false },
-    loading: { default: false },
-    rainbow: { default: false },
-    rounded: { default: undefined as RoundedSize | undefined },
-    size: { default: undefined as ComponentSize | undefined },
-    type: { default: 'button' as ButtonType },
-    variant: { default: 'solid' as Exclude<VisualVariant, 'glass'> },
+    color: { default: undefined as ThemeColor | undefined, reflect: true },
+    disabled: { default: false, reflect: true },
+    fullwidth: { default: false, reflect: true },
+    iconOnly: { default: false, reflect: true },
+    loading: { default: false, reflect: true },
+    rainbow: { default: false, reflect: true },
+    rounded: { default: undefined as RoundedSize | undefined, reflect: true },
+    size: { default: undefined as ComponentSize | undefined, reflect: true },
+    type: { default: 'button' as ButtonType, reflect: true },
+    variant: { default: 'solid' as Exclude<VisualVariant, 'glass'>, reflect: true },
   });
 
   const isDisabled = computed(() => props.disabled.value || props.loading.value);
@@ -391,7 +366,32 @@ define('bit-button', () => {
   );
 
   return {
-    styles: [styles],
+    styles: [
+      colorThemeMixin,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+          height: 'var(--size-12)',
+          iconSize: 'var(--size-6)',
+          lineHeight: 'var(--leading-relaxed)',
+          padding: 'var(--size-2-5) var(--size-5)',
+        },
+        sm: {
+          fontSize: 'var(--text-sm)',
+          gap: 'var(--size-1-5)',
+          height: 'var(--size-8)',
+          iconSize: 'var(--size-4)',
+          lineHeight: 'var(--leading-tight)',
+          padding: 'var(--size-1-5) var(--size-3)',
+        },
+      }),
+      roundedVariantMixin,
+      frostVariantMixin('button'),
+      rainbowEffectMixin('button'),
+      disabledLoadingMixin('button'),
+      componentStyles,
+    ],
     template: html`
       <button
         part="button"

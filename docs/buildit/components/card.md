@@ -18,7 +18,7 @@ A versatile and feature-rich card container component with purposeful variants, 
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/base/card/card.ts
+<<< @/../packages/buildit/src/content/card/card.ts
 :::
 
 ## Basic Usage

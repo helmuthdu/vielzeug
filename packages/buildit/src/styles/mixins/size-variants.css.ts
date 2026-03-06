@@ -1,3 +1,5 @@
+import { css } from '@vielzeug/craftit';
+
 /**
  * Size Variant Mixin
  *
@@ -5,25 +7,28 @@
  * Reduces code duplication for size-based styling.
  *
  * @param config - Optional configuration for size-specific values
- * @returns CSS string with size variant styles
+ * @returns CSSResult with size variant styles
  *
  * @example
  * ```ts
  * import { sizeVariantMixin } from '../../styles';
  *
- * const styles = css`
- *   ${sizeVariantMixin()}
- *   // Uses default sizes
- * `;
+ * return {
+ *   styles: [sizeVariantMixin(), componentStyles],
+ *   template: html`...`
+ * };
  * ```
  *
  * @example
  * ```ts
  * // Custom size configuration
- * ${sizeVariantMixin({
- *   sm: { size: 'var(--size-3)', fontSize: 'var(--text-2xs)' },
- *   lg: { size: 'var(--size-8)', fontSize: 'var(--text-lg)' },
- * })}
+ * return {
+ *   styles: [sizeVariantMixin({
+ *     sm: { size: 'var(--size-3)', fontSize: 'var(--text-2xs)' },
+ *     lg: { size: 'var(--size-8)', fontSize: 'var(--text-lg)' },
+ *   }), componentStyles],
+ *   template: html`...`
+ * };
  * ```
  */
 export const sizeVariantMixin = (config?: {
@@ -100,26 +105,24 @@ export const sizeVariantMixin = (config?: {
       .join('\n        ');
   };
 
-  return `
-    @layer buildit.variants {
-      /* ========================================
-         Size Variants (Shared Mixin)
-         ======================================== */
+  return css`
+    /* ========================================
+       Size Variants (Shared Mixin)
+       ======================================== */
 
-      /* Small */
-      :host([size='sm']) {
-        ${generateSizeCSS(sm)}
-      }
+    /* Small */
+    :host([size='sm']) {
+      ${generateSizeCSS(sm)}
+    }
 
-      /* Medium (default, can be used for explicit md attribute) */
-      :host([size='md']) {
-        ${generateSizeCSS(md)}
-      }
+    /* Medium (default, can be used for explicit md attribute) */
+    :host([size='md']) {
+      ${generateSizeCSS(md)}
+    }
 
-      /* Large */
-      :host([size='lg']) {
-        ${generateSizeCSS(lg)}
-      }
+    /* Large */
+    :host([size='lg']) {
+      ${generateSizeCSS(lg)}
     }
   `;
 };

@@ -9,7 +9,7 @@ A versatile typography component with semantic variants for consistent text styl
 - ⚖️ **4 Font Weights**: normal, medium, semibold, bold
 - 🌈 **9 Colors**: semantic (primary, secondary, success, warning, error) + text colors (heading, body, muted, disabled)
 - 📐 **4 Alignments**: left, center, right, justify
-- ✂️ **Truncate**: Single-line text truncation with ellipsis
+- ✂️ **Truncate**: CSS-based single-line text truncation with ellipsis
 - 🔤 **Semantic HTML**: Render as different HTML tags (span, p, div, h1-h6, label, code)
 - ♿ **Accessible**: Semantic HTML support, respects user font preferences
 - 🎭 **Italic Style**: Font style support
@@ -18,7 +18,7 @@ A versatile typography component with semantic variants for consistent text styl
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/base/text/text.ts
+<<< @/../packages/buildit/src/content/text/text.ts
 :::
 
 ## Basic Usage
@@ -202,24 +202,21 @@ When using the `align` attribute, the text component automatically changes from 
 <ComponentPreview center vertical>
 
 ```html
-<div
-  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+<bit-box style="width: 100%">
   <bit-text align="left">Left aligned text</bit-text>
-</div>
-<div
-  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+</bit-box>
+<bit-box style="width: 100%;">
   <bit-text align="center">Centered text</bit-text>
-</div>
-<div
-  style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem; margin-bottom: 0.5rem;">
+</bit-box>
+<bit-box style="width: 100%;">
   <bit-text align="right">Right aligned text</bit-text>
-</div>
-<div style="display: block; width: 100%; border: 1px solid var(--color-contrast-200); padding: 1rem;">
+</bit-box>
+<bit-box style="width: 100%;">
   <bit-text align="justify">
     Justified text distributes words evenly across the line width. This is useful for formal documents or
     newspaper-style layouts.
   </bit-text>
-</div>
+</bit-box>
 ```
 
 </ComponentPreview>
@@ -228,23 +225,23 @@ When using the `align` attribute, the text component automatically changes from 
 
 ### Truncate
 
-Enable single-line truncation with ellipsis for overflow text.
+Enable single-line truncation with ellipsis for overflow text using CSS.
 
 <ComponentPreview center vertical>
 
 ```html
-<div style="max-width: 300px;">
+<bit-box style="width: 100%; max-width: 400px;">
   <bit-text truncate>
-    This is a very long text that will be truncated with an ellipsis when it exceeds the container width and
-    demonstrates how the component handles overflow content gracefully
+    This is a very long text that will be truncated with an ellipsis when it exceeds the width of its container. The
+    truncation happens automatically using CSS text-overflow.
   </bit-text>
-</div>
+</bit-box>
 ```
 
 </ComponentPreview>
 
 ::: tip Usage
-Set a `max-width` or width constraint on the container for truncation to work effectively.
+The `truncate` attribute is a boolean flag. The text will be truncated when it overflows the container width. Make sure to set a width constraint on the text element or its parent container for truncation to work properly.
 :::
 
 ### Italic Style
@@ -291,7 +288,7 @@ Combine multiple text components for rich layouts.
 <ComponentPreview center vertical>
 
 ```html
-<div style="border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); padding: var(--size-4);">
+<bit-box style="width: 100%;">
   <bit-text variant="overline" color="primary" size="xs">Featured Product</bit-text>
   <bit-text variant="heading" size="xl" as="h2" style="margin-top: var(--size-2);"> Premium Headphones </bit-text>
   <bit-text variant="caption" color="muted" style="display: block; margin-top: var(--size-1);">
@@ -301,7 +298,7 @@ Combine multiple text components for rich layouts.
     High-quality wireless headphones with active noise cancellation, 40-hour battery life, and premium comfort for
     all-day wear.
   </bit-text>
-</div>
+</bit-box>
 ```
 
 </ComponentPreview>
@@ -344,20 +341,19 @@ Use semantic colors for feedback.
 
 ### Truncated Filename
 
-Show file information with truncation.
+Show file information with truncation using width constraints.
 
 <ComponentPreview center vertical>
 
 ```html
-<div
-  style="max-width: 250px; padding: var(--size-3); border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-md);">
+<bit-box style="max-width: 250px;">
   <bit-text truncate color="primary" weight="medium">
     very-long-document-name-that-needs-truncation-for-display.pdf
   </bit-text>
   <bit-text variant="caption" color="muted" size="xs" style="display: block; margin-top: var(--size-1);">
     2.4 MB • PDF Document
   </bit-text>
-</div>
+</bit-box>
 ```
 
 </ComponentPreview>
@@ -373,7 +369,7 @@ Show file information with truncation.
 | `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                  | —        | Font weight (uses variant default if not specified) |
 | `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | —        | Text color (uses variant default if not specified)  |
 | `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                    | —        | Text alignment                                      |
-| `truncate` | `boolean`                                                                                                       | `false`  | Enable single-line truncation                       |
+| `truncate` | `boolean`                                                                                                       | `false`  | Enable single-line truncation with ellipsis         |
 | `italic`   | `boolean`                                                                                                       | `false`  | Italic font style                                   |
 | `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                   | —        | Semantic HTML tag to render                         |
 

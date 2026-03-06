@@ -13,27 +13,29 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 ## Why Formit?
 
-FormData is the native browser API for form state. Formit builds on it with validators, error tracking, and async support — without framework lock-in.
+Formit tracks typed form values with validators, error tracking, and async support — without framework lock-in.
 
 ```ts
 // Before — manual validation
 function handleSubmit(e: SubmitEvent) {
   e.preventDefault();
-  const data = new FormData(e.target as HTMLFormElement);
-  const errors = new Map();
-  if (!data.get('email')) errors.set('email', 'Required');
+  const errors: Record<string, string> = {};
+  if (!name) errors.name = 'Required';
   // ...
 }
 
 // After — Formit
-const form = createForm({ fields: { email: { value: '', validators: v => !v ? 'Required' : undefined } } });
+const form = createForm({
+  values: { email: '' },
+  rules: { email: (v) => (!v ? 'Required' : undefined) },
+});
 form.subscribe(setState);
 ```
 
 | Feature | Formit | React Hook Form | Formik |
 |---|---|---|---|
 | Framework | Agnostic | React | React |
-| Based on | FormData | Refs | State |
+| Typed values | ✅ | ❌ | ❌ |
 | Async validators | ✅ | ✅ | ✅ |
 | Zero dependencies | ✅ | ❌ | ❌ |
 
@@ -44,50 +46,37 @@ form.subscribe(setState);
 
 ### Creating a Form
 
-Three ways to initialize fields:
-
-**Plain Values:**
-
 ```typescript
 const form = createForm({
-  fields: {
+  values: {
     name: '',
     email: '',
     age: 0,
   },
+  rules: {
+    name: (v) => (!v ? 'Name is required' : undefined),
+    email: [
+      (v) => (!v ? 'Email is required' : undefined),
+      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
+    ],
+  },
 });
 ```
 
-**Nested Objects:**
+### Using Dot-Notation for Nested Data
+
+There is no auto-flattening of nested objects. Store nested data with explicit dot-notation keys:
 
 ```typescript
 const form = createForm({
-  fields: {
-    user: {
-      name: 'Alice',
-      profile: {
-        age: 25,
-        city: 'NYC',
-      },
-    },
+  values: {
+    'user.name': 'Alice',
+    'user.profile.age': 25,
+    'user.profile.city': 'NYC',
   },
 });
 
-// Access with dot notation
-form.get('user.profile.age'); // '25'
-```
-
-**With Validators:**
-
-```typescript
-const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: (v) => !String(v).includes('@') && 'Invalid email',
-    },
-  },
-});
+form.get('user.profile.age'); // 25 (typed number, not string)
 ```
 
 ### Reading and Writing Values
@@ -99,17 +88,14 @@ const email = form.get('email');
 // Set value
 form.set('email', 'user@example.com');
 
-// Set multiple values
-form.set({
+// Set multiple values at once
+form.patch({
   email: 'user@example.com',
   name: 'Alice',
 });
 
 // Get all values
 const all = form.values();
-
-// Clone FormData (for safe external use)
-const formData = form.clone();
 ```
 
 ## Advanced Patterns
@@ -118,7 +104,7 @@ const formData = form.clone();
 
 ```typescript
 const form = createForm({
-  fields: {
+  values: {
     // Step 1
     name: '',
     email: '',
@@ -128,35 +114,34 @@ const form = createForm({
     // Step 3
     cardNumber: '',
   },
+  rules: {
+    name: (v) => (!v ? 'Required' : undefined),
+    email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
+    address: (v) => (!v ? 'Required' : undefined),
+    city: (v) => (!v ? 'Required' : undefined),
+    cardNumber: (v) => (!v ? 'Required' : undefined),
+  },
 });
 
 let currentStep = 1;
 
-async function validateStep(step: number) {
-  const stepFields = {
-    1: ['name', 'email'],
-    2: ['address', 'city'],
-    3: ['cardNumber'],
-  };
-
-  const errors = await form.validate({ fields: stepFields[step] });
-  return errors.size === 0;
-}
+const stepFields = {
+  1: ['name', 'email'],
+  2: ['address', 'city'],
+  3: ['cardNumber'],
+};
 
 async function nextStep() {
-  const isValid = await validateStep(currentStep);
-  if (isValid) {
+  const errors = await form.validateAll({ fields: stepFields[currentStep] });
+  if (Object.keys(errors).length === 0) {
     currentStep++;
   }
 }
 
 async function submitForm() {
-  const isValid = await validateStep(currentStep);
-  if (isValid) {
-    await form.submit(async (formData) => {
-      await fetch('/api/complete', { method: 'POST', body: formData });
-    });
-  }
+  await form.submit(async (formData) => {
+    await fetch('/api/complete', { method: 'POST', body: formData });
+  });
 }
 ```
 
@@ -164,26 +149,23 @@ async function submitForm() {
 
 ```typescript
 const form = createForm({
-  fields: {
+  values: {
     items: [] as Array<{ name: string; quantity: number }>,
   },
 });
 
 function addItem() {
-  const items = form.get('items') || [];
+  const items = (form.get('items') as typeof form.get<Array<unknown>>('items')) || [];
   form.set('items', [...items, { name: '', quantity: 0 }]);
 }
 
 function removeItem(index: number) {
-  const items = form.get('items') || [];
-  form.set(
-    'items',
-    items.filter((_, i) => i !== index),
-  );
+  const items = form.get<Array<unknown>>('items') || [];
+  form.set('items', items.filter((_, i) => i !== index));
 }
 
-function updateItem(index: number, field: 'name' | 'quantity', value: any) {
-  const items = form.get('items') || [];
+function updateItem(index: number, field: 'name' | 'quantity', value: unknown) {
+  const items = form.get<Array<Record<string, unknown>>>('items') || [];
   const updated = [...items];
   updated[index] = { ...updated[index], [field]: value };
   form.set('items', updated);
@@ -194,7 +176,7 @@ function updateItem(index: number, field: 'name' | 'quantity', value: any) {
 
 ```typescript
 const form = createForm({
-  fields: {
+  values: {
     accountType: 'personal',
     companyName: '',
     vatNumber: '',
@@ -224,13 +206,13 @@ form.subscribe((state) => {
 
 ```typescript
 const form = createForm({
-  fields: { name: '', email: '' },
+  values: { name: '', email: '' },
 });
 
 window.addEventListener('beforeunload', (e) => {
   const state = form.snapshot();
 
-  if (state.dirty.size > 0) {
+  if (state.isDirty) {
     e.preventDefault();
     e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
   }
@@ -241,13 +223,13 @@ window.addEventListener('beforeunload', (e) => {
 
 ```typescript
 const form = createForm({
-  fields: { content: '' },
+  values: { content: '' },
 });
 
-let saveTimeout;
+let saveTimeout: ReturnType<typeof setTimeout>;
 
 form.subscribe((state) => {
-  if (state.dirty.size > 0) {
+  if (state.isDirty) {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
       await form.submit(
@@ -265,7 +247,7 @@ form.subscribe((state) => {
 
 ```typescript
 const form = createForm({
-  fields: { name: '', email: '' },
+  values: { name: '', email: '' },
 });
 
 // Reset to initial
@@ -273,21 +255,6 @@ form.reset();
 
 // Reset to new values
 form.reset({ name: 'Guest', email: '' });
-```
-
-### Form Cloning
-
-```typescript
-const form1 = createForm({
-  fields: { name: 'Alice', email: 'alice@example.com' },
-});
-
-// Clone FormData
-const formData = form1.clone();
-
-// Create new form with cloned data
-const form2 = createForm({ fields: {} });
-form2.set(formData);
 ```
 
 ## Best Practices
@@ -326,6 +293,9 @@ try {
 } catch (error) {
   if (error instanceof ValidationError) {
     // Handle validation errors
+    for (const [field, message] of Object.entries(error.errors)) {
+      console.log(`${field}: ${message}`);
+    }
   } else {
     // Handle other errors
   }
@@ -335,27 +305,21 @@ try {
 form.submit(onSubmit).catch(console.error);
 ```
 
-### 4. Use Nested Objects for Organization
+### 4. Use Explicit Dot-Notation Keys for Nested Data
 
 ```typescript
-// ✅ Good – organized
-fields: {
-  user: {
-    name: '',
-    email: ''
-  },
-  address: {
-    street: '',
-    city: ''
-  }
+// ✅ Good – explicit dot-notation keys
+values: {
+  'user.name': '',
+  'user.email': '',
+  'address.street': '',
+  'address.city': '',
 }
 
-// ❌ Flat – harder to manage
-fields: {
-  userName: '',
-  userEmail: '',
-  addressStreet: '',
-  addressCity: ''
+// ❌ Nested objects are stored as-is, not flattened
+values: {
+  user: { name: '', email: '' },    // form.get('user') returns the whole object
+  address: { street: '', city: '' },
 }
 ```
 
@@ -368,7 +332,7 @@ const binding = form.bind('email', {
 
 // Show error only if touched
 {
-  state.touched.has('email') && state.errors.get('email');
+  state.touched.has('email') && state.errors['email'];
 }
 ```
 
@@ -380,23 +344,21 @@ Single or multiple validators per field:
 
 ```typescript
 const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: [
-        (v) => !v && 'Email is required',
-        (v) => v && !String(v).includes('@') && 'Invalid email format',
-        (v) => v && String(v).length > 100 && 'Email too long',
-      ],
-    },
-    password: {
-      value: '',
-      validators: (v) => {
-        if (!v) return 'Password is required';
-        if (String(v).length < 8) return 'Min 8 characters';
-        if (!/[A-Z]/.test(String(v))) return 'Must contain uppercase';
-        if (!/[0-9]/.test(String(v))) return 'Must contain number';
-      },
+  values: {
+    email: '',
+    password: '',
+  },
+  rules: {
+    email: [
+      (v) => (!v ? 'Email is required' : undefined),
+      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
+      (v) => (v && String(v).length > 100 ? 'Email too long' : undefined),
+    ],
+    password: (v) => {
+      if (!v) return 'Password is required';
+      if (String(v).length < 8) return 'Min 8 characters';
+      if (!/[A-Z]/.test(String(v))) return 'Must contain uppercase';
+      if (!/[0-9]/.test(String(v))) return 'Must contain number';
     },
   },
 });
@@ -408,25 +370,25 @@ Cross-field validation:
 
 ```typescript
 const form = createForm({
-  fields: {
+  values: {
     password: '',
     confirmPassword: '',
     startDate: '',
     endDate: '',
   },
-  validate: (formData) => {
-    const errors = new Map();
+  validate: (values) => {
+    const errors: Record<string, string> = {};
 
     // Password matching
-    if (formData.get('password') !== formData.get('confirmPassword')) {
-      errors.set('confirmPassword', 'Passwords must match');
+    if (values['password'] !== values['confirmPassword']) {
+      errors['confirmPassword'] = 'Passwords must match';
     }
 
     // Date range validation
-    const start = new Date(String(formData.get('startDate')));
-    const end = new Date(String(formData.get('endDate')));
+    const start = new Date(String(values['startDate']));
+    const end = new Date(String(values['endDate']));
     if (start > end) {
-      errors.set('endDate', 'End date must be after start date');
+      errors['endDate'] = 'End date must be after start date';
     }
 
     return errors;
@@ -438,17 +400,17 @@ const form = createForm({
 
 ```typescript
 const form = createForm({
-  fields: {
-    username: {
-      value: '',
-      validators: async (value) => {
-        if (!value) return 'Username required';
+  values: {
+    username: '',
+  },
+  rules: {
+    username: async (value) => {
+      if (!value) return 'Username required';
 
-        const response = await fetch(`/api/check-username?username=${value}`);
-        const { exists } = await response.json();
+      const response = await fetch(`/api/check-username?username=${value}`);
+      const { exists } = await response.json();
 
-        if (exists) return 'Username already taken';
-      },
+      if (exists) return 'Username already taken';
     },
   },
 });
@@ -461,13 +423,13 @@ const form = createForm({
 const error = await form.validate('email');
 
 // Validate all fields
-const errors = await form.validate();
+const errors = await form.validateAll();
 
 // Validate only touched fields
-const errors = await form.validate({ onlyTouched: true });
+const errors = await form.validateAll({ onlyTouched: true });
 
 // Validate specific fields
-const errors = await form.validate({ fields: ['email', 'password'] });
+const errors = await form.validateAll({ fields: ['email', 'password'] });
 ```
 
 ## File Uploads
@@ -476,8 +438,8 @@ const errors = await form.validate({ fields: ['email', 'password'] });
 
 ```typescript
 const form = createForm({
-  fields: {
-    avatar: null,
+  values: {
+    avatar: null as File | null,
     title: '',
   },
 });
@@ -485,7 +447,7 @@ const form = createForm({
 // Handle file input
 const fileInput = document.querySelector('input[type="file"]');
 fileInput.addEventListener('change', (e) => {
-  form.set('avatar', e.target.files[0]);
+  form.set('avatar', (e.target as HTMLInputElement).files?.[0] ?? null);
 });
 
 // Submit
@@ -497,38 +459,22 @@ await form.submit(async (formData) => {
 });
 ```
 
-### Multiple Files
-
-```typescript
-const form = createForm({
-  fields: {
-    documents: [],
-  },
-});
-
-// Handle FileList
-form.set('documents', fileInput.files);
-
-// Or manually build array
-form.set('documents', Array.from(fileInput.files));
-```
-
 ### File Validation
 
 ```typescript
 const form = createForm({
-  fields: {
-    avatar: {
-      value: null,
-      validators: (value) => {
-        if (!value) return 'Avatar is required';
+  values: {
+    avatar: null as File | null,
+  },
+  rules: {
+    avatar: (value) => {
+      if (!value) return 'Avatar is required';
 
-        const file = value as File;
-        const maxSize = 5 * 1024 * 1024; // 5MB
+      const file = value as File;
+      const maxSize = 5 * 1024 * 1024; // 5MB
 
-        if (file.size > maxSize) return 'File too large (max 5MB)';
-        if (!file.type.startsWith('image/')) return 'Must be an image';
-      },
+      if (file.size > maxSize) return 'File too large (max 5MB)';
+      if (!file.type.startsWith('image/')) return 'Must be an image';
     },
   },
 });
@@ -540,40 +486,39 @@ const form = createForm({
 
 ```typescript
 const form = createForm({
-  fields: {
-    tags: ['javascript', 'typescript'],
-    interests: [],
+  values: {
+    tags: ['javascript', 'typescript'] as string[],
+    interests: [] as string[],
   },
 });
 
 // Get array
-const tags = form.get('tags'); // ['javascript', 'typescript']
+const tags = form.get<string[]>('tags'); // ['javascript', 'typescript']
 
 // Set array
 form.set('tags', ['vue', 'react']);
 
 // Empty arrays work correctly
 form.set('tags', []);
-console.log(form.get('tags')); // [] not undefined
+console.log(form.get('tags')); // []
 ```
 
 ### Multi-Select Inputs
 
 ```typescript
 const form = createForm({
-  fields: {
-    skills: {
-      value: [],
-      validators: (v) => Array.isArray(v) && v.length === 0 && 'Select at least one'
-    }
-  }
+  values: {
+    skills: [] as string[],
+  },
+  rules: {
+    skills: (v) => (Array.isArray(v) && v.length === 0 ? 'Select at least one' : undefined),
+  },
 });
 
 // Bind to select element
 <select multiple {...form.bind('skills')}>
   <option value="js">JavaScript</option>
   <option value="ts">TypeScript</option>
-  <option value="react">React</option>
 </select>
 ```
 
@@ -581,52 +526,19 @@ const form = createForm({
 
 ```typescript
 const form = createForm({
-  fields: {
-    interests: []
-  }
+  values: {
+    interests: [] as string[],
+  },
 });
 
 // Handle checkbox change
 function handleCheckbox(value: string, checked: boolean) {
-  const current = form.get('interests') || [];
+  const current = form.get<string[]>('interests') ?? [];
   const updated = checked
     ? [...current, value]
-    : current.filter(v => v !== value);
+    : current.filter((v) => v !== value);
   form.set('interests', updated);
 }
-
-// Usage
-<input
-  type="checkbox"
-  value="coding"
-  checked={(form.get('interests') || []).includes('coding')}
-  onChange={(e) => handleCheckbox('coding', e.target.checked)}
-/>
-```
-
-### Array Validation
-
-```typescript
-const form = createForm({
-  fields: {
-    emails: {
-      value: [],
-      validators: (value) => {
-        if (!Array.isArray(value)) return 'Must be an array';
-        if (value.length === 0) return 'At least one email required';
-        if (value.length > 10) return 'Maximum 10 emails';
-
-        // Validate each item
-        for (let i = 0; i < value.length; i++) {
-          const email = String(value[i]);
-          if (!email.includes('@')) {
-            return `Email #${i + 1} is invalid`;
-          }
-        }
-      },
-    },
-  },
-});
 ```
 
 ## Framework Integration
@@ -642,13 +554,13 @@ import { useEffect, useState } from 'react';
 function ContactForm() {
   const [form] = useState(() =>
     createForm({
-      fields: {
+      values: {
         name: '',
-        email: {
-          value: '',
-          validators: (v) => !String(v).includes('@') && 'Invalid email',
-        },
+        email: '',
         message: '',
+      },
+      rules: {
+        email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
       },
     }),
   );
@@ -668,7 +580,7 @@ function ContactForm() {
       <input {...form.bind('name')} placeholder="Name" />
 
       <input {...form.bind('email')} placeholder="Email" />
-      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+      {state.errors['email'] && <span>{state.errors['email']}</span>}
 
       <textarea {...form.bind('message')} />
 
@@ -699,11 +611,11 @@ function useForm(init: FormInit) {
 // Usage
 function MyForm() {
   const { form, state } = useForm({
-    fields: {
-      email: {
-        value: '',
-        validators: (v) => !String(v).includes('@') && 'Invalid',
-      },
+    values: {
+      email: '',
+    },
+    rules: {
+      email: (v) => (v && !String(v).includes('@') ? 'Invalid' : undefined),
     },
   });
 
@@ -714,7 +626,7 @@ function MyForm() {
         form.submit(onSubmit);
       }}>
       <input {...form.bind('email')} />
-      {state.errors.get('email') && <span>{state.errors.get('email')}</span>}
+      {state.errors['email'] && <span>{state.errors['email']}</span>}
       <button disabled={state.isSubmitting}>Submit</button>
     </form>
   );
@@ -731,12 +643,12 @@ import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: (v) => !String(v).includes('@') && 'Invalid email',
-    },
+  values: {
+    email: '',
     password: '',
+  },
+  rules: {
+    email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
   },
 });
 
@@ -756,8 +668,8 @@ const handleSubmit = async () => {
 <template>
   <form @submit.prevent="handleSubmit">
     <input v-bind="form.bind('email')" type="email" />
-    <span v-if="state.errors.get('email')">
-      {{ state.errors.get('email') }}
+    <span v-if="state.errors['email']">
+      {{ state.errors['email'] }}
     </span>
 
     <input v-bind="form.bind('password')" type="password" />
@@ -796,19 +708,19 @@ import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
 
 const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: (v) => !String(v).includes('@') && 'Invalid email'
-    },
-    password: ''
-  }
+  values: {
+    email: '',
+    password: '',
+  },
+  rules: {
+    email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
+  },
 });
 
 const state = writable(form.snapshot());
 let unsubscribe;
 
-onMount(() => unsubscribe = form.subscribe(s => state.set(s)));
+onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
 onDestroy(() => unsubscribe?.());
 
 async function handleSubmit() {
@@ -820,8 +732,8 @@ async function handleSubmit() {
 
 <form on:submit|preventDefault={handleSubmit}>
   <input {...form.bind('email')} type="email" />
-  {#if $state.errors.get('email')}
-    <span>{$state.errors.get('email')}</span>
+  {#if $state.errors['email']}
+    <span>{$state.errors['email']}</span>
   {/if}
 
   <input {...form.bind('password')} type="password" />

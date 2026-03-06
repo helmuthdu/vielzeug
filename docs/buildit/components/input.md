@@ -4,7 +4,7 @@ A customizable text input component with multiple types, variants, and validatio
 
 ## Features
 
-- 🎨 **7 Variants**: solid, flat, bordered, outline, ghost, text, frost
+- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
 - 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
@@ -44,31 +44,6 @@ Six visual variants for different UI contexts and levels of emphasis.
 <bit-input variant="outline" placeholder="Outline"></bit-input>
 <bit-input variant="ghost" placeholder="Ghost"></bit-input>
 <bit-input variant="text" placeholder="Text"></bit-input>
-```
-
-</ComponentPreview>
-
-### Frost Variant
-
-Modern frost effect with backdrop blur that adapts based on color:
-
-- **Without color**: Subtle canvas-based frost overlay
-- **With color**: Frosted glass effect with colored tint
-
-::: tip Best Used With
-Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
-:::
-
-<ComponentPreview center>
-
-```html
-<bit-input variant="frost" placeholder="Frost" value="Frost"></bit-input>
-<bit-input variant="frost" color="primary" placeholder="Primary" value="Primary"></bit-input>
-<bit-input variant="frost" color="secondary" placeholder="Secondary" value="Secondary"></bit-input>
-<bit-input variant="frost" color="info" placeholder="Info" value="Info"></bit-input>
-<bit-input variant="frost" color="success" placeholder="Success" value="Success"></bit-input>
-<bit-input variant="frost" color="warning" placeholder="Warning" value="Warning"></bit-input>
-<bit-input variant="frost" color="error" placeholder="Error" value="Error"></bit-input>
 ```
 
 </ComponentPreview>
@@ -291,8 +266,9 @@ Prevent interaction or modification of the input.
 | `disabled`        | `boolean`                                                                      | `false`     | Disable the input        |
 | `readonly`        | `boolean`                                                                      | `false`     | Make the input read-only |
 | `required`        | `boolean`                                                                      | `false`     | Mark field as required   |
+| `fullwidth`       | `boolean`                                                                      | `false`     | Expand to full width     |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Input size               |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual variant           |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`            | `'solid'`   | Visual variant           |
 | `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Color theme              |
 
 ### Slots
