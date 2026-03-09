@@ -86,6 +86,5 @@ const uniqueCaseInsensitive = uniq(data, (s) => s.toLowerCase());
 
 ## See Also
 
-- [filter](./filter.md): Create a subset of an array based on a predicate.
-- [compact](./compact.md): Remove falsy values from an array.
-- [aggregate](./aggregate.md): Group and aggregate array elements.
+- [select](./select.md): Filter array elements by a predicate.
+- [group](./group.md): Group and partition array elements.

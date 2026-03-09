@@ -25,8 +25,11 @@ Creates a new router instance.
 const router = createRouter({
   mode: 'history',
   base: '/app',
-  notFound: ({ pathname }) => {
+  onNotFound: ({ pathname }) => {
     console.log('404:', pathname);
+  },
+  onError: (error, ctx) => {
+    console.error('Route error at', ctx.pathname, error);
   },
   middleware: [loggerMiddleware],
 });
@@ -98,6 +101,56 @@ router.get('/users/:id', ({ params }) => {
 });
 ```
 
+### `on(path, handler, extras?)`
+
+Like `get()`, but also accepts a `name`, `data`, and `middleware` via an extras object.
+
+**Parameters:**
+
+- `path: string` – Route path
+- `handler: RouteHandler` – Route handler function
+- `extras?: { name?, data?, middleware? }` – Optional extras
+
+**Returns:** `Router` (chainable)
+
+**Example:**
+
+```ts
+router.on('/users/:id', ({ params }) => renderUser(params.id), {
+  name: 'user',
+  middleware: requireAuth,
+});
+```
+
+### `group(prefix, middlewareOrDefiner, definer?)`
+
+Registers a set of routes that share a common path prefix and optional middleware.
+
+**Parameters:**
+
+- `prefix: string` – Path prefix applied to all routes in the group
+- `middlewareOrDefiner: Middleware | Middleware[] | ((r: GroupRouter) => void)` – Middleware to apply to every route in the group, or a definer function if no middleware is needed
+- `definer?: (r: GroupRouter) => void` – Callback that registers routes via `r.on()`, `r.route()`, or `r.routes()`
+
+**Returns:** `Router` (chainable)
+
+**Example:**
+
+```ts
+// With middleware
+router.group('/admin', requireAuth, (r) => {
+  r.on('/dashboard', () => renderDashboard());
+  r.on('/users',     () => renderUsers());
+  r.route({ path: '/settings', name: 'adminSettings', handler: renderSettings });
+});
+
+// Without middleware
+router.group('/public', (r) => {
+  r.on('/',       () => renderHome());
+  r.on('/about',  () => renderAbout());
+});
+```
+
 ### `start()`
 
 Start listening for route changes.
@@ -114,7 +167,7 @@ router.get('/', homeHandler).get('/about', aboutHandler).start();
 
 Stop listening for route changes.
 
-**Returns:** `void`
+**Returns:** `Router` (chainable)
 
 **Example:**
 
@@ -134,8 +187,9 @@ Navigate to a path programmatically.
 - `options?: NavigateOptions` – Navigation options
   - `replace?: boolean` – Replace current history entry
   - `state?: unknown` – State to store with navigation
+  - `viewTransition?: boolean` – Override the router-level `viewTransitions` setting for this navigation
 
-**Returns:** `void`
+**Returns:** `Promise<void>`
 
 **Example:**
 
@@ -143,87 +197,85 @@ Navigate to a path programmatically.
 router.navigate('/about');
 router.navigate('/login', { replace: true });
 router.navigate('/profile', { state: { from: '/settings' } });
+router.navigate('/gallery', { viewTransition: true });
 ```
 
-### `navigateTo(name, params?, query?)`
+### `navigateTo(name, params?, options?)`
 
 Navigate to a named route.
 
 **Parameters:**
 
 - `name: string` – Route name
-- `params?: RouteParams` – Route parameters
-- `query?: QueryParams` – Query parameters
+- `params?: RouteParams` – Route parameters to substitute into the path
+- `options?: NavigateOptions` – Navigation options (same as `navigate()`)
 
-**Returns:** `void`
+**Returns:** `Promise<void>`
+
+::: tip Building a URL with query params
+To navigate to a named route **and** include query parameters, build the URL first with `url()` and pass it to `navigate()`:
+```ts
+router.navigate(router.url('search', undefined, { q: 'test' }));
+```
+:::
 
 **Example:**
 
 ```ts
 router.navigateTo('userDetail', { id: '123' });
-router.navigateTo('search', undefined, { q: 'test' });
+router.navigateTo('userDetail', { id: '123' }, { replace: true });
 ```
 
 ## URL Building Methods
 
-### `buildUrl(path, params?, query?)`
+### `url(nameOrPattern, params?, query?)`
 
-Build a URL with parameters and query string.
+Build a URL from a path pattern or named route, with optional parameter substitution and query string.
 
 **Parameters:**
 
-- `path: string` – Path template
-- `params?: RouteParams` – Parameters to substitute
+- `nameOrPattern: string` – A path pattern (e.g. `'/users/:id'`) or a route name (e.g. `'userDetail'`)
+- `params?: RouteParams` – Parameters to substitute into the pattern
 - `query?: QueryParams` – Query parameters to append
 
 **Returns:** `string`
 
+**Throws:** `Error` if a route name is passed and no route with that name is registered
+
 **Example:**
 
 ```ts
-router.buildUrl('/users/:id', { id: '123' });
+// Path pattern
+router.url('/users/:id', { id: '123' });
 // → '/users/123'
 
-router.buildUrl('/search', undefined, { q: 'test', page: '2' });
+router.url('/search', undefined, { q: 'test', page: '2' });
 // → '/search?q=test&page=2'
 
-router.buildUrl('/users/:id', { id: '123' }, { tab: 'posts' });
+router.url('/users/:id', { id: '123' }, { tab: 'posts' });
 // → '/users/123?tab=posts'
-```
 
-### `urlFor(name, params?, query?)`
-
-Build a URL for a named route.
-
-**Parameters:**
-
-- `name: string` – Route name
-- `params?: RouteParams` – Route parameters
-- `query?: QueryParams` – Query parameters
-
-**Returns:** `string`
-
-**Throws:** `Error` if route name not found
-
-**Example:**
-
-```ts
-router.urlFor('userDetail', { id: '123' });
+// Named route
+router.url('userDetail', { id: '123' });
 // → '/users/123'
 
-router.urlFor('search', undefined, { q: 'test' });
+router.url('search', undefined, { q: 'test' });
 // → '/search?q=test'
+
+// Array query parameters
+router.url('/products', undefined, { tags: ['new', 'sale'] });
+// → '/products?tags=new&tags=sale'
 ```
 
 ## State & Query Methods
 
-### `isActive(pattern)`
+### `isActive(nameOrPattern)`
 
-Check if a route pattern matches the current route.
+Check if the current path matches a route pattern or a named route.
 
 **Parameters:**
 
-- `pattern: string` – Path pattern to match
+- `nameOrPattern: string` – A path pattern (e.g. `'/users/:id'`) or route name (e.g. `'user'`)
 
 **Returns:** `boolean`
 
@@ -237,13 +289,18 @@ if (router.isActive('/users/:id')) {
 if (router.isActive('/admin/*')) {
   console.log('In admin section');
 }
+
+// Using a route name
+if (router.isActive('user')) {
+  console.log('On the named user route');
+}
 ```
 
 ### `getState()`
 
 Get the current route state.
 
-**Returns:** `{ pathname: string, params: RouteParams, query: QueryParams, hash: string }`
+**Returns:** `RouteState` — `{ pathname, params, query, hash, name? }`
 
 **Example:**
 
@@ -253,27 +310,28 @@ console.log(state.pathname); // '/users/123'
 console.log(state.params);   // { id: '123' }
 console.log(state.query);    // { tab: 'profile' }
 console.log(state.hash);     // 'section-1'
+console.log(state.name);     // 'userDetail' (only set when matched route has a name)
 ```
 
 ## Subscription Methods
 
 ### `subscribe(listener)`
 
-Subscribe to route changes.
+Subscribe to route changes. The listener is called immediately with the current state, then again after every navigation.
 
 **Parameters:**
 
-- `listener: () => void` – Callback function
+- `listener: (state: RouteState) => void` – Callback that receives the new route state
 
 **Returns:** `() => void` – Unsubscribe function
 
 **Example:**
 
 ```ts
-const unsubscribe = router.subscribe(() => {
-  const { pathname, params, query } = router.getState();
+const unsubscribe = router.subscribe((state) => {
   console.log('Route changed!');
-  console.log('Current:', pathname);
+  console.log('Current:', state.pathname);
+  console.log('Params:', state.params);
 });
 
 // Later...
@@ -308,15 +366,16 @@ interface Router {
   route(definition: RouteDefinition): Router;
   routes(definitions: RouteDefinition[]): Router;
   get(path: string, handler: RouteHandler): Router;
+  on(path: string, handler: RouteHandler, extras?: Pick<RouteDefinition, 'name' | 'data' | 'middleware'>): Router;
+  group(prefix: string, middlewareOrDefiner: Middleware | Middleware[] | ((r: GroupRouter) => void), definer?: (r: GroupRouter) => void): Router;
   start(): Router;
-  stop(): void;
-  navigate(path: string, options?: NavigateOptions): void;
-  navigateTo(name: string, params?: RouteParams, query?: QueryParams): void;
-  buildUrl(path: string, params?: RouteParams, query?: QueryParams): string;
-  urlFor(name: string, params?: RouteParams, query?: QueryParams): string;
-  isActive(pattern: string): boolean;
-  getState(): { pathname: string; params: RouteParams; query: QueryParams; hash: string };
-  subscribe(listener: () => void): () => void;
+  stop(): Router;
+  navigate(path: string, options?: NavigateOptions): Promise<void>;
+  navigateTo(name: string, params?: RouteParams, options?: NavigateOptions): Promise<void>;
+  url(nameOrPattern: string, params?: RouteParams, query?: QueryParams): string;
+  isActive(nameOrPattern: string): boolean;
+  getState(): RouteState;
+  subscribe(listener: (state: RouteState) => void): () => void;
   debug(): { mode: RouterMode; base: string; routes: Array<{ name?: string; path: string; params: string[] }> };
 }
 ```
@@ -327,15 +386,27 @@ The context object passed to handlers and middleware.
 
 ```ts
 type RouteContext<T = unknown> = {
-  params: RouteParams; // Route parameters
-  query: QueryParams; // Query parameters
-  pathname: string; // Current pathname
-  hash: string; // URL hash (without #)
-  data?: T; // Custom route data
-  meta?: Record<string, unknown>; // Metadata (populated/read by middleware)
-  navigate: (path: string, options?: NavigateOptions) => void;
+  readonly params: RouteParams;          // Route parameters
+  readonly query: QueryParams;           // Query parameters
+  readonly pathname: string;             // Current pathname
+  readonly hash: string;                 // URL hash (without #)
+  readonly data?: T;                     // Custom route data
+  meta: Record<string, unknown>;         // Mutable metadata — use this to pass data between middlewares
 };
 ```
+
+::: warning No `navigate` on context
+`RouteContext` does not expose a `navigate` method. To redirect inside a handler or middleware, call `router.navigate()` directly:
+```ts
+const authGuard: Middleware = async (ctx, next) => {
+  if (!isAuthenticated()) {
+    router.navigate('/login'); // call navigate on the router, not ctx
+    return;
+  }
+  await next();
+};
+```
+:::
 
 ### `RouteDefinition<T>`
 
@@ -343,14 +414,17 @@ Route configuration object.
 
 ```ts
 type RouteDefinition<T = unknown> = {
-  path: string; // Route path pattern
-  handler: RouteHandler<T>; // Route handler function
-  name?: string; // Optional route name
-  data?: T; // Optional custom data
-  middleware?: Middleware | Middleware[]; // Optional middleware
-  children?: RouteDefinition<T>[]; // Optional child routes
+  path: string;                           // Route path pattern
+  handler?: RouteHandler<T>;              // Route handler function (optional — middleware-only routes allowed)
+  name?: string;                          // Optional route name
+  data?: T;                               // Optional custom data
+  middleware?: Middleware | Middleware[];  // Optional route-level middleware
 };
 ```
+
+::: tip Nested routes
+Child route nesting is supported via `group()`, not via a `children` property on `RouteDefinition`.
+:::
 
 ### `RouteHandler<T>`
 
@@ -390,9 +464,35 @@ Navigation options.
 
 ```ts
 type NavigateOptions = {
-  replace?: boolean; // Replace current history entry
-  state?: unknown; // State to store with navigation
-  viewTransition?: boolean; // Override router-level viewTransitions for this navigation
+  replace?: boolean;         // Replace current history entry instead of pushing
+  state?: unknown;           // State to store with the history entry
+  viewTransition?: boolean;  // true = opt in, false = opt out, even when viewTransitions is globally enabled
+};
+```
+
+### `GroupRouter`
+
+The scoped router API available inside a `group()` callback.
+
+```ts
+type GroupRouter = {
+  on(path: string, handler: RouteHandler, extras?: Pick<RouteDefinition, 'name' | 'data' | 'middleware'>): GroupRouter;
+  route<T = unknown>(definition: RouteDefinition<T>): GroupRouter;
+  routes(definitions: RouteDefinition[]): GroupRouter;
+};
+```
+
+### `RouteState`
+
+The object returned by `getState()` and passed to `subscribe()` listeners.
+
+```ts
+type RouteState = {
+  readonly pathname: string;
+  readonly params: RouteParams;
+  readonly query: QueryParams;
+  readonly hash: string;
+  readonly name?: string; // Set when the matched route was registered with a name
 };
 ```
 
@@ -410,11 +510,12 @@ Router configuration options.
 
 ```ts
 type RouterOptions = {
-  mode?: RouterMode; // Router mode (default: 'history')
-  base?: string; // Base path (default: '/')
-  notFound?: RouteHandler; // 404 handler
-  middleware?: Middleware | Middleware[]; // Global middleware
-  viewTransitions?: boolean; // Wrap navigations in the View Transitions API (default: false)
+  mode?: RouterMode;                                          // Router mode (default: 'history')
+  base?: string;                                             // Base path (default: '/')
+  onNotFound?: RouteHandler;                                 // Handler for unmatched routes
+  onError?: (error: unknown, context: RouteContext) => void; // Handler for errors thrown in handlers/middleware
+  middleware?: Middleware | Middleware[];                     // Global middleware applied to every route
+  viewTransitions?: boolean;                                 // Wrap navigations in the View Transitions API (default: false)
 };
 ```
 
@@ -494,7 +595,7 @@ const errorHandler: Middleware = async (ctx, next) => {
     await next();
   } catch (error) {
     console.error('Route error:', error);
-    ctx.navigate('/error');
+    router.navigate('/error');
   }
 };
 ```
@@ -503,7 +604,7 @@ const errorHandler: Middleware = async (ctx, next) => {
 
 ```ts
 const router = createRouter({
-  notFound: ({ pathname }) => {
+  onNotFound: ({ pathname }) => {
     console.log('404:', pathname);
     document.getElementById('app').innerHTML = '<h1>404</h1>';
   },
@@ -512,18 +613,24 @@ const router = createRouter({
 
 ## Best Practices
 
-### 1. Type Your Context
+### 1. Pass Data Between Middlewares via `ctx.meta`
 
 ```ts
-interface AppContext extends RouteContext {
-  user?: User;
-  permissions?: Permissions;
-}
-
-const middleware: Middleware<AppContext> = async (ctx, next) => {
-  ctx.user = await fetchUser();
+// Store data in ctx.meta inside middleware
+const loadUser: Middleware = async (ctx, next) => {
+  ctx.meta.user = await fetchUser();
   await next();
 };
+
+// Read it in the handler
+router.route({
+  path: '/profile',
+  middleware: loadUser,
+  handler: (ctx) => {
+    const user = ctx.meta.user as User;
+    console.log(user.name);
+  },
+});
 ```
 
 ### 2. Use Named Routes
@@ -536,7 +643,7 @@ router.route({ path: '/users/:id', name: 'user', handler });
 router.navigateTo('user', { id: '123' });
 
 // Build URL
-const url = router.urlFor('user', { id: '123' });
+const url = router.url('user', { id: '123' });
 ```
 
 ### 3. Centralize Middleware

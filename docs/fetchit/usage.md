@@ -40,18 +40,19 @@ const user = await http.get<User>('/users/:id', { params: { id: userId } });
 ## Import
 
 ```ts
-import { createHttpClient, createQueryClient, HttpError } from '@vielzeug/fetchit';
+import { createHttpClient, createQueryClient, createClient, HttpError } from '@vielzeug/fetchit';
 ```
 
 ## Basic Usage
 
 ### Two Ways to Use Fetchit
 
-Fetchit provides flexible architecture with separate clients:
+Fetchit provides flexible architecture:
 
 1. **HTTP Client** – Pure HTTP operations without query overhead
 2. **Query Client** – Advanced caching and state management
-3. **Use Together or Independently** – Mix and match based on your needs
+3. **Unified Client** – `createClient()` combines both into one object
+4. **Use Together or Independently** – Mix and match based on your needs
 
 ### HTTP Client (Simple HTTP Requests)
 
@@ -69,7 +70,7 @@ const http = createHttpClient({
     Authorization: 'Bearer token',
     'Content-Type': 'application/json',
   },
-  dedupe: true, // Automatic request deduplication (default: true)
+  dedupe: false, // Force-dedupe non-idempotent methods (GET/HEAD/OPTIONS always dedupe)
   logger: (level, msg, meta) => {
     // Optional: Custom logger for debugging
     console.log(`[${level.toUpperCase()}]`, msg, meta);
@@ -82,7 +83,7 @@ const http = createHttpClient({
 - `baseUrl` – Base URL for all requests
 - `timeout` – Request timeout in milliseconds (default: 30000)
 - `headers` – Default headers for all requests
-- `dedupe` – Enable request deduplication (default: true)
+- `dedupe` – Force deduplication for non-idempotent methods (default: `false`; GET/HEAD/OPTIONS always dedupe)
 - `logger` – Optional logger function for debugging requests
 
 #### Making Requests
@@ -117,11 +118,11 @@ await http.delete('/users/1');
 const data = await http.request<DataType>('CUSTOM', '/endpoint');
 ```
 
-#### Query Parameters
+#### Query String Parameters
 
 ```ts
 const users = await http.get<User[]>('/users', {
-  query: {
+  search: {
     role: 'admin',
     age: 18,
     page: 1,
@@ -146,58 +147,44 @@ const post = await http.get<Post>('/posts/{postId}', {
 // Calls: /posts/456
 ```
 
-#### Combined Path and Query Parameters
+#### Combined Path and Query String Parameters
 
 ```ts
 const comments = await http.get<Comment[]>('/posts/:postId/comments', {
   params: { postId: '456' },
-  query: { sort: 'created_at', limit: 20 },
+  search: { sort: 'created_at', limit: 20 },
 });
 // Calls: /posts/456/comments?sort=created_at&limit=20
 ```
 
 ### Request Deduplication
 
-The HTTP client automatically deduplicates concurrent identical requests to prevent unnecessary network calls:
+GET, HEAD, and OPTIONS requests are **always** deduplicated — concurrent identical requests share one in-flight network call. POST, PUT, PATCH, and DELETE only deduplicate when `dedupe: true` is set on the client or per-request:
 
 ```ts
 const http = createHttpClient({
   baseUrl: 'https://api.example.com',
-  dedupe: true, // Default is true
+  // dedupe: false is the default — only GET/HEAD/OPTIONS auto-dedupe
 });
 
-// These 3 requests happen concurrently but only ONE network call is made
+// GET requests always dedupe — only ONE network call is made
 const [user1, user2, user3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
 
 // All three get the same response
 console.log(user1 === user2); // true
 ```
 
-Deduplication works with different body types:
+To deduplicate POST/PUT/PATCH/DELETE, set `dedupe: true` globally or per-request:
 
 ```ts
-// JSON bodies with same content dedupe (property order doesn't matter)
-const [r1, r2] = await Promise.all([
-  http.post('/data', { body: { name: 'Alice', age: 25 } }),
-  http.post('/data', { body: { age: 25, name: 'Alice' } }), // Same content!
-]);
-// Only one request made ✅
+const http = createHttpClient({
+  baseUrl: 'https://api.example.com',
+  dedupe: true, // Dedupe all methods, including POST
+});
 
-// FormData, Blob, ArrayBuffer are treated specially
-const formData = new FormData();
-formData.append('file', file);
-
-// All FormData uploads get the same dedupe key, so they dedupe together
-const [upload1, upload2] = await Promise.all([
-  http.post('/upload', { body: formData }),
-  http.post('/upload', { body: formData }),
-]);
-// Only one upload ✅
+// Or per-request:
+const result = await http.post('/data', { body: payload, dedupe: true });
 ```
-
-::: tip 💡 Smart Deduplication
-Fetchit uses stable serialization for request bodies, meaning property order doesn't affect deduplication. Binary data types (FormData, Blob, ArrayBuffer) are handled safely without crashing.
-:::
 
 #### Managing Headers
 
@@ -244,9 +231,9 @@ const queryKeys = {
 } as const;
 
 // Type-safe and autocomplete works!
-const user = await queryClient.fetch({
-  queryKey: queryKeys.users.detail('123'),
-  queryFn: () => http.get(`/users/123`),
+const user = await queryClient.query({
+  key: queryKeys.users.detail('123'),
+  fn: () => http.get(`/users/123`),
 });
 ```
 
@@ -254,9 +241,9 @@ const user = await queryClient.fetch({
 
 ```ts
 // Fetch user with caching
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
   staleTime: 5000, // Fresh for 5 seconds
   gcTime: 60000, // Keep in cache for 60 seconds
 });
@@ -267,9 +254,9 @@ const user = await queryClient.fetch({
 ```ts
 // Query key includes all parameters that affect the data
 async function fetchUsers(filters: { role?: string; age?: number }) {
-  return queryClient.fetch({
-    queryKey: ['users', filters], // Include filters in key
-    queryFn: () => http.get<User[]>('/users', { query: filters }),
+  return queryClient.query({
+    key: ['users', filters], // Include filters in key
+    fn: () => http.get<User[]>('/users', { search: filters }),
   });
 }
 
@@ -279,21 +266,30 @@ const adults = await fetchUsers({ age: 18 });
 
 #### Mutations (POST/PUT/DELETE)
 
+`mutation()` returns a factory object with `mutate`, `subscribe`, `getState`, and `reset` methods:
+
 ```ts
-// Create user
-const newUser = await queryClient.mutate(
-  {
-    mutationFn: (userData: CreateUserInput) => http.post<User>('/users', { body: userData }),
-    onSuccess: (data) => {
-      // Invalidate users list to refetch
-      queryClient.invalidate(['users']);
-    },
-  },
-  {
-    name: 'John Doe',
-    email: 'john@example.com',
-  },
+// Create a mutation factory
+const createUser = queryClient.mutation(
+  (userData: CreateUserInput) => http.post<User>('/users', { body: userData }),
+  { retry: false },
 );
+
+// Subscribe to state changes
+const unsubscribe = createUser.subscribe((state) => {
+  console.log(state.status, state.data, state.error);
+});
+
+// Execute the mutation
+const newUser = await createUser.mutate({
+  name: 'John Doe',
+  email: 'john@example.com',
+});
+
+// Invalidate after success
+queryClient.invalidate(['users']);
+
+unsubscribe();
 ```
 
 #### Optimistic Updates
@@ -305,17 +301,14 @@ queryClient.setData<User>(['users', userId], (old) => ({
   name: 'Updated Name',
 }));
 
+const updateUser = queryClient.mutation(
+  (updates: Partial<User>) => http.put<User>(`/users/${userId}`, { body: updates }),
+);
+
 try {
-  await queryClient.mutate(
-    {
-      mutationFn: (updates) => http.put<User>(`/users/${userId}`, { body: updates }),
-      onSuccess: () => {
-        // Refetch to get server data
-        queryClient.invalidate(['users', userId]);
-      },
-    },
-    { name: 'Updated Name' },
-  );
+  await updateUser.mutate({ name: 'Updated Name' });
+  // Refetch to sync with server
+  queryClient.invalidate(['users', userId]);
 } catch (error) {
   // Rollback on error
   queryClient.invalidate(['users', userId]);
@@ -346,8 +339,8 @@ const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
 
 // Prefetch data
 await queryClient.prefetch({
-  queryKey: ['users', '2'],
-  queryFn: () => http.get('/users/2'),
+  key: ['users', '2'],
+  fn: () => http.get('/users/2'),
 });
 
 // Clear all cache
@@ -380,15 +373,15 @@ Fetchit uses stable key serialization, meaning **property order doesn't matter**
 const key1 = ['users', { page: 1, filter: 'active' }];
 const key2 = ['users', { filter: 'active', page: 1 }]; // Different order!
 
-await queryClient.fetch({
-  queryKey: key1,
-  queryFn: () => http.get('/users'),
+await queryClient.query({
+  key: key1,
+  fn: () => http.get('/users'),
 });
 
 // This will use the cached data from above
-await queryClient.fetch({
-  queryKey: key2, // Same logical key, different property order
-  queryFn: () => http.get('/users'),
+await queryClient.query({
+  key: key2, // Same logical key, different property order
+  fn: () => http.get('/users'),
 });
 
 // Also works with nested objects
@@ -411,48 +404,41 @@ import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
   retry: 3, // 3 retries = 4 total attempts (1 initial + 3 retries)
   retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 });
 
 // Disable retries
-const data = await queryClient.fetch({
-  queryKey: ['data'],
-  queryFn: fetchData,
+const data = await queryClient.query({
+  key: ['data'],
+  fn: fetchData,
   retry: false, // No retries (1 attempt only)
-});
-
-// Or retry: 0 also means no retries
-const data2 = await queryClient.fetch({
-  queryKey: ['data2'],
-  queryFn: fetchData,
-  retry: 0, // No retries (1 attempt only)
 });
 ```
 
 ::: tip 💡 Retry Semantics
 
 - `retry: 3` means **3 retry attempts** (4 total attempts: 1 initial + 3 retries)
-- `retry: 0` or `retry: false` means **no retries** (1 attempt only)
-- Default is `retry: 3` for queries, `retry: false` for mutations
+- `retry: false` means **no retries** (1 attempt only)
+- Default is `retry: 3` for queries
   :::
 
 ### Dependent Queries
 
 ```ts
 // Fetch user first
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
 });
 
 // Then fetch their posts
-const posts = await queryClient.fetch({
-  queryKey: ['users', userId, 'posts'],
-  queryFn: () => http.get<Post[]>(`/users/${userId}/posts`),
+const posts = await queryClient.query({
+  key: ['users', userId, 'posts'],
+  fn: () => http.get<Post[]>(`/users/${userId}/posts`),
   enabled: !!user, // Only run if user exists
 });
 ```
@@ -460,18 +446,16 @@ const posts = await queryClient.fetch({
 ### Mutation with Invalidation
 
 ```ts
-await queryClient.mutate(
-  {
-    mutationFn: (postData) => http.post<Post>('/posts', { body: postData }),
-    onSuccess: () => {
-      // Invalidate posts list to refetch
-      queryClient.invalidate(['posts']);
-      // Also invalidate user's posts
-      queryClient.invalidate(['users', userId, 'posts']);
-    },
-  },
-  postData,
+const createPost = queryClient.mutation(
+  (postData: NewPost) => http.post<Post>('/posts', { body: postData }),
 );
+
+await createPost.mutate(postData);
+
+// Invalidate posts list to refetch
+queryClient.invalidate(['posts']);
+// Also invalidate user's posts
+queryClient.invalidate(['users', userId, 'posts']);
 ```
 
 ## Advanced Features
@@ -504,18 +488,13 @@ When a query is aborted:
 
 - The query state is set to `'idle'` (not `'error'`)
 - The `error` field is cleared (set to `null`)
-- The `onError` callback is **not called** (aborts are not errors)
 
 ```ts
 const controller = new AbortController();
 
-queryClient.fetch({
-  queryKey: ['data'],
-  queryFn: () => http.get('/data', { signal: controller.signal }),
-  onError: (err) => {
-    // This won't be called if request is aborted
-    console.error('Actual error:', err);
-  },
+queryClient.query({
+  key: ['data'],
+  fn: () => http.get('/data', { signal: controller.signal }),
 });
 
 // Cancel the request
@@ -526,25 +505,64 @@ controller.abort(); // Query state becomes 'idle', not 'error'
 Fetchit distinguishes between user-initiated aborts and actual errors. Aborted requests set the query status to `'idle'` with no error, while actual errors set the status to `'error'` with an error message.
 :::
 
-### Dynamic Headers
+### Interceptors
 
-Update headers after client creation:
+Add middleware to intercept and transform every request/response with `use()`. The method returns a dispose function to remove the interceptor:
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
 
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
-// Add or update headers
-http.setHeaders({
-  Authorization: 'Bearer new-token',
-  'X-Custom-Header': 'value',
+// Auth interceptor — injects a fresh token before each request
+const removeAuth = http.use(async (ctx, next) => {
+  const token = await getAccessToken();
+  ctx.init.headers = {
+    ...ctx.init.headers as Record<string, string>,
+    Authorization: `Bearer ${token}`,
+  };
+  return next(ctx);
 });
 
-// Remove headers (set to undefined)
-http.setHeaders({
-  Authorization: undefined,
+// Logging interceptor
+const removeLogger = http.use(async (ctx, next) => {
+  console.log(`→ ${ctx.init.method ?? 'GET'} ${ctx.url}`);
+  const start = Date.now();
+  const response = await next(ctx);
+  console.log(`← ${response.status} (${Date.now() - start}ms)`);
+  return response;
 });
+
+// Remove interceptors when no longer needed
+removeAuth();
+removeLogger();
+```
+
+Interceptors run in registration order and can short-circuit the chain by returning a `Response` without calling `next(ctx)`.
+
+### Unified Client
+
+`createClient()` is a convenience factory that returns an object combining both `HttpClient` and `QueryClient` methods:
+
+```ts
+import { createClient } from '@vielzeug/fetchit';
+
+const client = createClient({
+  baseUrl: 'https://api.example.com',
+  staleTime: 5000,
+});
+
+// HTTP methods available directly
+const user = await client.get<User>('/users/1');
+
+// Query methods also available
+const cachedUser = await client.query({
+  key: ['users', '1'],
+  fn: () => client.get<User>('/users/1'),
+});
+
+client.setHeaders({ Authorization: 'Bearer token' });
+client.invalidate(['users']);
 ```
 
 ### Query Options
@@ -557,9 +575,9 @@ import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
-await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
 
   // Caching
   staleTime: 5000, // Data fresh for 5 seconds
@@ -571,20 +589,12 @@ await queryClient.fetch({
   // Retry
   retry: 3, // Number of retries (or false)
   retryDelay: 1000, // Delay between retries (or function)
-
-  // Callbacks
-  onSuccess: (data) => {
-    console.log('Success:', data);
-  },
-  onError: (error) => {
-    console.error('Error:', error);
-  },
 });
 ```
 
-### Mutation Options
+### Mutation Pattern
 
-All available mutation options:
+`mutation()` creates a reusable mutation factory. Use `subscribe()` to react to state changes:
 
 ```ts
 import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
@@ -592,26 +602,29 @@ import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
-await queryClient.mutate(
+const createUser = queryClient.mutation(
+  (userData: NewUser) => http.post<User>('/users', { body: userData }),
   {
-    mutationFn: (userData) => http.post<User>('/users', { body: userData }),
-
-    // Retry
     retry: false, // Don't retry mutations by default
-
-    // Callbacks
-    onSuccess: (data, variables) => {
-      console.log('Created:', data);
-    },
-    onError: (error, variables) => {
-      console.error('Failed:', error);
-    },
-    onSettled: (data, error, variables) => {
-      // Always called (success or error)
-    },
   },
-  userData,
 );
+
+// Subscribe to state changes
+const unsubscribe = createUser.subscribe((state) => {
+  if (state.isSuccess) console.log('Created:', state.data);
+  if (state.isError) console.error('Failed:', state.error);
+});
+
+// Execute the mutation
+await createUser.mutate(userData);
+
+// Get current state
+const state = createUser.getState();
+
+// Reset state back to idle
+createUser.reset();
+
+unsubscribe();
 ```
 
 ### Cache Management
@@ -639,7 +652,7 @@ queryClient.clear();
 
 ### URL Building
 
-Use the `query` option to append query string parameters to URLs:
+Use the `search` option to append query string parameters to URLs:
 
 ```ts
 import { createHttpClient } from '@vielzeug/fetchit';
@@ -647,7 +660,7 @@ import { createHttpClient } from '@vielzeug/fetchit';
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
 const users = await http.get('/api/users', {
-  query: { page: 1, limit: 10, active: true },
+  search: { page: 1, limit: 10, active: true },
 });
 // Calls: /api/users?page=1&limit=10&active=true
 ```
@@ -715,7 +728,7 @@ await http.post('/form', { body: params });
   baseUrl?: string;          // Base URL for all requests
   headers?: Record<string, string>; // Default headers
   timeout?: number;          // Request timeout in ms (default: 30000)
-  dedupe?: boolean;          // Enable request deduplication (default: true)
+  dedupe?: boolean;          // Force-dedupe non-idempotent methods (default: false)
   logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void; // Optional debug logger
 }
 ```
@@ -726,7 +739,7 @@ await http.post('/form', { body: params });
 {
   body?: unknown;            // Request body (auto-serialized to JSON for plain objects)
   params?: Record<string, string | number | boolean | undefined>; // Path parameters
-  query?: Record<string, string | number | boolean | undefined>; // Query string parameters
+  search?: Record<string, string | number | boolean | undefined>; // Query string parameters
   dedupe?: boolean;          // Enable/disable deduplication for this request
   signal?: AbortSignal;      // AbortSignal for request cancellation
   // ...all standard RequestInit options

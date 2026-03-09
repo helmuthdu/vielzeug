@@ -22,7 +22,7 @@ describe('sum', () => {
   });
 
   it('should return 0 for an empty array', () => {
-    expect(sum([])).toBe(undefined);
+    expect(sum([])).toBe(0);
   });
 
   it('should handle arrays with a mix of numbers and other types', () => {

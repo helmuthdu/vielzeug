@@ -1,10 +1,10 @@
 # @vielzeug/toolkit
 
-> Typed utility functions for everyday TypeScript — arrays, objects, strings, async, and more
+> Typed utility functions for everyday TypeScript — arrays, objects, strings, async, dates, math, and more
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/toolkit)](https://www.npmjs.com/package/@vielzeug/toolkit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Toolkit** is a tree-shakeable collection of TypeScript utility functions: group arrays, deep-clone objects, debounce/throttle, generate IDs, and more — all individually importable with full type inference.
+**Toolkit** is a tree-shakeable collection of TypeScript utility functions covering arrays, objects, strings, async control-flow, dates, math, money, and type guards — all individually importable with full type inference and zero dependencies.
 
 ## Installation
 
@@ -17,36 +17,45 @@ pnpm add @vielzeug/toolkit
 ## Quick Start
 
 ```typescript
-import { group, debounce, deepClone, uid, chunk } from '@vielzeug/toolkit';
+import { group, chunk, debounce, retry, merge, uuid, is } from '@vielzeug/toolkit';
 
 // Group an array by a key
 const byStatus = group(users, (u) => u.status);
 // { active: [...], inactive: [...] }
 
+// Split array into chunks
+const pages = chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
+
 // Debounce an event handler
 const handleSearch = debounce((query: string) => fetchResults(query), 300);
 
-// Deep clone a value
-const copy = deepClone(complexObject);
+// Retry a failing async function
+const result = await retry(() => fetchData(), { times: 3, delay: 200 });
 
-// Unique ID
-const id = uid(); // e.g. "k3f92x"
+// Deep merge objects
+const config = merge('deep', defaults, overrides);
 
-// Split array into pages
-const pages = chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
+// Generate a UUID
+const id = uuid(); // e.g. "550e8400-e29b-41d4-a716-446655440000"
+
+// Runtime type checks
+if (is.string(value)) { /* value narrowed to string */ }
 ```
 
 ## Features
 
 - ✅ **Tree-shakeable** — import only what you use
 - ✅ **Type-safe** — full TypeScript inference on every utility
-- ✅ **Array utils** — `chunk`, `group`, `uniq`, `uniqBy`, `flatten`, `compact`, `zip`, `sortBy`, `shuffle`
-- ✅ **Object utils** — `deepClone`, `deepMerge`, `pick`, `omit`, `mapValues`, `mapKeys`
-- ✅ **String utils** — `capitalize`, `camelCase`, `kebabCase`, `snakeCase`, `truncate`, `slugify`
-- ✅ **Async utils** — `debounce`, `throttle`, `sleep`, `retry`, `timeout`
-- ✅ **Function utils** — `memoize`, `once`, `pipe`, `compose`
-- ✅ **ID / random** — `uid`, `randomInt`, `randomItem`, `sample`
-- ✅ **Type guards** — `isNil`, `isObject`, `isArray`, `isString`, `isNumber`, `isFunction`
+- ✅ **Array** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `rotate`, `replace`, `search`, `uniq`, `sort`, `contains`, `pick`
+- ✅ **Object** — `merge`, `diff`, `path`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
+- ✅ **String** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
+- ✅ **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`
+- ✅ **Function** — `debounce`, `throttle`, `memo`, `once`, `pipe`, `compose`, `curry`, `compare`, `fp`
+- ✅ **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
+- ✅ **Date** — `timeDiff`, `interval`, `expires`
+- ✅ **Money** — `currency`, `exchange`
+- ✅ **Random** — `uuid`, `random`, `draw`, `shuffle`
+- ✅ **Type guards** — `is.string`, `is.number`, `is.array`, `is.nil`, `is.equal`, `is.match`, and more
 - ✅ **Zero dependencies**
 
 ## Usage
@@ -54,62 +63,154 @@ const pages = chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
 ### Array Utilities
 
 ```typescript
-import { group, chunk, uniq, uniqBy, sortBy, compact, flatten } from '@vielzeug/toolkit';
+import { group, chunk, keyBy, fold, select, toggle, uniq } from '@vielzeug/toolkit';
 
-const grouped  = group(items, (i) => i.category);       // Record<string, Item[]>
-const pages    = chunk(items, 10);                      // Item[][]
-const unique   = uniq([1, 2, 2, 3]);                    // [1, 2, 3]
-const uniqueBy = uniqBy(items, (i) => i.id);
-const sorted   = sortBy(items, (i) => i.name);
-const truthy   = compact([0, '', null, 1, 'a']);        // [1, 'a']
-const flat     = flatten([[1, 2], [3, 4]]);             // [1, 2, 3, 4]
+// Group by key
+const byRole = group(users, (u) => u.role);     // { admin: [...], user: [...] }
+
+// Split into chunks
+const pages = chunk(items, 10);                  // Item[][]
+
+// Index by key
+const byId = keyBy(users, 'id');                 // { '1': user1, '2': user2 }
+
+// Fold (reduce without initial value)
+fold([1, 2, 3], (a, b) => a + b);               // 6
+
+// Map + filter in one step
+select([1, 2, 3, 4], (n) => n > 2 ? n * 10 : null); // [30, 40]
+
+// Toggle item in/out of array
+toggle([1, 2, 3], 2);                            // [1, 3]
+toggle([1, 2, 3], 4);                            // [1, 2, 3, 4]
+
+// Remove duplicates
+uniq([1, 2, 2, 3]);                              // [1, 2, 3]
 ```
 
 ### Object Utilities
 
 ```typescript
-import { deepClone, deepMerge, pick, omit, mapValues } from '@vielzeug/toolkit';
+import { merge, diff, path, seek, prune, parseJSON } from '@vielzeug/toolkit';
 
-const clone   = deepClone({ nested: { arr: [1, 2, 3] } });
-const merged  = deepMerge({ a: 1 }, { b: 2 });          // { a: 1, b: 2 }
-const picked  = pick(user, ['name', 'email']);
-const omitted = omit(user, ['password', 'salt']);
-const mapped  = mapValues(record, (v) => v.toUpperCase());
+// Deep merge
+const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
+// { api: { host: 'localhost', port: 3000 } }
+
+// Nested path access
+path(cfg, 'api.host');   // 'localhost'
+
+// Find value anywhere in deeply nested object
+seek(cfg, 'port');       // 3000
+
+// Remove nulls/empty values
+prune({ a: 1, b: null, c: '' });  // { a: 1 }
+
+// Safe JSON parse
+parseJSON('{"a":1}', {});  // { a: 1 }
+parseJSON('bad json', {}); // {}
 ```
 
 ### Async Utilities
 
 ```typescript
-import { debounce, throttle, sleep, retry } from '@vielzeug/toolkit';
+import { retry, sleep, parallel, pool, race, attempt, waitFor } from '@vielzeug/toolkit';
 
-const search   = debounce(fetchResults, 300);
-const scroll   = throttle(updatePosition, 16);
+// Retry with backoff
+const result = await retry(() => fetchData(), { times: 3, delay: 200, backoff: 2 });
 
+// Delay
 await sleep(500);
 
-const result = await retry(() => unstableRequest(), { times: 3, delay: 200 });
+// Process items with concurrency limit
+const results = await parallel(5, urls, async (url) => fetch(url).then(r => r.json()));
+
+// Race promise against minimum delay (prevents loading flicker)
+const data = await race(fetchUser(id), 300);
+
+// Attempt with silent error handling
+const user = await attempt(fetchUser, { retries: 2, timeout: 5000 });
+
+// Poll until condition is true
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
 ```
 
 ### String Utilities
 
 ```typescript
-import { capitalize, camelCase, kebabCase, truncate, slugify } from '@vielzeug/toolkit';
+import { camelCase, kebabCase, snakeCase, pascalCase, truncate, similarity } from '@vielzeug/toolkit';
 
-capitalize('hello world');     // 'Hello world'
-camelCase('hello-world');      // 'helloWorld'
-kebabCase('helloWorld');       // 'hello-world'
-truncate('long text...', 10);  // 'long te...'
-slugify('Hello World!');       // 'hello-world'
+camelCase('hello-world');          // 'helloWorld'
+kebabCase('helloWorld');           // 'hello-world'
+snakeCase('helloWorld');           // 'hello_world'
+pascalCase('hello-world');         // 'HelloWorld'
+truncate('A very long string', 10); // 'A very lon...'
+similarity('hello', 'hallo');      // ~0.8
 ```
 
 ### Function Utilities
 
 ```typescript
-import { memoize, once, pipe } from '@vielzeug/toolkit';
+import { memo, once, pipe, debounce, throttle, compare } from '@vielzeug/toolkit';
 
-const expensive = memoize((n: number) => fib(n));
-const init      = once(() => bootstrap());
-const process   = pipe(trim, normalize, validate);
+const fib    = memo((n: number): number => n <= 1 ? n : fib(n - 1) + fib(n - 2));
+const init   = once(() => bootstrap());
+const process = pipe(trim, normalize, validate);
+const search = debounce(fetchResults, 300);
+const scroll = throttle(updatePosition, 16);
+
+// Compare → always -1 | 0 | 1 (safe for sort)
+compare(1, 2);   // -1
+compare('b', 'a'); // 1
+```
+
+### Math Utilities
+
+```typescript
+import { sum, average, clamp, round, range, percent, linspace } from '@vielzeug/toolkit';
+
+sum([1, 2, 3, 4]);          // 10
+average([10, 20, 30]);      // 20
+clamp(105, 0, 100);         // 100
+round(Math.PI, 4);          // 3.1416
+range(1, 5);                // [1, 2, 3, 4, 5]
+percent(25, 100);           // 25
+linspace(0, 10, 5);         // [0, 2.5, 5, 7.5, 10]
+```
+
+### Date Utilities
+
+```typescript
+import { timeDiff, interval, expires } from '@vielzeug/toolkit';
+
+// Human-readable time difference
+timeDiff(new Date('2025-01-01'), new Date());
+// e.g. { value: 2, unit: 'MONTH' }
+
+// Generate date range
+interval('2024-01-01', '2024-01-07', { interval: 'day' });
+// [Date, Date, Date, Date, Date, Date, Date]
+
+// Check expiration
+expires('2023-01-01'); // e.g. 'EXPIRED'
+```
+
+### Type Guards
+
+```typescript
+import { is } from '@vielzeug/toolkit';
+
+is.string('hello');           // true
+is.number(42);                // true
+is.array([1, 2, 3]);          // true
+is.nil(null);                 // true
+is.nil(undefined);            // true
+is.equal([1, 2], [1, 2]);     // true (deep equality)
+is.match(user, { role: 'admin' }); // true (partial match)
+is.positive(5);               // true
+is.within(3, 1, 5);           // true
+is.ge(5, 5);                  // true  (a >= b)
+is.gt(5, 3);                  // true  (a > b)
 ```
 
 ## API
@@ -119,48 +220,135 @@ const process   = pipe(trim, normalize, validate);
 | Function | Description |
 |---|---|
 | `chunk(arr, size)` | Split array into chunks of given size |
-| `compact(arr)` | Remove falsy values |
-| `flatten(arr)` | Shallow flatten nested arrays |
-| `group(arr, selector)` | Group by key selector — returns `Record<string, T[]>` |
-| `shuffle(arr)` | Return a randomly reordered copy |
-| `sortBy(arr, selector)` | Sort by selector value |
+| `contains(arr, value)` | Check if array contains a value (deep equality) |
+| `fold(arr, fn)` | Reduce without initial value |
+| `group(arr, selector)` | Group by key — returns `Record<string, T[]>` |
+| `keyBy(arr, selector)` | Index by key — returns `Record<string, T>` |
+| `list(data, opts?)` | Reactive client-side pagination |
+| `pick(arr, valueFn, predicate?)` | Pick single transformed element |
+| `remoteList(opts)` | Reactive server-side pagination |
+| `replace(arr, predicate, value)` | Replace first matching element |
+| `rotate(arr, n, opts?)` | Rotate elements by N positions |
+| `search(arr, query, opts?)` | Fuzzy search |
+| `select(arr, mapper)` | Map + filter in one pass |
+| `sort(arr, comparator)` | Sort with custom comparator |
+| `toggle(arr, item, selector?, opts?)` | Add or remove item |
 | `uniq(arr)` | Remove duplicates |
-| `uniqBy(arr, selector)` | Remove duplicates by selector |
-| `zip(a, b)` | Zip two arrays into pairs |
 
 ### Object
 
 | Function | Description |
 |---|---|
-| `deepClone(obj)` | Deep-clone a value |
-| `deepMerge(target, ...sources)` | Recursively merge objects |
-| `mapKeys(obj, fn)` | Transform object keys |
-| `mapValues(obj, fn)` | Transform object values |
-| `omit(obj, keys)` | Object without specified keys |
-| `pick(obj, keys)` | Object with only specified keys |
+| `cache()` | Key-value cache with auto GC |
+| `diff(a, b)` | Find differences between objects |
+| `merge(strategy, ...objs)` | Merge objects (deep/shallow/concat) |
+| `parseJSON(str, fallback?)` | Safe JSON parse |
+| `path(obj, str)` | Access nested property by dot-path |
+| `proxy(obj, opts)` | Object proxy with get/set hooks |
+| `prune(value)` | Remove nulls/empty values recursively |
+| `seek(obj, key)` | Find value by key anywhere in nested object |
 
 ### String
 
 | Function | Description |
 |---|---|
 | `camelCase(str)` | Convert to camelCase |
-| `capitalize(str)` | Capitalise first letter |
 | `kebabCase(str)` | Convert to kebab-case |
-| `slugify(str)` | URL-safe lowercase slug |
+| `pascalCase(str)` | Convert to PascalCase |
+| `similarity(a, b)` | Similarity score (0–1) between two strings |
 | `snakeCase(str)` | Convert to snake_case |
-| `truncate(str, len, suffix?)` | Truncate with optional suffix |
+| `truncate(str, limit)` | Truncate with ellipsis |
 
-### Async / Function
+### Function
 
 | Function | Description |
 |---|---|
-| `debounce(fn, ms)` | Debounce function calls |
-| `memoize(fn)` | Cache results by arguments |
+| `assert(cond, msg, opts?)` | Assert condition, throw on failure |
+| `assertParams(params, keys)` | Validate required object keys |
+| `compare(a, b)` | Safe comparator returning -1 \| 0 \| 1 |
+| `compareBy(criteria)` | Multi-key object comparator |
+| `compose(...fns)` | Right-to-left function composition |
+| `curry(fn)` | Curry with partial application |
+| `debounce(fn, ms)` | Delay execution until idle |
+| `fp(fn, ...args)` | Functional pipeline helper |
+| `memo(fn)` | Cache results by arguments |
 | `once(fn)` | Execute only on first call |
 | `pipe(...fns)` | Left-to-right function composition |
-| `retry(fn, opts)` | Retry a failing async function |
+| `throttle(fn, ms)` | Limit execution rate |
+
+### Async
+
+| Function | Description |
+|---|---|
+| `attempt(fn, opts?)` | Execute with retry and error handling |
+| `defer()` | Deferred promise with external resolve/reject |
+| `parallel(n, items, fn, signal?)` | Process array with concurrency limit |
+| `pool(n)` | Concurrency-limited promise pool |
+| `queue(opts?)` | Sequential/concurrent task queue |
+| `race(promise, minDelay)` | Race promise against minimum delay |
+| `retry(fn, opts?)` | Retry with backoff |
 | `sleep(ms)` | Async delay |
-| `throttle(fn, ms)` | Throttle function calls |
+| `waitFor(cond, opts?)` | Poll until condition is true |
+
+### Math
+
+| Function | Description |
+|---|---|
+| `abs(n)` | Absolute value |
+| `allocate(amount, ratios)` | Distribute proportionally (bigint) |
+| `average(arr, fn?)` | Average of numbers |
+| `clamp(n, min, max)` | Clamp to range |
+| `distribute(amount, n)` | Distribute evenly (bigint) |
+| `linspace(start, end, steps?)` | Evenly spaced number array |
+| `max(arr, fn?)` | Maximum value |
+| `median(arr, fn?)` | Median value |
+| `min(arr, fn?)` | Minimum value |
+| `percent(value, total)` | Percentage (0–100) |
+| `range(start, end, step?)` | Generate number array |
+| `round(n, precision?)` | Round to decimal places |
+| `sum(arr, fn?)` | Sum of numbers |
+
+### Date
+
+| Function | Description |
+|---|---|
+| `expires(date)` | Check expiration status |
+| `interval(start, end, opts?)` | Generate date array for a range |
+| `timeDiff(a, b?, units?)` | Time difference as `{ value, unit }` |
+
+### Money
+
+| Function | Description |
+|---|---|
+| `currency(money)` | Format for display |
+| `exchange(money, opts)` | Convert between currencies |
+
+### Random
+
+| Function | Description |
+|---|---|
+| `draw(arr)` | Random element from array |
+| `random(min, max)` | Random number in range |
+| `shuffle(arr)` | Shuffle array |
+| `uuid()` | Generate UUID v4 |
+
+### Type Guards (`is` namespace)
+
+All type checks live on the `is` object:
+
+```typescript
+import { is } from '@vielzeug/toolkit';
+
+is.string(v)         is.number(v)         is.boolean(v)
+is.array(v)          is.object(v)         is.fn(v)
+is.date(v)           is.promise(v)        is.regex(v)
+is.nil(v)            is.defined(v)        is.primitive(v)
+is.empty(v)          is.equal(a, b)       is.match(obj, src)
+is.even(n)           is.odd(n)            is.positive(n)
+is.negative(n)       is.zero(n)           is.within(n, min, max)
+is.ge(a, b)          is.gt(a, b)          is.le(a, b)          is.lt(a, b)
+is.typeOf(v)         // returns 'string' | 'number' | 'array' | ...
+```
 
 ## Documentation
 

@@ -237,7 +237,7 @@ vielzeug/
 │   ├── logit/         # Logging
 │   ├── permit/        # Permissions
 │   ├── routeit/       # Routing
-│   ├── snapit/        # State management
+│   ├── storeit/        # State management
 │   ├── toolkit/       # Utilities
 │   ├── validit/       # Validation
 │   └── wireit/        # Dependency injection

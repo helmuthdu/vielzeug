@@ -81,5 +81,5 @@ contains(nested, [1, 2]); // true
 ## See Also
 
 - [isEqual](../typed/isEqual.md): The deep equality helper used by `contains`.
-- [find](./find.md): Get the matching element itself.
-- [some](./some.md): Check if any element satisfies a custom predicate.
+- [search](./search.md): Fuzzy-search over an array of strings or objects.
+- [select](./select.md): Filter elements matching a predicate.

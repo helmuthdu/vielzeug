@@ -87,10 +87,10 @@ describe('timeDiff', () => {
     expect(timeDiff(target, now)).toEqual({ unit: 'SECOND', value: 10 });
   });
 
-  it('returns INVALID_DATE for invalid date', () => {
+  it('returns undefined for invalid date', () => {
     const now = new Date(DATE_NOW);
-    expect(timeDiff('invalid-date', now)).toEqual({ unit: 'INVALID_DATE', value: 0 });
-    expect(timeDiff('invalid-date', now)).toEqual({ unit: 'INVALID_DATE', value: 0 });
+    expect(timeDiff('invalid-date', now)).toBeUndefined();
+    expect(timeDiff('invalid-date', now)).toBeUndefined();
   });
 
   it('returns 1 YEAR for exactly 1 year', () => {

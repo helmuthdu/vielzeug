@@ -4,7 +4,7 @@
    deposit - Lightweight client-side data storage
    ============================================ */
 
-import { arrange, group, max, min, type Predicate, search } from '@vielzeug/toolkit';
+import { sort, type Predicate, search } from '@vielzeug/toolkit';
 
 /* -------------------- Core Types -------------------- */
 
@@ -13,187 +13,152 @@ export type Logger = {
   warn(...args: any[]): void;
 };
 
-export type DepositDataRecord<T, K extends keyof T = keyof T> = {
+type TableDef<T, K extends keyof T = keyof T> = {
   key: K;
   record: T;
   indexes?: K[];
 };
 
-export type DepositDataSchema<S = Record<string, Record<string, unknown>>> = {
-  [K in keyof S]: DepositDataRecord<S[K], keyof S[K]>;
+export type Schema<S = Record<string, Record<string, unknown>>> = {
+  [K in keyof S]: TableDef<S[K], keyof S[K]>;
 };
 
-export type DepositMigrationFn<S extends DepositDataSchema> = (
+export type MigrationFn = (
   db: IDBDatabase,
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-  schema: S,
 ) => void | Promise<void>;
 
-type KeyType<S extends DepositDataSchema, K extends keyof S> = S[K]['record'][S[K]['key']];
-type RecordType<S extends DepositDataSchema, K extends keyof S> = S[K]['record'];
+type KeyType<S extends Schema, K extends keyof S> = S[K]['record'][S[K]['key']];
+type RecordType<S extends Schema, K extends keyof S> = S[K]['record'];
 
-type AdapterConfig<S extends DepositDataSchema> = {
-  type: 'localStorage' | 'indexedDB';
+export type LocalStorageConfig<S extends Schema> = {
+  type: 'localStorage';
   dbName: string;
-  version?: number;
   schema: S;
-  migrationFn?: DepositMigrationFn<S>;
   logger?: Logger;
 };
 
-/* -------------------- Schema Validation -------------------- */
+export type IndexedDBConfig<S extends Schema> = {
+  type: 'indexedDB';
+  dbName: string;
+  version?: number;
+  schema: S;
+  migrationFn?: MigrationFn;
+  logger?: Logger;
+};
+
+export type AdapterConfig<S extends Schema> = LocalStorageConfig<S> | IndexedDBConfig<S>;
+
+/* -------------------- Schema Factory -------------------- */
 
 /**
  * Helper to create a type-safe schema definition with clean syntax
  * @example
  * ```ts
- * const schema = defineSchema<{ users: User; posts: Post }>()({
+ * const schema = defineSchema<{ users: User; posts: Post }>({
  *   users: { key: 'id', indexes: ['name', 'email'] },
  *   posts: { key: 'id' }
  * });
  * ```
  */
-export function defineSchema<S extends Record<string, Record<string, unknown>>>() {
-  return <Schema extends { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }>(
-    schema: Schema,
-  ): DepositDataSchema<S> => schema as unknown as DepositDataSchema<S>;
-}
-
-function validateDepositSchema<S extends DepositDataSchema>(schema: S): void {
-  for (const [tableName, def] of Object.entries(schema)) {
-    const recordDef = def as DepositDataRecord<any>;
-    if (!recordDef || recordDef.key === undefined) {
-      throw new Error(
-        `Invalid schema: table "${tableName}" missing required "key" field. ` +
-          'Schema entries must have shape: { key: K; indexes?: K[] }',
-      );
-    }
-  }
+export function defineSchema<S extends Record<string, Record<string, unknown>>>(
+  schema: { [K in keyof S]: { key: keyof S[K]; indexes?: (keyof S[K])[] } },
+): Schema<S> {
+  return schema as unknown as Schema<S>;
 }
 
 /* -------------------- Helper Functions -------------------- */
 
-function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { expiresAt?: number } {
+function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { __deposit_ttl__?: number } {
   if (!ttl) return value;
-  return { ...value, expiresAt: Date.now() + ttl };
+  return { ...value, __deposit_ttl__: Date.now() + ttl };
 }
 
 function isExpired(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-  const obj = value as Record<string, unknown> & { expiresAt?: number };
-  return obj.expiresAt !== undefined && Date.now() >= obj.expiresAt;
+  const obj = value as Record<string, unknown> & { __deposit_ttl__?: number };
+  return obj.__deposit_ttl__ !== undefined && Date.now() >= obj.__deposit_ttl__;
 }
 
 function stripExpiry<T extends object>(value: T): T {
-  if (!('expiresAt' in value)) return value;
-  const { expiresAt: _, ...rest } = value as any;
+  if (!('__deposit_ttl__' in value)) return value;
+  const { __deposit_ttl__: _, ...rest } = value as any;
   return rest as T;
 }
 
-type PatchOperation<T, K = any> =
-  | { type: 'put'; value: T; ttl?: number }
-  | { type: 'delete'; key: K }
-  | { type: 'clear' };
+/* -------------------- Adapter Interface + BaseAdapter -------------------- */
 
-/* -------------------- DepositBaseAdapter -------------------- */
-
-export abstract class DepositBaseAdapter<S extends DepositDataSchema> {
-  abstract get<K extends keyof S, T extends RecordType<S, K>>(
+export interface Adapter<S extends Schema> {
+  get<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
-    defaultValue?: T,
-  ): Promise<T | undefined>;
-  abstract getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>;
-  abstract put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>;
-  abstract delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
-  abstract clear<K extends keyof S>(table: K): Promise<void>;
-  abstract count<K extends keyof S>(table: K): Promise<number>;
-  abstract bulkPut<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>;
-  abstract bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
-  abstract transaction<K extends keyof S, T extends { [P in K]: RecordType<S, P>[] }>(
-    tables: K[],
-    fn: (stores: T) => Promise<void>,
-    ttl?: number,
-  ): Promise<void>;
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined>;
+  getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>;
+  put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>;
+  delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
+  clear<K extends keyof S>(table: K): Promise<void>;
+  count<K extends keyof S>(table: K): Promise<number>;
+  bulkPut<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>;
+  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
+  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>;
+}
 
-  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return new QueryBuilder<RecordType<S, K>>(this, String(table));
-  }
-
-  async patch<K extends keyof S>(table: K, patches: PatchOperation<RecordType<S, K>, KeyType<S, K>>[]): Promise<void> {
-    await Promise.all(
-      patches.map((patch) => {
-        switch (patch.type) {
-          case 'put':
-            return this.put(table, patch.value, patch.ttl);
-          case 'delete':
-            return this.delete(table, patch.key);
-          case 'clear':
-            return this.clear(table);
-          default:
-            throw new Error('Unknown patch operation type');
-        }
-      }),
-    );
-  }
+export function query<S extends Schema, K extends keyof S>(
+  adapter: Adapter<S>,
+  table: K,
+): QueryBuilder<RecordType<S, K>> {
+  return new QueryBuilder<RecordType<S, K>>(adapter, String(table));
 }
 
 /* -------------------- createDeposit Factory -------------------- */
 
-export function createDeposit<S extends DepositDataSchema>(
-  config: DepositBaseAdapter<S> | AdapterConfig<S>,
-): DepositBaseAdapter<S> {
-  if (!('type' in config)) return config;
-  const { type, dbName, version = 1, schema, migrationFn, logger } = config;
-  switch (type) {
-    case 'localStorage':
-      return new LocalStorageAdapter(dbName, schema, logger);
-    case 'indexedDB':
-      return new IndexedDBAdapter(dbName, version, schema, migrationFn, logger);
-    default:
-      throw new Error(`Unknown adapter type: ${type}`);
+export function createDeposit<S extends Schema>(config: AdapterConfig<S>): Adapter<S> {
+  if (config.type === 'localStorage') {
+    return new LocalStorageAdapter(config.dbName, config.schema, config.logger);
   }
+  return new IndexedDBAdapter(config.dbName, config.version ?? 1, config.schema, config.migrationFn, config.logger);
 }
 
 /* -------------------- QueryBuilder -------------------- */
 
 export class QueryBuilder<T extends Record<string, unknown>> {
-  private operations: Array<(data: T[]) => T[]> = [];
+  private readonly operations: ReadonlyArray<(data: any[]) => any[]>;
   private readonly adapter: { getAll(table: string): Promise<unknown[]> };
   private readonly table: string;
 
-  constructor(adapter: { getAll(table: string): Promise<unknown[]> }, table: string) {
+  constructor(
+    adapter: { getAll(table: string): Promise<unknown[]> },
+    table: string,
+    operations: ReadonlyArray<(data: any[]) => any[]> = [],
+  ) {
     this.adapter = adapter;
     this.table = table;
+    this.operations = operations;
   }
 
-  private pushOp(op: (data: T[]) => T[]): this {
-    this.operations.push(op);
-    return this;
+  private clone(op: (data: T[]) => T[]): QueryBuilder<T> {
+    return new QueryBuilder<T>(this.adapter, this.table, [...this.operations, op]);
   }
 
-  where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): this {
-    return this.pushOp((data) => data.filter((r) => predicate(r[field], r)));
+  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
+    return this.clone((data) => data.filter((r) => r[field] === value));
   }
 
-  equals<K extends keyof T>(field: K, value: T[K]): this {
-    return this.pushOp((data) => data.filter((r) => r[field] === value));
-  }
-
-  between<K extends keyof T>(field: K, lower: number, upper: number): this {
-    return this.pushOp((data) =>
+  between<K extends keyof T>(field: K, lower: number | string, upper: number | string): QueryBuilder<T> {
+    return this.clone((data) =>
       data.filter((r) => {
-        const val = r[field] as any;
+        const val = r[field] as number | string;
         return val >= lower && val <= upper;
       }),
     );
   }
 
-  startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase = false): this {
+  startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase = false): QueryBuilder<T> {
     const lowerPrefix = ignoreCase ? prefix.toLowerCase() : prefix;
-    return this.pushOp((data) =>
+    return this.clone((data) =>
       data.filter((r) => {
         const value = r[field];
         if (typeof value !== 'string') return false;
@@ -203,35 +168,39 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     );
   }
 
-  filter(fn: Predicate<T>): this {
-    return this.pushOp((data) => data.filter(fn));
+  filter(fn: Predicate<T>): QueryBuilder<T> {
+    return this.clone((data) => data.filter(fn));
   }
 
-  not(fn: Predicate<T>): this {
-    return this.pushOp((data) => data.filter((item, idx, arr) => !fn(item, idx, arr)));
-  }
-
-  orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): this {
-    return this.pushOp(
-      (data) => arrange(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
+  orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
+    return this.clone(
+      (data) => sort(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
     );
   }
 
-  limit(n: number): this {
-    return this.pushOp((data) => data.slice(0, n));
+  limit(n: number): QueryBuilder<T> {
+    return this.clone((data) => data.slice(0, n));
   }
 
-  offset(n: number): this {
-    return this.pushOp((data) => data.slice(n));
+  offset(n: number): QueryBuilder<T> {
+    return this.clone((data) => data.slice(n));
   }
 
-  page(pageNumber: number, pageSize: number): this {
+  page(pageNumber: number, pageSize: number): QueryBuilder<T> {
     const start = (pageNumber - 1) * pageSize;
-    return this.pushOp((data) => data.slice(start, start + pageSize));
+    return this.clone((data) => data.slice(start, start + pageSize));
   }
 
-  reverse(): this {
-    return this.pushOp((data) => [...data].reverse());
+  reverse(): QueryBuilder<T> {
+    return this.clone((data) => [...data].reverse());
+  }
+
+  map<U extends Record<string, unknown>>(callback: (record: T) => U): QueryBuilder<U> {
+    return new QueryBuilder<U>(this.adapter, this.table, [...this.operations, (data: T[]) => data.map(callback)]);
+  }
+
+  search(query: string, tone?: number): QueryBuilder<T> {
+    return this.clone((data) => search(data, query, tone) as T[]);
   }
 
   async count(): Promise<number> {
@@ -247,75 +216,35 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return arr[arr.length - 1];
   }
 
-  async average<K extends keyof T>(field: K): Promise<number> {
-    const arr = await this.toArray();
-    if (arr.length === 0) return 0;
-    const total = arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
-    return total / arr.length;
-  }
-
-  async min<K extends keyof T>(field: K): Promise<T | undefined> {
-    return min(await this.toArray(), (item) => item[field] as any);
-  }
-
-  async max<K extends keyof T>(field: K): Promise<T | undefined> {
-    return max(await this.toArray(), (item) => item[field] as any);
-  }
-
-  async sum<K extends keyof T>(field: K): Promise<number> {
-    const arr = await this.toArray();
-    return arr.reduce((acc, item) => acc + (Number(item[field]) || 0), 0);
-  }
-
-  map(callback: (record: T) => T): this {
-    return this.pushOp((data) => data.map(callback));
-  }
-
-  async toGrouped<K extends keyof T>(field: K): Promise<Array<{ key: T[K]; values: T[] }>> {
-    const data = await this.toArray();
-    const grouped = group(data, (item) => item[field] as any);
-    return Object.entries(grouped).map(([key, values]) => ({
-      key: key as T[K],
-      values: values as T[],
-    }));
-  }
-
-  search(query: string, tone?: number): this {
-    return this.pushOp((data) => search(data as unknown as any[], query, tone) as unknown as T[]);
-  }
-
-  reset(): this {
-    this.operations = [];
-    return this;
-  }
-
   async toArray(): Promise<T[]> {
-    let data = (await this.adapter.getAll(this.table)) as T[];
+    let data: any[] = (await this.adapter.getAll(this.table)) as any[];
     for (const op of this.operations) data = op(data);
-    return data;
+    return data as T[];
   }
 }
 
 /* -------------------- LocalStorageAdapter -------------------- */
 
-export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
+export class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   private readonly dbName: string;
   private readonly schema: S;
   private readonly logger: Logger;
 
+  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
+    return query(this, table);
+  }
+
   constructor(dbName: string, schema: S, logger?: Logger) {
-    super();
-    validateDepositSchema(schema);
     this.dbName = dbName;
     this.schema = schema;
     this.logger = logger ?? console;
   }
 
-  async get<K extends keyof S, T extends RecordType<S, K>>(
+  async get<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
-    defaultValue?: T,
-  ): Promise<T | undefined> {
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined> {
     const storageKey = this.getStorageKey(table, String(key));
     const item = localStorage.getItem(storageKey);
     if (!item) return defaultValue;
@@ -324,18 +253,18 @@ export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBas
       const parsed = JSON.parse(item);
 
       if (!parsed || typeof parsed !== 'object') {
-        await this.delete(table, key);
+        localStorage.removeItem(storageKey);
         return defaultValue;
       }
 
       if (isExpired(parsed)) {
-        await this.delete(table, key);
+        localStorage.removeItem(storageKey);
         return defaultValue;
       }
-      return stripExpiry(parsed) as T;
+      return stripExpiry(parsed) as RecordType<S, K>;
     } catch (err) {
       this.logger.warn(`Removing corrupted entry for key: ${String(key)}`, err);
-      await this.delete(table, key);
+      localStorage.removeItem(storageKey);
       return defaultValue;
     }
   }
@@ -402,32 +331,8 @@ export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBas
     await Promise.all(keys.map((key) => this.delete(table, key)));
   }
 
-  async transaction<K extends keyof S, T extends { [P in K]: RecordType<S, P>[] }>(
-    tables: K[],
-    fn: (stores: T) => Promise<void>,
-    ttl?: number,
-  ): Promise<void> {
-    const storeMap = {} as T;
-    await Promise.all(
-      tables.map(async (table) => {
-        (storeMap as any)[table] = await this.getAll(table);
-      }),
-    );
-    try {
-      await fn(storeMap as T);
-      await Promise.all(
-        tables.map(async (table) => {
-          await this.clear(table);
-          await this.bulkPut(table, storeMap[table], ttl);
-        }),
-      );
-    } catch (err) {
-      throw new Error(`Transaction failed for tables: ${tables.join(', ')}`, { cause: err });
-    }
-  }
-
   private getRecordKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number {
-    const keyField = String((this.schema[table] as DepositDataRecord<any>).key);
+    const keyField = String((this.schema[table] as TableDef<any>).key);
     const keyValue = value[keyField];
 
     if (keyValue === undefined || keyValue === null) {
@@ -445,17 +350,19 @@ export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBas
 
 /* -------------------- IndexedDBAdapter -------------------- */
 
-export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
+export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
   private db: IDBDatabase | null = null;
   private readonly dbName: string;
   private readonly schema: S;
   private readonly version: number;
-  private readonly migrationFn?: DepositMigrationFn<S>;
+  private readonly migrationFn?: MigrationFn;
   private readonly logger: Logger;
 
-  constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>, logger?: Logger) {
-    super();
-    validateDepositSchema(schema);
+  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
+    return query(this, table);
+  }
+
+  constructor(dbName: string, version: number, schema: S, migrationFn?: MigrationFn, logger?: Logger) {
     this.dbName = dbName;
     this.version = version;
     this.schema = schema;
@@ -463,7 +370,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
     this.logger = logger ?? console;
   }
 
-  async connect(): Promise<void> {
+  private async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
@@ -482,7 +389,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
             reject(new Error('Migration failed', { cause: err }));
           };
           try {
-            const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx, this.schema);
+            const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx);
             Promise.resolve(result).catch(handleError);
           } catch (err) {
             handleError(err);
@@ -499,20 +406,15 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
     });
   }
 
-  async get<K extends keyof S, T extends RecordType<S, K>>(
+  async get<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
-    defaultValue?: T,
-  ): Promise<T | undefined> {
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined> {
     return await this.withTransaction(table, 'readonly', async (store) => {
       const result = (await this.requestToPromise(store.get(key as IDBValidKey))) as any;
-      if (!result) return defaultValue;
-
-      if (isExpired(result)) {
-        await this.delete(table, key);
-        return defaultValue;
-      }
-      return stripExpiry(result) as T;
+      if (!result || isExpired(result)) return defaultValue;
+      return stripExpiry(result) as RecordType<S, K>;
     });
   }
 
@@ -561,9 +463,9 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
     });
   }
 
-  async transaction<K extends keyof S, T extends { [P in K]: RecordType<S, P>[] }>(
+  async transaction<K extends keyof S>(
     tables: K[],
-    fn: (stores: T) => Promise<void>,
+    fn: (stores: { [P in K]: RecordType<S, P>[] }) => Promise<void>,
     ttl?: number,
   ): Promise<void> {
     if (!this.db) await this.connect();
@@ -575,7 +477,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
       let callbackError: Error | undefined;
 
       (async () => {
-        const storeMap = {} as T;
+        const storeMap = {} as { [P in K]: RecordType<S, P>[] };
         await Promise.all(
           tables.map(async (table) => {
             const store = tx.objectStore(String(table));
@@ -585,7 +487,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
               .map((rec) => stripExpiry(rec as object));
           }),
         );
-        await fn(storeMap as T);
+        await fn(storeMap);
         await Promise.all(
           tables.map(async (table) => {
             const store = tx.objectStore(String(table));
@@ -621,7 +523,7 @@ export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAd
     for (const [name, def] of Object.entries(this.schema)) {
       if (db.objectStoreNames.contains(name)) continue;
 
-      const recordDef = def as DepositDataRecord<any>;
+      const recordDef = def as TableDef<any>;
       const keyPath = recordDef.key as string;
       const store = db.createObjectStore(name, { keyPath });
 

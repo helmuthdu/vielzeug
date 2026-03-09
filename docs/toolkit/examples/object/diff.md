@@ -82,5 +82,5 @@ diff(v1, v2);
 ## See Also
 
 - [merge](./merge.md): Combine objects (often used with the result of `diff`).
-- [clone](./clone.md): Create a copy of an object.
+- [prune](./prune.md): Remove null/empty values from an object.
 - [isEqual](../typed/isEqual.md): The comparison engine used by `diff`.

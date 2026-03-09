@@ -63,21 +63,42 @@ const form = createForm({
 });
 ```
 
-### Using Dot-Notation for Nested Data
+### Nested Objects in Values
 
-There is no auto-flattening of nested objects. Store nested data with explicit dot-notation keys:
+Plain objects inside `values` are automatically flattened into dot-notation keys, so you can write your initial state as a natural nested structure:
+
+```typescript
+const form = createForm({
+  values: {
+    user: {
+      name: 'Alice',
+      profile: {
+        age: 25,
+        city: 'NYC',
+      },
+    },
+  },
+});
+
+form.get('user.name');        // 'Alice'
+form.get('user.profile.age'); // 25 (typed number)
+form.set('user.name', 'Bob');
+```
+
+You can also use dot-notation string keys directly — both styles are equivalent:
 
 ```typescript
 const form = createForm({
   values: {
     'user.name': 'Alice',
     'user.profile.age': 25,
-    'user.profile.city': 'NYC',
   },
 });
-
-form.get('user.profile.age'); // 25 (typed number, not string)
 ```
+
+::: tip What gets flattened?
+Only plain objects (`{}` literals) are flattened. Arrays, `Date` instances, class instances, `File`, and `Blob` values are stored as-is under their own key.
+:::
 
 ### Reading and Writing Values
 
@@ -139,8 +160,12 @@ async function nextStep() {
 }
 
 async function submitForm() {
-  await form.submit(async (formData) => {
-    await fetch('/api/complete', { method: 'POST', body: formData });
+  await form.submit(async (values) => {
+    await fetch('/api/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
   });
 }
 ```
@@ -210,7 +235,7 @@ const form = createForm({
 });
 
 window.addEventListener('beforeunload', (e) => {
-  const state = form.snapshot();
+  const state = form.getState();
 
   if (state.isDirty) {
     e.preventDefault();
@@ -233,8 +258,12 @@ form.subscribe((state) => {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
       await form.submit(
-        async (formData) => {
-          await fetch('/api/auto-save', { method: 'POST', body: formData });
+        async (values) => {
+          await fetch('/api/auto-save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+          });
         },
         { validate: false },
       );
@@ -305,29 +334,31 @@ try {
 form.submit(onSubmit).catch(console.error);
 ```
 
-### 4. Use Explicit Dot-Notation Keys for Nested Data
+### 4. Use Nested Objects for Structured Data
 
 ```typescript
-// ✅ Good – explicit dot-notation keys
+// ✅ Good – natural nested structure, auto-flattened
+values: {
+  user: { name: '', email: '' },
+  address: { street: '', city: '' },
+}
+// Access: form.get('user.name'), form.get('address.city')
+
+// ✅ Also fine – explicit dot-notation keys
 values: {
   'user.name': '',
   'user.email': '',
-  'address.street': '',
-  'address.city': '',
 }
 
-// ❌ Nested objects are stored as-is, not flattened
-values: {
-  user: { name: '', email: '' },    // form.get('user') returns the whole object
-  address: { street: '', city: '' },
-}
+// ❌ Accessing nested object as a key – won't work
+form.get('user'); // undefined (keys are 'user.name', 'user.email', ...)
 ```
 
 ### 5. Validate on Submit, Show Errors on Blur
 
 ```typescript
 const binding = form.bind('email', {
-  markTouchedOnBlur: true,
+  touchOnBlur: true,
 });
 
 // Show error only if touched
@@ -451,10 +482,11 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // Submit
-await form.submit(async (formData) => {
+import { toFormData } from '@vielzeug/formit';
+await form.submit(async (values) => {
   await fetch('/api/upload', {
     method: 'POST',
-    body: formData, // FormData ready with file
+    body: toFormData(values), // handles File/Blob values
   });
 });
 ```
@@ -565,7 +597,7 @@ function ContactForm() {
     }),
   );
 
-  const [state, setState] = useState(form.snapshot());
+  const [state, setState] = useState(form.getState());
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -573,8 +605,12 @@ function ContactForm() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        form.submit(async (formData) => {
-          await fetch('/api/contact', { method: 'POST', body: formData });
+        form.submit(async (values) => {
+          await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+          });
         });
       }}>
       <input {...form.bind('name')} placeholder="Name" />
@@ -601,7 +637,7 @@ import { createForm } from '@vielzeug/formit';
 
 function useForm(init: FormInit) {
   const [form] = useState(() => createForm(init));
-  const [state, setState] = useState(form.snapshot());
+  const [state, setState] = useState(form.getState());
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -652,15 +688,19 @@ const form = createForm({
   },
 });
 
-const state = ref(form.snapshot());
+const state = ref(form.getState());
 let unsubscribe;
 
 onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
 onUnmounted(() => unsubscribe?.());
 
 const handleSubmit = async () => {
-  await form.submit(async (formData) => {
-    await fetch('/api/login', { method: 'POST', body: formData });
+  await form.submit(async (values) => {
+    await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
   });
 };
 </script>
@@ -689,7 +729,7 @@ import { createForm, type FormInit } from '@vielzeug/formit';
 
 export function useForm(init: FormInit) {
   const form = createForm(init);
-  const state = ref(form.snapshot());
+  const state = ref(form.getState());
   let unsubscribe;
 
   onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
@@ -717,15 +757,19 @@ const form = createForm({
   },
 });
 
-const state = writable(form.snapshot());
+const state = writable(form.getState());
 let unsubscribe;
 
 onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
 onDestroy(() => unsubscribe?.());
 
 async function handleSubmit() {
-  await form.submit(async (formData) => {
-    await fetch('/api/login', { method: 'POST', body: formData });
+  await form.submit(async (values) => {
+    await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
   });
 }
 </script>

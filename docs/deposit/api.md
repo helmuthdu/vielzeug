@@ -9,26 +9,23 @@ description: Complete API reference for Deposit storage and query builder.
 
 ## `createDeposit()` factory
 
-The `createDeposit()` function is a factory (not a class) that returns a `DepositBaseAdapter<S>`. Pass either an adapter instance or a configuration object.
+The `createDeposit()` function is a factory that returns an `Adapter<S>`. Pass a configuration object specifying the adapter type, database name, schema, and optional settings.
 
 ## Deposit Methods
 
 ### `createDeposit(config)`
 
-Creates a createDeposit adapter.
+Creates a deposit adapter.
 
 **Parameters:**
 
-- `config: DepositBaseAdapter<S> | AdapterConfig<S>` – Either an adapter instance or a configuration object
+- `config: AdapterConfig<S>` – Configuration object
+
+**Returns:** `Adapter<S>`
 
 **Example:**
 
 ```ts
-// With adapter instance
-const adapter = new IndexedDBAdapter('my-db', 1, schema);
-const db = createDeposit(adapter);
-
-// With configuration object
 const db = createDeposit({
   type: 'indexedDB',
   dbName: 'my-db',
@@ -243,12 +240,11 @@ const adults = await db
 
 ### `transaction(tables, fn, ttl?)`
 
-Performs operations across multiple tables with automatic adapter-appropriate behavior.
+Performs operations across multiple tables within a single atomic `IDBTransaction`.
 
-**Atomicity:**
+> **Note:** `transaction()` is only available on `IndexedDBAdapter`. Use individual CRUD methods for localStorage.
 
-- **IndexedDB**: Fully atomic – all changes happen in a single IDBTransaction (ACID guarantees)
-- **LocalStorage**: Optimistic – changes are applied sequentially (not atomic across tables)
+**Atomicity:** Fully atomic – all changes happen in a single IDBTransaction (ACID guarantees).
 
 **Parameters:**
 
@@ -277,8 +273,7 @@ await db.transaction(['users', 'posts'], async (stores) => {
     content: 'My first post',
   });
 
-  // For IndexedDB: Changes are committed atomically
-  // For LocalStorage: Changes are committed optimistically
+  // Changes are committed atomically
 });
 ```
 
@@ -286,32 +281,10 @@ await db.transaction(['users', 'posts'], async (stores) => {
 
 - Loads all specified tables into memory
 - Executes the callback with in-memory proxies
-- On success: commits all changes (atomically for IndexedDB)
-- On error: rolls back all changes without persisting
+- On success: commits all changes atomically via IDBTransaction
+- On error: the IDB transaction is aborted, no changes are persisted
 
 ---
-
-### `patch(table, patches)`
-
-Applies a batch of operations (put, delete, clear) atomically.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `patches: PatchOperation[]` – Array of operations
-
-**Returns:** `Promise<void>`
-
-**Example:**
-
-```ts
-await db.patch('users', [
-  { type: 'put', value: { id: 'u1', name: 'Alice', email: 'a@example.com' } },
-  { type: 'put', value: { id: 'u2', name: 'Bob', email: 'b@example.com' }, ttl: 3600000 },
-  { type: 'delete', key: 'u3' },
-  { type: 'clear' }, // Clears all, then applies puts
-]);
-```
 
 ## QueryBuilder Methods
 
@@ -351,21 +324,6 @@ const aliceUsers = await db.query('users').startsWith('name', 'Alice', true).toA
 
 ---
 
-### `where(field, predicate)`
-
-Filters using custom predicate function.
-
-**Example:**
-
-```ts
-const verified = await db
-  .query('users')
-  .where('email', (email) => email.endsWith('@company.com'))
-  .toArray();
-```
-
----
-
 ### `filter(fn)`
 
 Filters using predicate on entire record.
@@ -381,34 +339,7 @@ const special = await db
 
 ---
 
-### `not(fn)`
-
-Excludes records where the predicate returns `true`.
-
-**Example:**
-
-```ts
-const nonAdmins = await db
-  .query('users')
-  .not((u) => u.role === 'admin')
-  .toArray();
-```
-
-::: tip Combining conditions
-For AND-like behaviour, chain multiple `.filter()` calls. For OR-like behaviour, use a single `.filter()` with `||`:
-```ts
-// AND
-const seniors = await db.query('users')
-  .filter((u) => u.role === 'admin')
-  .filter((u) => u.age >= 30)
-  .toArray();
-
-// OR
-const either = await db.query('users')
-  .filter((u) => u.role === 'admin' || u.age >= 50)
-  .toArray();
-```
-:::
+### `orderBy(field, direction?)`
 
 Sorts results by field.
 
@@ -470,67 +401,23 @@ const lastUser = await db.query('users').last();
 
 ---
 
-### `average(field)`, `min(field)`, `max(field)`, `sum(field)`
+### `map<U>(callback)`
 
-Numeric aggregations.
-
-**Example:**
-
-```ts
-const avgAge = await db.query('users').average('age');
-const youngest = await db.query('users').min('age');
-const oldest = await db.query('users').max('age');
-const totalAge = await db.query('users').sum('age');
-```
-
----
-
-### `map(callback)`
-
-Transforms each record in the result set. Returns `this` for chaining.
+Transforms each record into a new type. Returns a new `QueryBuilder<U>`.
 
 **Parameters:**
 
-- `callback: (record: T) => T` – Transformation function applied to each record
+- `callback: (record: T) => U` – Transformation function
 
 **Example:**
 
 ```ts
-const uppercased = await db
+const names = await db
   .query('users')
-  .map((user) => ({
-    ...user,
-    name: user.name.toUpperCase(),
-  }))
+  .map((user) => ({ name: user.name }))
   .toArray();
+// QueryBuilder<{ name: string }>
 ```
-
----
-
-### `toGrouped(field)`
-
-Type-safe grouping. Returns an array of grouped results with proper typing.
-
-**Parameters:**
-
-- `field: K` – Field to group by
-
-**Returns:** `Promise<Array<{ key: T[K], values: T[] }>>`
-
-**Example:**
-
-```ts
-const grouped = await db.query('users').toGrouped('role');
-// Type: Array<{ key: 'admin' | 'user', values: User[] }>
-
-for (const group of grouped) {
-  console.log(`${group.key}: ${group.values.length} users`);
-}
-```
-
-::: tip Recommended
-Use `toGrouped()` for better type safety and clearer intent. It returns properly typed results without requiring manual type casting.
-:::
 
 ---
 
@@ -547,18 +434,6 @@ Performs fuzzy search across all string fields.
 
 ```ts
 const searchResults = await db.query('users').search('alice').toArray();
-```
-
----
-
-### `reset()`
-
-Resets the query builder to start fresh.
-
-**Example:**
-
-```ts
-const builder = db.query('users').equals('role', 'admin').reset().equals('role', 'user'); // Start over
 ```
 
 ---
@@ -583,7 +458,7 @@ const results = await db
 
 ### `LocalStorageAdapter<S>`
 
-Storage adapter using browser LocalStorage with schema validation and safe key encoding.
+Uses `window.localStorage` under the hood. All methods are `async` for a consistent API.
 
 **Constructor:**
 
@@ -594,46 +469,21 @@ new LocalStorageAdapter(dbName: string, schema: S, logger?: Logger)
 **Example:**
 
 ```ts
-const adapter = new LocalStorageAdapter('my-app', schema);
-const db = createDeposit(adapter);
+const db = createDeposit({ type: 'localStorage', dbName: 'my-app', schema });
 ```
 
 **Characteristics:**
 
-- Synchronous operations (wrapped in promises for API consistency)
-- ~5-10MB storage limit
-- String-based storage (JSON serialization)
-- Survives page reloads
-- Shared across all tabs/windows
-- **Schema validation** on initialization (throws clear errors for invalid schemas)
-- **Safe key encoding** using `encodeURIComponent` (handles special characters including colons)
-- **Graceful error handling** (corrupted entries are skipped and deleted, not thrown)
-
-**Schema Validation:**
-
-```ts
-// ✅ Valid – will work
-const validSchema = defineSchema<{ users: User }>()({ users: { key: 'id' } });
-
-// ❌ Invalid – will throw immediately
-const invalidSchema = {
-  users: {}, // Missing 'key' field
-};
-// Error: "Invalid schema: table "users" missing required "key" field..."
-```
-
-**Safe Key Handling:**
-
-```ts
-// Special characters in dbName and table names are safely encoded
-const adapter = new LocalStorageAdapter('my:app:db', schema); // ✅ Works
-```
+- ~5-10 MB storage limit
+- Keys encoded with `encodeURIComponent` — special characters (including `:`) are safe
+- Expired or corrupted entries are removed lazily on read; a warning is logged
+- No `transaction()` method
 
 ---
 
 ### `IndexedDBAdapter<S>`
 
-Storage adapter using browser IndexedDB with schema validation and robust index creation.
+Uses the native `IDBDatabase` API. Connection is lazy — opened on first operation.
 
 **Constructor:**
 
@@ -642,234 +492,128 @@ new IndexedDBAdapter(
   dbName: string,
   version: number,
   schema: S,
-  migrationFn?: DepositMigrationFn<S>
+  migrationFn?: MigrationFn,
+  logger?: Logger,
 )
 ```
 
 **Example:**
 
 ```ts
-const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
-  // Optional migration logic
-});
-const db = createDeposit(adapter);
-```
-
-**Characteristics:**
-
-- Asynchronous, transaction-based operations
-- Much larger storage limits (typically hundreds of MB to GB)
-- Native object storage with indexes
-- Supports complex queries via indexes
-- Isolated per origin
-- **Schema validation** on initialization
-- **Smart index creation** (detects duplicates, skips redundant key path indexes)
-- **Robust error handling** for index creation failures
-
-**Index Creation:**
-
-```ts
-const schema = defineSchema<{ users: User }>()({ users: { key: 'id', indexes: ['email', 'role', 'email'] } });
-// Logs warning: "Duplicate index \"email\" in table \"users\" – skipping"
-
-const schema2 = defineSchema<{ users: User }>()({ users: { key: 'id', indexes: ['id'] } });
-// Logs warning: "Skipping index on key path "id" – redundant"
-```
-
-```ts
-const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
-  if (oldVersion < 1) {
+const db = createDeposit({
+  type: 'indexedDB',
+  dbName: 'my-app',
+  version: 1,
+  schema,
+  migrationFn: (db, oldVersion, newVersion, tx) => {
     // Migration logic
-  }
+  },
 });
-
-const db = createDeposit(adapter);
 ```
 
 **Characteristics:**
 
-- Asynchronous operations
-- ~50MB+ storage (quota-based)
-- Supports indexes for fast lookups
-- Survives page reloads
-- Isolated per origin
+- Quota-based storage (typically hundreds of MB)
+- Indexes are created from `schema[table].indexes`; duplicate and key-path-redundant indexes produce warnings and are skipped
+- Expired entries are filtered out on read
+- Supports `transaction()` for atomic multi-table writes
+
+**Index warnings:**
+
+```ts
+// Duplicate index — logs warning and skips
+const schema = defineSchema<{ users: User }>({
+  users: { key: 'id', indexes: ['email', 'role', 'email'] },
+});
+
+// Key path index — logs warning and skips
+const schema2 = defineSchema<{ users: User }>({
+  users: { key: 'id', indexes: ['id'] },
+});
+```
 
 ## Types
 
-### `DepositDataSchema`
+### `Schema<S>`
 
-Schema definition type.
+Use `defineSchema<S>(schema)` rather than constructing this directly.
 
 ```ts
-type DepositDataSchema = {
-  [tableName: string]: {
-    key: string; // Primary key field name
-    indexes?: string[]; // Optional index fields
-    record: any; // Record type
+type Schema<S> = {
+  [K in keyof S]: {
+    key: keyof S[K];
+    indexes?: (keyof S[K])[];
+    record: S[K];
   };
 };
 ```
 
-**Example:**
+---
+
+### `AdapterConfig<S>`
+
+Discriminated union of `LocalStorageConfig<S>` and `IndexedDBConfig<S>`:
 
 ```ts
-import { defineSchema } from '@vielzeug/deposit';
-
-// Recommended: Use defineSchema helper for clean syntax
-const schema = defineSchema<{ users: User; posts: Post }>()({
-  users: {
-    key: 'id',
-    indexes: ['email', 'role'],
-  },
-  posts: {
-    key: 'id',
-    indexes: ['userId', 'createdAt'],
-  },
-});
+type AdapterConfig<S> = LocalStorageConfig<S> | IndexedDBConfig<S>;
 ```
 
 ---
 
-### `defineSchema<S>()(schema)`
+### `MigrationFn`
 
-Helper function to create a type-safe schema definition with clean syntax.
-
-**Generic Parameters:**
-
-- `S` – Schema definition type (maps table names to record types)
-
-**Parameters:**
-
-- `schema: { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }`
-
-**Returns:** `DepositDataSchema<S>`
-
-**Example:**
+Migration function type for IndexedDB version upgrades.
 
 ```ts
-import { defineSchema } from '@vielzeug/deposit';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Post {
-  id: number;
-  title: string;
-}
-
-// Curried function for better type inference
-const schema = defineSchema<{ users: User; posts: Post }>()({
-  users: {
-    key: 'id',
-    indexes: ['email'],
-  },
-  posts: {
-    key: 'id',
-  },
-});
-```
-
-**Benefits:**
-
-- ✅ No need for empty `record: {} as Type` declarations
-- ✅ Full type inference and autocomplete for keys and indexes
-- ✅ Clean, minimal syntax
-- ✅ Type-safe field validation
-
----
-
-### `DepositMigrationFn<S>`
-
-Migration function type for IndexedDB schema changes.
-
-```ts
-type DepositMigrationFn<S> = (
+type MigrationFn = (
   db: IDBDatabase,
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-  schema: S,
 ) => void | Promise<void>;
-```
-
-**Example:**
-
-```ts
-const migration: DepositMigrationFn<typeof schema> = async (db, oldVersion, newVersion, tx, schema) => {
-  if (oldVersion < 2) {
-    // Migrate data from version 1 to 2
-    const store = tx.objectStore('users');
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      for (const user of request.result) {
-        user.role = user.role || 'user';
-        store.put(user);
-      }
-    };
-  }
-};
 ```
 
 ---
 
-### `PatchOperation<T, K>`
-
-Operation types for `patch()` method.
+### `Logger`
 
 ```ts
-type PatchOperation<T, K> = { type: 'put'; value: T; ttl?: number } | { type: 'delete'; key: K } | { type: 'clear' };
+type Logger = {
+  error(...args: any[]): void;
+  warn(...args: any[]): void;
+};
 ```
+
+Pass a custom logger to suppress or redirect internal warnings. Defaults to `console`.
+
+---
 
 ## Advanced Usage
 
 ### TTL (Time-To-Live)
 
-Records can expire automatically:
+Records can expire automatically. The expiry is stored in an internal `__deposit_ttl__` field that is stripped on read.
 
 ```ts
 // Expires in 1 hour
-await db.put('sessions', { id: 's1', token: 'abc' }, 3600000);
+await db.put('sessions', { id: 's1', token: 'abc' }, 3_600_000);
 
-// After 1 hour
-const session = await db.get('sessions', 's1'); // undefined (expired)
+// Returns undefined after expiry
+const session = await db.get('sessions', 's1');
 ```
 
 ### Type Safety
 
-Deposit provides full type inference:
-
 ```ts
 const user = await db.get('users', 'u1');
-// user is typed as: { id: string; name: string; email: string } | undefined
+// user is typed as: User | undefined
 
 const users = await db
   .query('users')
-  .filter((u) => u.name.includes('Alice')) // Full autocomplete
+  .filter((u) => u.name.includes('Alice')) // full autocomplete
   .toArray();
+// users is typed as: User[]
+
+const mapped = await db.query('users').map((u) => ({ label: u.name, value: u.id })).toArray();
+// mapped is typed as: { label: string; value: string }[]
 ```
-
-Implements all `DepositBaseAdapter` methods and `connect()`.
-
-## Types
-
-### `DepositDataRecord<T, K>`
-
-Defines a table schema entry.
-
-- `key`: Primary key field name.
-- `indexes`: Optional array of index field names.
-- `record`: The record type.
-
-### `DepositDataSchema<S>`
-
-Maps table names to `DepositDataRecord` definitions.
-
-### `DepositBaseAdapter<S>`
-
-Abstract base class for storage adapters. Both `LocalStorageAdapter` and `IndexedDBAdapter` extend this. Methods:
-
-- `get`, `getAll`, `put`, `delete`, `clear`, `count`, `bulkPut`, `bulkDelete`, `transaction`, `query`, `patch`

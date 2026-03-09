@@ -94,6 +94,5 @@ merge(custom, { val: 10 }, { val: 5 }); // { val: 15 }
 
 ## See Also
 
-- [clone](./clone.md): Create a deep copy of a single object.
 - [diff](./diff.md): Find the differences between two objects.
-- [patch](./patch.md): Apply a diff to an object.
+- [prune](./prune.md): Remove empty/null values after merging.

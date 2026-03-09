@@ -1,8 +1,7 @@
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 import { isNil } from '../typed/isNil';
-import { isPromise } from '../typed/isPromise';
-import type { CallbackDynamic, Predicate, ResultArray } from '../types';
+import type { Predicate } from '../types';
 
 /**
  * Selects elements from an array based on a callback function and an optional predicate function.
@@ -11,7 +10,7 @@ import type { CallbackDynamic, Predicate, ResultArray } from '../types';
  * ```ts
  * const arr = [1, 2, 3, 4];
  * select(arr, x => x * x, x => x > 2) // [9, 16]
- * await select(arr, async x => x * x, x => x > 2) // [9, 16]
+ * select(arr, x => x * x) // [1, 4, 9, 16]
  * ```
  *
  * @param array - The array to select from.
@@ -22,16 +21,15 @@ import type { CallbackDynamic, Predicate, ResultArray } from '../types';
  *
  * @throws {TypeError} If the provided array is not an array.
  */
-export function select<T, R, C extends CallbackDynamic<T, R>>(
+export function select<T, R>(
   array: T[],
-  callback: C,
+  callback: (item: T, index: number, array: T[]) => R,
   predicate?: Predicate<T>,
-): ResultArray<C> {
+): R[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  const result = [];
-
   const isValid = predicate ?? ((value: T) => !isNil(value));
+  const result: R[] = [];
 
   for (let index = 0; index < array.length; index++) {
     if (isValid(array[index], index, array)) {
@@ -39,7 +37,5 @@ export function select<T, R, C extends CallbackDynamic<T, R>>(
     }
   }
 
-  return (result.length > 0 && isPromise(result[0]) ? Promise.all(result) : result) as ResultArray<C>;
+  return result;
 }
-
-select.fp = true;

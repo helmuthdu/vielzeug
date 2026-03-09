@@ -41,6 +41,21 @@ api.info('GET /users', data);  // filtered by log level, styled, optionally remo
 
 **Consider alternatives when** you need high-throughput file-based logging (Pino), file rotation (Winston), or your team already uses a logging framework.
 
+## Logger instances
+
+### `createLogger(initial?)`
+
+For module-level or test isolation, use `createLogger()` to get an independent logger with its own private config:
+
+```ts
+import { createLogger } from '@vielzeug/logit';
+
+const log = createLogger({ namespace: 'App', logLevel: 'info' });
+const api = createLogger('api'); // string shorthand sets namespace
+```
+
+Each call returns a new `Logger` — config changes to one never affect another. `Logit` is simply the pre-created default instance (`createLogger()` with no arguments).
+
 ## Configuration
 
 ### `Logit.config(options)`
@@ -130,6 +145,16 @@ Logit.assert(user !== null, 'User must be defined', { userId });
 Logit.assert(response.ok, 'HTTP request failed', { status: response.status });
 ```
 
+### Level check
+
+`enabled(type)` returns `true` if the given level passes the current `logLevel` filter — use it to guard against computing expensive arguments:
+
+```ts
+if (Logit.enabled('debug')) {
+  Logit.debug('Diagnostics', buildDiagnostics());
+}
+```
+
 ### Tables
 
 ```ts
@@ -152,8 +177,13 @@ Logit.timeEnd('db-query'); // db-query: 45ms
 ### Groups
 
 ```ts
-Logit.groupCollapsed('Request Details', 'GET /users');
+// Visible (expanded) group
+Logit.group('Request Details', 'GET /users');
 Logit.info('Headers:', req.headers);
+Logit.groupEnd();
+
+// Collapsed by default — click to expand in DevTools
+Logit.groupCollapsed('Query params', req.url);
 Logit.info('Query:', req.query);
 Logit.groupEnd();
 ```
@@ -172,7 +202,7 @@ const auth = api.scope('auth');
 auth.info('Login');     // [api.auth] Login
 ```
 
-Scoped loggers support: `debug`, `trace`, `info`, `success`, `warn`, `error`, and `.scope()`.
+Scoped loggers are full `Logger` instances — they support all the same methods as the parent, including `config()`, `getConfig()`, `enabled()`, `child()`, `scope()`, and all utility methods.
 
 ```ts
 // Pass scoped loggers to modules
@@ -184,6 +214,28 @@ function createUserService(logger = Logit.scope('user-service')) {
     },
   };
 }
+```
+
+## Child Loggers
+
+`logger.child(overrides?)` creates an independent logger starting from a snapshot of the parent's current config. Unlike `scope()`, it accepts any config overrides.
+
+```ts
+const parent = createLogger({ logLevel: 'info', namespace: 'App' });
+
+// Override specific options; all others are inherited
+const verbose = parent.child({ logLevel: 'debug' });
+
+// Changes to parent do not affect child
+parent.config({ logLevel: 'error' });
+verbose.getConfig().logLevel; // still 'debug'
+```
+
+Remote config is merged rather than replaced:
+
+```ts
+const child = parent.child({ remote: { logLevel: 'debug' } });
+// child inherits parent's remote handler, overrides the remote threshold
 ```
 
 ## Remote Logging
@@ -246,32 +298,29 @@ Logit.config({
 });
 ```
 
-### Toggle indicators at runtime
-
-```ts
-Logit.toggleTimestamp();           // flip current value
-Logit.toggleTimestamp(false);      // explicitly hide
-Logit.toggleEnvironment(true);     // explicitly show
-```
-
 ## Testing
 
-Logit doesn't expose a mock API — use `config()` to silence output during tests and restore it after.
+Prefer `createLogger()` in tests — each instance has its own config, so no global state cleanup is needed:
+
+```ts
+import { createLogger } from '@vielzeug/logit';
+
+it('logs info on startup', () => {
+  const log = createLogger({ logLevel: 'debug' });
+  const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+  log.info('startup');
+
+  expect(spy).toHaveBeenCalled();
+  spy.mockRestore();
+});
+```
+
+To silence the shared `Logit` instance for an entire suite:
 
 ```ts
 import { Logit } from '@vielzeug/logit';
 
 beforeAll(() => Logit.config({ logLevel: 'off' }));
 afterAll(() => Logit.config({ logLevel: 'debug' }));
-
-it('logs info on startup', () => {
-  // Logit.info() routes to console.info
-  const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
-  Logit.config({ logLevel: 'debug' });
-
-  Logit.info('startup');
-
-  expect(spy).toHaveBeenCalled();
-  spy.mockRestore();
-});
 ```

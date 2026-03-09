@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/test';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('bit-textarea', () => {

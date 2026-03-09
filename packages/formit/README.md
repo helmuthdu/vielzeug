@@ -36,8 +36,8 @@ const errors = await form.validateAll();
 
 // Submit (auto-validates, throws ValidationError on failure)
 try {
-  await form.submit(async (formData) => {
-    await api.login(Object.fromEntries(formData));
+  await form.submit(async (values) => {
+    await api.login(values);
   });
 } catch (error) {
   if (error instanceof ValidationError) {
@@ -52,6 +52,7 @@ form.dispose();
 ## Features
 
 - ✅ **Typed values** — values stay typed (`number`, `boolean`, `File`) — no string coercion
+- ✅ **Nested values** — plain objects in `values` are auto-flattened; access fields with `form.get('user.name')`
 - ✅ **Field rules** — per-field validators via the `rules` option
 - ✅ **Cross-field validation** — `validate` option for form-level errors
 - ✅ **Async validators** — validators can return `Promise<string | undefined>`
@@ -125,7 +126,7 @@ unsubField();
 ### Snapshots and Reset
 
 ```typescript
-const state = form.snapshot(); // capture current state
+const state = form.getState(); // capture current state
 form.reset();                  // restore to initial values
 form.reset({ name: '', email: '' }); // reset with new initial values
 ```
@@ -143,6 +144,7 @@ const { name, value, onChange, onBlur } = form.bind('email');
 |---|---|
 | `form.get(field)` | Get current value of a field |
 | `form.set(field, value, options?)` | Set field value |
+| `form.update(field, fn, options?)` | Update a field with a `(prev) => next` updater |
 | `form.patch(entries, options?)` | Set multiple fields at once |
 | `form.values()` | Get all current values as a plain object |
 | `form.getError(field)` | Get error message for a field |
@@ -156,7 +158,7 @@ const { name, value, onChange, onBlur } = form.bind('email');
 | `form.validateAll(options?)` | Validate all fields — returns `Promise<Record<string, string>>` |
 | `form.submit(handler, options?)` | Validate then call handler with `FormData` |
 | `form.reset(newValues?)` | Reset to initial or new values |
-| `form.snapshot()` | Capture current form state |
+| `form.getState()` | Capture current form state |
 | `form.bind(field, config?)` | Get `{ name, value, onChange, onBlur, set }` binding helpers |
 | `form.subscribe(listener)` | Subscribe to all form changes |
 | `form.subscribeField(field, listener)` | Subscribe to a single field |

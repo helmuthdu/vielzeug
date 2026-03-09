@@ -83,22 +83,6 @@ describe('cache', () => {
     expect(meta).toHaveProperty('role', 'admin');
   });
 
-  it('should get metadata by hash', () => {
-    const c = cache<string>();
-    c.setMeta(['key'], { info: 'test' });
-    const hash = c.hash(['key']);
-    const meta = c.getMetaByHash(hash);
-    expect(meta).toHaveProperty('info', 'test');
-  });
-
-  it('should list all metadata hashes', () => {
-    const c = cache<number>();
-    c.setMeta(['a'], {});
-    c.setMeta(['b'], {});
-    const hashes = c.listMetaHashes();
-    expect(hashes).toHaveLength(2);
-  });
-
   it('should clear GC timers on clear', () => {
     const c = cache<string>();
     c.set(['a'], 'A');
@@ -115,10 +99,4 @@ describe('cache', () => {
     expect(c.get(key)).toBe('complex');
   });
 
-  it('should hash keys consistently', () => {
-    const c = cache<string>();
-    const hash1 = c.hash(['a', 1]);
-    const hash2 = c.hash(['a', 1]);
-    expect(hash1).toBe(hash2);
-  });
 });

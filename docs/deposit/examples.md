@@ -20,8 +20,8 @@ These are complete application examples. For API reference and basic usage, see 
 ### Define Schema
 
 ```ts
-import { createDeposit, defineSchema, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
-import type { DepositDataSchema } from '@vielzeug/deposit';
+import { createDeposit, defineSchema } from '@vielzeug/deposit';
+import type { Schema } from '@vielzeug/deposit';
 
 interface User {
   id: string;
@@ -48,7 +48,7 @@ interface Session {
   expiresAt: number;
 }
 
-const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>()({
+const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>({
   users: {
     key: 'id',
     indexes: ['email', 'role'],
@@ -68,33 +68,20 @@ const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>()({
 
 ::: warning 🔍 Choosing an Adapter
 
-- **IndexedDB**: Recommended for production (larger storage, better performance)
-- **LocalStorage**: Simple apps with small data (<5MB)
-- Use the shorthand config for quick setup
+- **IndexedDB**: Recommended for production (larger storage, better performance, atomic transactions)
+- **LocalStorage**: Simple apps with small data (<5 MB)
   :::
 
 ::: code-group
 
 ```ts [IndexedDB]
 // IndexedDB (recommended for production)
-const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
-const db = createDeposit(adapter);
+const db = createDeposit({ type: 'indexedDB', dbName: 'my-app-db', version: 1, schema });
 ```
 
 ```ts [LocalStorage]
 // LocalStorage (simpler, smaller storage)
-const adapter = new LocalStorageAdapter('my-app-db', schema);
-const db = createDeposit(adapter);
-```
-
-```ts [Shorthand]
-// Or use shorthand config
-const db = createDeposit({
-  type: 'indexedDB',
-  dbName: 'my-app-db',
-  version: 1,
-  schema,
-});
+const db = createDeposit({ type: 'localStorage', dbName: 'my-app-db', schema });
 ```
 
 :::
@@ -199,12 +186,6 @@ const youngAdults = await db.query('users').between('age', 18, 30).toArray();
 // Find by string prefix
 const aliceUsers = await db.query('users').startsWith('name', 'Alice', true).toArray();
 
-// Custom filtering
-const verified = await db
-  .query('users')
-  .where('email', (email) => email.endsWith('@company.com'))
-  .toArray();
-
 // Complex filter
 const special = await db
   .query('users')
@@ -246,25 +227,12 @@ const userCount = await db.query('users').equals('role', 'admin').count();
 
 // First and last
 const firstUser = await db.query('users').orderBy('createdAt', 'asc').first();
-
-const lastUser = await db.query('users').orderBy('createdAt', 'asc').last();
-
-// Numeric aggregations
-const avgAge = await db.query('users').average('age');
-const minAge = await db.query('users').min('age');
-const maxAge = await db.query('users').max('age');
-const totalAge = await db.query('users').sum('age');
+const lastUser  = await db.query('users').orderBy('createdAt', 'asc').last();
 ```
 
 ### Logical Operators
 
 ```ts
-// NOT
-const nonAdmins = await db
-  .query('users')
-  .not((user) => user.role === 'admin')
-  .toArray();
-
 // AND — chain multiple filter calls
 const seniorAdmins = await db
   .query('users')
@@ -282,7 +250,7 @@ const either = await db
 ### Transformations
 
 ```ts
-// Map/transform results
+// Map/transform results (generic — can change the type)
 const uppercased = await db
   .query('users')
   .map((user) => ({
@@ -291,28 +259,9 @@ const uppercased = await db
   }))
   .toArray();
 
-// Type-safe grouping
-const byRoleTyped = await db.query('users').toGrouped('role');
-// Result: Array<{ key: 'admin' | 'user', values: User[] }>
-
-// Example: Count users by role
-for (const group of byRoleTyped) {
-  console.log(`${group.key}: ${group.values.length} users`);
-}
-
-// Example: Filter groups
-const adminGroup = byRoleTyped.find((g) => g.key === 'admin');
-if (adminGroup) {
-  console.log('Admin users:', adminGroup.values);
-}
-
 // Search
 const searchResults = await db.query('users').search('alice').toArray();
 ```
-
-::: tip Type-Safe Grouping
-Use `toGrouped()` for grouped results — it returns a structured array that's easy to iterate and filter.
-:::
 
 ### Chaining Multiple Operations
 
@@ -398,14 +347,18 @@ await db.put(
 
 ## Transaction Examples
 
-::: tip ⚡ Automatic Atomicity
-Transactions automatically use atomic operations for **IndexedDB** (all changes in a single `IDBTransaction`) and optimistic updates for **LocalStorage**. For critical data integrity, use IndexedDB.
+::: tip ⚡ Atomic Writes
+Transactions use a single `IDBTransaction` — all changes succeed together or none are persisted.
+:::
+
+::: warning
+`transaction()` is only available on `IndexedDBAdapter`. For localStorage, use individual `put`/`bulkPut`/`delete` calls.
 :::
 
 ### User Registration
 
 ```ts
-// Create user and their first post atomically (IndexedDB) or optimistically (LocalStorage)
+// Create user and their first post atomically (IndexedDB only)
 await db.transaction(['users', 'posts'], async (stores) => {
   const userId = crypto.randomUUID();
 
@@ -429,8 +382,7 @@ await db.transaction(['users', 'posts'], async (stores) => {
     createdAt: Date.now(),
   });
 
-  // For IndexedDB: Both changes committed atomically
-  // For LocalStorage: Changes committed optimistically
+  // If the callback throws, the transaction is aborted — no partial writes
 });
 ```
 
@@ -452,42 +404,31 @@ await db.transaction(['users', 'profiles'], async (stores) => {
 });
 ```
 
-## Patch Operations Examples
+## Bulk Operation Examples
 
 ### Batch Updates
 
 ```ts
-const patches = [
-  // Add new user
+// Add multiple records, delete one
+await db.bulkPut('users', [
   {
-    type: 'put' as const,
-    value: {
-      id: 'u1',
-      name: 'Alice',
-      email: 'alice@example.com',
-      age: 30,
-      role: 'admin' as const,
-      createdAt: Date.now(),
-    },
+    id: 'u1',
+    name: 'Alice',
+    email: 'alice@example.com',
+    age: 30,
+    role: 'admin' as const,
+    createdAt: Date.now(),
   },
-  // Add another with TTL
   {
-    type: 'put' as const,
-    value: {
-      id: 'u2',
-      name: 'Bob',
-      email: 'bob@example.com',
-      age: 25,
-      role: 'user' as const,
-      createdAt: Date.now(),
-    },
-    ttl: 3600000,
+    id: 'u2',
+    name: 'Bob',
+    email: 'bob@example.com',
+    age: 25,
+    role: 'user' as const,
+    createdAt: Date.now(),
   },
-  // Delete old user
-  { type: 'delete' as const, key: 'old-user-id' },
-];
-
-await db.patch('users', patches);
+]);
+await db.delete('users', 'old-user-id');
 ```
 
 ### Sync from Server
@@ -496,15 +437,8 @@ await db.patch('users', patches);
 async function syncFromServer() {
   const serverData = await fetch('/api/sync').then((r) => r.json());
 
-  const patches = [
-    { type: 'clear' as const }, // Clear existing data
-    ...serverData.map((item) => ({
-      type: 'put' as const,
-      value: item,
-    })),
-  ];
-
-  await db.patch('users', patches);
+  await db.clear('users');
+  await db.bulkPut('users', serverData);
 }
 ```
 
@@ -520,13 +454,11 @@ interface Todo {
   createdAt: number;
 }
 
-const schema = defineSchema<{ todos: Todo }>()({
+const schema = defineSchema<{ todos: Todo }>({
   todos: { key: 'id', indexes: ['completed', 'createdAt'] },
 });
 
 const db = createDeposit({ type: 'indexedDB', dbName: 'todos', version: 1, schema });
-
-// Add todo
 async function addTodo(text: string) {
   await db.put('todos', {
     id: crypto.randomUUID(),
@@ -571,14 +503,13 @@ interface Preference {
   updatedAt: number;
 }
 
-const schema = defineSchema<{ prefs: Preference }>()({
+const schema = defineSchema<{ prefs: Preference }>({
   prefs: { key: 'id' },
 });
 
 const db = createDeposit({
   type: 'localStorage',
   dbName: 'preferences',
-  version: 1,
   schema,
 });
 
@@ -614,7 +545,7 @@ interface AnalyticsEvent {
   sent: boolean;
 }
 
-const schema = defineSchema<{ events: AnalyticsEvent }>()({
+const schema = defineSchema<{ events: AnalyticsEvent }>({
   events: { key: 'id', indexes: ['sent', 'timestamp'] },
 });
 
@@ -701,7 +632,7 @@ async function searchUsers(query: string, limit = 10) {
 ### Version 1 to 2: Add Field
 
 ```ts
-const migration = (db, oldVersion, newVersion, tx, schema) => {
+const migration: MigrationFn = (db, oldVersion, newVersion, tx) => {
   if (oldVersion < 2) {
     const store = tx.objectStore('users');
     const request = store.getAll();
@@ -721,7 +652,7 @@ const migration = (db, oldVersion, newVersion, tx, schema) => {
 ### Version 2 to 3: Transform Data
 
 ```ts
-const migration = (db, oldVersion, newVersion, tx, schema) => {
+const migration: MigrationFn = (db, oldVersion, newVersion, tx) => {
   if (oldVersion < 3) {
     const store = tx.objectStore('posts');
     const request = store.getAll();

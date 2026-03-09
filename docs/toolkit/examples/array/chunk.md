@@ -77,5 +77,5 @@ chunk('abc', 2, { overlap: true }); // ['ab', 'bc']
 
 ## See Also
 
-- [flatten](./flatten.md): The inverse operation for arrays.
+- [group](./group.md): Partition array elements by a criterion.
 - [group](./group.md): Group array elements by a criterion.

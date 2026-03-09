@@ -35,13 +35,4 @@ describe('pipe', () => {
     const pipedFn = pipe(identity);
     expect(pipedFn(42)).toBe(42);
   });
-
-  it('should handle asynchronous functions', async () => {
-    const asyncAdd = async (x: number) => x + 1;
-    const asyncMultiply = async (x: number) => x * 2;
-
-    const pipedFn = pipe(asyncAdd, asyncMultiply);
-    const result = await pipedFn(3);
-    expect(result).toBe(8); // (3 + 1) * 2 = 8
-  });
 });

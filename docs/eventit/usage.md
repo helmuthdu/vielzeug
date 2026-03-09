@@ -26,12 +26,12 @@ type AppEvents = {
 };
 ```
 
-Pass it as a type parameter to `createEventBus`:
+Pass it as a type parameter to `eventBus`:
 
 ```ts
-import { createEventBus } from '@vielzeug/eventit';
+import { eventBus } from '@vielzeug/eventit';
 
-const bus = createEventBus<AppEvents>();
+const bus = eventBus<AppEvents>();
 ```
 
 TypeScript now enforces correct payload shapes everywhere — in `on`, `once`, `off`, and `emit`.
@@ -58,23 +58,6 @@ Any number of listeners can subscribe to the same event. They fire in registrati
 ```ts
 bus.on('userLogin', (user) => analytics.track('login', user));
 bus.on('userLogin', (user) => notifications.send(`Welcome, ${user.name}!`));
-```
-
-### `off` — explicit removal
-
-`off` with a listener reference removes only that listener:
-
-```ts
-function onLogin(user: AppEvents['userLogin']) { /* ... */ }
-
-bus.on('userLogin', onLogin);
-bus.off('userLogin', onLogin);
-```
-
-`off` without a listener reference removes **all** listeners for that event:
-
-```ts
-bus.off('userLogin'); // clears every login subscriber
 ```
 
 ## Emitting Events
@@ -126,7 +109,7 @@ bus.emit('userLogin', { id: '1', name: 'Bob' }); // throws
 For resilient multi-listener buses, supply an `onError` callback:
 
 ```ts
-const bus = createEventBus<AppEvents>({
+const bus = eventBus<AppEvents>({
   onError: (err, event) => {
     console.error(`[eventit] Error in "${event}" listener:`, err);
   },
@@ -135,40 +118,54 @@ const bus = createEventBus<AppEvents>({
 
 With `onError` set, a throwing listener logs the error but allows remaining listeners to continue running.
 
-## Inspecting the Bus
+## Emit Hook
+
+`onEmit` is called on every `emit`, before any listeners run. The event name is typed as a union of valid event keys:
 
 ```ts
-bus.has('userLogin');              // true if ≥1 listener
-bus.listenerCount('userLogin');    // exact count
-bus.clear('userLogin');            // remove all listeners for one event
-bus.clear();                       // remove all listeners for all events
+const bus = eventBus<AppEvents>({
+  onEmit: (event, payload) => {
+    console.debug(`[bus] ${event}`, payload);
+  },
+});
 ```
 
-## Max Listener Warning
+Useful for logging, analytics instrumentation, or debugging event flows in development.
 
-By default a warning is printed when an event accumulates more than 100 listeners — a sign of a likely memory leak:
-
-```
-[eventit] Max listeners (100) reached for event "userLogin". Possible memory leak.
-```
-
-Adjust or disable the threshold via options:
+## Cleanup
 
 ```ts
-const bus = createEventBus<AppEvents>({ maxListeners: 10 });
+bus.clear('userLogin'); // remove all listeners for one event
+bus.clear();            // remove all listeners for all events
 ```
+
+## Disposing
+
+`dispose()` permanently tears down the bus:
+
+```ts
+bus.dispose();
+```
+
+After `dispose()`:
+
+- All listeners are removed.
+- `emit` becomes a no-op — calls are silently ignored.
+- `on` and `once` return a no-op unsubscribe; no listener is stored.
+
+Ideal for component or module teardown when the bus should never fire again.
 
 ## Testing
 
-`createTestEventBus` wraps a real bus and records every emitted payload for easy assertions:
+`testEventBus` wraps a real bus and records every emitted payload for easy assertions:
 
 ```ts
-import { createTestEventBus } from '@vielzeug/eventit';
+import { testEventBus } from '@vielzeug/eventit';
 
 type Events = { count: number; reset: void };
 
 test('increments counter', () => {
-  const { bus, emitted, dispose } = createTestEventBus<Events>();
+  const { bus, emitted, reset, dispose } = testEventBus<Events>();
 
   bus.emit('count', 1);
   bus.emit('count', 2);
@@ -177,15 +174,16 @@ test('increments counter', () => {
   expect(emitted.get('count')).toEqual([1, 2]);
   expect(emitted.has('reset')).toBe(true);
 
-  dispose(); // clears listeners and recorded payloads
+  reset();   // clear recorded payloads; listeners still work
+  dispose(); // clear listeners and recorded payloads
 });
 ```
 
-Listeners registered on `bus` still fire normally — `createTestEventBus` only adds recording on top:
+Listeners registered on `bus` still fire normally — `testEventBus` only adds recording on top:
 
 ```ts
 test('listener is called', () => {
-  const { bus, dispose } = createTestEventBus<Events>();
+  const { bus, dispose } = testEventBus<Events>();
   const handler = vi.fn();
 
   bus.on('count', handler);
@@ -196,4 +194,4 @@ test('listener is called', () => {
 });
 ```
 
-After `dispose()`, subsequent emits no longer record to `emitted` and registered listeners are cleared.
+After `dispose()`, the bus is permanently torn down — `emit` is a no-op and `emitted` is cleared. Use `reset()` between assertions within a single test when you only want to discard the recorded history.

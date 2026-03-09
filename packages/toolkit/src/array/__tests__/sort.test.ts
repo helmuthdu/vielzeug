@@ -9,7 +9,7 @@ describe('sort', () => {
 
   it('should sort numbers in descending order when desc is true', () => {
     const data = [{ value: 3 }, { value: 1 }, { value: 2 }];
-    const result = sort(data, (item) => item.value, true);
+    const result = sort(data, (item) => item.value, 'desc');
     expect(result).toEqual([{ value: 3 }, { value: 2 }, { value: 1 }]);
   });
 
@@ -21,7 +21,7 @@ describe('sort', () => {
 
   it('should sort strings in descending order when desc is true', () => {
     const data = [{ value: 'b' }, { value: 'a' }, { value: 'c' }];
-    const result = sort(data, (item) => item.value, true);
+    const result = sort(data, (item) => item.value, 'desc');
     expect(result).toEqual([{ value: 'c' }, { value: 'b' }, { value: 'a' }]);
   });
 
@@ -33,7 +33,7 @@ describe('sort', () => {
 
   it('should handle undefined values correctly in descending order', () => {
     const data = [{ value: undefined }, { value: 2 }, { value: 1 }];
-    const result = sort(data, (item) => item.value, true);
+    const result = sort(data, (item) => item.value, 'desc');
     expect(result).toEqual([{ value: undefined }, { value: 2 }, { value: 1 }]);
   });
 
@@ -57,7 +57,7 @@ describe('sort', () => {
       { value: new Date('2022-01-01') },
       { value: new Date('2024-01-01') },
     ];
-    const result = sort(data, (item) => item.value, true);
+    const result = sort(data, (item) => item.value, 'desc');
     expect(result).toEqual([
       { value: new Date('2024-01-01') },
       { value: new Date('2023-01-01') },
@@ -73,8 +73,34 @@ describe('sort', () => {
 
   it('should handle objects by stringifying them in descending order', () => {
     const data = [{ value: { b: 2 } }, { value: { a: 1 } }, { value: { c: 3 } }];
-    const result = sort(data, (item) => item.value, true);
+    const result = sort(data, (item) => item.value, 'desc');
     expect(result).toEqual([{ value: { c: 3 } }, { value: { b: 2 } }, { value: { a: 1 } }]);
+  });
+
+  it('should sort by multiple fields using object selectors', () => {
+    const data = [
+      { age: 30, name: 'Alice' },
+      { age: 25, name: 'Bob' },
+      { age: 35, name: 'Charlie' },
+      { age: 25, name: 'Alice' },
+      { age: 30, name: 'Bob' },
+      { age: 30, name: 'Charlie' },
+    ];
+    // biome-ignore assist/source/useSortedKeys: the order matters
+    expect(sort(data, { name: 'asc', age: 'desc' })).toEqual([
+      { age: 30, name: 'Alice' },
+      { age: 25, name: 'Alice' },
+      { age: 30, name: 'Bob' },
+      { age: 25, name: 'Bob' },
+      { age: 35, name: 'Charlie' },
+      { age: 30, name: 'Charlie' },
+    ]);
+  });
+
+  it('should sort by a single key using object selector', () => {
+    const data = [{ a: 3 }, { a: 1 }, { a: 2 }];
+    expect(sort(data, { a: 'asc' })).toEqual([{ a: 1 }, { a: 2 }, { a: 3 }]);
+    expect(sort(data, { a: 'desc' })).toEqual([{ a: 3 }, { a: 2 }, { a: 1 }]);
   });
 
   it('should return an empty array when input is empty', () => {

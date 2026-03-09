@@ -8,25 +8,22 @@ type MaybePromise<T> = T | Promise<T>;
 
 /**
  * Field validator receives the raw stored value (typed, not coerced to string).
- * Return a string to signal an error, or undefined/null to signal success.
+ * Return a string to signal an error, or undefined to signal success.
  */
-export type FieldValidator = (value: unknown) => MaybePromise<string | undefined | null>;
+export type FieldValidator = (value: unknown) => MaybePromise<string | undefined>;
 
 /**
  * Form-level validator for cross-field validation.
- * Receives the full values object and returns a map of field errors.
+ * Receives the full typed values and returns a map of field errors.
  */
-export type FormValidator = (
-  values: Record<string, unknown>,
-) => MaybePromise<Record<string, string> | undefined | null>;
+export type FormValidator<TValues extends Record<string, unknown> = Record<string, unknown>> = (
+  values: TValues,
+) => MaybePromise<Record<string, string> | undefined>;
 
 export type FormInit<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  /** Initial field values */
   values?: TValues;
-  /** Per-field validators, keyed by field name */
   rules?: Record<string, FieldValidator | FieldValidator[]>;
-  /** Form-level validator for cross-field validation */
-  validate?: FormValidator;
+  validate?: FormValidator<TValues>;
 };
 
 export type ValidateOptions = {
@@ -45,7 +42,7 @@ export type SetOptions = {
 export type PatchOptions = {
   /** Replace all values instead of merging. Default: false */
   replace?: boolean;
-  /** Track dirty state for patched fields. Default: false */
+  /** Track dirty state for patched fields. Default: true */
   setDirty?: boolean;
 };
 
@@ -53,11 +50,8 @@ export type FormState = {
   errors: Record<string, string>;
   touched: Set<string>;
   dirty: Set<string>;
-  /** true if errors is empty */
   isValid: boolean;
-  /** true if any field is dirty */
   isDirty: boolean;
-  /** true if any field is touched */
   isTouched: boolean;
   isValidating: boolean;
   isSubmitting: boolean;
@@ -66,7 +60,12 @@ export type FormState = {
 
 export type BindConfig = {
   valueExtractor?: (event: unknown) => unknown;
-  markTouchedOnBlur?: boolean;
+  touchOnBlur?: boolean;
+};
+
+export type SubmitOptions = {
+  signal?: AbortSignal;
+  validate?: boolean;
 };
 
 /* -------------------- Error Class -------------------- */
@@ -78,12 +77,6 @@ export class ValidationError extends Error {
     super('Form validation failed');
     this.name = 'ValidationError';
     this.errors = errors;
-    if (typeof (Error as { captureStackTrace?: unknown }).captureStackTrace === 'function') {
-      (Error as { captureStackTrace: (t: unknown, c: unknown) => void }).captureStackTrace(
-        this,
-        ValidationError,
-      );
-    }
   }
 }
 
@@ -99,9 +92,40 @@ function isSameValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
-function toFormData(values: Record<string, unknown>): FormData {
+function isPlainObject(val: unknown): val is Record<string, unknown> {
+  return val !== null && typeof val === 'object' && Object.getPrototypeOf(val) === Object.prototype;
+}
+
+function flattenValues(obj: Record<string, unknown>, prefix = ''): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (isPlainObject(val)) {
+      Object.assign(result, flattenValues(val, fullKey));
+    } else {
+      result[fullKey] = val;
+    }
+  }
+  return result;
+}
+
+function unflattenValues(flat: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(flat)) {
+    const parts = key.split('.');
+    let obj = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!isPlainObject(obj[parts[i]])) obj[parts[i]] = {};
+      obj = obj[parts[i]] as Record<string, unknown>;
+    }
+    obj[parts[parts.length - 1]] = val;
+  }
+  return result;
+}
+
+export function toFormData(values: Record<string, unknown>): FormData {
   const fd = new FormData();
-  for (const [name, value] of Object.entries(values)) {
+  for (const [name, value] of Object.entries(flattenValues(values))) {
     if (value === null || value === undefined) continue;
     if (value instanceof File || value instanceof Blob) {
       fd.append(name, value);
@@ -118,6 +142,9 @@ function toFormData(values: Record<string, unknown>): FormData {
   return fd;
 }
 
+type Listener = (state: FormState) => void;
+type FieldListener = (payload: { value: unknown; error?: string; touched: boolean; dirty: boolean }) => void;
+
 /* -------------------- Form Creation -------------------- */
 
 export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
@@ -127,11 +154,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const formValidator = init.validate;
 
   // Backing store: typed values, never coerced to string
-  const store = new Map<string, unknown>(Object.entries(init.values ?? {}));
+  const store = new Map<string, unknown>(Object.entries(flattenValues(init.values ?? {})));
   const initial = new Map<string, unknown>(store);
 
   // State
-  const errors: Record<string, string> = Object.create(null);
+  const errors: Record<string, string> = {};
   const touched = new Set<string>();
   const dirty = new Set<string>();
   let isValidating = false;
@@ -139,25 +166,20 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   let submitCount = 0;
 
   // Listeners
-  type Listener = (state: FormState) => void;
-  type FieldListener = (payload: { value: unknown; error?: string; touched: boolean; dirty: boolean }) => void;
-
   const listeners = new Set<Listener>();
   const fieldListeners = new Map<string, Set<FieldListener>>();
 
   // Batched notification
   let scheduled = false;
-  let changedFields = new Set<string>();
+  const changedFields = new Set<string>();
   let notifyAllFields = false;
 
   /* -------------------- Notification -------------------- */
 
   function buildState(): FormState {
-    const errCopy: Record<string, string> = {};
-    for (const k of Object.keys(errors)) errCopy[k] = errors[k];
     return {
       dirty: new Set(dirty),
-      errors: errCopy,
+      errors: { ...errors },
       isDirty: dirty.size > 0,
       isTouched: touched.size > 0,
       isSubmitting,
@@ -174,8 +196,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     for (const listener of listeners) {
       try {
         listener(state);
-      } catch {
-        /* swallow */
+      } catch (err) {
+        console.error('[formit] subscriber threw:', err);
       }
     }
     // Only notify field listeners for fields that actually changed
@@ -192,12 +214,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       for (const fn of set) {
         try {
           fn(payload);
-        } catch {
-          /* swallow */
+        } catch (err) {
+          console.error('[formit] subscribeField threw:', err);
         }
       }
     }
-    changedFields = new Set();
+    changedFields.clear();
     notifyAllFields = false;
   }
 
@@ -209,7 +231,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
     if (scheduled) return;
     scheduled = true;
-    Promise.resolve().then(flush);
+    queueMicrotask(flush);
   }
 
   /* -------------------- Field Validation -------------------- */
@@ -233,8 +255,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return store.get(name) as V;
   }
 
-  function values(): Record<string, unknown> {
-    return Object.fromEntries(store);
+  function values(): TValues {
+    return unflattenValues(Object.fromEntries(store)) as TValues;
   }
 
   function set(name: string, value: unknown, options: SetOptions = {}): void {
@@ -250,19 +272,26 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify([name]);
   }
 
+  function update(name: string, updater: (prev: unknown) => unknown, options: SetOptions = {}): void {
+    set(name, updater(store.get(name)), options);
+  }
+
   /**
    * Set multiple fields at once.
    * Use `replace: true` to clear all existing values first.
    */
-  function patch(entries: Record<string, unknown>, options: PatchOptions = {}): void {
-    const { replace = false, setDirty = false } = options;
+  function patch(entries: Partial<TValues>, options?: PatchOptions & { replace?: false }): void;
+  function patch(entries: Record<string, unknown>, options: PatchOptions & { replace: true }): void;
+  function patch(entries: Partial<TValues> | Record<string, unknown>, options: PatchOptions = {}): void {
+    const { replace = false, setDirty = true } = options;
     if (replace) {
       store.clear();
       initial.clear();
       dirty.clear();
     }
+    const flat = flattenValues(entries as Record<string, unknown>);
     const changed: string[] = [];
-    for (const [name, value] of Object.entries(entries)) {
+    for (const [name, value] of Object.entries(flat)) {
       store.set(name, value);
       changed.push(name);
       if (replace) {
@@ -285,7 +314,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function setError(name: string, message?: string): void {
-    if (message) {
+    if (message != null) {
       errors[name] = message;
     } else {
       delete errors[name];
@@ -294,16 +323,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function getErrors(): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (const k of Object.keys(errors)) result[k] = errors[k];
-    return result;
+    return { ...errors };
   }
 
   function setErrors(nextErrors: Record<string, string>): void {
     for (const k of Object.keys(errors)) delete errors[k];
-    for (const [name, message] of Object.entries(nextErrors)) {
-      if (message) errors[name] = message;
-    }
+    Object.assign(errors, nextErrors);
     scheduleNotify();
   }
 
@@ -322,14 +347,20 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return dirty.has(name);
   }
 
+  function touchAll(...fields: string[]): void {
+    const toTouch = fields.length > 0 ? fields : [...store.keys(), ...Object.keys(rules)];
+    for (const name of toTouch) touched.add(name);
+    scheduleNotify(fields.length > 0 ? fields : undefined);
+  }
+
   /* -------------------- Validation -------------------- */
 
   /** Validate a single field. Returns the error message, or undefined if valid. */
-  async function validate(name: string, signal?: AbortSignal): Promise<string | undefined> {
+  async function validate(name: string, opts?: { signal?: AbortSignal }): Promise<string | undefined> {
     isValidating = true;
     scheduleNotify([name]);
     try {
-      const msg = await runFieldValidators(name, signal);
+      const msg = await runFieldValidators(name, opts?.signal);
       if (msg) {
         errors[name] = msg;
       } else {
@@ -349,13 +380,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     const { signal } = options ?? {};
     try {
       const nextErrors: Record<string, string> = {};
-      let fieldsToValidate = new Set<string>([...Object.keys(rules), ...store.keys()]);
-      if (options?.onlyTouched) {
-        fieldsToValidate = new Set([...fieldsToValidate].filter((n) => touched.has(n)));
-      }
-      if (options?.fields?.length) {
-        fieldsToValidate = new Set(options.fields);
-      }
+      const base = new Set<string>([...Object.keys(rules), ...store.keys()]);
+      const fieldsToValidate = options?.fields?.length
+        ? new Set(options.fields)
+        : options?.onlyTouched
+          ? new Set([...base].filter((n) => touched.has(n)))
+          : base;
 
       for (const name of fieldsToValidate) {
         if (signal?.aborted) throw new Error('Validation aborted');
@@ -365,15 +395,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       if (formValidator) {
         if (signal?.aborted) throw new Error('Validation aborted');
-        try {
-          const formErrors = await formValidator(values());
-          if (formErrors) {
-            for (const [name, message] of Object.entries(formErrors)) {
-              if (message) nextErrors[name] = message;
-            }
+        const formErrors = await formValidator(values());
+        if (formErrors) {
+          for (const [name, message] of Object.entries(formErrors)) {
+            if (message) nextErrors[name] = message;
           }
-        } catch (err) {
-          nextErrors[''] = err instanceof Error ? err.message : String(err);
         }
       }
 
@@ -387,10 +413,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Submit -------------------- */
 
-  async function submit(
-    onSubmit: (formData: FormData) => MaybePromise<unknown>,
-    options?: { signal?: AbortSignal; validate?: boolean },
-  ): Promise<unknown> {
+  async function submit<TResult = void>(
+    onSubmit: (values: TValues) => MaybePromise<TResult>,
+    options?: SubmitOptions,
+  ): Promise<TResult> {
     if (isSubmitting) throw new Error('Form is already being submitted');
     submitCount++;
     isSubmitting = true;
@@ -400,16 +426,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       if (options?.validate ?? true) {
         await validateAll({ signal: options?.signal });
       }
-
-      // Mark all fields as touched so validation errors become visible in the UI
-      for (const name of store.keys()) touched.add(name);
-      for (const name of Object.keys(rules)) touched.add(name);
-
+      touchAll();
       if (Object.keys(errors).length > 0) {
         throw new ValidationError(getErrors());
       }
-
-      return await onSubmit(toFormData(values()));
+      return await onSubmit(values());
     } finally {
       isSubmitting = false;
       scheduleNotify();
@@ -418,40 +439,35 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Subscriptions -------------------- */
 
-  function subscribe(listener: Listener): () => void {
+  function subscribe(listener: Listener, options?: { immediate?: boolean }): () => void {
     listeners.add(listener);
-    try {
-      listener(buildState());
-    } catch {
-      /* swallow */
-    }
+    if (options?.immediate !== false) listener(buildState());
     return () => listeners.delete(listener);
   }
 
   function subscribeField<V = unknown>(
     name: string,
     listener: (payload: { value: V; error?: string; touched: boolean; dirty: boolean }) => void,
+    options?: { immediate?: boolean },
   ): () => void {
-    let set = fieldListeners.get(name);
-    if (!set) {
-      set = new Set();
-      fieldListeners.set(name, set);
+    let bucket = fieldListeners.get(name);
+    if (!bucket) {
+      bucket = new Set();
+      fieldListeners.set(name, bucket);
     }
-    set.add(listener as FieldListener);
-    try {
+    bucket.add(listener as FieldListener);
+    if (options?.immediate !== false) {
       listener({
         dirty: dirty.has(name),
         error: errors[name],
         touched: touched.has(name),
         value: store.get(name) as V,
       });
-    } catch {
-      /* swallow */
     }
     return () => {
-      const s = fieldListeners.get(name);
-      s?.delete(listener as FieldListener);
-      if (s?.size === 0) fieldListeners.delete(name);
+      const bucket = fieldListeners.get(name);
+      bucket?.delete(listener as FieldListener);
+      if (bucket?.size === 0) fieldListeners.delete(name);
     };
   }
 
@@ -464,14 +480,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         event && typeof event === 'object' && 'target' in event
           ? (event as { target: { value: unknown } }).target.value
           : event);
-    const touchOnBlur = config?.markTouchedOnBlur ?? true;
+    const touchOnBlur = config?.touchOnBlur ?? true;
 
     const setter = (newValue: unknown) => {
-      const next =
-        typeof newValue === 'function'
-          ? (newValue as (v: unknown) => unknown)(store.get(name))
-          : newValue;
-      set(name, next, { setDirty: true, setTouched: true });
+      if (typeof newValue === 'function') {
+        update(name, newValue as (prev: unknown) => unknown, { setDirty: true });
+      } else {
+        set(name, newValue, { setDirty: true });
+      }
     };
 
     return {
@@ -492,14 +508,13 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Reset -------------------- */
 
-  function reset(newValues?: Record<string, unknown>): void {
+  function reset(newValues?: Partial<TValues>): void {
     store.clear();
     for (const k of Object.keys(errors)) delete errors[k];
     touched.clear();
     dirty.clear();
     initial.clear();
-
-    const source = newValues ?? (init.values as Record<string, unknown> | undefined) ?? {};
+    const source = flattenValues((newValues ?? init.values ?? {}) as Record<string, unknown>);
     for (const [name, value] of Object.entries(source)) {
       store.set(name, value);
       initial.set(name, value);
@@ -530,12 +545,17 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     setError,
     setErrors,
     setTouched,
-    snapshot: buildState,
+    getState: buildState,
     submit,
     subscribe,
     subscribeField,
+    update,
     validate,
     validateAll,
     values,
   };
 }
+
+export type Form<TValues extends Record<string, unknown> = Record<string, unknown>> = ReturnType<
+  typeof createForm<TValues>
+>;

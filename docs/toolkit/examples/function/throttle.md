@@ -102,5 +102,4 @@ trackEvent.flush(); // Executes 'scroll' immediately
 ## See Also
 
 - [debounce](./debounce.md): Delay execution until a period of inactivity.
-- [delay](./delay.md): Pause execution for a specified duration.
 - [once](./once.md): Ensure a function is only ever called once.

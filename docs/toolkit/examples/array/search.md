@@ -77,6 +77,6 @@ search(products, 'phone', 0.25); // [{ name: 'iPhone 15' }]
 
 ## See Also
 
-- [filter](./filter.md): Filter items based on exact conditions.
+- [select](./select.md): Filter array elements by a predicate.
 - [similarity](../string/similarity.md): The underlying string comparison helper.
 - [contains](./contains.md): Check for existence using deep equality.

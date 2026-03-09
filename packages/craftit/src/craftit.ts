@@ -1,315 +1,72 @@
-/** @vielzeug/craftit
- * Monolithic, functional, signals-based web component utility.
+/** @vielzeug/craftit — Functional, signals-based web component library.
+ * Signal primitives (Signal, signal, effect, computed, batch, watch, etc.)
+ * are provided by @vielzeug/stateit and re-exported here for convenience.
  */
-/* ========== Signals Core ========== */
-export type CleanupFn = () => void;
-// biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
-export type EffectFn = () => CleanupFn | undefined | void;
 
-const runAll = (fns: Iterable<() => void>) => {
+// ─── Signal primitives (re-exported from @vielzeug/stateit) ──────────────────
+// Consumers of craftit do not need to also import from @vielzeug/stateit.
+export {
+  batch, computed, effect,
+  isSignal, readonly, signal,
+  toValue,
+  untrack, writable, type CleanupFn, type EffectFn, type ReadonlySignal, type Signal, type WatchOptions
+} from '@vielzeug/stateit';
+
+import {
+  watch as _signalWatch,
+  batch,
+  type CleanupFn,
+  computed,
+  effect,
+  isSignal,
+  type ReadonlySignal,
+  type Signal,
+  signal,
+  untrack,
+  type WatchOptions,
+} from '@vielzeug/stateit';
+
+// Internal iterate-and-call helper — used by component disconnectedCallback.
+const runAll = (fns: Iterable<() => void>): void => {
   for (const fn of fns) fn();
 };
-let currentEffect: EffectFn | null = null;
-let isBatching = false;
-const pendingEffects = new Set<EffectFn>();
 
-/** Symbol used to identify Signal instances without instanceof checks (works through Proxy / subclasses) */
-const SIGNAL_BRAND = Symbol('craftit.signal');
-/** Symbol-keyed unsubscribe method — keeps it off the public type surface */
-const REMOVE_SUBSCRIBER = Symbol('craftit.removeSubscriber');
-/** Tracks which signals each effect runner currently depends on, enabling proper dep pruning */
-const effectDeps = new WeakMap<EffectFn, Set<Signal<unknown>>>();
-
-export class Signal<T> {
-  /** @internal — brand used by isSignal(); avoids instanceof so proxies and subclasses work */
-  readonly [SIGNAL_BRAND] = true;
-
-  get value(): T {
-    if (currentEffect) {
-      this.#subscribers.add(currentEffect);
-      // Register this signal in the running effect's dep set so it can be removed on re-run/dispose.
-      // This enables correct handling of conditional deps (a signal no longer read won't fire the effect).
-      let deps = effectDeps.get(currentEffect);
-
-      if (!deps) {
-        deps = new Set();
-        effectDeps.set(currentEffect, deps);
-      }
-
-      deps.add(this as Signal<unknown>);
-    }
-
-    return this.#value;
-  }
-  set value(next: T) {
-    if (Object.is(this.#value, next)) return;
-
-    this.#value = next;
-
-    if (isBatching) {
-      this.#subscribers.forEach((fn) => {
-        pendingEffects.add(fn);
-      });
-    } else {
-      // Snapshot subscribers into an array before iterating.
-      // pruneDeps() (called inside each runner) removes the runner from the live
-      // Set, and fn() immediately re-adds it. Without a snapshot, for...of on a
-      // Set visits items that were deleted-then-re-added, causing an infinite loop.
-      runAll([...this.#subscribers]);
-    }
-  }
-  /** @internal — removes a specific subscriber; called by effect cleanup / re-run */
-  [REMOVE_SUBSCRIBER](fn: EffectFn): void {
-    this.#subscribers.delete(fn);
-  }
-  #subscribers = new Set<EffectFn>();
-  #value: T;
-  #name?: string;
-  constructor(initial: T, name?: string) {
-    this.#value = initial;
-    this.#name = name;
-  }
-  /** Optional debug label — set via signal(value, { name: 'mySignal' }) */
-  get debugName(): string | undefined {
-    return this.#name;
-  }
-  map<U>(fn: (item: T extends readonly (infer I)[] ? I : never, index: number) => U): Signal<U[]> {
-    return computed(() => {
-      const arr = this.value as unknown as readonly unknown[];
-
-      return arr.map(fn as (item: unknown, index: number) => U);
-    });
-  }
-  /** Creates a derived signal by transforming this signal's value. Shorthand for computed(() => fn(this.value)). */
-  derive<U>(fn: (value: T) => U): Signal<U> {
-    return computed(() => fn(this.value));
-  }
-  peek(): T {
-    return this.#value;
-  }
-  update(fn: (current: T) => T): void {
-    this.value = fn(this.#value);
-  }
-  /** Merges a partial object into the current signal value. Only works on object-typed signals. */
-  assign(partial: T extends object ? Partial<T> : never): void {
-    if (typeof this.#value === 'object' && this.#value !== null) {
-      this.value = { ...this.#value, ...(partial as object) } as T;
-    }
-  }
-  /** Subscribes to value changes — shorthand for `watch(signal, cb)`. Returns a cleanup to stop watching. */
-  subscribe(cb: (value: T, prev: T) => void): CleanupFn {
-    return watch(this, cb);
-  }
-}
-export const signal = <T>(initial: T, options?: { name?: string }): Signal<T> => new Signal(initial, options?.name);
-/** Type guard that identifies Signal instances without instanceof — works through Proxy and subclasses */
-export const isSignal = <T = unknown>(value: unknown): value is Signal<T> =>
-  typeof value === 'object' && value !== null && SIGNAL_BRAND in value;
-/** Unwraps a plain value or a Signal to its current value. Reads are tracked if called inside an effect. */
-export const toValue = <T>(v: T | Signal<T>): T => (v instanceof Signal ? v.value : v);
+/* ========== Watch (component-context-aware) ========== */
 /**
- * A Signal with the value setter removed — all read operations (peek, map, derive, debugName)
- * remain available, writes are blocked both at the type level and at runtime.
+ * Watches a Signal and calls cb with (next, prev) whenever its value changes.
+ * Watches an array of Signals and calls cb (no args) whenever any of them changes.
+ * When called inside a component setup function, the watcher is automatically
+ * cleaned up when the component unmounts — no manual cleanup needed.
  */
-export type ReadonlySignal<T> = Omit<Signal<T>, 'update' | 'assign'> & { readonly value: T };
-/** Shared Proxy get trap — passes `target` as receiver so private fields (#value) resolve correctly. */
-// biome-ignore lint/suspicious/noExplicitAny: required to bind Signal private fields through Proxy
-const signalProxyGet = (target: Signal<any>, prop: string | symbol) => {
-  const val = Reflect.get(target, prop, target);
-  return typeof val === 'function' ? (val as Function).bind(target) : val;
-};
-export const readonly = <T>(s: Signal<T>): ReadonlySignal<T> =>
-  new Proxy(s, {
-    // Pass `target` (not the proxy) as the receiver so private fields (#value) resolve correctly.
-    get: signalProxyGet,
-    set(_target, prop, value, receiver) {
-      if (prop === 'value') {
-        throw new TypeError('[craftit] Cannot assign to value on a ReadonlySignal');
-      }
-      return Reflect.set(_target, prop, value, receiver);
-    },
-  }) as ReadonlySignal<T>;
-export const effect = (fn: EffectFn): CleanupFn => {
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
-  let cleanup: CleanupFn | undefined | void;
-
-  // Unsubscribes runner from every signal it previously tracked.
-  // Must be called before each re-run (handles conditional deps) and on explicit dispose.
-  const pruneDeps = () => {
-    const deps = effectDeps.get(runner);
-
-    if (deps) {
-      for (const sig of deps) sig[REMOVE_SUBSCRIBER](runner);
-
-      deps.clear();
-    }
-  };
-
-  const runner: EffectFn = () => {
-    cleanup?.();
-    pruneDeps(); // clear stale subscriptions before re-tracking
-
-    try {
-      currentEffect = runner;
-
-      const result = fn();
-
-      cleanup = typeof result === 'function' ? result : undefined;
-    } finally {
-      currentEffect = null;
-    }
-
-    return cleanup;
-  };
-
-  runner();
-
-  return () => {
-    cleanup?.();
-    pruneDeps();
-    effectDeps.delete(runner);
-  };
-};
-export const untrack = <T>(fn: () => T): T => {
-  const prev = currentEffect;
-
-  currentEffect = null;
-
-  try {
-    return fn();
-  } finally {
-    currentEffect = prev;
-  }
-};
-/** Sentinel value used to initialize signals in computed() and writable() before the first effect run.
- * The effect is called synchronously, so by the time the function returns the sentinel is already replaced. */
-const UNSET = Symbol('craftit.unset');
-
-export const computed = <T>(compute: () => T): Signal<T> => {
-  const s = signal<T | typeof UNSET>(UNSET);
-
-  effect(() => {
-    s.value = compute();
-  });
-
-  // Safe cast: effect runs synchronously above, so s.value is already T by the time we return.
-  return s as Signal<T>;
-};
-/**
- * Creates a bi-directional computed signal: reads track the getter reactively, writes are forwarded to `set`.
- * Useful for form adapters and derived state that needs to write back to a source.
- * @example
- * const doubled = writable(() => count.value * 2, (v) => (count.value = v / 2));
- */
-export const writable = <T>(get: () => T, set: (value: T) => void): Signal<T> => {
-  const s = signal<T | typeof UNSET>(UNSET);
-  effect(() => {
-    s.value = get();
-  });
-  // Safe cast: effect runs synchronously above, so s.value is already T by the time we return.
-  return new Proxy(s as Signal<T>, {
-    get: signalProxyGet,
-    set(_target, prop, newValue) {
-      if (prop === 'value') {
-        set(newValue as T);
-        return true;
-      }
-      return Reflect.set(_target, prop, newValue, _target);
-    },
-  });
-};
-export const batch = <T>(fn: () => T): T => {
-  const wasBatching = isBatching;
-
-  isBatching = true;
-
-  let result!: T;
-  try {
-    result = fn();
-  } finally {
-    isBatching = wasBatching;
-
-    if (!wasBatching) {
-      // Snapshot before iterating: effects added by f() during this flush belong to the NEXT batch.
-      for (const f of [...pendingEffects]) {
-        pendingEffects.delete(f);
-        f();
-      }
-    }
-  }
-  return result;
-};
-
-export type WatchOptions = {
-  immediate?: boolean;
-};
-export function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
-export function watch<T extends readonly Signal<unknown>[]>(
-  sources: [...T],
-  cb: (
-    values: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
-    prevValues: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
-  ) => void,
+export function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
+export function watch(
+  sources: ReadonlyArray<ReadonlySignal<unknown>>,
+  cb: () => void,
   options?: WatchOptions,
 ): CleanupFn;
-export function watch<T>(
-  source: Signal<T> | Signal<unknown>[],
-  cb: ((value: T, prev: T) => void) | ((values: unknown[]) => void),
+export function watch(
+  source: ReadonlySignal<unknown> | ReadonlyArray<ReadonlySignal<unknown>>,
+  cb: ((value: unknown, prev: unknown) => void) | (() => void),
   options?: WatchOptions,
 ): CleanupFn {
   if (Array.isArray(source)) {
-    const sources = source as Signal<unknown>[];
-    let prevValues = sources.map((s) => s.peek());
-
-    if (options?.immediate) {
-      (cb as (values: unknown[], prev: unknown[]) => void)(prevValues, prevValues);
-    }
-
-    const stop = effect(() => {
-      // Read all values (tracks all deps) then check for changes — avoids allocating
-      // a new array when nothing changed, which is the common hot path.
-      let changed = false;
-      const nextValues: unknown[] = [];
-
-      for (let i = 0; i < sources.length; i++) {
-        const v = sources[i].value;
-
-        nextValues.push(v);
-        if (!Object.is(v, prevValues[i])) changed = true;
-      }
-
-      if (changed) {
-        const prev = prevValues;
-
-        prevValues = nextValues;
-        (cb as (values: unknown[], prev: unknown[]) => void)(nextValues, prev);
+    let initialized = false;
+    let dispose!: CleanupFn;
+    dispose = effect(() => {
+      for (const s of source) s.value; // register all listed deps
+      if (!initialized) {
+        initialized = true;
+        if (options?.immediate) untrack(cb as () => void);
+      } else {
+        untrack(cb as () => void);
+        if (options?.once) dispose();
       }
     });
-
-    // Auto-register cleanup when called inside a component lifecycle context
-    if (runtimeStack.length > 0) onCleanup(stop);
-
-    return stop;
+    if (runtimeStack.length > 0) onCleanup(dispose);
+    return dispose;
   }
-
-  let prev = source.peek();
-
-  if (options?.immediate) {
-    (cb as (value: T, prev: T) => void)(prev, prev);
-  }
-
-  const stop = effect(() => {
-    const next = source.value;
-
-    if (!Object.is(prev, next)) {
-      (cb as (value: T, prev: T) => void)(next, prev);
-      prev = next;
-    }
-  });
-
-  // Auto-register cleanup when called inside a component lifecycle context
+  const stop = _signalWatch(source as ReadonlySignal<unknown>, cb as (value: unknown, prev: unknown) => void, options);
   if (runtimeStack.length > 0) onCleanup(stop);
-
   return stop;
 }
 
@@ -335,20 +92,22 @@ export const guard =
   };
 
 const kebabCache = new Map<string, string>();
-const toKebab = (str: string): string =>
-  kebabCache.get(str) ||
-  kebabCache
-    .set(
-      str,
-      str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
-    )
-    .get(str)!;
+const toKebab = (str: string): string => {
+  const cached = kebabCache.get(str);
+  if (cached !== undefined) return cached;
+  const result = str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+  kebabCache.set(str, result);
+  return result;
+};
 // Basic HTML escaping for untrusted text
-export const escapeHtml = (value: unknown): string =>
-  String(value).replace(
-    /[&<>"']/g,
-    (c) => ({ "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!,
-  );
+const _htmlEscapeMap: Record<string, string> = {
+  "'": '&#39;',
+  '"': '&quot;',
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+};
+export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => _htmlEscapeMap[c]!);
 const parseHTML = (html: string): DocumentFragment => {
   const tpl = document.createElement('template');
 
@@ -369,11 +128,11 @@ const findCommentMarker = (root: Node, marker: string): Comment | null => {
 };
 
 /* ========== Template & Bindings Types ========== */
-type TextBinding = { marker: string; signal: Signal<unknown>; type: 'text' };
+type TextBinding = { marker: string; signal: ReadonlySignal<unknown>; type: 'text' };
 type AttrBindingBase = {
   marker: string;
   name: string;
-  signal?: Signal<unknown>;
+  signal?: ReadonlySignal<unknown>;
   value?: unknown;
 };
 type AttrBinding = AttrBindingBase & {
@@ -401,7 +160,7 @@ type ModelBinding = {
 type HtmlBinding = {
   keyed?: boolean;
   marker: string;
-  signal: Signal<{
+  signal: ReadonlySignal<{
     bindings: Binding[];
     html: string;
     items?: Array<{ bindings: Binding[]; html: string }>;
@@ -479,11 +238,7 @@ const applyAttrBinding = (
 
   const update = (v: unknown) => {
     if (binding.mode === 'bool') {
-      if (v) {
-        el.setAttribute(binding.name, '');
-      } else {
-        el.removeAttribute(binding.name);
-      }
+      el.toggleAttribute(binding.name, Boolean(v));
       // For checkbox/radio inputs, also update the property
       if (binding.name === 'checked' && el instanceof HTMLInputElement) {
         el.checked = Boolean(v);
@@ -569,6 +324,8 @@ const booleanAttrs = new Set([
   'checked',
   'selected',
   'hidden',
+  'multiple',
+  'novalidate',
   'open',
   'autofocus',
   'autoplay',
@@ -587,10 +344,6 @@ const keyMap: Record<string, string> = {
   space: ' ',
   tab: 'Tab',
   up: 'ArrowUp',
-};
-
-type HtmlSignalWrapper = {
-  __htmlSignal: Signal<{ bindings: Binding[]; html: string }>;
 };
 
 /* Marker for raw HTML content */
@@ -668,7 +421,6 @@ const applyModelBinding = (
     }
   };
 
-  updateElement();
   registerCleanup(effect(() => updateElement()));
 
   const eventName = el instanceof HTMLSelectElement ? 'change' : 'input';
@@ -697,11 +449,9 @@ const applyBindingsInContainer = (
   container: ParentNode,
   bindings: Binding[],
   registerCleanup: RegisterCleanup,
-  opts?: { eventModifiers?: boolean; keepMarkers?: boolean; onHtml?: (b: HtmlBinding) => void },
+  opts?: { eventModifiers?: boolean; onHtml?: (b: HtmlBinding) => void },
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Core binding application logic requires handling many binding types
 ) => {
-  const km = opts?.keepMarkers ?? false;
-
   for (const b of bindings) {
     if (b.type === 'text') {
       const found = findCommentMarker(container, b.marker);
@@ -722,38 +472,30 @@ const applyBindingsInContainer = (
       const el = container.querySelector<HTMLElement>(`[${b.marker}]`);
 
       if (el) {
-        if (b.type === 'attr') applyAttrBinding(el, b, registerCleanup, km);
-        else if (b.type === 'prop') applyPropBinding(el, b, registerCleanup, km);
-        else if (b.type === 'event') applyEventBinding(el, b, registerCleanup, opts?.eventModifiers ?? true, km);
-        else if (b.type === 'ref') applyRefBinding(el, b, registerCleanup, km);
-        else if (b.type === 'model') applyModelBinding(el, b, registerCleanup, km);
+        if (b.type === 'attr') applyAttrBinding(el, b, registerCleanup);
+        else if (b.type === 'prop') applyPropBinding(el, b, registerCleanup);
+        else if (b.type === 'event') applyEventBinding(el, b, registerCleanup, opts?.eventModifiers ?? true);
+        else if (b.type === 'ref') applyRefBinding(el, b, registerCleanup);
+        else if (b.type === 'model') applyModelBinding(el, b, registerCleanup);
       }
     }
   }
 };
-const resolveCondition = (cond: unknown): boolean => !!(cond instanceof Signal ? cond.value : cond);
+const resolveCondition = (cond: unknown): boolean => !!(isSignal(cond) ? cond.value : cond);
 
 /* Internal helper for looping - used by html.each() */
 const eachHelper = <T>(
-  source: T[] | Signal<T[]>,
+  source: T[] | Signal<T[]> | ReadonlySignal<T[]> | (() => T[]),
   keyFn: (item: T, index: number) => string | number,
   template: (item: T, index: number) => string | HTMLResult,
   empty?: () => string | HTMLResult,
-):
-  | EachDirective<T>
-  | {
-      __eachSignal: Signal<{
-        bindings: Binding[];
-        html: string;
-        items: Array<{ bindings: Binding[]; html: string }>;
-        keys: (string | number)[];
-      }>;
-    } => {
-  if (source instanceof Signal) {
+) => {
+  const src = typeof source === 'function' ? computed(source) : source;
+  if (isSignal<T[]>(src)) {
     const htmlSignal = computed(() => {
-      const items = source.value;
+      const items = src.value;
 
-      if (!items?.length) {
+      if (!items.length) {
         const emptyResult = empty?.();
 
         return emptyResult
@@ -810,7 +552,7 @@ const eachHelper = <T>(
     return { __eachSignal: htmlSignal };
   }
 
-  return { empty, items: source, keyFn, template, type: 'each' };
+  return { empty, items: src as T[], keyFn, template, type: 'each' };
 };
 
 /* Global marker index to ensure unique markers across all components */
@@ -842,12 +584,11 @@ const MARKER_PREFIX = {
 
 /** Hoisted out of htmlTemplate so it isn't re-created as a new closure on every tag call. */
 const createAttrBinding = (mode: 'bool' | 'attr', name: string, markerAttr: string, value: unknown): AttrBinding => {
-  const sig =
-    value instanceof Signal
-      ? (value as Signal<unknown>)
-      : typeof value === 'function'
-        ? computed(() => (value as () => unknown)())
-        : undefined;
+  const sig = isSignal(value)
+    ? (value as ReadonlySignal<unknown>)
+    : typeof value === 'function'
+      ? computed(value as () => unknown)
+      : undefined;
 
   return sig
     ? { marker: markerAttr, mode, name, signal: sig, type: 'attr' }
@@ -946,11 +687,11 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
       const m = addMarker(str, propMatch, MARKER_PREFIX.prop);
 
       bindings.push(
-        value instanceof Signal
+        isSignal(value)
           ? {
               marker: m,
               name: propMatch[1],
-              signal: value as Signal<unknown>,
+              signal: value as ReadonlySignal<unknown>,
               type: 'prop' as const,
             }
           : { marker: m, name: propMatch[1], type: 'prop' as const, value },
@@ -1000,7 +741,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
     }
 
     // Model binding for two-way data binding
-    if (hasKey(value, '__model') && value && typeof value === 'object') {
+    if (hasKey(value, '__model')) {
       const marker = `data-${MARKER_PREFIX.model}${globalMarkerIndex++}`;
       const sig = (value as { __model: Signal<string | number | boolean> }).__model;
 
@@ -1026,14 +767,14 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
     }
 
     /*  Reactive HTML wrappers  */
-    let htmlWrapper: HtmlSignalWrapper | null = null;
+    let htmlWrapper: { __htmlSignal: ReadonlySignal<{ bindings: Binding[]; html: string }> } | null = null;
     let isKeyed = false;
 
     if (hasKey(value, '__eachSignal')) {
       htmlWrapper = {
         __htmlSignal: (
           value as {
-            __eachSignal: Signal<{
+            __eachSignal: ReadonlySignal<{
               bindings: Binding[];
               html: string;
               items?: Array<{ bindings: Binding[]; html: string }>;
@@ -1046,7 +787,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
     } else if (hasKey(value, 'type') && (value as Directive).type === 'when') {
       const whenDir = value as WhenDirective;
 
-      if (whenDir.condition instanceof Signal) {
+      if (isSignal(whenDir.condition)) {
         const whenSignal = computed(() => {
           const cond = resolveCondition(whenDir.condition);
           const res = cond ? whenDir.thenBranch() : whenDir.elseBranch ? whenDir.elseBranch() : '';
@@ -1092,7 +833,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
     }
 
     // Signal interpolation with an array or HTMLResult => reactive HTML
-    if (!htmlWrapper && value instanceof Signal) {
+    if (!htmlWrapper && isSignal(value)) {
       if (Array.isArray(value.value) || isHtmlResult(value.value)) {
         htmlWrapper = {
           __htmlSignal: Array.isArray(value.value)
@@ -1100,7 +841,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
                 let html = '';
                 const bs: Binding[] = [];
 
-                for (const item of (value as Signal<unknown[]>).value) {
+                for (const item of (value as ReadonlySignal<unknown[]>).value) {
                   if (isHtmlResult(item)) {
                     html += item.__html;
                     bs.push(...item.__bindings);
@@ -1112,8 +853,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
                 return { bindings: bs, html };
               })
             : computed(() => {
-                const val = (value as Signal<unknown>).value;
-
+                const val = (value as ReadonlySignal<unknown>).value;
                 return isHtmlResult(val)
                   ? { bindings: val.__bindings, html: val.__html }
                   : { bindings: [], html: String(val) };
@@ -1152,7 +892,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
     }
 
     // Regular signal -> text comment binding
-    if (value instanceof Signal) {
+    if (isSignal(value)) {
       const marker = `__s_${globalMarkerIndex++}`;
 
       result += `${str}<!--${marker}-->`;
@@ -1161,14 +901,11 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
         signal: value as Signal<unknown>,
         type: 'text',
       });
+    } else if (isHtmlResult(value)) {
+      result += str + value.__html;
+      bindings.push(...value.__bindings);
     } else {
-      // Check if it's an HTMLResult - if so, extract bindings
-      if (isHtmlResult(value)) {
-        result += str + value.__html;
-        bindings.push(...value.__bindings);
-      } else {
-        result += str + resolveDirectiveValue(value);
-      }
+      result += str + resolveDirectiveValue(value);
     }
   }
 
@@ -1180,41 +917,36 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
 
 /* ========== Template Engine — html & raw ========== */
 export const html = Object.assign(
-  (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => {
-    return htmlTemplate(strings, values, true);
-  },
+  (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => htmlTemplate(strings, values, true),
   {
     /** Two-way binding shorthand — use as a prop value: html`<my-input ${html.bind(mySignal)} />` */
     bind: (sig: Signal<string | number | boolean>) => ({ __model: sig }),
     /* --- helpers: classes, escape, log, style --- */
+    /**
+     * Builds a class string from an object map of `{ className: condition }` pairs.
+     * Conditions can be booleans, Signals, or getter functions for reactivity.
+     * Returns a plain string for static conditions or a computed Signal for reactive ones.
+     *
+     * @example
+     * html.classes({ active: isActive, hidden: () => !visible.value })
+     */
     classes: (
-      classes:
-        | Record<string, boolean | Signal<boolean> | (() => boolean) | undefined>
-        | (string | false | undefined | null | Record<string, boolean | undefined>)[],
-    ): string | Signal<string> => {
-      if (!Array.isArray(classes)) {
-        const entries = Object.entries(classes);
-        const hasReactive = entries.some(([, v]) => v instanceof Signal || typeof v === 'function');
-
-        if (hasReactive) {
-          return computed(() =>
-            entries
-              .filter(([, v]) => (v instanceof Signal ? v.value : typeof v === 'function' ? (v as () => boolean)() : v))
-              .map(([k]) => k)
-              .join(' '),
-          );
-        }
-      }
-
-      return Array.isArray(classes)
-        ? classes
-            .map((c) => (typeof c === 'string' ? c : c && typeof c === 'object' ? String(html.classes(c)) : ''))
-            .filter(Boolean)
-            .join(' ')
-        : Object.entries(classes)
-            .filter(([, v]) => v)
+      classes: Record<string, boolean | Signal<boolean> | (() => boolean) | undefined>,
+    ): string | ReadonlySignal<string> => {
+      const entries = Object.entries(classes);
+      const hasReactive = entries.some(([, v]) => isSignal(v) || typeof v === 'function');
+      if (hasReactive) {
+        return computed(() =>
+          entries
+            .filter(([, v]) => (isSignal(v) ? v.value : typeof v === 'function' ? (v as () => boolean)() : v))
             .map(([k]) => k)
-            .join(' ');
+            .join(' '),
+        );
+      }
+      return entries
+        .filter(([, v]) => v)
+        .map(([k]) => k)
+        .join(' ');
     },
     // Loop rendering - renamed from 'for' to 'each' for clarity
     each: <T>(
@@ -1226,30 +958,11 @@ export const html = Object.assign(
             (item: T, index: number) => string | HTMLResult,
             (() => string | HTMLResult)?,
           ]
-        | [
-            {
-              empty?: () => string | HTMLResult;
-              key?: (item: T, index: number) => string | number;
-              template: (item: T, index: number) => string | HTMLResult;
-            },
-          ]
     ) => {
-      // Convert function source to Signal for reactivity
-      let sourceSignal: T[] | Signal<T[]>;
-      if (typeof source === 'function') {
-        sourceSignal = computed(() => (source as () => T[])());
-      } else {
-        sourceSignal = source;
-      }
-
       if (args.length === 1) {
         const first = args[0];
-        if (typeof first === 'function') {
-          // Simple form: html.each(items, item => html`...`)
-          return eachHelper(sourceSignal, (_, i) => i, first);
-        }
-        // Advanced form with options object: html.each(items, { key, template, empty })
-        return eachHelper(sourceSignal, first.key ?? ((_, i) => i), first.template, first.empty);
+        // Simple form: html.each(items, item => html`...`)
+        return eachHelper(source, (_, i) => i, first);
       }
       // Three-argument form: html.each(items, keyFn, templateFn, emptyFn?)
       const [keyFn, templateFn, emptyFn] = args as [
@@ -1257,38 +970,8 @@ export const html = Object.assign(
         (item: T, index: number) => string | HTMLResult,
         (() => string | HTMLResult)?,
       ];
-      return eachHelper(sourceSignal, keyFn, templateFn, emptyFn);
+      return eachHelper(source, keyFn, templateFn, emptyFn);
     },
-    // Match/case helper — pattern-matching style switch for reactive values
-    // Overloaded: static value → returns V directly; Signal/function → returns () => V for reactive re-evaluation.
-    match: (<T, V extends string | HTMLResult>(
-      value: T | Signal<T> | (() => T),
-      cases: Array<[T, () => V]>,
-      defaultCase?: () => V,
-    ): V | (() => V) => {
-      const resolveCase = (val: T): V => {
-        const found = cases.find(([caseValue]) => Object.is(caseValue, val));
-        return found ? found[1]() : defaultCase ? defaultCase() : ('' as V);
-      };
-
-      // Handle Signal
-      if (value instanceof Signal) {
-        return () => resolveCase(value.value);
-      }
-
-      // Handle function (reactive)
-      if (typeof value === 'function') {
-        return () => resolveCase((value as () => T)());
-      }
-
-      // Handle static value
-      return resolveCase(value as T);
-    }) as (<T, V extends string | HTMLResult>(value: T, cases: Array<[T, () => V]>, defaultCase?: () => V) => V) &
-      (<T, V extends string | HTMLResult>(
-        value: Signal<T> | (() => T),
-        cases: Array<[T, () => V]>,
-        defaultCase?: () => V,
-      ) => () => V),
     // Conditional visibility — keeps the DOM mounted, only toggles display.
     // Use instead of html.when when the content has expensive setup or local state
     // that must survive visibility changes (e.g. a video player, a form with inputs).
@@ -1298,12 +981,11 @@ export const html = Object.assign(
     ): HTMLResult => {
       const inner = templateFn();
       const { html: innerHtml, bindings: innerBindings } = extractHtml(inner);
-      const condSignal =
-        condition instanceof Signal
-          ? condition
-          : typeof condition === 'function'
-            ? computed(() => resolveCondition((condition as () => unknown)()))
-            : null;
+      const condSignal = isSignal(condition)
+        ? condition
+        : typeof condition === 'function'
+          ? computed(() => resolveCondition((condition as () => unknown)()))
+          : null;
 
       if (condSignal) {
         // Reactive: wrap in a layout-transparent <span> and toggle display reactively.
@@ -1345,6 +1027,7 @@ export const html = Object.assign(
     // Two forms:
     //   html.when(cond, thenFn, elseFn?)                    — single condition
     //   html.when([cond1, fn1], [cond2, fn2], ..., fallback?) — multi-branch else-if chain
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: multi-branch conditional directive requires complex branching logic
     when: <V extends string | HTMLResult>(...args: unknown[]): V | WhenDirective | string => {
       // Multi-branch form: each positional arg is a [condition, fn] tuple
       if (Array.isArray(args[0])) {
@@ -1352,7 +1035,7 @@ export const html = Object.assign(
         const lastArg = args[args.length - 1];
         const fallback = !Array.isArray(lastArg) && typeof lastArg === 'function' ? (lastArg as () => V) : undefined;
         const branches = (fallback ? args.slice(0, -1) : args) as Branch[];
-        const isReactive = branches.some(([cond]) => cond instanceof Signal || typeof cond === 'function');
+        const isReactive = branches.some(([cond]) => isSignal(cond) || typeof cond === 'function');
 
         if (!isReactive) {
           for (const [cond, fn] of branches) {
@@ -1366,17 +1049,17 @@ export const html = Object.assign(
         const conditionSignal = computed(() =>
           branches.some(([cond]) =>
             resolveCondition(
-              cond instanceof Signal ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond,
+              isSignal(cond) ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond,
             ),
           ),
         );
         return {
           condition: conditionSignal,
-          elseBranch: undefined,
+          elseBranch: fallback,
+          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: resolving the matching branch is inherently iterative
           thenBranch: () => {
             for (const [cond, fn] of branches) {
-              const val =
-                cond instanceof Signal ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond;
+              const val = isSignal(cond) ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond;
               if (resolveCondition(val)) return fn();
             }
             return fallback ? fallback() : ('' as V);
@@ -1387,7 +1070,7 @@ export const html = Object.assign(
 
       // Single-condition form: html.when(condition, thenFn, elseFn?)
       const [condition, thenFn, elseFn] = args as [unknown | Signal<unknown>, () => V, (() => V) | undefined];
-      if (condition instanceof Signal) {
+      if (isSignal(condition)) {
         return { condition, elseBranch: elseFn, thenBranch: thenFn, type: 'when' };
       }
       if (typeof condition === 'function') {
@@ -1400,9 +1083,8 @@ export const html = Object.assign(
 );
 
 /* ========== Template Engine — raw (no escaping) ========== */
-export const raw = (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => {
-  return htmlTemplate(strings, values, false);
-};
+export const raw = (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult =>
+  htmlTemplate(strings, values, false);
 
 /* ========== Runtime Helpers — suspense & bind ========== */
 export const suspense = <T>(
@@ -1437,8 +1119,7 @@ export const suspense = <T>(
     const current = state.value;
     if (current.loading) return options.fallback();
     if (current.error) {
-      const retry = () => run();
-      return options.error ? options.error(current.error, retry) : html`<div>Error loading</div>`;
+      return options.error ? options.error(current.error, run) : html`<div>Error loading</div>`;
     }
     return options.template(current.data!);
   };
@@ -1452,6 +1133,9 @@ export type CSSResult = {
 type ThemeVars<T extends Record<string, string | number>> = {
   [K in keyof T]: string;
 } & { toString(): string };
+const cssResultToString = function (this: CSSResult): string {
+  return this.content;
+};
 export const css = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): CSSResult => {
     const content = strings
@@ -1464,12 +1148,7 @@ export const css = Object.assign(
       }, '')
       .trim();
 
-    return {
-      content,
-      toString() {
-        return this.content;
-      },
-    };
+    return { content, toString: cssResultToString };
   },
   {
     theme: <T extends Record<string, string | number>>(
@@ -1607,20 +1286,20 @@ type AriaAttrValue =
  */
 export const aria = (attrs: Record<string, AriaAttrValue>): void => {
   const host = currentRuntime().el;
-  const applyAttr = (name: string, raw: AriaAttrValue) => {
+  const applyAttr = (name: string, val: AriaAttrValue) => {
     const attrName = `aria-${name}`;
-    const value = typeof raw === 'function' ? (raw as () => AriaAttrValue)() : raw;
+    const value = typeof val === 'function' ? (val as () => AriaAttrValue)() : val;
     if (value === null || value === undefined || value === false) {
       host.removeAttribute(attrName);
     } else {
-      host.setAttribute(attrName, String(value === true ? 'true' : value));
+      host.setAttribute(attrName, String(value));
     }
   };
 
   for (const [name, value] of Object.entries(attrs)) {
     if (typeof value === 'function') {
       // Wrap in a reactive effect so getter-functions are re-evaluated on signal changes
-      effect(() => applyAttr(name, value));
+      onCleanup(effect(() => applyAttr(name, value)));
     } else {
       applyAttr(name, value);
     }
@@ -1629,15 +1308,8 @@ export const aria = (attrs: Record<string, AriaAttrValue>): void => {
 
 /* ========== Context (provide/inject) ========== */
 
-/** WeakMap-based logical parent tracking — let's inject() traverse through portaled components */
+/** WeakMap-based logical parent tracking — lets inject() traverse through portaled components */
 const _logicalParents = new WeakMap<HTMLElement, HTMLElement>();
-const componentRegistry = {
-  clearLogicalParent: (el: HTMLElement) => _logicalParents.delete(el),
-  getLogicalParent: (el: HTMLElement): HTMLElement | null => _logicalParents.get(el) ?? null,
-  setLogicalParent: (child: HTMLElement, parent: HTMLElement | null) => {
-    if (parent) _logicalParents.set(child, parent);
-  },
-};
 
 const contextKey = Symbol('craftit.context');
 
@@ -1648,33 +1320,14 @@ interface ContextHost extends HTMLElement {
   [contextKey]?: Map<InjectionKey<unknown> | string | symbol, unknown>;
 }
 export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): void => {
-  const rt = currentRuntime();
-  const el = rt.el as ContextHost;
+  const el = currentRuntime().el as ContextHost;
 
-  // biome-ignore lint/suspicious/noAssignInExpressions: -
-  (el[contextKey] ??= new Map()).set(key, value);
+  el[contextKey] ??= new Map();
+  el[contextKey]!.set(key, value);
 };
 export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T): T | undefined {
-  const result = injectInternal(key, fallback);
-  if (result === undefined && fallback === undefined) {
-    const keyStr = typeof key === 'symbol' ? key.toString() : String(key);
-    console.warn(
-      `[craftit] Injection key not found: ${keyStr}\n\nPossible causes:
-  • No parent component calls provide() with this key
-  • inject() called outside component setup
-  • Component hierarchy doesn't include provider
-Solutions:
-  • Ensure a parent component calls provide(key, value)
-  • Provide a fallback: inject(key, defaultValue)
-  • Check component nesting in your template`,
-    );
-  }
-  return result;
-}
-
-function injectInternal<T>(key: InjectionKey<T> | string | symbol, fallback?: T): T | undefined {
   const rt = currentRuntime();
   let node: Node | null = rt.el;
 
@@ -1683,13 +1336,12 @@ function injectInternal<T>(key: InjectionKey<T> | string | symbol, fallback?: T)
       const host = node as ContextHost;
 
       if (host[contextKey]?.has(key)) {
-        return host[contextKey]!.get(key) as T | undefined;
+        return host[contextKey]!.get(key) as T;
       }
     }
 
     // Try logical parent first (for portaled components)
-    const logicalParent: HTMLElement | null =
-      node instanceof HTMLElement ? componentRegistry.getLogicalParent(node) : null;
+    const logicalParent: HTMLElement | null = node instanceof HTMLElement ? (_logicalParents.get(node) ?? null) : null;
 
     if (logicalParent) {
       node = logicalParent;
@@ -1704,6 +1356,19 @@ function injectInternal<T>(key: InjectionKey<T> | string | symbol, fallback?: T)
     node = parentElement ?? hostElement ?? null;
   }
 
+  if (fallback === undefined) {
+    console.warn(
+      `[craftit] Injection key not found: ${String(key)}\n\nPossible causes:
+  • No parent component calls provide() with this key
+  • inject() called outside component setup
+  • Component hierarchy doesn't include provider
+Solutions:
+  • Ensure a parent component calls provide(key, value)
+  • Provide a fallback: inject(key, defaultValue)
+  • Check component nesting in your template`,
+    );
+  }
+
   return fallback;
 }
 
@@ -1713,36 +1378,18 @@ export const createContext = <T>(): InjectionKey<T> => Symbol() as InjectionKey<
 /* ========== Slots API ========== */
 export type SlotsAPI<T extends Record<string, unknown> = Record<string, unknown>> = {
   has(name: keyof T): boolean;
-  render<K extends keyof T>(name: K, props?: T[K], fallback?: () => HTMLResult | string): HTMLResult | string;
-  default(props?: T['default'], fallback?: () => HTMLResult | string): HTMLResult | string;
 };
 
 export const defineSlots = <T extends Record<string, unknown> = Record<string, unknown>>(): SlotsAPI<T> => {
-  const rt = currentRuntime();
-  const el = rt.el;
+  const el = currentRuntime().el;
 
   return {
-    default(_props?: T['default'], fallback?: () => HTMLResult | string): HTMLResult | string {
-      // If there's a fallback and slot is empty, return fallback
-      if (fallback && !this.has('default')) {
-        return fallback();
-      }
-      return html`<slot />`;
-    },
     has(name: keyof T): boolean {
       const slotName = name === 'default' ? '' : String(name);
       const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(
         slotName ? `slot[name="${slotName}"]` : 'slot:not([name])',
       );
       return (slot?.assignedNodes().length ?? 0) > 0;
-    },
-    render<K extends keyof T>(name: K, _props?: T[K], fallback?: () => HTMLResult | string): HTMLResult | string {
-      const slotName = name === 'default' ? '' : String(name);
-      // If there's a fallback and the slot is empty, return fallback
-      if (fallback && !this.has(name)) {
-        return fallback();
-      }
-      return html`<slot ${slotName ? `name="${slotName}"` : ''} />`;
     },
   };
 };
@@ -1751,8 +1398,7 @@ export const defineSlots = <T extends Record<string, unknown> = Record<string, u
 export type EmitFn<T extends Record<string, unknown>> = <K extends keyof T>(event: K, detail: T[K]) => void;
 
 export const defineEmits = <T extends Record<string, unknown>>(): EmitFn<T> => {
-  const rt = currentRuntime();
-  const el = rt.el;
+  const el = currentRuntime().el;
 
   return <K extends keyof T>(event: K, detail: T[K]) => {
     el.dispatchEvent(
@@ -1778,38 +1424,21 @@ const formCallbacksKey = Symbol('craftit.formCallbacks');
 interface FormHost extends HTMLElement {
   [formCallbacksKey]?: FormAssociatedCallbacks;
 }
-export const onFormAssociated = (fn: (form: HTMLFormElement | null) => void): void => {
-  const rt = currentRuntime();
-  const el = rt.el as FormHost;
-
+const setFormCallback = <K extends keyof FormAssociatedCallbacks>(key: K, fn: FormAssociatedCallbacks[K]): void => {
+  const el = currentRuntime().el as FormHost;
   el[formCallbacksKey] ??= {};
-  el[formCallbacksKey]!.formAssociated = fn;
+  (el[formCallbacksKey] as FormAssociatedCallbacks)[key] = fn;
 };
-export const onFormDisabled = (fn: (disabled: boolean) => void): void => {
-  const rt = currentRuntime();
-  const el = rt.el as FormHost;
-
-  el[formCallbacksKey] ??= {};
-  el[formCallbacksKey]!.formDisabled = fn;
-};
-export const onFormReset = (fn: () => void): void => {
-  const rt = currentRuntime();
-  const el = rt.el as FormHost;
-
-  el[formCallbacksKey] ??= {};
-  el[formCallbacksKey]!.formReset = fn;
-};
-export const onFormStateRestore = (fn: (state: unknown, mode: 'autocomplete' | 'restore') => void): void => {
-  const rt = currentRuntime();
-  const el = rt.el as FormHost;
-
-  el[formCallbacksKey] ??= {};
-  el[formCallbacksKey]!.formStateRestore = fn;
-};
+export const onFormAssociated = (fn: (form: HTMLFormElement | null) => void): void =>
+  setFormCallback('formAssociated', fn);
+export const onFormDisabled = (fn: (disabled: boolean) => void): void => setFormCallback('formDisabled', fn);
+export const onFormReset = (fn: () => void): void => setFormCallback('formReset', fn);
+export const onFormStateRestore = (fn: (state: unknown, mode: 'autocomplete' | 'restore') => void): void =>
+  setFormCallback('formStateRestore', fn);
 export type FormFieldOptions<T = unknown> = {
-  disabled?: Signal<boolean>;
+  disabled?: Signal<boolean> | ReadonlySignal<boolean>;
   toFormValue?: (value: T) => File | FormData | string | null;
-  value: Signal<T>;
+  value: Signal<T> | ReadonlySignal<T>;
 };
 export type FormFieldHandle = {
   readonly internals: ElementInternals | null;
@@ -1854,7 +1483,7 @@ export const field = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandl
   return {
     internals,
     reportValidity: () => internals.reportValidity(),
-    setValidity: (...args: Parameters<ElementInternals['setValidity']>) => internals.setValidity(...args),
+    setValidity: internals.setValidity.bind(internals),
   };
 };
 
@@ -1877,11 +1506,10 @@ export type PropOptions<T> = {
   type?: PropType<T>;
   validator?: (value: T) => boolean;
   required?: boolean;
-  default?: T;
 };
 type PropMeta<T = unknown> = {
   name: string;
-  parse?: (value: string | null) => T;
+  parse: (value: string | null) => T;
   reflect: boolean;
   required?: boolean;
   signal: Signal<T>;
@@ -1891,30 +1519,28 @@ interface PropHost extends HTMLElement {
   [propsKey]?: Map<string, PropMeta<unknown>>;
 }
 
-/** Signal subclass that validates writes against a predicate, logging a warning on failure.
- * Lighter than a full Proxy — only the `value` setter is intercepted. */
-class ValidatedSignal<T> extends Signal<T> {
-  readonly #validator: (v: T) => boolean;
-  readonly #propName: string;
-
-  constructor(defaultValue: T, validator: (v: T) => boolean, propName: string) {
-    super(defaultValue);
-    this.#validator = validator;
-    this.#propName = propName;
-  }
-
-  override get value(): T {
-    return super.value;
-  }
-
-  override set value(next: T) {
-    if (!this.#validator(next)) {
-      console.warn(`[craftit] Prop "${this.#propName}" validation failed for value:`, next);
-      return;
-    }
-    super.value = next;
-  }
-}
+/** Returns a Signal<T> whose value setter runs validator before accepting the write.
+ * Uses a Proxy over signal() since Signal<T> is an interface, not a class. */
+const validatedSignal = <T>(defaultValue: T, validator: (v: T) => boolean, propName: string): Signal<T> => {
+  const s = signal<T>(defaultValue);
+  return new Proxy(s, {
+    get(target, prop) {
+      const val = Reflect.get(target, prop, target);
+      return typeof val === 'function' ? val.bind(target) : val;
+    },
+    set(_target, prop, value) {
+      if (prop === 'value') {
+        if (!validator(value as T)) {
+          console.warn(`[craftit] Prop "${propName}" validation failed for value:`, value);
+          return true;
+        }
+        s.value = value as T;
+        return true;
+      }
+      return Reflect.set(s, prop, value, s);
+    },
+  }) as Signal<T>;
+};
 
 export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
   const rt = currentRuntime();
@@ -1924,6 +1550,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
 
   const parse =
     options?.parse ??
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: attribute parsing must handle all HTML scalar types
     ((v: string | null): T => {
       // Explicit Boolean type: string values 'true' / '' → boolean
       if (options?.type === Boolean) return (v === '' || v === 'true') as T;
@@ -1942,7 +1569,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
       return v as unknown as T;
     });
   const validator = options?.validator;
-  const s: Signal<T> = validator ? new ValidatedSignal<T>(defaultValue, validator, name) : signal<T>(defaultValue);
+  const s: Signal<T> = validator ? validatedSignal<T>(defaultValue, validator, name) : signal<T>(defaultValue);
 
   el[propsKey]!.set(name, {
     name,
@@ -1980,7 +1607,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
  * Use inline object literals directly: `{ default: 0, type: Number }` or just `{ default: '' }`.
  */
 export type PropDef<T> = PropOptions<T> & { default: T };
-export type InferPropsSignals<T extends Record<string, PropDef<unknown>>> = {
+export type InferPropsSignals<T extends Record<string, PropDef<any>>> = {
   [K in keyof T]: Signal<T[K]['default']>;
 };
 /**
@@ -1994,7 +1621,7 @@ export type InferPropsSignals<T extends Record<string, PropDef<unknown>>> = {
  * });
  * // props.count → Signal<number>, props.label → Signal<string>
  */
-export const defineProps = <T extends Record<string, PropDef<unknown>>>(defs: T): InferPropsSignals<T> => {
+export const defineProps = <T extends Record<string, PropDef<any>>>(defs: T): InferPropsSignals<T> => {
   const result = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
@@ -2018,8 +1645,7 @@ export type SetupResult =
   | {
       styles?: (string | CSSStyleSheet | CSSResult)[];
       template: string | HTMLResult;
-    }
-  | Promise<unknown>; // Async setup functions are not supported, but we detect them at runtime
+    };
 export type DefineOptions = {
   /** Indicates if this should be a form-associated element */
   formAssociated?: boolean;
@@ -2142,7 +1768,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
         const logicalParent =
           this.parentElement ?? (rootNode instanceof ShadowRoot ? (rootNode.host as HTMLElement) : null);
         if (logicalParent) {
-          componentRegistry.setLogicalParent(this, logicalParent);
+          _logicalParents.set(this, logicalParent);
         }
 
         this._isPortaling = true;
@@ -2171,7 +1797,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       this._setupDone = true;
       runtimeStack.push(this.runtime);
 
-      let res: SetupResult;
+      let res: unknown;
 
       try {
         res = (this.constructor as typeof CraftitBaseElement)._setup({ host: this });
@@ -2217,7 +1843,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
     if (this[propsKey]) {
       for (const [attrName, meta] of this[propsKey]) {
         if (this.hasAttribute(attrName)) {
-          meta.signal.value = (meta.parse ?? ((v: string | null) => v))(this.getAttribute(attrName)) as never;
+          meta.signal.value = meta.parse(this.getAttribute(attrName)) as never;
         } else if (meta.required) {
           console.warn(`[craftit] <${this.localName}> missing required prop "${attrName}"`);
         }
@@ -2237,12 +1863,13 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       this._attrObserver = null;
     }
 
-    runAll([...this.runtime.cleanups, ...this.runtime.onUnmount]);
+    runAll(this.runtime.cleanups);
+    runAll(this.runtime.onUnmount);
     this.runtime.cleanups = [];
     this.runtime.onUnmount = [];
 
     // Clean up logical parent reference
-    componentRegistry.clearLogicalParent(this);
+    _logicalParents.delete(this);
 
     // Restore element to original position if it was portaled
     if (this._originalParent && this._portalTarget && !this._isPortaling) {
@@ -2280,12 +1907,12 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       onHtml: (b) => {
         if (!this.appliedHtmlBindings.has(b.marker)) {
           this.appliedHtmlBindings.add(b.marker);
-          this.applyHtmlBinding(root, b);
+          this.applyHtmlBinding(root, b, registerCleanup);
         }
       },
     });
   }
-  private applyHtmlBinding(root: Node, b: HtmlBinding, registerCleanup?: RegisterCleanup) {
+  private applyHtmlBinding(root: Node, b: HtmlBinding, registerCleanup: RegisterCleanup) {
     const found = findCommentMarker(root, b.marker);
 
     if (!found) return;
@@ -2301,8 +1928,6 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       currentCleanups = [];
     };
     const clearNodesAfterMarker = () => htmlBindingClearAfter(marker);
-    const createNodesFromHTML = (htmlString: string) => htmlBindingCreateNodes(htmlString);
-    const removeKeyedNode = (keyedNode: KeyedNode) => htmlBindingRemoveKeyed(keyedNode);
     const insertNodesBefore = (nodes: Node[], before: Node | null) => htmlBindingInsertBefore(marker, nodes, before);
     let lastDataHash: string | null = null;
     const stop = effect(() => {
@@ -2371,7 +1996,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
                 } else if (existing) {
                   // REPLACE: Different HTML - create new nodes, remove old
                   runAll(existing.cleanups);
-                  const newNodes = createNodesFromHTML(itemData.html);
+                  const newNodes = htmlBindingCreateNodes(itemData.html);
                   insertNodesBefore(newNodes, insertPoint);
                   const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
                   newKeyedState.set(key, {
@@ -2381,12 +2006,10 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
                     key,
                     nodes: newNodes,
                   });
-                  existing.nodes.forEach((n: Node) => {
-                    n.parentNode?.removeChild(n);
-                  });
+                  for (const n of existing.nodes) n.parentNode?.removeChild(n);
                 } else {
                   // CREATE: New item
-                  const newNodes = createNodesFromHTML(itemData.html);
+                  const newNodes = htmlBindingCreateNodes(itemData.html);
                   insertNodesBefore(newNodes, insertPoint);
                   const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
                   newKeyedState.set(key, {
@@ -2402,7 +2025,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
               // DELETE: Remove old items not in new state
               for (const [oldKey, oldNode] of keyedState) {
                 if (!newKeyedState.has(oldKey)) {
-                  removeKeyedNode(oldNode);
+                  htmlBindingRemoveKeyed(oldNode);
                 }
               }
 
@@ -2426,29 +2049,18 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       }); // end batch
     }); // end effect
 
-    if (registerCleanup) {
-      registerCleanup(stop);
-      registerCleanup(runCurrentCleanups);
-      if (b.keyed) registerCleanup(() => globalKeyedStates.delete(b.marker));
-    } else {
-      this.runtime.cleanups.push(stop);
-      this.runtime.cleanups.push(runCurrentCleanups);
-      if (b.keyed) this.runtime.cleanups.push(() => globalKeyedStates.delete(b.marker));
-    }
+    registerCleanup(stop);
+    registerCleanup(runCurrentCleanups);
+    if (b.keyed) registerCleanup(() => globalKeyedStates.delete(b.marker));
   }
   private handleAttributeChange(name: string, oldValue: string | null, newValue: string | null) {
     if (oldValue === newValue) return;
 
-    const props = this[propsKey];
-
-    if (!props) return;
-
-    const meta = props.get(name);
+    const meta = this[propsKey]?.get(name);
 
     if (!meta) return;
 
-    const parser = meta.parse ?? ((v: string | null) => v as unknown);
-    const parsedValue = parser(newValue);
+    const parsedValue = meta.parse(newValue);
 
     if (!Object.is(meta.signal.peek(), parsedValue)) {
       meta.signal.value = parsedValue as never;

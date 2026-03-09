@@ -17,7 +17,7 @@ Define a single event bus as a singleton module and import it across your app:
 
 ```ts
 // src/events.ts
-import { createEventBus } from '@vielzeug/eventit';
+import { eventBus } from '@vielzeug/eventit';
 
 export type AppEvents = {
   // auth
@@ -31,7 +31,7 @@ export type AppEvents = {
   dataRefresh:  { entity: string };
 };
 
-export const appBus = createEventBus<AppEvents>({
+export const appBus = eventBus<AppEvents>({
   onError: (err, event) => console.error(`[appBus] error in "${event}":`, err),
 });
 ```
@@ -69,7 +69,7 @@ type CartEvents = {
   cleared:     void;
 };
 
-const cartBus = createEventBus<CartEvents>();
+const cartBus = eventBus<CartEvents>();
 
 export const cart = {
   add(productId: string, quantity: number) {
@@ -104,7 +104,7 @@ type SystemEvents = {
   cacheReady: void;
 };
 
-const systemBus = createEventBus<SystemEvents>();
+const systemBus = eventBus<SystemEvents>();
 
 // Queue work until DB is ready
 systemBus.once('dbReady', () => {
@@ -132,7 +132,7 @@ type TrackingEvents = {
   errorOccurred: { code: string; message: string };
 };
 
-const trackingBus = createEventBus<TrackingEvents>();
+const trackingBus = eventBus<TrackingEvents>();
 
 // Generic analytics sink
 trackingBus.on('pageView',      (e) => ga('send', 'pageview', e.path));
@@ -146,10 +146,10 @@ trackingBus.emit('buttonClick', { label: 'Buy Now', section: 'Product' });
 
 ---
 
-## Testing with createTestEventBus
+## Testing with testEventBus
 
 ```ts
-import { createTestEventBus } from '@vielzeug/eventit';
+import { testEventBus } from '@vielzeug/eventit';
 import { describe, expect, it } from 'vitest';
 
 type OrderEvents = {
@@ -160,7 +160,7 @@ type OrderEvents = {
 
 describe('order flow', () => {
   it('records all order events', () => {
-    const { bus, emitted, dispose } = createTestEventBus<OrderEvents>();
+    const { bus, emitted, dispose } = testEventBus<OrderEvents>();
 
     bus.emit('placed',   { orderId: 'O1', total: 49.99 });
     bus.emit('shipped',  { orderId: 'O1', trackingCode: 'TRK123' });
@@ -173,13 +173,25 @@ describe('order flow', () => {
   });
 
   it('still calls listeners', () => {
-    const { bus, dispose } = createTestEventBus<OrderEvents>();
+    const { bus, dispose } = testEventBus<OrderEvents>();
     const onPlaced = vi.fn();
 
     bus.on('placed', onPlaced);
     bus.emit('placed', { orderId: 'O2', total: 19.99 });
 
     expect(onPlaced).toHaveBeenCalledWith({ orderId: 'O2', total: 19.99 });
+    dispose();
+  });
+
+  it('reset clears records between assertions', () => {
+    const { bus, emitted, reset, dispose } = testEventBus<OrderEvents>();
+
+    bus.emit('placed', { orderId: 'O3', total: 9.99 });
+    reset(); // clear history — bus and listeners still work
+
+    bus.emit('placed', { orderId: 'O4', total: 29.99 });
+    expect(emitted.get('placed')).toEqual([{ orderId: 'O4', total: 29.99 }]);
+
     dispose();
   });
 });
@@ -193,14 +205,14 @@ Use eventit as a cross-component event channel without prop drilling or context:
 
 ```tsx
 // src/events.ts
-import { createEventBus } from '@vielzeug/eventit';
+import { eventBus } from '@vielzeug/eventit';
 
 type UIEvents = {
   sidebarToggle: void;
   themeChange:   { theme: 'light' | 'dark' };
 };
 
-export const uiBus = createEventBus<UIEvents>();
+export const uiBus = eventBus<UIEvents>();
 ```
 
 ```tsx

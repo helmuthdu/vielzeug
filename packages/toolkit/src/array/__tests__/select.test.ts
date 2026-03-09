@@ -75,18 +75,4 @@ describe('select', () => {
     // @ts-expect-error
     expect(() => select({}, (x) => x)).toThrow(TypeError);
   });
-
-  it('should support async callback', async () => {
-    const arr = [1, 2, 3, 4];
-    const asyncCallback = async (x: number) => x * 2;
-    const result = await select(arr, asyncCallback, (x) => x > 2);
-    expect(result).toEqual([6, 8]);
-  });
-
-  it('should support async callback with no matching predicate', async () => {
-    const arr = [1, 2, 3];
-    const asyncCallback = async (x: number) => x * 2;
-    const result = await select(arr, asyncCallback, (x) => x > 10);
-    expect(result).toEqual([]);
-  });
 });

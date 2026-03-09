@@ -10,7 +10,7 @@ import type { Obj } from '../types';
  * const obj1 = { a: 1, b: 2, c: 3 };
  * const obj2 = { b: 2, c: 3, d: 4 };
  *
- * diff(obj1, obj2); // { d: 4 }
+ * diff(obj1, obj2); // { a: 1, d: undefined }
  * ```
  *
  * @param curr - The current object.

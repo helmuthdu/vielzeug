@@ -33,6 +33,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "dependencies": {
+    "@vielzeug/stateit": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^25.3.3",
     "jsdom": "^28.1.0",

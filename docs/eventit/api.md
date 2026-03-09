@@ -29,10 +29,10 @@ A string that must be a key of the provided event map.
 
 ---
 
-### EventListener
+### Listener
 
 ```ts
-type EventListener<T> = (payload: T) => void;
+type Listener<T> = (payload: T) => void;
 ```
 
 Callback function that receives the event payload.
@@ -56,16 +56,16 @@ Function returned by `on` and `once`. Call it to remove that specific listener.
 ### EventBusOptions
 
 ```ts
-type EventBusOptions = {
-  maxListeners?: number;
-  onError?: (err: unknown, event: string) => void;
+type EventBusOptions<T extends EventMap = EventMap> = {
+  onError?: (err: unknown, event: EventKey<T>) => void;
+  onEmit?:  (event: EventKey<T>, payload: unknown) => void;
 };
 ```
 
 **Properties:**
 
-- **maxListeners** _(optional)_ — Maximum listeners per event before a warning is printed. Default: `100`.
-- **onError** _(optional)_ — Custom error handler for listener errors. When provided, a throwing listener logs via this callback and execution continues. When absent, errors are re-thrown from `emit`.
+- **onError** _(optional)_ — Custom error handler for listener errors. When provided, a throwing listener is reported via this callback and execution continues with the remaining listeners. When absent, errors are re-thrown from `emit`.
+- **onEmit** _(optional)_ — Called on every `emit`, before any listeners run. Receives the event key (typed as a union of valid event names) and the raw payload. Useful for logging, debugging, and testing.
 
 ---
 
@@ -73,38 +73,37 @@ type EventBusOptions = {
 
 ```ts
 type EventBus<T extends EventMap> = {
-  on<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe;
-  once<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe;
-  off<K extends EventKey<T>>(event: K, listener?: EventListener<T[K]>): void;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
   clear(event?: EventKey<T>): void;
-  has<K extends EventKey<T>>(event: K): boolean;
-  listenerCount<K extends EventKey<T>>(event: K): number;
+  dispose(): void;
 };
 ```
 
-The public interface returned by `createEventBus`.
+The public interface returned by `eventBus`.
 
 ---
 
-### TestEventBus
+### TestBus
 
 ```ts
-type TestEventBus<T extends EventMap> = {
+type TestBus<T extends EventMap> = {
   bus: EventBus<T>;
   emitted: Map<EventKey<T>, unknown[]>;
-  dispose: () => void;
+  reset(): void;
+  dispose(): void;
 };
 ```
 
-The object returned by `createTestEventBus`. See [Testing Utilities](#testing-utilities) below.
+The object returned by `testEventBus`. See [Testing Utilities](#testing-utilities) below.
 
 ---
 
-## createEventBus
+## eventBus
 
 ```ts
-function createEventBus<T extends EventMap>(options?: EventBusOptions): EventBus<T>
+function eventBus<T extends EventMap>(options?: EventBusOptions<T>): EventBus<T>
 ```
 
 Creates and returns a new typed event bus.
@@ -115,7 +114,7 @@ Creates and returns a new typed event bus.
 
 **Parameters:**
 
-- **options** _(optional)_ — `EventBusOptions` to configure max listeners and error handling.
+- **options** _(optional)_ — `EventBusOptions<T>` to configure error handling and emit observability.
 
 **Returns:** `EventBus<T>`
 
@@ -127,10 +126,11 @@ type Events = {
   stop: void;
 };
 
-const bus = createEventBus<Events>();
-const busWithOptions = createEventBus<Events>({
-  maxListeners: 20,
+const bus = eventBus<Events>();
+
+const busWithOptions = eventBus<Events>({
   onError: (err, event) => console.error(`[bus] error in ${event}:`, err),
+  onEmit:  (event, payload) => console.debug(`[bus] emit ${event}`, payload),
 });
 ```
 
@@ -141,7 +141,7 @@ const busWithOptions = createEventBus<Events>({
 ### `on`
 
 ```ts
-on<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe
+on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe
 ```
 
 Registers a persistent listener for `event`. Returns an unsubscribe function.
@@ -158,7 +158,7 @@ Registers a persistent listener for `event`. Returns an unsubscribe function.
 ### `once`
 
 ```ts
-once<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe
+once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe
 ```
 
 Registers a listener that fires exactly once on the next emission, then unsubscribes automatically.
@@ -169,19 +169,6 @@ Registers a listener that fires exactly once on the next emission, then unsubscr
 - **listener** — Callback receiving the payload.
 
 **Returns:** `Unsubscribe` — call to cancel before the event fires.
-
----
-
-### `off`
-
-```ts
-off<K extends EventKey<T>>(event: K, listener?: EventListener<T[K]>): void
-```
-
-Removes listeners for `event`.
-
-- With `listener` — removes only that specific listener.
-- Without `listener` — removes **all** listeners for the event.
 
 ---
 
@@ -214,51 +201,52 @@ Removes listeners.
 
 ---
 
-### `has`
+### `dispose`
 
 ```ts
-has<K extends EventKey<T>>(event: K): boolean
+dispose(): void
 ```
 
-Returns `true` if the event has at least one active listener.
+Permanently tears down the bus. After calling `dispose`:
 
----
+- All listeners are removed.
+- `emit` becomes a no-op — subsequent calls are silently ignored.
+- `on` and `once` return a no-op unsubscribe; the listener is never stored.
 
-### `listenerCount`
-
-```ts
-listenerCount<K extends EventKey<T>>(event: K): number
-```
-
-Returns the number of currently registered listeners for `event`.
+Useful for component or module teardown where the bus should never fire again.
 
 ---
 
 ## Testing Utilities
 
-### createTestEventBus
+### testEventBus
 
 ```ts
-function createTestEventBus<T extends EventMap>(): TestEventBus<T>
+function testEventBus<T extends EventMap>(
+  options?: Omit<EventBusOptions<T>, 'onEmit'>
+): TestBus<T>
 ```
 
-Creates a test-friendly event bus that wraps a real `EventBus` and records all emitted payloads.
+Creates a test-friendly event bus that records all emitted payloads via the `onEmit` hook.
 
-**Returns:** `TestEventBus<T>` with:
+**Returns:** `TestBus<T>` with:
 
 - **bus** — A full `EventBus<T>`. Listeners registered on `bus` fire normally.
 - **emitted** — `Map<EventKey<T>, unknown[]>`. Each key maps to an array of payloads in emission order.
-- **dispose** — Clears all listeners and resets `emitted`. After calling `dispose`, subsequent emits no longer record to `emitted`.
+- **reset** — Clears `emitted` records without disposing or affecting registered listeners.
+- **dispose** — Clears all listeners, disposes the bus, and resets `emitted`.
+
+> `onEmit` is reserved internally for recording; pass `onError` via `options` if needed.
 
 **Example:**
 
 ```ts
-import { createTestEventBus } from '@vielzeug/eventit';
+import { testEventBus } from '@vielzeug/eventit';
 
 type Events = { score: number; reset: void };
 
 test('records emitted payloads', () => {
-  const { bus, emitted, dispose } = createTestEventBus<Events>();
+  const { bus, emitted, reset, dispose } = testEventBus<Events>();
 
   bus.emit('score', 10);
   bus.emit('score', 20);
@@ -267,6 +255,7 @@ test('records emitted payloads', () => {
   expect(emitted.get('score')).toEqual([10, 20]);
   expect(emitted.has('reset')).toBe(true);
 
-  dispose();
+  reset();   // clear records, listeners still work
+  dispose(); // tear everything down
 });
 ```

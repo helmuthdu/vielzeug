@@ -13,14 +13,11 @@
  *
  * @returns The sum of the numbers in the array or the sum of the mapped values.
  */
-export function sum<T>(array: T[], callback?: (item: T) => number): number | undefined {
-  if (array.length === 0) return undefined;
+export function sum<T>(array: T[], callback?: (item: T) => number): number {
+  if (array.length === 0) return 0;
 
   return array.reduce<number>((acc, item) => {
-    const val = callback ? callback(item) : item;
-    if (typeof val !== 'number') {
-      throw new TypeError(`Expected number, got ${typeof val}`);
-    }
+    const val = callback ? callback(item) : (item as unknown as number);
     if (Number.isNaN(val)) {
       throw new TypeError('Cannot sum NaN values');
     }

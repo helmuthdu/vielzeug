@@ -1,156 +1,114 @@
 /** -------------------- Core Types -------------------- **/
 
 export type EventMap = Record<string, unknown>;
-export type EventKey<T extends EventMap> = string & keyof T;
-export type EventListener<T> = (payload: T) => void;
+export type EventKey<T extends EventMap> = keyof T & string;
+export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
-export type EventBusOptions = {
-  /** Maximum number of listeners per event before a warning is printed. Default: 100 */
-  maxListeners?: number;
-  /** Custom error handler for listener errors. If not provided, errors are re-thrown. */
-  onError?: (err: unknown, event: string) => void;
+export type EventBusOptions<T extends EventMap = EventMap> = {
+  /** Custom error handler. If not provided, listener errors are re-thrown. */
+  onError?: (err: unknown, event: EventKey<T>) => void;
+  /** Called on every emit, before listeners run. Useful for logging and testing. */
+  onEmit?: (event: EventKey<T>, payload: unknown) => void;
 };
 
 export type EventBus<T extends EventMap> = {
   /** Subscribe to an event. Returns an unsubscribe function. */
-  on<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe;
-  /** Subscribe to an event once — auto-unsubscribes after the first emit. */
-  once<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe;
-  /** Remove a specific listener, or all listeners for an event if none is provided. */
-  off<K extends EventKey<T>>(event: K, listener?: EventListener<T[K]>): void;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
+  /** Subscribe once — auto-unsubscribes after the first emit. */
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
   /** Emit an event, calling all registered listeners synchronously. */
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
-  /** Remove all listeners for a specific event, or all events if none is provided. */
+  /** Remove all listeners for a specific event, or all events if none provided. */
   clear(event?: EventKey<T>): void;
-  /** Returns true if the event has at least one active listener. */
-  has<K extends EventKey<T>>(event: K): boolean;
-  /** Returns the number of listeners registered for an event. */
-  listenerCount<K extends EventKey<T>>(event: K): number;
+  /** Permanently dispose the bus — clears all listeners; emit and on become no-ops. */
+  dispose(): void;
 };
 
-export type TestEventBus<T extends EventMap> = {
+export type TestBus<T extends EventMap> = {
   bus: EventBus<T>;
+  /** All payloads emitted per event key, in order. */
   emitted: Map<EventKey<T>, unknown[]>;
-  dispose: () => void;
+  /** Clear emitted records without disposing the bus. */
+  reset(): void;
+  /** Dispose the bus and clear all records. */
+  dispose(): void;
 };
 
-/** -------------------- EventBus Implementation -------------------- **/
+/** -------------------- Factory -------------------- **/
 
-class EventBusImpl<T extends EventMap> {
-  private readonly listeners = new Map<string, Set<EventListener<unknown>>>();
-  private readonly maxListeners: number;
-  private readonly onError?: (err: unknown, event: string) => void;
+export function eventBus<T extends EventMap>(options?: EventBusOptions<T>): EventBus<T> {
+  const subs = new Map<string, Set<Listener<unknown>>>();
+  let disposed = false;
 
-  constructor(options?: EventBusOptions) {
-    this.maxListeners = options?.maxListeners ?? 100;
-    this.onError = options?.onError;
-  }
-
-  on<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe {
-    let set = this.listeners.get(event);
-    if (!set) {
-      set = new Set();
-      this.listeners.set(event, set);
-    }
-    if (set.size >= this.maxListeners) {
-      console.warn(
-        `[eventit] Max listeners (${this.maxListeners}) reached for event "${event}". Possible memory leak.`,
-      );
-    }
-    set.add(listener as EventListener<unknown>);
-    return () => this.off(event, listener);
-  }
-
-  once<K extends EventKey<T>>(event: K, listener: EventListener<T[K]>): Unsubscribe {
-    const wrapper: EventListener<T[K]> = (payload) => {
-      this.off(event, wrapper);
-      listener(payload);
+  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe {
+    if (disposed) return () => {};
+    let set = subs.get(event);
+    if (!set) subs.set(event, (set = new Set()));
+    set.add(listener as Listener<unknown>);
+    return () => {
+      subs.get(event)?.delete(listener as Listener<unknown>);
     };
-    return this.on(event, wrapper);
   }
 
-  off<K extends EventKey<T>>(event: K, listener?: EventListener<T[K]>): void {
-    if (listener === undefined) {
-      this.listeners.delete(event);
-      return;
-    }
-    this.listeners.get(event)?.delete(listener as EventListener<unknown>);
+  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe {
+    const unsub = on(event, (payload) => {
+      unsub();
+      listener(payload);
+    });
+    return unsub;
   }
 
-  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
-    const payload = args[0] as unknown;
-    const set = this.listeners.get(event);
+  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
+    if (disposed) return;
+    const payload = (args as unknown[])[0];
+    options?.onEmit?.(event, payload);
+    const set = subs.get(event);
     if (!set?.size) return;
     for (const listener of [...set]) {
       try {
         listener(payload);
       } catch (err) {
-        if (this.onError) {
-          this.onError(err, event);
-        } else {
-          throw err;
-        }
+        if (options?.onError) options.onError(err, event);
+        else throw err;
       }
     }
   }
 
-  clear(event?: EventKey<T>): void {
-    if (event !== undefined) {
-      this.listeners.delete(event);
-    } else {
-      this.listeners.clear();
-    }
+  function clear(event?: EventKey<T>): void {
+    if (event !== undefined) subs.delete(event);
+    else subs.clear();
   }
 
-  has<K extends EventKey<T>>(event: K): boolean {
-    return (this.listeners.get(event)?.size ?? 0) > 0;
+  function dispose(): void {
+    disposed = true;
+    subs.clear();
   }
 
-  listenerCount<K extends EventKey<T>>(event: K): number {
-    return this.listeners.get(event)?.size ?? 0;
-  }
-}
-
-/** -------------------- Factory -------------------- **/
-
-export function createEventBus<T extends EventMap>(options?: EventBusOptions): EventBus<T> {
-  return new EventBusImpl<T>(options) as EventBus<T>;
+  return { on, once, emit, clear, dispose };
 }
 
 /** -------------------- Test Utilities -------------------- **/
 
-export function createTestEventBus<T extends EventMap>(): TestEventBus<T> {
-  const bus = createEventBus<T>();
+export function testEventBus<T extends EventMap>(options?: Omit<EventBusOptions<T>, 'onEmit'>): TestBus<T> {
   const emitted = new Map<EventKey<T>, unknown[]>();
-  let disposed = false;
 
-  const testBus: EventBus<T> = {
-    clear: (event?) => bus.clear(event),
-    // biome-ignore lint/suspicious/noExplicitAny: intentional any for tracking wrapper
-    emit: (event: any, ...args: any[]) => {
-      const payload = args[0];
-      if (!disposed) {
-        if (!emitted.has(event)) emitted.set(event, []);
-        emitted.get(event)!.push(payload);
-      }
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for tracking wrapper
-      (bus.emit as any)(event, payload);
+  const bus = eventBus<T>({
+    ...options,
+    onEmit(event, payload) {
+      const list = emitted.get(event) ?? [];
+      list.push(payload);
+      emitted.set(event, list);
     },
-    has: (event) => bus.has(event),
-    listenerCount: (event) => bus.listenerCount(event),
-    off: (event, listener?) => bus.off(event, listener),
-    on: (event, listener) => bus.on(event, listener),
-    once: (event, listener) => bus.once(event, listener),
-  };
+  });
 
   return {
-    bus: testBus,
-    dispose: () => {
-      disposed = true;
-      emitted.clear();
-      bus.clear();
-    },
+    bus,
     emitted,
+    reset: () => emitted.clear(),
+    dispose(): void {
+      emitted.clear();
+      bus.dispose();
+    },
   };
 }

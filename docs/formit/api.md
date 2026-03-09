@@ -17,9 +17,14 @@ Creates a new form instance.
 
 ```typescript
 type FormInit<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  /** Initial field values */
+  /**
+   * Initial field values.
+   * Plain objects are automatically flattened using dot-notation:
+   * `{ user: { name: 'Alice' } }` is equivalent to `{ 'user.name': 'Alice' }`.
+   * Arrays, Date instances, and class instances are stored as-is.
+   */
   values?: TValues;
-  /** Per-field validators, keyed by field name */
+  /** Per-field validators, keyed by the same field name used in values. */
   rules?: Record<string, FieldValidator | FieldValidator[]>;
   /** Form-level validator for cross-field validation */
   validate?: FormValidator;
@@ -52,10 +57,10 @@ get<V = unknown>(name: string): V
 form.get('email');          // string
 form.get('age');            // number (if stored as number)
 form.get('active');         // boolean (if stored as boolean)
-form.get('user.name');      // dot-notation for manual nesting
+form.get('user.name');      // nested field (if values: { user: { name: '...' } })
 ```
 
----
+
 
 ### `set(name, value, options?)`
 
@@ -79,7 +84,25 @@ form.set('tags', ['js', 'ts']);
 form.set('avatar', fileInput.files[0]);
 ```
 
----
+
+
+### `update(name, fn, options?)`
+
+Update a field value with a functional updater.
+
+```typescript
+update(name: string, fn: (prev: unknown) => unknown, options?: SetOptions): void
+```
+
+**Examples:**
+
+```typescript
+form.update('count', (prev) => (prev as number) + 1);
+form.update('tags', (prev) => [...(prev as string[]), 'new-tag']);
+form.update('name', (prev) => String(prev).trim(), { setDirty: false });
+```
+
+
 
 ### `patch(entries, options?)`
 
@@ -90,7 +113,7 @@ patch(entries: Record<string, unknown>, options?: PatchOptions): void
 
 type PatchOptions = {
   replace?: boolean;  // default: false — replace all values instead of merging
-  setDirty?: boolean; // default: false — track dirty state for patched fields
+  setDirty?: boolean; // default: true — track dirty state for patched fields
 };
 ```
 
@@ -107,7 +130,7 @@ form.patch({ email: 'new@example.com' }, { replace: true });
 form.patch({ email: 'user@example.com' }, { setDirty: true });
 ```
 
----
+
 
 ### `values()`
 
@@ -124,7 +147,7 @@ const allValues = form.values();
 // { email: 'user@example.com', name: 'Alice', ... }
 ```
 
----
+
 
 ### `dispose()`
 
@@ -141,7 +164,7 @@ dispose(): void
 form.dispose();
 ```
 
----
+
 
 ### `getError(name)`
 
@@ -160,7 +183,7 @@ if (emailError) {
 }
 ```
 
----
+
 
 ### `getErrors()`
 
@@ -181,7 +204,7 @@ for (const [field, message] of Object.entries(allErrors)) {
 }
 ```
 
----
+
 
 ### `setError(name, message?)`
 
@@ -201,7 +224,7 @@ form.setError('email', 'This email is already taken');
 form.setError('email');
 ```
 
----
+
 
 ### `setErrors(nextErrors)`
 
@@ -221,7 +244,7 @@ form.setErrors({ email: 'Invalid', password: 'Too short' });
 form.setErrors({});
 ```
 
----
+
 
 ### `isDirty(name)`
 
@@ -275,12 +298,12 @@ form.setTouched('email');
 
 ---
 
-### `validate(name, signal?)`
+### `validate(name, opts?)`
 
 Validate a specific field. Returns the error message, or `undefined` if valid.
 
 ```typescript
-validate(name: string, signal?: AbortSignal): Promise<string | undefined>
+validate(name: string, opts?: { signal?: AbortSignal }): Promise<string | undefined>
 ```
 
 **Example:**
@@ -293,7 +316,7 @@ if (error) {
 
 // With abort signal
 const controller = new AbortController();
-const error = await form.validate('email', controller.signal);
+const error = await form.validate('email', { signal: controller.signal });
 ```
 
 ---
@@ -345,13 +368,15 @@ const errors = await form.validateAll({ signal: controller.signal });
 Submit the form with automatic validation.
 
 ```typescript
-submit(
-  onSubmit: (formData: FormData) => any | Promise<any>,
-  options?: {
-    signal?: AbortSignal;
-    validate?: boolean; // default: true
-  }
-): Promise<any>
+submit<TResult = void>(
+  onSubmit: (values: TValues) => TResult | Promise<TResult>,
+  options?: SubmitOptions
+): Promise<TResult>
+
+type SubmitOptions = {
+  signal?: AbortSignal;
+  validate?: boolean; // default: true
+};
 ```
 
 **Behavior:**
@@ -359,17 +384,28 @@ submit(
 1. Validates form (unless `validate: false`)
 2. Marks all fields as touched (validation errors become visible in the UI)
 3. If validation fails, throws `ValidationError`
-4. If validation passes, calls `onSubmit` with `FormData` built from current values
+4. If validation passes, calls `onSubmit` with typed values (same as `form.values()`)
 5. Returns the result of `onSubmit`
 
 **Examples:**
 
 ```typescript
-// Basic submission
-const result = await form.submit(async (formData) => {
+// Basic submission — send as JSON
+const result = await form.submit(async (values) => {
   const response = await fetch('/api/submit', {
     method: 'POST',
-    body: formData,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(values),
+  });
+  return response.json();
+});
+
+// Send as multipart FormData (e.g. file uploads)
+import { toFormData } from '@vielzeug/formit';
+const result = await form.submit(async (values) => {
+  const response = await fetch('/api/submit', {
+    method: 'POST',
+    body: toFormData(values),
   });
   return response.json();
 });
@@ -415,10 +451,13 @@ form.reset({ email: '', password: '' });
 
 ### `subscribe(listener)`
 
-Subscribe to form state changes. Calls the listener immediately with the current state.
+Subscribe to form state changes. Calls the listener immediately with the current state by default.
 
 ```typescript
-subscribe(listener: (state: FormState) => void): () => void
+subscribe(
+  listener: (state: FormState) => void,
+  options?: { immediate?: boolean } // default: { immediate: true }
+): () => void
 ```
 
 **Returns:** Unsubscribe function
@@ -445,7 +484,7 @@ unsubscribe();
 
 ### `subscribeField(name, listener)`
 
-Subscribe to a specific field's changes. Only fires when that field changes. Calls the listener immediately with the current field state.
+Subscribe to a specific field's changes. Only fires when that field changes. Calls the listener immediately with the current field state by default.
 
 ```typescript
 subscribeField<V = unknown>(
@@ -455,7 +494,8 @@ subscribeField<V = unknown>(
     error?: string;
     touched: boolean;
     dirty: boolean;
-  }) => void
+  }) => void,
+  options?: { immediate?: boolean } // default: { immediate: true }
 ): () => void
 ```
 
@@ -492,15 +532,15 @@ bind(name: string, config?: BindConfig): {
 
 type BindConfig = {
   valueExtractor?: (event: unknown) => unknown;
-  markTouchedOnBlur?: boolean; // default: true
+  touchOnBlur?: boolean; // default: true
 };
 ```
 
 **Behavior:**
 
-- `onChange` extracts the value via `valueExtractor` (defaults to `event.target.value`), then calls `set` with `{ setDirty: true, setTouched: true }` — marking the field as both dirty and touched
-- `onBlur` marks the field as touched (unless `markTouchedOnBlur: false`)
-- `set` accepts a plain value or a functional updater `(prev) => next`; it also marks the field dirty and touched
+- `onChange` extracts the value via `valueExtractor` (defaults to `event.target.value`) and calls `set` with `{ setDirty: true }` — marking the field as dirty
+- `onBlur` marks the field as touched (unless `touchOnBlur: false`)
+- `set` accepts a plain value or a functional updater `(prev) => next`; marks the field dirty
 - `value` is a live getter that reads directly from the form store
 
 **Examples:**
@@ -515,7 +555,7 @@ const binding = form.bind('category', {
 });
 
 // Disable touch on blur
-<input {...form.bind('name', { markTouchedOnBlur: false })} />
+<input {...form.bind('name', { touchOnBlur: false })} />
 
 // Programmatic updates via the set helper
 const emailBinding = form.bind('email');
@@ -525,12 +565,12 @@ emailBinding.set((prev) => prev + '@domain.com');
 
 ---
 
-### `snapshot()`
+### `getState()`
 
 Get an immutable snapshot of the current form state.
 
 ```typescript
-snapshot(): FormState
+getState(): FormState
 ```
 
 **Returns:**
@@ -552,7 +592,7 @@ type FormState = {
 **Example:**
 
 ```typescript
-const state = form.snapshot();
+const state = form.getState();
 console.log(state.errors['email']);
 console.log(state.isValid);
 console.log(state.dirty.has('email'));
@@ -615,7 +655,7 @@ type SetOptions = {
 ```typescript
 type PatchOptions = {
   replace?: boolean;  // default: false
-  setDirty?: boolean; // default: false
+  setDirty?: boolean; // default: true
 };
 ```
 
@@ -634,7 +674,7 @@ type ValidateOptions = {
 ```typescript
 type BindConfig = {
   valueExtractor?: (event: unknown) => unknown;
-  markTouchedOnBlur?: boolean; // default: true
+  touchOnBlur?: boolean; // default: true
 };
 ```
 
@@ -645,4 +685,35 @@ class ValidationError extends Error {
   readonly type: 'validation';
   readonly errors: Record<string, string>;
 }
+```
+
+## Utilities
+
+### `toFormData(values)`
+
+Convert a plain values object to a `FormData` instance. Useful in `submit` handlers when you need to send files or use multipart encoding.
+
+```typescript
+toFormData(values: Record<string, unknown>): FormData
+```
+
+**Behavior:**
+- `null` / `undefined` values are skipped
+- `File` and `Blob` values are appended as-is
+- `FileList` values are appended entry-by-entry
+- Arrays are appended entry-by-entry (files as-is, other items as strings)
+- Everything else is stringified
+
+**Example:**
+
+```typescript
+import { createForm, toFormData } from '@vielzeug/formit';
+
+await form.submit(async (values) => {
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    body: toFormData(values),
+  });
+  return response.json();
+});
 ```

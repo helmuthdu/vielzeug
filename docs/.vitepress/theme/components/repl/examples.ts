@@ -1932,9 +1932,9 @@ console.log('User posts URL:', userPostsUrl)`,
       name: 'URL Building - Dynamic URLs',
     },
   },
-  snapit: {
+  stateit: {
     'basic-state': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 // Create a simple counter state
 const counter = createSnapshot({ count: 0, name: 'Counter' })
@@ -1958,7 +1958,7 @@ console.log('After reset:', counter.get())`,
       name: 'Basic State - Counter',
     },
     'selective-subscription': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const user = createSnapshot({
   name: 'Alice',
@@ -1990,7 +1990,7 @@ user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
       name: 'Selective Subscriptions',
     },
     'get-with-selector': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const user = createSnapshot({
   firstName: 'Alice',
@@ -2023,7 +2023,7 @@ console.log('Summary:', summary)`,
       name: 'Get with Selector',
     },
     'async-updates': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const data = createSnapshot({
   items: null,
@@ -2064,7 +2064,7 @@ await fetchItems()`,
       name: 'Async State Updates',
     },
     'scoped-states': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const app = createSnapshot({
   theme: 'light',
@@ -2101,7 +2101,7 @@ console.log('Result:', result)`,
       name: 'Scoped States',
     },
     'custom-equality': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const state = createSnapshot({
   items: [1, 2, 3],
@@ -2132,7 +2132,7 @@ state.set({ metadata: { updated: Date.now() } })`,
       name: 'Custom Equality Functions',
     },
     'todo-list': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const todos = createSnapshot({
   items: [],
@@ -2180,7 +2180,7 @@ todos.set({ filter: 'completed' })`,
       name: 'Todo List Example',
     },
     'computed-values': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const cart = createSnapshot({
   items: [
@@ -2216,7 +2216,7 @@ console.log('\\nNew Total:', total.get().toFixed(2))`,
       name: 'Computed Values',
     },
     'transactions': {
-      code: `import { createSnapshot } from '@vielzeug/snapit'
+      code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const user = createSnapshot({
   name: 'Alice',

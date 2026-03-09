@@ -515,10 +515,9 @@ const registrationSchema = v
       .string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username cannot exceed 20 characters')
-      .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-      .min(1, 'Username is required'),
+      .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
 
-    email: v.email().min(1, 'Email is required'),
+    email: v.email(),
 
     password: v
       .string()
@@ -526,8 +525,7 @@ const registrationSchema = v
       .refine((val) => /[A-Z]/.test(val), 'Password must contain at least one uppercase letter')
       .refine((val) => /[a-z]/.test(val), 'Password must contain at least one lowercase letter')
       .refine((val) => /[0-9]/.test(val), 'Password must contain at least one number')
-      .refine((val) => /[!@#$%^&*]/.test(val), 'Password must contain at least one special character')
-      .min(1, 'Password is required'),
+      .refine((val) => /[!@#$%^&*]/.test(val), 'Password must contain at least one special character'),
 
     confirmPassword: v.string().min(1, 'Please confirm your password'),
 
@@ -535,13 +533,11 @@ const registrationSchema = v
       .number()
       .int('Age must be a whole number')
       .min(13, 'You must be at least 13 years old')
-      .max(120, 'Please enter a valid age')
-      .min(1, 'Age is required'),
+      .max(120, 'Please enter a valid age'),
 
     agreeToTerms: v
       .boolean()
-      .refine((val) => val === true, 'You must accept the terms and conditions')
-      .min(1),
+      .refine((val) => val === true, 'You must accept the terms and conditions'),
 
     newsletter: v.boolean().default(false),
   })
@@ -576,12 +572,11 @@ const loginSchema = v.object({
   identifier: v
     .string()
     .min(1, 'Email or username is required')
-    .refineAsync(async (value) => {
+    .refine(async (value) => {
       // Check if user exists
       const user = await findUser(value);
       return user !== null;
-    }, 'User not found')
-    .min(1),
+    }, 'User not found'),
 
   password: v.string().min(8, 'Password is required'),
 
@@ -650,13 +645,13 @@ Validate incoming API requests.
 ```ts
 // POST /api/articles
 const createArticleSchema = v.object({
-  title: v.string().min(5, 'Title must be at least 5 characters').max(200, 'Title cannot exceed 200 characters').min(1),
+  title: v.string().min(5, 'Title must be at least 5 characters').max(200, 'Title cannot exceed 200 characters'),
 
-  content: v.string().min(50, 'Content must be at least 50 characters').min(1),
+  content: v.string().min(50, 'Content must be at least 50 characters'),
 
   tags: v.array(v.string()).min(1, 'At least one tag is required').max(5, 'Maximum 5 tags allowed'),
 
-  status: v.enum('draft', 'published', 'archived').default('draft'),
+  status: v.oneOf(v.literal('draft'), v.literal('published'), v.literal('archived')).default('draft' as 'draft' | 'published' | 'archived'),
 
   publishedAt: v.date().optional(),
 });
@@ -725,9 +720,9 @@ const searchQuerySchema = v
 
     limit: v.coerce.number().int().min(1).max(100).default(20),
 
-    sort: v.enum('relevance', 'date', 'popularity').default('relevance'),
+    sort: v.oneOf(v.literal('relevance'), v.literal('date'), v.literal('popularity')).default('relevance' as 'relevance' | 'date' | 'popularity'),
 
-    category: v.enum('all', 'tech', 'science', 'business', 'sports').default('all'),
+    category: v.oneOf(v.literal('all'), v.literal('tech'), v.literal('science'), v.literal('business'), v.literal('sports')).default('all' as 'all' | 'tech' | 'science' | 'business' | 'sports'),
 
     minPrice: v.coerce.number().positive().optional(),
     maxPrice: v.coerce.number().positive().optional(),
@@ -797,8 +792,8 @@ const appConfigSchema = v.object({
   }),
 
   logging: v.object({
-    level: v.enum('debug', 'info', 'warn', 'error').default('info'),
-    format: v.enum('json', 'pretty').default('json'),
+    level: v.oneOf(v.literal('debug'), v.literal('info'), v.literal('warn'), v.literal('error')).default('info' as 'debug' | 'info' | 'warn' | 'error'),
+    format: v.oneOf(v.literal('json'), v.literal('pretty')).default('json' as 'json' | 'pretty'),
   }),
 
   features: v.object({
@@ -844,12 +839,12 @@ const productSchema = v.object({
   description: v.string().max(2000).optional(),
 
   price: v.object({
-    amount: v.number().positive().min(1),
-    currency: v.enum('USD', 'EUR', 'GBP').default('USD'),
+    amount: v.number().positive(),
+    currency: v.oneOf(v.literal('USD'), v.literal('EUR'), v.literal('GBP')).default('USD' as 'USD' | 'EUR' | 'GBP'),
   }),
 
   inventory: v.object({
-    quantity: v.number().int().min(0).min(1),
+    quantity: v.number().int().min(0),
     lowStockThreshold: v.number().int().positive().default(10),
   }),
 
@@ -892,8 +887,8 @@ type Product = Infer<typeof productSchema>;
 const orderSchema = v
   .object({
     customer: v.object({
-      id: v.uuid().min(1),
-      email: v.email().min(1),
+      id: v.uuid(),
+      email: v.email(),
       name: v.string().min(1),
     }),
 
@@ -916,13 +911,13 @@ const orderSchema = v
         zipCode: v.string().pattern(/^\d{5}(-\d{4})?$/),
         country: v.string().min(1),
       }),
-      method: v.enum('standard', 'express', 'overnight'),
+      method: v.oneOf(v.literal('standard'), v.literal('express'), v.literal('overnight')),
       tracking: v.string().optional(),
     }),
 
     payment: v.object({
-      method: v.enum('credit_card', 'paypal', 'bank_transfer'),
-      status: v.enum('pending', 'completed', 'failed'),
+      method: v.oneOf(v.literal('credit_card'), v.literal('paypal'), v.literal('bank_transfer')),
+      status: v.oneOf(v.literal('pending'), v.literal('completed'), v.literal('failed')),
       transactionId: v.string().optional(),
     }),
 
@@ -955,7 +950,7 @@ const usernameSchema = v
   .min(3, 'Username must be at least 3 characters')
   .max(20, 'Username cannot exceed 20 characters')
   .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-  .refineAsync(async (username) => {
+  .refine(async (username) => {
     const user = await db.users.findOne({ username });
     return user === null;
   }, 'Username is already taken');
@@ -982,7 +977,7 @@ Validate email and check domain MX records.
 ```ts
 import { resolveMx } from 'dns/promises';
 
-const emailSchema = v.email().refineAsync(async (email) => {
+const emailSchema = v.email().refine(async (email) => {
   const domain = email.split('@')[1];
   try {
     const records = await resolveMx(domain);
@@ -1004,7 +999,7 @@ Verify API key against external service.
 const apiKeySchema = v
   .string()
   .pattern(/^sk_[a-zA-Z0-9]{32}$/, 'Invalid API key format')
-  .refineAsync(async (key) => {
+  .refine(async (key) => {
     const response = await fetch('https://api.service.com/validate', {
       headers: { Authorization: `Bearer ${key}` },
     });
@@ -1012,7 +1007,7 @@ const apiKeySchema = v
   }, 'Invalid or expired API key');
 ```
 
-## Union & Discriminated Unions
+## Unions & Discriminated Unions
 
 ### API Response Union
 
@@ -1033,7 +1028,7 @@ const errorResponseSchema = v.object({
   }),
 });
 
-const apiResponseSchema = v.union(successResponseSchema, errorResponseSchema);
+const apiResponseSchema = v.oneOf(successResponseSchema, errorResponseSchema);
 
 type ApiResponse = Infer<typeof apiResponseSchema>;
 // { success: true; data: {...} } | { success: false; error: {...} }
@@ -1068,10 +1063,10 @@ const bankTransferSchema = v.object({
   type: v.literal('bank_transfer'),
   accountNumber: v.string(),
   routingNumber: v.string(),
-  accountType: v.enum('checking', 'savings'),
+  accountType: v.oneOf(v.literal('checking'), v.literal('savings')),
 });
 
-const paymentMethodSchema = v.union(creditCardSchema, paypalSchema, bankTransferSchema);
+const paymentMethodSchema = v.oneOf(creditCardSchema, paypalSchema, bankTransferSchema);
 
 type PaymentMethod = Infer<typeof paymentMethodSchema>;
 ```
@@ -1081,6 +1076,8 @@ type PaymentMethod = Infer<typeof paymentMethodSchema>;
 ### Recursive Schema (Comments)
 
 ```ts
+import { v, type Schema, type Infer } from '@vielzeug/validit';
+
 type Comment = {
   id: number;
   text: string;
@@ -1088,12 +1085,16 @@ type Comment = {
   replies?: Comment[];
 };
 
-const commentSchema: v.Schema<Comment> = v.object({
-  id: v.int().positive(),
-  text: v.string().min(1).max(1000),
-  author: v.string(),
-  replies: v.array(v.any()).optional(), // Simplified for recursion
-}) as any;
+const CommentSchema: Schema<Comment> = v.lazy(() =>
+  v.object({
+    id: v.int().positive(),
+    text: v.string().min(1).max(1000),
+    author: v.string(),
+    replies: v.array(CommentSchema).optional(),
+  }),
+);
+
+type CommentType = Infer<typeof CommentSchema>;
 ```
 
 ### Conditional Validation
@@ -1101,7 +1102,7 @@ const commentSchema: v.Schema<Comment> = v.object({
 ```ts
 const shipmentSchema = v
   .object({
-    shippingMethod: v.enum('pickup', 'delivery'),
+    shippingMethod: v.oneOf(v.literal('pickup'), v.literal('delivery')),
     address: v
       .object({
         street: v.string(),

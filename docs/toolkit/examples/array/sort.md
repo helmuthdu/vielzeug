@@ -76,6 +76,5 @@ const byAge = sort(users, (u) => u.age);
 
 ## See Also
 
-- [sortBy](./sortBy.md): Sort by multiple properties with different orders.
 - [compareBy](../function/compareBy.md): Create a comparator function for native sort.
 - [group](./group.md): Organize elements into collections.

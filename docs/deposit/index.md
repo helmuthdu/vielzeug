@@ -36,36 +36,30 @@ import { createDeposit, defineSchema } from '@vielzeug/deposit';
 
 type User = { id: string; name: string; age: number };
 
-const schema = defineSchema<{ users: User }>()({
+const schema = defineSchema<{ users: User }>({
   users: { key: 'id', indexes: ['age'] },
 });
 
 const db = createDeposit({ type: 'localStorage', dbName: 'my-app', schema });
 
-// Add records
+// Upsert records
 await db.put('users', { id: '1', name: 'Alice', age: 30 });
 await db.put('users', { id: '2', name: 'Bob', age: 25 });
 
 // Query
-const adults = await db.query('users')
-  .between('age', 18, 99)
-  .orderBy('name')
-  .toArray();
+const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
 
 // Fast lookup
 const alice = await db.get('users', '1');
-
-// Aggregates
-const avgAge = await db.query('users').average('age');
 ```
 
 ## Features
 
-- **Schema-driven** — `defineSchema()` types every collection and query result
-- **Rich query builder** — `where`, `equals`, `between`, `startsWith`, `filter`, `orderBy`, `limit`, `offset`, `first`, `last`, and aggregates
-- **Multiple adapters** — `LocalStorageAdapter` for browser sync, `IndexedDBAdapter` for async persistence
-- **Grouping & search** — `toGrouped()` and `search()` for advanced queries
-- **Patch API** — batch upsert/delete via `patch()`
+- **Schema-driven** — `defineSchema()` types every table and query result
+- **Discriminated config** — `{ type: 'localStorage' | 'indexedDB', ... }` — no separate adapter setup
+- **Rich query builder** — `equals`, `between`, `startsWith`, `filter`, `orderBy`, `limit`, `offset`, `page`, `reverse`, `map`, `search`
+- **TTL support** — per-record expiry via optional `ttl` milliseconds on `put` / `bulkPut`
+- **Transactions** — atomic multi-table writes (IndexedDB only)
 - **Zero dependencies** — <PackageInfo package="deposit" type="size" /> gzipped
 
 ## Next Steps

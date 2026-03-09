@@ -27,28 +27,27 @@ const users = await http.get<User[]>('/users');
 // Cached query — second call returns from cache
 const queryClient = createQueryClient({ staleTime: 5000 });
 
-const user = await queryClient.fetch({
-  queryKey: ['users', 1],
-  queryFn: () => http.get<User>('/users/1'),
+const user = await queryClient.query({
+  key: ['users', 1],
+  fn: () => http.get<User>('/users/1'),
 });
 
 // Mutation with cache invalidation
-await queryClient.mutate(
-  {
-    mutationFn: (data: NewUser) => http.post<User>('/users', { body: data }),
-    onSuccess: () => queryClient.invalidate(['users']),
-  },
-  { name: 'Alice', email: 'alice@example.com' },
+const createUser = queryClient.mutation(
+  (data: NewUser) => http.post<User>('/users', { body: data }),
 );
+await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+queryClient.invalidate(['users']);
 ```
 
 ## Features
 
 - ✅ **Smart caching** — stale-while-revalidate with configurable `staleTime` and `gcTime`
-- ✅ **Request deduplication** — concurrent identical requests share one in-flight fetch
+- ✅ **Request deduplication** — GET/HEAD/OPTIONS always deduplicate; other methods opt-in
+- ✅ **Interceptors** — `use()` middleware for auth, logging, and transforms
 - ✅ **Retry with backoff** — configurable retry count and delay strategy
 - ✅ **Abort support** — pass an `AbortSignal` to cancel in-flight requests
-- ✅ **Mutations** — `onSuccess`, `onError`, `onSettled` callbacks
+- ✅ **Mutations** — factory pattern with `subscribe()`, `getState()`, and `reset()`
 - ✅ **Subscriptions** — reactive `subscribe()` for query state changes
 - ✅ **Type-safe** — full TypeScript inference throughout
 
@@ -69,7 +68,7 @@ const http = createHttpClient({
 const user = await http.get<User>('/users/:id', { params: { id: '123' } });
 
 // Query string
-const page = await http.get<User[]>('/users', { query: { page: 1, limit: 20 } });
+const page = await http.get<User[]>('/users', { search: { page: 1, limit: 20 } });
 
 // Body
 const created = await http.post<User>('/users', { body: { name: 'Alice' } });
@@ -86,9 +85,9 @@ import { createQueryClient } from '@vielzeug/fetchit';
 const queryClient = createQueryClient({ staleTime: 5_000, gcTime: 300_000 });
 
 // Fetch with retry
-const data = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get(`/users/${userId}`),
+const data = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get(`/users/${userId}`),
   retry: 3,
 });
 
@@ -103,6 +102,12 @@ queryClient.invalidate(['users']);
 const unsub = queryClient.subscribe(['users', 1], (state) => {
   console.log(state.status, state.data, state.error);
 });
+
+// Create a mutation factory
+const updateUser = queryClient.mutation(
+  (data: Partial<User>) => http.put<User>(`/users/${userId}`, { body: data }),
+);
+await updateUser.mutate({ name: 'Alice' });
 ```
 
 ### Error Handling
@@ -128,9 +133,9 @@ try {
 | `baseUrl` | `string` | `''` | Base URL prepended to every request |
 | `headers` | `Record<string, string>` | `{}` | Default headers |
 | `timeout` | `number` | `30000` | Request timeout in ms |
-| `dedupe` | `boolean` | `true` | Deduplicate concurrent identical requests |
+| `dedupe` | `boolean` | `false` | Force-dedupe non-idempotent methods (GET/HEAD/OPTIONS always dedupe) |
 
-Returns: `{ get, post, put, patch, delete, request, setHeaders }`
+Returns: `{ get, post, put, patch, delete, request, setHeaders, use }`
 
 ### `createQueryClient(options?)`
 
@@ -139,7 +144,7 @@ Returns: `{ get, post, put, patch, delete, request, setHeaders }`
 | `staleTime` | `number` | `0` | ms before cached data is stale |
 | `gcTime` | `number` | `300000` | ms before unused cache is collected |
 
-Returns: `{ fetch, prefetch, mutate, invalidate, setData, getData, getState, subscribe, clear }`
+Returns: `{ query, mutation, prefetch, invalidate, setData, getData, getState, subscribe, clear }`
 
 ## Documentation
 

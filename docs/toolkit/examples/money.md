@@ -69,11 +69,9 @@ exchange(usd, rate); // { amount: 85000n, currency: 'EUR' }
 
 For arithmetic operations on monetary amounts, see:
 
-- [add](./math/add.md) – Add amounts
-- [subtract](./math/subtract.md) – Subtract amounts
-- [multiply](./math/multiply.md) – Multiply by scalars
 - [allocate](./math/allocate.md) – Split proportionally
 - [distribute](./math/distribute.md) – Split evenly
+- [percent](./math/percent.md) – Calculate percentage
 
 <style>
 .grid-links {

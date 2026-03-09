@@ -17,9 +17,9 @@ describe('assertParams', () => {
     expect(() => assertParams(params, ['name'])).toThrowError('Missing required parameter: "name"');
   });
 
-  it('should throw if a key is an empty string', () => {
+  it('should not throw if a key is an empty string', () => {
     const params = { id: '123', name: '' };
-    expect(() => assertParams(params, ['name'])).toThrowError('Missing required parameter: "name"');
+    expect(() => assertParams(params, ['name'])).not.toThrow();
   });
 
   it('should throw with multiple missing keys', () => {
@@ -29,7 +29,7 @@ describe('assertParams', () => {
   });
 
   it('should include context name if provided', () => {
-    const params = { id: '123', name: '' };
+    const params = { id: '123', name: undefined as unknown as string };
     expect(() => assertParams(params, ['name'], 'UserUpdate')).toThrowError(
       'Missing required parameter: "name" in "UserUpdate"',
     );
@@ -44,7 +44,7 @@ describe('assertParams', () => {
 
   it('should support bypass mode', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const params = { id: '' };
+    const params = { id: undefined as unknown as string };
     assertParams(params, ['id'], 'Context', { bypass: true });
     expect(console.warn).toHaveBeenCalledWith('Missing required parameter: "id" in "Context"');
   });

@@ -72,4 +72,3 @@ process([5, 12, 8, 20]); // [144, 400]
 
 - [pipe](./pipe.md): Compose multiple FP functions together.
 - [curry](./curry.md): Manual currying for any custom function.
-- [map](../array/map.md): The standard version of the map utility.

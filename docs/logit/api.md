@@ -7,9 +7,28 @@ description: Complete API reference for Logit with type signatures and parameter
 
 [[toc]]
 
+## `createLogger(initial?)`
+
+Creates and returns an independent `Logger` instance with its own isolated config. Each call is fully independent — config changes never bleed between instances.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `initial` | `LogitOptions \| string` | `{}` | Initial options, or a string shorthand that sets `namespace` |
+
+**Returns:** `Logger`
+
+```ts
+import { createLogger } from '@vielzeug/logit';
+
+const log = createLogger({ logLevel: 'warn', namespace: 'App' });
+const api = createLogger('api'); // shorthand for createLogger({ namespace: 'api' })
+```
+
+
+
 ## `Logit` object
 
-The main export. A plain object (not a class) with all logging methods.
+The pre-created default `Logger` instance. Equivalent to calling `createLogger()` with no arguments.
 
 ```ts
 import { Logit } from '@vielzeug/logit';
@@ -36,6 +55,22 @@ Returns a read-only snapshot of the current configuration.
 const config: Readonly<LogitConfig> = Logit.getConfig();
 ```
 
+### `Logit.enabled(type)`
+
+Returns `true` if the given level passes the current `logLevel` filter. Useful to guard against computing expensive arguments.
+
+| Parameter | Type | Description |
+|---|---|
+| `type` | `LogLevel` | The level to query |
+
+**Returns:** `boolean`
+
+```ts
+if (Logit.enabled('debug')) {
+  Logit.debug('Expensive info', computeExpensiveInfo());
+}
+```
+
 ### Log methods
 
 All methods accept any number of arguments.
@@ -51,28 +86,43 @@ All methods accept any number of arguments.
 
 ### `Logit.scope(name)`
 
-Creates an isolated scoped logger with the given namespace. Does not mutate global state.
+Creates an isolated child logger with the namespace appended (dot-separated). Does not mutate the parent.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `name` | `string` | Namespace for this logger |
+| `name` | `string` | Namespace segment to append |
 
-**Returns:** `ScopedLogger`
+**Returns:** `Logger`
 
 ```ts
-const api = Logit.scope('api');
-api.info('msg'); // [api] msg
+const api = Logit.scope('api');       // [api] prefix
+api.info('msg');
+const auth = api.scope('auth');       // [api.auth] prefix
 ```
 
-### `Logit.assert(condition, message, context?)`
+### `Logit.child(overrides?)`
 
-Logs an error via `console.assert` if `condition` is `false`.
+Creates an independent `Logger` starting from a snapshot of the current config. Accepts any config overrides, not just namespace.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `overrides` | `LogitOptions` | `{}` | Options to merge over the parent snapshot |
+
+**Returns:** `Logger`
+
+```ts
+const child = Logit.child({ logLevel: 'debug', namespace: 'verbose' });
+// parent config is unchanged
+```
+
+### `Logit.assert(condition, ...args)`
+
+Forwards to `console.assert`. Only fires when the logger's level is at or above `error`.
 
 | Parameter | Type | Description |
 |---|---|---|
 | `condition` | `boolean` | Assertion condition |
-| `message` | `string` | Message shown on failure |
-| `context` | `Record<string, unknown>` | Optional extra context |
+| `...args` | `unknown[]` | Any additional arguments forwarded to `console.assert` |
 
 ### `Logit.table(data, properties?)`
 
@@ -99,9 +149,18 @@ Stops and logs a console timer.
 |---|---|---|
 | `label` | `string` | Timer identifier (must match `time()` call) |
 
+### `Logit.group(label?, text?)`
+
+Opens a console group. Gated by the `debug` log level.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `label` | `string` | `'GROUP'` | Group header label |
+| `text` | `string` | `''` | Optional secondary text |
+
 ### `Logit.groupCollapsed(label?, text?)`
 
-Opens a collapsed console group. Gated by the `success` log level.
+Opens a collapsed console group. Gated by the `debug` log level.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -111,22 +170,6 @@ Opens a collapsed console group. Gated by the `success` log level.
 ### `Logit.groupEnd()`
 
 Closes the current console group.
-
-### `Logit.toggleTimestamp(value?)`
-
-Toggles or explicitly sets timestamp visibility.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `value` | `boolean \| undefined` | If omitted, flips current value |
-
-### `Logit.toggleEnvironment(value?)`
-
-Toggles or explicitly sets environment indicator visibility.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `value` | `boolean \| undefined` | If omitted, flips current value |
 
 ---
 
@@ -141,7 +184,7 @@ type LogLevel = 'debug' | 'trace' | 'time' | 'table' | 'info' | 'success' | 'war
 ### `LogType`
 
 ```ts
-type LogType = Exclude<LogLevel, 'off'>;
+type LogType = 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error';
 ```
 
 ### `Variant`
@@ -166,7 +209,7 @@ type LogitOptions = {
 ### `LogitConfig`
 
 ```ts
-type LogitConfig = Required<Omit<LogitOptions, 'remote'>> & { remote: RemoteOptions };
+type LogitConfig = Omit<Required<LogitOptions>, 'remote'> & { remote: ResolvedRemote };
 ```
 
 ### `RemoteOptions`
@@ -189,16 +232,37 @@ type RemoteLogData = {
 };
 ```
 
-### `ScopedLogger`
+### `Logger`
+
+The full type returned by `createLogger()`, `scope()`, and `child()`.
 
 ```ts
-type ScopedLogger = {
+type Logger = {
+  assert: (condition: boolean, ...args: unknown[]) => void;
+  child: (overrides?: LogitOptions) => Logger;
+  config: (opts: LogitOptions) => Logger;
   debug: (...args: unknown[]) => void;
+  enabled: (type: LogLevel) => boolean;
   error: (...args: unknown[]) => void;
+  getConfig: () => Readonly<LogitConfig>;
+  group: (label?: string, text?: string) => void;
+  groupCollapsed: (label?: string, text?: string) => void;
+  groupEnd: () => void;
   info: (...args: unknown[]) => void;
-  scope: (name: string) => ScopedLogger;
+  scope: (name: string) => Logger;
   success: (...args: unknown[]) => void;
+  table: (data: unknown, properties?: string[]) => void;
+  time: (label: string) => void;
+  timeEnd: (label: string) => void;
   trace: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
 };
+```
+
+### `ResolvedRemote`
+
+The fully resolved remote config stored internally (all fields present).
+
+```ts
+type ResolvedRemote = { handler?: RemoteHandler; logLevel: LogLevel };
 ```

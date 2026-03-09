@@ -145,41 +145,34 @@ declare module '@vielzeug/toolkit' {
 
 export const depositTypes = `
 declare module '@vielzeug/deposit' {
-  export type AdapterConfig<S extends DepositDataSchema> = {
-    type: 'localStorage' | 'indexedDB';
-    dbName: string;
-    version?: number;
-    schema: S;
-    migrationFn?: DepositMigrationFn<S>;
-  };
-
-  export type DataSchemaDef = Record<string, Record<string, unknown>>;
-
-  export type DepositDataSchema<S = DataSchemaDef> = {
-    [K in keyof S]: DepositDataRecord<S[K], keyof S[K]>;
-  };
-
-  export type DepositDataRecord<T, K extends keyof T = keyof T> = {
+  type TableDef<T, K extends keyof T = keyof T> = {
     indexes?: K[];
     key: K;
     record: T;
   };
 
-  export type DepositMigrationFn<S extends DepositDataSchema> = (
+  export type Schema<S = Record<string, Record<string, unknown>>> = {
+    [K in keyof S]: TableDef<S[K], keyof S[K]>;
+  };
+
+  export type MigrationFn = (
     db: IDBDatabase,
     oldVersion: number,
     newVersion: number | null,
-    transaction: IDBTransaction,
-    schema: S
+    transaction: IDBTransaction
   ) => void | Promise<void>;
 
-  /** Factory — pass an AdapterConfig or an existing adapter instance. */
-  export function createDeposit<S extends DepositDataSchema>(
-    adapterOrConfig: DepositBaseAdapter<S> | AdapterConfig<S>
-  ): DepositBaseAdapter<S>;
+  type AdapterConfig<S extends Schema> = {
+    type: 'localStorage' | 'indexedDB';
+    dbName: string;
+    version?: number;
+    schema: S;
+    migrationFn?: MigrationFn;
+    logger?: any;
+  };
 
-  export abstract class DepositBaseAdapter<S extends DepositDataSchema> {
-    get<K extends keyof S, T extends S[K]['record']>(table: K, key: any, defaultValue?: T): Promise<T | undefined>;
+  export interface Adapter<S extends Schema> {
+    get<K extends keyof S>(table: K, key: any, defaultValue?: S[K]['record']): Promise<S[K]['record'] | undefined>;
     getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
     put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
     delete<K extends keyof S>(table: K, key: any): Promise<void>;
@@ -187,30 +180,25 @@ declare module '@vielzeug/deposit' {
     count<K extends keyof S>(table: K): Promise<number>;
     bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
     bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
-    patch<K extends keyof S>(table: K, patches: any[]): Promise<void>;
-    transaction<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
-      tables: K[],
-      fn: (stores: T) => Promise<void>,
-      ttl?: number
-    ): Promise<void>;
     query<K extends keyof S>(table: K): QueryBuilder<S[K]['record']>;
   }
 
+  export function createDeposit<S extends Schema>(config: AdapterConfig<S>): Adapter<S>;
+
   export class QueryBuilder<T extends Record<string, unknown>> {
-    where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): this;
-    equals<K extends keyof T>(field: K, value: T[K]): this;
-    between<K extends keyof T>(field: K, lower: number, upper: number): this;
-    startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase?: boolean): this;
-    filter(fn: (record: T) => boolean): this;
-    not(fn: (record: T) => boolean): this;
-    orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): this;
-    limit(n: number): this;
-    offset(n: number): this;
-    page(pageNumber: number, pageSize: number): this;
-    reverse(): this;
-    map(callback: (record: T) => T): this;
-    search(query: string, tone?: number): this;
-    reset(): this;
+    where<K extends keyof T>(field: K, predicate: (value: T[K], record: T) => boolean): QueryBuilder<T>;
+    equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
+    between<K extends keyof T>(field: K, lower: number, upper: number): QueryBuilder<T>;
+    startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase?: boolean): QueryBuilder<T>;
+    filter(fn: (record: T) => boolean): QueryBuilder<T>;
+    not(fn: (record: T) => boolean): QueryBuilder<T>;
+    orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+    limit(n: number): QueryBuilder<T>;
+    offset(n: number): QueryBuilder<T>;
+    page(pageNumber: number, pageSize: number): QueryBuilder<T>;
+    reverse(): QueryBuilder<T>;
+    map(callback: (record: T) => T): QueryBuilder<T>;
+    search(query: string, tone?: number): QueryBuilder<T>;
     count(): Promise<number>;
     first(): Promise<T | undefined>;
     last(): Promise<T | undefined>;
@@ -222,17 +210,39 @@ declare module '@vielzeug/deposit' {
     toGrouped<K extends keyof T>(field: K): Promise<Array<{ key: T[K]; values: T[] }>>;
   }
 
-  export function defineSchema<S extends DataSchemaDef>(): <
-    Schema extends { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }
-  >(schema: Schema) => DepositDataSchema<S>;
+  export function defineSchema<S extends Record<string, Record<string, unknown>>>(
+    schema: { [K in keyof S]: { key: keyof S[K]; indexes?: (keyof S[K])[] } }
+  ): Schema<S>;
 
-  export class LocalStorageAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
+  export class LocalStorageAdapter<S extends Schema> {
     constructor(dbName: string, schema: S, logger?: any);
+    get<K extends keyof S>(table: K, key: any, defaultValue?: S[K]['record']): Promise<S[K]['record'] | undefined>;
+    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
+    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+    clear<K extends keyof S>(table: K): Promise<void>;
+    count<K extends keyof S>(table: K): Promise<number>;
+    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
+    query<K extends keyof S>(table: K): QueryBuilder<S[K]['record']>;
   }
 
-  export class IndexedDBAdapter<S extends DepositDataSchema> extends DepositBaseAdapter<S> {
-    constructor(dbName: string, version: number, schema: S, migrationFn?: DepositMigrationFn<S>, logger?: any);
-    connect(): Promise<void>;
+  export class IndexedDBAdapter<S extends Schema> {
+    constructor(dbName: string, version: number, schema: S, migrationFn?: MigrationFn, logger?: any);
+    get<K extends keyof S>(table: K, key: any, defaultValue?: S[K]['record']): Promise<S[K]['record'] | undefined>;
+    getAll<K extends keyof S>(table: K): Promise<S[K]['record'][]>;
+    put<K extends keyof S>(table: K, value: S[K]['record'], ttl?: number): Promise<void>;
+    delete<K extends keyof S>(table: K, key: any): Promise<void>;
+    clear<K extends keyof S>(table: K): Promise<void>;
+    count<K extends keyof S>(table: K): Promise<number>;
+    bulkPut<K extends keyof S>(table: K, values: S[K]['record'][], ttl?: number): Promise<void>;
+    bulkDelete<K extends keyof S>(table: K, keys: any[]): Promise<void>;
+    query<K extends keyof S>(table: K): QueryBuilder<S[K]['record']>;
+    transaction<K extends keyof S, T extends { [P in K]: S[P]['record'][] }>(
+      tables: K[],
+      fn: (stores: T) => Promise<void>,
+      ttl?: number
+    ): Promise<void>;
   }
 }
 `;
@@ -694,7 +704,7 @@ declare module '@vielzeug/permit' {
 `;
 
 export const snapitTypes = `
-declare module '@vielzeug/snapit' {
+declare module '@vielzeug/stateit' {
   export type Listener<T> = (curr: T, prev: T) => void;
   export type Selector<T, U> = (data: T) => U;
   export type Unsubscribe = () => void;
@@ -947,7 +957,7 @@ export const libraryTypes = {
   logit: logitTypes,
   permit: permitTypes,
   routeit: routeitTypes,
-  snapit: snapitTypes,
+  stateit: snapitTypes,
   toolkit: toolkitTypes,
   validit: validitTypes,
   wireit: wireitTypes,

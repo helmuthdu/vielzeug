@@ -27,6 +27,26 @@
 
 ## 📦 Packages
 
+### [@vielzeug/buildit](packages/buildit) – Web Component Library
+
+Accessible, customizable web components built on top of `@vielzeug/craftit`. Works with React, Vue, Svelte, Angular, or vanilla HTML.
+
+```bash
+npm install @vielzeug/buildit
+```
+
+**Key Features:**
+
+- Drop-in accessible components (button, input, select, checkbox, accordion, tooltip, and more)
+- Framework agnostic — plain custom elements, no framework required
+- Full theming via CSS custom properties
+- Tree-shakeable per-component imports
+- Built on `@vielzeug/craftit`
+
+[📖 Documentation](https://vielzeug.dev/buildit/) • [Examples](https://vielzeug.dev/buildit/examples)
+
+---
+
 ### [@vielzeug/craftit](packages/craftit) – Web Components
 
 Lightweight, type-safe web component creation library with reactive state and automatic rendering.
@@ -47,7 +67,25 @@ npm install @vielzeug/craftit
 
 ---
 
-### [@vielzeug/deposit](packages/deposit) – Browser Storage
+### [@vielzeug/eventit](packages/eventit) – Typed Event Bus
+
+Lightweight, zero-dependency typed event bus with `on`, `once`, `emit`, and `clear`.
+
+```bash
+npm install @vielzeug/eventit
+```
+
+**Key Features:**
+
+- Fully type-safe event maps — payload types inferred from the event key
+- `once()` for single-fire subscriptions
+- `onError` and `onEmit` hooks for logging and error handling
+- `dispose()` for clean teardown; `testBus()` helper for testing
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/eventit/) • [Examples](https://vielzeug.dev/eventit/examples)
+
+---
 
 Powerful, type-safe browser storage utility with unified API for IndexedDB and LocalStorage.
 
@@ -125,7 +163,7 @@ npm install @vielzeug/i18nit
 
 ### [@vielzeug/logit](packages/logit) – Logging Utility
 
-Flexible, zero-dependency logging utility for browser and Node.js environments.
+Structured, zero-dependency logging with log levels, scoped namespaces, styled output, and non-blocking remote transport. Works in browser and Node.js.
 
 ```bash
 npm install @vielzeug/logit
@@ -133,10 +171,13 @@ npm install @vielzeug/logit
 
 **Key Features:**
 
-- Multiple log levels with filtering
-- Custom themes and colors
-- Remote logging support
-- Scoped loggers (2.7 KB gzipped)
+- Log levels (`debug` → `error`) with priority-based filtering
+- `scope(name)` and `child(overrides?)` for isolated namespaced loggers
+- `enabled(type)` to guard expensive argument construction
+- Browser CSS badge styling — `symbol`, `icon`, or `text` variants
+- Non-blocking remote handler (Sentry, Datadog, custom endpoint)
+- `time/timeEnd`, `table`, `group/groupCollapsed`, `assert` backed by native console APIs
+- Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/logit/) • [Examples](https://vielzeug.dev/logit/examples)
 
@@ -180,12 +221,12 @@ npm install @vielzeug/routeit
 
 ---
 
-### [@vielzeug/snapit](packages/snapit) – State Management
+### [@vielzeug/storeit](packages/storeit) – State Management
 
 Simple, reactive state management for modern web apps.
 
 ```bash
-npm install @vielzeug/snapit
+npm install @vielzeug/storeit
 ```
 
 **Key Features:**
@@ -195,7 +236,7 @@ npm install @vielzeug/snapit
 - Async state updates
 - Custom equality checks (2.4 KB gzipped)
 
-[📖 Documentation](https://vielzeug.dev/snapit/) • [Examples](https://vielzeug.dev/snapit/examples)
+[📖 Documentation](https://vielzeug.dev/storeit/) • [Examples](https://vielzeug.dev/storeit/examples)
 
 ---
 
@@ -254,6 +295,25 @@ npm install @vielzeug/wireit
 - Testing helpers (2.1 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/wireit/) • [Examples](https://vielzeug.dev/wireit/examples)
+
+### [@vielzeug/workit](packages/workit) – Web Worker Pool
+
+Run CPU-intensive tasks off the main thread with a typed Web Worker pool and automatic fallback.
+
+```bash
+npm install @vielzeug/workit
+```
+
+**Key Features:**
+
+- `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
+- `createPool(fn, options)` — concurrent worker pool with configurable size
+- Timeout support with `AbortSignal`-based cancellation
+- Graceful fallback to main-thread execution when Workers are unavailable
+- `testWorker()` helper for unit testing without Worker infrastructure
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/workit/) • [Examples](https://vielzeug.dev/workit/examples)
 
 ## 🏁 Quick Start
 
@@ -357,18 +417,21 @@ pnpm docs:dev
 ```
 vielzeug/
 ├── packages/
-│   ├── craftit/       # Web components
-│   ├── deposit/       # Browser storage utility
+│   ├── buildit/       # Web component library (built on craftit)
+│   ├── craftit/       # Web component primitives
+│   ├── deposit/       # Browser storage (IndexedDB + LocalStorage)
+│   ├── eventit/       # Typed event bus
 │   ├── fetchit/       # HTTP client & query management
 │   ├── formit/        # Form state management
 │   ├── i18nit/        # Internationalization
-│   ├── logit/         # Logging utility
-│   ├── permit/        # Permission management
+│   ├── logit/         # Structured logging
+│   ├── permit/        # Permission & RBAC management
 │   ├── routeit/       # Client-side routing
-│   ├── snapit/       # State management
+│   ├── storeit/       # Reactive state management
 │   ├── toolkit/       # Utility functions
 │   ├── validit/       # Schema validation
-│   └── wireit/        # Dependency injection
+│   ├── wireit/        # Dependency injection
+│   └── workit/        # Web Worker pool
 ├── docs/              # VitePress documentation
 └── common/            # Shared configuration
 ```
@@ -390,20 +453,23 @@ All sizes are measured as **minified + gzipped** production builds:
 
 | Package           | Minified Size              | Gzipped Size  | Dependencies |
 | ----------------- | -------------------------- | ------------- | ------------ |
+| @vielzeug/buildit | —                          | —             | 1\*          |
 | @vielzeug/craftit | **18 KB**                  | **5.0 KB**    | 0            |
 | @vielzeug/deposit | **16 KB**                  | **4.5 KB**    | 2\*          |
+| @vielzeug/eventit | —                          | —             | 0            |
 | @vielzeug/fetchit | **10 KB**                  | **3.4 KB**    | 1\*          |
 | @vielzeug/formit  | **7.2 KB**                 | **3.0 KB**    | 0            |
 | @vielzeug/i18nit  | **7.4 KB**                 | **1.6 KB**    | 0            |
 | @vielzeug/logit   | **6.8 KB**                 | **2.7 KB**    | 0            |
 | @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
 | @vielzeug/routeit | **9.0 KB**                 | **3.1 KB**    | 0            |
-| @vielzeug/snapit | **7.0 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/storeit | **7.0 KB**                 | **2.4 KB**    | 0            |
 | @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
 | @vielzeug/validit | **14 KB**                  | **2.8 KB**    | 0            |
 | @vielzeug/wireit  | **8.0 KB**                 | **2.1 KB**    | 0            |
+| @vielzeug/workit  | —                          | —             | 0            |
 
-\* Only depends on other @vielzeug packages (deposit depends on @vielzeug/logit and @vielzeug/toolkit; fetchit depends on @vielzeug/toolkit; permit depends on @vielzeug/logit; toolkit utilities may depend on other toolkit utilities)
+\* Only depends on other @vielzeug packages (deposit depends on @vielzeug/logit and @vielzeug/toolkit; fetchit depends on @vielzeug/toolkit; permit depends on @vielzeug/logit; buildit depends on @vielzeug/craftit; toolkit utilities may depend on other toolkit utilities). Packages marked — haven't published a final build size yet.
 
 ## 🌐 Browser & Node.js Support
 

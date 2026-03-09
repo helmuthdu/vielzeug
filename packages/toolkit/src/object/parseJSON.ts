@@ -48,7 +48,7 @@ export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSON
 
     return parsed ?? defaultValue;
   } catch (err) {
-    onError ? onError(err) : console.error('parseJSON() -> failed to parse object', err);
+    onError?.(err);
     return defaultValue;
   }
 }

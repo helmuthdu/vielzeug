@@ -67,14 +67,6 @@ export function cache<T>() {
     return metadata.get(hash(key));
   }
 
-  function getMetaByHash(keyHash: string): Record<string, unknown> | undefined {
-    return metadata.get(keyHash);
-  }
-
-  function listMetaHashes(): string[] {
-    return Array.from(metadata.keys());
-  }
-
   function clearGc(keyHash: string): void {
     clearTimeout(gcTimers.get(keyHash));
     gcTimers.delete(keyHash);
@@ -85,9 +77,6 @@ export function cache<T>() {
     delete: del,
     get,
     getMeta,
-    getMetaByHash,
-    hash,
-    listMetaHashes,
     scheduleGc,
     set,
     setMeta,

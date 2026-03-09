@@ -104,17 +104,12 @@ container
 
 // Middleware
 app.use(async (req, res, next) => {
-  await container.runInScope(
-    async (scope) => {
-      // Store request-specific data in scope
-      req.container = scope;
-      next();
-    },
-    [
-      [RequestId, { useValue: req.id }],
-      [User, { useValue: req.user }],
-    ],
-  );
+  await container.runInScope(async (scope) => {
+    scope.registerValue(RequestId, req.id);
+    scope.registerValue(User, req.user);
+    req.container = scope;
+    next();
+  });
 });
 
 // Route using scoped container
@@ -190,7 +185,9 @@ container.registerValue(Database, db).register(UserService, {
 fastify.decorateRequest('container', null);
 
 fastify.addHook('onRequest', async (request) => {
-  request.container = container.createChild([[RequestId, { useValue: request.id }]]);
+  const child = container.createChild();
+  child.registerValue(RequestId, request.id);
+  request.container = child;
 });
 
 fastify.post('/users', async (request, reply) => {
@@ -365,15 +362,15 @@ container.registerValue(Config, {
 // Infrastructure
 container.register(Logger, { useClass: ConsoleLogger, lifetime: 'singleton' });
 
-container.registerFactory(
-  Database,
-  async (config) => {
+container.register(Database, {
+  useFactory: async (config) => {
     const db = new PrismaClient({ datasourceUrl: config.dbUrl });
     await db.$connect();
     return db;
   },
-  { deps: [Config], lifetime: 'singleton' },
-);
+  deps: [Config],
+  lifetime: 'singleton',
+});
 
 // Repositories
 container.register(UserRepository, {
@@ -690,11 +687,11 @@ class TenantManager {
       // Register tenant-specific providers
       container.registerValue(TenantId, tenantId);
       container.registerValue(TenantConfig, config);
-      container.registerFactory(
-        TenantDatabase,
-        (config) => new PrismaClient({ datasourceUrl: config.dbUrl }),
-        { deps: [TenantConfig], lifetime: 'singleton' },
-      );
+      container.register(TenantDatabase, {
+        useFactory: (config) => new PrismaClient({ datasourceUrl: config.dbUrl }),
+        deps: [TenantConfig],
+        lifetime: 'singleton',
+      });
 
       this.containers.set(tenantId, container);
     }

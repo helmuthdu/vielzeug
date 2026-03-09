@@ -56,7 +56,7 @@ i18n.t('items', { count: 1 });          // "You have one item"
 i18n.t('items', { count: 5 });          // "You have 5 items"
 
 // Switch locale
-i18n.setLocale('es');
+i18n.locale = 'es';
 i18n.t('greeting', { name: 'Alice' }); // "¡Hola, Alice!"
 
 // Reactive subscription
@@ -67,17 +67,21 @@ const unsubscribe = i18n.subscribe(() => {
 
 ## Features
 
-- **Nested keys** — `'nav.home'` dot-notation access
-- **Interpolation** — `{name}`, `{user.name}`, `{items[0]}`, `{items|and}`
-- **Async loading** — `load()` and `register()` for lazy locale bundles
+- **Nested keys** — `'nav.home'` dot-notation access into nested message objects
+- **Interpolation** — `{name}`, `{user.name}`, `{items[0]}`, `{items|and}`, `{items| / }`
+- **Pluralisation** — `Intl.PluralRules`-based `zero/one/two/few/many/other` forms
+- **Async loading** — `load()` and `addLoader()` for lazy locale bundles
+- **Fallback chain** — walks `locale → lang-root → fallback(s)` for missing keys
+- **Scoped** — `scoped(locale)` translates in another locale without changing the active one
+- **Formatting** — `number()` and `date()` backed by `Intl`
 - **Subscriptions** — reactive updates when locale changes
-- **Key checking** — `has(key)` and `hasAsync(key)` to test key existence
+- **Key checking** — `has(key, locale?)` / `hasLocale(locale)` to test presence
 - **Zero dependencies** — <PackageInfo package="i18nit" type="size" /> gzipped
 
 ## Next Steps
 
 | | |
 |---|---|
-| [Usage Guide](./usage.md) | Locale setup, interpolation, async loading, and testing |
+| [Usage Guide](./usage.md) | Locale setup, interpolation, pluralisation, async loading, and subscriptions |
 | [API Reference](./api.md) | Complete type signatures and method documentation |
 | [Examples](./examples.md) | Real-world i18n patterns and framework integrations |

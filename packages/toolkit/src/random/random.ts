@@ -15,7 +15,7 @@ import { assert } from '../function/assert';
 export function random(min: number, max: number): number {
   assert(min <= max, 'Minimum value must be less than maximum value', { args: { max, min }, type: RangeError });
 
-  const randomValue = crypto ? crypto.getRandomValues(new Uint32Array(1))[0] / 0xffffffff : Math.random();
+  const randomValue = crypto.getRandomValues(new Uint32Array(1))[0] / 0xffffffff;
 
   return Math.floor(randomValue * (max - min + 1)) + min;
 }

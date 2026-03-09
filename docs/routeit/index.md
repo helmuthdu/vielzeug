@@ -35,35 +35,38 @@ yarn add @vielzeug/routeit
 import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
-// Global middleware (passed at creation time)
+// Create the router first so middleware can reference it
+const router = createRouter({ viewTransitions: true });
+
+// Global auth guard — applies to admin section via group()
 const authGuard: Middleware = async (ctx, next) => {
-  if (ctx.pathname.startsWith('/admin') && !isAuthenticated()) {
-    ctx.navigate('/login');
+  if (!isAuthenticated()) {
+    router.navigate('/login');
     return;
   }
   await next();
 };
 
-const router = createRouter({
-  viewTransitions: true,
-  middleware: authGuard,
-});
-
 router.routes([
-  { path: '/',         handler: () => renderHome() },
-  { path: '/users',    handler: () => renderUsers() },
+  { path: '/',          handler: () => renderHome() },
+  { path: '/users',     handler: () => renderUsers() },
   { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
-  { path: '*',         handler: () => render404() },
+  { path: '*',          handler: () => render404() },
 ]);
+
+// Protected routes share the auth guard via group()
+router.group('/admin', authGuard, (r) => {
+  r.on('/dashboard', () => renderDashboard());
+});
 
 router.start();
 
 // Navigate programmatically
 router.navigate('/users/42');
 
-// Subscribe to route changes (call getState() to read current route)
-router.subscribe(() => {
-  console.log('Current path:', router.getState().pathname);
+// Subscribe to route changes — listener receives the new state directly
+router.subscribe((state) => {
+  console.log('Current path:', state.pathname);
 });
 ```
 

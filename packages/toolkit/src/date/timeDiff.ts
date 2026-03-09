@@ -1,6 +1,5 @@
 // #region TimeDiffTypes
-export type TimeUnit = 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' | 'INVALID_DATE';
-export type TimeDirection = 'FUTURE' | 'PAST';
+export type TimeUnit = 'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND';
 export type TimeResult = { unit: TimeUnit; value: number };
 // #endregion TimeDiffTypes
 
@@ -45,12 +44,12 @@ export function timeDiff(
   a: Date | string,
   b: Date | string = new Date(),
   allowedUnits: TimeUnit[] = ALL_UNITS,
-): TimeResult {
+): TimeResult | undefined {
   const aDate = typeof a === 'string' ? Date.parse(a) : a.getTime();
   const bDate = typeof b === 'string' ? Date.parse(b) : b.getTime();
 
   if (Number.isNaN(aDate) || Number.isNaN(bDate)) {
-    return { unit: 'INVALID_DATE', value: 0 };
+    return undefined;
   }
 
   const units = TIME_UNITS.filter((u) => allowedUnits.includes(u.unit));

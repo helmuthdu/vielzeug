@@ -17,9 +17,9 @@ describe('Core: Signal System', () => {
       expect(count.value).toBe(5);
     });
 
-    it('should support update function', () => {
+    it('should support updating via setter', () => {
       const count = signal(0);
-      count.update((n) => n + 1);
+      count.value = count.peek() + 1;
       expect(count.value).toBe(1);
     });
 
@@ -28,10 +28,10 @@ describe('Core: Signal System', () => {
       expect(count.peek()).toBe(0);
     });
 
-    it('subscribe() stops watching after cleanup is called', () => {
+    it('watch() stops watching after cleanup is called', () => {
       const count = signal(0);
       const values: number[] = [];
-      const stop = count.subscribe((val) => values.push(val));
+      const stop = watch(count, (val) => values.push(val));
       count.value = 1;
       count.value = 2;
       expect(values).toEqual([1, 2]);
@@ -40,10 +40,10 @@ describe('Core: Signal System', () => {
       expect(values).toEqual([1, 2]);
     });
 
-    it('subscribe() receives current and previous value', () => {
+    it('watch() receives current and previous value', () => {
       const count = signal(10);
       const pairs: [number, number][] = [];
-      count.subscribe((next, prev) => pairs.push([next, prev]));
+      watch(count, (next, prev) => pairs.push([next, prev]));
       count.value = 20;
       count.value = 30;
       expect(pairs).toEqual([
@@ -147,14 +147,38 @@ describe('Core: Signal System', () => {
       expect(values).toEqual([5]);
     });
 
-    it('should watch multiple signals', async () => {
+    it('fires cb (no args) when any signal in the source array changes', () => {
       const a = signal(1);
       const b = signal(2);
-      const results: number[][] = [];
-      watch([a, b], (values) => results.push([...values]));
+      let fires = 0;
+      const stop = watch([a, b], () => fires++);
       a.value = 10;
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(results[0]).toEqual([10, 2]);
+      b.value = 20;
+      stop();
+      a.value = 99; // after dispose — silent
+      expect(fires).toBe(2);
+    });
+
+    it('array form: { immediate } fires cb on subscription', () => {
+      const a = signal(1);
+      const b = signal(2);
+      let fires = 0;
+      const stop = watch([a, b], () => fires++, { immediate: true });
+      expect(fires).toBe(1); // immediate
+      a.value = 10;
+      stop();
+      expect(fires).toBe(2);
+    });
+
+    it('array form: { once } auto-unsubscribes after the first change', () => {
+      const a = signal(0);
+      const b = signal(0);
+      let fires = 0;
+      watch([a, b], () => fires++, { once: true });
+      a.value = 1;
+      b.value = 1;
+      a.value = 2;
+      expect(fires).toBe(1);
     });
   });
 

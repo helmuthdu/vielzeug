@@ -34,15 +34,16 @@ yarn add @vielzeug/eventit
 - **Fully typed** — payload types flow from event map declaration to every listener
 - **Void events** — emit signal events with no payload, no workarounds required
 - **One-time listeners** — `once()` auto-unsubscribes after the first emit
-- **Error isolation** — custom `onError` handler keeps one failing listener from crashing others
-- **Max-listener warning** — catches accidental listener leaks early
-- **Testing utilities** — `createTestEventBus` records all payloads for easy assertions
+- **Error isolation** — custom `onError` keeps one failing listener from crashing others
+- **Emit hook** — optional `onEmit` intercepts every emission for logging or debugging
+- **Dispose** — permanently tear down a bus; `emit` and `on` become no-ops
+- **Testing utilities** — `testEventBus` records all payloads for easy assertions
 - **Zero dependencies** — no supply chain risk, minimal bundle size
 
 ## Quick Start
 
 ```ts
-import { createEventBus } from '@vielzeug/eventit';
+import { eventBus } from '@vielzeug/eventit';
 
 // 1. Declare your event map
 type AppEvents = {
@@ -52,7 +53,7 @@ type AppEvents = {
 };
 
 // 2. Create a bus
-const bus = createEventBus<AppEvents>();
+const bus = eventBus<AppEvents>();
 
 // 3. Subscribe
 const unsub = bus.on('userLogin', ({ id, name }) => {
@@ -61,6 +62,7 @@ const unsub = bus.on('userLogin', ({ id, name }) => {
 
 // 4. Emit
 bus.emit('userLogin', { id: '42', name: 'Alice' });
+bus.emit('userLogout'); // void event — no payload
 
 // 5. Clean up
 unsub();

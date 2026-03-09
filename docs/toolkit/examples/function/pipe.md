@@ -79,4 +79,3 @@ await getUserName(1); // 'Alice'
 
 - [compose](./compose.md): Functional composition from right to left.
 - [fp](./fp.md): Wrap functions for better functional programming support.
-- [map](../array/map.md): Use `pipe` within a map for complex transformations.

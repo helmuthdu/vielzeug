@@ -405,7 +405,6 @@ await products.setSort({ key: 'price', dir: 'asc' });
 
 - [list](./list.md): Client-side pagination utility
 - [search](./search.md): Fuzzy search functionality
-- [filter](./filter.md): Array filtering utility
 - [sort](./sort.md): Functional sorting utility
 
 <style>

@@ -17,33 +17,41 @@ pnpm add @vielzeug/validit
 ## Quick Start
 
 ```typescript
-import { v, Infer } from '@vielzeug/validit';
+import { v, type Infer } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   name:  v.string().min(1),
-  email: v.string().email(),
+  email: v.email(),
   age:   v.number().min(18).optional(),
-  role:  v.enum(['admin', 'user', 'guest']),
+  role:  v.oneOf(v.literal('admin'), v.literal('user'), v.literal('guest')),
 });
 
 type User = Infer<typeof UserSchema>;
 
-const result = UserSchema.parse({ name: 'Alice', email: 'alice@example.com', role: 'admin' });
+// Parse — throws ValidationError on failure
+const user = UserSchema.parse(rawInput);
 
+// Safe parse — never throws; returns a result object
+const result = UserSchema.safeParse(rawInput);
 if (result.success) {
   console.log(result.data); // typed as User
 } else {
-  console.log(result.errors); // [{ path, message }]
+  console.log(result.error.issues); // [{ path, message, code }]
 }
 ```
 
 ## Features
 
-- ✅ **Rich primitives** — `string`, `number`, `boolean`, `date`, `literal`, `enum`, `unknown`
-- ✅ **Composite types** — `object`, `array`, `tuple`, `union`, `intersection`, `record`
-- ✅ **Modifiers** — `.optional()`, `.nullable()`, `.default(val)`
-- ✅ **String rules** — `.min()`, `.max()`, `.length()`, `.email()`, `.url()`, `.regex()`, `.trim()`
-- ✅ **Number rules** — `.min()`, `.max()`, `.int()`, `.positive()`, `.negative()`
+- ✅ **Rich primitives** — `string`, `number`, `boolean`, `date`, `literal`, `unknown`, `never`
+- ✅ **Composite types** — `object`, `array`, `oneOf`, `allOf`, `noneOf`
+- ✅ **Schema modifiers** — `.optional()`, `.nullable()`, `.default(val)`
+- ✅ **String rules** — `.min()`, `.max()`, `.length()`, `.nonempty()`, `.startsWith()`, `.endsWith()`, `.email()`, `.url()`, `.pattern()`, `.trim()`
+- ✅ **Number rules** — `.min()`, `.max()`, `.int()`, `.positive()`, `.negative()`, `.multipleOf()`
+- ✅ **Object helpers** — `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strip()`, `.passthrough()`, `.strict()`
+- ✅ **Recursive schemas** — `v.lazy(() => schema)` for circular/self-referencing types
+- ✅ **Class validation** — `v.instanceof(SomeClass)`
+- ✅ **Coercion** — `v.coerce.string/number/boolean/date()` for form data and URL params
+- ✅ **Async validation** — `parseAsync()` / `safeParseAsync()` for async refinements
 - ✅ **Type inference** — `Infer<typeof schema>` gives the exact TypeScript type
 - ✅ **Zero dependencies** — pure TypeScript, ~2 KB gzipped
 
@@ -58,7 +66,7 @@ const name     = v.string().min(1).max(100).trim();
 const age      = v.number().int().min(0).max(120);
 const active   = v.boolean();
 const joinedAt = v.date();
-const status   = v.enum(['active', 'inactive', 'pending']);
+const status   = v.oneOf(v.literal('active'), v.literal('inactive'), v.literal('pending'));
 ```
 
 ### Objects
@@ -79,19 +87,20 @@ const PersonSchema = v.object({
 type Person = Infer<typeof PersonSchema>;
 ```
 
-### Arrays and Tuples
+### Arrays
 
 ```typescript
-const TagsSchema  = v.array(v.string().min(1));
-const PointSchema = v.tuple([v.number(), v.number()]);
+const TagsSchema = v.array(v.string().nonempty()).nonempty();
 ```
 
-### Union and Intersection
+### Unions and Intersections
 
 ```typescript
-const IdSchema = v.union([v.string(), v.number()]);
+// Exactly one branch must match (mutual exclusion)
+const IdSchema = v.oneOf(v.string(), v.number());
 
-const AdminSchema = v.intersection([UserSchema, v.object({ permissions: v.array(v.string()) })]);
+// All branches must pass (intersection/mix-in)
+const AdminSchema = v.allOf(UserSchema, v.object({ permissions: v.array(v.string()) }));
 ```
 
 ### Safe Parse vs. Parse
@@ -99,7 +108,7 @@ const AdminSchema = v.intersection([UserSchema, v.object({ permissions: v.array(
 ```typescript
 // safeParse — never throws, returns { success, data?, errors? }
 const result = schema.safeParse(input);
-if (!result.success) console.log(result.errors);
+if (!result.success) console.log(result.error.issues);
 
 // parse — throws ValidationError on failure
 const data = schema.parse(input);
@@ -108,10 +117,17 @@ const data = schema.parse(input);
 ### Custom Validators
 
 ```typescript
-const PasswordSchema = v.string().refine(
-  (val) => /[A-Z]/.test(val) && /[0-9]/.test(val),
-  'Password must contain an uppercase letter and a digit'
-);
+const PasswordSchema = v.string()
+  .min(8)
+  .refine(
+    (val) => /[A-Z]/.test(val) && /[0-9]/.test(val),
+    'Password must contain an uppercase letter and a digit',
+  );
+
+// Async refinement — use parseAsync / safeParseAsync
+const UniqueEmailSchema = v.email().refine(async (email) => {
+  return !(await db.users.exists({ email }));
+}, 'Email already registered');
 ```
 
 ## API
@@ -123,15 +139,26 @@ const PasswordSchema = v.string().refine(
 | `v.boolean()` | Boolean schema |
 | `v.date()` | Date schema |
 | `v.literal(val)` | Exact value schema |
-| `v.enum(values)` | Enum schema from string array |
 | `v.object(shape)` | Object schema |
 | `v.array(item)` | Array schema |
-| `v.tuple(items)` | Fixed-length tuple schema |
-| `v.union(schemas)` | Union (OR) schema |
-| `v.intersection(schemas)` | Intersection (AND) schema |
-| `v.record(key, value)` | Record/dictionary schema |
-| `v.unknown()` | Passes any value |
+| `v.oneOf(...schemas)` | Exactly one schema must match |
+| `v.noneOf(...schemas)` | Passes when value matches none of the schemas (blocklist) |
+| `v.allOf(...schemas)` | All schemas must pass (intersection) |
+| `v.lazy(getter)` | Deferred / recursive schema |
+| `v.instanceof(cls)` | Class instance check |
+| `v.never()` | Always fails |
+| `v.coerce.string/number/boolean/date()` | Coercive schemas |
+| `v.email()` | Shorthand for `v.string().email()` |
+| `v.url()` | Shorthand for `v.string().url()` |
+| `v.uuid()` | Shorthand for `v.string().uuid()` |
+| `v.int()` | Shorthand for `v.number().int()` |
+| `v.any()` | Passes any value |
+| `v.unknown()` | Passes any value (typed as `unknown`) |
+| `v.null()` | Matches `null` |
+| `v.undefined()` | Matches `undefined` |
 | `Infer<T>` | Extract TypeScript type from schema |
+| `pipe(...schemas)` | Chain schemas in sequence |
+| `ValidationError` | Error class thrown by `parse()` |
 
 ## Documentation
 

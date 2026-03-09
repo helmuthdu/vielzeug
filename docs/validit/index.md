@@ -38,7 +38,7 @@ const UserSchema = v.object({
   name: v.string().min(1),
   email: v.email(),
   age: v.number().min(18).optional(),
-  role: v.enum('admin', 'editor', 'viewer'),
+  role: v.oneOf(v.literal('admin'), v.literal('editor'), v.literal('viewer')),
 });
 
 // Parse (throws on failure)
@@ -59,12 +59,15 @@ type User = Infer<typeof UserSchema>;
 
 ## Features
 
-- **Chainable schema builders** — `v.string()`, `v.number()`, `v.object()`, `v.array()`, and more
+- **Chainable schema builders** — `v.string()`, `v.number()`, `v.object()`, `v.array()`, `v.oneOf()`, `v.allOf()`, `v.noneOf()`, and more
 - **Type inference** — `Infer<typeof Schema>` extracts the TypeScript type
 - **Async validation** — `parseAsync()` and `safeParseAsync()` for async refinements
-- **Coercion** — `v.coerce.string()` / `v.coerce.number()` for form data and URL params
-- **Refinements** — `.refine(fn)` for custom validation logic
+- **Coercion** — `v.coerce.string/number/boolean/date()` for form data and URL params
+- **Refinements** — `.refine(fn)` handles both sync and async custom validation logic
 - **Transforms** — `.transform(fn)` for data shaping after validation
+- **Recursive schemas** — `v.lazy(() => schema)` for circular/self-referencing types
+- **Class validation** — `v.instanceof(SomeClass)` for custom class checks
+- **Object helpers** — `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strict()`
 - **Zero dependencies** — <PackageInfo package="validit" type="size" /> gzipped
 
 ## Next Steps

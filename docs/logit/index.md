@@ -32,7 +32,7 @@ yarn add @vielzeug/logit
 ## Quick Start
 
 ```ts
-import { Logit } from '@vielzeug/logit';
+import { createLogger, Logit } from '@vielzeug/logit';
 
 // Log at different levels
 Logit.debug('Debugging info', { userId: '123' });
@@ -41,16 +41,22 @@ Logit.success('User created');
 Logit.warn('Memory usage high', { usage: '85%' });
 Logit.error('Connection failed', new Error('Timeout'));
 
-// Scoped logger (recommended for modules)
+// Scoped logger — namespaced child, never mutates the parent
 const api = Logit.scope('api');
 api.info('GET /users');        // [api] GET /users
 api.error('404 Not Found');    // [api] 404 Not Found
 
-// Nest scopes
+// Nest scopes (dot-separated)
 const auth = api.scope('auth');
 auth.info('Token validated');  // [api.auth] Token validated
 
-// Configure once globally
+// Create a fully isolated instance
+const log = createLogger({ namespace: 'Worker', logLevel: 'warn' });
+
+// Check whether a level passes the current filter
+if (log.enabled('debug')) log.debug('verbose', buildDiagnostics());
+
+// Configure globally (returns logger for fluent chaining)
 Logit.config({
   logLevel: 'warn',    // Only warn + error
   variant: 'symbol',   // Emoji badge indicators
@@ -62,12 +68,13 @@ Logit.config({
 ## Features
 
 - **Log levels** — `debug`, `trace`, `info`, `success`, `warn`, `error`; filter with `config({ logLevel })`
-- **Scoped loggers** — namespaced child loggers that don\'t mutate global state
+- **Level query** — `enabled(type)` checks whether a level passes the current filter
+- **Scoped loggers** — `scope(name)` and `child(overrides?)` return isolated instances that never mutate the parent
 - **Styled output** — browser CSS badges with `symbol`, `icon`, or `text` variants
 - **Remote logging** — non-blocking async handler for Sentry, Datadog, custom endpoints
 - **Timing & tables** — `time/timeEnd` and `table` backed by native console APIs
-- **Group collapsing** — `groupCollapsed/groupEnd` for structured log sections
-- **Assertions** — `assert(condition, msg)` logs when condition is false
+- **Groups** — `group/groupCollapsed/groupEnd` for structured collapsible log sections
+- **Assertions** — `assert(condition, ...args)` forwards to `console.assert`
 - **Zero dependencies** — <PackageInfo package="logit" type="size" /> gzipped, <PackageInfo package="logit" type="dependencies" /> dependencies
 
 ## Next Steps

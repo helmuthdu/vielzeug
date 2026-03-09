@@ -37,7 +37,7 @@ describe('assert', () => {
   });
 
   it('should handle multiple conditions', () => {
-    expect(() => assert([true, true])).not.toThrow();
-    expect(() => assert([true, false], 'One condition failed')).toThrowError('One condition failed');
+    expect(() => assert.all([true, true])).not.toThrow();
+    expect(() => assert.all([true, false], 'One condition failed')).toThrowError('One condition failed');
   });
 });

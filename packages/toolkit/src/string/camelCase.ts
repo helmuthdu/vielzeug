@@ -14,6 +14,6 @@ import { normalizeCase } from './_caseUtils';
  */
 export function camelCase(str: string): string {
   return normalizeCase(str, ' ')
-    .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase()) // Basic split by non-alphanumeric
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase())
     .replace(/^./, (char) => char.toLowerCase());
 }

@@ -95,6 +95,6 @@ const doubled = parseJSON(raw, {
 
 ## See Also
 
-- [clone](./clone.md): Create a copy of a parsed object.
+- [prune](./prune.md): Remove null/undefined values from a parsed object.
 - [path](./path.md): Safely access nested properties of the parsed object.
 - [merge](./merge.md): Combine the parsed object with default settings.

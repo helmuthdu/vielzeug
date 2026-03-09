@@ -7,7 +7,6 @@ describe('median', () => {
 
   it('returns the only element for single-element array', () => {
     expect(median([42])).toBe(42);
-    expect(median([new Date('2020-01-01')])).toEqual(new Date('2020-01-01'));
   });
 
   it('calculates median for odd-length array of numbers', () => {
@@ -42,33 +41,5 @@ describe('median', () => {
     const copy = [...arr];
     median(arr);
     expect(arr).toEqual(copy);
-  });
-
-  it('calculates median for odd-length array of Dates', () => {
-    const d1 = new Date('2020-01-01T00:00:00Z');
-    const d2 = new Date('2020-01-03T00:00:00Z');
-    const d3 = new Date('2020-01-05T00:00:00Z');
-    const result = median([d1, d2, d3]);
-    expect(result).toEqual(d2);
-  });
-
-  it('calculates median for even-length array of Dates', () => {
-    const d1 = new Date('2020-01-01T00:00:00Z');
-    const d2 = new Date('2020-01-03T00:00:00Z');
-    const d3 = new Date('2020-01-05T00:00:00Z');
-    const d4 = new Date('2020-01-07T00:00:00Z');
-    const expected = new Date((d2.getTime() + d3.getTime()) / 2);
-    const result = median([d1, d2, d3, d4]);
-    expect(result).toEqual(expected);
-  });
-
-  it('works with a callback extracting Dates', () => {
-    const arr = [
-      { d: new Date('2020-01-01T00:00:00Z') },
-      { d: new Date('2020-01-03T00:00:00Z') },
-      { d: new Date('2020-01-05T00:00:00Z') },
-    ];
-    const result = median(arr, (x) => x.d);
-    expect(result).toEqual(new Date('2020-01-03T00:00:00Z'));
   });
 });

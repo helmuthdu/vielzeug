@@ -157,7 +157,7 @@ distribute(5n, 3);
 ## See Also
 
 - [allocate](./allocate.md): Distribute amount proportionally by ratios
-- [divide](./divide.md): Simple division
+- [allocate](./allocate.md): Distribute a total into weighted shares.
 - [sum](./sum.md): Sum an array of numbers
 
 <style>

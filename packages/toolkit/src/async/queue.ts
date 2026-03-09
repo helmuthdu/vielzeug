@@ -84,7 +84,7 @@ export function queue(options: { concurrency?: number } = {}) {
      * Returns a promise that resolves when the queue becomes idle
      */
     onIdle: (): Promise<void> => {
-      if (activeCount === 0 && queue.length === 0) {
+      if (activeCount === 0 && tasks.length === 0) {
         return Promise.resolve();
       }
 

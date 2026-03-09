@@ -31,11 +31,13 @@ export const compare = (a: unknown, b: unknown): number => {
   }
 
   if (typeof a === 'number' && typeof b === 'number') {
-    return a - b;
+    return a === b ? 0 : a > b ? 1 : -1;
   }
 
   if (a instanceof Date && b instanceof Date) {
-    return a.getTime() - b.getTime();
+    const at = a.getTime();
+    const bt = b.getTime();
+    return at === bt ? 0 : at > bt ? 1 : -1;
   }
 
   if (typeof a === 'object' && typeof b === 'object') {

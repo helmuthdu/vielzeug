@@ -213,7 +213,6 @@ currency(money, {
 ## See Also
 
 - [exchange](../money/exchange.md): Convert between currencies
-- [add](../math/add.md): Add monetary amounts
 - [distribute](../math/distribute.md): Split amounts equally
 
 <style>

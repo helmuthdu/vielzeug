@@ -94,8 +94,6 @@ const heavyCalc = memo((n: number) => {
 - [memo](./function/memo.md)
 - [once](./function/once.md)
 - [pipe](./function/pipe.md)
-- [proxy](./function/proxy.md)
-- [prune](./function/prune.md)
 - [throttle](./function/throttle.md)
 
 </div>

@@ -103,5 +103,4 @@ saveData.flush(); // Saves 'Charlie' immediately
 ## See Also
 
 - [throttle](./throttle.md): Execute a function at most once in a specified interval.
-- [delay](./delay.md): Pause execution for a specified duration.
 - [retry](./retry.md): Automatically retry an asynchronous operation.

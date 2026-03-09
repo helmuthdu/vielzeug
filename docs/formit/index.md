@@ -56,8 +56,8 @@ form.subscribe((state) => {
 
 // Submit
 try {
-  await form.submit(async (formData) => {
-    await api.createUser(Object.fromEntries(formData));
+  await form.submit(async (values) => {
+    await api.createUser(values);
   });
 } catch (error) {
   if (error instanceof ValidationError) {
@@ -69,6 +69,7 @@ try {
 ## Features
 
 - **Typed values** — field values stay typed (`number`, `boolean`, `File`) — no string coercion
+- **Nested values** — plain objects in `values` are auto-flattened; access fields with `form.get('user.name')`
 - **Field rules** — per-field `rules` option with single or multiple validators
 - **Form validators** — cross-field validation via `validate` returning an error record
 - **Async validators** — validators can return `Promise<string | undefined>`

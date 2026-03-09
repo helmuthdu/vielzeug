@@ -40,7 +40,7 @@ const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const users = await http.get<User[]>('/users');
 
 // POST with body
-const user = await http.post<User>('/users', { name: 'Alice', email: 'alice@example.com' });
+const user = await http.post<User>('/users', { body: { name: 'Alice', email: 'alice@example.com' } });
 
 // Path parameters — supports both :param and {param} syntax
 const post = await http.get<Post>('/users/:userId/posts/:postId', {
@@ -69,13 +69,14 @@ try {
 - **Base URL** — configure once, use everywhere
 - **Custom headers** — global via `setHeaders()`, per-request via options
 - **Query client** — `createQueryClient()` for request deduplication and caching
-- **HttpError** — structured error with `url`, `method`, `status`, and `original` properties
+- **Interceptors** — `use()` middleware for auth, logging, and request transforms
+- **HttpError** — structured error with `url`, `method`, `status`, and `cause` properties
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped
 
 ## Next Steps
 
 | | |
 |---|---|
-| [Usage Guide](./usage.md) | HTTP methods, error handling, query client, and interceptors |
+| [Usage Guide](./usage.md) | HTTP methods, caching, mutations, interceptors, and more |
 | [API Reference](./api.md) | Complete type signatures and method documentation |
 | [Examples](./examples.md) | Real-world HTTP patterns and framework integrations |

@@ -1,9 +1,7 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 import { Logit } from '@vielzeug/logit';
 import {
+  type Adapter,
   createDeposit,
-  type DepositBaseAdapter,
   defineSchema,
   IndexedDBAdapter,
   LocalStorageAdapter,
@@ -14,7 +12,7 @@ import {
 type User = { id: number; name?: string; age?: number; city?: string };
 type TestSchemaDef = { users: User };
 
-const userSchema = defineSchema<TestSchemaDef>()({
+const userSchema = defineSchema<TestSchemaDef>({
   users: {
     indexes: ['name', 'age', 'city'],
     key: 'id',
@@ -53,11 +51,6 @@ describe('QueryBuilder', () => {
     test('startsWith', async () => {
       const result = await builder.startsWith('name', 'A').toArray();
       expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
-    });
-
-    test('not', async () => {
-      const result = await builder.not((item) => item.city === 'Paris').toArray();
-      expect(result).toEqual([{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }]);
     });
 
     test('and combines multiple predicates', async () => {
@@ -104,42 +97,12 @@ describe('QueryBuilder', () => {
       expect(await builder.first()).toEqual(sampleData[0]);
       expect(await builder.last()).toEqual(sampleData[2]);
     });
-
-    test('min and max', async () => {
-      expect(await builder.min('age')).toEqual({ age: 25, city: 'Paris', id: 1, name: 'Alice' });
-      expect(await builder.max('age')).toEqual({ age: 35, city: 'Paris', id: 3, name: 'Charlie' });
-    });
-
-    test('sum and average', async () => {
-      expect(await builder.sum('age')).toBe(90);
-      expect(await builder.average('age')).toBeCloseTo(30);
-    });
   });
 
   describe('Transformations', () => {
     test('map', async () => {
       const result = await builder.map((item) => ({ ...item, age: item.age + 1 })).toArray();
       expect(result.map((r) => r.age)).toEqual([26, 31, 36]);
-    });
-
-    test('toGrouped', async () => {
-      const result = await builder.toGrouped('city');
-      const berlinGroup = result.find((g) => g.key === 'Berlin');
-      const parisGroup = result.find((g) => g.key === 'Paris');
-      expect(berlinGroup?.values).toEqual([{ age: 30, city: 'Berlin', id: 2, name: 'Bob' }]);
-      expect(parisGroup?.values).toEqual(
-        expect.arrayContaining([
-          { age: 25, city: 'Paris', id: 1, name: 'Alice' },
-          { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-        ]),
-      );
-    });
-
-    test('toGrouped - type-safe grouping', async () => {
-      const result = await builder.toGrouped('city');
-      expect(result).toHaveLength(2);
-      const parisGroup = result.find((g) => g.key === 'Paris');
-      expect(parisGroup?.values).toHaveLength(2);
     });
 
     test('search', async () => {
@@ -149,13 +112,6 @@ describe('QueryBuilder', () => {
   });
 
   describe('Utilities', () => {
-    test('reset clears operations', async () => {
-      builder.equals('city', 'Paris');
-      builder.reset();
-      const result = await builder.toArray();
-      expect(result).toHaveLength(3);
-    });
-
     test('fluent chaining applies multiple conditions', async () => {
       const result = await builder.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
       expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
@@ -241,13 +197,6 @@ describe('LocalStorageAdapter', () => {
       expect(await adapter.get('users', 1)).toBeUndefined();
     });
   });
-
-  describe('Schema Validation', () => {
-    test('throws on missing key field in schema', () => {
-      const badSchema = { users: { record: {} as User } } as any;
-      expect(() => new LocalStorageAdapter('TestDB', badSchema)).toThrow('missing required "key" field');
-    });
-  });
 });
 
 describe('IndexedDBAdapter', () => {
@@ -321,16 +270,36 @@ describe('IndexedDBAdapter', () => {
     });
   });
 
-  describe('Schema Validation', () => {
-    test('throws on missing key field in schema', () => {
-      const badSchema = { users: { record: {} as User } } as any;
-      expect(() => new IndexedDBAdapter('TestDB', 1, badSchema)).toThrow('missing required "key" field');
+  describe('Transaction', () => {
+    test('commits changes', async () => {
+      await adapter.bulkPut('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+      await adapter.transaction(['users'], async (stores) => {
+        stores.users = stores.users.filter((u) => u.id !== 1);
+        stores.users.push({ id: 3, name: 'Charlie' });
+      });
+      expect(await adapter.getAll('users')).toEqual([
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+      ]);
+    });
+
+    test('does not apply changes on error', async () => {
+      await adapter.bulkPut('users', [{ id: 1, name: 'Alice' }]);
+      await expect(
+        adapter.transaction(['users'], async () => {
+          throw new Error('fail');
+        }),
+      ).rejects.toThrow();
+      expect(await adapter.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
     });
   });
 });
 
 describe('Depot', () => {
-  let deposit: DepositBaseAdapter<typeof userSchema>;
+  let deposit: Adapter<typeof userSchema>;
 
   beforeEach(() => {
     localStorage.clear();
@@ -338,7 +307,6 @@ describe('Depot', () => {
       dbName: 'TestDB',
       schema: userSchema,
       type: 'localStorage',
-      version: 1,
     });
   });
 
@@ -436,53 +404,16 @@ describe('Depot', () => {
     expect(results).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
-  test('transaction commits changes atomically', async () => {
-    await deposit.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    await deposit.transaction(['users'], async (stores) => {
-      (stores as any).users = stores.users.filter((u) => u.id !== 1);
-      stores.users.push({ id: 3, name: 'Charlie' });
-    });
-    const all = await deposit.getAll('users');
-    expect(all).toEqual([
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-  });
-
-  test('transaction throws and does not apply changes on error', async () => {
-    await deposit.bulkPut('users', [{ id: 1, name: 'Alice' }]);
-    await expect(
-      deposit.transaction(['users'], async () => {
-        throw new Error('fail');
-      }),
-    ).rejects.toThrow('Transaction failed');
-    // Data should remain unchanged
-    expect(await deposit.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
-  });
-
   test('transaction is atomic for IndexedDB with multiple tables', async () => {
-    // Transaction automatically uses atomic IDBTransaction for IndexedDB
     type Post = { id: number; userId: number; title: string };
     type MultiTableSchema = { users: User; posts: Post };
 
-    const idbSchema = defineSchema<MultiTableSchema>()({
-      posts: {
-        key: 'id',
-      },
-      users: {
-        key: 'id',
-      },
+    const idbSchema = defineSchema<MultiTableSchema>({
+      posts: { key: 'id' },
+      users: { key: 'id' },
     });
 
-    const idbDeposit = createDeposit({
-      dbName: 'AtomicTestDB',
-      schema: idbSchema,
-      type: 'indexedDB',
-      version: 1,
-    });
+    const idbDeposit = new IndexedDBAdapter('AtomicTestDB', 1, idbSchema);
 
     await idbDeposit.bulkPut('users', [
       { id: 1, name: 'Alice' },
@@ -493,53 +424,16 @@ describe('Depot', () => {
       { id: 2, title: 'Post 2', userId: 2 },
     ]);
 
-    // Execute atomic transaction across both tables
     await idbDeposit.transaction(['users', 'posts'], async (stores) => {
-      (stores as any).users = stores.users.filter((u) => u.id !== 1);
-      (stores as any).posts = stores.posts.filter((p) => p.userId !== 1);
+      stores.users = stores.users.filter((u) => u.id !== 1);
+      stores.posts = stores.posts.filter((p) => p.userId !== 1);
     });
 
-    // Verify both tables updated
     expect(await idbDeposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
     expect(await idbDeposit.getAll('posts')).toEqual([{ id: 2, title: 'Post 2', userId: 2 }]);
 
-    // Clean up
     await idbDeposit.clear('users');
     await idbDeposit.clear('posts');
-  });
-
-  test('patch applies put, delete, and clear operations', async () => {
-    await deposit.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    await deposit.patch('users', [
-      { type: 'put', value: { id: 3, name: 'Charlie' } },
-      { key: 1, type: 'delete' },
-    ]);
-    expect(await deposit.getAll('users')).toEqual([
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    await deposit.patch('users', [{ type: 'clear' }]);
-    expect(await deposit.getAll('users')).toEqual([]);
-  });
-
-  test('patch with empty array does nothing', async () => {
-    await deposit.bulkPut('users', [{ id: 1, name: 'Alice' }]);
-    await deposit.patch('users', []);
-    expect(await deposit.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
-  });
-
-  test('Depot constructor throws on unknown adapter type', () => {
-    expect(() =>
-      createDeposit({
-        dbName: 'TestDB',
-        schema: userSchema,
-        type: 'unknown' as any,
-        version: 1,
-      }),
-    ).toThrow('Unknown adapter type: unknown');
   });
 
   test('integrates with Logit as custom logger', async () => {
@@ -551,7 +445,6 @@ describe('Depot', () => {
       logger: Logit.scope('createDeposit'),
       schema: userSchema,
       type: 'localStorage',
-      version: 1,
     });
 
     // Test that logger is used when handling corrupted data
@@ -582,7 +475,6 @@ describe('Depot', () => {
       dbName: 'NoLoggerDB',
       schema: userSchema,
       type: 'localStorage',
-      version: 1,
       // No logger provided - should use console
     });
 

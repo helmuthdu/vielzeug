@@ -32,12 +32,14 @@ yarn add @vielzeug/toolkit
 ## Quick Start
 
 ```ts
-import { chunk, group, debounce, retry, merge } from '@vielzeug/toolkit';
+import { chunk, group, keyBy, select, toggle, debounce, retry, merge, is } from '@vielzeug/toolkit';
 
 // Arrays
 chunk([1, 2, 3, 4, 5], 2);           // [[1,2],[3,4],[5]]
 group([{type:'a'},{type:'b'},{type:'a'}], x => x.type);
 // { a: [...], b: [...] }
+keyBy([{id:1,name:'Alice'},{id:2,name:'Bob'}], 'id');
+// { '1': {id:1,name:'Alice'}, '2': {id:2,name:'Bob'} }
 
 // Functions
 const fn = debounce(() => console.log('typed'), 300);
@@ -48,17 +50,21 @@ const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
 // Objects
 const merged = merge('deep', { a: { x: 1 } }, { a: { y: 2 } });
 // { a: { x: 1, y: 2 } }
+
+// Type guards
+is.string('hello');   // true
+is.nil(null);         // true
 ```
 
 ## Features
 
-- **Arrays** — `chunk`, `group`, `flatten`, `uniq`, `sort`, `search`, `compact`, and more
-- **Async** — `retry`, `sleep`, `delay`, `parallel`, `pool`, `queue`, `race`, `waitFor`
-- **Objects** — `merge`, `clone`, `diff`, `path`, `seek`, `cache`, `parseJSON`, and more
+- **Arrays** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `replace`, `rotate`, `search`, `sort`, `contains`, `uniq`, `pick`, `list`, `remoteList`
+- **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`
+- **Objects** — `merge`, `diff`, `path`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
 - **Strings** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
-- **Math** — `clamp`, `average`, `sum`, `round`, `range`, and more
+- **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
 - **Dates** — `timeDiff`, `interval`, `expires`
-- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`
+- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`, `compare`, `fp`
 - **Zero dependencies** — tree-shakeable; import only what you need
 
 ## Next Steps

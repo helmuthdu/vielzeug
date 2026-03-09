@@ -103,4 +103,3 @@ async function fetchWithRetry(url: string) {
 ## Related
 
 - [attempt](./attempt.md) – Execute with error handling and retry
-- [predict](./predict.md) – Add timeout with AbortSignal

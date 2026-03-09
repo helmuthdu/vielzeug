@@ -62,7 +62,7 @@ const result = select(
 ### Asynchronous Selection
 
 ```ts
-import { select, delay } from '@vielzeug/toolkit';
+import { select, sleep } from '@vielzeug/toolkit';
 
 const ids = [1, 2, 3];
 
@@ -70,7 +70,7 @@ const ids = [1, 2, 3];
 const details = await select(
   ids,
   async (id) => {
-    await delay(50); // Simulate API latency
+    await sleep(50); // Simulate API latency
     return { id, status: 'ok' };
   },
   (id) => id !== 2,
@@ -98,7 +98,5 @@ const doubled = select(data, (x) => x * 2);
 
 ## See Also
 
-- [map](./map.md): Standard array transformation.
-- [filter](./filter.md): Standard array filtering.
-- [compact](./compact.md): Remove falsy values from an array.
+- [toggle](./toggle.md): Add or remove an item from an array.
 - [pick](./pick.md): Extract specific properties from an array of objects.

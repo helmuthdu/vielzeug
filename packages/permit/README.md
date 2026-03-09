@@ -1,10 +1,8 @@
 # @vielzeug/permit
 
-> Lightweight role-based access control (RBAC) with attribute-aware permission checks
+> Lightweight, type-safe role-based access control (RBAC) with dynamic permission functions, wildcard roles, and anonymous user support.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/permit)](https://www.npmjs.com/package/@vielzeug/permit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-**Permit** is a minimal RBAC library: define permissions per role and resource, check them at runtime with optional attribute conditions, and extend via role inheritance — all in a tiny, dependency-free package.
 
 ## Installation
 
@@ -16,105 +14,84 @@ pnpm add @vielzeug/permit
 
 ## Quick Start
 
-```typescript
-import { createPermit, WILDCARD } from '@vielzeug/permit';
+```ts
+import { createPermit, hasRole, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 
-const permit = createPermit<User>();
+const permit = createPermit();
 
-// Grant permissions
-permit.set('admin', 'post', { create: true, read: true, update: true, delete: true });
-permit.set('user',  'post', { create: true, read: true });
+// Fluent setup — any string actions, not just CRUD
+permit
+  .define('admin', WILDCARD, { read: true, write: true, delete: true })
+  .define('editor', 'posts', {
+    read:  true,
+    write: (user, data) => user.id === data?.authorId,
+  })
+  .define(ANONYMOUS, 'posts', { read: true }); // public read
 
-// Check a permission
-const canDelete = permit.check({ role: 'user' }, 'post', 'delete');
-// → false
+const user = { id: 'u1', roles: ['editor'] };
 
-// Wildcard resource — applies to all resources
-permit.set('superadmin', WILDCARD, { create: true, read: true, update: true, delete: true });
+// Direct check
+permit.check(user, 'posts', 'read');                         // true
+permit.check(user, 'posts', 'write', { authorId: 'u1' });   // true
+permit.check(user, 'posts', 'delete');                       // false
+
+// Pre-bound guard
+const can = permit.for(user);
+can('posts', 'read');   // true
+can('posts', 'delete'); // false
+
+// Standalone utilities
+hasRole(user, 'editor'); // true
 ```
 
 ## Features
 
-- ✅ **Role-based permissions** — define `create`, `read`, `update`, `delete` per role+resource
-- ✅ **Attribute-based conditions** — pass a condition function for dynamic checks
-- ✅ **Wildcard resources** — grant a role access to all resources with `WILDCARD`
-- ✅ **Anonymous access** — use `ANONYMOUS` role for unauthenticated users
-- ✅ **Role inheritance** — extend roles with `extends` to inherit permissions
-- ✅ **Type-safe users** — generic `<User>` type for the user object passed to `check`
-- ✅ **Zero dependencies**
+- **Role-based rules** — define permissions per role + resource with any string action
+- **Dynamic permissions** — `(user, data) => boolean` for context-aware rules
+- **Wildcard role/resource** — `'*'` applies to all users or all resources
+- **Partial wildcard override** — specific resources override individual wildcard actions, inheriting the rest
+- **First-match-wins** — explicit `false` on an earlier role stops the chain
+- **Anonymous users** — automatic `anonymous` role for unauthenticated users
+- **Pre-bound guards** — `permit.for(user)` returns a single-user check function
+- **Fluent API** — `define()` returns the instance for chained setup
+- **Immutable snapshot** — `snapshot()` returns a safe plain-object copy
+- **TypeScript generics** — type your user with `createPermit<MyUser>()`
+- **Zero dependencies**
 
-## Usage
+## API Summary
 
-### Defining Permissions
+### Factory
 
-```typescript
-import { createPermit, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
-
-const permit = createPermit<User>();
-
-// Standard actions object
-permit.set('viewer', 'article', { read: true });
-permit.set('editor', 'article', { create: true, read: true, update: true });
-permit.set('admin',  'article', { create: true, read: true, update: true, delete: true });
-
-// Anonymous access (unauthenticated)
-permit.set(ANONYMOUS, 'article', { read: true });
-
-// Wildcard — applies to all resources
-permit.set('superadmin', WILDCARD, { create: true, read: true, update: true, delete: true });
+```ts
+createPermit(opts?)          // create a permit instance
+createPermit<User>()         // typed user
+createPermit<User, Action>() // typed user + action strings
 ```
 
-### Checking Permissions
+| Option | Type | Description |
+|---|---|---|
+| `opts.roles` | `Record<...>` | Seed initial permissions at creation time |
+| `opts.logger` | `(result, user, resource, action) => void` | Called on every check |
 
-```typescript
-// Basic check
-permit.check({ role: 'viewer' }, 'article', 'read');   // true
-permit.check({ role: 'viewer' }, 'article', 'delete'); // false
+### Instance methods
 
-// Attribute-based condition — 4th arg receives user and resource data
-permit.set('user', 'post', {
-  read: true,
-  update: (user, post) => post.authorId === user.id,
-  delete: (user, post) => post.authorId === user.id,
-});
+| Method | Returns | Description |
+|---|---|---|
+| `define(role, resource, actions, opts?)` | `Permit` | Register permissions. Merges by default; `{ replace: true }` to overwrite. |
+| `check(user, resource, action, data?)` | `boolean` | Check if user has permission. |
+| `for(user)` | `(resource, action, data?) => boolean` | Pre-bound guard for a single user. |
+| `remove(role, resource?, action?)` | `void` | Remove role / resource / action. |
+| `snapshot()` | `PermitSnapshot` | Plain-object copy of all permissions. |
+| `clear()` | `void` | Remove all permissions. |
 
-permit.check({ role: 'user', id: '42' }, 'post', 'update', { authorId: '42' });
-// → true (authorId matches user.id)
-
-permit.check({ role: 'user', id: '42' }, 'post', 'delete', { authorId: '99' });
-// → false
-```
-
-### Role Inheritance
-
-```typescript
-permit.set('editor', 'article', { create: true, read: true, update: true });
-
-permit.set('senior-editor', 'article', {
-  extends: 'editor',  // inherits editor permissions
-  delete: true,        // adds delete
-});
-
-permit.check({ role: 'senior-editor' }, 'article', 'create'); // true (inherited)
-permit.check({ role: 'senior-editor' }, 'article', 'delete'); // true (added)
-```
-
-## API
+### Standalone utilities
 
 | Export | Description |
 |---|---|
-| `createPermit<User>()` | Create a permission store |
-| `WILDCARD` | Symbol matching all resources |
-| `ANONYMOUS` | Symbol for unauthenticated users |
-| `BaseUser` | Base type `{ role: string }` |
-| `PermissionAction` | Type of an action value (`boolean \| ConditionFn`) |
-
-### Permit Methods
-
-| Method | Description |
-|---|---|
-| `permit.set(role, resource, actions)` | Define permissions for a role+resource |
-| `permit.check(user, resource, action, data?)` | Check if user can perform action |
+| `hasRole(user, role)` | `true` if user has the role (case-insensitive). |
+| `isAnonymous(user)` | `true` if user is null, missing `id`, or missing `roles`. |
+| `WILDCARD` | `'*'` — matches all roles or all resources. |
+| `ANONYMOUS` | `'anonymous'` — auto-assigned to unauthenticated users. |
 
 ## Documentation
 
@@ -122,7 +99,7 @@ Full docs at **[vielzeug.dev/permit](https://vielzeug.dev/permit)**
 
 | | |
 |---|---|
-| [Usage Guide](https://vielzeug.dev/permit/usage) | Roles, resources, conditions |
+| [Usage Guide](https://vielzeug.dev/permit/usage) | Roles, resources, wildcards, dynamic rules |
 | [API Reference](https://vielzeug.dev/permit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/permit/examples) | Real-world RBAC patterns |
 

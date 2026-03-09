@@ -25,31 +25,35 @@ const i18n = createI18n({
   messages: {
     en: {
       greeting: 'Hello, {name}!',
-      items: '{count} item | {count} items',
+      items: { one: 'One item', other: '{count} items' },
+      nav: { home: 'Home', about: 'About' },
     },
     de: {
       greeting: 'Hallo, {name}!',
-      items: '{count} Element | {count} Elemente',
+      items: { one: 'Ein Element', other: '{count} Elemente' },
     },
   },
 });
 
-i18n.t('greeting', { name: 'Alice' });   // "Hello, Alice!"
-i18n.t('items', { count: 1 });            // "1 item"
-i18n.t('items', { count: 3 });            // "3 items"
+i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
+i18n.t('nav.home');                     // "Home"
+i18n.t('items', { count: 1 });          // "One item"
+i18n.t('items', { count: 3 });          // "3 items"
 
-i18n.setLocale('de');
-i18n.t('greeting', { name: 'Alice' });   // "Hallo, Alice!"
+i18n.locale = 'de';
+i18n.t('greeting', { name: 'Alice' }); // "Hallo, Alice!"
 ```
 
 ## Features
 
-- ✅ **Variable interpolation** — `{variable}` placeholders in messages
-- ✅ **Pluralisation** — `singular | plural` separated by pipe
+- ✅ **Variable interpolation** — `{var}`, `{obj.prop}`, `{arr[0]}`, `{arr|and}`
+- ✅ **Pluralisation** — `Intl.PluralRules`-based with `zero/one/two/few/many/other`
+- ✅ **Nested keys** — dot-notation access for organised message trees
 - ✅ **Namespaces** — scope messages with `i18n.namespace(ns)`
 - ✅ **Lazy loaders** — async `loaders` for on-demand locale loading
-- ✅ **Fallback locale** — fallback to another locale when a key is missing
-- ✅ **Key existence check** — `has(key, locale?)` before translating
+- ✅ **Fallback chain** — walk `locale → lang-root → fallback(s)` for missing keys
+- ✅ **Scoped translation** — `scoped(locale)` to translate without changing active locale
+- ✅ **Formatting helpers** — `number()` and `date()` backed by `Intl`
 - ✅ **Reactive** — subscribe to locale changes with `subscribe()`
 - ✅ **Framework-agnostic** — works with any UI framework
 
@@ -77,11 +81,14 @@ i18n.t('welcome', { name: 'Alice', count: 5 });
 const i18n = createI18n({
   locale: 'en',
   messages: {
-    en: { files: '{count} file | {count} files' },
+    en: {
+      files: { zero: 'No files', one: 'One file', other: '{count} files' },
+    },
   },
 });
 
-i18n.t('files', { count: 1 }); // "1 file"
+i18n.t('files', { count: 0 }); // "No files"
+i18n.t('files', { count: 1 }); // "One file"
 i18n.t('files', { count: 2 }); // "2 files"
 ```
 
@@ -113,7 +120,8 @@ const i18n = createI18n({
   },
 });
 
-await i18n.setLocale('fr');  // loads fr.json on demand
+await i18n.load('fr');
+i18n.locale = 'fr';
 i18n.t('greeting');
 ```
 
@@ -132,22 +140,29 @@ const unsub = i18n.subscribe((locale) => {
 
 | Config Option | Type | Description |
 |---|---|---|
-| `locale` | `string` | Active locale |
-| `fallback` | `string` | Fallback locale for missing keys |
-| `messages` | `Record<locale, Messages>` | Static message bundles |
-| `loaders` | `Record<locale, () => Promise<Messages>>` | Async locale loaders |
-| `escape` | `boolean` | HTML-escape interpolated values |
+| `locale` | `string` | Active locale (default: `'en'`) |
+| `fallback` | `string \| string[]` | Fallback locale(s) for missing keys |
+| `messages` | `Record<string, Messages>` | Static message bundles |
+| `loaders` | `Record<string, Loader>` | Async locale loaders |
 
-### `I18n` Methods
+### `I18n` Methods and Properties
 
-| Method | Description |
+| Member | Description |
 |---|---|
-| `t(key, vars?, opts?)` | Translate a key with optional variables |
-| `setLocale(locale)` | Switch the active locale (async if loader needed) |
-| `getLocale()` | Get the current locale string |
-| `namespace(ns)` | Return a namespaced translator |
-| `has(key, locale?)` | Check if a key exists |
+| `locale` (property) | Get or set the active locale |
+| `t(key, vars?)` | Translate a key with optional interpolation variables |
+| `number(value, options?, locale?)` | Format a number via `Intl.NumberFormat` |
+| `date(value, options?, locale?)` | Format a date via `Intl.DateTimeFormat` |
+| `namespace(ns)` | Return a namespaced translator (`t` and `has`) |
+| `scoped(locale)` | Return a locale-bound translator without changing active locale |
+| `add(locale, messages)` | Deep-merge messages into a locale catalog |
+| `replace(locale, messages)` | Replace the entire catalog for a locale |
+| `has(key, locale?)` | Check if a translation key exists |
+| `hasLocale(locale)` | Check if a locale catalog is loaded |
+| `addLoader(locale, loader)` | Register an async loader dynamically |
+| `load(locale)` | Load a locale via its registered loader |
 | `subscribe(handler)` | Subscribe to locale changes — returns unsubscribe |
+| `dispose()` | Remove all subscribers |
 
 ## Documentation
 

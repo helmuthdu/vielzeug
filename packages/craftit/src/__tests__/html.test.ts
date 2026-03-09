@@ -329,10 +329,7 @@ describe('Template: HTML System', () => {
         const items = signal<number[]>([]);
         return html`
           <div class="container">
-            ${html.each(items, {
-              empty: () => html`<div class="empty">Empty</div>`,
-              template: (item) => html`<li>${item}</li>`,
-            })}
+            ${html.each(items, (_, i) => i, (item) => html`<li>${item}</li>`, () => html`<div class="empty">Empty</div>`)}
           </div>
         `;
       });
@@ -366,10 +363,7 @@ describe('Template: HTML System', () => {
         const items = signal([1, 2, 3]);
         return html`
           <ul>
-            ${html.each(items, {
-              key: (item) => item,
-              template: (item) => html`<li>${item}</li>`,
-            })}
+            ${html.each(items, (item) => item, (item) => html`<li>${item}</li>`)}
           </ul>
         `;
       });
@@ -400,41 +394,13 @@ describe('Template: HTML System', () => {
         const items = signal<{ id: number; name: string }[]>([]);
         return html`
           <div>
-            ${html.each(items, {
-              empty: () => html`<div class="empty">No items</div>`,
-              key: (item) => item.id,
-              template: (item) => html`<div class="item">${item.name}</div>`,
-            })}
+            ${html.each(items, (item) => item.id, (item) => html`<div class="item">${item.name}</div>`, () => html`<div class="empty">No items</div>`)}
           </div>
         `;
       });
 
       const { query } = await mount('test-for-advanced');
       expect(query('.empty')?.textContent).toBe('No items');
-    });
-  });
-
-  describe('Conditional: html.match()', () => {
-    it('should support html.match() for multi-way branching', async () => {
-      define('test-switch', () => {
-        const status = signal<'loading' | 'success' | 'error'>('success');
-        return html`
-          <div>
-            ${html.match(
-              status,
-              [
-                ['loading', () => html`<span>Loading...</span>`],
-                ['success', () => html`<span>Success!</span>`],
-                ['error', () => html`<span>Error!</span>`],
-              ],
-              () => html`<span>Unknown</span>`,
-            )}
-          </div>
-        `;
-      });
-
-      const { query } = await mount('test-switch');
-      expect(query('span')?.textContent).toBe('Success!');
     });
   });
 

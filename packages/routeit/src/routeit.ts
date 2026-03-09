@@ -7,49 +7,45 @@ export type RouteHandler<T = unknown> = (context: RouteContext<T>) => void | Pro
 
 /**
  * Middleware function that can modify context or block navigation.
- * Return false or throw to prevent route handler execution.
+ * Does not call next() to prevent the handler from executing.
  *
  * @example
  * const authMiddleware: Middleware = async (ctx, next) => {
- *   if (!ctx.meta?.user) {
- *     ctx.navigate('/login');
+ *   if (!ctx.meta.user) {
+ *     router.navigate('/login');
  *     return; // Don't call next()
  *   }
- *   await next(); // Continue to next middleware or handler
+ *   await next();
  * };
  */
 export type Middleware<T = unknown> = (context: RouteContext<T>, next: () => Promise<void>) => void | Promise<void>;
 
 export type RouteContext<T = unknown> = {
   /** Route parameters extracted from path (e.g., /users/:id => { id: '123' }) */
-  params: RouteParams;
+  readonly params: RouteParams;
   /** Query parameters from URL search (e.g., ?name=alice => { name: 'alice' }) */
-  query: QueryParams;
+  readonly query: QueryParams;
   /** Full pathname */
-  pathname: string;
+  readonly pathname: string;
   /** Hash portion of URL (without #) */
-  hash: string;
+  readonly hash: string;
   /** Custom route data */
-  data?: T;
+  readonly data?: T;
   /** Custom metadata that can be passed between middlewares */
-  meta?: Record<string, unknown>;
-  /** Navigate to a new path */
-  navigate: (path: string, options?: NavigateOptions) => void;
+  meta: Record<string, unknown>;
 };
 
 export type RouteDefinition<T = unknown> = {
   /** Route path pattern (e.g., '/users/:id', '/posts/*') */
   path: string;
   /** Handler function to execute when route matches */
-  handler: RouteHandler<T>;
-  /** Optional route name for easier navigation */
+  handler?: RouteHandler<T>;
+  /** Optional route name for programmatic navigation */
   name?: string;
   /** Optional custom data attached to route */
   data?: T;
   /** Route-specific middleware (executed before handler) */
   middleware?: Middleware<T> | Middleware<T>[];
-  /** Optional child routes */
-  children?: RouteDefinition[];
 };
 
 export type NavigateOptions = {
@@ -72,12 +68,14 @@ export type RouterOptions = {
   /** Base path for all routes (default: '/') */
   base?: string;
   /** Called when no route matches */
-  notFound?: RouteHandler;
+  onNotFound?: RouteHandler;
+  /** Called when a route handler or middleware throws */
+  onError?: (error: unknown, context: RouteContext) => void;
   /** Global middleware applied to all routes */
   middleware?: Middleware | Middleware[];
   /**
    * Wrap route handler execution in the View Transition API when available.
-   * Falls back to a plain execution when the API is not supported by the browser.
+   * Falls back to plain execution when the API is not supported.
    * Can be overridden per navigation via `NavigateOptions.viewTransition`.
    * (default: false)
    */
@@ -86,10 +84,19 @@ export type RouterOptions = {
 
 /** Current route state */
 export type RouteState = {
-  pathname: string;
-  params: RouteParams;
-  query: QueryParams;
-  hash: string;
+  readonly pathname: string;
+  readonly params: RouteParams;
+  readonly query: QueryParams;
+  readonly hash: string;
+  /** Name of the matched route, if registered with a name */
+  readonly name?: string;
+};
+
+/** Route registration interface provided to group() callbacks */
+export type GroupRouter = {
+  on(path: string, handler: RouteHandler, extras?: Pick<RouteDefinition, 'name' | 'data' | 'middleware'>): GroupRouter;
+  route<T = unknown>(definition: RouteDefinition<T>): GroupRouter;
+  routes(definitions: RouteDefinition[]): GroupRouter;
 };
 
 /** -------------------- Internal Types -------------------- **/
@@ -162,6 +169,39 @@ function joinPaths(base: string, path: string): string {
   return a === '/' ? b : b === '/' ? a : `${a}${b}`;
 }
 
+function buildQueryString(query: QueryParams): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (Array.isArray(value)) {
+      for (const v of value) searchParams.append(key, v);
+    } else {
+      searchParams.set(key, value);
+    }
+  }
+  return searchParams.toString();
+}
+
+function buildUrlFromPattern(base: string, path: string, params?: RouteParams, query?: QueryParams): string {
+  let url = path;
+
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url = url.replace(new RegExp(`:${key}\\b`, 'g'), encodeURIComponent(value));
+    }
+  }
+
+  const unsubstituted = url.match(/:([\w]+)/g);
+  if (unsubstituted) {
+    throw new Error(`[Router] Missing URL params: ${unsubstituted.join(', ')}`);
+  }
+
+  if (query && Object.keys(query).length > 0) {
+    url += `?${buildQueryString(query)}`;
+  }
+
+  return joinPaths(base, url);
+}
+
 /** -------------------- Router Implementation -------------------- **/
 
 export class Router {
@@ -169,10 +209,11 @@ export class Router {
   private readonly base: string;
   private readonly records: RouteRecord[] = [];
   private readonly routesByName = new Map<string, RouteRecord>();
-  private readonly notFoundHandler?: RouteHandler;
+  private readonly onNotFoundHandler?: RouteHandler;
+  private readonly onErrorHandler?: (error: unknown, context: RouteContext) => void;
   private readonly globalMiddleware: Middleware[];
   private readonly viewTransitions: boolean;
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = new Set<(state: RouteState) => void>();
   private isStarted = false;
   private currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
   private readonly handleRouteCallback = (): void => {
@@ -182,7 +223,8 @@ export class Router {
   constructor(options: RouterOptions = {}) {
     this.mode = options.mode ?? 'history';
     this.base = normalizePath(options.base ?? '/');
-    this.notFoundHandler = options.notFound;
+    this.onNotFoundHandler = options.onNotFound;
+    this.onErrorHandler = options.onError;
     this.viewTransitions = options.viewTransitions ?? false;
     this.globalMiddleware = [options.middleware ?? []].flat() as Middleware[];
   }
@@ -191,43 +233,22 @@ export class Router {
 
   /**
    * Registers a new route.
-   * Automatically compiles nested child routes.
    */
   route<T = unknown>(definition: RouteDefinition<T>): this {
-    // biome-ignore lint/suspicious/noExplicitAny: RouteDefinition needs type flexibility for recursive compilation
-    this.compileRoute(definition as RouteDefinition<any>);
+    this.registerRoute(definition as RouteDefinition<unknown>);
     return this;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: RouteDefinition needs type flexibility for recursive compilation
-  private compileRoute(def: RouteDefinition<any>, parentPath = ''): void {
-    const fullPath = normalizePath(`${parentPath}/${def.path}`);
+  private registerRoute(def: RouteDefinition<unknown>): void {
+    const fullPath = normalizePath(def.path);
     const { regex, paramNames } = compilePattern(fullPath);
     const middleware = [def.middleware ?? []].flat() as Middleware[];
 
-    const record: RouteRecord = {
-      def,
-      fullPath,
-      middleware,
-      paramNames,
-      regex,
-    };
-
+    const record: RouteRecord = { def, fullPath, middleware, paramNames, regex };
     this.records.push(record);
 
-    // Store by name for quick lookup
     if (def.name) {
-      if (this.routesByName.has(def.name)) {
-        console.warn(`[Router] Route name "${def.name}" is already registered. Overwriting.`);
-      }
       this.routesByName.set(def.name, record);
-    }
-
-    // Compile children
-    if (def.children?.length) {
-      for (const child of def.children) {
-        this.compileRoute(child, fullPath);
-      }
     }
   }
 
@@ -235,17 +256,52 @@ export class Router {
    * Registers multiple routes at once.
    */
   routes(definitions: RouteDefinition[]): this {
-    for (const def of definitions) {
-      this.route(def);
-    }
+    for (const def of definitions) this.route(def);
     return this;
   }
 
   /**
-   * Convenience method to register a GET-like route.
+   * Registers a route with a path and handler directly.
+   * Optionally accepts a name, data, or middleware via extras.
    */
-  get(path: string, handler: RouteHandler): this {
-    return this.route({ handler, path });
+  on(path: string, handler: RouteHandler, extras?: Pick<RouteDefinition, 'name' | 'data' | 'middleware'>): this {
+    return this.route({ ...extras, handler, path });
+  }
+
+  /**
+   * Registers a group of routes sharing a common path prefix and optional middleware.
+   */
+  group(prefix: string, definer: (r: GroupRouter) => void): this;
+  group(prefix: string, middleware: Middleware | Middleware[], definer: (r: GroupRouter) => void): this;
+  group(
+    prefix: string,
+    middlewareOrDefiner: Middleware | Middleware[] | ((r: GroupRouter) => void),
+    definer?: (r: GroupRouter) => void,
+  ): this {
+    const [groupMiddleware, define] =
+      typeof middlewareOrDefiner === 'function' && !definer
+        ? [[] as Middleware[], middlewareOrDefiner as (r: GroupRouter) => void]
+        : [[middlewareOrDefiner as Middleware | Middleware[]].flat() as Middleware[], definer!];
+
+    const self = this;
+    const groupRouter: GroupRouter = {
+      on(path, handler, extras) {
+        return this.route({ ...extras, handler, path });
+      },
+      route(definition) {
+        const fullPath = normalizePath(`${prefix}/${definition.path}`);
+        const middleware = [...groupMiddleware, ...[definition.middleware ?? []].flat()] as Middleware[];
+        self.registerRoute({ ...(definition as RouteDefinition<unknown>), middleware, path: fullPath });
+        return this;
+      },
+      routes(definitions) {
+        for (const def of definitions) this.route(def);
+        return this;
+      },
+    };
+
+    define(groupRouter);
+    return this;
   }
 
   /** -------------------- Lifecycle -------------------- **/
@@ -263,16 +319,15 @@ export class Router {
       window.addEventListener('hashchange', this.handleRouteCallback);
     }
 
-    // Handle initial route
-    this.handleRoute();
+    void this.handleRoute();
     return this;
   }
 
   /**
    * Stops the router and removes event listeners.
    */
-  stop(): void {
-    if (!this.isStarted) return;
+  stop(): this {
+    if (!this.isStarted) return this;
     this.isStarted = false;
 
     if (this.mode === 'history') {
@@ -280,15 +335,26 @@ export class Router {
     } else {
       window.removeEventListener('hashchange', this.handleRouteCallback);
     }
+
+    return this;
   }
 
   /** -------------------- Navigation -------------------- **/
 
   /**
-   * Navigates to a new path.
+   * Navigates to a path.
+   *
+   * @example
+   * router.navigate('/users/123')
+   * router.navigate('/users/123', { replace: true })
    */
-  navigate(path: string, options: NavigateOptions = {}): void {
-    const destination = path.startsWith('http') ? path : joinPaths(this.base, path);
+  navigate(path: string, options: NavigateOptions = {}): Promise<void> {
+    if (this.mode === 'history' && path.startsWith('http')) {
+      window.location.href = path;
+      return Promise.resolve();
+    }
+
+    const destination = joinPaths(this.base, path);
 
     if (this.mode === 'history') {
       if (options.replace) {
@@ -297,16 +363,25 @@ export class Router {
         window.history.pushState(options.state ?? null, '', destination);
       }
     } else {
-      // Hash mode
-      const hash = `#${destination}`;
       if (options.replace) {
-        window.location.replace(hash);
+        window.location.replace(`#${destination}`);
       } else {
-        window.location.hash = hash;
+        window.location.hash = `#${destination}`;
       }
     }
 
-    void this.handleRoute(options.viewTransition);
+    return this.handleRoute(options.viewTransition);
+  }
+
+  /**
+   * Navigates to a named route with parameters.
+   *
+   * @example
+   * router.navigateTo('userDetail', { id: '123' })
+   * router.navigateTo('userDetail', { id: '123' }, { replace: true })
+   */
+  navigateTo(name: string, params?: RouteParams, options?: NavigateOptions): Promise<void> {
+    return this.navigate(this.url(name, params), options);
   }
 
   /** -------------------- Current Route Info -------------------- **/
@@ -314,38 +389,29 @@ export class Router {
   private getCurrentPath(): string {
     if (this.mode === 'history') {
       const path = window.location.pathname || '/';
-      // Remove base path if present
       if (this.base !== '/' && path.startsWith(this.base)) {
         return normalizePath(path.slice(this.base.length) || '/');
       }
       return normalizePath(path);
     }
 
-    // Hash mode - extract path from hash
     const hash = window.location.hash || '';
     const path = hash.startsWith('#') ? hash.slice(1).split('?')[0] : hash.split('?')[0];
     return normalizePath(path || '/');
   }
 
   private getCurrentQuery(): QueryParams {
-    if (this.mode === 'history') {
-      return parseQuery(window.location.search);
-    }
+    if (this.mode === 'history') return parseQuery(window.location.search);
 
-    // Hash mode - extract query from hash
     const hash = window.location.hash || '';
     const queryStart = hash.indexOf('?');
     return queryStart >= 0 ? parseQuery(hash.slice(queryStart)) : {};
   }
 
   private getCurrentHash(): string {
-    if (this.mode === 'history') {
-      return window.location.hash.slice(1);
-    }
+    if (this.mode === 'history') return window.location.hash.slice(1);
     return '';
   }
-
-  /** -------------------- Route Handling -------------------- **/
 
   /** -------------------- View Transitions -------------------- **/
 
@@ -364,9 +430,6 @@ export class Router {
 
   /** -------------------- Route Handling -------------------- **/
 
-  /**
-   * Handles the current route by matching and executing handlers.
-   */
   private buildContext(
     pathname: string,
     params: RouteParams,
@@ -374,15 +437,7 @@ export class Router {
     query: QueryParams,
     data?: unknown,
   ): RouteContext {
-    return {
-      data,
-      hash,
-      meta: {},
-      navigate: (path, opts) => this.navigate(path, opts),
-      params,
-      pathname,
-      query,
-    };
+    return { data, hash, meta: {}, params, pathname, query };
   }
 
   private async handleRoute(useTransition?: boolean): Promise<void> {
@@ -401,12 +456,12 @@ export class Router {
       }
     }
 
-    this.currentState = { hash, params: matchedParams, pathname, query };
+    this.currentState = { hash, name: matchedRecord?.def.name, params: matchedParams, pathname, query };
 
     try {
       await this.runWithTransition(useTransition, async () => {
         if (!matchedRecord) {
-          if (this.notFoundHandler) await this.notFoundHandler(this.buildContext(pathname, {}, hash, query));
+          if (this.onNotFoundHandler) await this.onNotFoundHandler(this.buildContext(pathname, {}, hash, query));
         } else {
           await this.executeMiddlewareChain(
             this.buildContext(pathname, matchedParams, hash, query, matchedRecord.def.data),
@@ -415,22 +470,23 @@ export class Router {
         }
       });
     } catch (error) {
-      console.error('[Router] Route handling error:', error);
+      if (this.onErrorHandler) {
+        this.onErrorHandler(error, this.buildContext(pathname, matchedParams, hash, query));
+      } else {
+        console.error('[Router] Route handling error:', error);
+      }
     } finally {
       this.notifyListeners();
     }
   }
 
-  /**
-   * Executes the middleware chain for a route.
-   */
   private async executeMiddlewareChain(context: RouteContext, record: RouteRecord): Promise<void> {
     const allMiddleware = [...this.globalMiddleware, ...record.middleware];
     let index = 0;
     const next = async (): Promise<void> => {
       if (index < allMiddleware.length) {
         await allMiddleware[index++](context, next);
-      } else {
+      } else if (record.def.handler) {
         await record.def.handler(context);
       }
     };
@@ -440,17 +496,24 @@ export class Router {
   /** -------------------- Subscriptions -------------------- **/
 
   /**
-   * Subscribes to route changes.
+   * Subscribes to route changes. The listener receives the new route state.
+   * Returns an unsubscribe function.
    */
-  subscribe(listener: () => void): () => void {
+  subscribe(listener: (state: RouteState) => void): () => void {
     this.listeners.add(listener);
+    try {
+      listener(this.getState());
+    } catch {
+      // Swallow listener errors
+    }
     return () => this.listeners.delete(listener);
   }
 
   private notifyListeners(): void {
+    const state = this.getState();
     for (const listener of this.listeners) {
       try {
-        listener();
+        listener(state);
       } catch {
         // Swallow listener errors
       }
@@ -460,43 +523,28 @@ export class Router {
   /** -------------------- Utilities -------------------- **/
 
   /**
-   * Checks if a path matches the current route.
+   * Checks if a path pattern matches the current route.
    */
-  isActive(pattern: string): boolean {
-    const currentPath = this.getCurrentPath();
-    const { regex } = compilePattern(pattern);
-    return regex.test(currentPath);
+  isActive(patternOrName: string): boolean {
+    const record = this.routesByName.get(patternOrName);
+    const regex = record ? record.regex : compilePattern(patternOrName).regex;
+    return regex.test(this.getCurrentPath());
   }
 
   /**
-   * Generates a URL from a path pattern and parameters.
+   * Generates a URL from a path pattern or named route, with optional params and query.
+   *
+   * @example
+   * router.url('/users/:id', { id: '42' })
+   * router.url('userDetail', { id: '42' }, { tab: 'profile' })
    */
-  buildUrl(path: string, params?: RouteParams, query?: QueryParams): string {
-    let url = path;
-
-    // Replace parameters
-    if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        url = url.replace(`:${key}`, encodeURIComponent(value));
-      }
+  url(nameOrPattern: string, params?: RouteParams, query?: QueryParams): string {
+    const record = this.routesByName.get(nameOrPattern);
+    if (!record && !nameOrPattern.startsWith('/')) {
+      throw new Error(`[Router] Route with name "${nameOrPattern}" not found`);
     }
-
-    // Add query parameters
-    if (query && Object.keys(query).length > 0) {
-      const searchParams = new URLSearchParams();
-      for (const [key, value] of Object.entries(query)) {
-        if (Array.isArray(value)) {
-          for (const v of value) {
-            searchParams.append(key, v);
-          }
-        } else {
-          searchParams.set(key, value);
-        }
-      }
-      url += `?${searchParams.toString()}`;
-    }
-
-    return joinPaths(this.base, url);
+    const pattern = record ? record.fullPath : nameOrPattern;
+    return buildUrlFromPattern(this.base, pattern, params, query);
   }
 
   /**
@@ -504,43 +552,6 @@ export class Router {
    */
   getState(): RouteState {
     return { ...this.currentState };
-  }
-
-  /**
-   * Navigates to a named route with parameters.
-   *
-   * @example
-   * router.navigateTo('userDetail', { id: '123' }, { tab: 'profile' });
-   */
-  navigateTo(name: string, params?: RouteParams, query?: QueryParams): void {
-    this.navigate(this.urlFor(name, params, query));
-  }
-
-  /**
-   * Generates a URL for a named route.
-   *
-   * @example
-   * const url = router.urlFor('userDetail', { id: '123' });
-   */
-  urlFor(name: string, params?: RouteParams, query?: QueryParams): string {
-    const record = this.routesByName.get(name);
-    if (!record) throw new Error(`[Router] Route with name "${name}" not found`);
-    return this.buildUrl(record.fullPath, params, query);
-  }
-
-  /**
-   * Debug helper to inspect compiled routes.
-   */
-  debug(): { routes: Array<{ name?: string; path: string; params: string[] }>; mode: RouterMode; base: string } {
-    return {
-      base: this.base,
-      mode: this.mode,
-      routes: this.records.map((record) => ({
-        name: record.def.name,
-        params: record.paramNames,
-        path: record.fullPath,
-      })),
-    };
   }
 }
 

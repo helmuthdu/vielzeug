@@ -73,8 +73,8 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/snapit",
-      "projectFolder": "packages/snapit",
+      "packageName": "@vielzeug/stateit",
+      "projectFolder": "packages/stateit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -93,6 +93,12 @@
     {
       "packageName": "@vielzeug/wireit",
       "projectFolder": "packages/wireit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/workit",
+      "projectFolder": "packages/workit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

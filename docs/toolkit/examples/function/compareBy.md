@@ -77,4 +77,3 @@ files.sort(byExtLength);
 
 - [compare](./compare.md): The underlying primitive comparison logic.
 - [sort](../array/sort.md): Functional sorting using a selector directly.
-- [sortBy](../array/sortBy.md): Sort by multiple fields.

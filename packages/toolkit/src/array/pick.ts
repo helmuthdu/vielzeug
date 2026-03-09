@@ -9,7 +9,6 @@ import { isNil } from '../typed/isNil';
  * ```ts
  * const arr = [1, 2, 3, 4];
  * pick(arr, x => x * x, x => x > 2) // 9
- * await pick(arr, async x => x * x, x => x > 2) // 9
  * ```
  *
  * @param array - The array to search.
@@ -37,5 +36,3 @@ export function pick<T, R = T>(
 
   return undefined;
 }
-
-pick.fp = true;

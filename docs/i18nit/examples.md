@@ -11,24 +11,11 @@ These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed e
 
 [[toc]]
 
-::: tip 💡 Complete Applications
-These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
-:::
-
 ## Framework Integration
 
-::: details 🎯 Why Two Patterns?
-We provide both **inline** and **hook/composable** patterns because:
+Complete examples showing how to integrate i18nit with React, Vue, and Svelte. Each framework has two patterns: an inline approach and a reusable hook/composable.
 
-- **Inline**: Quick prototyping, simple components
-- **Hook/Composable**: Reusable across components, better separation of concerns
-
-Choose based on your project structure and team preferences.
-:::
-
-Complete examples showing how to integrate i18nit with React, Vue, and Svelte. Each framework has two patterns: inline usage and reusable hook/composable.
-
-### Basic Integration (Inline)
+### Inline Pattern
 
 Directly create and use an i18n instance within components.
 
@@ -53,7 +40,7 @@ function App() {
   return (
     <div>
       <h1>{i18n.t('welcome')}</h1>
-      <button onClick={() => i18n.setLocale('es')}>ES</button>
+      <button onClick={() => { i18n.locale = 'es'; }}>ES</button>
     </div>
   );
 }
@@ -62,7 +49,7 @@ function App() {
 ```vue [Vue 3]
 <script setup lang="ts">
 import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onUnmounted } from 'vue';
 
 const i18n = createI18n({
   locale: 'en',
@@ -72,16 +59,15 @@ const i18n = createI18n({
   },
 });
 
-const locale = ref(i18n.getLocale());
-let unsubscribe;
-onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
-onUnmounted(() => unsubscribe?.());
+const locale = ref(i18n.locale);
+const unsub = i18n.subscribe((l) => (locale.value = l));
+onUnmounted(() => unsub());
 </script>
 
 <template>
   <div>
     <h1>{{ i18n.t('welcome') }}</h1>
-    <button @click="i18n.setLocale('es')">ES</button>
+    <button @click="i18n.locale = 'es'">ES</button>
   </div>
 </template>
 ```
@@ -89,743 +75,474 @@ onUnmounted(() => unsubscribe?.());
 ```svelte [Svelte]
 <script lang="ts">
   import { createI18n } from '@vielzeug/i18nit';
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
 
   const i18n = createI18n({
     locale: 'en',
     messages: {
       en: { welcome: 'Welcome!' },
-      es: { welcome: '¡Bienvenido!' }
-    }
+      es: { welcome: '¡Bienvenido!' },
+    },
   });
 
-  let locale = i18n.getLocale();
-  const unsubscribe = i18n.subscribe(l => locale = l);
-  onDestroy(unsubscribe);
+  let locale = i18n.locale;
+  const unsub = i18n.subscribe((l) => { locale = l; });
+  onDestroy(() => unsub());
 </script>
 
 <h1>{i18n.t('welcome')}</h1>
-<button on:click={() => i18n.setLocale('es')}>ES</button>
-```
-
-```ts [Web Component]
-import { createI18n } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { welcome: 'Welcome!' },
-    es: { welcome: '¡Bienvenido!' },
-  },
-});
-
-class i18nWelcome extends HTMLElement {
-  connectedCallback() {
-    this.render();
-    i18n.subscribe(() => this.render());
-  }
-
-  render() {
-    this.innerHTML = `
-      <h1>${i18n.t('welcome')}</h1>
-      <button id="btn">ES</button>
-    `;
-    this.querySelector('#btn').onclick = () => i18n.setLocale('es');
-  }
-}
-customElements.define('i18n-welcome', i18nWelcome);
+<button on:click={() => { i18n.locale = 'es'; }}>ES</button>
 ```
 
 :::
 
-### Advanced Integration (Hook/Store)
+### Hook / Composable Pattern
 
-Recommended singleton pattern for global scope or complex apps.
+Encapsulate i18n logic into a reusable hook so any component can consume the same instance.
 
 ::: code-group
 
 ```tsx [React]
-// useI18n.ts
+// i18n.ts — singleton
 import { createI18n } from '@vielzeug/i18nit';
 import { useEffect, useState } from 'react';
 
-// Reusable loader function
-const loadLocale = async (locale: string) => {
-  const response = await fetch(`/locales/${locale}.json`);
-  return response.json();
-};
-
-const i18n = createI18n({
+export const i18n = createI18n({
   locale: 'en',
-  loaders: {
-    en: loadLocale,
-    es: loadLocale,
-    fr: loadLocale,
+  messages: {
+    en: { welcome: 'Welcome, {name}!' },
+    es: { welcome: '¡Bienvenido, {name}!' },
   },
 });
 
 export function useI18n() {
   const [, forceUpdate] = useState({});
   useEffect(() => i18n.subscribe(() => forceUpdate({})), []);
-  return { t: i18n.t, setLocale: (l) => i18n.load(l).then(() => i18n.setLocale(l)) };
+  return {
+    t: i18n.t.bind(i18n),
+    locale: i18n.locale,
+    setLocale: async (l: string) => {
+      await i18n.load(l);
+      i18n.locale = l;
+    },
+  };
 }
 
-// Component.tsx
-function Label() {
-  const { t } = useI18n();
-  return <span>{t('key')}</span>;
+// App.tsx
+export function App() {
+  const { t, locale, setLocale } = useI18n();
+  return (
+    <div lang={locale}>
+      <h1>{t('welcome', { name: 'Alice' })}</h1>
+      <button onClick={() => setLocale('es')}>ES</button>
+    </div>
+  );
 }
 ```
 
-```tsx [Vue 3]
-// useI18n.ts
+```ts [Vue 3]
+// i18n.ts — singleton
 import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
-const i18n = createI18n({ locale: 'en', loaders: { en: () => fetch('/en.json').then(r => r.json()) }});
-
-export function useI18n() {
-  const locale = ref(i18n.getLocale());
-  let sub; onMounted(() => sub = i18n.subscribe(l => locale.value = l));
-  onUnmounted(() => sub?.());
-  return { t: i18n.t, setLocale: (l) => i18n.load(l).then(() => i18n.setLocale(l)) };
-}
-
-// Component.vue
-<script setup>
-const { t } = useI18n();
-</script>
-<template>
-  <span>{{ t('key') }}</span>
-</template>
-```
-
-```svelte [Svelte]
-// i18nStore.ts
-import { createI18n } from '@vielzeug/i18nit';
-import { writable } from 'svelte/store';
-
-const i18n = createI18n({ locale: 'en', loaders: {
-  en: () => fetch('/en.json').then(r => r.json())
-}});
-
-export const locale = writable(i18n.getLocale());
-i18n.subscribe(l => locale.set(l));
-
-export const t = i18n.t;
-export const setLocale = (l) => i18n.load(l).then(() => i18n.setLocale(l));
-
-// Component.svelte
-<script>
-  import { t } from './i18nStore';
-</script>
-<span>{$t('key')}</span>
-```
-
-```ts [Web Component]
-// i18n.ts
-import { createI18n } from '@vielzeug/i18nit';
+import { ref, onUnmounted } from 'vue';
 
 export const i18n = createI18n({
   locale: 'en',
-  loaders: {
-    en: () => fetch('/en.json').then((r) => r.json()),
+  messages: {
+    en: { welcome: 'Welcome, {name}!' },
+    es: { welcome: '¡Bienvenido, {name}!' },
   },
 });
 
-// Component.ts
-class i18nLabel extends HTMLElement {
-  connectedCallback() {
-    this.render();
-    i18n.subscribe(() => this.render());
-  }
-  render() {
-    this.textContent = i18n.t(this.getAttribute('key'));
-  }
+export function useI18n() {
+  const locale = ref(i18n.locale);
+  const unsub = i18n.subscribe((l) => (locale.value = l));
+  onUnmounted(() => unsub());
+
+  return {
+    t: i18n.t.bind(i18n),
+    locale,
+    async setLocale(l: string) {
+      await i18n.load(l);
+      i18n.locale = l;
+    },
+  };
 }
-customElements.define('i18n-label', i18nLabel);
+```
+
+```svelte [Svelte]
+// i18n.ts — singleton + store
+import { createI18n } from '@vielzeug/i18nit';
+import { writable } from 'svelte/store';
+
+export const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: { welcome: 'Welcome, {name}!' },
+    es: { welcome: '¡Bienvenido, {name}!' },
+  },
+});
+
+export const locale = writable(i18n.locale);
+i18n.subscribe((l) => locale.set(l));
+
+export async function setLocale(l: string) {
+  await i18n.load(l);
+  i18n.locale = l;
+}
 ```
 
 :::
+
+
+
+## Async Loading
+
+### Lazy-Loaded Locales
+
+Register loaders upfront and call `load()` before switching locale:
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: await import('./locales/en.json').then((m) => m.default) },
+  loaders: {
+    es: () => import('./locales/es.json').then((m) => m.default),
+    fr: () => import('./locales/fr.json').then((m) => m.default),
+    de: () => import('./locales/de.json').then((m) => m.default),
+  },
+});
+
+async function switchLocale(locale: string) {
+  await i18n.load(locale);
+  i18n.locale = locale;
+}
+```
+
+### Route-Based Loading
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: baseMessages },
+  loaders: {
+    fr: async () => {
+      const [base, routes] = await Promise.all([
+        import('./locales/fr/base.json'),
+        import('./locales/fr/routes.json'),
+      ]);
+      return { ...base.default, ...routes.default };
+    },
+  },
+});
+```
+
+### Preloading Multiple Locales
+
+```ts
+// Preload everything before rendering
+await Promise.all([i18n.load('es'), i18n.load('fr'), i18n.load('de')]);
+```
+
+
 
 ## Array Handling
 
-i18nit provides powerful array handling features for dynamic lists and collections using **Intl.ListFormat API** for automatic support of 100+ languages.
-
-::: tip Intl.ListFormat
-Array separators `{items|and}` and `{items|or}` use the browser's built-in Intl.ListFormat API which automatically handles proper grammar, conjunctions, and punctuation for 100+ languages. No manual configuration needed!
-:::
-
-### Shopping List Example
+### Grocery List
 
 ```ts
-import { createI18n } from '@vielzeug/i18nit';
-
 const i18n = createI18n({
   locale: 'en',
   messages: {
     en: {
-      shopping: 'Shopping list: {items}',
-      summary: 'You have {items.length} items in your cart',
-      checkout: 'Ready to buy: {items|and}?',
+      groceries: {
+        list:    'Shopping list: {items}',
+        andList: 'Buy {items|and}',
+        orList:  '{items|or}?',
+        count:   '{items.length} items to buy',
+        first:   "Don't forget: {items[0]}",
+      },
+    },
+  },
+});
+
+const items = ['Milk', 'Eggs', 'Bread', 'Butter'];
+
+i18n.t('groceries.list',    { items }); // "Shopping list: Milk, Eggs, Bread, Butter"
+i18n.t('groceries.andList', { items }); // "Buy Milk, Eggs, Bread, and Butter"
+i18n.t('groceries.orList',  { items }); // "Milk, Eggs, Bread, or Butter?"
+i18n.t('groceries.count',   { items }); // "4 items to buy"
+i18n.t('groceries.first',   { items }); // "Don't forget: Milk"
+```
+
+### Price List with Formatting
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      cart: { total: 'Total: {amount}', items: 'Items: {items}' },
+    },
+  },
+});
+
+const prices = [9.99, 24.99, 4.99];
+i18n.t('cart.total', { amount: prices.reduce((s, p) => s + p, 0) });
+// "Total: 39.97"
+
+i18n.t('cart.items', { items: prices });
+// "Items: 9.99, 24.99, 4.99"
+```
+
+
+
+## E-Commerce
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  fallback: 'en',
+  messages: {
+    en: {
+      product: {
+        price:    '{price}',
+        inStock:  { one: 'Last item!', other: '{count} in stock', zero: 'Out of stock' },
+        addCart:  'Add to cart',
+        checkout: 'Checkout ({count})',
+      },
+      cart: {
+        empty:  'Your cart is empty',
+        total:  'Total: {total}',
+        items:  '{count, plural, one {# item} other {# items}}',
+      },
+      order: {
+        placed:   'Order #{id} placed',
+        shipping: 'Ships by {date}',
+        summary:  '{items|and} will ship on {date}',
+      },
     },
     es: {
-      shopping: 'Lista de compras: {items}',
-      summary: 'Tienes {items.length} artículos en tu carrito',
-      checkout: '¿Listo para comprar: {items|and}?',
+      product: {
+        price:    '{price}',
+        inStock:  { one: '¡Último artículo!', other: '{count} en stock', zero: 'Agotado' },
+        addCart:  'Añadir al carrito',
+        checkout: 'Pagar ({count})',
+      },
     },
+  },
+  loaders: {
+    es: () => import('./locales/es.json').then((m) => m.default),
+    fr: () => import('./locales/fr.json').then((m) => m.default),
   },
 });
 
-// Default comma separator
-const cart = ['Apple', 'Banana', 'Orange'];
-console.log(i18n.t('shopping', { items: cart }));
-// "Shopping list: Apple, Banana, Orange"
+// Product page
+i18n.t('product.inStock', { count: 0 }); // "Out of stock"
+i18n.t('product.inStock', { count: 1 }); // "Last item!"
+i18n.t('product.inStock', { count: 5 }); // "5 in stock"
 
-// Array length
-console.log(i18n.t('summary', { items: cart }));
-// "You have 3 items in your cart"
+i18n.number(29.99, { style: 'currency', currency: 'USD' }); // "$29.99"
 
-// Natural "and" list (English uses Oxford comma)
-console.log(i18n.t('checkout', { items: cart }));
-// "Ready to buy: Apple, Banana, and Orange?"
+// Order confirmation
+i18n.t('order.placed', { id: '12345' });
+i18n.t('order.shipping', { date: i18n.date(new Date('2024-02-01'), { dateStyle: 'long' }) });
 
-// Spanish automatically uses "y"
-i18n.setLocale('es');
-console.log(i18n.t('checkout', { items: cart }));
-// "¿Listo para comprar: Apple, Banana y Orange?"
+// Switch to Spanish
+async function goSpanish() {
+  await i18n.load('es');
+  i18n.locale = 'es';
+}
 ```
 
-### Guest List Example
+
+
+## Dashboard
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      dashboard: {
+        title:   'Dashboard',
+        metrics: {
+          users:   { zero: 'No users', one: 'One user', other: '{count} users' },
+          revenue: 'Revenue: {amount}',
+          growth:  '{percent} growth',
+        },
+        charts: {
+          title:  '{name} Chart',
+          noData: 'No data available',
+          legend: '{series|and}',
+        },
+        alerts: {
+          none:     'No alerts',
+          critical: 'Critical: {message}',
+          warning:  'Warning: {message}',
+        },
+      },
+    },
+  },
+  loaders: {
+    de: () => import('./locales/de.json').then((m) => m.default),
+    fr: () => import('./locales/fr.json').then((m) => m.default),
+  },
+});
+
+const metrics = i18n.namespace('dashboard.metrics');
+const charts  = i18n.namespace('dashboard.charts');
+const alerts  = i18n.namespace('dashboard.alerts');
+
+metrics.t('users',   { count: 1250 }); // "1,250 users"
+metrics.t('revenue', { amount: i18n.number(98765.43, { style: 'currency', currency: 'USD' }) });
+metrics.t('growth',  { percent: i18n.number(0.156, { style: 'percent' }) });
+
+charts.t('title',  { name: 'Sales' }); // "Sales Chart"
+charts.t('legend', { series: ['Revenue', 'Users', 'Sessions'] }); // "Revenue, Users, and Sessions"
+
+alerts.t('critical', { message: 'Database connection lost' });
+
+async function setDashboardLocale(locale: string) {
+  await i18n.load(locale);
+  i18n.locale = locale;
+}
+```
+
+
+
+## Auth Flow
 
 ```ts
 const i18n = createI18n({
   locale: 'en',
   messages: {
     en: {
-      invited: 'Invited guests: {guests|and}',
-      attending: '{attending.length} out of {invited.length} guests attending',
-      empty: 'No guests invited yet',
+      auth: {
+        login:    { title: 'Sign In', submit: 'Sign In', link: 'Sign in' },
+        register: { title: 'Create Account', submit: 'Create Account' },
+        logout:   { title: 'Sign Out', confirm: 'Are you sure?' },
+        errors: {
+          invalid:   'Invalid email or password',
+          locked:    'Account locked. Try again in {minutes} minutes.',
+          expired:   'Session expired. Please sign in again.',
+          attempts:  { one: 'One attempt remaining', other: '{count} attempts remaining' },
+        },
+        success: {
+          login:    'Welcome back, {name}!',
+          register: 'Welcome, {name}! Check your email.',
+          logout:   'You have been signed out.',
+        },
+        validation: {
+          email:       'Enter a valid email address',
+          password:    'Password must be at least {min} characters',
+          required:    '{field} is required',
+          mismatch:    'Passwords do not match',
+        },
+      },
+    },
+    es: {
+      auth: {
+        login:    { title: 'Iniciar sesión', submit: 'Iniciar sesión', link: 'Entrar' },
+        register: { title: 'Crear cuenta', submit: 'Crear cuenta' },
+        logout:   { title: 'Cerrar sesión', confirm: '¿Estás seguro?' },
+        errors: {
+          invalid:  'Correo o contraseña incorrectos',
+          locked:   'Cuenta bloqueada. Inténtalo de nuevo en {minutes} minutos.',
+          expired:  'Sesión expirada. Por favor inicia sesión de nuevo.',
+          attempts: { one: 'Un intento restante', other: '{count} intentos restantes' },
+        },
+        success: {
+          login:    '¡Bienvenido de nuevo, {name}!',
+          register: '¡Bienvenido, {name}! Revisa tu correo.',
+          logout:   'Has cerrado sesión.',
+        },
+      },
     },
   },
 });
 
-// Multiple guests (with Oxford comma)
-const guests = ['Alice', 'Bob', 'Charlie', 'Diana'];
-console.log(i18n.t('invited', { guests }));
-// "Invited guests: Alice, Bob, Charlie, and Diana"
+const auth = i18n.namespace('auth');
 
-// Two guests
-console.log(i18n.t('invited', { guests: ['Alice', 'Bob'] }));
-// "Invited guests: Alice and Bob"
+auth.t('errors.locked',   { minutes: 5 });          // "Account locked. Try again in 5 minutes."
+auth.t('errors.attempts', { count: 2 });             // "2 attempts remaining"
+auth.t('success.login',   { name: 'Alice' });        // "Welcome back, Alice!"
+auth.t('validation.required', { field: 'Email' });   // "Email is required"
 
-// One guest
-console.log(i18n.t('invited', { guests: ['Alice'] }));
-// "Invited guests: Alice"
-
-// Count comparison
-console.log(
-  i18n.t('attending', {
-    invited: guests,
-    attending: ['Alice', 'Charlie'],
-  }),
-);
-// "2 out of 4 guests attending"
+i18n.locale = 'es';
+auth.t('errors.locked', { minutes: 5 }); // "Cuenta bloqueada. Inténtalo de nuevo en 5 minutos."
 ```
 
-### File Path Example
+
+
+## Multi-Tenant App
+
+Serve multiple languages simultaneously using `scoped()` — the active locale never changes:
 
 ```ts
+import { createI18n } from '@vielzeug/i18nit';
+
 const i18n = createI18n({
   locale: 'en',
+  fallback: 'en',
   messages: {
-    en: {
-      breadcrumb: '{path| > }',
-      folder: 'Location: {folders| / }',
-    },
+    en: { greeting: 'Hello, {name}!', goodbye: 'Goodbye, {name}!' },
+    es: { greeting: '¡Hola, {name}!', goodbye: '¡Adiós, {name}!' },
+    fr: { greeting: 'Bonjour, {name}!', goodbye: 'Au revoir, {name}!' },
   },
 });
 
-const folders = ['home', 'user', 'documents', 'work'];
-console.log(i18n.t('breadcrumb', { path: folders }));
-// "home > user > documents > work"
+// SSR: render the same page for different locales in parallel
+function renderForLocale(locale: string, name: string) {
+  const scoped = i18n.scoped(locale);
+  return {
+    greeting: scoped.t('greeting', { name }),
+    goodbye:  scoped.t('goodbye',  { name }),
+    since:    scoped.date(new Date(), { dateStyle: 'long' }),
+  };
+}
 
-console.log(i18n.t('folder', { folders }));
-// "Location: home / user / documents / work"
+console.log(i18n.locale); // still 'en' — scoped() never changes it
+
+renderForLocale('en', 'Alice'); // { greeting: 'Hello, Alice!', ... }
+renderForLocale('es', 'Bob');   // { greeting: '¡Hola, Bob!', ... }
+renderForLocale('fr', 'Carol'); // { greeting: 'Bonjour, Carol!', ... }
 ```
 
-### Tags and Categories Example
+
+
+## Subscriptions & Reactivity
+
+### Document Metadata
 
 ```ts
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      tags: 'Tags: {tags| • }',
-      filter: 'Filtering by: {filters|or}',
-      categories: '{categories.length} categories available',
-    },
-  },
+i18n.subscribe((locale) => {
+  document.documentElement.lang = locale;
+  document.documentElement.dir  = ['ar', 'he', 'fa', 'ur'].includes(locale) ? 'rtl' : 'ltr';
 });
-
-// Custom separator
-const tags = ['typescript', 'javascript', 'react', 'node'];
-console.log(i18n.t('tags', { tags }));
-// "Tags: typescript • javascript • react • node"
-
-// "or" separator for choices (with Oxford comma)
-const filters = ['Color: Red', 'Size: Large', 'Brand: Nike'];
-console.log(i18n.t('filter', { filters }));
-// "Filtering by: Color: Red, Size: Large, or Brand: Nike"
-
-// Array length
-const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
-console.log(i18n.t('categories', { categories }));
-// "4 categories available"
 ```
 
-### Safe Index Access
+### Persistent Locale
 
 ```ts
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      firstItem: 'First: {items[0]}',
-      lastItem: 'Last: {items[2]}',
-      missing: 'Tenth: {items[10]}',
-      mixed: 'Winner: {winners[0]}, Total: {winners.length}, All: {winners}',
-    },
-  },
+const saved = localStorage.getItem('locale') ?? 'en';
+i18n.locale = saved;
+
+i18n.subscribe((locale) => {
+  localStorage.setItem('locale', locale);
 });
-
-const items = ['Gold', 'Silver', 'Bronze'];
-
-// Safe access
-console.log(i18n.t('firstItem', { items }));
-// "First: Gold"
-
-console.log(i18n.t('lastItem', { items }));
-// "Last: Bronze"
-
-// Out of bounds returns empty string (safe)
-console.log(i18n.t('missing', { items }));
-// "Tenth: "
-
-// Combined features
-console.log(i18n.t('mixed', { winners: items }));
-// "Winner: Gold, Total: 3, All: Gold, Silver, Bronze"
 ```
 
-### Complex Nested Arrays
+### Multiple Subscribers
 
 ```ts
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      userItems: '{user.name} has {user.items.length} items: {user.items}',
-      orderSummary: 'Order #{order.id}: {order.items|and} (Total: {order.items.length} items)',
-    },
-  },
-});
+const unsub1 = i18n.subscribe((l) => { document.documentElement.lang = l; });
+const unsub2 = i18n.subscribe((l) => { localStorage.setItem('locale', l); });
+const unsub3 = i18n.subscribe((l) => { analytics.track('locale_change', { locale: l }); });
 
-// Nested object with array
-const data = {
-  user: {
-    name: 'Alice',
-    items: ['Book', 'Pen', 'Notebook', 'Laptop'],
-  },
-};
-
-console.log(i18n.t('userItems', data));
-// "Alice has 4 items: Book, Pen, Notebook, Laptop"
-
-// Order summary
-const order = {
-  order: {
-    id: '12345',
-    items: ['Laptop', 'Mouse', 'Keyboard'],
-  },
-};
-
-console.log(i18n.t('orderSummary', order));
-// "Order #12345: Laptop, Mouse, and Keyboard (Total: 3 items)"
+// Unsubscribe any one independently
+unsub2();
 ```
-
-## E-commerce Application
-
-Complete e-commerce example with product listings, cart, and checkout.
-
-::: code-group
-
-```tsx [React]
-import { createI18n } from '@vielzeug/i18nit';
-import { useState, useEffect } from 'react';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' },
-  },
-});
-
-function EcommerceApp() {
-  const [cart, setCart] = useState([]);
-  const [, forceUpdate] = useState({});
-  useEffect(() => i18n.subscribe(() => forceUpdate({})), []);
-
-  return (
-    <div>
-      <h1>{i18n.t('title')}</h1>
-      <p>{i18n.t('cart', { count: cart.length })}</p>
-      <button onClick={() => setCart([...cart, {}])}>Add to Cart</button>
-      <button onClick={() => i18n.setLocale('es')}>ES</button>
-    </div>
-  );
-}
-```
-
-```vue [Vue 3]
-<script setup lang="ts">
-import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' },
-  },
-});
-
-const cart = ref([]);
-const locale = ref(i18n.getLocale());
-let unsubscribe;
-onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
-onUnmounted(() => unsubscribe?.());
-</script>
-
-<template>
-  <div>
-    <h1>{{ i18n.t('title') }}</h1>
-    <p>{{ i18n.t('cart', { count: cart.length }) }}</p>
-    <button @click="cart.push({})">Add to Cart</button>
-    <button @click="i18n.setLocale('es')">ES</button>
-  </div>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { createI18n } from '@vielzeug/i18nit';
-  import { onDestroy } from 'svelte';
-
-  const i18n = createI18n({
-    locale: 'en',
-    messages: {
-      en: { title: 'Shop', cart: 'Cart ({count})' },
-      es: { title: 'Tienda', cart: 'Carrito ({count})' }
-    }
-  });
-
-  let cart = [];
-  let locale = i18n.getLocale();
-  const unsubscribe = i18n.subscribe(l => locale = l);
-  onDestroy(unsubscribe);
-</script>
-
-<h1>{i18n.t('title')}</h1>
-<p>{i18n.t('cart', { count: cart.length })}</p>
-<button on:click={() => cart = [...cart, {}]}>Add to Cart</button>
-<button on:click={() => i18n.setLocale('es')}>ES</button>
-```
-
-```ts [Web Component]
-import { createI18n } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Shop', cart: 'Cart ({count})' },
-    es: { title: 'Tienda', cart: 'Carrito ({count})' },
-  },
-});
-
-class EcommerceApp extends HTMLElement {
-  #cart = [];
-  connectedCallback() {
-    this.render();
-    i18n.subscribe(() => this.render());
-  }
-  render() {
-    this.innerHTML = `
-      <h1>${i18n.t('title')}</h1>
-      <p>${i18n.t('cart', { count: this.#cart.length })}</p>
-      <button id="add">Add to Cart</button>
-      <button id="es">ES</button>
-    `;
-    this.querySelector('#add').onclick = () => {
-      this.#cart.push({});
-      this.render();
-    };
-    this.querySelector('#es').onclick = () => i18n.setLocale('es');
-  }
-}
-customElements.define('ecommerce-app', EcommerceApp);
-```
-
-:::
-
-## Dashboard with Multi-Language
-
-Dashboard with statistics and dynamic content.
-
-::: code-group
-
-```tsx [React]
-import { createI18n } from '@vielzeug/i18nit';
-import { useState, useEffect } from 'react';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' },
-  },
-});
-
-function Dashboard() {
-  const [, forceUpdate] = useState({});
-  useEffect(() => i18n.subscribe(() => forceUpdate({})), []);
-
-  return (
-    <div>
-      <h1>{i18n.t('title')}</h1>
-      <p>{i18n.t('stats', { count: 1234 })}</p>
-      <button onClick={() => i18n.setLocale('es')}>ES</button>
-    </div>
-  );
-}
-```
-
-```vue [Vue 3]
-<script setup lang="ts">
-import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' },
-  },
-});
-
-const locale = ref(i18n.getLocale());
-let unsubscribe;
-onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
-onUnmounted(() => unsubscribe?.());
-</script>
-
-<template>
-  <div>
-    <h1>{{ i18n.t('title') }}</h1>
-    <p>{{ i18n.t('stats', { count: 1234 }) }}</p>
-    <button @click="i18n.setLocale('es')">ES</button>
-  </div>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { createI18n } from '@vielzeug/i18nit';
-  import { onDestroy } from 'svelte';
-
-  const i18n = createI18n({
-    locale: 'en',
-    messages: {
-      en: { title: 'Dashboard', stats: 'Users: {count}' },
-      es: { title: 'Panel', stats: 'Usuarios: {count}' }
-    }
-  });
-
-  let locale = i18n.getLocale();
-  const unsubscribe = i18n.subscribe(l => locale = l);
-  onDestroy(unsubscribe);
-</script>
-
-<h1>{i18n.t('title')}</h1>
-<p>{i18n.t('stats', { count: 1234 })}</p>
-<button on:click={() => i18n.setLocale('es')}>ES</button>
-```
-
-```ts [Web Component]
-import { createI18n } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { title: 'Dashboard', stats: 'Users: {count}' },
-    es: { title: 'Panel', stats: 'Usuarios: {count}' },
-  },
-});
-
-class Dashboard extends HTMLElement {
-  connectedCallback() {
-    this.render();
-    i18n.subscribe(() => this.render());
-  }
-  render() {
-    this.innerHTML = `
-      <h1>${i18n.t('title')}</h1>
-      <p>${i18n.t('stats', { count: 1234 })}</p>
-      <button id="es">ES</button>
-    `;
-    this.querySelector('#es').onclick = () => i18n.setLocale('es');
-  }
-}
-customElements.define('dashboard-view', Dashboard);
-```
-
-:::
-
-## Authentication System
-
-Complete authentication flow with validation messages.
-
-::: code-group
-
-```tsx [React]
-import { createI18n } from '@vielzeug/i18nit';
-import { useState, useEffect } from 'react';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
-  },
-});
-
-function AuthForm() {
-  const [error, setError] = useState('');
-  const [, forceUpdate] = useState({});
-  useEffect(() => i18n.subscribe(() => forceUpdate({})), []);
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setError(i18n.t('error'));
-      }}>
-      <h1>{i18n.t('login')}</h1>
-      {error && <p>{error}</p>}
-      <button type="submit">{i18n.t('login')}</button>
-      <button type="button" onClick={() => i18n.setLocale('es')}>
-        ES
-      </button>
-    </form>
-  );
-}
-```
-
-```vue [Vue 3]
-<script setup lang="ts">
-import { createI18n } from '@vielzeug/i18nit';
-import { ref, onMounted, onUnmounted } from 'vue';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
-  },
-});
-
-const error = ref('');
-const locale = ref(i18n.getLocale());
-let unsubscribe;
-onMounted(() => (unsubscribe = i18n.subscribe((l) => (locale.value = l))));
-onUnmounted(() => unsubscribe?.());
-</script>
-
-<template>
-  <form @submit.prevent="error = i18n.t('error')">
-    <h1>{{ i18n.t('login') }}</h1>
-    <p v-if="error">{{ error }}</p>
-    <button type="submit">{{ i18n.t('login') }}</button>
-    <button type="button" @click="i18n.setLocale('es')">ES</button>
-  </form>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { createI18n } from '@vielzeug/i18nit';
-  import { onDestroy } from 'svelte';
-
-  const i18n = createI18n({
-    locale: 'en',
-    messages: {
-      en: { login: 'Login', error: 'Invalid credentials' },
-      es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' }
-    }
-  });
-
-  let error = '';
-  let locale = i18n.getLocale();
-  const unsubscribe = i18n.subscribe(l => locale = l);
-  onDestroy(unsubscribe);
-</script>
-
-<form on:submit|preventDefault={() => error = i18n.t('error')}>
-  <h1>{i18n.t('login')}</h1>
-  {#if error}<p>{error}</p>{/if}
-  <button type="submit">{i18n.t('login')}</button>
-  <button type="button" on:click={() => i18n.setLocale('es')}>ES</button>
-</form>
-```
-
-```ts [Web Component]
-import { createI18n } from '@vielzeug/i18nit';
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: { login: 'Login', error: 'Invalid credentials' },
-    es: { login: 'Iniciar sesión', error: 'Credenciales inválidas' },
-  },
-});
-
-class AuthForm extends HTMLElement {
-  #error = '';
-  connectedCallback() {
-    this.render();
-    i18n.subscribe(() => this.render());
-  }
-  render() {
-    this.innerHTML = `
-      <form>
-        <h1>${i18n.t('login')}</h1>
-        ${this.#error ? `<p>${this.#error}</p>` : ''}
-        <button type="submit">${i18n.t('login')}</button>
-        <button type="button" id="es">ES</button>
-      </form>
-    `;
-    this.querySelector('form').onsubmit = (e) => {
-      e.preventDefault();
-      this.#error = i18n.t('error');
-      this.render();
-    };
-    this.querySelector('#es').onclick = () => i18n.setLocale('es');
-  }
-}
-customElements.define('auth-form', AuthForm);
-```
-
-:::
-
----
-
-For more API details, see [API Reference](./api.md). For usage patterns, see [Usage Guide](./usage.md).

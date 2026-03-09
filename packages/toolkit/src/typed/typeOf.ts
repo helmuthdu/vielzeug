@@ -26,7 +26,7 @@ export type ArgType =
  * typeOf(null); // 'null'
  * typeOf(undefined); // 'undefined'
  * typeOf(NaN); // 'nan'
- * typeOf(async function() {}); // 'promise'
+ * typeOf(async function() {}); // 'function'
  * typeOf(123); // 'number'
  * typeOf('abc'); // 'string'
  * typeOf({}); // 'object'

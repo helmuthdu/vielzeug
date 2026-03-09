@@ -496,17 +496,13 @@ Complete authentication flow with protected routes.
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
-import type { Middleware, RouteContext } from '@vielzeug/routeit';
+import type { Middleware } from '@vielzeug/routeit';
 
 // Types
 interface User {
   id: string;
   name: string;
   roles: string[];
-}
-
-interface AuthContext extends RouteContext {
-  user?: User;
 }
 
 // Auth service
@@ -542,34 +538,34 @@ const authService = {
   },
 };
 
-// Middleware
-const requireAuth: Middleware<AuthContext> = async (ctx, next) => {
+// Create router first so middleware can reference it
+const router = createRouter();
+
+// Middleware — store user in ctx.meta so downstream handlers can access it
+const requireAuth: Middleware = async (ctx, next) => {
   const user = await authService.getCurrentUser();
 
   if (!user) {
-    ctx.navigate('/login');
+    router.navigate('/login');
     return;
   }
 
-  ctx.user = user;
+  ctx.meta.user = user;
   await next();
 };
 
-const requireRole = (role: string): Middleware<AuthContext> => {
+const requireRole = (role: string): Middleware => {
   return async (ctx, next) => {
-    const user = ctx.user;
+    const user = ctx.meta.user as User | undefined;
 
     if (!user || !user.roles.includes(role)) {
-      ctx.navigate('/forbidden');
+      router.navigate('/forbidden');
       return;
     }
 
     await next();
   };
 };
-
-// Router setup
-const router = createRouter();
 
 router
   // Public routes
@@ -604,10 +600,11 @@ router
   .route({
     path: '/dashboard',
     middleware: requireAuth,
-    handler: (ctx: AuthContext) => {
+    handler: (ctx) => {
+      const user = ctx.meta.user as User;
       document.getElementById('app').innerHTML = `
         <h1>Dashboard</h1>
-        <p>Welcome, ${ctx.user?.name}!</p>
+        <p>Welcome, ${user?.name}!</p>
         <button id="logout">Logout</button>
       `;
 
@@ -620,10 +617,11 @@ router
   .route({
     path: '/admin',
     middleware: [requireAuth, requireRole('admin')],
-    handler: (ctx: AuthContext) => {
+    handler: (ctx) => {
+      const user = ctx.meta.user as User;
       document.getElementById('app').innerHTML = `
         <h1>Admin Panel</h1>
-        <p>Hello, ${ctx.user?.name} (Admin)</p>
+        <p>Hello, ${user?.name} (Admin)</p>
       `;
     },
   })
@@ -637,7 +635,7 @@ Using @vielzeug/permit for fine-grained access control.
 ```ts
 import { createRouter } from '@vielzeug/routeit';
 import { createPermit } from '@vielzeug/permit';
-import type { Middleware, RouteContext } from '@vielzeug/routeit';
+import type { Middleware } from '@vielzeug/routeit';
 import type { BaseUser, PermissionAction } from '@vielzeug/permit';
 
 const permit = createPermit();
@@ -664,27 +662,27 @@ permit.set('viewer', 'posts', {
   delete: false,
 });
 
+// Create router before middleware so it can be referenced
+const router = createRouter();
+
 // Permission middleware factory
 function requirePermission(resource: string, action: PermissionAction): Middleware {
   return async (ctx, next) => {
-    const user = ctx.user as BaseUser;
+    const user = ctx.meta.user as BaseUser;
 
     if (!user) {
-      ctx.navigate('/login');
+      router.navigate('/login');
       return;
     }
 
     if (!permit.check(user, resource, action)) {
-      ctx.navigate('/forbidden');
+      router.navigate('/forbidden');
       return;
     }
 
     await next();
   };
 }
-
-// Router setup
-const router = createRouter();
 
 router
   .route({
@@ -730,11 +728,13 @@ Load route modules on demand for better performance.
 import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
+// Create router first so middleware closures can reference it
+const router = createRouter();
+
 // Lazy loading middleware
 const lazyLoad = (importFn: () => Promise<{ default: (ctx: any) => void }>): Middleware => {
   return async (ctx, next) => {
     try {
-      ctx.meta = ctx.meta || {};
       ctx.meta.loading = true;
 
       const module = await importFn();
@@ -744,13 +744,10 @@ const lazyLoad = (importFn: () => Promise<{ default: (ctx: any) => void }>): Mid
       await next();
     } catch (error) {
       console.error('Failed to load route:', error);
-      ctx.navigate('/error');
+      router.navigate('/error');
     }
   };
 };
-
-// Router setup
-const router = createRouter();
 
 router
   .route({
@@ -772,9 +769,10 @@ router
 
 // routes/dashboard.ts
 export default function dashboard(ctx) {
+  const user = ctx.meta?.user;
   document.getElementById('app').innerHTML = `
     <h1>Dashboard</h1>
-    <p>User: ${ctx.user?.name}</p>
+    <p>User: ${user?.name}</p>
   `;
 }
 
@@ -916,7 +914,7 @@ const notFoundHandler = ({ pathname }) => {
 // Router with error handling
 const router = createRouter({
   middleware: [errorHandler],
-  notFound: notFoundHandler,
+  onNotFound: notFoundHandler,
 });
 
 router

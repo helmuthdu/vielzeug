@@ -1,10 +1,10 @@
 # @vielzeug/wireit
 
-> Lightweight dependency injection container for TypeScript with interface tokens and test mocks
+> Lightweight dependency injection container for TypeScript with typed tokens, lifetimes, and test utilities
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/wireit)](https://www.npmjs.com/package/@vielzeug/wireit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Wireit** is a minimal IoC container that uses typed interface tokens to bind and resolve dependencies — with first-class support for testing via `createTestContainer` and `withMock`.
+**Wireit** is a zero-dependency IoC container that uses typed tokens to register and resolve dependencies — with singleton/transient/scoped lifetimes, async providers, child containers, and first-class test helpers.
 
 ## Installation
 
@@ -19,73 +19,94 @@ pnpm add @vielzeug/wireit
 ```typescript
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-interface Logger { log(msg: string): void }
-interface UserRepo { findById(id: string): Promise<User> }
+interface ILogger { log(msg: string): void }
+interface IUserRepo { findById(id: string): Promise<User> }
 
-const LoggerToken = createToken<Logger>('Logger');
-const UserRepoToken = createToken<UserRepo>('UserRepo');
+const LoggerToken  = createToken<ILogger>('Logger');
+const UserRepoToken = createToken<IUserRepo>('UserRepo');
 
 const container = createContainer();
 
-container.bind(LoggerToken).toValue({ log: (msg) => console.log(msg) });
-container.bind(UserRepoToken).toClass(SqlUserRepo, [LoggerToken]);
+container.registerValue(LoggerToken, { log: (msg) => console.log(msg) });
+container.register(UserRepoToken, { useClass: SqlUserRepo, deps: [LoggerToken] });
 
-const repo = container.resolve(UserRepoToken);
+const repo = container.get(UserRepoToken);
 await repo.findById('123');
 ```
 
 ## Features
 
-- ✅ **Typed tokens** — `createToken<T>(name)` keeps bindings type-safe
-- ✅ **Multiple binding strategies** — `toValue`, `toClass`, `toFactory`, `toAlias`
-- ✅ **Scoped containers** — child containers inherit parent bindings
-- ✅ **Lazy resolution** — bindings are only created when first resolved
-- ✅ **Singleton by default** — one instance per container scope
-- ✅ **Test utilities** — `createTestContainer` and `withMock` for easy testing
-- ✅ **Zero runtime dependencies**
+- **Typed tokens** — `createToken<T>(name)` ties a TypeScript type to the token at compile time
+- **Three provider kinds** — `useValue`, `useClass`, `useFactory` (sync or async)
+- **Lifetimes** — `'singleton'` (default), `'transient'`, `'scoped'` per registration
+- **Child containers** — `createChild()` inherits parent registrations; scoped deps get one instance per child
+- **Scoped execution** — `runInScope(fn)` creates a child container, runs `fn`, then clears it
+- **Aliases** — `alias(token, source)` redirects one token to another, with chain and cycle detection
+- **Async providers** — `useFactory` may return a `Promise`; resolve with `getAsync()`
+- **Test utilities** — `createTestContainer` and `withMock` for isolated, auto-cleanup test setups
+- **Snapshot/restore** — `snapshot()` / `restore()` for rollback in tests
+- **Zero runtime dependencies**
 
 ## Usage
 
-### Defining Tokens
+### Tokens
 
 ```typescript
 import { createToken } from '@vielzeug/wireit';
 
 const DbToken     = createToken<Database>('Database');
-const LoggerToken = createToken<Logger>('Logger');
+const LoggerToken = createToken<ILogger>('Logger');
 const ConfigToken = createToken<Config>('Config');
 ```
 
-### Binding Strategies
+### Registration
 
 ```typescript
 const container = createContainer();
 
-// Value — constant instance
-container.bind(ConfigToken).toValue({ apiUrl: 'https://api.example.com' });
+// Value — register a constant instance
+container.registerValue(ConfigToken, { apiUrl: 'https://api.example.com' });
 
-// Class — auto-resolved constructor injection
-container.bind(LoggerToken).toClass(ConsoleLogger);
-container.bind(DbToken).toClass(PostgresDb, [ConfigToken]);
+// Class — container instantiates and injects deps
+container.register(LoggerToken, { useClass: ConsoleLogger });
+container.register(DbToken, { useClass: PostgresDb, deps: [ConfigToken] });
 
-// Factory — full control
-container.bind(LoggerToken).toFactory((c) => {
-  const config = c.resolve(ConfigToken);
-  return new FileLogger(config.logPath);
+// Factory — full control; may be async
+container.register(DbToken, {
+  useFactory: async (config) => {
+    const db = new PostgresDb(config.apiUrl);
+    await db.connect();
+    return db;
+  },
+  deps: [ConfigToken],
+  lifetime: 'singleton',
 });
 
-// Alias — redirect one token to another
-container.bind(AltLoggerToken).toAlias(LoggerToken);
+// Alias — redirect AltLoggerToken → LoggerToken
+container.alias(AltLoggerToken, LoggerToken);
 ```
 
-### Child Containers
+### Resolution
 
 ```typescript
-const requestContainer = createContainer(container); // inherits all parent bindings
+const logger = container.get(LoggerToken);           // sync
+const db     = await container.getAsync(DbToken);    // async factory
+const cache  = container.getOptional(CacheToken);    // undefined if missing
+```
 
-requestContainer.bind(UserToken).toValue(currentUser);
+### Child Containers & Scoped Execution
 
-const svc = requestContainer.resolve(ServiceToken);
+```typescript
+// Child inherits all parent registrations
+const child = container.createChild();
+child.registerValue(UserToken, currentUser);
+const svc = child.get(ServiceToken);
+
+// runInScope creates an auto-disposed child
+const result = await container.runInScope(async (scope) => {
+  scope.registerValue(RequestIdToken, generateId());
+  return scope.get(RequestHandlerToken).handle(data);
+});
 ```
 
 ### Testing
@@ -93,37 +114,65 @@ const svc = requestContainer.resolve(ServiceToken);
 ```typescript
 import { createTestContainer, withMock } from '@vielzeug/wireit';
 
-// createTestContainer returns { container, dispose }
+// Isolated child container + dispose helper
 const { container, dispose } = createTestContainer(baseContainer);
+container.registerValue(DbToken, mockDb);
+const service = container.get(ServiceToken);
+dispose(); // clears the child container
 
-container.bind(DbToken).toValue(mockDb);
-const service = container.resolve(ServiceToken);
-
-// or use withMock for scoped override
-const result = await withMock(container, LoggerToken, mockLogger, async (c) => {
-  return c.resolve(ServiceToken).doWork();
+// Scoped override via snapshot/restore
+await withMock(container, LoggerToken, mockLogger, async () => {
+  await container.get(ServiceToken).doWork();
+  // original LoggerToken is restored after this block
 });
-
-dispose(); // always clean up
 ```
 
 ## API
 
+### Factory functions
+
 | Export | Description |
 |---|---|
-| `createToken<T>(name)` | Create a typed DI token |
-| `createContainer(parent?)` | Create a container (optionally inheriting from parent) |
-| `createTestContainer(base?)` | Create a disposable test container — returns `{ container, dispose }` |
-| `withMock(container, token, mock, fn)` | Run `fn` with a temporary binding override |
+| `createToken<T>(description)` | Create a typed DI token |
+| `createContainer()` | Create a new root container |
+| `createTestContainer(base?)` | Create a child test container — returns `{ container, dispose }` |
+| `withMock(container, token, mock, fn)` | Run `fn` with `token` temporarily overridden by `mock` |
 
-### Container Methods
+### Container methods
 
 | Method | Description |
 |---|---|
-| `.bind(token)` | Start a binding — returns builder with `toValue`, `toClass`, `toFactory`, `toAlias` |
-| `.resolve(token)` | Resolve a dependency by token |
-| `.has(token)` | Check if a token is bound |
-| `.unbind(token)` | Remove a binding |
+| `register(token, provider)` | Register a `useClass`, `useFactory`, or `useValue` provider |
+| `registerValue(token, value)` | Shorthand for `register(token, { useValue })` |
+| `alias(token, source)` | Redirect `token` resolution to `source` |
+| `unregister(token)` | Remove a registration |
+| `clear()` | Remove all registrations and aliases |
+| `has(token)` | Check if registered (own or parent) |
+| `get(token)` | Resolve synchronously; throws `AsyncProviderError` for async factories |
+| `getAsync(token)` | Resolve asynchronously; deduplicates concurrent singleton requests |
+| `getOptional(token)` | Returns `undefined` if not found instead of throwing |
+| `getOptionalAsync(token)` | Async version of `getOptional` |
+| `createChild()` | Create a child container that inherits this one |
+| `runInScope(fn)` | Run `fn` in a temporary child container, auto-cleared on completion |
+| `snapshot()` | Deep-copy current registry state (includes cached instances) |
+| `restore(snap)` | Restore a previously taken snapshot |
+| `debug()` | Returns `{ tokens: string[], aliases: [string, string][] }` |
+
+### Lifetimes
+
+| Lifetime | Behaviour |
+|---|---|
+| `'singleton'` | One instance per container, cached after first resolution (default for class/factory) |
+| `'transient'` | New instance on every `get()` call |
+| `'scoped'` | One instance per child container; behaves as singleton in the root |
+
+### Errors
+
+| Class | When thrown |
+|---|---|
+| `ProviderNotFoundError` | Token not registered and no parent provides it |
+| `AsyncProviderError` | `get()` called on an async factory; use `getAsync()` |
+| `CircularDependencyError` | Circular dependency detected during resolution |
 
 ## Documentation
 
@@ -131,7 +180,7 @@ Full docs at **[vielzeug.dev/wireit](https://vielzeug.dev/wireit)**
 
 | | |
 |---|---|
-| [Usage Guide](https://vielzeug.dev/wireit/usage) | Tokens, bindings, child containers |
+| [Usage Guide](https://vielzeug.dev/wireit/usage) | Tokens, providers, lifetimes, child containers, testing |
 | [API Reference](https://vielzeug.dev/wireit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/wireit/examples) | Real-world DI patterns |
 

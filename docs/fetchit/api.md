@@ -9,10 +9,11 @@ description: Complete API reference for Fetchit HTTP client and query client.
 
 ## Overview
 
-Fetchit provides **two separate clients** for maximum flexibility:
+Fetchit provides **two separate clients** plus a **unified client** for maximum flexibility:
 
 1. **HTTP Client** (`createHttpClient`) – Pure HTTP operations without caching
 2. **Query Client** (`createQueryClient`) – Advanced query management with caching
+3. **Unified Client** (`createClient`) – Combines both into a single object
 
 Use them together or independently based on your needs.
 
@@ -28,7 +29,7 @@ Creates a pure HTTP client without query management. Perfect for simple HTTP req
   - `baseUrl?: string` – Base URL for all requests
   - `headers?: Record<string, string>` – Default headers for all requests
   - `timeout?: number` – Request timeout in milliseconds (default: 30000)
-  - `dedupe?: boolean` – Enable request deduplication (default: true)
+  - `dedupe?: boolean` – Force-deduplicate non-idempotent methods (default: `false`; GET/HEAD/OPTIONS always dedupe regardless)
   - `logger?: (level, msg, meta) => void` – Optional logger function for debugging
 
 **Returns:** HTTP client instance with REST methods
@@ -42,15 +43,10 @@ const http = createHttpClient({
   baseUrl: 'https://api.example.com',
   timeout: 10000,
   headers: { Authorization: 'Bearer token' },
-  dedupe: true,
-  logger: (level, msg, meta) => {
-    console.log(`[${level}]`, msg, meta);
-  },
 });
 
-// Direct HTTP requests (returns raw data)
-const user = await http.get('/users/1');
-const created = await http.post('/users', { body: newUser });
+const user = await http.get<User>('/users/1');
+const created = await http.post<User>('/users', { body: newUser });
 ```
 
 **Available Methods:**
@@ -62,6 +58,7 @@ const created = await http.post('/users', { body: newUser });
 - `delete<T>(url, config?): Promise<T>` – DELETE request
 - `request<T>(method, url, config?): Promise<T>` – Custom HTTP method
 - `setHeaders(headers): void` – Update global headers
+- `use(interceptor): () => void` – Add an interceptor; returns a dispose function
 
 ---
 
@@ -82,22 +79,18 @@ Creates a pure query management client. Works with any HTTP client or fetch func
 ```ts
 import { createQueryClient, createHttpClient } from '@vielzeug/fetchit';
 
-const queryClient = createQueryClient({
-  staleTime: 5000,
-  gcTime: 300000,
-});
-
-// Use with HTTP client
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const user = await queryClient.fetch({
-  queryKey: ['users', 1],
-  queryFn: () => http.get('/users/1'),
+const queryClient = createQueryClient({ staleTime: 5000 });
+
+const user = await queryClient.query({
+  key: ['users', 1],
+  fn: () => http.get('/users/1'),
 });
 
 // Or with native fetch
-const data = await queryClient.fetch({
-  queryKey: ['data'],
-  queryFn: () => fetch('/data').then((r) => r.json()),
+const data = await queryClient.query({
+  key: ['data'],
+  fn: () => fetch('/data').then((r) => r.json()),
 });
 ```
 
@@ -105,15 +98,50 @@ const data = await queryClient.fetch({
 
 **Core Methods:**
 
-- `fetch<T>(options): Promise<T>` – Execute a query with caching
-- `mutate<TData, TVariables>(options, variables): Promise<TData>` – Execute a mutation
+- `query<T>(options): Promise<T | undefined>` – Execute a query with caching
+- `mutation<TData, TVariables>(fn, opts?): MutationHandle` – Create a mutation factory
 - `prefetch<T>(options): Promise<void>` – Prefetch a query
-- `getData<T>(queryKey): T | undefined` – Get cached data
-- `setData<T>(queryKey, data | updater): void` – Set/update cached data
-- `getState<T>(queryKey): QueryState<T> | null` – Get full query state
-- `invalidate(queryKey): void` – Invalidate query (supports prefix matching)
-- `subscribe<T>(queryKey, listener): () => void` – Subscribe to query changes (returns unsubscribe function)
+- `getData<T>(key): T | undefined` – Get cached data
+- `setData<T>(key, data | updater): void` – Set/update cached data
+- `getState<T>(key): QueryState<T> | null` – Get full query state
+- `invalidate(key): void` – Invalidate query (supports prefix matching)
+- `subscribe<T>(key, listener): () => void` – Subscribe to query changes (returns unsubscribe)
 - `clear(): void` – Clear all cached data
+
+---
+
+### `createClient(options?)`
+
+Convenience factory that returns an object combining both `HttpClient` and `QueryClient` methods.
+
+**Parameters:**
+
+- `options?` – Merged `HttpClientOptions` and `QueryClientOptions`
+
+**Returns:** Unified client with all HTTP and query methods
+
+**Example:**
+
+```ts
+import { createClient } from '@vielzeug/fetchit';
+
+const client = createClient({
+  baseUrl: 'https://api.example.com',
+  staleTime: 5000,
+});
+
+// HTTP methods
+const user = await client.get<User>('/users/1');
+
+// Query methods
+const cachedUser = await client.query({
+  key: ['users', '1'],
+  fn: () => client.get<User>('/users/1'),
+});
+
+client.setHeaders({ Authorization: 'Bearer token' });
+client.invalidate(['users']);
+```
 
 ## Type-Safe Query Keys
 
@@ -136,166 +164,46 @@ const queryKeys = {
 } as const;
 
 // Type-safe usage – autocomplete works!
-queryClient.fetch({
-  queryKey: queryKeys.users.detail('123'),
-  queryFn: () => http.get('/users/123'),
+await queryClient.query({
+  key: queryKeys.users.detail('123'),
+  fn: () => http.get('/users/123'),
 });
 
 // Invalidate with type safety
 queryClient.invalidate(queryKeys.users.all());
 ```
 
-## Query Client Methods
-
-The Query Client provides caching and state management. Use it with any HTTP client or fetch function.
-
-### `fetch<T>(options)`
-
-Execute a query with automatic caching, deduplication, and smart refetching.
-
-**Parameters:**
-
-- `options: QueryOptions<T>`
-  - `queryKey: QueryKey` – Array-based unique identifier (e.g., `['users', 1]`)
-  - `queryFn: () => Promise<T>` – Function that fetches the data
-  - `staleTime?: number` – Time in ms before data is stale (default: 0)
-  - `gcTime?: number` – Time in ms before garbage collection (default: 300000)
-  - `enabled?: boolean` – Whether to execute the query (default: true)
-  - `retry?: number | false` – Number of retry attempts (default: 3)
-  - `retryDelay?: number | ((attempt: number) => number)` – Delay between retries
-  - `onSuccess?: (data: T) => void` – Success callback
-  - `onError?: (error: Error) => void` – Error callback
-
-**Returns:** `Promise<T>` – The fetched data
-
-**Example:**
-
-```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get(`/users/${userId}`),
-  staleTime: 5000,
-  gcTime: 300000,
-  retry: 3,
-  onSuccess: (data) => console.log('User loaded:', data),
-});
-```
-
-### `mutate<TData, TVariables>(options, variables)`
-
-Execute a mutation (POST, PUT, PATCH, DELETE) with retry support and lifecycle callbacks.
-
-**Parameters:**
-
-- `options: MutationOptions<TData, TVariables>`
-  - `mutationFn: (variables: TVariables) => Promise<TData>` – Function to execute
-  - `retry?: number | false` – Number of retry attempts (default: false)
-  - `retryDelay?: number | ((attempt: number) => number)` – Delay between retries
-  - `onSuccess?: (data: TData, variables: TVariables) => void` – Success callback
-  - `onError?: (error: Error, variables: TVariables) => void` – Error callback
-  - `onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void` – Always called
-- `variables: TVariables` – Variables to pass to mutationFn
-
-**Returns:** `Promise<TData>` – The mutation result
-
-**Example:**
-
-```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-const newUser = await queryClient.mutate(
-  {
-    mutationFn: (data) => http.post<User>('/users', { body: data }),
-    retry: 1,
-    onSuccess: (data) => {
-      console.log('User created:', data);
-      queryClient.invalidate(['users']);
-    },
-  },
-  { name: 'Alice', email: 'alice@example.com' },
-);
-```
-
 ## HTTP Client Methods
 
-All HTTP client methods return `Promise<T>` – the raw data directly (not wrapped in a response object).
+All HTTP client methods return `Promise<T>` — the deserialized response body directly.
 
-> **🔥 Automatic Deduplication:** All HTTP requests are automatically deduplicated by default. Concurrent identical requests (same URL, method, and body) will share the same network call. Disable per-request with `{ dedupe: false }`.
+> **Smart Deduplication:** GET, HEAD, and OPTIONS requests always deduplicate concurrent identical calls. POST/PUT/PATCH/DELETE only deduplicate when `dedupe: true` is set.
 
 ### `get<T>(url, config?)`
 
-Makes a GET request and returns the data directly.
-
 **Config Options:**
 
-- `params?: Record<string, string | number | boolean | undefined>` – Path parameters (replace `:id` or `{id}` in URL)
-- `query?: Record<string, string | number | boolean | undefined>` – Query string parameters appended to the URL
-- `body?: unknown` – Request body (auto-serialized to JSON for plain objects)
-- `dedupe?: boolean` – Enable/disable deduplication for this request (default: true)
-- `signal?: AbortSignal` – AbortSignal for request cancellation
+- `params?: Record<string, string | number | boolean | undefined>` – Path parameters (replaces `:id` or `{id}`)
+- `search?: Record<string, string | number | boolean | undefined>` – Query string parameters
+- `dedupe?: boolean` – Per-request deduplication override
+- `signal?: AbortSignal` – For request cancellation
 
 **Example:**
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-
-const user = await http.get<User>('/users/1');
-console.log(user.name); // Direct access
-
-// Concurrent requests are automatically deduped
-const [u1, u2, u3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
-// Only 1 network request made!
+const user = await http.get<User>('/users/:id', { params: { id: '1' } });
+const users = await http.get<User[]>('/users', { search: { page: 1, limit: 20 } });
 ```
 
-### `post<T>(url, config?)`
-
-Makes a POST request and returns the data directly.
-
-**Example:**
+### `post<T>(url, config?)` / `put<T>` / `patch<T>`
 
 ```ts
-const user = await http.post<User>('/users', {
+const created = await http.post<User>('/users', {
   body: { name: 'Alice', email: 'alice@example.com' },
-});
-console.log(user.id); // Direct access
-```
-
-### `put<T>(url, config?)`
-
-Makes a PUT request and returns the data directly.
-
-**Example:**
-
-```ts
-const user = await http.put<User>('/users/1', {
-  body: { name: 'Alice Smith' },
-});
-console.log(user); // Updated user
-```
-
-### `patch<T>(url, config?)`
-
-Makes a PATCH request.
-
-**Example:**
-
-```ts
-const user = await http.patch<User>('/users/1', {
-  body: { email: 'newemail@example.com' },
 });
 ```
 
 ### `delete<T>(url, config?)`
-
-Makes a DELETE request.
-
-**Example:**
 
 ```ts
 await http.delete('/users/1');
@@ -303,314 +211,305 @@ await http.delete('/users/1');
 
 ### `request<T>(method, url, config?)`
 
-Makes a request with a custom HTTP method. Useful for less common methods like OPTIONS, HEAD, etc.
-
-**Parameters:**
-
-- `method: string` – HTTP method (e.g., 'OPTIONS', 'HEAD')
-- `url: string` – Request URL
-- `config?: HttpRequestConfig` – Request configuration
-
-**Returns:** `Promise<T>`
-
-**Example:**
+Makes a request with a custom HTTP method.
 
 ```ts
-// OPTIONS request
-const corsInfo = await http.request<CorsInfo>('OPTIONS', '/users');
-
-// HEAD request to check if resource exists
-await http.request('HEAD', '/users/1');
+const info = await http.request<Info>('OPTIONS', '/users');
 ```
 
 ### `setHeaders(headers)`
 
-Update global headers for all future requests.
-
-**Parameters:**
-
-- `headers: Record<string, string | undefined>` – Headers to set (undefined removes header)
-
-**Example:**
+Update global headers. Pass `undefined` as a value to remove a header.
 
 ```ts
-// Set auth token
 http.setHeaders({ Authorization: `Bearer ${token}` });
-
-// Remove auth token
-http.setHeaders({ Authorization: undefined });
+http.setHeaders({ Authorization: undefined }); // removes it
 ```
 
-## Query Client Cache Management
+### `use(interceptor)`
 
-### `invalidate(queryKey)`
+Add middleware to intercept every request. Returns a dispose function.
 
-Invalidates and removes queries from cache. Supports prefix matching!
+```ts
+const dispose = http.use(async (ctx, next) => {
+  ctx.init.headers = { ...(ctx.init.headers as Record<string, string>), 'X-Request-Id': crypto.randomUUID() };
+  return next(ctx);
+});
 
-**Prefix Matching:**
+dispose(); // remove interceptor
+```
 
-- Exact match: `['users', '1']` matches only `['users', '1']`
-- Prefix match: `['users']` matches `['users']`, `['users', '1']`, `['users', 'list', {...}]`, etc.
+---
+
+## Query Client Methods
+
+### `query<T>(options)`
+
+Execute a query with automatic caching, deduplication, and stale-while-revalidate semantics.
+
+**Parameters — `QueryOptions<T>`:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `key` | `QueryKey` | required | Unique cache identifier |
+| `fn` | `() => Promise<T>` | required | Data-fetching function |
+| `staleTime` | `number` | `0` | ms before data is stale |
+| `gcTime` | `number` | `300000` | ms before entry is garbage collected |
+| `enabled` | `boolean` | `true` | Skip execution when `false` |
+| `retry` | `number \| false` | `3` | Number of retry attempts |
+| `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries |
+
+**Returns:** `Promise<T | undefined>`
 
 **Example:**
 
 ```ts
-// Invalidate specific user
-queryClient.invalidate(['users', '1']);
-
-// Invalidate ALL user queries (prefix matching!)
-queryClient.invalidate(['users']);
-// Matches: ['users'], ['users', '1'], ['users', 'list', {...}], etc.
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
+  staleTime: 5000,
+  retry: 3,
+});
 ```
 
-### `setData<T>(queryKey, data)`
+### `mutation<TData, TVariables>(fn, opts?)`
 
-Manually set or update data in the query cache.
+Creates a **mutation factory** — a reusable handle to execute and observe a mutation.
 
 **Parameters:**
 
-- `queryKey: QueryKey` – The query key
-- `data: T | ((old: T | undefined) => T)` – New data or updater function
+- `fn: (variables: TVariables) => Promise<TData>` – The mutation function
+- `opts?`
+  - `retry?: number | false` – Retry attempts (default: `false`)
+  - `retryDelay?: number | ((attempt: number) => number)`
 
-**Example:**
-
-```ts
-// Set data directly
-queryClient.setData(['users', '1'], { id: '1', name: 'Alice' });
-
-// Update existing data
-queryClient.setData(['users', '1'], (old) => ({ ...old, name: 'Alice Updated' }));
-```
-
-### `getData<T>(queryKey)`
-
-Get cached data for a query.
-
-**Parameters:**
-
-- `queryKey: QueryKey` – The query key
-
-**Returns:** `T | undefined` – Cached data or undefined
-
-**Example:**
-
-```ts
-const user = queryClient.getData<User>(['users', '1']);
-if (user) {
-  console.log('Cached user:', user);
-}
-```
-
-### `getState<T>(queryKey)`
-
-Get the full state of a query including status, error, and metadata.
-
-**Parameters:**
-
-- `queryKey: QueryKey` – The query key
-
-**Returns:** `QueryState<T> | null` – Query state object or null if not found
-
-**QueryState Type:**
+**Returns:**
 
 ```ts
 {
-  data: T | undefined;
-  error: Error | null;
-  status: 'idle' | 'pending' | 'success' | 'error';
-  dataUpdatedAt: number;
-  errorUpdatedAt: number;
-  fetchedAt: number;
-  isLoading: boolean;
-  isSuccess: boolean;
-  isError: boolean;
-  isIdle: boolean;
+  mutate(variables: TVariables): Promise<TData>;
+  subscribe(listener: (state: MutationState<TData>) => void): () => void;
+  getState(): MutationState<TData>;
+  reset(): void;
 }
 ```
 
 **Example:**
+
+```ts
+const createUser = queryClient.mutation(
+  (data: NewUser) => http.post<User>('/users', { body: data }),
+  { retry: false },
+);
+
+const unsubscribe = createUser.subscribe((state) => {
+  if (state.isSuccess) queryClient.invalidate(['users']);
+  if (state.isError) console.error(state.error);
+});
+
+const newUser = await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+
+unsubscribe();
+```
+
+### `prefetch<T>(options)`
+
+Warm the cache without consuming the result. Accepts the same options as `query()`.
+
+**Returns:** `Promise<void>`
+
+```ts
+await queryClient.prefetch({
+  key: ['users', '2'],
+  fn: () => http.get('/users/2'),
+});
+```
+
+### `getData<T>(key)`
+
+Get cached data without triggering a fetch. Returns `T | undefined`.
+
+```ts
+const user = queryClient.getData<User>(['users', '1']);
+```
+
+### `setData<T>(key, data)`
+
+Manually set or update cache data. Accepts a value or an updater function.
+
+```ts
+queryClient.setData(['users', '1'], { id: '1', name: 'Alice' });
+queryClient.setData<User>(['users', '1'], (old) => ({ ...old, name: 'Alice Updated' }));
+```
+
+### `getState<T>(key)`
+
+Get the full `QueryState` for a key. Returns `QueryState<T> | null`.
 
 ```ts
 const state = queryClient.getState<User>(['users', '1']);
 if (state) {
-  console.log('Status:', state.status);
-  console.log('Is loading:', state.isLoading);
-  console.log('Data:', state.data);
-  console.log('Last updated:', new Date(state.dataUpdatedAt));
+  console.log(state.status, state.data, state.updatedAt);
 }
 ```
 
-### `subscribe<T>(queryKey, listener)`
+### `invalidate(key)`
 
-Subscribe to query state changes. Returns an unsubscribe function.
+Remove a key or all keys with a matching prefix from the cache.
 
-**Parameters:**
-
-- `queryKey: QueryKey` – The query key to watch
-- `listener: (state: QueryState<T>) => void` – Callback invoked on state changes
-
-**Returns:** `() => void` – Unsubscribe function
-
-**Example:**
+- Exact match: `['users', '1']` removes only that entry
+- Prefix match: `['users']` removes all entries starting with `'users'`
 
 ```ts
-// Subscribe to changes
+queryClient.invalidate(['users', '1']); // exact
+queryClient.invalidate(['users']);       // all user queries (prefix match)
+```
+
+### `subscribe<T>(key, listener)`
+
+Subscribe to `QueryState` changes. Returns an unsubscribe function.
+
+```ts
 const unsubscribe = queryClient.subscribe(['users', userId], (state) => {
-  console.log('User changed:', state.data);
-  console.log('Loading:', state.isLoading);
-  console.log('Error:', state.error);
+  console.log(state.status, state.data, state.error);
 });
 
-// Clean up when done
 unsubscribe();
-````
-
-**React Hook Example:**
-
-```tsx
-useEffect(() => {
-  return queryClient.subscribe(['users', userId], (state) => {
-    setUser(state.data);
-    setLoading(state.isLoading);
-  });
-}, [userId]);
 ```
 
 ### `clear()`
 
-Clears all cached queries and aborts in-flight requests.
-
-**Example:**
+Clear all cached entries and cancel in-flight requests.
 
 ```ts
 queryClient.clear();
 ```
 
-### `prefetch<T>(options)`
-
-Prefetch a query without consuming the result. Useful for warming the cache.
-
-**Parameters:**
-
-- `options: QueryOptions<T>` – Same as `fetch()` options
-
-**Returns:** `Promise<void>`
-
-**Example:**
-
-```ts
-// Prefetch user data before navigation
-await queryClient.prefetch({
-  queryKey: ['users', '2'],
-  queryFn: () => http.get('/users/2'),
-});
-```
+---
 
 ## Types
 
 ### `QueryKey`
 
-Array-based unique identifier for queries.
-
 ```ts
 type QueryKey = readonly unknown[];
 ```
 
-**Examples:**
+Examples: `['users']`, `['users', 1]`, `['posts', { status: 'published' }]`
 
-```ts
-['users'][('users', 1)][('posts', { status: 'published' })][('users', userId, 'posts')];
-```
+---
 
 ### `QueryOptions<T>`
 
-Configuration for query execution.
-
 ```ts
 type QueryOptions<T> = {
-  queryKey: QueryKey;
-  queryFn: () => Promise<T>;
+  key: QueryKey;
+  fn: () => Promise<T>;
   staleTime?: number;
   gcTime?: number;
   enabled?: boolean;
   retry?: number | false;
   retryDelay?: number | ((attempt: number) => number);
-  onSuccess?: (data: T) => void;
-  onError?: (error: Error) => void;
 };
 ```
 
-### `MutationOptions<TData, TVariables>`
+---
 
-Configuration for mutation execution.
+### `QueryState<T>`
 
 ```ts
-type MutationOptions<TData, TVariables> = {
-  mutationFn: (variables: TVariables) => Promise<TData>;
-  onSuccess?: (data: TData, variables: TVariables) => void;
-  onError?: (error: Error, variables: TVariables) => void;
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
-  retry?: number | false;
+type QueryState<T> = {
+  data: T | undefined;
+  error: Error | null;
+  status: QueryStatus;    // 'idle' | 'pending' | 'success' | 'error'
+  updatedAt: number;      // timestamp of last state change
+  isLoading: boolean;
+  isSuccess: boolean;
+  isError: boolean;
+  isIdle: boolean;
 };
 ```
 
-### `HttpClientOptions`
+---
 
-Client initialization options.
+### `MutationState<TData>`
+
+Alias for `QueryState<TData>` — same shape, used for mutation observability.
+
+```ts
+type MutationState<TData> = QueryState<TData>;
+```
+
+---
+
+### `QueryStatus`
+
+```ts
+type QueryStatus = 'idle' | 'pending' | 'success' | 'error';
+```
+
+---
+
+### `HttpClientOptions`
 
 ```ts
 type HttpClientOptions = {
   baseUrl?: string;
   headers?: Record<string, string>;
-  timeout?: number;
-  dedupe?: boolean;
+  timeout?: number;        // default: 30000
+  dedupe?: boolean;        // default: false
   logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void;
 };
 ```
 
-**Note:** Fetchit uses [@vielzeug/toolkit](../toolkit/index.md)'s utilities:
+---
 
-- **Retry Logic**: Powered by [retry()](../toolkit/examples/function/retry.md)
+### `QueryClientOptions`
+
+```ts
+type QueryClientOptions = {
+  staleTime?: number;  // default: 0
+  gcTime?: number;     // default: 300000
+};
+```
+
+---
 
 ### `HttpRequestConfig`
 
-Request configuration for REST methods.
-
 ```ts
 type HttpRequestConfig = Omit<RequestInit, 'body'> & {
-  body?: unknown; // Auto-serialized to JSON or passed as-is for FormData/Blob
-  params?: Record<string, string | number | boolean | undefined>; // Path parameters (replace :id or {id} in URL)
-  query?: Record<string, string | number | boolean | undefined>; // Query string parameters (?key=value)
-  dedupe?: boolean; // Enable/disable request deduplication for this request
+  body?: unknown;     // Plain objects auto-serialized to JSON; BodyInit passed through
+  params?: Record<string, string | number | boolean | undefined>; // Path params (:id or {id})
+  search?: Record<string, string | number | boolean | undefined>; // Query string (?key=value)
+  dedupe?: boolean;   // Per-request deduplication override
 };
 ```
 
 **Examples:**
 
 ```ts
-// Query parameters
-await http.get('/users', {
-  query: { role: 'admin', active: true },
-});
+// Query string
+await http.get('/users', { search: { role: 'admin', active: true } });
 // → GET /users?role=admin&active=true
 
 // Path parameters
-await http.get('/users/:id', {
-  params: { id: '123' },
-});
+await http.get('/users/:id', { params: { id: '123' } });
 // → GET /users/123
 
 // Combined
 await http.get('/users/:userId/posts', {
   params: { userId: '123' },
-  query: { status: 'published', limit: 10 },
+  search: { status: 'published', limit: 10 },
 });
 // → GET /users/123/posts?status=published&limit=10
 ```
 
+---
+
 ### `HttpError`
 
-Custom error class with request context.
+Thrown for non-2xx responses and network-level errors.
 
 ```ts
 class HttpError extends Error {
@@ -618,216 +517,126 @@ class HttpError extends Error {
   readonly url: string;
   readonly method: string;
   readonly status?: number;
-  readonly original?: unknown;
+  readonly cause?: unknown;
 }
 ```
 
 **Example:**
 
 ```ts
-import { HttpError, createHttpClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+import { HttpError } from '@vielzeug/fetchit';
 
 try {
   await http.get('/users/1');
 } catch (error) {
   if (error instanceof HttpError) {
-    console.error(`${error.method} ${error.url} failed with status ${error.status}`);
+    console.error(`${error.method} ${error.url} → ${error.status}`);
   }
 }
 ```
 
-### `QueryStatus`
+---
 
-Query state enumeration.
+### `Interceptor`
 
 ```ts
-type QueryStatus = 'idle' | 'pending' | 'success' | 'error';
+type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 ```
+
+### `FetchContext`
+
+```ts
+type FetchContext = { url: string; init: RequestInit };
+```
+
+---
 
 ## Advanced Usage
 
-### Query Keys Best Practices
-
-Use structured query keys for better cache management:
+### Type-Safe Query Keys
 
 ```ts
-// User details
-['users', userId][
-  // User details
-  ('users', userId)
-][
-  // User posts
-  ('users', userId, 'posts')
-][
-  // Filtered posts
-  ('posts', { status: 'published', author: userId })
-];
+const queryKeys = {
+  users: {
+    all: () => ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+    list: (filters: { role?: string }) => ['users', 'list', filters] as const,
+  },
+} as const;
 
-// Invalidate all user-related queries
-queryClient.invalidate(['users']);
+await queryClient.query({
+  key: queryKeys.users.detail('123'),
+  fn: () => http.get('/users/123'),
+});
+
+queryClient.invalidate(queryKeys.users.all());
 ```
 
 ### Optimistic Updates
 
 ```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+queryClient.setData<User>(['users', userId], (old) => ({ ...old, name: 'New Name' }));
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-// Optimistically update cache before mutation
-queryClient.setData(['users', userId], (old) => ({
-  ...old,
-  name: 'New Name',
-}));
-
-// Perform mutation
-await queryClient.mutate(
-  {
-    mutationFn: (data) => http.put<User>(`/users/${userId}`, { body: data }),
-    onError: () => {
-      // Revert on error
-      queryClient.invalidate(['users', userId]);
-    },
-  },
-  { name: 'New Name' },
+const updateUser = queryClient.mutation(
+  (data: Partial<User>) => http.put<User>(`/users/${userId}`, { body: data }),
 );
+
+try {
+  await updateUser.mutate({ name: 'New Name' });
+  queryClient.invalidate(['users', userId]);
+} catch {
+  // Rollback
+  queryClient.invalidate(['users', userId]);
+}
 ```
 
 ### Stale-While-Revalidate Pattern
 
 ```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-// Return stale data immediately, fetch fresh data in background
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
-  staleTime: 5000, // Data is fresh for 5 seconds
-  gcTime: 300000, // Keep in cache for 5 minutes
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
+  staleTime: 5000,   // serve cached data for 5s before refetching
+  gcTime: 300000,    // keep entry in memory for 5 minutes
 });
 ```
 
 ### Custom Retry Strategies
 
-Fetchit uses [@vielzeug/toolkit's retry()](../toolkit/examples/function/retry.md) utility under the hood, giving you powerful retry strategies:
-
 ```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-// Exponential backoff (default)
-await queryClient.fetch({
-  queryKey: ['users'],
-  queryFn: () => http.get<User[]>('/users'),
-  retry: 3, // Retry 3 times
-  // Default: 1s, 2s, 4s, 8s... (max 30s)
-});
-
-// Custom retry delay function
-await queryClient.fetch({
-  queryKey: ['users'],
-  queryFn: () => http.get<User[]>('/users'),
+// Exponential backoff
+await queryClient.query({
+  key: ['users'],
+  fn: () => http.get<User[]>('/users'),
   retry: 3,
-  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
 });
 
 // Fixed delay
-await queryClient.fetch({
-  queryKey: ['users'],
-  queryFn: () => http.get<User[]>('/users'),
+await queryClient.query({
+  key: ['users'],
+  fn: () => http.get<User[]>('/users'),
   retry: 5,
-  retryDelay: 2000, // Wait 2s between retries
+  retryDelay: 2000,
 });
 
 // Disable retries
-await queryClient.fetch({
-  queryKey: ['users'],
-  queryFn: () => http.get<User[]>('/users'),
-  retry: false, // No retries
+await queryClient.query({
+  key: ['users'],
+  fn: () => http.get<User[]>('/users'),
+  retry: false,
 });
 ```
 
-**How it works:**
-
-- If `retryDelay` is a function, it's called with `attemptIndex – 1` (0-based)
-- If `retryDelay` is a number, it's used as a fixed delay
-- If `retryDelay` is undefined, exponential backoff is used (1s → 2s → 4s → 8s, max 30s)
-- Retry requests respect the query's `AbortController` for cancellation
-
-See [retry() documentation](../toolkit/examples/function/retry.md) for more details.
-
-### Request Deduplication
+### Auth Interceptor
 
 ```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
-
-// Multiple identical queries = single network request
-const [user1, user2, user3] = await Promise.all([
-  queryClient.fetch({ queryKey: ['users', 1], queryFn: () => http.get<User>('/users/1') }),
-  queryClient.fetch({ queryKey: ['users', 1], queryFn: () => http.get<User>('/users/1') }),
-  queryClient.fetch({ queryKey: ['users', 1], queryFn: () => http.get<User>('/users/1') }),
-]);
-// Only one actual fetch is made, all receive the same result
-```
-
-### FormData and File Uploads
-
-```ts
-import { createHttpClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-formData.append('name', 'document.pdf');
-
-// Automatically detected and handled correctly
-await http.post('/upload', { body: formData });
-```
-
-### Binary Data
-
-```ts
-import { createHttpClient } from '@vielzeug/fetchit';
-
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-
-// Blob
-const blob = new Blob(['content'], { type: 'text/plain' });
-await http.post('/upload', { body: blob });
-
-// ArrayBuffer
-const buffer = new ArrayBuffer(8);
-await http.post('/data', { body: buffer });
-```
-
-### Reactive Data with Subscriptions
-
-```ts
-import { createQueryClient } from '@vielzeug/fetchit';
-
-const queryClient = createQueryClient();
-
-// Subscribe to changes
-const unsubscribe = queryClient.subscribe(['users', userId], () => {
-  const user = queryClient.getData(['users', userId]);
-  console.log('User updated:', user);
+const dispose = http.use(async (ctx, next) => {
+  const token = await getAccessToken();
+  ctx.init.headers = {
+    ...(ctx.init.headers as Record<string, string>),
+    Authorization: `Bearer ${token}`,
+  };
+  return next(ctx);
 });
-
-// Trigger update
-queryClient.setData(['users', userId], newUserData);
-
-// Clean up
-unsubscribe();
 ```

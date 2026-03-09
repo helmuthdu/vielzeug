@@ -32,33 +32,42 @@ yarn add @vielzeug/permit
 ## Quick Start
 
 ```ts
-import { createPermit } from '@vielzeug/permit';
+import { createPermit, hasRole } from '@vielzeug/permit';
 
 const permit = createPermit();
 
-// Register role permissions
-permit.set('admin', '*', { create: true, read: true, update: true, delete: true });
-permit.set('editor', 'posts', { read: true, update: (user, data) => user.id === data?.authorId });
-permit.set('viewer', 'posts', { read: true });
+// Define role permissions (any string actions, not just CRUD)
+permit
+  .define('admin', '*', { read: true, write: true, delete: true })
+  .define('editor', 'posts', { read: true, write: (user, data) => user.id === data?.authorId })
+  .define('viewer', 'posts', { read: true });
 
 // Check permissions
 const user = { id: 'u1', roles: ['editor'] };
 
-permit.check(user, 'posts', 'read');           // true
-permit.check(user, 'posts', 'update', post);   // true if user.id === post.authorId
-permit.check(user, 'posts', 'delete');         // false
+permit.check(user, 'posts', 'read');                          // true
+permit.check(user, 'posts', 'write', { authorId: 'u1' });    // true
+permit.check(user, 'posts', 'delete');                        // false
 
-// Check if user has a role
-permit.hasRole(user, 'editor'); // true
+// Pre-bind a guard for a single user
+const can = permit.for(user);
+can('posts', 'read');                       // true
+can('posts', 'write', { authorId: 'u1' }); // true
+
+// Check role membership (standalone utility)
+hasRole(user, 'editor'); // true
 ```
 
 ## Features
 
-- **Role-based rules** — map roles to resources and actions (`create`, `read`, `update`, `delete`)
+- **Role-based rules** — map roles to resources and any string actions
 - **Dynamic permissions** — use functions `(user, data) => boolean` for context-aware rules
-- **Wildcard resource** — `'*'` grants permissions across all resources for a role
+- **Wildcard role/resource** — `'*'` applies to all users or all resources
 - **Anonymous users** — automatic `anonymous` role for unauthenticated users
-- **TypeScript generics** — type your user and data shapes with `createPermit<User, Data>()`
+- **Pre-bound guards** — `permit.for(user)` returns a single-user check function
+- **Fluent API** — `define()` chains return the permit instance
+- **Immutable snapshot** — `snapshot()` returns a safe plain-object copy
+- **TypeScript generics** — type your user shape with `createPermit<MyUser>()`
 - **Zero dependencies** — <PackageInfo package="permit" type="size" /> gzipped
 
 ## Next Steps

@@ -161,4 +161,3 @@ console.log(myCache.size()); // 0
 
 - [memo](../function/memo.md): Memoize function results with automatic caching.
 - [merge](./merge.md): Deep merge objects.
-- [clone](./clone.md): Deep clone objects for safe storage.

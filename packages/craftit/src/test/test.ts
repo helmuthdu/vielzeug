@@ -27,9 +27,9 @@ export interface Fixture<T extends HTMLElement = HTMLElement> {
   /** Query all elements by their `data-testid` attribute */
   queryAllByTestId<E extends Element = Element>(testId: string): E[];
   /** Set an attribute (boolean `false` removes it) then flush */
-  attr(name: string, value: string | boolean): Promise<void>;
+  attr(name: string, value: string | number | boolean): Promise<void>;
   /** Set multiple attributes then flush */
-  attrs(record: Record<string, string | boolean>): Promise<void>;
+  attrs(record: Record<string, string | number | boolean>): Promise<void>;
   /** Wait for all reactive updates and animation frames */
   flush(): Promise<void>;
   /** Run a callback then flush — the standard way to trigger and assert a reactive update */
@@ -52,7 +52,7 @@ export interface MountOptions {
   /** Properties assigned directly onto the element */
   props?: Record<string, unknown>;
   /** HTML attributes to set on the element */
-  attrs?: Record<string, string | boolean>;
+  attrs?: Record<string, string | number | boolean>;
   /** Inner HTML for slot content */
   html?: string;
   /** Parent container (default: document.body) */
@@ -97,9 +97,9 @@ export function install(afterEachHook: (fn: () => void) => void): void {
   afterEachHook(cleanup);
 }
 
-function applyAttr(element: Element, name: string, value: string | boolean): void {
+function applyAttr(element: Element, name: string, value: string | number | boolean): void {
   if (value === false) element.removeAttribute(name);
-  else element.setAttribute(name, value === true ? '' : value);
+  else element.setAttribute(name, value === true ? '' : String(value));
 }
 
 /**

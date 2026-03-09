@@ -118,7 +118,7 @@ Apply validation rules based on other field values:
 
 ```ts
 const schema = v.object({
-  type: v.union([v.literal('email'), v.literal('phone')]),
+  type: v.oneOf(v.literal('email'), v.literal('phone')),
   contact: v.string(),
 }).refine((data) => {
   if (data.type === 'email') {
@@ -133,13 +133,13 @@ const schema = v.object({
 Validate against external services or databases:
 
 ```ts
-const emailSchema = v.string().email().refineAsync(
+const emailSchema = v.string().email().refine(
   async (email) => {
     const response = await fetch(`/api/check-email?email=${email}`);
     const { available } = await response.json();
     return available;
   },
-  'Email already taken'
+  'Email already taken',
 );
 
 // Use with parseAsync
@@ -169,18 +169,21 @@ v.string();
 
 // With validation
 v.string()
-  .min(3) // Min length
-  .max(100) // Max length
-  .length(10) // Exact length
+  .min(3)        // Min length
+  .max(100)      // Max length
+  .length(10)    // Exact length
+  .nonempty()    // Shorthand for .min(1)
+  .startsWith('https', 'Must be a secure URL')
+  .endsWith('.ts', 'TypeScript files only')
   .pattern(/^[a-z]+$/) // Regex pattern
-  .email() // Email format
-  .url() // URL format
-  .trim(); // Trim whitespace before validation
+  .email()       // Email format
+  .url()         // URL format
+  .trim();       // Trim whitespace before validation
 
 // Convenience helpers
-v.email(); // Shorthand for v.string().email()
-v.url(); // Shorthand for v.string().url()
-v.uuid(); // UUID validation
+v.email();  // Shorthand for v.string().email()
+v.url();    // Shorthand for v.string().url()
+v.uuid();   // UUID validation
 ```
 
 ### Number
@@ -191,17 +194,18 @@ v.number();
 
 // With validation
 v.number()
-  .min(0) // Minimum value
-  .max(100) // Maximum value
-  .int() // Must be integer
-  .positive() // Must be > 0
-  .negative() // Must be < 0
-  .nonNegative() // Must be >= 0 (alias for .min(0))
-  .nonPositive(); // Must be <= 0 (alias for .max(0))
+  .min(0)         // Minimum value
+  .max(100)       // Maximum value
+  .int()          // Must be integer
+  .positive()     // Must be > 0
+  .negative()     // Must be < 0
+  .nonNegative()  // Must be >= 0 (alias for .min(0))
+  .nonPositive()  // Must be <= 0 (alias for .max(0))
+  .multipleOf(5); // Must be divisible by 5
 
 // Convenience helpers
-v.int().positive(); // Shorthand for v.number().int().positive()
-v.int().negative(); // Shorthand for v.number().int().negative()
+v.int();           // Shorthand for v.number().int()
+v.int().positive(); // Positive integer
 ```
 
 ### Boolean
@@ -226,12 +230,17 @@ v.literal(42); // Exactly 42
 v.literal(true); // Exactly true
 ```
 
-### Enum
+### Literals and Unions of Literals
 
 ```ts
-v.enum('red', 'green', 'blue'); // One of these values
-v.enum(1, 2, 3); // One of these numbers
-v.enum('admin', 'user', 'guest'); // Union of literals
+// Exact value
+v.literal('active'); // Exactly 'active'
+v.literal(42);       // Exactly 42
+v.literal(true);     // Exactly true
+
+// Union of literals (use v.oneOf) — raw values are accepted as shorthand for v.literal()
+v.oneOf('red', 'green', 'blue');     // 'red' | 'green' | 'blue'
+v.oneOf('admin', 'user', 'guest');   // 'admin' | 'user' | 'guest'
 ```
 
 ## Complex Schemas
@@ -244,9 +253,10 @@ v.array(v.string());
 
 // With constraints
 v.array(v.string())
-  .min(1) // Rejects null, undefined, and empty arrays
-  .max(10) // At most 10 items
-  .length(5); // Exactly 5 items
+  .nonempty()  // Rejects empty arrays (shorthand for .min(1))
+  .min(1)      // At least 1 item
+  .max(10)     // At most 10 items
+  .length(5);  // Exactly 5 items
 
 // Nested arrays
 v.array(v.array(v.number())); // number[][]
@@ -273,42 +283,51 @@ v.object({
 });
 
 // Object methods
-schema.partial(); // Make all fields optional
-schema.pick('name', 'email'); // Select specific fields
-schema.omit('password'); // Exclude specific fields
+schema.partial();              // Make all fields optional
+schema.required();             // Remove optional from all fields
+schema.pick('name', 'email');  // Select specific fields
+schema.omit('password');       // Exclude specific fields
+schema.extend({ role: v.string() }); // Add/override fields
+schema.strip();                // Remove unknown keys (default)
+schema.passthrough();          // Allow unknown keys through
+schema.strict();               // Reject unknown keys
+schema.shape;                  // Access raw shape definition
 ```
 
-### Union
+### Unions
 
 ```ts
-// Union of primitives
-v.union(v.string(), v.number()); // string | number
+// v.oneOf: exactly one branch must match (mutual exclusion)
+v.oneOf('light', 'dark');         // 'light' | 'dark'
+v.oneOf(v.string(), v.number()); // string | number
 
 // Discriminated union
-v.union(
-  v.object({
-    type: v.literal('success'),
-    data: v.string(),
-  }),
-  v.object({
-    type: v.literal('error'),
-    error: v.string(),
-  }),
+v.oneOf(
+  v.object({ type: v.literal('success'), data: v.string() }),
+  v.object({ type: v.literal('error'),   message: v.string() }),
+);
+
+// v.noneOf: passes when value matches NONE of the schemas (blocklist/exclusion)
+v.noneOf('admin', 'system'); // any value except those two
+v.noneOf(v.string(), v.number()); // accepts true, null, Date, etc. but not strings or numbers
+
+// v.allOf: all schemas must pass (intersection / mixin)
+v.allOf(
+  v.object({ id: v.number() }),
+  v.object({ name: v.string() }),
 );
 ```
 
 ## Validation Methods
 
-### parse()
-
-Validates and returns data, throws `ValidationError` on failure.
+### Parse (throws)
 
 ```ts
 try {
   const user = userSchema.parse(data);
   console.log(user); // Typed data
 } catch (error) {
-  if (error instanceof ValidationError) {
+  if (ValidationError.is(error)) {
     error.issues.forEach((issue) => {
       console.log(`${issue.path.join('.')}: ${issue.message}`);
     });
@@ -330,7 +349,7 @@ if (result.success) {
 }
 ```
 
-## Async Validation
+### Async Validation
 
 ### parseAsync()
 
@@ -340,7 +359,7 @@ For schemas with async validators.
 const schema = v
   .string()
   .email()
-  .refineAsync(async (email) => {
+  .refine(async (email) => {
     const exists = await checkDatabase(email);
     return !exists;
   }, 'Email already exists');
@@ -348,7 +367,9 @@ const schema = v
 try {
   const email = await schema.parseAsync('user@example.com');
 } catch (error) {
-  console.error(error.issues);
+  if (ValidationError.is(error)) {
+    console.error(error.issues);
+  }
 }
 ```
 
@@ -377,7 +398,7 @@ const schema = v.array(
       id: v.number(),
       name: v.string(),
     })
-    .refineAsync(async (item) => {
+    .refine(async (item) => {
       return await validateItem(item);
     }),
 );
@@ -460,19 +481,19 @@ v.number().default(0); // Returns 0 if undefined
 v.boolean().default(false); // Returns false if undefined
 
 v.object({
-  theme: v.enum('light', 'dark').default('light'),
+  theme: v.oneOf(v.literal('light'), v.literal('dark')).default('light' as 'light' | 'dark'),
   language: v.string().default('en'),
 });
 ```
 
 ## Custom Refinements
 
-### refine() – Sync
+### refine() – Sync and Async
 
-Add custom validation logic.
+Add custom validation logic. Pass an async function to defer to `parseAsync()`.
 
 ```ts
-// Simple refinement
+// Simple sync refinement
 v.string().refine((val) => val.length >= 3, 'Must be at least 3 characters');
 
 // Multiple refinements
@@ -486,35 +507,12 @@ v.object({
   password: v.string(),
   confirmPassword: v.string(),
 }).refine((data) => data.password === data.confirmPassword, 'Passwords must match');
-```
 
-### refineAsync() – Async
-
-Add async validation (database checks, API calls).
-
-```ts
-// Username availability
-v.string()
-  .min(3)
-  .refineAsync(async (username) => {
-    const available = await checkAvailability(username);
-    return available;
-  }, 'Username already taken');
-
-// Email validation with database
-v.email().refineAsync(async (email) => {
+// Async refinement — detected automatically; use parseAsync / safeParseAsync
+v.email().refine(async (email) => {
   const exists = await db.users.findOne({ email });
   return !exists;
 }, 'Email already registered');
-
-// Combine sync and async
-v.string()
-  .min(3) // Sync
-  .refine((val) => /^[a-z]+$/.test(val), 'Only lowercase') // Sync
-  .refineAsync(async (val) => {
-    // Async
-    return await isUnique(val);
-  }, 'Already exists');
 ```
 
 ## Error Handling
@@ -601,7 +599,7 @@ const schema = v.object({
   name: v.string(),
   email: v.email().optional(),
   age: v.number().nullable(),
-  role: v.enum('admin', 'user').default('user'),
+  role: v.oneOf(v.literal('admin'), v.literal('user')).default('user' as 'admin' | 'user'),
 });
 
 type User = Infer<typeof schema>;
@@ -622,14 +620,14 @@ const schema = v.object({
     name: v.string(),
     contacts: v.array(
       v.object({
-        type: v.enum('email', 'phone'),
+        type: v.oneOf(v.literal('email'), v.literal('phone')),
         value: v.string(),
       }),
     ),
   }),
   settings: v
     .object({
-      theme: v.enum('light', 'dark'),
+      theme: v.oneOf(v.literal('light'), v.literal('dark')),
     })
     .optional(),
 });
@@ -647,6 +645,63 @@ type Data = Infer<typeof schema>;
 //     theme: 'light' | 'dark';
 //   };
 // }
+```
+
+## Recursive Schemas
+
+Use `v.lazy()` to define schemas that reference themselves (e.g. tree structures, nested comments).
+
+```ts
+import { v, type Schema, type Infer } from '@vielzeug/validit';
+
+type Category = {
+  name: string;
+  subcategories: Category[];
+};
+
+const CategorySchema: Schema<Category> = v.lazy(() =>
+  v.object({
+    name: v.string(),
+    subcategories: v.array(CategorySchema),
+  }),
+);
+
+CategorySchema.parse({ name: 'Root', subcategories: [{ name: 'Child', subcategories: [] }] });
+```
+
+## Class Validation
+
+Use `v.instanceof()` to validate class instances.
+
+```ts
+class File {
+  constructor(public name: string, public size: number) {}
+}
+
+const FileSchema = v.object({
+  file: v.instanceof(File),
+  label: v.string(),
+});
+
+FileSchema.parse({ file: new File('photo.png', 2048), label: 'Profile picture' });
+```
+
+## pipe()
+
+`pipe()` chains schemas in sequence: each schema's output feeds into the next as input. Useful for coerce → validate pipelines.
+
+```ts
+import { pipe, v } from '@vielzeug/validit';
+
+// Accept a string, coerce it to a number, then apply number constraints
+const portSchema = pipe(v.string(), v.coerce.number(), v.number().int().min(1024).max(65535));
+portSchema.parse('3000'); // → 3000
+
+// CSV string → array of trimmed strings
+const tagsSchema = pipe(
+  v.string(),
+  v.string().transform((s) => s.split(',').map((t) => t.trim())),
+);
 ```
 
 ## Best Practices

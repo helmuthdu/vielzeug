@@ -8,7 +8,7 @@ export default defineConfig(
   mergeConfig(getConfig(__dirname, { name: 'deposit' }), {
     build: {
       rollupOptions: {
-        external: ['@vielzeug/logit', '@vielzeug/toolkit'],
+        external: ['@vielzeug/toolkit'],
       },
     },
   }),

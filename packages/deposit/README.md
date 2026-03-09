@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/deposit)](https://www.npmjs.com/package/@vielzeug/deposit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**createDeposit** is a schema-driven storage library for the browser: define typed collections, persist to IndexedDB or LocalStorage, and query with a fluent builder — without writing a single raw database call.
+**Deposit** is a schema-driven storage library for the browser: define typed tables, persist to IndexedDB or LocalStorage via a discriminated config, and query with a fluent builder — without writing a single raw database call.
 
 ## Installation
 
@@ -17,38 +17,33 @@ pnpm add @vielzeug/deposit
 ## Quick Start
 
 ```typescript
-import { createDeposit, IndexedDBAdapter, defineSchema } from '@vielzeug/deposit';
+import { createDeposit, defineSchema } from '@vielzeug/deposit';
 
-interface User { id: string; name: string; email: string; age: number }
+interface User { id: string; name: string; age: number }
 
-const schema = defineSchema<{ users: User }>()(({ collection }) => ({
-  users: collection<User>({ key: 'id' }),
-}));
-
-const db = await createDeposit({
-  adapter: IndexedDBAdapter('myapp', schema),
-  schema,
+const schema = defineSchema<{ users: User }>({
+  users: { key: 'id', indexes: ['age'] },
 });
 
-await db.users.add({ id: '1', name: 'Alice', email: 'alice@example.com', age: 30 });
+const db = createDeposit({ type: 'localStorage', dbName: 'my-app', schema });
 
-const adults = await db.users
-  .where('age')
-  .between(18, 99)
-  .orderBy('name')
-  .toArray();
+await db.put('users', { id: '1', name: 'Alice', age: 30 });
+await db.put('users', { id: '2', name: 'Bob', age: 25 });
+
+const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
+
+const alice = await db.get('users', '1');
 ```
 
 ## Features
 
-- ✅ **Schema-driven** — define typed collections once, get full type inference everywhere
-- ✅ **Multiple adapters** — `IndexedDBAdapter` (persistent) and `LocalStorageAdapter` (sync, smaller data)
-- ✅ **Fluent query builder** — filter, sort, paginate, aggregate without SQL
-- ✅ **Migrations** — structured migration runner for schema evolution
-- ✅ **CRUD** — `add`, `put`, `update`, `delete`, `clear`, `count`, `getAll`, `getById`
-- ✅ **Aggregations** — `count`, `min`, `max`, `sum`, `average`
-- ✅ **Grouping** — `toGrouped(key)` for bucketed results
-- ✅ **Type-safe** — TypeScript inference throughout
+- ✅ **Schema-driven** — `defineSchema()` types every table and query result
+- ✅ **Discriminated config** — `{ type: 'localStorage' | 'indexedDB', ... }` — no separate adapter instances
+- ✅ **Fluent query builder** — `equals`, `between`, `startsWith`, `filter`, `orderBy`, `limit`, `offset`, `page`, `reverse`, `map`, `search`
+- ✅ **TTL support** — per-record expiry via optional `ttl` (milliseconds) on `put` / `bulkPut`
+- ✅ **Transactions** — atomic multi-table writes (IndexedDB only)
+- ✅ **Bulk operations** — `bulkPut` / `bulkDelete`
+- ✅ **Zero dependencies** — tiny bundle
 
 ## Usage
 
@@ -60,143 +55,202 @@ import { defineSchema } from '@vielzeug/deposit';
 interface Post { id: string; title: string; authorId: string; publishedAt: number }
 interface Comment { id: string; postId: string; body: string }
 
-const schema = defineSchema<{ posts: Post; comments: Comment }>()(({ collection }) => ({
-  posts:    collection<Post>({ key: 'id' }),
-  comments: collection<Comment>({ key: 'id' }),
-}));
+const schema = defineSchema<{ posts: Post; comments: Comment }>({
+  posts:    { key: 'id', indexes: ['authorId', 'publishedAt'] },
+  comments: { key: 'id', indexes: ['postId'] },
+});
 ```
 
-### Adapters
+### Create an Adapter
 
 ```typescript
-import { IndexedDBAdapter, LocalStorageAdapter } from '@vielzeug/deposit';
+import { createDeposit } from '@vielzeug/deposit';
 
-// IndexedDB — persistent, handles large data, version-based migrations
-const idbAdapter = IndexedDBAdapter('my-app', schema, { version: 1 });
+// LocalStorage — simple, synchronous under the hood, ~5-10 MB limit
+const db = createDeposit({ type: 'localStorage', dbName: 'my-app', schema });
 
-// LocalStorage — synchronous, for small/simple data (no version param)
-const lsAdapter = LocalStorageAdapter('my-app', schema);
+// IndexedDB — async, larger storage, supports migrations and transactions
+const db = createDeposit({
+  type: 'indexedDB',
+  dbName: 'my-app',
+  version: 1,
+  schema,
+  migrationFn: (db, oldVersion, newVersion, tx) => { /* ... */ },
+});
 ```
 
-### CRUD Operations
+### CRUD
 
 ```typescript
-const db = await createDeposit({ adapter: idbAdapter, schema });
+// Upsert
+await db.put('posts', { id: '1', title: 'Hello', authorId: 'u1', publishedAt: Date.now() });
 
-// Add
-await db.posts.add({ id: '1', title: 'Hello', authorId: 'u1', publishedAt: Date.now() });
-
-// Put (upsert)
-await db.posts.put({ id: '1', title: 'Updated', authorId: 'u1', publishedAt: Date.now() });
-
-// Update (partial)
-await db.posts.update('1', { title: 'Patched Title' });
-
-// Delete
-await db.posts.delete('1');
+// Upsert with TTL (expires after 1 hour)
+await db.put('sessions', session, 3_600_000);
 
 // Get by key
-const post = await db.posts.getById('1');
+const post = await db.get('posts', '1');
+const post = await db.get('posts', '1', defaultPost); // with default value
 
 // Get all
-const all = await db.posts.getAll();
+const all = await db.getAll('posts');
+
+// Delete
+await db.delete('posts', '1');
+
+// Clear table
+await db.clear('posts');
+
+// Count
+const total = await db.count('posts');
 ```
 
-### Querying
+### Bulk Operations
 
 ```typescript
-// Filter with where
-const recent = await db.posts
-  .where('publishedAt')
-  .between(Date.now() - 86400_000, Date.now())
+await db.bulkPut('posts', [post1, post2, post3]);
+await db.bulkPut('sessions', sessions, 3_600_000); // with TTL
+
+await db.bulkDelete('posts', ['id1', 'id2', 'id3']);
+```
+
+### Query Builder
+
+```typescript
+// Equality
+const byAuthor = await db.query('posts').equals('authorId', 'u1').toArray();
+
+// Range (number or string)
+const recent = await db
+  .query('posts')
+  .between('publishedAt', Date.now() - 86_400_000, Date.now())
   .orderBy('publishedAt', 'desc')
   .limit(10)
   .toArray();
 
-// Equality
-const byAuthor = await db.posts.where('authorId').equals('u1').toArray();
+// Prefix match (case-insensitive)
+const results = await db.query('posts').startsWith('title', 'Hello', true).toArray();
 
-// Prefix match
-const results = await db.posts.where('title').startsWith('Hello').toArray();
-
-// Custom filter
-const long = await db.posts.filter(p => p.title.length > 50).toArray();
+// Custom predicate
+const long = await db.query('posts').filter(p => p.title.length > 50).toArray();
 
 // Pagination
-const page = await db.posts.orderBy('publishedAt').page(2, 20).toArray();
+const page2 = await db.query('posts').orderBy('publishedAt').page(2, 20).toArray();
 
-// Aggregations
-const total  = await db.posts.count();
-const oldest = await db.posts.min('publishedAt');
-const newest = await db.posts.max('publishedAt');
+// Map to new type
+const titles = await db.query('posts').map(p => p.title).toArray();
+// QueryBuilder<string>
 
-// Grouping
-const grouped = await db.posts.toGrouped('authorId');
-// Record<string, Post[]>
+// Fuzzy search
+const found = await db.query('posts').search('typescript').toArray();
+
+// Terminal methods
+const first = await db.query('posts').orderBy('publishedAt').first();
+const last  = await db.query('posts').orderBy('publishedAt').last();
+const count = await db.query('posts').equals('authorId', 'u1').count();
 ```
 
-### Migrations
+### Transactions (IndexedDB only)
 
 ```typescript
-import { DepositMigrationFn } from '@vielzeug/deposit';
-
-const migrations: DepositMigrationFn[] = [
-  async ({ db }) => {
-    // v1 → v2: add index
-    db.createObjectStore('tags', { keyPath: 'id' });
-  },
-];
-
-const db = await createDeposit({
-  adapter: IndexedDBAdapter('my-app', schema, { version: 2 }),
-  schema,
-  migrations,
+await db.transaction(['posts', 'comments'], async (stores) => {
+  stores.posts.push({ id: 'p1', title: 'New post', authorId: 'u1', publishedAt: Date.now() });
+  stores.comments.push({ id: 'c1', postId: 'p1', body: 'First comment!' });
+  // All changes committed atomically in a single IDBTransaction
 });
+```
+
+> **Note:** `transaction()` is only available on `IndexedDBAdapter`.
+
+### Schema Migrations (IndexedDB)
+
+```typescript
+import type { MigrationFn } from '@vielzeug/deposit';
+
+const migrationFn: MigrationFn = (db, oldVersion, newVersion, tx) => {
+  if (oldVersion < 2) {
+    const store = tx.objectStore('users');
+    const req = store.getAll();
+    req.onsuccess = () => {
+      for (const user of req.result) {
+        if (!user.role) { user.role = 'user'; store.put(user); }
+      }
+    };
+  }
+};
+
+const db = createDeposit({ type: 'indexedDB', dbName: 'my-app', version: 2, schema, migrationFn });
 ```
 
 ## API
 
-### `createDeposit(options)`
+### `defineSchema<S>(schema)`
 
-| Option | Type | Description |
+Creates a type-safe schema definition. `S` maps table names to record types.
+
+```typescript
+const schema = defineSchema<{ users: User }>({
+  users: { key: 'id', indexes: ['email', 'role'] },
+});
+```
+
+### `createDeposit(config)`
+
+| Config field | Type | Description |
 |---|---|---|
-| `adapter` | `StorageAdapter` | `IndexedDBAdapter(...)` or `LocalStorageAdapter(...)` |
-| `schema` | `Schema` | Schema created with `defineSchema()()` |
-| `migrations` | `DepositMigrationFn[]` | Optional migration runner |
+| `type` | `'localStorage' \| 'indexedDB'` | Adapter to use |
+| `dbName` | `string` | Database / storage namespace |
+| `schema` | `Schema<S>` | Schema from `defineSchema()` |
+| `version` | `number` | *(indexedDB only)* Schema version, default `1` |
+| `migrationFn` | `MigrationFn` | *(indexedDB only)* Called on version upgrade |
+| `logger` | `Logger` | Custom logger, default `console` |
 
-Returns a typed `Db` object with one property per collection.
+Returns an `Adapter<S>`.
 
-### `defineSchema<S>()(factory)`
-
-Define the database schema with full type inference.
-
-### Collection Methods
+### `Adapter<S>` methods
 
 | Method | Description |
 |---|---|
-| `add(record)` | Insert a record |
-| `put(record)` | Upsert a record |
-| `update(key, patch)` | Partial update |
-| `delete(key)` | Delete by key |
-| `clear()` | Remove all records |
-| `getById(key)` | Fetch by primary key |
-| `getAll()` | Fetch all records |
-| `count()` | Count all records |
-| `where(field)` | Start a query on a field |
-| `filter(fn)` | Arbitrary predicate filter |
-| `orderBy(field, dir?)` | Sort results |
-| `limit(n)` | Limit result count |
-| `offset(n)` | Skip first n records |
-| `page(page, size)` | Paginate |
-| `toArray()` | Execute query and return array |
-| `first()` | Return first result |
-| `last()` | Return last result |
-| `min(field)` | Minimum field value |
-| `max(field)` | Maximum field value |
-| `sum(field)` | Sum a numeric field |
-| `average(field)` | Average a numeric field |
-| `toGrouped(field)` | Group results by field |
-| `search(query, fields)` | Full-text search across fields |
+| `get(table, key, default?)` | Fetch by primary key (returns `undefined` if expired/missing) |
+| `getAll(table)` | Fetch all non-expired records |
+| `put(table, value, ttl?)` | Upsert; optional TTL in ms |
+| `delete(table, key)` | Delete by key |
+| `clear(table)` | Remove all records from table |
+| `count(table)` | Count non-expired records |
+| `bulkPut(table, values, ttl?)` | Upsert multiple records |
+| `bulkDelete(table, keys)` | Delete multiple records |
+| `query(table)` | Start a `QueryBuilder` for the table |
+
+### `QueryBuilder<T>` methods
+
+**Chainable (return a new `QueryBuilder`):**
+
+| Method | Description |
+|---|---|
+| `equals(field, value)` | Exact match |
+| `between(field, lower, upper)` | Range filter (number or string) |
+| `startsWith(field, prefix, ignoreCase?)` | Prefix filter on string fields |
+| `filter(fn)` | Arbitrary predicate |
+| `orderBy(field, 'asc' \| 'desc')` | Sort; default `'asc'` |
+| `limit(n)` | Take at most `n` results |
+| `offset(n)` | Skip first `n` results |
+| `page(num, size)` | Cursor-style pagination |
+| `reverse()` | Reverse current order |
+| `map<U>(fn)` | Transform records; returns `QueryBuilder<U>` |
+| `search(query, tone?)` | Fuzzy full-text search |
+
+**Terminal (return a `Promise`):**
+
+| Method | Description |
+|---|---|
+| `toArray()` | Execute and return all results |
+| `first()` | Return first result or `undefined` |
+| `last()` | Return last result or `undefined` |
+| `count()` | Return result count |
+
+### `IndexedDBAdapter.transaction(tables, fn, ttl?)`
+
+Atomic multi-table write. `fn` receives a map of `{ [table]: records[] }` that you mutate; changes are committed in a single `IDBTransaction`.
 
 ## Documentation
 

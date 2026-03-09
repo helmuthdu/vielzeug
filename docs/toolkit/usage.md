@@ -81,15 +81,12 @@ import { chunk, group } from '@vielzeug/toolkit';
 ### Arrays
 
 ```ts
-import { map, filter, group, chunk } from '@vielzeug/toolkit';
+import { select, group, chunk, toggle, uniq, keyBy } from '@vielzeug/toolkit';
 
 const numbers = [1, 2, 3, 4, 5, 6];
 
-// Transform
-const doubled = map(numbers, (n) => n * 2); // [2, 4, 6, 8, 10, 12]
-
-// Filter
-const evens = filter(numbers, (n) => n % 2 === 0); // [2, 4, 6]
+// Map + filter in one step
+const evenDoubled = select(numbers, (n) => n % 2 === 0 ? n * 2 : null); // [4, 8, 12]
 
 // Group
 const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
@@ -97,12 +94,18 @@ const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
 
 // Chunk
 const batches = chunk(numbers, 2); // [[1, 2], [3, 4], [5, 6]]
+
+// Toggle item in/out
+const updated = toggle([1, 2, 3], 2); // [1, 3]
+
+// Remove duplicates
+const unique = uniq([1, 2, 2, 3]); // [1, 2, 3]
 ```
 
 ### Objects
 
 ```ts
-import { merge, clone, path, diff } from '@vielzeug/toolkit';
+import { merge, path, diff, seek, prune } from '@vielzeug/toolkit';
 
 const config = { api: { host: 'localhost', port: 8080 } };
 const overrides = { api: { port: 3000 } };
@@ -111,11 +114,14 @@ const overrides = { api: { port: 3000 } };
 const final = merge('deep', config, overrides);
 // { api: { host: 'localhost', port: 3000 } }
 
-// Deep clone
-const copy = clone(config);
-
 // Access nested properties
 const port = path(config, 'api.port'); // 8080
+
+// Find key anywhere in nested object
+const host = seek(config, 'host'); // 'localhost'
+
+// Remove nulls/empty values
+const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
 
 // Find differences
 const changes = diff(config, final);
@@ -136,42 +142,51 @@ truncate('A very long string', 10); // 'A very lon...'
 
 ### Type Guards
 
+All type checks live on the `is` namespace:
+
 ```ts
-import { isString, isArray, isObject, isEmpty } from '@vielzeug/toolkit';
+import { is } from '@vielzeug/toolkit';
 
 function processInput(input: unknown) {
-  if (isString(input)) {
+  if (is.string(input)) {
     return input.toUpperCase(); // TypeScript knows input is string
   }
 
-  if (isArray(input)) {
+  if (is.array(input)) {
     return input.length; // TypeScript knows input is array
   }
 
-  if (isObject(input)) {
+  if (is.object(input)) {
     return Object.keys(input); // TypeScript knows input is object
   }
 }
+
+// Deep equality, pattern matching, numeric checks
+is.equal([1,2], [1,2]);           // true
+is.match(user, { role: 'admin' }); // true
+is.positive(5);                    // true
+is.within(3, 1, 5);                // true
+is.ge(5, 5);                       // true  (a >= b)
 ```
 
 ## Advanced Usage
 
 ### Async Operations
 
-Many utilities support async callbacks:
-
 ```ts
-import { map, filter } from '@vielzeug/toolkit';
+import { parallel, retry, race, waitFor } from '@vielzeug/toolkit';
 
-// Async map – parallel execution
-const users = await map([1, 2, 3], async (id) => {
-  return await fetchUser(id);
-});
+// Process with concurrency limit
+const users = await parallel(3, ids, async (id) => fetchUser(id));
 
-// Async filter
-const active = await filter(users, async (user) => {
-  return (await checkStatus(user.id)) === 'active';
-});
+// Retry with exponential backoff
+const data = await retry(() => fetchData(), { times: 3, delay: 500, backoff: 2 });
+
+// Ensure loading state shows for at least 300ms (prevents flicker)
+const result = await race(fetchQuickData(), 300);
+
+// Poll until ready
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
 ```
 
 ### Composition
@@ -179,15 +194,11 @@ const active = await filter(users, async (user) => {
 Combine utilities for complex transformations:
 
 ```ts
-import { filter, group, arrange } from '@vielzeug/toolkit';
+import { select, group } from '@vielzeug/toolkit';
 
-// Chain operations
+// Filter in-stock products and group by category
 const result = group(
-  arrange(
-    filter(products, (p) => p.inStock),
-    (p) => p.price,
-    'desc',
-  ),
+  select(products, (p) => p.inStock ? p : null),
   (p) => p.category,
 );
 ```
@@ -306,13 +317,13 @@ import * as toolkit from '@vielzeug/toolkit';
 ✅ **Good**: Let TypeScript infer types
 
 ```ts
-const names = map(users, (u) => u.name); // string[]
+const names = select(users, (u) => u.name); // string[]
 ```
 
 ❌ **Bad**: Manual type assertions
 
 ```ts
-const names = map(users, (u) => u.name) as string[];
+const names = select(users, (u) => u.name) as string[];
 ```
 
 ### 3. Use Type Guards
@@ -320,7 +331,7 @@ const names = map(users, (u) => u.name) as string[];
 ✅ **Good**: Type-safe runtime checks
 
 ```ts
-if (isString(value)) {
+if (is.string(value)) {
   return value.toUpperCase();
 }
 ```
@@ -336,7 +347,7 @@ return (value as string).toUpperCase();
 ✅ **Good**: Readable transformations
 
 ```ts
-const result = group(filter(items, isValid), (item) => item.category);
+const result = group(select(items, isValid), (item) => item.category);
 ```
 
 ❌ **Bad**: Nested callbacks
@@ -352,10 +363,10 @@ const result = items.reduce((acc, item) => {
 
 ### 5. Handle Async Operations
 
-✅ **Good**: Use built-in async support
+✅ **Good**: Use `parallel` for concurrent fetching
 
 ```ts
-const users = await map(ids, async (id) => fetchUser(id));
+const users = await parallel(5, ids, async (id) => fetchUser(id));
 ```
 
 ❌ **Bad**: Manual Promise.all

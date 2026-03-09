@@ -27,7 +27,7 @@ import { createForm, type FormInit } from '@vielzeug/formit';
 
 function useForm(init: FormInit) {
   const [form] = useState(() => createForm(init));
-  const [state, setState] = useState(form.snapshot());
+  const [state, setState] = useState(form.getState());
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -51,10 +51,11 @@ function LoginForm() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        form.submit(async (formData) => {
+        form.submit(async (values) => {
           const response = await fetch('/api/login', {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
           });
           return response.json();
         });
@@ -84,7 +85,7 @@ import { createForm, type FormInit } from '@vielzeug/formit';
 
 export function useForm(init: FormInit) {
   const form = createForm(init);
-  const state = ref(form.snapshot());
+  const state = ref(form.getState());
   let unsubscribe;
 
   onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
@@ -111,10 +112,11 @@ const { form, state } = useForm({
 });
 
 const handleSubmit = async () => {
-  await form.submit(async (formData) => {
+  await form.submit(async (values) => {
     const response = await fetch('/api/login', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
     });
     return response.json();
   });
@@ -161,17 +163,18 @@ const form = createForm({
   },
 });
 
-const state = writable(form.snapshot());
+const state = writable(form.getState());
 let unsubscribe;
 
 onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
 onDestroy(() => unsubscribe?.());
 
 async function handleSubmit() {
-  await form.submit(async (formData) => {
+  await form.submit(async (values) => {
     const response = await fetch('/api/login', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
     });
     return response.json();
   });
@@ -229,11 +232,11 @@ const loginForm = createForm({
 // Handle submission
 async function handleLogin() {
   try {
-    const result = await loginForm.submit(async (formData) => {
+    const result = await loginForm.submit(async (values) => {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(formData)),
+        body: JSON.stringify(values),
       });
 
       if (!response.ok) {
@@ -307,10 +310,11 @@ const registrationForm = createForm({
 
 // Submit
 async function handleRegistration() {
-  await registrationForm.submit(async (formData) => {
+  await registrationForm.submit(async (values) => {
     const response = await fetch('/api/register', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
     });
     return response.json();
   });
@@ -322,7 +326,7 @@ async function handleRegistration() {
 Form with file upload and validation.
 
 ```typescript
-import { createForm } from '@vielzeug/formit';
+import { createForm, toFormData } from '@vielzeug/formit';
 
 const contactForm = createForm({
   values: {
@@ -362,11 +366,11 @@ function handleFileChange(event: Event) {
 
 // Submit
 async function handleSubmit() {
-  await contactForm.submit(async (formData) => {
-    // FormData automatically includes the file
+  await contactForm.submit(async (values) => {
+    // Use toFormData to include the file attachment
     const response = await fetch('/api/contact', {
       method: 'POST',
-      body: formData,
+      body: toFormData(values),
     });
     return response.json();
   });
@@ -448,10 +452,11 @@ async function nextStep() {
 async function submitWizard() {
   const isValid = await validateCurrentStep();
   if (isValid) {
-    await wizardForm.submit(async (formData) => {
+    await wizardForm.submit(async (values) => {
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
       });
       return response.json();
     });
@@ -508,14 +513,11 @@ function updateMember(index: number, field: keyof TeamMember, value: string) {
 
 // Submit
 async function submitTeam() {
-  await dynamicForm.submit(async (formData) => {
+  await dynamicForm.submit(async (values) => {
     const response = await fetch('/api/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        teamName: formData.get('teamName'),
-        members: dynamicForm.get('members'),
-      }),
+      body: JSON.stringify(values),
     });
     return response.json();
   });
@@ -630,19 +632,17 @@ profileForm.subscribe(() => {
 
 // Submit
 async function submitProfile() {
-  await profileForm.submit(async (formData) => {
-    const accountType = formData.get('accountType');
-
+  await profileForm.submit(async (values) => {
     const payload: Record<string, unknown> = {
-      accountType,
-      name: formData.get('name'),
-      email: formData.get('email'),
+      accountType: values['accountType'],
+      name: values['name'],
+      email: values['email'],
     };
 
-    if (accountType === 'business') {
-      payload['companyName'] = formData.get('companyName');
-      payload['vatNumber'] = formData.get('vatNumber');
-      payload['businessEmail'] = formData.get('businessEmail');
+    if (values['accountType'] === 'business') {
+      payload['companyName'] = values['companyName'];
+      payload['vatNumber'] = values['vatNumber'];
+      payload['businessEmail'] = values['businessEmail'];
     }
 
     const response = await fetch('/api/profile', {

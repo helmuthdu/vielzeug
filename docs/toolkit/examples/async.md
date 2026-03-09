@@ -70,22 +70,9 @@ const clickEvent = await eventPromise.promise;
 
 ## delay
 
-Delay the execution of a function by a specified time.
-
-```typescript
-import { delay } from '@vielzeug/toolkit';
-
-// Basic usage
-const log = () => console.log('Hello, world!');
-delay(log, 1000); // Logs after 1 second
-
-// With async function
-const fetchData = async () => fetch('/api/data');
-const result = await delay(fetchData, 500);
-
-// Custom delay
-await delay(() => processData(), 2000);
-```
+::: warning Removed
+`delay` has been removed. Use `sleep` for a plain async wait, or `attempt` for delayed retries.
+:::
 
 ## parallel
 
@@ -136,30 +123,9 @@ async function fetchUser(id: number) {
 
 ## predict
 
-Add timeout to async operations with AbortSignal support.
-
-```typescript
-import { predict } from '@vielzeug/toolkit';
-
-// Basic usage
-const result = await predict(
-  async (signal) => {
-    const response = await fetch('/api/data', { signal });
-    return response.json();
-  },
-  { timeout: 5000 },
-);
-
-// With custom AbortSignal
-const controller = new AbortController();
-
-const result = await predict(async (signal) => longRunningTask(signal), { timeout: 10000, signal: controller.signal });
-
-// Combine with retry
-import { retry } from '@vielzeug/toolkit';
-
-const result = await retry(() => predict((signal) => fetchData(signal), { timeout: 5000 }), { times: 3, delay: 1000 });
-```
+::: tip Internal utility
+`predict` is not exported from the package index. It powers `attempt` internally. Use `attempt` for retry + timeout logic, or `race` for a minimum-delay guarantee.
+:::
 
 ## queue
 
@@ -198,7 +164,7 @@ for (const url of urls) {
 
 ## race
 
-Race promises with a guaranteed minimum delay (better UX for loading states).
+Race a promise against a guaranteed minimum delay — useful for preventing loading flicker.
 
 ```typescript
 import { race } from '@vielzeug/toolkit';
@@ -206,17 +172,10 @@ import { race } from '@vielzeug/toolkit';
 // Show loading spinner for at least 500ms
 const data = await race(fetchQuickData(), 500);
 
-// Prevents flickering for fast operations
-const result = await race(
-  [fetch('/api/1'), fetch('/api/2')],
-  1000, // Ensure at least 1 second
-);
-
 // Use case: Better UX
 async function loadUserProfile(userId: string) {
   // Even if data loads in 50ms, show spinner for at least 300ms
   const user = await race(fetchUser(userId), 300);
-
   return user;
 }
 ```
@@ -322,19 +281,11 @@ await waitFor(() => window.myGlobal !== undefined, {
 ### API Request with Retry and Timeout
 
 ```typescript
-import { retry, predict } from '@vielzeug/toolkit';
+import { retry, attempt } from '@vielzeug/toolkit';
 
 async function fetchWithRetry(url: string) {
   return retry(
-    () =>
-      predict(
-        async (signal) => {
-          const response = await fetch(url, { signal });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json();
-        },
-        { timeout: 5000 },
-      ),
+    () => attempt(() => fetch(url).then(r => r.json()), { timeout: 5000 }),
     { times: 3, delay: 1000, backoff: 2 },
   );
 }

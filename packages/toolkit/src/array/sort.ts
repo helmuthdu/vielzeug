@@ -1,31 +1,41 @@
 import { assert } from '../function/assert';
 import { compare } from '../function/compare';
+import { compareBy } from '../function/compareBy';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 
 /**
- * Sorts an array of objects by a specific key in ascending order.
+ * Sorts an array by a selector function (single-field) or by a multi-field
+ * object of `{ key: 'asc' | 'desc' }` entries.
  *
  * @example
  * ```ts
- * const data = [{ a: 2 }, { a: 3 }, { a: 1 }];
- * sort(data, (item) => item.a); // [{ a: 1 }, { a: 2 }, { a: 3 }]
+ * // Single field
+ * sort([{ a: 2 }, { a: 1 }], item => item.a);           // [{ a:1 }, { a:2 }]
+ * sort([{ a: 2 }, { a: 1 }], item => item.a, 'desc');   // [{ a:2 }, { a:1 }]
+ *
+ * // Multi-field
+ * sort(users, { name: 'asc', age: 'desc' });
  * ```
  *
- * @param array - The array of objects to sort.
- * @param selector - A function that extracts the key to sort by.
- * @param desc - A boolean indicating whether to sort in descending order (default: false).
+ * @param array - The array to sort.
+ * @param selector - A function extracting the sort key, or a multi-field object.
+ * @param direction - `'asc'` (default) or `'desc'` — only applies to single-field mode.
+ * @returns A new sorted array.
  *
- * @returns A new array sorted by the specified key.
- *
- * @throws {TypeError} If the provided array is not an array.
+ * @throws {TypeError} If the first argument is not an array.
  */
 // biome-ignore lint/suspicious/noExplicitAny: -
-export const sort = <T>(array: T[], selector: (item: T) => any, desc = false) => {
+export function sort<T>(array: T[], selector: (item: T) => any, direction?: 'asc' | 'desc'): T[];
+export function sort<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
+// biome-ignore lint/suspicious/noExplicitAny: -
+export function sort<T>(array: T[], selectorOrSelectors: ((item: T) => any) | Partial<Record<keyof T, 'asc' | 'desc'>>, direction: 'asc' | 'desc' = 'asc'): T[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  const multiplier = desc ? -1 : 1;
+  if (typeof selectorOrSelectors === 'function') {
+    const multiplier = direction === 'desc' ? -1 : 1;
+    return [...array].sort((a, b) => compare(selectorOrSelectors(a), selectorOrSelectors(b)) * multiplier);
+  }
 
-  return [...array].sort((a, b) => compare(selector(a), selector(b)) * multiplier);
-};
+  return [...array].sort(compareBy(selectorOrSelectors));
+}
 
-sort.fp = true;

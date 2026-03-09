@@ -213,8 +213,6 @@ const gbp = exchange(eur, eurToGbp);
 ## See Also
 
 - [currency](./currency.md): Format money for display
-- [add](../math/add.md): Add monetary amounts
-- [multiply](../math/multiply.md): Multiply amounts
 
 <style>
 .badges {

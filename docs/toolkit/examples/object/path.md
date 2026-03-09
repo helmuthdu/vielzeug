@@ -102,4 +102,4 @@ path(obj, 'e.f.g', 'default', { throwOnMissing: true }); // throws Error
 
 - [seek](./seek.md): Find a value anywhere in an object by key.
 - [merge](./merge.md): Combine objects.
-- [clone](./clone.md): Create a copy of an object.
+- [seek](./seek.md): Find a value by key anywhere in a nested object.

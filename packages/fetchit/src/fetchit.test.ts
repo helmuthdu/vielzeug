@@ -1,73 +1,20 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import {
-  createHttpClient,
-  createQueryClient,
-  type HttpClientOptions,
-  HttpError,
-  type QueryClientOptions,
-} from './fetchit';
-
-vi.mock('@vielzeug/logit', () => ({
-  Logit: {
-    error: vi.fn(),
-    success: vi.fn(),
-  },
-}));
+/** biome-ignore-all lint/suspicious/noExplicitAny: */
+import { createHttpClient, createQueryClient, HttpError, type MutationState, type QueryState } from './fetchit';
 
 describe('fetchit', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
-  const mockJsonResponse = (data: unknown, status = 200) => ({
+  const jsonResponse = (data: unknown, status = 200) => ({
     headers: new Headers({ 'content-type': 'application/json' }),
     json: async () => data,
     ok: status >= 200 && status < 300,
     status,
+    text: async () => JSON.stringify(data),
   });
-
-  // Helper to create a combined HTTP + Query client for tests
-  function createCombinedClient(options: any = {}) {
-    const http = createHttpClient({
-      baseUrl: options.baseUrl,
-      dedupe: options.dedupe,
-      headers: options.headers,
-      timeout: options.timeout,
-    } as HttpClientOptions);
-
-    const queryClient = createQueryClient({
-      gcTime: options.gcTime,
-      staleTime: options.staleTime,
-    } as QueryClientOptions);
-
-    return {
-      clear: queryClient.clear,
-      delete: http.delete,
-      fetch: queryClient.fetch,
-      get: http.get,
-      getData: queryClient.getData,
-      getQueryData: queryClient.getData, // Alias
-      getQueryState: queryClient.getState, // Alias
-      getState: queryClient.getState,
-      invalidate: queryClient.invalidate,
-      invalidateQueries: queryClient.invalidate, // Alias
-      mutate: queryClient.mutate,
-      patch: http.patch,
-      post: http.post,
-      prefetch: queryClient.prefetch,
-      prefetchQuery: queryClient.prefetch, // Alias
-      put: http.put,
-      query: queryClient.fetch, // Alias
-      request: http.request,
-      setData: queryClient.setData,
-      setHeaders: http.setHeaders,
-      setQueryData: queryClient.setData, // Alias
-      subscribe: queryClient.subscribe,
-    };
-  }
 
   beforeEach(() => {
     fetchMock = vi.fn();
     globalThis.fetch = fetchMock as typeof fetch;
-    vi.clearAllTimers();
   });
 
   afterEach(() => {
@@ -75,1097 +22,758 @@ describe('fetchit', () => {
     vi.restoreAllMocks();
   });
 
-  // ========================================================================
-  // REST API
-  // ========================================================================
+  // =========================================================================
+  // HTTP CLIENT
+  // =========================================================================
 
-  describe('REST API methods', () => {
-    it('should support all HTTP methods (GET, POST, PUT, PATCH, DELETE)', async () => {
-      const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-      fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
+  describe('HTTP Client', () => {
+    // -----------------------------------------------------------------------
+    // URL Construction
+    // -----------------------------------------------------------------------
 
-      // GET
-      await http.get('/users/1');
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        'https://api.example.com/users/1',
-        expect.objectContaining({ method: 'GET' }),
-      );
+    describe('URL Construction', () => {
+      it('interpolates :param style path parameters', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({}));
 
-      // POST with body
-      await http.post('/users', { body: { name: 'Alice' } });
-      expect(fetchMock).toHaveBeenLastCalledWith(
-        'https://api.example.com/users',
-        expect.objectContaining({
-          body: JSON.stringify({ name: 'Alice' }),
-          method: 'POST',
-        }),
-      );
+        await http.get('/users/:id/posts/:postId', { params: { id: 1, postId: 42 } });
 
-      // PUT, PATCH, DELETE
-      await http.put('/users/1', { body: { name: 'Bob' } });
-      expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'PUT' }));
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/1/posts/42', expect.any(Object));
+      });
 
-      await http.patch('/users/1', { body: { status: 'active' } });
-      expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'PATCH' }));
+      it('interpolates {param} style path parameters', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({}));
 
-      await http.delete('/users/1');
-      expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'DELETE' }));
+        await http.get('/users/{id}', { params: { id: 'abc' } });
+
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/abc', expect.any(Object));
+      });
+
+      it('appends search params as a query string', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse([]));
+
+        await http.get('/users', { search: { page: 2, role: 'admin' } });
+
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?page=2&role=admin', expect.any(Object));
+      });
+
+      it('combines path params and search params', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse([]));
+
+        await http.get('/users/:id/posts', { params: { id: 5 }, search: { limit: 10 } });
+
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/5/posts?limit=10', expect.any(Object));
+      });
+
+      it('omits undefined search params', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse([]));
+
+        await http.get('/users', { search: { page: 1, role: undefined } });
+
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?page=1', expect.any(Object));
+      });
     });
 
-    it('should handle query parameters', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
+    // -----------------------------------------------------------------------
+    // HTTP Methods & Body Serialization
+    // -----------------------------------------------------------------------
 
-      fetchMock.mockResolvedValue(mockJsonResponse([]));
+    describe('HTTP Methods & Body Serialization', () => {
+      it('dispatches GET, POST, PUT, PATCH, DELETE and custom methods', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({}));
 
-      await client.get('/users', {
-        query: { age: 25, role: 'admin' },
+        await http.get('/r');
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'GET' }));
+
+        await http.post('/r', { body: {} });
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'POST' }));
+
+        await http.put('/r', { body: {} });
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'PUT' }));
+
+        await http.patch('/r', { body: {} });
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'PATCH' }));
+
+        await http.delete('/r');
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'DELETE' }));
+
+        await http.request('OPTIONS', '/r');
+        expect(fetchMock).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ method: 'OPTIONS' }));
       });
 
-      expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?age=25&role=admin', expect.any(Object));
-    });
+      it('auto-serializes a plain-object body as JSON with content-type header', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
-    it('should handle path parameters', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
+        await http.post('/users', { body: { name: 'Alice' } });
 
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: '123', name: 'User' }));
-
-      await client.get('/users/:id', {
-        params: { id: '123' },
-      });
-
-      expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/123', expect.any(Object));
-    });
-
-    it('should handle both path parameters and query parameters', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
-
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: '123', posts: [] }));
-
-      await client.get('/users/:id/posts', {
-        params: { id: '123' },
-        query: { limit: 10, offset: 0 },
-      });
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://api.example.com/users/123/posts?limit=10&offset=0',
-        expect.any(Object),
-      );
-    });
-  });
-
-  // ========================================================================
-  // QUERY API
-  // ========================================================================
-
-  describe('Query API - Caching', () => {
-    it('should cache query results', async () => {
-      const client = createCombinedClient({
-        cache: { staleTime: 5000 },
-      });
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      const fetchUser = async () => {
-        return await client.get('/users/1');
-      };
-
-      // First call - fetches from network
-      const result1 = await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 10000, // Keep data fresh for 10s
-      });
-
-      expect(result1).toEqual(mockData);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-
-      // Second call - returns from cache (no fetch)
-      const result2 = await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 10000,
-      });
-
-      expect(result2).toEqual(mockData);
-      expect(fetchMock).toHaveBeenCalledTimes(1); // Still 1!
-    });
-
-    it('should refetch when data becomes stale', async () => {
-      vi.useFakeTimers();
-
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      const fetchUser = async () => {
-        return await client.get('/users/1');
-      };
-
-      // First call
-      await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 1000, // 1 second
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-
-      // Wait for stale time to pass
-      vi.advanceTimersByTime(1001);
-
-      // Second call - should refetch
-      await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 1000,
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-
-      vi.useRealTimers();
-    });
-
-    it('should deduplicate in-flight requests', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockJsonResponse(mockData)), 100);
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({
+            body: JSON.stringify({ name: 'Alice' }),
+            headers: expect.objectContaining({ 'content-type': 'application/json' }),
           }),
-      );
-
-      const fetchUser = async () => {
-        return await client.get('/users/1');
-      };
-
-      // Fire multiple requests simultaneously
-      const [result1, result2, result3] = await Promise.all([
-        client.query({ queryFn: fetchUser, queryKey: ['users', 1] }),
-        client.query({ queryFn: fetchUser, queryKey: ['users', 1] }),
-        client.query({ queryFn: fetchUser, queryKey: ['users', 1] }),
-      ]);
-
-      // All should return same data
-      expect(result1).toEqual(mockData);
-      expect(result2).toEqual(mockData);
-      expect(result3).toEqual(mockData);
-
-      // But fetch should only be called once
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ========================================================================
-  // MUTATION API
-  // ========================================================================
-
-  describe('Mutation API', () => {
-    it('should execute mutations with success/error callbacks', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
-      const mockData = { id: 1, name: 'Created' };
-      const onSuccess = vi.fn();
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData, 201));
-
-      const result = await client.mutate(
-        {
-          mutationFn: async (data: { name: string }) => {
-            return await client.post('/users', { body: data });
-          },
-          onSuccess,
-        },
-        { name: 'Created' },
-      );
-
-      expect(result).toEqual(mockData);
-      expect(onSuccess).toHaveBeenCalledWith(mockData, { name: 'Created' });
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onError callback on failure', async () => {
-      const client = createCombinedClient();
-      const onError = vi.fn();
-
-      fetchMock.mockRejectedValue(new Error('Network error'));
-
-      try {
-        await client.mutate(
-          {
-            mutationFn: async () => {
-              return await client.post('/users', { body: {} });
-            },
-            onError,
-          },
-          {},
         );
-      } catch {
-        // Expected to throw
-      }
-
-      expect(onError).toHaveBeenCalled();
-    });
-  });
-
-  // ========================================================================
-  // CACHE MANAGEMENT
-  // ========================================================================
-
-  describe('Cache Management', () => {
-    it('should invalidate queries', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      const fetchUser = async () => {
-        return await client.get('/users/1');
-      };
-
-      // First call - fetches
-      await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 10000,
       });
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      it('passes BodyInit types (FormData, Blob, ArrayBuffer, TypedArray) through without serialization', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
-      // Invalidate cache
-      client.invalidateQueries(['users', 1]);
-
-      // Second call - should refetch even with stale time
-      await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        staleTime: 10000,
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-    });
-
-    it('should set and get query data manually with function updater', async () => {
-      const client = createCombinedClient();
-
-      // Set data without fetching
-      client.setQueryData(['users', 1], { id: 1, name: 'Manual' });
-
-      // Get data back
-      const data = client.getQueryData(['users', 1]);
-      expect(data).toEqual({ id: 1, name: 'Manual' });
-
-      // Update with function
-      client.setQueryData<{ id: number; name: string }>(['users', 1], (old) => ({
-        ...old!,
-        name: 'Updated',
-      }));
-
-      expect(client.getQueryData(['users', 1])).toEqual({ id: 1, name: 'Updated' });
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('should clear all cache', async () => {
-      const client = createCombinedClient();
-
-      client.setQueryData(['users', 1], { id: 1 });
-      client.setQueryData(['posts', 1], { id: 1 });
-
-      // Verify data exists
-      expect(client.getQueryData(['users', 1])).toEqual({ id: 1 });
-      expect(client.getQueryData(['posts', 1])).toEqual({ id: 1 });
-
-      client.clear();
-
-      // Verify cache cleared
-      expect(client.getQueryData(['users', 1])).toBeUndefined();
-      expect(client.getQueryData(['posts', 1])).toBeUndefined();
-    });
-  });
-
-  // ========================================================================
-  // RETRY LOGIC
-  // ========================================================================
-
-  describe('Retry Logic', () => {
-    it('should retry failed queries', async () => {
-      const client = createCombinedClient();
-      let attempts = 0;
-
-      const fetchUser = async () => {
-        attempts++;
-        if (attempts < 3) {
-          throw new Error('Network error');
-        }
-        return await client.get('/users/1');
-      };
-
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1 }));
-
-      await client.query({
-        queryFn: fetchUser,
-        queryKey: ['users', 1],
-        retry: 3,
-      });
-
-      expect(attempts).toBe(3);
-    });
-
-    it('should not retry when retry is false', async () => {
-      const client = createCombinedClient();
-      let attempts = 0;
-
-      const fetchUser = async () => {
-        attempts++;
-        throw new Error('Network error');
-      };
-
-      await expect(
-        client.query({
-          queryFn: fetchUser,
-          queryKey: ['users', 1],
-          retry: false,
-        }),
-      ).rejects.toThrow();
-
-      expect(attempts).toBe(1);
-    });
-  });
-
-  // ========================================================================
-  // CALLBACKS
-  // ========================================================================
-
-  describe('Query Callbacks', () => {
-    it('should call onSuccess and onError callbacks', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1 };
-      const onSuccess = vi.fn();
-      const onError = vi.fn();
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      // Test onSuccess
-      await client.query({
-        onSuccess,
-        queryFn: async () => {
-          return await client.get('/users/1');
-        },
-        queryKey: ['users', 1],
-      });
-
-      expect(onSuccess).toHaveBeenCalledWith(mockData);
-
-      // Test onError
-      await expect(
-        client.query({
-          onError,
-          queryFn: async () => {
-            throw new Error('Failed');
-          },
-          queryKey: ['users', 2],
-          retry: false,
-        }),
-      ).rejects.toThrow();
-
-      expect(onError).toHaveBeenCalled();
-    });
-  });
-
-  // ========================================================================
-  // ERROR HANDLING
-  // ========================================================================
-
-  describe('Error Handling', () => {
-    it('should throw HttpError with context', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
-
-      fetchMock.mockRejectedValue(new Error('Network error'));
-
-      try {
-        await client.get('/users/1');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(HttpError);
-        expect((error as HttpError).url).toBe('https://api.example.com/users/1');
-        expect((error as HttpError).method).toBe('GET');
-      }
-    });
-  });
-
-  // ========================================================================
-  // HEADERS MANAGEMENT
-  // ========================================================================
-
-  describe('Headers Management', () => {
-    it('should set global headers', async () => {
-      const client = createCombinedClient({
-        baseUrl: 'https://api.example.com',
-        headers: { Authorization: 'Bearer token' },
-      });
-
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-
-      await client.get('/users');
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer token',
-          }),
-        }),
-      );
-    });
-
-    it('should update headers dynamically', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
-
-      client.setHeaders({ Authorization: 'Bearer new-token' });
-
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-
-      await client.get('/users');
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: 'Bearer new-token',
-          }),
-        }),
-      );
-    });
-  });
-
-  // ========================================================================
-  // ENABLED OPTION
-  // ========================================================================
-
-  describe('Enabled Option', () => {
-    it('should not execute query when disabled', async () => {
-      const client = createCombinedClient();
-
-      await expect(
-        client.query({
-          enabled: false,
-          queryFn: async () => ({ id: 1 }),
-          queryKey: ['users', 1],
-        }),
-      ).rejects.toThrow('Query disabled');
-
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
-  });
-
-  // ========================================================================
-  // CONVENIENCE METHODS
-  // ========================================================================
-
-  describe('Convenience Methods', () => {
-    it('should get full query state with getQueryState', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'Test' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      // Before query
-      const stateBefore = client.getQueryState(['users', 1]);
-      expect(stateBefore).toBeNull();
-
-      // Execute query
-      await client.query({
-        queryFn: async () => mockData,
-        queryKey: ['users', 1],
-      });
-
-      // After query
-      const stateAfter = client.getQueryState(['users', 1]);
-      expect(stateAfter).toMatchObject({
-        data: mockData,
-        error: null,
-        isError: false,
-        isIdle: false,
-        isLoading: false,
-        isSuccess: true,
-        status: 'success',
-      });
-      expect(stateAfter?.dataUpdatedAt).toBeGreaterThan(0);
-      expect(stateAfter?.fetchedAt).toBeGreaterThan(0);
-    });
-
-    it('should prefetch query', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'Test' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      await client.prefetchQuery({
-        queryFn: async () => mockData,
-        queryKey: ['users', 1],
-      });
-
-      // But data should be in the cache
-      const cachedData = client.getQueryData(['users', 1]);
-      expect(cachedData).toEqual(mockData);
-    });
-
-    it('should prefetch and silently ignore errors', async () => {
-      const client = createCombinedClient();
-
-      fetchMock.mockRejectedValue(new Error('Network error'));
-
-      // Prefetch should not throw
-      await expect(
-        client.prefetchQuery({
-          queryFn: async () => {
-            throw new Error('Network error');
-          },
-          queryKey: ['users', 1],
-          retry: false, // Disable retry to avoid timeout
-        }),
-      ).resolves.toBeUndefined();
-    });
-
-    it('should make requests with custom HTTP method using request', async () => {
-      const client = createCombinedClient({ baseUrl: 'https://api.example.com' });
-      const mockData = { success: true };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      const data = await client.request('OPTIONS', '/users');
-
-      expect(data).toEqual(mockData);
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://api.example.com/users',
-        expect.objectContaining({ method: 'OPTIONS' }),
-      );
-    });
-  });
-
-  // ========================================================================
-  // OBSERVABLE STATE
-  // ========================================================================
-
-  describe('Observable State', () => {
-    it('should call subscriber with state on changes', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-      const states: any[] = [];
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      // Subscribe before querying
-      const unsubscribe = client.subscribe(['users', 1], (state) => {
-        states.push({ ...state });
-      });
-
-      // Execute query
-      await client.query({
-        queryFn: () => client.get('/users/1'),
-        queryKey: ['users', 1],
-      });
-
-      // Should have received state updates
-      expect(states.length).toBeGreaterThan(0);
-
-      // Final state should be success
-      const finalState = states[states.length - 1];
-      expect(finalState.isSuccess).toBe(true);
-      expect(finalState.data).toEqual(mockData);
-
-      unsubscribe();
-    });
-
-    it('should notify subscribers when data is updated via setQueryData', async () => {
-      const client = createCombinedClient();
-      const states: any[] = [];
-
-      client.subscribe(['users', 1], (state) => {
-        states.push({ ...state });
-      });
-
-      // Set data manually
-      client.setQueryData(['users', 1], { id: 1, name: 'Alice' });
-
-      expect(states.length).toBeGreaterThan(0);
-      expect(states[states.length - 1].data).toEqual({ id: 1, name: 'Alice' });
-    });
-  });
-
-  // ========================================================================
-  // REQUEST DEDUPLICATION
-  // ========================================================================
-
-  describe('Request Deduplication', () => {
-    it('should deduplicate concurrent REST requests by default', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockJsonResponse(mockData)), 100);
-          }),
-      );
-
-      // Fire multiple identical requests simultaneously
-      const [result1, result2, result3] = await Promise.all([
-        client.get('/users/1'),
-        client.get('/users/1'),
-        client.get('/users/1'),
-      ]);
-
-      // All should return same data
-      expect(result1).toEqual(mockData);
-      expect(result2).toEqual(mockData);
-      expect(result3).toEqual(mockData);
-
-      // But fetch should only be called once (deduped!)
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('should allow opting out of deduplication per request', async () => {
-      const client = createCombinedClient();
-      const mockData = { id: 1, name: 'User' };
-
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      // Make requests with deduplication disabled
-      await Promise.all([client.get('/users/1', { dedupe: false }), client.get('/users/1', { dedupe: false })]);
-
-      // Should make 2 separate requests
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-    });
-
-    it('should deduplicate globally when enabled', async () => {
-      const client = createCombinedClient({ dedupe: true });
-      const mockData = { id: 1 };
-
-      fetchMock.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockJsonResponse(mockData)), 50);
-          }),
-      );
-
-      const [r1, r2] = await Promise.all([
-        client.post('/users', { body: mockData }),
-        client.post('/users', { body: mockData }),
-      ]);
-
-      expect(r1).toEqual(mockData);
-      expect(r2).toEqual(mockData);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ========================================================================
-  // NESTED CONFIGURATION
-  // ========================================================================
-
-  describe('Nested Configuration', () => {
-    it('should accept flat cache configuration', async () => {
-      const client = createCombinedClient({
-        gcTime: 60000,
-        staleTime: 10000,
-      });
-
-      const mockData = { id: 1 };
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      await client.query({
-        queryFn: () => client.get('/test'),
-        queryKey: ['test'],
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-
-      // Should use cache (stale time not exceeded)
-      await client.query({
-        queryFn: () => client.get('/test'),
-        queryKey: ['test'],
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(1); // Still 1
-    });
-
-    it('should accept nested refetch configuration', async () => {
-      const client = createCombinedClient({
-        refetch: {
-          onFocus: false,
-          onReconnect: false,
-        },
-      });
-
-      expect(client).toBeDefined();
-    });
-  });
-
-  // ========================================================================
-  // BUG FIXES - Edge Cases & Correctness
-  // ========================================================================
-
-  describe('Bug Fixes', () => {
-    describe('Timeout Edge Cases', () => {
-      it('should handle 0 timeout without creating timer', async () => {
-        const http = createHttpClient({
-          baseUrl: 'https://api.example.com',
-          timeout: 0,
-        });
-
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
-
-        const result = await http.get('/test');
-        expect(result).toEqual({ success: true });
-      });
-
-      it('should handle Infinity timeout without creating timer', async () => {
-        const http = createHttpClient({
-          baseUrl: 'https://api.example.com',
-          timeout: Number.POSITIVE_INFINITY,
-        });
-
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
-
-        const result = await http.get('/test');
-        expect(result).toEqual({ success: true });
-      });
-    });
-
-    describe('Body Serialization for Dedupe', () => {
-      it('should safely handle FormData body in dedupe key', async () => {
-        const http = createHttpClient({ dedupe: true });
         const formData = new FormData();
-        formData.append('name', 'Alice');
+        await http.post('/upload', { body: formData });
+        expect(fetchMock.mock.calls[0][1].body).toBe(formData);
 
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
+        const blob = new Blob(['data'], { type: 'text/plain' });
+        await http.post('/upload', { body: blob });
+        expect(fetchMock.mock.calls[1][1].body).toBe(blob);
 
-        // Should not crash with FormData
-        await expect(http.post('/upload', { body: formData })).resolves.toEqual({ success: true });
-      });
-
-      it('should safely handle Blob body in dedupe key', async () => {
-        const http = createHttpClient({ dedupe: true });
-        const blob = new Blob(['test'], { type: 'text/plain' });
-
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
-
-        // Should not crash with Blob
-        await expect(http.post('/upload', { body: blob })).resolves.toEqual({ success: true });
-      });
-
-      it('should safely handle ArrayBuffer body in dedupe key', async () => {
-        const http = createHttpClient({ dedupe: true });
         const buffer = new ArrayBuffer(8);
+        await http.post('/binary', { body: buffer });
+        expect(fetchMock.mock.calls[2][1].body).toBe(buffer);
 
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
-
-        // Should not crash with ArrayBuffer
-        await expect(http.post('/binary', { body: buffer })).resolves.toEqual({ success: true });
+        const uint8 = new Uint8Array([1, 2, 3]);
+        await http.post('/binary', { body: uint8 });
+        expect(fetchMock.mock.calls[3][1].body).toBe(uint8);
       });
 
-      it('should safely handle URLSearchParams body in dedupe key', async () => {
-        const http = createHttpClient({ dedupe: true });
-        const params = new URLSearchParams();
-        params.append('key', 'value');
+      it('returns undefined for 204 No Content responses', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue({ headers: new Headers(), ok: true, status: 204 });
 
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
+        const result = await http.delete('/users/1');
 
-        await expect(http.post('/form', { body: params })).resolves.toEqual({ success: true });
+        expect(result).toBeUndefined();
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Headers
+    // -----------------------------------------------------------------------
+
+    describe('Headers', () => {
+      it('sends initial headers on every request', async () => {
+        const http = createHttpClient({ headers: { Authorization: 'Bearer token', 'x-app': 'test' } });
+        fetchMock.mockResolvedValue(jsonResponse({}));
+
+        await http.get('/test');
+
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({
+            headers: expect.objectContaining({ Authorization: 'Bearer token', 'x-app': 'test' }),
+          }),
+        );
       });
 
-      it('should safely handle circular reference in dedupe key generation', async () => {
-        const http = createHttpClient({ dedupe: true });
+      it('setHeaders() updates a header dynamically', async () => {
+        const http = createHttpClient({ headers: { Authorization: 'Bearer old' } });
+        http.setHeaders({ Authorization: 'Bearer new' });
+        fetchMock.mockResolvedValue(jsonResponse({}));
 
-        fetchMock.mockImplementation(
-          () =>
-            new Promise((resolve) => {
-              setTimeout(() => resolve(mockJsonResponse({ id: 1 })), 50);
+        await http.get('/test');
+
+        expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer new');
+      });
+
+      it('setHeaders() removes a header when value is undefined', async () => {
+        const http = createHttpClient({ headers: { 'x-trace': 'abc' } });
+        http.setHeaders({ 'x-trace': undefined });
+        fetchMock.mockResolvedValue(jsonResponse({}));
+
+        await http.get('/test');
+
+        expect(fetchMock.mock.calls[0][1].headers['x-trace']).toBeUndefined();
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Interceptors
+    // -----------------------------------------------------------------------
+
+    describe('Interceptors', () => {
+      it('runs an interceptor that can modify request context', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
+
+        http.use(async ({ url, init }, next) =>
+          next({ url, init: { ...init, headers: { ...(init.headers as Record<string, string>), 'x-custom': 'yes' } } }),
+        );
+
+        await http.get('/users/1');
+
+        expect(fetchMock.mock.calls[0][1].headers['x-custom']).toBe('yes');
+      });
+
+      it('chains multiple interceptors in onion order', async () => {
+        const http = createHttpClient();
+        fetchMock.mockResolvedValue(jsonResponse({}));
+        const log: number[] = [];
+
+        http.use(async (ctx, next) => {
+          log.push(1);
+          const r = await next(ctx);
+          log.push(4);
+          return r;
+        });
+        http.use(async (ctx, next) => {
+          log.push(2);
+          const r = await next(ctx);
+          log.push(3);
+          return r;
+        });
+
+        await http.get('/test');
+        expect(log).toEqual([1, 2, 3, 4]);
+      });
+
+      it('use() returns a dispose function that removes the interceptor', async () => {
+        const http = createHttpClient();
+        fetchMock.mockResolvedValue(jsonResponse({}));
+        let callCount = 0;
+
+        const remove = http.use(async (ctx, next) => {
+          callCount++;
+          return next(ctx);
+        });
+
+        await http.get('/test');
+        expect(callCount).toBe(1);
+
+        remove();
+        await http.get('/test');
+        expect(callCount).toBe(1); // not called again
+      });
+
+      it('an interceptor can short-circuit fetch entirely', async () => {
+        const http = createHttpClient();
+
+        http.use(
+          async () =>
+            new Response(JSON.stringify({ mocked: true }), {
+              headers: { 'content-type': 'application/json' },
+              status: 200,
             }),
         );
 
-        // Create circular object for dedupe key testing
-        const circular1: any = { name: 'test' };
-        circular1.self = circular1;
+        const result = await http.get<{ mocked: boolean }>('/anything');
+        expect(result).toEqual({ mocked: true });
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+    });
 
-        const circular2: any = { name: 'test' };
-        circular2.self = circular2;
+    // -----------------------------------------------------------------------
+    // Request Deduplication
+    // -----------------------------------------------------------------------
 
-        // Both should get same dedupe key '[Object]' and be deduped
-        const [r1, r2] = await Promise.all([
-          // Use dedupe: true but these will fail JSON.stringify in body
-          // However, dedupe key serialization should handle it
-          http.post('/test', { body: circular1 }).catch(() => ({ id: 1 })),
-          http.post('/test', { body: circular2 }).catch(() => ({ id: 1 })),
-        ]);
+    describe('Request Deduplication', () => {
+      it('auto-deduplicates concurrent GET requests (idempotent by default)', async () => {
+        const http = createHttpClient();
+        fetchMock.mockImplementation(
+          () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+        );
 
-        // Even though body serialization fails, dedupe key should not crash
+        const [r1, r2, r3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
+
         expect(r1).toEqual({ id: 1 });
         expect(r2).toEqual({ id: 1 });
+        expect(r3).toEqual({ id: 1 });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
       });
 
-      it('should deduplicate requests with same non-serializable body type', async () => {
-        const http = createHttpClient({ dedupe: true });
+      it('does NOT deduplicate POST requests by default', async () => {
+        const http = createHttpClient();
+        fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
+        await Promise.all([http.post('/users', { body: { name: 'A' } }), http.post('/users', { body: { name: 'A' } })]);
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('deduplicates POST when global dedupe:true is set', async () => {
+        const http = createHttpClient({ dedupe: true });
         fetchMock.mockImplementation(
-          () =>
-            new Promise((resolve) => {
-              setTimeout(() => resolve(mockJsonResponse({ id: 1 })), 50);
-            }),
+          () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
 
-        // Two FormData instances (treated as different)
-        const formData1 = new FormData();
-        formData1.append('name', 'Alice');
-
-        const formData2 = new FormData();
-        formData2.append('name', 'Alice');
-
         const [r1, r2] = await Promise.all([
-          http.post('/upload', { body: formData1 }),
-          http.post('/upload', { body: formData2 }),
+          http.post('/users', { body: { name: 'A' } }),
+          http.post('/users', { body: { name: 'A' } }),
         ]);
 
-        // FormData gets dedupe key '[FormData]' - should deduplicate
+        expect(r1).toEqual({ id: 1 });
+        expect(r2).toEqual({ id: 1 });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      it('per-request dedupe:false opts out of deduplication', async () => {
+        const http = createHttpClient();
+        fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
+
+        await Promise.all([http.get('/users/1', { dedupe: false }), http.get('/users/1', { dedupe: false })]);
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('handles BodyInit binary types in dedupe key without crashing', async () => {
+        const http = createHttpClient({ dedupe: true });
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+        const fd = new FormData();
+        fd.append('x', '1');
+        await expect(http.post('/upload', { body: fd })).resolves.toBeDefined();
+        await expect(http.post('/upload', { body: new Blob(['hi']) })).resolves.toBeDefined();
+        await expect(http.post('/binary', { body: new ArrayBuffer(4) })).resolves.toBeDefined();
+      });
+
+      it('rejects with TypeError when a plain-object body has circular references', async () => {
+        const http = createHttpClient({ dedupe: true });
+
+        const circular: any = { a: 1 };
+        circular.self = circular;
+
+        await expect(http.post('/json', { body: circular })).rejects.toThrow(TypeError);
+      });
+
+      it('deduplicates FormData requests since they share the same serialized body key', async () => {
+        const http = createHttpClient({ dedupe: true });
+        fetchMock.mockImplementation(
+          () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+        );
+
+        const fd1 = new FormData();
+        fd1.append('name', 'Alice');
+        const fd2 = new FormData();
+        fd2.append('name', 'Alice');
+
+        const [r1, r2] = await Promise.all([http.post('/upload', { body: fd1 }), http.post('/upload', { body: fd2 })]);
+
         expect(r1).toEqual({ id: 1 });
         expect(r2).toEqual({ id: 1 });
         expect(fetchMock).toHaveBeenCalledTimes(1);
       });
     });
 
-    describe('Cross-Realm ArrayBuffer Detection', () => {
-      it('should detect ArrayBuffer using toString fallback', async () => {
-        const http = createHttpClient();
+    // -----------------------------------------------------------------------
+    // Timeout
+    // -----------------------------------------------------------------------
 
-        // Simulate cross-realm ArrayBuffer by creating object with same toString
-        const fakeArrayBuffer = {
-          byteLength: 8,
-          [Symbol.toStringTag]: 'ArrayBuffer',
-        };
+    describe('Timeout', () => {
+      it('timeout:0 and timeout:Infinity complete requests without timer errors', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
-        // Mock Object.prototype.toString to return correct value
-        const originalToString = Object.prototype.toString;
-        Object.prototype.toString = function () {
-          if (this === fakeArrayBuffer) {
-            return '[object ArrayBuffer]';
-          }
-          return originalToString.call(this);
-        };
+        await expect(createHttpClient({ timeout: 0 }).get('/test')).resolves.toBeDefined();
+        await expect(createHttpClient({ timeout: Number.POSITIVE_INFINITY }).get('/test')).resolves.toBeDefined();
+      });
+    });
 
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
+    // -----------------------------------------------------------------------
+    // Error Handling
+    // -----------------------------------------------------------------------
 
-        try {
-          await expect(http.post('/binary', { body: fakeArrayBuffer as any })).resolves.toEqual({ success: true });
-        } finally {
-          Object.prototype.toString = originalToString;
-        }
+    describe('Error Handling', () => {
+      it('wraps network errors in HttpError preserving url and method', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockRejectedValue(new Error('Network error'));
+
+        const err = await http.get('/users/1').catch((e) => e);
+
+        expect(err).toBeInstanceOf(HttpError);
+        if (!(err instanceof HttpError)) throw err;
+        expect(err.url).toBe('https://api.example.com/users/1');
+        expect(err.method).toBe('GET');
       });
 
-      it('should detect TypedArray views', async () => {
-        const http = createHttpClient({ dedupe: true });
-        const uint8Array = new Uint8Array([1, 2, 3, 4]);
+      it('wraps non-OK responses in HttpError with status and parsed body as cause', async () => {
+        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
-        fetchMock.mockResolvedValue(mockJsonResponse({ success: true }));
+        const err = await http.get('/users/999').catch((e) => e);
 
-        await expect(http.post('/binary', { body: uint8Array })).resolves.toEqual({ success: true });
+        expect(err).toBeInstanceOf(HttpError);
+        if (!(err instanceof HttpError)) throw err;
+        expect(err.status).toBe(404);
+        expect(err.cause).toEqual({ error: 'Not found' });
       });
     });
   });
 
-  // ========================================================================
-  // SEPARATE HTTP/QUERY CLIENTS
-  // ========================================================================
+  // =========================================================================
+  // QUERY CLIENT
+  // =========================================================================
 
-  describe('Separate Clients', () => {
-    it('should create HTTP-only client with all methods', async () => {
-      const { createHttpClient } = await import('./fetchit');
-      const http = createHttpClient({
-        baseUrl: 'https://api.example.com',
+  describe('Query Client', () => {
+    // -----------------------------------------------------------------------
+    // Caching
+    // -----------------------------------------------------------------------
+
+    describe('Caching', () => {
+      it('serves fresh data from cache without re-executing fn', async () => {
+        const qc = createQueryClient();
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { id: 1 };
+        };
+
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+
+        expect(calls).toBe(1);
       });
 
-      const mockData = { id: 1, name: 'Test' };
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
+      it('refetches after staleTime expires', async () => {
+        vi.useFakeTimers();
+        const qc = createQueryClient();
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { id: calls };
+        };
 
-      const data = await http.get('/users/1');
+        await qc.query({ fn, key: ['data'], staleTime: 500 });
+        vi.advanceTimersByTime(501);
+        await qc.query({ fn, key: ['data'], staleTime: 500 });
 
-      expect(data).toEqual(mockData);
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://api.example.com/users/1',
-        expect.objectContaining({ method: 'GET' }),
-      );
-
-      // Test other methods
-      fetchMock.mockResolvedValue(mockJsonResponse({}));
-      await http.post('/users', { body: { name: 'Alice' } });
-      await http.put('/users/1', { body: { name: 'Bob' } });
-      await http.patch('/users/1', { body: { email: 'new@example.com' } });
-      await http.delete('/users/1');
-
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-    });
-
-    it('should deduplicate HTTP requests when enabled', async () => {
-      const { createHttpClient } = await import('./fetchit');
-      const http = createHttpClient({ dedupe: true });
-
-      fetchMock.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockJsonResponse({ id: 1 })), 50);
-          }),
-      );
-
-      const [r1, r2] = await Promise.all([http.get('/users/1'), http.get('/users/1')]);
-
-      expect(r1).toEqual({ id: 1 });
-      expect(r2).toEqual({ id: 1 });
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('should create query-only client with cache and subscriptions', async () => {
-      const { createQueryClient, createHttpClient } = await import('./fetchit');
-
-      const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-      const queryClient = createQueryClient({ staleTime: 10000 });
-
-      const mockData = { id: 1, name: 'User' };
-      fetchMock.mockResolvedValue(mockJsonResponse(mockData));
-
-      // Use query client with http client
-      const user = await queryClient.fetch({
-        queryFn: () => http.get('/users/1'),
-        queryKey: ['users', 1],
+        expect(calls).toBe(2);
+        vi.useRealTimers();
       });
 
-      expect(user).toEqual(mockData);
+      it('deduplicates concurrent in-flight queries for the same key', async () => {
+        const qc = createQueryClient();
+        let calls = 0;
+        const fn = () => new Promise<{ id: number }>((resolve) => setTimeout(() => resolve({ id: ++calls }), 50));
 
-      // Should be cached
-      const cached = queryClient.getData(['users', 1]);
-      expect(cached).toEqual(mockData);
+        const [r1, r2, r3] = await Promise.all([
+          qc.query({ fn, key: ['users', 1] }),
+          qc.query({ fn, key: ['users', 1] }),
+          qc.query({ fn, key: ['users', 1] }),
+        ]);
 
-      // Test subscriptions
-      const states: any[] = [];
-      queryClient.subscribe(['test'], (state) => {
-        states.push({ ...state });
+        expect(r1).toEqual({ id: 1 });
+        expect(r2).toEqual({ id: 1 });
+        expect(r3).toEqual({ id: 1 });
+        expect(calls).toBe(1);
       });
 
-      queryClient.setData(['test'], { value: 123 });
+      it('enabled:false returns undefined without executing fn', async () => {
+        const qc = createQueryClient();
+        let called = false;
 
-      expect(states.length).toBeGreaterThan(0);
-      expect(states[states.length - 1].data).toEqual({ value: 123 });
-
-      // Clear cache
-      queryClient.clear();
-      expect(queryClient.getData(['test'])).toBeUndefined();
-    });
-
-    it('should support mutations with query client', async () => {
-      const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient();
-
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1, name: 'Created' }));
-
-      const result = await queryClient.mutate(
-        {
-          mutationFn: async (data: { name: string }) => {
-            const response = await fetch('/users', {
-              body: JSON.stringify(data),
-              method: 'POST',
-            });
-            return response.json();
+        const result = await qc.query({
+          enabled: false,
+          fn: async () => {
+            called = true;
+            return 1;
           },
-        },
-        { name: 'Alice' },
+          key: ['x'],
+        });
+
+        expect(result).toBeUndefined();
+        expect(called).toBe(false);
+      });
+
+      it('enabled:false returns existing cached data', async () => {
+        const qc = createQueryClient();
+        qc.setData(['users', 1], { id: 1, name: 'Alice' });
+
+        const result = await qc.query({ enabled: false, fn: async () => ({ id: 99 }), key: ['users', 1] });
+
+        expect(result).toEqual({ id: 1, name: 'Alice' });
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Prefetch
+    // -----------------------------------------------------------------------
+
+    describe('Prefetch', () => {
+      it('populates the cache', async () => {
+        const qc = createQueryClient();
+
+        await qc.prefetch({ fn: async () => ({ id: 1, name: 'Test' }), key: ['users', 1] });
+
+        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Test' });
+      });
+
+      it('silently ignores errors — returns undefined, never throws', async () => {
+        const qc = createQueryClient();
+
+        await expect(
+          qc.prefetch({
+            fn: async () => {
+              throw new Error('fail');
+            },
+            key: ['users', 1],
+            retry: false,
+          }),
+        ).resolves.toBeUndefined();
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Retry
+    // -----------------------------------------------------------------------
+
+    describe('Retry', () => {
+      it('retries the fn up to the specified count before succeeding', async () => {
+        const qc = createQueryClient();
+        let attempts = 0;
+
+        await qc.query({
+          fn: async () => {
+            if (++attempts < 3) throw new Error('transient');
+            return { id: 1 };
+          },
+          key: ['users', 1],
+          retry: 3,
+        });
+
+        expect(attempts).toBe(3);
+      });
+
+      it('retry:false makes exactly one attempt then rejects', async () => {
+        const qc = createQueryClient();
+        let attempts = 0;
+
+        await expect(
+          qc.query({
+            fn: async () => {
+              attempts++;
+              throw new Error('fail');
+            },
+            key: ['users', 1],
+            retry: false,
+          }),
+        ).rejects.toThrow('fail');
+
+        expect(attempts).toBe(1);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // State & Subscriptions
+    // -----------------------------------------------------------------------
+
+    describe('State & Subscriptions', () => {
+      it('getState() returns null before any query', () => {
+        const qc = createQueryClient();
+        expect(qc.getState(['never'])).toBeNull();
+      });
+
+      it('getState() returns full state shape after a successful query', async () => {
+        const qc = createQueryClient();
+
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+
+        expect(qc.getState(['users', 1])).toMatchObject({
+          data: { id: 1 },
+          error: null,
+          isError: false,
+          isIdle: false,
+          isLoading: false,
+          isSuccess: true,
+          status: 'success',
+        });
+        expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
+      });
+
+      it('subscribe() fires through idle -> pending -> success transitions', async () => {
+        const qc = createQueryClient();
+        const states: QueryState[] = [];
+
+        const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+        unsub();
+
+        const statuses = states.map((s) => s.status);
+        expect(statuses[0]).toBe('idle');
+        expect(statuses).toContain('pending');
+        expect(statuses[statuses.length - 1]).toBe('success');
+        expect(states[states.length - 1].data).toEqual({ id: 1 });
+      });
+
+      it('setData() notifies subscribers immediately with the new value', () => {
+        const qc = createQueryClient();
+        const states: QueryState[] = [];
+
+        qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+        qc.setData(['users', 1], { id: 1, name: 'Alice' });
+
+        expect(states[states.length - 1].data).toEqual({ id: 1, name: 'Alice' });
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Cache Management
+    // -----------------------------------------------------------------------
+
+    describe('Cache Management', () => {
+      it('setData with a value and getData round-trip', () => {
+        const qc = createQueryClient();
+        qc.setData(['users', 1], { id: 1, name: 'Manual' });
+
+        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Manual' });
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it('setData with a function updater merges with existing data', () => {
+        const qc = createQueryClient();
+        qc.setData(['users', 1], { id: 1, name: 'Alice' });
+        qc.setData<{ id: number; name: string }>(['users', 1], (old) => ({ ...old!, name: 'Bob' }));
+
+        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Bob' });
+      });
+
+      it('invalidate() clears the exact key and forces a re-fetch', async () => {
+        const qc = createQueryClient();
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { id: 1 };
+        };
+
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+        expect(calls).toBe(1);
+
+        qc.invalidate(['users', 1]);
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+        expect(calls).toBe(2);
+      });
+
+      it('clear() removes all cached entries', () => {
+        const qc = createQueryClient();
+        qc.setData(['a'], 1);
+        qc.setData(['b'], 2);
+        qc.clear();
+
+        expect(qc.getData(['a'])).toBeUndefined();
+        expect(qc.getData(['b'])).toBeUndefined();
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Key Serialization
+    // -----------------------------------------------------------------------
+
+    describe('Key Serialization', () => {
+      it('treats objects with different property order as the same cache key', async () => {
+        const qc = createQueryClient({ staleTime: 10_000 });
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { id: 1 };
+        };
+
+        await qc.query({ fn, key: ['users', { page: 1, role: 'admin' }] });
+        await qc.query({ fn, key: ['users', { role: 'admin', page: 1 }] });
+
+        expect(calls).toBe(1);
+      });
+
+      it('invalidate() with a prefix clears all matching entries', async () => {
+        const qc = createQueryClient();
+        const fn = async () => ({ id: 1 });
+
+        await qc.query({ fn, key: ['users', { page: 1 }] });
+        await qc.query({ fn, key: ['users', { page: 2 }] });
+
+        qc.invalidate(['users']);
+
+        expect(qc.getData(['users', { page: 1 }])).toBeUndefined();
+        expect(qc.getData(['users', { page: 2 }])).toBeUndefined();
+      });
+
+      it('handles deeply nested objects as stable cache keys', async () => {
+        const qc = createQueryClient({ staleTime: 10_000 });
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { data: 'ok' };
+        };
+        const key = ['posts', { filters: { author: 'john', tags: ['a', 'b'] }, page: 1 }];
+
+        await qc.query({ fn, key });
+        await qc.query({ fn, key });
+
+        expect(calls).toBe(1);
+      });
+    });
+  });
+
+  // =========================================================================
+  // MUTATION
+  // =========================================================================
+
+  describe('Mutation', () => {
+    it('executes the mutationFn and returns the result', async () => {
+      const qc = createQueryClient();
+      fetchMock.mockResolvedValue(jsonResponse({ id: 1, name: 'Created' }, 201));
+
+      const addUser = qc.mutation((data: { name: string }) =>
+        fetch('/users', { body: JSON.stringify(data), method: 'POST' }).then((r) => r.json()),
       );
 
+      const result = await addUser.mutate({ name: 'Created' });
       expect(result).toEqual({ id: 1, name: 'Created' });
     });
-  });
 
-  // ========================================================================
-  // STABLE KEY SERIALIZATION
-  // ========================================================================
+    it('reports idle -> pending -> success state lifecycle via subscribe', async () => {
+      const qc = createQueryClient();
+      fetchMock.mockResolvedValue(jsonResponse({ id: 1 }, 201));
 
-  describe('Stable Key Serialization', () => {
-    it('should treat objects with same properties but different order as identical in cache', async () => {
-      const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient({ staleTime: 10000 });
+      const addUser = qc.mutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
 
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1, name: 'User' }));
+      const states: MutationState[] = [];
+      const unsub = addUser.subscribe((s) => states.push({ ...s }));
+      await addUser.mutate(undefined);
+      unsub();
 
-      // Same object properties, different order
-      const key1 = ['users', { filter: 'active', page: 1 }] as const;
-      const key2 = ['users', { filter: 'active', page: 1 }] as const;
-
-      const result1 = await queryClient.fetch({
-        queryFn: () => fetch('/users').then((r) => r.json()),
-        queryKey: key1,
-      });
-
-      // Should use cache because keys are logically equivalent
-      const result2 = await queryClient.fetch({
-        queryFn: () => fetch('/users').then((r) => r.json()),
-        queryKey: key2,
-      });
-
-      expect(result1).toEqual({ id: 1, name: 'User' });
-      expect(result2).toEqual({ id: 1, name: 'User' });
-      expect(fetchMock).toHaveBeenCalledTimes(1); // Only called once due to stable key matching
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
+      expect(states[2].data).toEqual({ id: 1 });
+      expect(states[2].isSuccess).toBe(true);
+      expect(states[2].updatedAt).toBeGreaterThan(0);
     });
 
-    it('should invalidate with prefix matching on stable keys', async () => {
-      const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient();
+    it('reports idle -> pending -> error state lifecycle on failure', async () => {
+      const qc = createQueryClient();
+      fetchMock.mockRejectedValue(new Error('Server error'));
 
-      fetchMock.mockResolvedValue(mockJsonResponse({ id: 1 }));
+      const fail = qc.mutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
 
-      // Create entries with different property orders
-      await queryClient.fetch({
-        queryFn: () => fetch('/test').then((r) => r.json()),
-        queryKey: ['users', { filter: 'active', page: 1 }],
-      });
+      const states: MutationState[] = [];
+      fail.subscribe((s) => states.push({ ...s }));
 
-      await queryClient.fetch({
-        queryFn: () => fetch('/test').then((r) => r.json()),
-        queryKey: ['users', { filter: 'inactive', page: 2 }],
-      });
+      await expect(fail.mutate(undefined)).rejects.toThrow();
 
-      // Verify data exists
-      expect(queryClient.getData(['users', { filter: 'active', page: 1 }])).toBeDefined();
-      expect(queryClient.getData(['users', { filter: 'inactive', page: 2 }])).toBeDefined();
-
-      // Invalidate prefix - should match both regardless of property order
-      queryClient.invalidate(['users']);
-
-      // Verify data cleared
-      expect(queryClient.getData(['users', { filter: 'active', page: 1 }])).toBeUndefined();
-      expect(queryClient.getData(['users', { filter: 'inactive', page: 2 }])).toBeUndefined();
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
+      expect(states[2].isError).toBe(true);
+      expect(states[2].error?.message).toContain('Server error');
     });
 
-    it('should handle nested objects with stable serialization', async () => {
-      const { createQueryClient } = await import('./fetchit');
-      const queryClient = createQueryClient({ staleTime: 10000 });
+    it('reset() returns state to idle with no data or error', async () => {
+      const qc = createQueryClient();
+      fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
-      fetchMock.mockResolvedValue(mockJsonResponse({ data: 'test' }));
+      const mut = qc.mutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+      await mut.mutate(undefined);
 
-      const key1 = ['posts', { filters: { author: 'john', status: 'active' }, page: 1 }];
-      const key2 = ['posts', { filters: { author: 'john', status: 'active' }, page: 1 }];
+      expect(mut.getState().status).toBe('success');
+      mut.reset();
+      expect(mut.getState()).toMatchObject({ status: 'idle', data: undefined, error: null });
+    });
 
-      await queryClient.fetch({
-        queryFn: () => fetch('/posts').then((r) => r.json()),
-        queryKey: key1,
-      });
+    it('throws the original error to the caller', async () => {
+      const qc = createQueryClient();
+      fetchMock.mockRejectedValue(new Error('boom'));
 
-      // Should reuse cache
-      await queryClient.fetch({
-        queryFn: () => fetch('/posts').then((r) => r.json()),
-        queryKey: key2,
-      });
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const fail = qc.mutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
+      await expect(fail.mutate(undefined)).rejects.toThrow('boom');
     });
   });
 });

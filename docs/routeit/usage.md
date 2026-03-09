@@ -239,28 +239,28 @@ router.get('/old-page', ({ navigate }) => {
 
 ```ts
 // Build URL with parameters
-const url = router.buildUrl('/users/:id', { id: '123' });
+const url = router.url('/users/:id', { id: '123' });
 console.log(url); // '/users/123'
 
 // Build URL with query parameters
-const searchUrl = router.buildUrl('/search', undefined, {
+const searchUrl = router.url('/search', undefined, {
   q: 'test',
   page: '2',
 });
 console.log(searchUrl); // '/search?q=test&page=2'
 
 // Build URL with both
-const fullUrl = router.buildUrl('/users/:id', { id: '123' }, { tab: 'posts', page: '2' });
+const fullUrl = router.url('/users/:id', { id: '123' }, { tab: 'posts', page: '2' });
 console.log(fullUrl); // '/users/123?tab=posts&page=2'
 
 // Array query parameters
-const filterUrl = router.buildUrl('/products', undefined, {
+const filterUrl = router.url('/products', undefined, {
   tags: ['new', 'sale'],
 });
 console.log(filterUrl); // '/products?tags=new&tags=sale'
 ```
 
-## Named Routes
+### Named Routes
 
 Navigate by route name instead of path:
 
@@ -277,12 +277,19 @@ router.route({
 // Navigate by name
 router.navigateTo('userDetail', { id: '123' });
 
+// Navigate by name with NavigateOptions (replace, state, viewTransition)
+router.navigateTo('userDetail', { id: '123' }, { replace: true });
+
 // Build URL by name
-const url = router.urlFor('userDetail', { id: '123' });
+const url = router.url('userDetail', { id: '123' });
 console.log(url); // '/users/123'
 
-// With query parameters
-router.navigateTo('userDetail', { id: '123' }, { tab: 'profile' });
+// Build URL with query parameters by name
+const urlWithQuery = router.url('userDetail', { id: '123' }, { tab: 'profile' });
+console.log(urlWithQuery); // '/users/123?tab=profile'
+
+// Navigate to a named route and include query params
+router.navigate(router.url('userDetail', { id: '123' }, { tab: 'profile' }));
 // Navigates to: /users/123?tab=profile
 ```
 
@@ -320,12 +327,12 @@ const requireAuth: Middleware = async (ctx, next) => {
 
   if (!user) {
     // Redirect to login if not authenticated
-    ctx.navigate('/login');
+    router.navigate('/login');
     return; // Don't call next() – stops execution
   }
 
-  // Add user to context
-  ctx.user = user;
+  // Pass user data to handler via ctx.meta
+  ctx.meta.user = user;
 
   // Continue to next middleware or handler
   await next();
@@ -336,7 +343,7 @@ router.route({
   path: '/dashboard',
   middleware: requireAuth,
   handler: (ctx) => {
-    console.log('User:', ctx.user);
+    console.log('User:', ctx.meta.user);
   },
 });
 ```
@@ -351,7 +358,7 @@ router.route({
   middleware: [requireAuth, requireAdmin, loadData],
   handler: (ctx) => {
     console.log('Admin page');
-    console.log('User:', ctx.user);
+    console.log('User:', ctx.meta.user);
     console.log('Data:', ctx.meta.data);
   },
 });
@@ -372,18 +379,16 @@ const router = createRouter({
 
 ### Context Enhancement
 
-Middleware can modify the context:
+Middleware can add data to `ctx.meta` for downstream middlewares and handlers:
 
 ```ts
 const dataLoader: Middleware = async (ctx, next) => {
   // Add metadata
-  ctx.meta = {
-    loadedAt: Date.now(),
-    environment: 'production',
-  };
+  ctx.meta.loadedAt = Date.now();
+  ctx.meta.environment = 'production';
 
   // Load user data
-  ctx.user = await fetchUser();
+  ctx.meta.user = await fetchUser();
 
   // Load additional data
   ctx.meta.settings = await fetchSettings();
@@ -395,9 +400,9 @@ router.route({
   path: '/profile',
   middleware: dataLoader,
   handler: (ctx) => {
-    console.log('User:', ctx.user);
-    console.log('Meta:', ctx.meta);
+    console.log('User:', ctx.meta.user);
     console.log('Settings:', ctx.meta.settings);
+    console.log('Loaded at:', ctx.meta.loadedAt);
   },
 });
 ```
@@ -430,10 +435,10 @@ permit.set('user', 'posts', {
 // Permission middleware factory
 function requirePermission(resource: string, action: PermissionAction): Middleware {
   return async (ctx, next) => {
-    const user = ctx.user as BaseUser;
+    const user = ctx.meta.user as BaseUser;
 
     if (!user || !permit.check(user, resource, action)) {
-      ctx.navigate('/forbidden');
+      router.navigate('/forbidden');
       return;
     }
 
@@ -455,52 +460,30 @@ router.route({
 });
 ```
 
-## Nested Routes
+## Route Groups
 
-Support for child routes:
+Group routes that share a common path prefix and optional middleware. This is the preferred way to create scoped route trees.
 
 ```ts
-router.route({
-  path: '/users',
-  handler: () => {
-    console.log('Users section');
-  },
-  children: [
-    {
-      path: '/list',
-      handler: () => console.log('User list'),
-      // Matches: /users/list
-    },
-    {
-      path: '/:id',
-      handler: ({ params }) => console.log('User:', params.id),
-      // Matches: /users/123
-    },
-    {
-      path: '/:id/edit',
-      handler: ({ params }) => console.log('Edit user:', params.id),
-      // Matches: /users/123/edit
-    },
-  ],
+// Group without middleware
+router.group('/api', (r) => {
+  r.on('/users', () => renderUsers());
+  r.on('/users/:id', ({ params }) => renderUser(params.id));
+  r.on('/posts', () => renderPosts());
 });
+// Registers: /api/users, /api/users/:id, /api/posts
 
-// Nested routes with parameters
-router.route({
-  path: '/organizations/:orgId',
-  handler: ({ params }) => {
-    console.log('Organization:', params.orgId);
-  },
-  children: [
-    {
-      path: '/projects/:projectId',
-      handler: ({ params }) => {
-        // Both orgId and projectId are available
-        console.log('Org:', params.orgId);
-        console.log('Project:', params.projectId);
-      },
-      // Matches: /organizations/abc/projects/xyz
-    },
-  ],
+// Group with shared middleware
+router.group('/admin', requireAuth, (r) => {
+  r.on('/dashboard', () => renderDashboard());
+  r.on('/settings', () => renderSettings());
+  r.route({ path: '/users', name: 'adminUsers', handler: renderAdminUsers });
+});
+// requireAuth runs before every route in this group
+
+// Group with multiple middleware
+router.group('/admin', [requireAuth, requireAdmin], (r) => {
+  r.on('/reports', () => renderReports());
 });
 ```
 
@@ -525,13 +508,24 @@ router.get('/users/:id', (context) => {
   // Custom route data
   console.log(context.data);
 
-  // Metadata (set by middleware)
+  // Metadata set by middleware
   console.log(context.meta);
-
-  // Navigate function
-  context.navigate('/another-page');
 });
 ```
+
+::: warning No `navigate` on context
+`RouteContext` does not have a `navigate` method. To redirect inside a handler or middleware, call `router.navigate()` from the enclosing closure:
+
+```ts
+const authGuard: Middleware = async (ctx, next) => {
+  if (!isAuthenticated()) {
+    router.navigate('/login'); // ✔ call navigate on the router
+    return;
+  }
+  await next();
+};
+```
+:::
 
 ### Typed Context
 
@@ -561,10 +555,11 @@ React to route changes:
 
 ```ts
 // Subscribe to route changes
-const unsubscribe = router.subscribe(() => {
-  const { pathname, params, query } = router.getState();
+const unsubscribe = router.subscribe((state) => {
   console.log('Route changed!');
-  console.log('Current path:', pathname);
+  console.log('Current path:', state.pathname);
+  console.log('Params:', state.params);
+  console.log('Query:', state.query);
 });
 
 // Later... unsubscribe
@@ -624,7 +619,7 @@ Handle routes that don't match:
 
 ```ts
 const router = createRouter({
-  notFound: ({ pathname, navigate }) => {
+  onNotFound: ({ pathname }) => {
     console.log('404:', pathname);
 
     // Render 404 page
@@ -632,9 +627,6 @@ const router = createRouter({
       <h1>404 – Page Not Found</h1>
       <p>The page "${pathname}" does not exist.</p>
     `;
-
-    // Or redirect
-    // navigate('/', { replace: true });
   },
 });
 ```
@@ -690,20 +682,26 @@ import type {
   NavigateOptions,
   RouterMode,
   RouterOptions,
+  RouteState,
+  GroupRouter,
 } from '@vielzeug/routeit';
 
-// Custom context type
-interface MyContext extends RouteContext {
+// Custom context metadata type
+interface MyMeta {
   user: {
     id: string;
     name: string;
   };
 }
 
-// Typed handler
-const handler: RouteHandler<MyContext> = (ctx) => {
-  console.log(ctx.user.name); // Fully typed
-};
+// Typed route data
+router.route<{ title: string }>({
+  path: '/admin',
+  data: { title: 'Admin' },
+  handler: ({ data }) => {
+    document.title = data?.title ?? 'App'; // data is typed as { title: string }
+  },
+});
 ```
 
 ## Best Practices
@@ -744,13 +742,13 @@ router.route({
 ### 3. Type Your Context
 
 ```ts
-interface AppContext extends RouteContext {
+interface AppMeta {
   user?: User;
   settings?: Settings;
 }
 
-const loadUser: Middleware<AppContext> = async (ctx, next) => {
-  ctx.user = await fetchUser();
+const loadUser: Middleware = async (ctx, next) => {
+  ctx.meta.user = await fetchUser();
   await next();
 };
 ```

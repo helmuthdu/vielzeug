@@ -242,7 +242,7 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
 
-  packages/snapit:
+  packages/storeit:
     devDependencies:
       '@types/node':
         specifier: ^25.3.3

@@ -80,4 +80,3 @@ if (!result) {
 ## Related
 
 - [retry](./retry.md) – Retry operations with exponential backoff
-- [predict](./predict.md) – Add timeout with AbortSignal

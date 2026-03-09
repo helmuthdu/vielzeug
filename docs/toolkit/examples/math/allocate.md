@@ -148,8 +148,7 @@ const [senior, junior] = allocate(bonus, [5, 3]);
 ## See Also
 
 - [distribute](./distribute.md): Distribute amount evenly among N parties
-- [divide](./divide.md): Simple division
-- [multiply](./multiply.md): Multiply numbers
+- [distribute](./distribute.md): Distribute a total into equal parts.
 
 <style>
 .badges {

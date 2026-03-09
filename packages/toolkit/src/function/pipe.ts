@@ -1,14 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 
-import { isPromise } from '../typed/isPromise';
-import type { FnDynamic } from '../types';
+import type { Fn } from '../types';
 import { assert } from './assert';
 
-type FirstParameters<T> = T extends [infer First extends FnDynamic, ...any] ? Parameters<First> : never;
-type LastReturnType<T> = T extends [...any, infer Last extends FnDynamic] ? ReturnType<Last> : never;
-type PipeReturn<T extends FnDynamic[]> = (
-  ...args: FirstParameters<T>
-) => LastReturnType<T> extends Promise<any> ? Promise<Awaited<LastReturnType<T>>> : LastReturnType<T>;
+type FirstParameters<T> = T extends [infer First extends Fn, ...any] ? Parameters<First> : never;
+type LastReturnType<T> = T extends [...any, infer Last extends Fn] ? ReturnType<Last> : never;
 
 /**
  * Pipes multiple functions into a single function. It starts from the leftmost function and proceeds to the right.
@@ -23,25 +19,15 @@ type PipeReturn<T extends FnDynamic[]> = (
  * pipedFn(5); // ((5-4) * 3) + 2 = 5
  * ```
  *
- * @example
- * ```ts
- * const square = async (x) => x * x;
- * const add = async (x) => x + 2;
- * const pipedFn = pipe(square, add);
- *
- * await pipedFn(4); // (4 * 4) + 2 = 18
- * ```
- *
  * @param fns - List of functions to be piped.
  *
  * @returns A new function that is the pipe of the input functions.
  */
-export function pipe<T extends FnDynamic[]>(...fns: T) {
+export function pipe<T extends Fn[]>(...fns: T): (...args: FirstParameters<T>) => LastReturnType<T> {
   assert(fns.length > 0, 'pipe requires at least one function', { args: { fns } });
 
-  const firstFn = fns[0];
-  const restFns = fns.slice(1);
+  const [firstFn, ...restFns] = fns;
 
   return ((...args: FirstParameters<T>) =>
-    restFns.reduce((prev, fn) => (isPromise(prev) ? prev.then(fn) : fn(prev)), firstFn(...args))) as PipeReturn<T>;
+    restFns.reduce((prev, fn) => fn(prev), firstFn(...args))) as (...args: FirstParameters<T>) => LastReturnType<T>;
 }

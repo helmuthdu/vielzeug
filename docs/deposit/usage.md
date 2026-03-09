@@ -41,7 +41,7 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 ```ts
 import { createDeposit, defineSchema, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
 // Optional: Import types
-import type { DepositDataSchema, DepositMigrationFn, DepositBaseAdapter } from '@vielzeug/deposit';
+import type { Schema, MigrationFn, Adapter } from '@vielzeug/deposit';
 ```
 
 ## Basic Usage
@@ -71,8 +71,8 @@ interface Post {
   createdAt: number;
 }
 
-// Define the schema with type-safe helper
-const schema = defineSchema<{ users: User; posts: Post }>()({
+// Define the schema — single call, full type inference
+const schema = defineSchema<{ users: User; posts: Post }>({
   users: {
     key: 'id', // Primary key field
     indexes: ['email', 'role'], // Indexed fields for fast lookups
@@ -88,42 +88,36 @@ const schema = defineSchema<{ users: User; posts: Post }>()({
 
 #### Using LocalStorage
 
-LocalStorage is simpler but has a smaller storage limit (~5-10MB):
+LocalStorage is simpler but has a smaller storage limit (~5-10 MB):
 
 ```ts
-const adapter = new LocalStorageAdapter('my-app-db', schema);
-const db = createDeposit(adapter);
-
-// Or use the shorthand config
 const db = createDeposit({
   type: 'localStorage',
   dbName: 'my-app-db',
-  version: 1,
   schema,
 });
 ```
 
 #### Using IndexedDB
 
-IndexedDB is more powerful with larger storage and index support:
+IndexedDB supports larger storage, native indexes, migrations, and atomic transactions:
 
 ```ts
-const adapter = new IndexedDBAdapter('my-app-db', 1, schema);
-const db = createDeposit(adapter);
-
-// With migration function
-const adapterWithMigration = new IndexedDBAdapter('my-app-db', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
-  // Migration logic here
-});
-
-// Or use the shorthand config
 const db = createDeposit({
   type: 'indexedDB',
   dbName: 'my-app-db',
   version: 1,
   schema,
-  migrationFn: (db, oldVersion, newVersion, tx, schema) => {
-    // Migration logic
+});
+
+// With migration function
+const dbWithMigration = createDeposit({
+  type: 'indexedDB',
+  dbName: 'my-app-db',
+  version: 2,
+  schema,
+  migrationFn: (db, oldVersion, newVersion, tx) => {
+    // Migration logic here
   },
 });
 ```
@@ -267,27 +261,21 @@ const page2 = await db
   .page(2, 10) // Page 2, 10 items per page
   .toArray();
 
-// Aggregations
-const avgAge = await db.query('users').average('age');
-const oldest = await db.query('users').max('age');
-const youngest = await db.query('users').min('age');
+// Count matching records
 const totalUsers = await db.query('users').count();
+const adminCount = await db.query('users').equals('role', 'admin').count();
 
-// Type-safe grouping
-const byRoleTyped = await db.query('users').toGrouped('role');
-// Result: Array<{ key: 'admin' | 'user', values: User[] }>
-for (const group of byRoleTyped) {
-  console.log(`${group.key}: ${group.values.length} users`);
-}
+// First / last
+const first = await db.query('users').orderBy('createdAt', 'asc').first();
+const last  = await db.query('users').orderBy('createdAt', 'asc').last();
+
+// Map to a new type
+const names = await db.query('users').map((u) => u.name).toArray();
 ```
 
-::: tip 💡 Type-Safe Grouping
-Use `toGrouped()` for type-safe grouping. It returns `Array<{ key: T[K], values: T[] }>` with full type inference.
-:::
+### Transactions *(IndexedDB only)*
 
-### Transactions
-
-Perform operations across multiple tables with automatic atomicity for IndexedDB:
+Perform atomic writes across multiple tables in a single `IDBTransaction`:
 
 ```ts
 await db.transaction(['users', 'posts'], async (stores) => {
@@ -310,65 +298,12 @@ await db.transaction(['users', 'posts'], async (stores) => {
     createdAt: Date.now(),
   });
 
-  // For IndexedDB: All changes committed atomically in a single transaction
-  // For LocalStorage: Changes committed optimistically (non-atomic)
-  // If any error occurs, all changes are rolled back
+  // All changes committed atomically — if the callback throws, nothing is persisted
 });
 ```
 
-::: tip ⚡ Atomicity Guarantees
-
-- **IndexedDB**: Transactions are fully atomic using a single `IDBTransaction` – all changes succeed together or all fail together (ACID properties)
-- **LocalStorage**: Transactions are optimistic and NOT atomic – tables are updated sequentially. For critical data integrity, use IndexedDB
-  :::
-
-### Patch Operations
-
-Apply multiple operations atomically:
-
-```ts
-await db.patch('users', [
-  {
-    type: 'put',
-    value: { id: 'u6', name: 'Frank', email: 'f@example.com', age: 40, role: 'user', createdAt: Date.now() },
-  },
-  {
-    type: 'put',
-    value: { id: 'u7', name: 'Grace', email: 'g@example.com', age: 33, role: 'admin', createdAt: Date.now() },
-    ttl: 3600000,
-  },
-  { type: 'delete', key: 'u2' },
-  { type: 'clear' }, // Clears all, then applies puts
-]);
-```
-
-## Schema Validation
-
-Deposit automatically validates your schema on initialization to catch configuration errors early:
-
-```ts
-// ✅ Valid schema
-const validSchema = defineSchema<{ users: User }>()({
-  users: { key: 'id', indexes: ['email'] },
-});
-
-// ❌ Invalid schema – missing key field
-const invalidSchema = {
-  users: {}, // Missing 'key' field
-};
-
-// This will throw immediately with a clear error message:
-// "Invalid schema: table "users" missing required "key" field.
-//  Schema entries must have shape: { key: K; indexes?: K[] }"
-const db = createDeposit({
-  type: 'localStorage',
-  dbName: 'my-app',
-  schema: invalidSchema, // ❌ Throws error
-});
-```
-
-::: tip 💡 Early Error Detection
-Schema validation happens in the constructor, so you'll catch configuration errors immediately rather than at runtime when accessing data. This makes debugging much easier.
+::: warning
+`transaction()` is only available on `IndexedDBAdapter`. For localStorage, use individual `put`/`delete`/`bulkPut` calls.
 :::
 
 ### Safe Storage Keys
@@ -410,12 +345,14 @@ const users = await db.getAll('users');
 
 ## Schema Migrations
 
-When using IndexedDB, you can migrate data when the schema changes:
+When using IndexedDB, provide a `migrationFn` to transform data when the schema version changes:
 
 ```ts
-const migrationFn: DepositMigrationFn<typeof schema> = (db, oldVersion, newVersion, tx, schema) => {
+import type { MigrationFn } from '@vielzeug/deposit';
+
+const migrationFn: MigrationFn = (db, oldVersion, newVersion, tx) => {
   if (oldVersion < 2) {
-    // Version 1 -> 2: Add default role to existing users
+    // Version 1 → 2: add default role to existing users
     const store = tx.objectStore('users');
     const request = store.getAll();
 
@@ -430,7 +367,7 @@ const migrationFn: DepositMigrationFn<typeof schema> = (db, oldVersion, newVersi
   }
 
   if (oldVersion < 3) {
-    // Version 2 -> 3: Add createdAt to posts
+    // Version 2 → 3: add createdAt to posts
     const store = tx.objectStore('posts');
     const request = store.getAll();
 
@@ -445,8 +382,7 @@ const migrationFn: DepositMigrationFn<typeof schema> = (db, oldVersion, newVersi
   }
 };
 
-const adapter = new IndexedDBAdapter('my-app-db', 3, schema, migrationFn);
-const db = createDeposit(adapter);
+const db = createDeposit({ type: 'indexedDB', dbName: 'my-app-db', version: 3, schema, migrationFn });
 ```
 
 ## Environment-Specific Configuration
@@ -457,7 +393,6 @@ const db = createDeposit(adapter);
 const db = createDeposit({
   type: 'localStorage', // Faster for development
   dbName: 'my-app-dev',
-  version: 1,
   schema,
 });
 ```
@@ -481,7 +416,6 @@ beforeEach(async () => {
   const db = createDeposit({
     type: 'localStorage',
     dbName: `test-${Date.now()}`, // Unique per test
-    version: 1,
     schema,
   });
 

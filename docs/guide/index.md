@@ -26,7 +26,7 @@ Client-side data management made simple:
 | ------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------- |
 | **[Deposit](/deposit/)** | Schema-driven client-side storage with a rich query builder across LocalStorage and IndexedDB | <PackageInfo package="deposit" type="size" /> |
 | **[Fetchit](/fetchit/)** | Modern HTTP client with smart caching, request deduplication, and a query layer            | <PackageInfo package="fetchit" type="size" /> |
-| **[Snapit](/snapit/)** | Tiny reactive state management with computed values, transactions, and selective subscriptions | <PackageInfo package="snapit" type="size" /> |
+| **[Stateit](/stateit/)** | Tiny reactive state management with computed values, transactions, and selective subscriptions | <PackageInfo package="stateit" type="size" /> |
 
 ### 🎨 Frontend & Forms
 
@@ -75,7 +75,7 @@ yarn add @vielzeug/toolkit
 
 ```typescript
 import { debounce, group } from '@vielzeug/toolkit';
-import { createSnapshot } from '@vielzeug/snapit';
+import { createSnapshot } from '@vielzeug/stateit';
 import { createHttpClient } from '@vielzeug/fetchit';
 
 // Debounce search input
@@ -168,7 +168,7 @@ const canDelete = permit.check(currentUser, 'posts', 'delete');
 ### Reactive State
 
 ```typescript
-import { createSnapshot } from '@vielzeug/snapit';
+import { createSnapshot } from '@vielzeug/stateit';
 
 const store = createSnapshot({ todos: [], filter: 'all' });
 
@@ -191,8 +191,8 @@ These combinations complement each other particularly well:
 | Pairing | Why it works |
 |---|---|
 | **Validit + Formit** | Use Validit schemas directly as field validators — one schema drives both API validation and form error messages |
-| **Fetchit + Snapit** | Fetch remote data with caching, then push results into a snapshot for reactive UI state |
-| **Craftit + Snapit** | Share global app state across multiple web components via snapshots |
+| **Fetchit + Stateit** | Fetch remote data with caching, then push results into a snapshot for reactive UI state |
+| **Craftit + Stateit** | Share global app state across multiple web components via snapshots |
 | **Deposit + Fetchit** | Persist API responses in IndexedDB for offline-capable apps with a typed query layer |
 | **Permit + Routeit** | Guard route navigation with permission checks in router middleware |
 | **Wireit + Logit** | Register a scoped logger per service in your DI container for structured, context-aware logging |
@@ -233,7 +233,7 @@ Learn one package's patterns — `create*` factories, `on*` subscriptions, `safe
 | | |
 |---|---|
 | [Toolkit](/toolkit/) | Start here — 100+ utilities for arrays, objects, strings, and async |
-| [Snapit](/snapit/) | Add reactive state management to your app |
+| [Stateit](/stateit/) | Add reactive state management to your app |
 | [Fetchit](/fetchit/) | HTTP client with caching, retries, and deduplication |
 | [Deposit](/deposit/) | Type-safe client-side storage with IndexedDB or LocalStorage |
 | [Formit](/formit/) | Form state management with validation and dirty tracking |

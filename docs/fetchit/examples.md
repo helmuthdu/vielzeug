@@ -58,9 +58,9 @@ function UserProfile({ userId }: { userId: string }) {
     });
 
     queryClient
-      .fetch({
-        queryKey: ['users', userId],
-        queryFn: () => http.get<User>(`/users/${userId}`),
+      .query({
+        key: ['users', userId],
+        fn: () => http.get<User>(`/users/${userId}`),
         staleTime: 5000,
       })
       .catch(() => {});
@@ -103,9 +103,9 @@ onMounted(() => {
   });
 
   queryClient
-    .fetch({
-      queryKey: ['users', props.userId],
-      queryFn: () => http.get<User>(`/users/${props.userId}`),
+    .query({
+      key: ['users', props.userId],
+      fn: () => http.get<User>(`/users/${props.userId}`),
       staleTime: 5000,
     })
     .catch(() => {});
@@ -147,9 +147,9 @@ onUnmounted(() => unsubscribe?.());
   });
 
   queryClient
-    .fetch({
-      queryKey: ['users', userId],
-      queryFn: () => http.get<User>(`/users/${userId}`),
+    .query({
+      key: ['users', userId],
+      fn: () => http.get<User>(`/users/${userId}`),
       staleTime: 5000,
     })
     .catch(() => {});
@@ -185,9 +185,9 @@ class UserCard extends HTMLElement {
     });
 
     this.#queryClient
-      .fetch({
-        queryKey: ['users', userId],
-        queryFn: () => this.#http.get<User>(`/users/${userId}`),
+      .query({
+        key: ['users', userId],
+        fn: () => this.#http.get<User>(`/users/${userId}`),
         staleTime: 5000,
       })
       .catch(() => {});
@@ -244,9 +244,9 @@ export function useUser(userId: string) {
     });
 
     queryClient
-      .fetch({
-        queryKey: ['users', userId],
-        queryFn: () => http.get<User>(`/users/${userId}`),
+      .query({
+        key: ['users', userId],
+        fn: () => http.get<User>(`/users/${userId}`),
         staleTime: 5000,
       })
       .catch(() => {});
@@ -299,9 +299,9 @@ export function useUser(userId: () => string) {
     });
 
     queryClient
-      .fetch({
-        queryKey: ['users', id],
-        queryFn: () => http.get<User>(`/users/${id}`),
+      .query({
+        key: ['users', id],
+        fn: () => http.get<User>(`/users/${id}`),
         staleTime: 5000,
       })
       .catch(() => {});
@@ -350,9 +350,9 @@ export function useUser(userId: string) {
   });
 
   queryClient
-    .fetch({
-      queryKey: ['users', userId],
-      queryFn: () => http.get<User>(`/users/${userId}`),
+    .query({
+      key: ['users', userId],
+      fn: () => http.get<User>(`/users/${userId}`),
       staleTime: 5000,
     })
     .catch(() => {});
@@ -389,9 +389,9 @@ export class BaseUserElement extends HTMLElement {
   queryClient = createQueryClient();
 
   async fetchUser(userId: string) {
-    return this.queryClient.fetch({
-      queryKey: ['users', userId],
-      queryFn: () => this.http.get<User>(`/users/${userId}`),
+    return this.queryClient.query({
+      key: ['users', userId],
+      fn: () => this.http.get<User>(`/users/${userId}`),
       staleTime: 5000,
     });
   }
@@ -538,9 +538,9 @@ const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
 // Use query keys for better cache control
-const user = await queryClient.fetch({
-  queryKey: ['users', '1'],
-  queryFn: () => http.get<User>('/users/1'),
+const user = await queryClient.query({
+  key: ['users', '1'],
+  fn: () => http.get<User>('/users/1'),
 });
 
 // Later, invalidate this specific query
@@ -567,9 +567,9 @@ console.log(user1 === user2); // true (same instance)
 ```ts
 // Invalidate cache first, then fetch fresh data
 queryClient.invalidate(['users', '1']);
-const freshUser = await queryClient.fetch({
-  queryKey: ['users', '1'],
-  queryFn: () => http.get<User>('/users/1'),
+const freshUser = await queryClient.query({
+  key: ['users', '1'],
+  fn: () => http.get<User>('/users/1'),
 });
 ```
 
@@ -590,14 +590,14 @@ console.log(`Cache contains ${size} entries`);
 
 ## URL Building
 
-### Query Parameters
+### Query String Parameters
 
 ```ts
 const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 
-// Use query option for query string parameters
+// Use search option for query string parameters
 const users = await http.get<User[]>('/api/users', {
-  query: {
+  search: {
     page: 1,
     limit: 10,
     sort: 'name',
@@ -619,10 +619,10 @@ function getUser(id: string) {
   });
 }
 
-// Using query parameters for search
+// Using query string parameters for search
 function searchUsers(query: string, page: number) {
   return http.get<User[]>('/users/search', {
-    query: { q: query, page },
+    search: { q: query, page },
   });
 }
 
@@ -630,7 +630,7 @@ function searchUsers(query: string, page: number) {
 function getUserPosts(userId: string, status: string, limit: number) {
   return http.get<Post[]>('/users/:userId/posts', {
     params: { userId },
-    query: { status, limit },
+    search: { status, limit },
   });
 }
 ```
@@ -773,26 +773,24 @@ const http = createHttpClient({ baseUrl: 'https://api.example.com' });
 const queryClient = createQueryClient();
 
 // Query with automatic retry
-const user = await queryClient.fetch({
-  queryKey: ['users', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+const user = await queryClient.query({
+  key: ['users', userId],
+  fn: () => http.get<User>(`/users/${userId}`),
   retry: 3, // Retry 3 times with exponential backoff (1s, 2s, 4s)
   retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
 });
 
 // Mutation with retry
-await queryClient.mutate(
-  {
-    mutationFn: (data) => http.post<User>('/users', { body: data }),
-    retry: 2, // Retry POST operations 2 times
-  },
-  { name: 'Alice' },
+const createUser = queryClient.mutation(
+  (data: { name: string }) => http.post<User>('/users', { body: data }),
+  { retry: 2 }, // Retry POST operations 2 times
 );
+await createUser.mutate({ name: 'Alice' });
 
 // Custom fixed retry delay
-const data = await queryClient.fetch({
-  queryKey: ['status'],
-  queryFn: () => http.get('/status'),
+const data = await queryClient.query({
+  key: ['status'],
+  fn: () => http.get('/status'),
   retry: 5,
   retryDelay: 2000, // Fixed 2s delay between retries
 });
@@ -809,9 +807,9 @@ function startPolling(interval: number, onData: (data: any) => void) {
     try {
       // Invalidate to force refetch
       queryClient.invalidate(['status']);
-      const data = await queryClient.fetch({
-        queryKey: ['status'],
-        queryFn: () => http.get('/status'),
+      const data = await queryClient.query({
+        key: ['status'],
+        fn: () => http.get('/status'),
       });
       onData(data);
     } catch (error) {
