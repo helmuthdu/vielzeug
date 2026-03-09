@@ -1,15 +1,428 @@
 ---
 title: Fetchit — Examples
-description: Real-world HTTP patterns and framework integrations for Fetchit.
+description: Real-world patterns for the Fetchit HTTP client, query client, and standalone mutations.
 ---
 
-# Fetchit Examples
+## Fetchit Examples
 
 ::: tip
-These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+These are copy-paste ready recipes. See the [Usage Guide](./usage.md) for detailed explanations.
 :::
 
 [[toc]]
+
+## Framework Integration
+
+Complete examples showing how to integrate Fetchit with React, Vue, Svelte, and Web Components. All patterns use `createApi` for HTTP and `createQuery` + `createMutation` for data management.
+
+### Basic Integration (Inline)
+
+::: code-group
+
+```tsx [React]
+import { createApi, createMutation, createQuery } from '@vielzeug/fetchit';
+import { useEffect, useState } from 'react';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc = createQuery({ staleTime: 5_000 });
+
+function UserProfile({ userId }: { userId: number }) {
+  const [state, setState] = useState<QueryState<User>>(() => qc.getState<User>(['users', userId]) ?? {
+    data: undefined, error: null, status: 'idle',
+    updatedAt: 0, isPending: false, isSuccess: false, isError: false, isIdle: true,
+  });
+
+  useEffect(() => {
+    const unsub = qc.subscribe<User>(['users', userId], setState);
+    qc.query({ key: ['users', userId], fn: ({ signal }) => api.get('/users/{id}', { params: { id: userId }, signal }) }).catch(() => {});
+    return unsub;
+  }, [userId]);
+
+  if (state.isPending) return <div>Loading…</div>;
+  if (state.isError)   return <div>Error: {state.error!.message}</div>;
+  if (!state.data)     return <div>Not found</div>;
+  return <div>{state.data.name}</div>;
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createApi, createQuery } from '@vielzeug/fetchit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const props = defineProps<{ userId: number }>();
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery({ staleTime: 5_000 });
+
+const state = ref({ data: null as User | null, isPending: false, error: null as Error | null });
+let unsub: (() => void) | undefined;
+
+onMounted(() => {
+  unsub = qc.subscribe<User>(['users', props.userId], (s) => {
+    state.value = { data: s.data ?? null, isPending: s.isPending, error: s.error };
+  });
+  qc.query({
+    key: ['users', props.userId],
+    fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: props.userId }, signal }),
+  }).catch(() => {});
+});
+
+onUnmounted(() => unsub?.());
+</script>
+
+<template>
+  <div v-if="state.isPending">Loading…</div>
+  <div v-else-if="state.error">Error: {{ state.error.message }}</div>
+  <div v-else-if="state.data">{{ state.data.name }}</div>
+  <div v-else>Not found</div>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createApi, createQuery } from '@vielzeug/fetchit';
+  import { onDestroy } from 'svelte';
+
+  export let userId: number;
+
+  const api = createApi({ baseUrl: 'https://api.example.com' });
+  const qc  = createQuery({ staleTime: 5_000 });
+
+  let data: User | undefined;
+  let isPending = true;
+  let error: Error | null = null;
+
+  const unsub = qc.subscribe<User>(['users', userId], (s) => {
+    data = s.data; isPending = s.isPending; error = s.error;
+  });
+
+  qc.query({
+    key: ['users', userId],
+    fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
+  }).catch(() => {});
+
+  onDestroy(unsub);
+</script>
+
+{#if isPending}
+  <div>Loading…</div>
+{:else if error}
+  <div>Error: {error.message}</div>
+{:else if data}
+  <div>{data.name}</div>
+{:else}
+  <div>Not found</div>
+{/if}
+```
+
+```ts [Web Component]
+import { createApi, createQuery } from '@vielzeug/fetchit';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery({ staleTime: 5_000 });
+
+class UserCard extends HTMLElement {
+  #unsub?: () => void;
+
+  connectedCallback() {
+    const id = Number(this.getAttribute('user-id'));
+    this.#unsub = qc.subscribe<User>(['users', id], (state) => this.#render(state));
+    qc.query({ key: ['users', id], fn: ({ signal }) => api.get('/users/{id}', { params: { id }, signal }) }).catch(() => {});
+  }
+  disconnectedCallback() { this.#unsub?.(); }
+
+  #render(state: QueryState<User>) {
+    this.innerHTML = state.isPending
+      ? '<p>Loading…</p>'
+      : state.error
+        ? `<p>Error: ${state.error.message}</p>`
+        : state.data
+          ? `<p>${state.data.name}</p>`
+          : '<p>Not found</p>';
+  }
+}
+customElements.define('user-card', UserCard);
+```
+
+:::
+
+### Reusable Hook/Composable
+
+::: code-group
+
+```tsx [React hook]
+// hooks/useQuery.ts
+import { createApi, createQuery, type QueryState } from '@vielzeug/fetchit';
+import { useEffect, useState } from 'react';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery({ staleTime: 5_000 });
+
+export function useUser(userId: number) {
+  const [state, setState] = useState<QueryState<User>>(
+    () => qc.getState<User>(['users', userId]) ?? { data: undefined, error: null, status: 'idle', updatedAt: 0, isPending: false, isSuccess: false, isError: false, isIdle: true },
+  );
+
+  useEffect(() => {
+    const unsub = qc.subscribe<User>(['users', userId], setState);
+    qc.query({
+      key: ['users', userId],
+      fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
+    }).catch(() => {});
+    return unsub;
+  }, [userId]);
+
+  return state;
+}
+
+// UserProfile.tsx
+function UserProfile({ userId }: { userId: number }) {
+  const { data, isPending, error } = useUser(userId);
+  if (isPending) return <div>Loading…</div>;
+  if (error)     return <div>Error: {error.message}</div>;
+  return data ? <div>{data.name}</div> : <div>Not found</div>;
+}
+```
+
+```ts [Vue composable]
+// composables/useUser.ts
+import { createApi, createQuery } from '@vielzeug/fetchit';
+import { ref, onScopeDispose, type Ref } from 'vue';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery({ staleTime: 5_000 });
+
+export function useUser(userId: number) {
+  const data     = ref<User | null>(null);
+  const isPending = ref(true);
+  const error    = ref<Error | null>(null);
+
+  const unsub = qc.subscribe<User>(['users', userId], (s) => {
+    data.value = s.data ?? null;
+    isPending.value = s.isPending;
+    error.value = s.error;
+  });
+
+  qc.query({
+    key: ['users', userId],
+    fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
+  }).catch(() => {});
+
+  onScopeDispose(unsub);
+  return { data, isPending, error };
+}
+```
+
+:::
+
+## CRUD Operations
+
+```ts
+import { createApi, createMutation, createQuery } from '@vielzeug/fetchit';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery({ staleTime: 5_000 });
+
+// READ — cached
+const users = await qc.query({
+  key: ['users'],
+  fn: ({ signal }) => api.get<User[]>('/users', { signal }),
+});
+
+// READ one
+const user = await qc.query({
+  key: ['users', 1],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+});
+
+// CREATE
+const addUser = createMutation(
+  (data: NewUser) => api.post<User>('/users', { body: data }),
+  { onSuccess: (user) => { qc.set(['users', user.id], user); qc.invalidate(['users']); } },
+);
+await addUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+
+// UPDATE
+const updateUser = createMutation(
+  ({ id, ...patch }: { id: number } & Partial<User>) =>
+    api.put<User>('/users/{id}', { params: { id }, body: patch }),
+  { onSuccess: (user) => qc.set(['users', user.id], user) },
+);
+await updateUser.mutate({ id: 1, name: 'Alice Smith' });
+
+// DELETE
+const deleteUser = createMutation(
+  (id: number) => api.delete(`/users/${id}`),
+  { onSuccess: (_, id) => qc.invalidate(['users']) },
+);
+await deleteUser.mutate(1);
+```
+
+## Authentication
+
+```ts
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc  = createQuery();
+
+function login(token: string) {
+  api.headers({ Authorization: `Bearer ${token}` });
+}
+
+function logout() {
+  api.headers({ Authorization: undefined }); // remove header
+  qc.clear();                                // clear cached authenticated data
+}
+```
+
+### Auto Token Refresh via Interceptor
+
+```ts
+const dispose = api.use(async (ctx, next) => {
+  try {
+    return await next(ctx);
+  } catch (err) {
+    if (HttpError.is(err, 401)) {
+      const newToken = await refreshToken();
+      api.headers({ Authorization: `Bearer ${newToken}` });
+      // Retry with updated header
+      ctx.init.headers = { ...(ctx.init.headers as object), Authorization: `Bearer ${newToken}` };
+      return next(ctx);
+    }
+    throw err;
+  }
+});
+```
+
+## Optimistic Updates
+
+```ts
+const userId = 1;
+const key = ['users', userId];
+
+const updateUser = createMutation(
+  (patch: Partial<User>) => api.put<User>('/users/{id}', { params: { id: userId }, body: patch }),
+);
+
+// Apply optimistic update immediately
+qc.set<User>(key, (old) => ({ ...old!, ...patch }));
+
+try {
+  await updateUser.mutate(patch);
+  // Server confirmed — force sync
+  qc.invalidate(key);
+} catch {
+  // Server rejected — roll back
+  qc.invalidate(key);
+}
+```
+
+## Polling
+
+```ts
+const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the server
+
+function startPolling(key: QueryKey, fn: QueryOptions<unknown>['fn'], intervalMs: number) {
+  const tick = async () => {
+    qc.invalidate(key);
+    await qc.query({ key, fn }).catch(() => {});
+  };
+  tick();
+  const id = setInterval(tick, intervalMs);
+  return () => clearInterval(id);
+}
+
+const stopPolling = startPolling(
+  ['job', jobId],
+  ({ signal }) => api.get<Job>('/jobs/{id}', { params: { id: jobId }, signal }),
+  3_000,
+);
+
+// Stop when job completes
+qc.subscribe<Job>(['job', jobId], (state) => {
+  if (state.data?.status === 'done') stopPolling();
+});
+```
+
+## Error Handling Patterns
+
+### Status-code branching
+
+```ts
+import { HttpError } from '@vielzeug/fetchit';
+
+try {
+  await api.get('/users/1');
+} catch (err) {
+  if (HttpError.is(err, 404)) return null;
+  if (HttpError.is(err, 401)) return redirectToLogin();
+  if (HttpError.is(err, 403)) return showForbidden();
+  if (HttpError.is(err))      throw new Error(`Unexpected ${err.status}: ${err.url}`);
+  throw err; // re-throw non-HTTP errors
+}
+```
+
+### Global error logger
+
+```ts
+const api = createApi({
+  baseUrl: 'https://api.example.com',
+  logger: (level, msg, meta) => {
+    if (level === 'error') Sentry.captureMessage(msg, { extra: { meta } });
+    else if (level === 'warn') console.warn(msg);
+  },
+});
+```
+
+### Mutation error state
+
+```ts
+const mutation = createMutation((id: number) => api.delete(`/users/${id}`));
+
+mutation.subscribe((state) => {
+  if (state.isError) {
+    // State is observable — no need for try/catch in UI
+    toast.error(state.error!.message);
+    mutation.reset();
+  }
+});
+
+mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
+```
+
+## File Uploads
+
+```ts
+const api = createApi({ baseUrl: 'https://api.example.com' });
+
+// Single file — FormData passes through without JSON serialization
+const form = new FormData();
+form.append('file', fileInput.files[0]);
+form.append('alt', 'Profile photo');
+
+const result = await api.post<UploadResult>('/upload', { body: form });
+
+// Multiple files
+const batch = new FormData();
+for (const file of files) batch.append('files', file);
+await api.post('/upload/batch', { body: batch });
+```
+
+## Disposal
+
+```ts
+// Using declarations (TypeScript 5.2+)
+{
+  using api = createApi({ baseUrl: 'https://api.example.com' });
+  using qc  = createQuery();
+  // Automatically disposed at end of block
+}
+
+// Manual disposal — good for singleton cleanup on logout
+function cleanup() {
+  api.dispose();
+  qc.dispose();
+}
+```
 
 ::: tip 💡 Complete Applications
 These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
@@ -35,11 +448,11 @@ Directly create and use a client within components.
 ::: code-group
 
 ```tsx [React]
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { useEffect, useState } from 'react';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 function UserProfile({ userId }: { userId: string }) {
   const [state, setState] = useState({
@@ -52,7 +465,7 @@ function UserProfile({ userId }: { userId: string }) {
     const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
       setState({
         data: newState.data ?? null,
-        isLoading: newState.isLoading,
+        isLoading: newState.isPending,
         error: newState.error,
       });
     });
@@ -78,12 +491,12 @@ function UserProfile({ userId }: { userId: string }) {
 
 ```vue [Vue 3]
 <script setup lang="ts">
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{ userId: string }>();
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 const state = ref({
   data: null as User | null,
@@ -97,7 +510,7 @@ onMounted(() => {
   unsubscribe = queryClient.subscribe(['users', props.userId], (newState) => {
     state.value = {
       data: newState.data ?? null,
-      isLoading: newState.isLoading,
+      isLoading: newState.isPending,
       error: newState.error,
     };
   });
@@ -124,13 +537,13 @@ onUnmounted(() => unsubscribe?.());
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+  import { createHttp, createQuery } from '@vielzeug/fetchit';
   import { onDestroy } from 'svelte';
 
   export let userId: string;
 
-  const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-  const queryClient = createQueryClient();
+  const http = createHttp({ baseUrl: 'https://api.example.com' });
+  const queryClient = createQuery();
 
   let state = {
     data: null as User | null,
@@ -141,7 +554,7 @@ onUnmounted(() => unsubscribe?.());
   const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
     state = {
       data: newState.data ?? null,
-      isLoading: newState.isLoading,
+      isLoading: newState.isPending,
       error: newState.error,
     };
   });
@@ -169,11 +582,11 @@ onUnmounted(() => unsubscribe?.());
 ```
 
 ```ts [Web Component]
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 
 class UserCard extends HTMLElement {
-  #http = createHttpClient({ baseUrl: 'https://api.example.com' });
-  #queryClient = createQueryClient();
+  #http = createHttp({ baseUrl: 'https://api.example.com' });
+  #queryClient = createQuery();
   #unsubscribe: (() => void) | null = null;
 
   connectedCallback() {
@@ -198,7 +611,7 @@ class UserCard extends HTMLElement {
   }
 
   render(state: any) {
-    this.innerHTML = state.isLoading
+    this.innerHTML = state.isPending
       ? '<div>Loading...</div>'
       : state.error
         ? `<div>Error: ${state.error.message}</div>`
@@ -221,11 +634,11 @@ Recommended pattern for reusability and separation of concerns.
 
 ```tsx [React]
 // useUser.ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { useEffect, useMemo, useState } from 'react';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 export function useUser(userId: string) {
   const [state, setState] = useState({
@@ -238,7 +651,7 @@ export function useUser(userId: string) {
     const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
       setState({
         data: newState.data ?? null,
-        isLoading: newState.isLoading,
+        isLoading: newState.isPending,
         error: newState.error,
       });
     });
@@ -271,11 +684,11 @@ function UserProfile({ userId }: { userId: string }) {
 
 ```vue [Vue 3]
 // useUser.ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 export function useUser(userId: () => string) {
   const state = ref({
@@ -293,7 +706,7 @@ export function useUser(userId: () => string) {
     unsubscribe = queryClient.subscribe(['users', id], (newState) => {
       state.value = {
         data: newState.data ?? null,
-        isLoading: newState.isLoading,
+        isLoading: newState.isPending,
         error: newState.error,
       };
     });
@@ -328,11 +741,11 @@ const state = useUser(() => props.userId);
 
 ```svelte [Svelte]
 // userStore.ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { writable } from 'svelte/store';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 export function useUser(userId: string) {
   const state = writable({
@@ -344,7 +757,7 @@ export function useUser(userId: string) {
   const unsubscribe = queryClient.subscribe(['users', userId], (newState) => {
     state.set({
       data: newState.data ?? null,
-      isLoading: newState.isLoading,
+      isLoading: newState.isPending,
       error: newState.error,
     });
   });
@@ -382,11 +795,11 @@ export function useUser(userId: string) {
 
 ```ts [Web Component]
 // BaseUserElement.ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 
 export class BaseUserElement extends HTMLElement {
-  http = createHttpClient({ baseUrl: 'https://api.example.com' });
-  queryClient = createQueryClient();
+  http = createHttp({ baseUrl: 'https://api.example.com' });
+  queryClient = createQuery();
 
   async fetchUser(userId: string) {
     return this.queryClient.query({
@@ -409,9 +822,9 @@ export class BaseUserElement extends HTMLElement {
 ### GET Request
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createHttp } from '@vielzeug/fetchit';
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://api.example.com',
 });
 
@@ -483,20 +896,20 @@ await http.delete('/users/1');
 ### Setting Auth Headers
 
 ```ts
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://api.example.com',
 });
 
 // After login
 function login(token: string) {
-  http.setHeaders({
+  http.headers({
     Authorization: `Bearer ${token}`,
   });
 }
 
 // On logout
 function logout() {
-  http.setHeaders({
+  http.headers({
     Authorization: undefined, // Removes the header
   });
   queryClient.clear(); // Clear cached authenticated data
@@ -506,9 +919,9 @@ function logout() {
 ### Auth Token Refresh
 
 ```ts
-import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+import { HttpError, createHttp } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: string, options?: any): Promise<T> {
   try {
@@ -517,7 +930,7 @@ async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: str
     if (error instanceof HttpError && error.status === 401) {
       // Token expired, refresh it
       const newToken = await refreshAuthToken();
-      http.setHeaders({ Authorization: `Bearer ${newToken}` });
+      http.headers({ Authorization: `Bearer ${newToken}` });
 
       // Retry the request
       return await http[method]<T>(url, options);
@@ -532,10 +945,10 @@ async function apiRequest<T>(method: 'get' | 'post' | 'put' | 'delete', url: str
 ### Query Keys
 
 ```ts
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 // Use query keys for better cache control
 const user = await queryClient.query({
@@ -550,7 +963,7 @@ queryClient.invalidate(['users', '1']);
 ### Request Deduplication
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 // HTTP client automatically deduplicates identical concurrent requests
 const [user1, user2, user3] = await Promise.all([
@@ -586,18 +999,18 @@ queryClient.invalidate(['users']);
 // Check cache size
 console.log(`Cache contains ${size} entries`);
 
-````
+````text
 
 ## URL Building
 
 ### Query String Parameters
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
-// Use search option for query string parameters
+// Use query option for query string parameters
 const users = await http.get<User[]>('/api/users', {
-  search: {
+  query: {
     page: 1,
     limit: 10,
     sort: 'name',
@@ -610,11 +1023,11 @@ const users = await http.get<User[]>('/api/users', {
 ### Dynamic URLs
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 // Using path parameters
 function getUser(id: string) {
-  return http.get<User>('/users/:id', {
+  return http.get<User>('/users/{id}', {
     params: { id },
   });
 }
@@ -622,15 +1035,15 @@ function getUser(id: string) {
 // Using query string parameters for search
 function searchUsers(query: string, page: number) {
   return http.get<User[]>('/users/search', {
-    search: { q: query, page },
+    query: { q: query, page },
   });
 }
 
 // Combining both
 function getUserPosts(userId: string, status: string, limit: number) {
-  return http.get<Post[]>('/users/:userId/posts', {
+  return http.get<Post[]>('/users/{userId}/posts', {
     params: { userId },
-    search: { status, limit },
+    query: { status, limit },
   });
 }
 ```
@@ -640,7 +1053,7 @@ function getUserPosts(userId: string, status: string, limit: number) {
 ### Single File Upload
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 const fileInput = document.querySelector<HTMLInputElement>('#file');
 const formData = new FormData();
@@ -684,9 +1097,9 @@ xhr.upload.addEventListener('progress', (e) => {
 ### Basic Error Handling
 
 ```ts
-import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+import { HttpError, createHttp } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 try {
   const user = await http.get<User>('/users/1');
@@ -707,7 +1120,7 @@ try {
 ```ts
 import { HttpError } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 try {
   await http.get('/users/1');
@@ -734,9 +1147,9 @@ try {
 ### Global Error Handler
 
 ```ts
-import { HttpError, createHttpClient } from '@vielzeug/fetchit';
+import { HttpError, createHttp } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 async function safeRequest<T>(requestFn: () => Promise<T>): Promise<T | null> {
   try {
@@ -769,8 +1182,8 @@ const user = await safeRequest(() => http.get<User>('/users/1'));
 Fetchit uses [@vielzeug/toolkit's retry()](../toolkit/examples/function/retry.md) utility for intelligent retry logic with exponential backoff:
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 // Query with automatic retry
 const user = await queryClient.query({
@@ -799,8 +1212,8 @@ const data = await queryClient.query({
 ### Polling
 
 ```ts
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-const queryClient = createQueryClient();
+const http = createHttp({ baseUrl: 'https://api.example.com' });
+const queryClient = createQuery();
 
 function startPolling(interval: number, onData: (data: any) => void) {
   const pollId = setInterval(async () => {
@@ -831,9 +1244,9 @@ const stopPolling = startPolling('/status', 5000, (status) => {
 ### Batch Requests
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createHttp } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const http = createHttp({ baseUrl: 'https://api.example.com' });
 
 async function batchFetch<T>(ids: string[]): Promise<T[]> {
   const requests = ids.map((id) => http.get<T>(`/users/${id}`));

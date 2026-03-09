@@ -9,16 +9,16 @@ Object utilities provide robust tools to manipulate, compare, and traverse objec
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :----- | :---------- |
-| [`cache`](./object/cache.md) | Key-value cache with automatic GC and observer support. |
-| [`diff`](./object/diff.md) | Compare two objects and return the structural differences. |
-| [`merge`](./object/merge.md) | Merge multiple objects with configurable strategies (deep, shallow, concat). |
-| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value. |
-| [`path`](./object/path.md) | Safely access nested properties using dot-notation strings. |
-| [`proxy`](./object/proxy.md) | Object proxy with get/set intercept hooks. |
-| [`prune`](./object/prune.md) | Recursively remove null/undefined/empty values. |
-| [`seek`](./object/seek.md) | Find a value anywhere within a deeply nested object by its key. |
+| Method                               | Description                                                                  |
+| :----------------------------------- | :--------------------------------------------------------------------------- |
+| [`cache`](./object/cache.md)         | Key-value cache with automatic GC and observer support.                      |
+| [`diff`](./object/diff.md)           | Compare two objects and return the structural differences.                   |
+| [`merge`](./object/merge.md)         | Merge multiple objects with configurable strategies (deep, shallow, concat). |
+| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value.                      |
+| [`path`](./object/path.md)           | Safely access nested properties using dot-notation strings.                  |
+| [`proxy`](./object/proxy.md)         | Object proxy with get/set intercept hooks.                                   |
+| [`prune`](./object/prune.md)         | Recursively remove null/undefined/empty values.                              |
+| [`seek`](./object/seek.md)           | Find a value anywhere within a deeply nested object by its key.              |
 
 ## 💡 Practical Examples
 
@@ -66,9 +66,9 @@ import { prune } from '@vielzeug/toolkit';
 
 // Remove all nulls, undefined, empty strings, and empty objects/arrays
 prune({ a: 1, b: null, c: '', d: { e: undefined } }); // { a: 1 }
-prune([1, null, '', 2, undefined]);                    // [1, 2]
-prune('  hello  ');                                    // 'hello'
-prune('   ');                                          // undefined
+prune([1, null, '', 2, undefined]); // [1, 2]
+prune('  hello  '); // 'hello'
+prune('   '); // undefined
 ```
 
 ### Caching
@@ -78,9 +78,9 @@ import { cache } from '@vielzeug/toolkit';
 
 const myCache = cache<string>();
 myCache.set(['user', 1], 'John Doe');
-myCache.get(['user', 1]);             // 'John Doe'
+myCache.get(['user', 1]); // 'John Doe'
 myCache.scheduleGc(['user', 1], 5000); // Auto-delete after 5s
-myCache.size();                        // 1
+myCache.size(); // 1
 ```
 
 ## 🔗 All Object Utilities
@@ -97,4 +97,3 @@ myCache.size();                        // 1
 - [seek](./object/seek.md)
 
 </div>
-

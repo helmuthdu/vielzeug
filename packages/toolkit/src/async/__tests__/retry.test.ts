@@ -75,7 +75,52 @@ describe('retry', () => {
   it('should abort if the signal is aborted', async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error('failure'));
 
-    await expect(retry(mockFn, { delay: 100, signal: AbortSignal.abort(), times: 3 })).rejects.toThrow('Retry aborted');
+    const err = (await retry(mockFn, { delay: 100, signal: AbortSignal.abort(), times: 3 }).catch((e) => e)) as Error;
     expect(mockFn).not.toHaveBeenCalled();
+    expect(err.name).toBe('AbortError');
+  });
+
+  it('retryDelay: uses a custom per-attempt delay function (0-based)', async () => {
+    const mockFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('fail'))
+      .mockRejectedValueOnce(new Error('fail'))
+      .mockResolvedValueOnce('success');
+    const retryDelay = vi.fn((attempt: number) => (attempt + 1) * 100);
+
+    await retry(mockFn, { retryDelay, times: 3 });
+
+    expect(sleep).toHaveBeenNthCalledWith(1, 100); // attempt 0 → 100 ms
+    expect(sleep).toHaveBeenNthCalledWith(2, 200); // attempt 1 → 200 ms
+  });
+
+  it('retryDelay: supersedes delay and backoff', async () => {
+    const mockFn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValueOnce('ok');
+
+    await retry(mockFn, { backoff: 10, delay: 999, retryDelay: () => 42, times: 3 });
+
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(42);
+  });
+
+  it('shouldRetry: stops retrying immediately when predicate returns false', async () => {
+    const mockFn = vi.fn().mockRejectedValue(new Error('fatal'));
+
+    await expect(retry(mockFn, { shouldRetry: () => false, times: 5 })).rejects.toThrow('fatal');
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('shouldRetry: receives the error and 0-based failure count', async () => {
+    const shouldRetry = vi.fn().mockReturnValue(true);
+    const mockFn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('err1'))
+      .mockRejectedValueOnce(new Error('err2'))
+      .mockResolvedValueOnce('success');
+
+    await retry(mockFn, { shouldRetry, times: 3 });
+
+    expect(shouldRetry).toHaveBeenNthCalledWith(1, expect.any(Error), 0);
+    expect(shouldRetry).toHaveBeenNthCalledWith(2, expect.any(Error), 1);
   });
 });

@@ -1,6 +1,6 @@
 ---
 title: Fetchit — HTTP client for TypeScript
-description: Lightweight, type-safe HTTP client with request caching, path parameters, custom headers, and a query client. Zero dependencies.
+description: Lightweight, type-safe HTTP client with query caching, request deduplication, and standalone mutations. Built on the native fetch API. Zero dependencies.
 ---
 
 <PackageBadges package="fetchit" />
@@ -9,7 +9,7 @@ description: Lightweight, type-safe HTTP client with request caching, path param
 
 # Fetchit
 
-**Fetchit** is a lightweight HTTP client with request caching, typed path parameters, and a query client built on the native `fetch` API. Zero dependencies.
+**Fetchit** provides three independent primitives built on the native `fetch` API: an HTTP client, a query cache, and standalone mutations. Use any combination based on your needs.
 
 ## Installation
 
@@ -32,51 +32,48 @@ yarn add @vielzeug/fetchit
 ## Quick Start
 
 ```ts
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createApi, createQuery, createMutation } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const api = createApi({ baseUrl: 'https://api.example.com' });
 
 // GET with typed response
-const users = await http.get<User[]>('/users');
+const users = await api.get<User[]>('/users');
 
-// POST with body
-const user = await http.post<User>('/users', { body: { name: 'Alice', email: 'alice@example.com' } });
+// Type-safe path parameters — TypeScript errors if params are wrong or missing
+const user = await api.get<User>('/users/{id}', { params: { id: 42 } });
 
-// Path parameters — supports both :param and {param} syntax
-const post = await http.get<Post>('/users/:userId/posts/:postId', {
-  params: { userId: '1', postId: '42' },
+// Cached query — second call within staleTime returns immediately from cache
+const qc = createQuery({ staleTime: 5_000 });
+const post = await qc.query({
+  key: ['users', 42],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 42 }, signal }),
 });
 
-// Custom headers per request
-const data = await http.get('/protected', {
-  headers: { Authorization: 'Bearer token' },
-});
-
-// Error handling
-try {
-  await http.get('/not-found');
-} catch (err) {
-  if (err instanceof HttpError) {
-    console.log(err.status, err.url, err.method);
-  }
-}
+// Standalone mutation with cache invalidation on success
+const createUser = createMutation(
+  (data: NewUser) => api.post<User>('/users', { body: data }),
+  { onSuccess: () => qc.invalidate(['users']) },
+);
+await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
 ```
 
 ## Features
 
-- **Type-safe responses** — generic type parameter for automatic inference
-- **Path parameters** — `:param` and `{param}` syntax for URL templating
-- **Base URL** — configure once, use everywhere
-- **Custom headers** — global via `setHeaders()`, per-request via options
-- **Query client** — `createQueryClient()` for request deduplication and caching
-- **Interceptors** — `use()` middleware for auth, logging, and request transforms
-- **HttpError** — structured error with `url`, `method`, `status`, and `cause` properties
+- **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
+- **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and deduplication
+- **Query cache** — `createQuery()` for stale-while-revalidate caching, prefix invalidation, and reactive subscriptions
+- **Standalone mutations** — `createMutation()` with lifecycle callbacks, retry, and observable state
+- **Request deduplication** — GET/HEAD/OPTIONS always deduplicate concurrent identical calls; others opt-in
+- **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
+- **Retry with backoff** — configurable attempt count and exponential delay strategy
+- **Abort support** — `QueryFnContext` passes an `AbortSignal` to every query function
+- **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | HTTP methods, caching, mutations, interceptors, and more |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world HTTP patterns and framework integrations |
+|                           |                                                              |
+| ------------------------- | ------------------------------------------------------------ |
+| [Usage Guide](./usage.md) | HTTP client, query client, mutations, interceptors, and more |
+| [API Reference](./api.md) | Complete type signatures and method documentation            |
+| [Examples](./examples.md) | Real-world data-fetching patterns                            |

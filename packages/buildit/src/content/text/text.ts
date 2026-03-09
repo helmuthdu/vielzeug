@@ -210,11 +210,15 @@ export interface TextProps {
  * ```
  */
 
-define('bit-text', () => {
+export const TAG = define('bit-text', () => {
   return {
     styles: [styles],
     template: html`<slot></slot>`,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-text': HTMLElement & TextProps;
+  }
+}

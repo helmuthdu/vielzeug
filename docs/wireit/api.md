@@ -1,659 +1,563 @@
 ---
 title: Wireit — API Reference
-description: Complete API reference for the Wireit dependency injection container.
+description: Complete API reference for @vielzeug/wireit dependency injection container.
 ---
 
 # Wireit API Reference
 
 [[toc]]
 
-## Factory Functions
+## `createToken(description)`
 
-### createToken()
+Creates a typed injection token.
 
-Creates a typed token used to identify a dependency in the container.
+**Parameters:**
 
-#### Signature
+- `description: string` — Human-readable name shown in error messages and `debug()` output. Required.
+
+**Returns:** `Token<T>`
+
+**Example:**
 
 ```ts
-function createToken<T = unknown>(description: string): Token<T>;
+import { createToken } from '@vielzeug/wireit';
+
+const DbToken     = createToken<IDatabase>('Database');
+const ConfigToken = createToken<AppConfig>('AppConfig');
 ```
 
-#### Parameters
+## `createContainer()`
 
-- `description: string` – Human-readable name shown in error messages and `debug()` output.
+Creates a new root container.
 
-#### Returns
+**Returns:** `Container`
 
-A typed token (`symbol & { __type?: T }`).
-
-#### Example
+**Example:**
 
 ```ts
-const Logger   = createToken<ILogger>('Logger');
-const Config   = createToken<AppConfig>('Config');
-const Database = createToken<IDatabase>('Database');
-```
+import { createContainer } from '@vielzeug/wireit';
 
----
-
-### createContainer()
-
-Creates a new root dependency injection container.
-
-#### Signature
-
-```ts
-function createContainer(): Container;
-```
-
-#### Returns
-
-A new empty `Container` instance.
-
-#### Example
-
-```ts
 const container = createContainer();
 ```
 
----
+## `createTestContainer(base?)`
 
-### createTestContainer()
+Creates a container suitable for unit tests. When `base` is provided, the test container inherits all of its registrations. `dispose()` on the returned container clears registrations without running production dispose hooks.
 
-Creates a child test container with an automatic cleanup helper.
+**Parameters:**
 
-#### Signature
+- `base?: Container` — Optional base container to inherit from
+
+**Returns:** `Container`
+
+**Example:**
 
 ```ts
-function createTestContainer(base?: Container): {
-  container: Container;
-  dispose: () => void;
-};
+import { createTestContainer } from '@vielzeug/wireit';
+
+const container = createTestContainer(appContainer);
+container.value(DbToken, mockDb, { overwrite: true });
+
+afterEach(() => container.dispose());
 ```
 
-#### Parameters
+## Container Registration
 
-- `base?: Container` – Optional parent container. When provided the new container inherits all of its registrations. When omitted a fresh root container is used as parent.
+### `register(token, provider, opts?)`
 
-#### Returns
+Register a full `Provider<T>` for a token.
 
-- `container` – A child `Container` instance.
-- `dispose()` – Calls `container.clear()`. Call this in `afterEach` to prevent state leaking between tests.
+**Parameters:**
 
-#### Example
+- `token: Token<T>` — The injection token
+- `provider: Provider<T>` — One of `ValueProvider<T>`, `ClassProvider<T>`, or `FactoryProvider<T>`
+- `opts?: { overwrite?: boolean }` — Pass `{ overwrite: true }` to replace an existing registration
+
+**Returns:** `this` (chainable)
+
+**Throws:** `Error` if the token is already registered and `overwrite` is not `true`
+
+**Example:**
 
 ```ts
-describe('UserService', () => {
-  const { container, dispose } = createTestContainer(appContainer);
+container.register(DbToken, { useClass: Database, deps: [ConfigToken] });
+container.register(ConfigToken, { useValue: { apiUrl: 'https://...' } });
+container.register(LogToken, { useFactory: () => new Logger() });
+```
 
-  afterEach(() => dispose());
+---
 
-  it('resolves with mock db', () => {
-    container.registerValue(DbToken, mockDb);
-    const svc = container.get(UserServiceToken);
-    // ...
-  });
+### `value(token, val, opts?)`
+
+Shorthand for registering a plain value (wraps it in `{ useValue: val }`).
+
+**Parameters:**
+
+- `token: Token<T>` — The injection token
+- `val: T` — The value to register
+- `opts?: { overwrite?: boolean }`
+
+**Returns:** `this` (chainable)
+
+**Example:**
+
+```ts
+container.value(ConfigToken, { apiUrl: 'https://api.example.com' });
+```
+
+---
+
+### `factory(token, fn, opts?)`
+
+Shorthand for registering a factory function.
+
+**Parameters:**
+
+- `token: Token<T>` — The injection token
+- `fn: (...deps: Deps) => T | Promise<T>` — Factory function
+- `opts?: ProviderOptions<T, Deps>` — Optional lifetime, deps, dispose, and overwrite
+
+**Returns:** `this` (chainable)
+
+**Example:**
+
+```ts
+container.factory(DbToken, (config) => new Database(config.apiUrl), {
+  deps: [ConfigToken],
+  lifetime: 'singleton',
+  dispose: (db) => db.close(),
 });
 ```
 
 ---
 
-### withMock()
+### `bind(token, cls, opts?)`
 
-Temporarily overrides a token registration for the duration of a callback, then restores the original state.
+Shorthand for binding a class constructor to a token.
 
-Internally uses `snapshot()` / `restore()`.
+**Parameters:**
 
-#### Signature
+- `token: Token<T>` — The injection token
+- `cls: new (...args: Deps) => T` — The class to instantiate
+- `opts?: ProviderOptions<T, Deps>` — Optional lifetime, deps, dispose, and overwrite
 
-```ts
-function withMock<T, R>(
-  container: Container,
-  token: Token<T>,
-  mock: T,
-  fn: () => Promise<R> | R,
-): Promise<R>;
-```
+**Returns:** `this` (chainable)
 
-#### Parameters
-
-- `container: Container` – Container to modify.
-- `token: Token<T>` – Token to override.
-- `mock: T` – Mock value to register for the duration of `fn`.
-- `fn: () => Promise<R> | R` – Callback to execute; may be async.
-
-#### Returns
-
-`Promise<R>` — resolves to the value returned by `fn`. The original registration is restored even if `fn` throws.
-
-#### Example
+**Example:**
 
 ```ts
-const mockDb = { query: vi.fn() };
-
-const result = await withMock(container, DbToken, mockDb, async () => {
-  const svc = container.get(UserServiceToken);
-  return svc.getUser('1');
-});
-
-// DbToken is restored here; mockDb.query holds recorded calls
-```
-
----
-
-## Container
-
-### Registration Methods
-
-All registration methods return `this`, enabling chaining.
-
-#### register()
-
-Register a provider for a token.
-
-##### Signature
-
-```ts
-register<T>(token: Token<T>, provider: Provider<T>): this;
-```
-
-##### Parameters
-
-- `token: Token<T>` – Token to register.
-- `provider: Provider<T>` – One of:
-
-```ts
-type Provider<T> =
-  | { useValue: T }
-  | { useClass: new (...args: any[]) => T; deps?: Token<any>[]; lifetime?: Lifetime }
-  | { useFactory: (...deps: any[]) => T | Promise<T>; deps?: Token<any>[]; lifetime?: Lifetime };
-
-type Lifetime = 'singleton' | 'transient' | 'scoped';
-```
-
-`useClass` and `useFactory` default to `'singleton'` when `lifetime` is omitted.
-
-##### Example
-
-```ts
-// Value provider
-container.register(ConfigToken, { useValue: { port: 3000 } });
-
-// Class provider — container instantiates and caches
-container.register(UserServiceToken, {
-  useClass: UserService,
+container.bind(ServiceToken, UserService, {
   deps: [DbToken, LoggerToken],
   lifetime: 'singleton',
 });
-
-// Sync factory
-container.register(LoggerToken, {
-  useFactory: (config) => new ConsoleLogger(config.level),
-  deps: [ConfigToken],
-});
-
-// Async factory — must resolve via getAsync()
-container.register(DbToken, {
-  useFactory: async (config) => {
-    const db = new PrismaClient({ datasourceUrl: config.dbUrl });
-    await db.$connect();
-    return db;
-  },
-  deps: [ConfigToken],
-  lifetime: 'singleton',
-});
 ```
 
 ---
 
-#### registerValue()
+### `alias(token, source)`
 
-Shorthand for `register(token, { useValue: value })`.
+Map `token` to `source` — resolving `token` will resolve `source` instead.
 
-##### Signature
+**Parameters:**
 
-```ts
-registerValue<T>(token: Token<T>, value: T): this;
-```
+- `token: Token<T>` — The alias token
+- `source: Token<T>` — The target token
 
-##### Example
+**Returns:** `this` (chainable)
 
-```ts
-container.registerValue(ConfigToken, { port: 3000, dbUrl: '...' });
-container.registerValue(LoggerToken, new ConsoleLogger());
-```
+**Throws:** `AliasCycleError` if a cycle is detected
 
----
-
-#### alias()
-
-Redirect resolution of `token` to `source`. When the container receives a `get(token)` call it resolves `source` instead.
-
-Alias chains are supported (`C → B → A`). Cycle detection throws a generic `Error`.
-
-##### Signature
+**Example:**
 
 ```ts
-alias<T>(token: Token<T>, source: Token<T>): this;
-```
-
-##### Parameters
-
-- `token: Token<T>` – The new alias token.
-- `source: Token<T>` – The existing token to redirect to.
-
-##### Example
-
-```ts
-const ILogger     = createToken<ILogger>('ILogger');
-const LoggerImpl  = createToken<ConsoleLogger>('LoggerImpl');
-
-container.register(LoggerImpl, { useClass: ConsoleLogger });
-container.alias(ILogger, LoggerImpl);
-
-container.get(ILogger); // returns ConsoleLogger instance
+container.bind(ConsoleLoggerToken, ConsoleLogger);
+container.alias(ILoggerToken, ConsoleLoggerToken);
 ```
 
 ---
 
-#### unregister()
+### `unregister(token)`
 
-Remove a registration from the container.
+Remove a token's registration from this container.
 
-##### Signature
+**Parameters:**
+
+- `token: Token<any>`
+
+**Returns:** `this` (chainable)
+
+---
+
+### `clear()`
+
+Remove all registrations and aliases from this container without calling dispose hooks.
+
+**Returns:** `this` (chainable)
+
+## Container Resolution
+
+### `get<T>(token)`
+
+Resolve a token synchronously.
+
+**Parameters:**
+
+- `token: Token<T>`
+
+**Returns:** `T`
+
+**Throws:**
+- `ProviderNotFoundError` — No provider registered
+- `CircularDependencyError` — Circular dependency detected
+- `AsyncProviderError` — Provider is async; use `getAsync()` instead
+- `ContainerDisposedError` — Container has been disposed
+
+---
+
+### `getAsync<T>(token)`
+
+Resolve a token asynchronously. Handles both sync and async providers.
+
+**Parameters:**
+
+- `token: Token<T>`
+
+**Returns:** `Promise<T>`
+
+**Throws:**
+- `ProviderNotFoundError`
+- `CircularDependencyError`
+- `ContainerDisposedError`
+
+---
+
+### `getAll(tokens)`
+
+Resolve a tuple of tokens synchronously, returning a typed tuple.
+
+**Parameters:**
+
+- `tokens: [...T]` — A tuple of `Token<any>` values
+
+**Returns:** `TokenValues<T>` — A tuple matching the token types
+
+**Example:**
 
 ```ts
-unregister<T>(token: Token<T>): this;
-```
-
-##### Example
-
-```ts
-container.unregister(LoggerToken);
-container.has(LoggerToken); // false
+const [db, config] = container.getAll([DbToken, ConfigToken]);
+//     ^IDatabase  ^AppConfig
 ```
 
 ---
 
-#### clear()
+### `getAllAsync(tokens)`
 
-Remove all registrations and aliases. Cached singleton instances are also dropped.
+Resolve a tuple of tokens asynchronously.
 
-##### Signature
+**Parameters:**
 
-```ts
-clear(): this;
-```
+- `tokens: [...T]`
 
-##### Example
+**Returns:** `Promise<TokenValues<T>>`
 
-```ts
-container.clear();
-```
-
----
-
-### Resolution Methods
-
-#### get()
-
-Resolve a dependency synchronously.
-
-##### Signature
+**Example:**
 
 ```ts
-get<T>(token: Token<T>): T;
-```
-
-##### Throws
-
-- `ProviderNotFoundError` — token is not registered in this container or any parent.
-- `AsyncProviderError` — the provider's factory is `async`; use `getAsync()` instead.
-- `CircularDependencyError` — circular dependency detected during resolution.
-
-##### Example
-
-```ts
-const logger = container.get(LoggerToken);
-const config = container.get(ConfigToken);
+const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
 ```
 
 ---
 
-#### getAsync()
+### `getOptional<T>(token)`
 
-Resolve a dependency asynchronously. Works for both sync and async providers. Concurrent singleton requests share the same in-flight `Promise` to avoid duplicate instantiation.
+Resolve a token, returning `undefined` if not registered.
 
-##### Signature
+**Parameters:**
 
-```ts
-getAsync<T>(token: Token<T>): Promise<T>;
-```
+- `token: Token<T>`
 
-##### Example
-
-```ts
-const db = await container.getAsync(DbToken);
-```
+**Returns:** `T | undefined`
 
 ---
 
-#### getOptional()
+### `getOptionalAsync<T>(token)`
 
-Resolve a dependency synchronously, returning `undefined` if the token is not registered. Re-throws any other error (including `AsyncProviderError` and `CircularDependencyError`).
+Resolve a token asynchronously, returning `undefined` if not registered.
 
-##### Signature
+**Parameters:**
 
-```ts
-getOptional<T>(token: Token<T>): T | undefined;
-```
+- `token: Token<T>`
 
-##### Example
-
-```ts
-const cache = container.getOptional(CacheToken);
-if (cache) {
-  await cache.set('key', value);
-}
-```
+**Returns:** `Promise<T | undefined>`
 
 ---
 
-#### getOptionalAsync()
+### `has(token)`
 
-Async version of `getOptional()`.
+Check if a token is registered (including parent containers).
 
-##### Signature
+**Parameters:**
 
-```ts
-getOptionalAsync<T>(token: Token<T>): Promise<T | undefined>;
-```
+- `token: Token<any>`
 
-##### Example
+**Returns:** `boolean`
 
-```ts
-const cache = await container.getOptionalAsync(CacheToken);
-```
+## Container Hierarchy
 
----
+### `createChild()`
 
-#### has()
+Create a child container that inherits all registrations from this container. `scoped` providers will create one instance per child container.
 
-Check whether a token is registered in this container or any ancestor.
+**Returns:** `Container`
 
-##### Signature
-
-```ts
-has(token: Token<any>): boolean;
-```
-
-##### Example
-
-```ts
-if (container.has(LoggerToken)) {
-  container.get(LoggerToken).info('ready');
-}
-```
+**Throws:** `ContainerDisposedError` if this container has been disposed
 
 ---
 
-### Container Hierarchy
+### `runInScope(fn)`
 
-#### createChild()
+Create a child container, pass it to `fn`, then call `dispose()` on it automatically when `fn` completes (or throws).
 
-Create a child container that inherits all registrations from this container. Child registrations shadow the parent locally; the parent is never modified.
+**Parameters:**
 
-`'scoped'` providers receive their own cached instance per child container.
+- `fn: (scope: Container) => Promise<T> | T`
 
-##### Signature
+**Returns:** `Promise<Awaited<T>>`
 
-```ts
-createChild(): Container;
-```
-
-##### Example
-
-```ts
-const child = container.createChild();
-child.registerValue(RequestIdToken, generateId());
-
-child.get(LoggerToken);    // inherited from parent
-child.get(RequestIdToken); // local to this child
-```
-
----
-
-#### runInScope()
-
-Create a temporary child container, pass it to `fn`, then `clear()` the child in a `finally` block.
-
-##### Signature
-
-```ts
-runInScope<T>(fn: (scope: Container) => Promise<T> | T): Promise<T>;
-```
-
-##### Parameters
-
-- `fn` – Receives the scoped child container. May be sync or async.
-
-##### Returns
-
-`Promise<T>` — resolves to the value returned by `fn`.
-
-##### Example
+**Example:**
 
 ```ts
 const result = await container.runInScope(async (scope) => {
-  scope.registerValue(RequestIdToken, generateId());
-  scope.registerValue(UserToken, currentUser);
-  return scope.get(RequestHandlerToken).handle(data);
+  scope.value(UserToken, currentUser);
+  return scope.get(ServiceToken).doWork();
 });
-// scope is cleared here regardless of success or failure
+```
+
+## Container Lifecycle
+
+### `dispose()`
+
+Calls `dispose` hooks for all resolved singleton and scoped instances, then clears all registrations. Idempotent — calling multiple times is safe.
+
+**Returns:** `Promise<void>`
+
+---
+
+### `disposed`
+
+`true` after `dispose()` has been called.
+
+**Type:** `boolean` (read-only)
+
+---
+
+### `[Symbol.asyncDispose]()`
+
+Implements the `AsyncDisposable` protocol for `await using` syntax.
+
+## Container Testing
+
+### `mock(token, mock, fn)`
+
+Temporarily replace a token's registration with `mock`, run `fn`, then restore the original state — even if `fn` throws.
+
+**Parameters:**
+
+- `token: Token<T>` — The token to replace
+- `mock: T | Provider<T>` — A plain value (wrapped in `{ useValue }`) or a full provider
+- `fn: () => Promise<R> | R` — Callback to run with the mock active
+
+**Returns:** `Promise<R>`
+
+**Example:**
+
+```ts
+const result = await container.mock(DbToken, fakeDb, () => svc.getUsers());
 ```
 
 ---
 
-### Snapshot / Restore
+### `snapshot()`
 
-#### snapshot()
+Capture the current registrations and aliases (including cached instances).
 
-Take a deep copy of the container's current registry and alias map, including any cached singleton instances.
-
-##### Signature
-
-```ts
-snapshot(): Snapshot;
-```
-
-##### Returns
-
-An opaque `Snapshot` handle.
+**Returns:** `Snapshot` (opaque handle)
 
 ---
 
-#### restore()
+### `restore(snap)`
 
-Restore the container to a previously snapshotted state.
+Restore registrations from a previous snapshot.
 
-##### Signature
+**Parameters:**
 
-```ts
-restore(snap: Snapshot): this;
-```
+- `snap: Snapshot`
 
-##### Example
-
-```ts
-const snap = container.snapshot();
-
-container.registerValue(LoggerToken, mockLogger);
-container.get(UserServiceToken).doWork();
-
-container.restore(snap); // original LoggerToken is back
-```
+**Returns:** `this` (chainable)
 
 ---
 
-### Debug
+### `debug()`
 
-#### debug()
+Return a human-readable view of all tokens and aliases, walking the full parent chain (child-wins).
 
-Return a plain-object summary of all registered tokens and aliases, for logging or inspection.
+**Returns:** `{ tokens: string[]; aliases: Array<[string, string]> }`
 
-##### Signature
-
-```ts
-debug(): { tokens: string[]; aliases: Array<[string, string]> };
-```
-
-##### Returns
-
-- `tokens` — description strings of all directly registered tokens.
-- `aliases` — pairs of `[aliasDescription, sourceDescription]`.
-
-##### Example
+**Example:**
 
 ```ts
-container.register(DbToken, { useClass: PrismaDb });
-container.register(LoggerToken, { useClass: ConsoleLogger });
-container.alias(ILoggerToken, LoggerToken);
-
-console.log(container.debug());
-// { tokens: ['Database', 'Logger'], aliases: [['ILogger', 'Logger']] }
+const { tokens, aliases } = container.debug();
+// tokens:  ['AppConfig', 'Database', 'Logger', 'UserService']
+// aliases: [['ILogger', 'Logger']]
 ```
-
----
 
 ## Types
 
-### Token
+### `Token<T>`
+
+Typed injection token — a branded symbol.
 
 ```ts
 type Token<T = unknown> = symbol & { __type?: T };
 ```
 
-Opaque typed symbol. The `__type` phantom property is never present at runtime — it exists only for TypeScript inference.
-
 ---
 
-### Lifetime
+### `Lifetime`
 
 ```ts
 type Lifetime = 'singleton' | 'transient' | 'scoped';
 ```
 
-| Value | Behaviour |
-|---|---|
-| `'singleton'` | One instance per container, cached after first resolution. Default for `useClass` and `useFactory`. |
-| `'transient'` | New instance on every `get()` / `getAsync()` call. |
-| `'scoped'` | One instance per child container. Acts as singleton in the root container. |
+---
+
+### `ValueProvider<T>`
+
+```ts
+type ValueProvider<T> = { useValue: T };
+```
 
 ---
 
-### Provider
+### `ClassProvider<T, Deps>`
 
 ```ts
-type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
-
-type ValueProvider<T> = {
-  useValue: T;
-};
-
-type ClassProvider<T> = {
-  useClass: new (...args: any[]) => T;
-  deps?: Token<any>[];
+type ClassProvider<T, Deps extends unknown[] = any[]> = {
+  useClass: new (...args: Deps) => T;
+  deps?: { [K in keyof Deps]: Token<Deps[K]> };
   lifetime?: Lifetime;
-};
-
-type FactoryProvider<T> = {
-  useFactory: (...deps: any[]) => T | Promise<T>;
-  deps?: Token<any>[];
-  lifetime?: Lifetime;
+  dispose?: (instance: T) => void | Promise<void>;
 };
 ```
 
 ---
 
-### Snapshot
+### `FactoryProvider<T, Deps>`
+
+```ts
+type FactoryProvider<T, Deps extends unknown[] = any[]> = {
+  useFactory: (...deps: Deps) => T | Promise<T>;
+  deps?: { [K in keyof Deps]: Token<Deps[K]> };
+  lifetime?: Lifetime;
+  dispose?: (instance: T) => void | Promise<void>;
+};
+```
+
+---
+
+### `Provider<T>`
+
+```ts
+type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
+```
+
+---
+
+### `ProviderOptions<T, Deps>`
+
+Options accepted by `factory()` and `bind()`. Can be imported to build higher-order helpers:
+
+```ts
+type ProviderOptions<T, Deps extends unknown[] = any[]> = {
+  deps?: { [K in keyof Deps]: Token<Deps[K]> };
+  lifetime?: Lifetime;
+  dispose?: (instance: T) => void | Promise<void>;
+  overwrite?: boolean;
+};
+```
+
+---
+
+### `TokenValues<T>`
+
+Extracts the value types from a tuple of tokens, preserving position:
+
+```ts
+type TokenValues<T extends readonly Token<any>[]> = {
+  [K in keyof T]: T[K] extends Token<infer V> ? V : never;
+};
+
+// Usage
+const tokens = [DbToken, ConfigToken] as const;
+type Values = TokenValues<typeof tokens>; // [IDatabase, AppConfig]
+```
+
+---
+
+### `Snapshot`
+
+Opaque handle returned by `snapshot()` and accepted by `restore()`.
 
 ```ts
 type Snapshot = { readonly __snapshot: never };
 ```
 
-Opaque handle returned by `snapshot()`. Pass it to `restore()` to roll back.
-
----
-
 ## Errors
 
-### ProviderNotFoundError
+### `ProviderNotFoundError`
 
-Thrown when resolving a token that has not been registered in the container or any of its ancestors.
+Thrown when `get()` or `getAsync()` is called for an unregistered token.
 
-```ts
-class ProviderNotFoundError extends Error {}
 ```
-
-**Example:**
-
-```ts
-try {
-  container.get(UnregisteredToken);
-} catch (error) {
-  if (error instanceof ProviderNotFoundError) {
-    console.error(error.message); // "No provider registered for token: UnregisteredToken"
-  }
-}
+No provider registered for token: Database
 ```
 
 ---
 
-### AsyncProviderError
+### `CircularDependencyError`
 
-Thrown when `get()` is called on a token whose factory is async. Use `getAsync()` instead.
+Thrown when a circular dependency is detected. The full path is included:
 
-```ts
-class AsyncProviderError extends Error {}
 ```
-
-**Example:**
-
-```ts
-container.register(DbToken, { useFactory: async () => connectDb() });
-
-try {
-  container.get(DbToken); // throws
-} catch (error) {
-  if (error instanceof AsyncProviderError) {
-    const db = await container.getAsync(DbToken); // correct
-  }
-}
+Circular dependency detected: A → B → C → A
 ```
 
 ---
 
-### CircularDependencyError
+### `AsyncProviderError`
 
-Thrown when a circular dependency is detected during resolution.
+Thrown when `get()` (sync) is called on a token whose factory returns a `Promise`. Use `getAsync()` instead.
 
-```ts
-class CircularDependencyError extends Error {}
+```
+Provider for token "Database" is async. Use getAsync() instead.
 ```
 
-**Example:**
+---
 
-```ts
-container.register(ServiceAToken, { useClass: ServiceA, deps: [ServiceBToken] });
-container.register(ServiceBToken, { useClass: ServiceB, deps: [ServiceAToken] });
+### `AliasCycleError`
 
-try {
-  container.get(ServiceAToken);
-} catch (error) {
-  if (error instanceof CircularDependencyError) {
-    console.error(error.message);
-    // "Circular dependency detected: ServiceA → ServiceB → ServiceA"
-  }
-}
+Thrown when alias definitions form a cycle. The full cycle path is shown:
+
+```
+Alias cycle detected: ILogger → Logger → ILogger
+```
+
+---
+
+### `ContainerDisposedError`
+
+Thrown when any public method is called on a container that has already been disposed.
+
+```
+Cannot use a disposed container.
 ```

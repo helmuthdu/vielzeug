@@ -37,7 +37,7 @@ describe('attempt', () => {
 
   it('should timeout if the function takes too long', async () => {
     const mockFn = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 2000)));
-    const result = await attempt(mockFn, { timeout: 1000, retries: 0 });
+    const result = await attempt(mockFn, { retries: 0, timeout: 1000 });
     expect(result).toBeUndefined();
   });
 

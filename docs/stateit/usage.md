@@ -3,15 +3,44 @@ title: Stateit — Usage Guide
 description: Concepts, patterns, and best practices for @vielzeug/stateit — signals, effects, computed, and stores.
 ---
 
-# Usage Guide
+# Stateit Usage Guide
 
-## Installation
+::: tip New to Stateit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
+:::
 
-```sh
-pnpm add @vielzeug/stateit
+[[toc]]
+
+## Why Stateit?
+
+Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
+
+```ts
+// Before — manual notification
+let count = 0;
+const listeners: Array<() => void> = [];
+function setCount(n: number) { count = n; listeners.forEach(fn => fn()); }
+
+// After — Stateit signals
+import { signal, effect } from '@vielzeug/stateit';
+const count = signal(0);
+effect(() => console.log(count.value)); // auto-tracks dependencies
+count.value = 1; // notifies automatically
 ```
 
-## Importing
+| Feature            | Stateit                                       | Zustand  | Jotai    | Nanostores |
+| ------------------ | --------------------------------------------- | -------- | -------- | ---------- |
+| Bundle size        | <PackageInfo package="stateit" type="size" /> | ~1.2 kB  | ~3 kB    | ~1 kB      |
+| Framework-agnostic | ✅                                            | ✅       | React    | ✅         |
+| Fine-grained reactivity | ✅                                       | ❌       | ✅       | ✅         |
+| Structured stores  | ✅                                            | ✅       | Manual   | ❌         |
+| Zero dependencies  | ✅                                            | ❌       | ❌       | ✅         |
+
+**Use Stateit when** you need fine-grained reactivity without framework lock-in, or when building web components and vanilla JS apps.
+
+**Consider alternatives when** you need DevTools integration (Zustand), React Suspense support (Jotai), or server-side stores.
+
+## Import
 
 ```ts
 import {
@@ -34,15 +63,13 @@ import {
   type Signal,
   type ReadonlySignal,
   type ComputedSignal,
+  type WritableSignal,
   type CleanupFn,
   type WatchOptions,
-  type WatchSelectorOptions,
   type Store,
   type StoreOptions,
 } from '@vielzeug/stateit';
 ```
-
----
 
 ## Signals
 
@@ -60,21 +87,21 @@ const items = signal<string[]>([]);
 ### Reading and Writing
 
 ```ts
-count.value;          // read — tracked inside effect/computed
-count.value = 42;     // write — notifies all dependents
-count.peek();         // read without registering a subscription
+count.value; // read — tracked inside effect/computed
+count.value = 42; // write — notifies all dependents
+count.peek(); // read without registering a subscription
 ```
 
 ### `readonly`
 
-Wraps a signal in a proxy that prevents writes at runtime and narrows the type:
+Narrows a `Signal<T>` to its read-only `ReadonlySignal<T>` interface at the type level. Useful for exposing a signal at API boundaries where callers should observe but not mutate:
 
 ```ts
 const count = signal(0);
 const readCount: ReadonlySignal<number> = readonly(count);
 
-readCount.value;        // fine
-readCount.value = 1;    // throws TypeError at runtime; TS error at compile time
+readCount.value; // fine — tracked read
+// readCount.value = 1; // TS compile error — no write access
 ```
 
 ### `toValue`
@@ -82,11 +109,9 @@ readCount.value = 1;    // throws TypeError at runtime; TS error at compile time
 Unwraps a plain value or signal transparently — useful in generic helpers:
 
 ```ts
-toValue(42);           // 42
-toValue(signal(42));   // 42 (tracked if called inside effect)
+toValue(42); // 42
+toValue(signal(42)); // 42 (tracked if called inside effect)
 ```
-
----
 
 ## Effects
 
@@ -134,8 +159,6 @@ effect(() => {
 });
 ```
 
----
-
 ## Computed
 
 `computed()` creates a derived read-only signal whose value is automatically
@@ -161,14 +184,12 @@ doubled.dispose();
 
 ```ts
 const a = signal(2);
-const b = computed(() => a.value * 3);  // 6
-const c = computed(() => b.value + 1);  // 7
+const b = computed(() => a.value * 3); // 6
+const c = computed(() => b.value + 1); // 7
 
 a.value = 4;
 console.log(c.value); // 13
 ```
-
----
 
 ## `writable`
 
@@ -180,7 +201,9 @@ and transformations that need to write back to the source.
 const firstName = signal('Alice');
 const upper = writable(
   () => firstName.value.toUpperCase(),
-  (v) => { firstName.value = v.toLowerCase(); },
+  (v) => {
+    firstName.value = v.toLowerCase();
+  },
 );
 
 console.log(upper.value); // 'ALICE'
@@ -189,8 +212,6 @@ console.log(firstName.value); // 'bob'
 
 upper.dispose(); // stop tracking getter
 ```
-
----
 
 ## `watch` (Signals)
 
@@ -218,8 +239,6 @@ watch(count, (v) => console.log(v), { immediate: true });
 watch(count, (v) => console.log('once:', v), { once: true });
 ```
 
----
-
 ## `batch` (Signals)
 
 `batch()` defers all signal notifications until the callback returns, then
@@ -230,7 +249,11 @@ const a = signal(0);
 const b = signal(0);
 
 let fires = 0;
-effect(() => { a.value; b.value; fires++; });
+effect(() => {
+  a.value;
+  b.value;
+  fires++;
+});
 // fires is 1 (initial run)
 
 batch(() => {
@@ -239,8 +262,6 @@ batch(() => {
 });
 // fires is 2 (one flush for both)
 ```
-
----
 
 ## Stores
 
@@ -272,18 +293,14 @@ const s = store(
 
 `equals` controls top-level change detection — two states that pass `equals` will not fire watchers. The default is `shallowEqual`. `onError` receives errors thrown by watch listeners so they don't escape silently.
 
----
-
 ## Reading State
 
 ```ts
-const state = s.value;         // { count: 0, user: null }
-const count = s.value.count;   // 0
+const state = s.value; // { count: 0, user: null }
+const count = s.value.count; // 0
 ```
 
 `.value` is a synchronous getter — no method call needed.
-
----
 
 ## Writing State
 
@@ -306,8 +323,6 @@ s.set((current) => ({ ...current, count: current.count + 1 }));
 
 Both forms are no-ops when the resulting state is equal to the current state.
 
----
-
 ## Resetting State
 
 ```ts
@@ -317,14 +332,12 @@ s.reset();
 
 `reset()` triggers a notification if the state actually changes.
 
----
-
 ## Notification Timing
 
 Watchers are notified **synchronously** — the listener runs before the next line after `set()`:
 
 ```ts
-const unsub = s.watch((state) => console.log('changed:', state.count));
+const unsub = s.subscribe((state) => console.log('changed:', state.count));
 
 s.set({ count: 1 });
 // 'changed: 1' has already been logged here
@@ -341,15 +354,13 @@ batch(() => {
 // One notification fires after the batch with the final state: { count: 3 }
 ```
 
----
-
 ## Watching State
 
 ### Full-State Watch
 
 ```ts
 // Does not fire immediately — use { immediate: true } to opt in
-const unsub = s.watch((curr, prev) => {
+const unsub = s.subscribe((curr, prev) => {
   console.log('state changed', curr);
 });
 
@@ -359,7 +370,7 @@ unsub(); // stop receiving updates
 When `immediate: true`, the listener fires once synchronously on subscription with both `curr` and `prev` set to the current value:
 
 ```ts
-s.watch(
+s.subscribe(
   (curr, prev) => {
     console.log('initial or changed:', curr.count);
   },
@@ -370,7 +381,7 @@ s.watch(
 When `once: true`, the watcher auto-unsubscribes after the first notification:
 
 ```ts
-s.watch((curr) => console.log('first change:', curr), { once: true });
+s.subscribe((curr) => console.log('first change:', curr), { once: true });
 ```
 
 ### Selector Watch
@@ -378,7 +389,7 @@ s.watch((curr) => console.log('first change:', curr), { once: true });
 `watch(selector, listener)` only fires when the projected value changes — unrelated state changes are ignored:
 
 ```ts
-const unsub = s.watch(
+const unsub = s.subscribe(
   (state) => state.count,
   (count, prev) => console.log('count changed to', count),
 );
@@ -387,16 +398,14 @@ const unsub = s.watch(
 With custom equality:
 
 ```ts
-s.watch(
+s.subscribe(
   (state) => state.items,
   (items) => renderList(items),
   { equals: (a, b) => a.length === b.length },
 );
 ```
 
-Selector equality is checked by `WatchSelectorOptions.equals` (defaults to `Object.is`). Full-state equality is checked by `StoreOptions.equals` first — if the full state is equal, no watcher fires at all.
-
----
+Selector equality is checked by `WatchOptions.equals` (defaults to `Object.is`). Full-state equality is checked by `StoreOptions.equals` first — if the full state is equal, no watcher fires at all.
 
 ## Batching
 
@@ -428,8 +437,6 @@ batch(() => {
 
 If the callback throws, the notification still fires with whatever partial state was accumulated.
 
----
-
 ## Disposing
 
 ```ts
@@ -445,8 +452,6 @@ Clears all watchers and freezes the store. After `dispose()`:
 
 Always dispose stores that are no longer needed to avoid memory leaks.
 
----
-
 ## Narrowing to Read-Only
 
 To expose a store at API boundaries where consumers should observe but not mutate, narrow it to only `value` and `watch`:
@@ -457,18 +462,74 @@ function createCounterService() {
 
   return {
     state: s as Pick<typeof s, 'value' | 'watch'>,
-    increment() { s.set((st) => ({ count: st.count + 1 })); },
-    decrement() { s.set((st) => ({ count: st.count - 1 })); },
+    increment() {
+      s.set((st) => ({ count: st.count + 1 }));
+    },
+    decrement() {
+      s.set((st) => ({ count: st.count - 1 }));
+    },
   };
 }
 
 const counter = createCounterService();
 counter.state.value.count; // readable
-counter.state.watch(/* ... */); // watchable
+counter.state.subscribe(/* ... */); // watchable
 // counter.state.set(...) — compile error
 ```
 
----
+## Best Practices
+
+### 1. Signals for Primitive Values, Stores for Objects
+
+```ts
+// ✅ signal for primitive or single scalar
+const isOpen = signal(false);
+
+// ✅ store for structured objects
+const user = store({ id: '', name: '', role: 'guest' });
+
+// ❌ store for a simple boolean — overcomplicated
+const isOpen = store({ value: false });
+```
+
+### 2. Computed for Derived Values
+
+```ts
+// ✅ computed instead of duplicating logic in effects
+const fullName = computed(() => `${firstName.value} ${lastName.value}`);
+
+// ❌ don't manually sync values in an effect
+effect(() => { fullName.value = firstName.value + ' ' + lastName.value; });
+```
+
+### 3. Batch Multiple Updates
+
+```ts
+// ✅ one notification instead of two
+batch(() => {
+  x.value = 1;
+  y.value = 2;
+});
+```
+
+### 4. Dispose Effects When No Longer Needed
+
+```ts
+const stop = effect(() => document.title = `Count: ${count.value}`);
+
+// when component unmounts:
+stop();
+```
+
+### 5. Use `untrack` to Break Unwanted Dependencies
+
+```ts
+effect(() => {
+  const id = userId.value; // tracked
+  const name = untrack(() => users.value[id]); // NOT tracked — avoids re-run on users change
+  render(id, name);
+});
+```
 
 ## Testing
 
@@ -495,7 +556,7 @@ describe('counter', () => {
 
   it('notifies watcher on change', () => {
     const listener = vi.fn();
-    s.watch((st) => st.count, listener);
+    s.subscribe((st) => st.count, listener);
     s.set({ count: 5 });
     // notifications are synchronous — no await needed
     expect(listener).toHaveBeenCalledWith(5, 0);
@@ -516,3 +577,16 @@ it('computed updates reactively', () => {
   sq.dispose();
 });
 ```
+
+## Next Steps
+
+<div class="vp-doc">
+  <div class="custom-block tip">
+    <p class="custom-block-title">💡 Continue Learning</p>
+    <ul>
+      <li><a href="./api">API Reference</a> – Complete API documentation</li>
+      <li><a href="./examples">Examples</a> – Practical code examples</li>
+      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
+    </ul>
+  </div>
+</div>

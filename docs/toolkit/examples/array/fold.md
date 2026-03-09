@@ -69,7 +69,7 @@ fold([{ a: 1 }, { b: 2 }, { c: 3 }], (acc, cur) => ({ ...acc, ...cur }));
 ```ts
 import { fold } from '@vielzeug/toolkit';
 
-fold([], (a, b) => a + b);   // undefined
+fold([], (a, b) => a + b); // undefined
 fold([42], (a, b) => a + b); // 42
 ```
 

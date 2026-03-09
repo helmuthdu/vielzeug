@@ -1,197 +1,236 @@
 ---
 title: Eventit — Usage Guide
-description: Core concepts and patterns for eventit typed event bus — event maps, subscriptions, one-time listeners, error handling, and testing.
+description: Event maps, subscribing, async/await, streaming, AbortSignal, error handling, disposal, and testing with Eventit.
 ---
 
 # Eventit Usage Guide
 
 ::: tip New to Eventit?
-Start with the [Overview](./index.md) for installation and a quick example, then come back here for in-depth patterns.
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
 [[toc]]
 
+## Import
+
+```ts
+import { createBus } from '@vielzeug/eventit';
+
+// Types only
+import type { Bus, BusOptions, EventMap, EventKey, Listener, Unsubscribe } from '@vielzeug/eventit';
+```
+
 ## Event Maps
 
-An **event map** is a plain TypeScript type that declares every event name and its payload:
+An event map is a plain TypeScript type where each key is an event name and each value is the payload type. Use `void` for signal events that carry no data.
 
 ```ts
 type AppEvents = {
   // events with payloads
-  userLogin:       { id: string; name: string };
-  messageReceived: { text: string; from: string };
-  // signal events — no payload
-  userLogout:      void;
-  appReady:        void;
+  'user:login':    { userId: string; email: string };
+  'user:logout':   void; // signal — no payload
+  'cart:updated':  { items: CartItem[]; total: number };
+  'theme:change':  'light' | 'dark';
+  'data:loaded':   { count: number; items: unknown[] };
 };
+
+const bus = createBus<AppEvents>();
 ```
 
-Pass it as a type parameter to `eventBus`:
-
-```ts
-import { eventBus } from '@vielzeug/eventit';
-
-const bus = eventBus<AppEvents>();
-```
-
-TypeScript now enforces correct payload shapes everywhere — in `on`, `once`, `off`, and `emit`.
+Colons in event names (e.g. `'user:login'`) are a common convention for grouping related events. You can use any string key your team prefers.
 
 ## Subscribing
 
-### `on` — persistent listener
+### `on()` — Persistent subscription
+
+`on()` registers a listener for every future emit of an event. It returns an `Unsubscribe` function.
 
 ```ts
-const unsub = bus.on('userLogin', ({ id, name }) => {
-  console.log(`${name} logged in`);
+const unsub = bus.on('user:login', ({ userId, email }) => {
+  console.log('logged in:', userId, email); // fully typed
 });
 
-// later, remove the listener
+// Remove the listener
 unsub();
 ```
 
-`on` returns an **unsubscribe** function. Call it to remove just that listener without affecting others.
+### `once()` — One-shot listener
 
-### Multiple listeners per event
-
-Any number of listeners can subscribe to the same event. They fire in registration order:
+`once()` registers a listener that fires exactly once, then removes itself automatically.
 
 ```ts
-bus.on('userLogin', (user) => analytics.track('login', user));
-bus.on('userLogin', (user) => notifications.send(`Welcome, ${user.name}!`));
+bus.once('user:logout', () => {
+  redirectToLogin();
+});
+```
+
+### AbortSignal
+
+Pass an `AbortSignal` as the third argument to `on()` or `once()`. The listener is automatically removed when the signal aborts — no manual `unsub()` call needed.
+
+```ts
+const controller = new AbortController();
+
+bus.on('user:login', handler, controller.signal);
+
+// Later — removes the listener automatically
+controller.abort();
+```
+
+This composes naturally with component lifecycle, request cancellation, and timeout signals:
+
+```ts
+// Unsubscribe after 10 seconds
+bus.on('data:loaded', handler, AbortSignal.timeout(10_000));
+
+// React/Vue: pass component signal
+bus.on('theme:change', applyTheme, componentSignal);
 ```
 
 ## Emitting Events
 
-### With payload
+`emit()` calls all registered listeners synchronously.
 
 ```ts
-bus.emit('userLogin', { id: '42', name: 'Alice' });
+bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
+bus.emit('user:logout'); // void event — no second argument
 ```
 
-TypeScript will error if the payload shape doesn't match the event map.
+If a listener throws and no `onError` is configured, the error propagates to the `emit()` caller. With `onError`, the error is captured and remaining listeners still run.
 
-### Void events
+## Awaiting Events
 
-Events declared as `void` are emitted with no arguments:
+`wait()` returns a `Promise` that resolves with the payload of the next emit. This is useful for one-off async coordination patterns.
 
 ```ts
-bus.emit('userLogout');  // no second argument needed or allowed
-bus.emit('appReady');
+// Waits for the next 'user:login' emit and resolves
+const { userId } = await bus.wait('user:login');
 ```
 
-## One-Time Listeners
-
-`once` subscribes for a **single emission**, then automatically unsubscribes:
+`wait()` rejects if:
+- The bus is disposed before the event fires
+- A provided `AbortSignal` aborts
 
 ```ts
-bus.once('appReady', () => {
-  initDashboard(); // only runs on the first appReady
-});
+// Reject if login hasn't happened within 5 seconds
+const signal = AbortSignal.timeout(5_000);
+const { userId } = await bus.wait('user:login', signal);
 ```
 
-You can still unsubscribe before firing using the returned function:
+## Async Iteration
+
+`events()` returns an `AsyncGenerator` that yields every future emit of an event. It terminates when the bus is disposed or the provided signal aborts.
 
 ```ts
-const unsub = bus.once('userLogin', handleFirstLogin);
-// if login happens before user confirms, cancel it
-unsub();
+for await (const { items, total } of bus.events('cart:updated')) {
+  renderCart(items, total);
+}
 ```
+
+Use an `AbortSignal` to stop iterating early:
+
+```ts
+const controller = new AbortController();
+
+for await (const payload of bus.events('data:loaded', controller.signal)) {
+  process(payload);
+  if (isDone(payload)) controller.abort(); // exits the loop
+}
+```
+
+`events()` is pull-based — it only awaits the next value when the loop body is ready. This makes it safe for processing events at variable rates without accumulating a backlog.
 
 ## Error Handling
 
-By default, if a listener throws, the error propagates to the caller of `emit`:
+By default, a listener that throws propagates the error to the `emit()` caller, and subsequent listeners for that emit do not run.
+
+Configure `onError` to capture errors instead. All remaining listeners still run.
 
 ```ts
-bus.on('userLogin', () => { throw new Error('oops'); });
-bus.emit('userLogin', { id: '1', name: 'Bob' }); // throws
-```
-
-For resilient multi-listener buses, supply an `onError` callback:
-
-```ts
-const bus = eventBus<AppEvents>({
-  onError: (err, event) => {
-    console.error(`[eventit] Error in "${event}" listener:`, err);
+const bus = createBus<AppEvents>({
+  onError: (err, event, payload) => {
+    logger.error(`[eventit] Error in "${event}" listener`, err);
   },
 });
 ```
 
-With `onError` set, a throwing listener logs the error but allows remaining listeners to continue running.
+`onError` receives:
+- `err` — the thrown value
+- `event` — the event key that was being emitted
+- `payload` — the payload passed to `emit()`
 
 ## Emit Hook
 
-`onEmit` is called on every `emit`, before any listeners run. The event name is typed as a union of valid event keys:
+`onEmit` is called before any listeners run on every emission. Use it for logging, tracing, or debugging the event stream.
 
 ```ts
-const bus = eventBus<AppEvents>({
+const bus = createBus<AppEvents>({
   onEmit: (event, payload) => {
-    console.debug(`[bus] ${event}`, payload);
+    console.debug(`[bus emit] ${event}`, payload);
   },
 });
 ```
 
-Useful for logging, analytics instrumentation, or debugging event flows in development.
+::: tip
+`createTestBus` uses `onEmit` internally for recording payloads. If you need both recording and a custom hook, use `createTestBus` and add separate logging in your listener or middleware.
+:::
 
-## Cleanup
+## Dispose & Cleanup
 
-```ts
-bus.clear('userLogin'); // remove all listeners for one event
-bus.clear();            // remove all listeners for all events
-```
-
-## Disposing
-
-`dispose()` permanently tears down the bus:
+`dispose()` permanently tears down the bus: all listeners are removed and all pending `wait()` promises are rejected with `Bus is disposed`.
 
 ```ts
 bus.dispose();
+bus.disposed; // true
+
+// Calling dispose() again is safe — idempotent
+bus.dispose(); // no-op
 ```
 
-After `dispose()`:
+### `using` keyword
 
-- All listeners are removed.
-- `emit` becomes a no-op — calls are silently ignored.
-- `on` and `once` return a no-op unsubscribe; no listener is stored.
+`Bus` implements `[Symbol.dispose]`, so it works with the `using` keyword (TypeScript 5.2+, `"lib": ["esnext"]`):
 
-Ideal for component or module teardown when the bus should never fire again.
+```ts
+{
+  using bus = createBus<AppEvents>();
+  bus.on('user:login', handler);
+  bus.emit('user:login', { userId: '1', email: 'a@b.com' });
+} // bus.dispose() is called automatically here
+```
+
+This is especially useful in test cases, request handlers, or any scope where you want guaranteed cleanup.
 
 ## Testing
 
-`testEventBus` wraps a real bus and records every emitted payload for easy assertions:
+Import `createTestBus` from `@vielzeug/eventit/test`. It wraps `createBus` and records every emitted payload by event key.
 
 ```ts
-import { testEventBus } from '@vielzeug/eventit';
+import { createTestBus } from '@vielzeug/eventit/test';
 
-type Events = { count: number; reset: void };
+const bus = createTestBus<AppEvents>();
 
-test('increments counter', () => {
-  const { bus, emitted, reset, dispose } = testEventBus<Events>();
+bus.emit('user:login', { userId: '1', email: 'a@example.com' });
+bus.emit('user:login', { userId: '2', email: 'b@example.com' });
 
-  bus.emit('count', 1);
-  bus.emit('count', 2);
-  bus.emit('reset');
+// emitted() returns a typed snapshot — not a live reference
+expect(bus.emitted('user:login')).toEqual([
+  { userId: '1', email: 'a@example.com' },
+  { userId: '2', email: 'b@example.com' },
+]);
 
-  expect(emitted.get('count')).toEqual([1, 2]);
-  expect(emitted.has('reset')).toBe(true);
-
-  reset();   // clear recorded payloads; listeners still work
-  dispose(); // clear listeners and recorded payloads
-});
+bus.reset();   // clear recorded payloads, keep listeners active
+bus.dispose(); // clear listeners and recorded payloads
 ```
 
-Listeners registered on `bus` still fire normally — `testEventBus` only adds recording on top:
+`createTestBus` accepts the same options as `createBus` except `onEmit` (used internally for recording).
+
+Use `using` for automatic cleanup in test cases:
 
 ```ts
-test('listener is called', () => {
-  const { bus, dispose } = testEventBus<Events>();
-  const handler = vi.fn();
-
-  bus.on('count', handler);
-  bus.emit('count', 42);
-
-  expect(handler).toHaveBeenCalledWith(42);
-  dispose();
-});
+it('records emitted events', () => {
+  using bus = createTestBus<AppEvents>();
+  bus.emit('user:logout');
+  expect(bus.emitted('user:logout')).toHaveLength(1);
+}); // bus disposed automatically
 ```
-
-After `dispose()`, the bus is permanently torn down — `emit` is a no-op and `emitted` is cleared. Use `reset()` between assertions within a single test when you only want to discard the recorded history.

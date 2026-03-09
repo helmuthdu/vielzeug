@@ -19,6 +19,7 @@
  *
  * @returns 0 if equal, 1 if the first value is greater, -1 if the second value is greater.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: intentional type-switch over all comparable primitives
 export const compare = (a: unknown, b: unknown): number => {
   if (a === b) return 0;
   if (a === undefined) return 1;

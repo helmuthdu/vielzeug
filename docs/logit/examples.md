@@ -3,7 +3,7 @@ title: Logit — Examples
 description: Real-world recipes and framework integrations for Logit.
 ---
 
-# Logit Examples
+## Logit Examples
 
 ::: tip
 These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
@@ -18,7 +18,7 @@ import { Logit } from '@vielzeug/logit';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
-Logit.config({
+Logit.setConfig({
   logLevel: isProd ? 'warn' : 'debug',
   variant: 'symbol',
   timestamp: true,
@@ -34,10 +34,8 @@ Logit.config({
               level: type,
               timestamp: data.timestamp,
               namespace: data.namespace,
-              environment: data.environment,
-              args: data.args.map((a) =>
-                a instanceof Error ? { message: a.message, stack: a.stack } : a,
-              ),
+              env: data.env,
+              args: data.args.map((a) => (a instanceof Error ? { message: a.message, stack: a.stack } : a)),
             }),
           });
         },
@@ -86,17 +84,10 @@ export function requestLogger(req, res, next) {
   const start = Date.now();
   const label = `${req.method} ${req.path}`;
 
-  Logit.time(label);
-
   res.on('finish', () => {
-    Logit.timeEnd(label);
-    const level = res.statusCode >= 500 ? 'error'
-                : res.statusCode >= 400 ? 'warn'
-                : 'info';
-    httpLog[level](`${res.statusCode} ${label}`, {
-      ip: req.ip,
-      duration: `${Date.now() - start}ms`,
-    });
+    const duration = `${Date.now() - start}ms`;
+    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+    httpLog[level](`${res.statusCode} ${label}`, { ip: req.ip, duration });
   });
 
   next();
@@ -178,21 +169,15 @@ export const logger = Logit.scope('app');
 ## Structured logging with groups
 
 ```ts
-Logit.groupCollapsed('Request', 'POST /api/orders');
-Logit.info('Body', req.body);
-Logit.info('User', req.user?.id);
-Logit.time('order-processing');
+// groupEnd fires automatically, even if processOrder throws
+const order = await Logit.group('Request POST /api/orders', async () => {
+  Logit.info('Body', req.body);
+  Logit.info('User', req.user?.id);
 
-try {
-  const order = await processOrder(req.body);
-  Logit.timeEnd('order-processing');
-  Logit.success('Order created', { orderId: order.id });
-} catch (err) {
-  Logit.timeEnd('order-processing');
-  Logit.error('Order failed', err);
-}
-
-Logit.groupEnd();
+  const result = await Logit.time('order-processing', () => processOrder(req.body));
+  Logit.success('Order created', { orderId: result.id });
+  return result;
+}, true); // collapsed
 ```
 
 ## Testing
@@ -202,11 +187,11 @@ import { Logit } from '@vielzeug/logit';
 import { describe, it, beforeAll, afterAll, vi, expect } from 'vitest';
 
 describe('UserService', () => {
-  beforeAll(() => Logit.config({ logLevel: 'off' }));
-  afterAll(() => Logit.config({ logLevel: 'debug' }));
+  beforeAll(() => Logit.setConfig({ logLevel: 'off' }));
+  afterAll(() => Logit.setConfig({ logLevel: 'debug' }));
 
   it('logs error on failure', () => {
-    Logit.config({ logLevel: 'error' });
+    Logit.setConfig({ logLevel: 'error' });
     // Logit.error() routes to console.error
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

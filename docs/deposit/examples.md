@@ -1,692 +1,248 @@
 ---
 title: Deposit — Examples
-description: Real-world storage patterns and framework integrations for Deposit.
+description: Real-world storage patterns using the Deposit browser storage library.
 ---
 
 # Deposit Examples
 
 ::: tip
-These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations and [API Reference](./api.md) for full type signatures.
 :::
 
 [[toc]]
 
-::: tip 💡 Complete Applications
-These are complete application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
-:::
+## Basic Examples
 
-## Basic Setup
+### User Store (LocalStorage)
 
-### Define Schema
+A simple typed store for user preferences persisted to `localStorage`.
 
 ```ts
-import { createDeposit, defineSchema } from '@vielzeug/deposit';
-import type { Schema } from '@vielzeug/deposit';
+import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  age: number;
-  role: 'admin' | 'user';
-  createdAt: number;
-}
-
-interface Post {
-  id: string;
-  userId: string;
-  title: string;
-  content: string;
-  published: boolean;
-  createdAt: number;
-}
-
-interface Session {
-  id: string;
-  userId: string;
-  token: string;
-  expiresAt: number;
-}
-
-const schema = defineSchema<{ users: User; posts: Post; sessions: Session }>({
-  users: {
-    key: 'id',
-    indexes: ['email', 'role'],
-  },
-  posts: {
-    key: 'id',
-    indexes: ['userId', 'published', 'createdAt'],
-  },
-  sessions: {
-    key: 'id',
-    indexes: ['userId'],
-  },
-});
-```
-
-### Create Instance
-
-::: warning 🔍 Choosing an Adapter
-
-- **IndexedDB**: Recommended for production (larger storage, better performance, atomic transactions)
-- **LocalStorage**: Simple apps with small data (<5 MB)
-  :::
-
-::: code-group
-
-```ts [IndexedDB]
-// IndexedDB (recommended for production)
-const db = createDeposit({ type: 'indexedDB', dbName: 'my-app-db', version: 1, schema });
-```
-
-```ts [LocalStorage]
-// LocalStorage (simpler, smaller storage)
-const db = createDeposit({ type: 'localStorage', dbName: 'my-app-db', schema });
-```
-
-:::
-
-## Basic CRUD Operations
-
-### Insert Records
-
-```ts
-// Single insert
-await db.put('users', {
-  id: crypto.randomUUID(),
-  name: 'Alice',
-  email: 'alice@example.com',
-  age: 30,
-  role: 'admin',
-  createdAt: Date.now(),
-});
-
-// Bulk insert
-const newUsers = [
-  { id: crypto.randomUUID(), name: 'Bob', email: 'bob@example.com', age: 25, role: 'user', createdAt: Date.now() },
-  { id: crypto.randomUUID(), name: 'Carol', email: 'carol@example.com', age: 28, role: 'user', createdAt: Date.now() },
-  { id: crypto.randomUUID(), name: 'Dave', email: 'dave@example.com', age: 35, role: 'admin', createdAt: Date.now() },
-];
-
-await db.bulkPut('users', newUsers);
-```
-
-### Read Records
-
-```ts
-// Get by ID
-const user = await db.get('users', 'user-id');
-if (user) {
-  console.log(user.name);
-}
-
-// Get with default
-const guestUser = await db.get('users', 'unknown-id', {
-  id: 'guest',
-  name: 'Guest',
-  email: '',
-  age: 0,
-  role: 'user',
-  createdAt: Date.now(),
-});
-
-// Get all
-const allUsers = await db.getAll('users');
-
-// Count
-const totalUsers = await db.count('users');
-```
-
-### Update Records
-
-```ts
-// Get, modify, put
-const user = await db.get('users', 'user-id');
-if (user) {
-  user.age = 31;
-  user.name = 'Alice Smith';
-  await db.put('users', user);
-}
-
-// Or create new object
-await db.put('users', {
-  id: 'user-id',
-  name: 'Alice Smith',
-  email: 'alice@example.com',
-  age: 31,
-  role: 'admin',
-  createdAt: Date.now(),
-});
-```
-
-### Delete Records
-
-```ts
-// Single delete
-await db.delete('users', 'user-id');
-
-// Bulk delete
-await db.bulkDelete('users', ['id1', 'id2', 'id3']);
-
-// Clear table
-await db.clear('users');
-```
-
-## Query Builder Examples
-
-### Basic Filtering
-
-```ts
-// Find all admins
-const admins = await db.query('users').equals('role', 'admin').toArray();
-
-// Find users in age range
-const youngAdults = await db.query('users').between('age', 18, 30).toArray();
-
-// Find by string prefix
-const aliceUsers = await db.query('users').startsWith('name', 'Alice', true).toArray();
-
-// Complex filter
-const special = await db
-  .query('users')
-  .filter((user) => user.age > 25 && user.role === 'admin')
-  .toArray();
-```
-
-### Sorting and Pagination
-
-```ts
-// Sort by name
-const sorted = await db.query('users').orderBy('name', 'asc').toArray();
-
-// Sort descending
-const newest = await db.query('users').orderBy('createdAt', 'desc').toArray();
-
-// Limit results
-const topTen = await db.query('users').orderBy('age', 'desc').limit(10).toArray();
-
-// Offset
-const skipFirst10 = await db.query('users').offset(10).limit(10).toArray();
-
-// Pagination
-const page2 = await db
-  .query('users')
-  .orderBy('name', 'asc')
-  .page(2, 20) // Page 2, 20 per page
-  .toArray();
-
-// Reverse
-const reversed = await db.query('users').orderBy('name', 'asc').reverse().toArray();
-```
-
-### Aggregations
-
-```ts
-// Count
-const userCount = await db.query('users').equals('role', 'admin').count();
-
-// First and last
-const firstUser = await db.query('users').orderBy('createdAt', 'asc').first();
-const lastUser  = await db.query('users').orderBy('createdAt', 'asc').last();
-```
-
-### Logical Operators
-
-```ts
-// AND — chain multiple filter calls
-const seniorAdmins = await db
-  .query('users')
-  .filter((user) => user.role === 'admin')
-  .filter((user) => user.age >= 30)
-  .toArray();
-
-// OR — use a single filter with logical OR
-const either = await db
-  .query('users')
-  .filter((user) => user.role === 'admin' || user.age >= 50)
-  .toArray();
-```
-
-### Transformations
-
-```ts
-// Map/transform results (generic — can change the type)
-const uppercased = await db
-  .query('users')
-  .map((user) => ({
-    ...user,
-    name: user.name.toUpperCase(),
-  }))
-  .toArray();
-
-// Search
-const searchResults = await db.query('users').search('alice').toArray();
-```
-
-### Chaining Multiple Operations
-
-```ts
-const result = await db
-  .query('users')
-  .filter((u) => u.age >= 18)
-  .equals('role', 'admin')
-  .orderBy('name', 'asc')
-  .limit(10)
-  .toArray();
-```
-
-## TTL (Time-To-Live) Examples
-
-::: tip TTL Feature
-Records with TTL automatically expire and are removed when accessed after the TTL period.
-:::
-
-### Session Management
-
-```ts
-// Create session with 1-hour expiry
-await db.put(
-  'sessions',
-  {
-    id: crypto.randomUUID(),
-    userId: 'user-id',
-    token: 'abc123',
-    expiresAt: Date.now() + 3600000,
-  },
-  3600000,
-); // TTL: 1 hour
-
-// After 1 hour, this returns undefined
-const session = await db.get('sessions', 'session-id');
-```
-
-### API Cache
-
-```ts
-// Cache API response for 5 minutes
-async function fetchWithCache(url: string) {
-  const cacheKey = btoa(url);
-  const cached = await db.get('api-cache', cacheKey);
-
-  if (cached) {
-    return cached.data;
-  }
-
-  const response = await fetch(url);
-  const data = await response.json();
-
-  await db.put(
-    'api-cache',
-    {
-      id: cacheKey,
-      url,
-      data,
-      cachedAt: Date.now(),
-    },
-    300000,
-  ); // 5 minutes
-
-  return data;
-}
-```
-
-### Temporary Files
-
-```ts
-// Store temp data for 30 minutes
-await db.put(
-  'temp-files',
-  {
-    id: 'temp-123',
-    content: 'temporary data',
-    createdAt: Date.now(),
-  },
-  1800000,
-); // 30 minutes
-```
-
-## Transaction Examples
-
-::: tip ⚡ Atomic Writes
-Transactions use a single `IDBTransaction` — all changes succeed together or none are persisted.
-:::
-
-::: warning
-`transaction()` is only available on `IndexedDBAdapter`. For localStorage, use individual `put`/`bulkPut`/`delete` calls.
-:::
-
-### User Registration
-
-```ts
-// Create user and their first post atomically (IndexedDB only)
-await db.transaction(['users', 'posts'], async (stores) => {
-  const userId = crypto.randomUUID();
-
-  // Add user
-  stores.users.push({
-    id: userId,
-    name: 'New User',
-    email: 'new@example.com',
-    age: 25,
-    role: 'user',
-    createdAt: Date.now(),
-  });
-
-  // Add welcome post
-  stores.posts.push({
-    id: crypto.randomUUID(),
-    userId,
-    title: 'Welcome!',
-    content: 'Thanks for joining!',
-    published: true,
-    createdAt: Date.now(),
-  });
-
-  // If the callback throws, the transaction is aborted — no partial writes
-});
-```
-
-### Data Migration
-
-```ts
-// Move data from one table structure to another
-await db.transaction(['users', 'profiles'], async (stores) => {
-  // Create profiles from users
-  for (const user of stores.users) {
-    stores.profiles.push({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      bio: '',
-      avatar: '',
-      createdAt: Date.now(),
-    });
-  }
-});
-```
-
-## Bulk Operation Examples
-
-### Batch Updates
-
-```ts
-// Add multiple records, delete one
-await db.bulkPut('users', [
-  {
-    id: 'u1',
-    name: 'Alice',
-    email: 'alice@example.com',
-    age: 30,
-    role: 'admin' as const,
-    createdAt: Date.now(),
-  },
-  {
-    id: 'u2',
-    name: 'Bob',
-    email: 'bob@example.com',
-    age: 25,
-    role: 'user' as const,
-    createdAt: Date.now(),
-  },
-]);
-await db.delete('users', 'old-user-id');
-```
-
-### Sync from Server
-
-```ts
-async function syncFromServer() {
-  const serverData = await fetch('/api/sync').then((r) => r.json());
-
-  await db.clear('users');
-  await db.bulkPut('users', serverData);
-}
-```
-
-## Real-World Patterns
-
-### Offline-First Todo App
-
-```ts
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
-}
-
-const schema = defineSchema<{ todos: Todo }>({
-  todos: { key: 'id', indexes: ['completed', 'createdAt'] },
-});
-
-const db = createDeposit({ type: 'indexedDB', dbName: 'todos', version: 1, schema });
-async function addTodo(text: string) {
-  await db.put('todos', {
-    id: crypto.randomUUID(),
-    text,
-    completed: false,
-    createdAt: Date.now(),
-  });
-}
-
-// Toggle completion
-async function toggleTodo(id: string) {
-  const todo = await db.get('todos', id);
-  if (todo) {
-    await db.put('todos', { ...todo, completed: !todo.completed });
-  }
-}
-
-// Get active todos
-async function getActiveTodos() {
-  return await db.query('todos').equals('completed', false).orderBy('createdAt', 'desc').toArray();
-}
-
-// Delete completed
-async function clearCompleted() {
-  const completed = await db.query('todos').equals('completed', true).toArray();
-
-  await db.bulkDelete(
-    'todos',
-    completed.map((t) => t.id),
-  );
-}
-```
-
-### User Preferences
-
-```ts
-interface Preference {
+interface Preferences {
   id: string;
   theme: 'light' | 'dark';
   language: string;
   notifications: boolean;
-  updatedAt: number;
 }
 
-const schema = defineSchema<{ prefs: Preference }>({
-  prefs: { key: 'id' },
+const schema = defineSchema<{ preferences: Preferences }>({
+  preferences: { key: 'id' },
 });
 
-const db = createDeposit({
-  type: 'localStorage',
-  dbName: 'preferences',
-  schema,
-});
+const db = createLocalStorage({ dbName: 'my-app', schema });
 
-// Save preferences
-async function savePreferences(prefs: Omit<Preference, 'id' | 'updatedAt'>) {
-  await db.put('prefs', {
-    id: 'user-prefs',
-    ...prefs,
-    updatedAt: Date.now(),
-  });
-}
+// Save defaults on first load
+await db.getOrPut('preferences', 'user-1', () => ({
+  id: 'user-1',
+  theme: 'light',
+  language: 'en',
+  notifications: true,
+}));
 
-// Load preferences
-async function loadPreferences() {
-  return await db.get('prefs', 'user-prefs', {
-    id: 'user-prefs',
-    theme: 'light',
-    language: 'en',
-    notifications: true,
-    updatedAt: Date.now(),
-  });
-}
+// Read
+const prefs = await db.get('preferences', 'user-1');
+
+// Partial update — returns the merged record immediately
+const updated = await db.patch('preferences', 'user-1', { theme: 'dark' });
+console.log(updated?.theme); // 'dark'
 ```
 
-### Analytics Queue
+---
+
+### Product Catalogue (IndexedDB)
+
+A full CRUD example using IndexedDB with schema indexes and query builder.
 
 ```ts
-interface AnalyticsEvent {
+import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  inStock: boolean;
+}
+
+const schema = defineSchema<{ products: Product }>({
+  products: { key: 'id', indexes: ['category', 'price'] },
+});
+
+const db = createIndexedDB({ dbName: 'catalogue', version: 1, schema });
+
+// Seed data
+await db.put('products', [
+  { id: 1, name: 'Keyboard', category: 'peripherals', price: 79,  inStock: true },
+  { id: 2, name: 'Monitor',  category: 'displays',    price: 349, inStock: true },
+  { id: 3, name: 'Webcam',   category: 'peripherals', price: 59,  inStock: false },
+]);
+
+// Query peripherals under €100, sorted by price
+const affordable = await db
+  .from('products')
+  .equals('category', 'peripherals')
+  .between('price', 0, 100)
+  .orderBy('price', 'asc')
+  .toArray();
+
+// Full-text search
+const results = await db.from('products').search('key').toArray();
+
+// Async iteration over all products
+for await (const product of db.from('products').orderBy('name')) {
+  console.log(`${product.name} — €${product.price}`);
+}
+
+db.close();
+```
+
+## Advanced Examples
+
+### Session Cache with TTL
+
+Cache authentication data with automatic expiry. No manual expiry checks needed.
+
+```ts
+import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
+
+interface Session {
   id: string;
-  type: string;
-  data: unknown;
-  timestamp: number;
-  sent: boolean;
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
-const schema = defineSchema<{ events: AnalyticsEvent }>({
-  events: { key: 'id', indexes: ['sent', 'timestamp'] },
+const schema = defineSchema<{ sessions: Session }>({ sessions: { key: 'id' } });
+const cache = createLocalStorage({ dbName: 'auth', schema });
+
+const ONE_HOUR = 3_600_000;
+
+async function getOrRefreshSession(id: string): Promise<Session> {
+  return cache.getOrPut('sessions', id, async () => {
+    const res  = await fetch('/api/auth/refresh');
+    const data = await res.json() as Session;
+    return data;
+  }, ONE_HOUR);
+}
+
+// Invalidate on logout
+async function logout(id: string) {
+  await cache.delete('sessions', id);
+}
+```
+
+---
+
+### Multi-Table Atomic Transaction
+
+An order is updated and a related audit log entry is created in a single atomic write.
+
+```ts
+import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+
+interface Order    { id: number; userId: number; status: 'pending' | 'shipped' | 'delivered'; total: number }
+interface AuditLog { id: number; orderId: number; action: string; at: number }
+
+const schema = defineSchema<{ orders: Order; audit: AuditLog }>({
+  orders: { key: 'id' },
+  audit:  { key: 'id', indexes: ['orderId'] },
 });
 
-const db = createDeposit({
-  type: 'indexedDB',
-  dbName: 'analytics',
-  version: 1,
-  schema,
+const db = createIndexedDB({ dbName: 'shop', version: 1, schema });
+
+async function shipOrder(orderId: number, auditId: number): Promise<void> {
+  await db.transaction(['orders', 'audit'], async (tx) => {
+    const order = await tx.get('orders', orderId);
+    if (!order) throw new Error(`Order ${orderId} not found`);
+    if (order.status !== 'pending') throw new Error('Order already processed');
+
+    await tx.patch('orders', orderId, { status: 'shipped' });
+    await tx.put('audit', { id: auditId, orderId, action: 'shipped', at: Date.now() });
+  });
+  // Either both writes happened, or neither did
+}
+```
+
+---
+
+### Batch Operations
+
+Import, delete, and query records in bulk.
+
+```ts
+import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+
+interface Contact { id: number; name: string; email: string; group: string }
+
+const schema = defineSchema<{ contacts: Contact }>({
+  contacts: { key: 'id', indexes: ['group'] },
 });
 
-// Track event
-async function track(type: string, data: unknown) {
-  await db.put('events', {
-    id: crypto.randomUUID(),
-    type,
-    data,
-    timestamp: Date.now(),
-    sent: false,
-  });
-}
+const db = createIndexedDB({ dbName: 'crm', version: 1, schema });
 
-// Flush to server
-async function flush() {
-  const pending = await db.query('events').equals('sent', false).orderBy('timestamp', 'asc').toArray();
+// Bulk import
+const imported: Contact[] = await fetch('/api/contacts').then(r => r.json());
+await db.put('contacts', imported);
 
-  if (pending.length === 0) return;
+// Fetch specific records by ID
+const selected = await db.getMany('contacts', [1, 7, 42]);
 
-  try {
-    await fetch('/api/analytics', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pending),
-    });
+// Bulk delete stale records
+const staleIds = (await db.from('contacts').equals('group', 'archived').toArray()).map(c => c.id);
+await db.delete('contacts', staleIds);
 
-    // Mark as sent
-    for (const event of pending) {
-      await db.put('events', { ...event, sent: true });
-    }
-  } catch (err) {
-    console.error('Failed to flush analytics', err);
-  }
-}
+// Find contacts by name substring
+const smiths = await db.from('contacts').contains('smith', ['name']).toArray();
+
+db.close();
 ```
 
-### Data Export/Import
+---
+
+### Schema Migration
+
+Add an index and a table when upgrading from v1 to v3.
 
 ```ts
-// Export all data
-async function exportData() {
-  const users = await db.getAll('users');
-  const posts = await db.getAll('posts');
+import { createIndexedDB, defineSchema, type MigrationFn } from '@vielzeug/deposit';
 
-  return {
-    version: 1,
-    timestamp: Date.now(),
-    data: { users, posts },
-  };
-}
+interface User { id: number; name: string; email: string; role: string }
+interface Tag  { id: number; label: string }
 
-// Import data
-async function importData(exported: any) {
-  await db.transaction(['users', 'posts'], async (stores) => {
-    stores.users = exported.data.users;
-    stores.posts = exported.data.posts;
-    // Atomically replaces all data for IndexedDB
-  });
-}
-```
+const schema = defineSchema<{ users: User; tags: Tag }>({
+  users: { key: 'id', indexes: ['email', 'role'] },
+  tags:  { key: 'id' },
+});
 
-### Search and Autocomplete
-
-```ts
-async function searchUsers(query: string, limit = 10) {
-  if (!query.trim()) {
-    return await db.query('users').orderBy('name', 'asc').limit(limit).toArray();
-  }
-
-  return await db.query('users').search(query).limit(limit).toArray();
-}
-```
-
-## Migration Examples
-
-### Version 1 to 2: Add Field
-
-```ts
-const migration: MigrationFn = (db, oldVersion, newVersion, tx) => {
+const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
   if (oldVersion < 2) {
-    const store = tx.objectStore('users');
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      for (const user of request.result) {
-        if (!user.role) {
-          user.role = 'user';
-          store.put(user);
-        }
-      }
-    };
+    // Add role index introduced in v2
+    tx.objectStore('users').createIndex('role', 'v.role');
+  }
+  if (oldVersion < 3) {
+    // New table introduced in v3
+    db.createObjectStore('tags', { keyPath: 'v.id' });
   }
 };
+
+const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
 ```
 
-### Version 2 to 3: Transform Data
+---
+
+### Inline Schema
 
 ```ts
-const migration: MigrationFn = (db, oldVersion, newVersion, tx) => {
-  if (oldVersion < 3) {
-    const store = tx.objectStore('posts');
-    const request = store.getAll();
+import { createLocalStorage } from '@vielzeug/deposit';
 
-    request.onsuccess = () => {
-      for (const post of request.result) {
-        // Convert old format to new
-        post.content = post.body || '';
-        delete post.body;
-        store.put(post);
-      }
-    };
-  }
-};
+const db = createLocalStorage<{ items: { id: string; label: string; done: boolean } }>({
+  dbName: 'todos',
+  schema: { items: { key: 'id' } },
+});
+
+await db.put('items', { id: '1', label: 'Buy milk', done: false });
+const todo = await db.get('items', '1');
+// todo is typed as { id: string; label: string; done: boolean } | undefined
 ```
-
-## Performance Tips
-
-::: warning Performance
-Always use bulk operations instead of loops for better performance.
-:::
-
-::: code-group
-
-```ts [❌ Slow]
-// Slow – multiple async operations
-for (const user of users) {
-  await db.put('users', user);
-}
-```
-
-```ts [✅ Fast]
-// Fast – single bulk operation
-await db.bulkPut('users', users);
-```
-
-:::

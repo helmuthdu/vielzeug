@@ -28,6 +28,7 @@ export function pipe<T extends Fn[]>(...fns: T): (...args: FirstParameters<T>) =
 
   const [firstFn, ...restFns] = fns;
 
-  return ((...args: FirstParameters<T>) =>
-    restFns.reduce((prev, fn) => fn(prev), firstFn(...args))) as (...args: FirstParameters<T>) => LastReturnType<T>;
+  return ((...args: FirstParameters<T>) => restFns.reduce((prev, fn) => fn(prev), firstFn(...args))) as (
+    ...args: FirstParameters<T>
+  ) => LastReturnType<T>;
 }

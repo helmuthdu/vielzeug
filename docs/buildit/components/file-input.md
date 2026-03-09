@@ -1,19 +1,18 @@
-# File Input Component
+# File Input
 
 A modern file upload component with drag-and-drop support, file list management, constraint filtering, and full form integration. Shares the same visual theme system as `bit-input`.
 
 ## Features
 
-- 🖱️ **Drag & Drop**: Drop files directly onto the dropzone
-- 📎 **Click to Browse**: Opens the native file picker on click or keyboard activation
-- 🗂️ **File List**: Displays selected files with name, size, and individual remove buttons
-- 🎨 **5 Variants**: solid, flat, bordered, outline, ghost
-- 🌈 **Color Themes**: default, primary, secondary, success, warning, error, info
-- 📏 **3 Sizes**: sm, md, lg
-- 🔒 **Constraints**: `accept`, `max-size`, `max-files` filtering built-in
-- ✅ **Multiple Selection**: toggle via `multiple` attribute
-- ♿ **Accessible**: keyboard navigation (Enter/Space to browse), ARIA attributes, role="button" dropzone
-- 🔗 **Form-Associated**: participates in native form submission via `FormData`
+- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
+- 📎 **Click to Browse** — opens the native file picker on click or keyboard activation
+- 📏 **3 Sizes** — sm, md, lg
+- 🔒 **Constraints** — `accept`, `max-size`, `max-files` filtering built-in
+- 🔗 **Form-Associated** — participates in native form submission via `FormData`
+- 🔲 **Multiple Selection** — toggle via `multiple` attribute
+- 🖱️ **Drag & Drop** — drop files directly onto the dropzone
+- 🗂️ **File List** — displays selected files with name, size, and individual remove buttons
 
 ## Source Code
 
@@ -133,7 +132,12 @@ Restrict accepted file types using MIME types or file extensions. The accepted t
 <bit-file-input accept=".pdf,.doc,.docx" label="Resume" variant="bordered"></bit-file-input>
 
 <!-- Multiple types -->
-<bit-file-input accept="image/*,application/pdf,.docx" label="Attachments" multiple variant="flat" color="secondary"></bit-file-input>
+<bit-file-input
+  accept="image/*,application/pdf,.docx"
+  label="Attachments"
+  multiple
+  variant="flat"
+  color="secondary"></bit-file-input>
 ```
 
 </ComponentPreview>
@@ -195,13 +199,7 @@ Expand the component to fill its container with `fullwidth`.
 <ComponentPreview>
 
 ```html
-<bit-file-input
-  fullwidth
-  multiple
-  label="Attachments"
-  helper="Drop any files here"
-  variant="bordered"
-  color="primary">
+<bit-file-input fullwidth multiple label="Attachments" helper="Drop any files here" variant="bordered" color="primary">
 </bit-file-input>
 ```
 
@@ -245,13 +243,7 @@ Display a validation error with the `error` attribute. The error message replace
 
 ```html
 <form id="upload-form" method="post" enctype="multipart/form-data">
-  <bit-file-input
-    name="documents"
-    multiple
-    accept=".pdf,.docx"
-    label="Upload documents"
-    required>
-  </bit-file-input>
+  <bit-file-input name="documents" multiple accept=".pdf,.docx" label="Upload documents" required> </bit-file-input>
   <button type="submit">Submit</button>
 </form>
 ```
@@ -271,74 +263,88 @@ fileInput.addEventListener('remove', ({ detail }) => {
 });
 ```
 
+## Guideline Recipe: Onboard with a Clear Upload Zone
+
+**Guideline: onboard** — explicit helper text and an accept filter tell users exactly what to do and what the system expects before they even click.
+
+```html
+<bit-file-input
+  label="Upload your avatar"
+  accept="image/png,image/jpeg,image/webp"
+  max-size="2097152"
+  helper="PNG, JPG or WebP · max 2 MB"
+  name="avatar"></bit-file-input>
+```
+
+**Tip:** Combine `helper` with `accept` and `max-size` so validation errors state the rule that was broken, not just that something went wrong.
+
 ## API Reference
 
 ### Attributes
 
-| Attribute    | Type                                                                              | Default     | Description                                      |
-| ------------ | --------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ |
-| `accept`     | `string`                                                                          | `''`        | Accepted MIME types or extensions (comma-separated) |
-| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`        | —           | Color theme                                      |
-| `disabled`   | `boolean`                                                                         | `false`     | Disable all interaction                          |
-| `error`      | `string`                                                                          | `''`        | Error message (replaces helper text)             |
-| `fullwidth`  | `boolean`                                                                         | `false`     | Expand to full width                             |
-| `helper`     | `string`                                                                          | `''`        | Helper text below the dropzone                  |
-| `label`      | `string`                                                                          | `''`        | Label text displayed above the dropzone          |
-| `max-files`  | `number`                                                                          | `0`         | Maximum number of files (0 = unlimited)          |
-| `max-size`   | `number`                                                                          | `0`         | Maximum file size in bytes (0 = unlimited)       |
-| `multiple`   | `boolean`                                                                         | `false`     | Allow selecting multiple files                   |
-| `name`       | `string`                                                                          | `''`        | Form field name                                  |
-| `required`   | `boolean`                                                                         | `false`     | Mark as required                                 |
-| `rounded`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                       | —           | Border radius                                    |
-| `size`       | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`      | Component size                                   |
-| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                          | `'solid'`   | Visual variant                                   |
+| Attribute   | Type                                                                      | Default   | Description                                         |
+| ----------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
+| `accept`    | `string`                                                                  | `''`      | Accepted MIME types or extensions (comma-separated) |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Color theme                                         |
+| `disabled`  | `boolean`                                                                 | `false`   | Disable all interaction                             |
+| `error`     | `string`                                                                  | `''`      | Error message (replaces helper text)                |
+| `fullwidth` | `boolean`                                                                 | `false`   | Expand to full width                                |
+| `helper`    | `string`                                                                  | `''`      | Helper text below the dropzone                      |
+| `label`     | `string`                                                                  | `''`      | Label text displayed above the dropzone             |
+| `max-files` | `number`                                                                  | `0`       | Maximum number of files (0 = unlimited)             |
+| `max-size`  | `number`                                                                  | `0`       | Maximum file size in bytes (0 = unlimited)          |
+| `multiple`  | `boolean`                                                                 | `false`   | Allow selecting multiple files                      |
+| `name`      | `string`                                                                  | `''`      | Form field name                                     |
+| `required`  | `boolean`                                                                 | `false`   | Mark as required                                    |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                | —         | Border radius                                       |
+| `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Component size                                      |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual variant                                      |
 
 ### Events
 
-| Event    | Detail                                              | Description                                       |
-| -------- | --------------------------------------------------- | ------------------------------------------------- |
-| `change` | `{ files: File[], originalEvent?: Event }`          | Emitted when selection changes (add or remove)    |
-| `remove` | `{ file: File, files: File[] }`                     | Emitted when a file is removed from the list      |
+| Event    | Detail                                     | Description                                    |
+| -------- | ------------------------------------------ | ---------------------------------------------- |
+| `change` | `{ files: File[], originalEvent?: Event }` | Emitted when selection changes (add or remove) |
+| `remove` | `{ file: File, files: File[] }`            | Emitted when a file is removed from the list   |
 
 ### CSS Parts
 
-| Part       | Description                                  |
-| ---------- | -------------------------------------------- |
-| `wrapper`  | The outer wrapper `<div>`                    |
-| `label`    | The `<label>` element above the dropzone     |
-| `dropzone` | The interactive drag-and-drop zone           |
-| `input`    | The hidden native `<input type="file">`      |
-| `helper`   | The helper text `<div>`                      |
-| `error`    | The error text `<div>`                       |
+| Part       | Description                              |
+| ---------- | ---------------------------------------- |
+| `wrapper`  | The outer wrapper `<div>`                |
+| `label`    | The `<label>` element above the dropzone |
+| `dropzone` | The interactive drag-and-drop zone       |
+| `input`    | The hidden native `<input type="file">`  |
+| `helper`   | The helper text `<div>`                  |
+| `error`    | The error text `<div>`                   |
 
 ### CSS Custom Properties
 
-| Property                      | Description                   | Default                      |
-| ----------------------------- | ----------------------------- | ---------------------------- |
-| `--file-input-bg`             | Dropzone background color     | `var(--color-contrast-100)`  |
-| `--file-input-border-color`   | Dropzone border color         | `var(--color-contrast-300)`  |
-| `--file-input-radius`         | Border radius                 | `var(--rounded-md)`          |
-| `--file-input-min-height`     | Minimum dropzone height       | `var(--size-40)`             |
-| `--file-input-font-size`      | Font size                     | `var(--text-sm)`             |
+| Property                    | Description               | Default                     |
+| --------------------------- | ------------------------- | --------------------------- |
+| `--file-input-bg`           | Dropzone background color | `var(--color-contrast-100)` |
+| `--file-input-border-color` | Dropzone border color     | `var(--color-contrast-300)` |
+| `--file-input-radius`       | Border radius             | `var(--rounded-md)`         |
+| `--file-input-min-height`   | Minimum dropzone height   | `var(--size-40)`            |
+| `--file-input-font-size`    | Font size                 | `var(--text-sm)`            |
 
 ## Accessibility
 
 The file input component follows WCAG 2.1 Level AA standards.
 
+### `bit-file-input`
+
 ✅ **Keyboard Navigation**
 
-- `Tab` focuses the dropzone.
-- `Enter` or `Space` opens the native file picker.
-- Remove buttons inside the file list are individually focusable and labeled.
+- `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker.
+- Remove buttons inside the file list are individually focusable.
 
-✅ **Screen Reader Support**
+✅ **Screen Readers**
 
-- Dropzone has `role="button"` with `aria-labelledby` pointing to the visible label.
-- Dropzone has `aria-describedby` for helper text association.
-- `aria-disabled` reflects the disabled state on the dropzone.
+- The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text.
+- Each remove button has a descriptive `aria-label` (e.g. `"Remove report.pdf"`).
 - Error messages use `role="alert"` for live-region announcements.
-- Each remove button has a descriptive `aria-label` (e.g., "Remove report.pdf").
-- The file list has `aria-label="Selected files"`.
+- `aria-disabled` reflects the disabled state.
 
 ## Best Practices
 

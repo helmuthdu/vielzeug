@@ -3,7 +3,7 @@ title: Permit — Examples
 description: Real-world RBAC patterns and framework integrations for Permit.
 ---
 
-# Permit Examples
+## Permit Examples
 
 ::: tip
 These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
@@ -19,54 +19,52 @@ import { createPermit, ANONYMOUS } from '@vielzeug/permit';
 const permit = createPermit<User>();
 
 // Anyone (including guests) can read posts and comments
-permit
-  .define(ANONYMOUS, 'posts',    { read: true })
-  .define(ANONYMOUS, 'comments', { read: true });
+permit.grant(ANONYMOUS, 'posts', 'read').grant(ANONYMOUS, 'comments', 'read');
 
 // Authors can create and manage their own content
 permit
-  .define('author', 'posts', {
+  .register('author', 'posts', {
     create: true,
-    read:   true,
+    read: true,
     update: (user, post) => user.id === post?.authorId,
     delete: (user, post) => user.id === post?.authorId,
   })
-  .define('author', 'comments', { create: true, read: true });
+  .register('author', 'comments', { create: true, read: true });
 
 // Moderators manage comments
-permit.define('moderator', 'comments', { read: true, update: true, delete: true });
+permit.grant('moderator', 'comments', 'read', 'update', 'delete');
 
 // Admins have full access to everything
-permit.define('admin', '*', { read: true, create: true, update: true, delete: true });
+permit.grant('admin', '*', 'read', 'create', 'update', 'delete');
 
 // --- Usage ---
-const guest  = { id: '',   roles: [] }; // falsy id → anonymous
+const guest = { id: '', roles: [] }; // falsy id → anonymous
 const author = { id: 'u1', roles: ['author'] };
-const admin  = { id: 'u2', roles: ['admin'] };
+const admin = { id: 'u2', roles: ['admin'] };
 
-permit.check(guest,  'posts', 'read');                    // true
-permit.check(author, 'posts', 'create');                  // true
+permit.check(guest, 'posts', 'read'); // true
+permit.check(author, 'posts', 'create'); // true
 permit.check(author, 'posts', 'delete', { authorId: 'u1' }); // true (own post)
 permit.check(author, 'posts', 'delete', { authorId: 'u9' }); // false
-permit.check(admin,  'anything', 'delete');               // true (wildcard)
+permit.check(admin, 'anything', 'delete'); // true (wildcard)
 ```
 
 ## SaaS multi-tenant roles
 
 ```ts
-type User     = BaseUser & { tenantId: string };
+type User = BaseUser & { tenantId: string };
 type Resource = { tenantId: string; ownerId: string };
 
 const permit = createPermit<User>();
 
 permit
-  .define('member', 'projects', {
-    read:   (user, r) => user.tenantId === r?.tenantId,
+  .register('member', 'projects', {
+    read: (user, r) => user.tenantId === r?.tenantId,
     create: (user, r) => user.tenantId === r?.tenantId,
     update: (user, r) => user.tenantId === r?.tenantId && user.id === r.ownerId,
   })
-  .define('admin', 'projects', {
-    read:   (user, r) => user.tenantId === r?.tenantId,
+  .register('admin', 'projects', {
+    read: (user, r) => user.tenantId === r?.tenantId,
     create: (user, r) => user.tenantId === r?.tenantId,
     update: (user, r) => user.tenantId === r?.tenantId,
     delete: (user, r) => user.tenantId === r?.tenantId,
@@ -81,24 +79,28 @@ type CmsAction = 'read' | 'write' | 'publish' | 'archive' | 'request-review';
 const permit = createPermit<User, CmsAction>();
 
 permit
-  .define('writer', 'articles', {
+  .register('writer', 'articles', {
     read: true,
     write: true,
     'request-review': true,
   })
-  .define('editor', 'articles', {
-    read:    true,
-    write:   true,
+  .register('editor', 'articles', {
+    read: true,
+    write: true,
     publish: true,
     archive: true,
   })
-  .define('admin', '*', {
-    read: true, write: true, publish: true, archive: true, 'request-review': true,
+  .register('admin', '*', {
+    read: true,
+    write: true,
+    publish: true,
+    archive: true,
+    'request-review': true,
   });
 
 // TypeScript will error if you check a non-CmsAction string
 permit.check(user, 'articles', 'publish'); // ✅
-permit.check(user, 'articles', 'delete');  // ❌ TypeScript error
+permit.check(user, 'articles', 'delete'); // ❌ TypeScript error
 ```
 
 ## React guard component
@@ -108,8 +110,8 @@ import { createPermit, type BaseUser } from '@vielzeug/permit';
 
 const permit = createPermit();
 permit
-  .define('admin',  '*',     { read: true, write: true, delete: true })
-  .define('editor', 'posts', { read: true, write: true });
+  .register('admin', '*', { read: true, write: true, delete: true })
+  .register('editor', 'posts', { read: true, write: true });
 
 type Props = {
   user: BaseUser;
@@ -128,18 +130,18 @@ function Can({ user, resource, action, data, children, fallback = null }: Props)
 // Usage
 <Can user={user} resource="posts" action="delete" data={post}>
   <DeleteButton />
-</Can>
+</Can>;
 ```
 
 Or use the bound guard for more granular control:
 
 ```tsx
 function PostActions({ user, post }) {
-  const can = permit.for(user);
+  const guard = permit.for(user);
   return (
     <>
-      {can('posts', 'write',  post) && <EditButton />}
-      {can('posts', 'delete', post) && <DeleteButton />}
+      {guard.can('posts', 'write', post) && <EditButton />}
+      {guard.can('posts', 'delete', post) && <DeleteButton />}
     </>
   );
 }
@@ -152,8 +154,8 @@ import { createPermit } from '@vielzeug/permit';
 
 const permit = createPermit();
 permit
-  .define('admin', '*',       { read: true, write: true, delete: true })
-  .define('user',  'profile', { read: true, write: (u, d) => u.id === d?.id });
+  .grant('admin', '*', 'read', 'write', 'delete')
+  .register('user', 'profile', { read: true, write: (u, d) => u.id === d?.id });
 
 function requirePermission(resource: string, action: string) {
   return (req, res, next) => {
@@ -164,21 +166,22 @@ function requirePermission(resource: string, action: string) {
   };
 }
 
-app.delete('/posts/:id',  requirePermission('posts',   'delete'), deleteHandler);
-app.put('/profile',       requirePermission('profile', 'write'),  updateHandler);
+app.delete('/posts/:id', requirePermission('posts', 'delete'), deleteHandler);
+app.put('/profile', requirePermission('profile', 'write'), updateHandler);
 ```
 
 ## Audit logging
 
 ```ts
 const permit = createPermit({
-  logger: (result, user, resource, action) => {
+  logger: (result, user, resource, action, data) => {
     auditLog.write({
-      type:     result,
-      userId:   user.id,
+      type: result,
+      userId: user?.id,
       resource,
       action,
-      ts:       Date.now(),
+      data,
+      ts: Date.now(),
     });
   },
 });
@@ -196,9 +199,9 @@ describe('Post permissions', () => {
   beforeEach(() => {
     permit = createPermit();
     permit
-      .define('admin', '*', { read: true, write: true, delete: true })
-      .define('editor', 'posts', {
-        read:  true,
+      .grant('admin', '*', 'read', 'write', 'delete')
+      .register('editor', 'posts', {
+        read: true,
         write: (user, data) => user.id === data?.authorId,
       });
   });
@@ -212,10 +215,10 @@ describe('Post permissions', () => {
 
   it('editor can only write own posts', () => {
     const editor = { id: 'e1', roles: ['editor'] };
-    const can = permit.for(editor);
-    expect(can('posts', 'write', { authorId: 'e1' })).toBe(true);
-    expect(can('posts', 'write', { authorId: 'other' })).toBe(false);
-    expect(can('posts', 'delete')).toBe(false);
+    const guard = permit.for(editor);
+    expect(guard.can('posts', 'write', { authorId: 'e1' })).toBe(true);
+    expect(guard.can('posts', 'write', { authorId: 'other' })).toBe(false);
+    expect(guard.can('posts', 'delete')).toBe(false);
   });
 });
 ```

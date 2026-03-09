@@ -4,14 +4,14 @@ A customizable text input component with multiple types, variants, and validatio
 
 ## Features
 
-- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
-- 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
-- 🔧 **Prefix/Suffix Slots**: Add icons or buttons before/after input
-- 🏷️ **Integrated Label**: Support for wide inset labels that span across slots
-- 💡 **Helper Text**: Add descriptive text or complex content below the input
-- 📝 **7 Input Types**: text, email, password, search, url, tel, number
+- ♿ **Accessible** — Full keyboard support, ARIA attributes, screen reader friendly
+- 🌈 **5 Semantic Colors** — primary, secondary, success, warning, error
+- 🎨 **6 Variants** — solid, flat, bordered, outline, ghost, text
+- 🏷️ **Integrated Label** — Support for wide inset labels that span across slots
+- 💡 **Helper Text** — Add descriptive text or complex content below the input
+- 📏 **3 Sizes** — sm, md, lg
+- 📝 **7 Input Types** — text, email, password, search, url, tel, number
+- 🔧 **Prefix/Suffix Slots** — Add icons or buttons before/after input
 
 ## Source Code
 
@@ -92,9 +92,14 @@ Three sizes for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-input variant="flat" size="sm" placeholder="Small"></bit-input>
-<bit-input variant="flat" size="md" placeholder="Medium"></bit-input>
-<bit-input variant="flat" size="lg" placeholder="Large"></bit-input>
+<bit-grid cols="3">
+  <bit-input variant="flat" size="sm" placeholder="Small"></bit-input>
+  <bit-input variant="flat" size="md" placeholder="Medium"></bit-input>
+  <bit-input variant="flat" size="lg" placeholder="Large"></bit-input>
+  <bit-input variant="flat" size="sm" label="Small" placeholder="Small"></bit-input>
+  <bit-input variant="flat" size="md" label="Medium" placeholder="Medium"></bit-input>
+  <bit-input variant="flat" size="lg" label="Large" placeholder="Large"></bit-input>
+</bit-grid>
 ```
 
 </ComponentPreview>
@@ -254,22 +259,22 @@ Prevent interaction or modification of the input.
 
 ### Attributes
 
-| Attribute         | Type                                                                           | Default     | Description              |
-| ----------------- | ------------------------------------------------------------------------------ | ----------- | ------------------------ |
-| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'`    | `'text'`    | Input type               |
-| `value`           | `string`                                                                       | `''`        | Current input value      |
-| `name`            | `string`                                                                       | `''`        | Form field name          |
-| `placeholder`     | `string`                                                                       | `''`        | Placeholder text         |
-| `label`           | `string`                                                                       | `''`        | Label text               |
-| `label-placement` | `'inset' \| 'outside'`                                                         | `'inset'`   | Label placement          |
-| `helper`          | `string`                                                                       | `''`        | Helper text below input  |
-| `disabled`        | `boolean`                                                                      | `false`     | Disable the input        |
-| `readonly`        | `boolean`                                                                      | `false`     | Make the input read-only |
-| `required`        | `boolean`                                                                      | `false`     | Mark field as required   |
-| `fullwidth`       | `boolean`                                                                      | `false`     | Expand to full width     |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Input size               |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`            | `'solid'`   | Visual variant           |
-| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Color theme              |
+| Attribute         | Type                                                                        | Default     | Description              |
+| ----------------- | --------------------------------------------------------------------------- | ----------- | ------------------------ |
+| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type               |
+| `value`           | `string`                                                                    | `''`        | Current input value      |
+| `name`            | `string`                                                                    | `''`        | Form field name          |
+| `placeholder`     | `string`                                                                    | `''`        | Placeholder text         |
+| `label`           | `string`                                                                    | `''`        | Label text               |
+| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement          |
+| `helper`          | `string`                                                                    | `''`        | Helper text below input  |
+| `disabled`        | `boolean`                                                                   | `false`     | Disable the input        |
+| `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only |
+| `required`        | `boolean`                                                                   | `false`     | Mark field as required   |
+| `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width     |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant           |
+| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme              |
 
 ### Slots
 
@@ -286,7 +291,7 @@ Prevent interaction or modification of the input.
 | `input`  | `{ value: string, originalEvent: Event }` | Emitted when the value changes (user input)     |
 | `change` | `{ value: string, originalEvent: Event }` | Emitted when value is committed (blur or Enter) |
 
-## CSS Custom Properties
+### CSS Custom Properties
 
 | Property             | Description      | Default                    |
 | -------------------- | ---------------- | -------------------------- |
@@ -298,17 +303,49 @@ Prevent interaction or modification of the input.
 
 The input component follows WCAG 2.1 Level AA standards.
 
+### `bit-input`
+
 ✅ **Keyboard Navigation**
 
 - `Tab` focuses the input.
 - Native input behavior (Enter to commit, etc.).
 
-✅ **Screen Reader Support**
+✅ **Screen Readers**
 
 - Proper ARIA states (disabled, required, readonly).
 - Associated labels via `aria-label` or `<label>`.
 
 ## Best Practices
+
+### Onboard with Clear Microcopy
+
+For first-run forms, combine a visible label, helper text, and progressive validation feedback.
+
+<ComponentPreview center>
+
+```html
+<div style="display: grid; gap: 0.75rem; max-width: 26rem; width: 100%;">
+  <bit-input
+    label="Workspace name"
+    placeholder="Acme Marketing"
+    helper="This appears in invites and email notifications."
+    clearable></bit-input>
+
+  <bit-input
+    type="email"
+    label="Owner email"
+    placeholder="you@company.com"
+    helper="We will send setup instructions to this address."></bit-input>
+
+  <bit-input
+    type="text"
+    label="Project key"
+    value="acme space"
+    error="Use lowercase letters, numbers, and dashes only."></bit-input>
+</div>
+```
+
+</ComponentPreview>
 
 **Do:**
 

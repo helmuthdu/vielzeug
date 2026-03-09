@@ -1,517 +1,343 @@
 ---
 title: Deposit — Usage Guide
-description: Schema definition, adapters, query builder, and testing for createDeposit.
+description: How to use Deposit for schema-driven browser storage with IndexedDB and LocalStorage.
 ---
 
 # Deposit Usage Guide
 
-::: tip New to Deposit?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
-:::
-
 [[toc]]
 
-## Why Deposit?
+## Defining a Schema
 
-Persistent client-side storage with structured queries is essential for offline-capable apps. Deposit gives you a typed query builder on top of LocalStorage or IndexedDB.
-
-```ts
-// Before — manual localStorage
-const raw = localStorage.getItem('users');
-const users = raw ? JSON.parse(raw) as User[] : [];
-const adults = users.filter(u => u.age >= 18).sort((a, b) => a.name.localeCompare(b.name));
-
-// After — Deposit
-const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
-```
-
-| Feature | Deposit | localforage | dexie |
-|---|---|---|---|
-| Bundle size | <PackageInfo package="deposit" type="size" /> | ~8 kB | ~23 kB |
-| Query builder | ✅ Rich | ❌ | ✅ |
-| TypeScript | ✅ First-class | ⚠️ | ✅ |
-| Multiple adapters | ✅ | ✅ | IndexedDB only |
-| Zero dependencies | ✅ | ❌ | ❌ |
-
-**Use Deposit when** you need typed storage with querying capability and don't need full IndexedDB power of Dexie.
-
-
-## Import
-
-```ts
-import { createDeposit, defineSchema, LocalStorageAdapter, IndexedDBAdapter } from '@vielzeug/deposit';
-// Optional: Import types
-import type { Schema, MigrationFn, Adapter } from '@vielzeug/deposit';
-```
-
-## Basic Usage
-
-### Define a Schema
-
-The schema defines your tables, their primary keys, indexes, and record types:
+Use `defineSchema<S>(schema)` to create a fully-typed schema. The type parameter `S` maps table names to record types; the runtime value describes the primary key and optional indexes per table.
 
 ```ts
 import { defineSchema } from '@vielzeug/deposit';
 
-// Define your record types
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  age: number;
-  role: 'admin' | 'user';
-  createdAt: number;
-}
+interface User    { id: number; name: string; age: number; city?: string }
+interface Post    { id: number; title: string; authorId: number; publishedAt: number }
+interface Comment { id: number; postId: number; body: string }
 
-interface Post {
-  id: string;
-  userId: string;
-  title: string;
-  content: string;
-  createdAt: number;
-}
-
-// Define the schema — single call, full type inference
-const schema = defineSchema<{ users: User; posts: Post }>({
-  users: {
-    key: 'id', // Primary key field
-    indexes: ['email', 'role'], // Indexed fields for fast lookups
-  },
-  posts: {
-    key: 'id',
-    indexes: ['userId', 'createdAt'],
-  },
+const schema = defineSchema<{ users: User; posts: Post; comments: Comment }>({
+  users:    { key: 'id', indexes: ['name', 'age'] },
+  posts:    { key: 'id', indexes: ['authorId', 'publishedAt'] },
+  comments: { key: 'id', indexes: ['postId'] },
 });
 ```
 
-### Initialize Deposit
+### Inline Schema
 
-#### Using LocalStorage
-
-LocalStorage is simpler but has a smaller storage limit (~5-10 MB):
+No separate variable is necessary. Pass the schema inline with a type parameter directly to the factory:
 
 ```ts
-const db = createDeposit({
-  type: 'localStorage',
-  dbName: 'my-app-db',
-  schema,
+import { createLocalStorage } from '@vielzeug/deposit';
+
+const db = createLocalStorage<{ users: { id: number; name: string } }>({
+  dbName: 'my-app',
+  schema: { users: { key: 'id' } },
 });
 ```
 
-#### Using IndexedDB
+::: tip Indexes in LocalStorage
+The `indexes` field is only used by the IndexedDB adapter. The LocalStorage adapter logs a warning and ignores them at runtime.
+:::
 
-IndexedDB supports larger storage, native indexes, migrations, and atomic transactions:
+## Creating an Adapter
+
+Deposit provides two factory functions that return the same `Adapter<S>` interface.
+
+### `createLocalStorage(options)`
+
+Synchronous under the hood. Best for small datasets and short-lived browser state (~5–10 MB storage limit).
 
 ```ts
-const db = createDeposit({
-  type: 'indexedDB',
-  dbName: 'my-app-db',
+import { createLocalStorage } from '@vielzeug/deposit';
+
+const db = createLocalStorage({ dbName: 'my-app', schema });
+```
+
+**Options:**
+
+| Property | Type | Description |
+|---|---|---|
+| `dbName` | `string` | Namespace prefix for all localStorage keys |
+| `schema` | `Schema<S>` | Schema created by `defineSchema()` or inline object |
+| `logger?` | `Logger` | Custom logger; defaults to `console` |
+
+### `createIndexedDB(options)`
+
+Async, quota-based storage (typically hundreds of MB). Connection is lazy — opened on the first operation. Call `db.close()` when done.
+
+```ts
+import { createIndexedDB } from '@vielzeug/deposit';
+
+const db = createIndexedDB({
+  dbName: 'my-app',
   version: 1,
   schema,
-});
-
-// With migration function
-const dbWithMigration = createDeposit({
-  type: 'indexedDB',
-  dbName: 'my-app-db',
-  version: 2,
-  schema,
   migrationFn: (db, oldVersion, newVersion, tx) => {
-    // Migration logic here
+    // runs inside onupgradeneeded
   },
 });
+
+// Close the connection when the app shuts down
+db.close();
 ```
 
-### Basic Operations
+**Options:**
 
-#### Insert/Update Records
+| Property | Type | Description |
+|---|---|---|
+| `dbName` | `string` | IDB database name |
+| `version?` | `number` | Database version (default: `1`) |
+| `schema` | `Schema<S>` | Schema created by `defineSchema()` or inline object |
+| `migrationFn?` | `MigrationFn` | Runs inside `onupgradeneeded` for schema migrations |
+| `logger?` | `Logger` | Custom logger; defaults to `console` |
+
+## CRUD Operations
+
+All methods are `async` on both adapters for a consistent API.
+
+### `put(table, value, ttl?)`
+
+Upserts one record or an array of records. An optional `ttl` (milliseconds) sets the expiry timestamp.
 
 ```ts
-// Insert a single user
-await db.put('users', {
-  id: 'u1',
-  name: 'Alice',
-  email: 'alice@example.com',
-  age: 30,
-  role: 'admin',
-  createdAt: Date.now(),
-});
-
-// Update (just put with same id)
-await db.put('users', {
-  id: 'u1',
-  name: 'Alice Smith', // Updated name
-  email: 'alice@example.com',
-  age: 31, // Updated age
-  role: 'admin',
-  createdAt: Date.now(),
-});
+await db.put('users', { id: 1, name: 'Alice', age: 30 });
+await db.put('users', [user1, user2, user3]);            // bulk upsert
+await db.put('users', { id: 1, name: 'Alice', age: 30 }, 3_600_000); // expires in 1 hour
 ```
 
-#### Retrieve Records
+### `get(table, key, defaultValue?)`
+
+Returns the record by primary key, or `undefined` when absent or expired. When `defaultValue` is supplied the return type narrows to `T` (never `undefined`).
 
 ```ts
-// Get a single user
-const user = await db.get('users', 'u1');
-if (user) {
+const user = await db.get('users', 1);               // User | undefined
+const user = await db.get('users', 1, { id: 0, name: 'Guest', age: 0 }); // User
+```
+
+### `getAll(table)`
+
+Returns all live records. Expired entries are filtered out; the IndexedDB adapter also evicts them from the store asynchronously.
+
+```ts
+const users = await db.getAll('users'); // User[]
+```
+
+### `getMany(table, keys[])`
+
+Batch fetch by a list of primary keys. Missing or expired records are omitted from the result.
+
+```ts
+const users = await db.getMany('users', [1, 2, 5]); // User[]
+```
+
+### `patch(table, key, partial)`
+
+Merges the partial object into the existing record and returns the result. Returns `undefined` when the key is absent or expired. TTL is preserved.
+
+```ts
+const updated = await db.patch('users', 1, { age: 31 });
+// updated: { id: 1, name: 'Alice', age: 31 } | undefined
+```
+
+### `delete(table, key)`
+
+Removes one record or an array of records. Silently ignores missing keys.
+
+```ts
+await db.delete('users', 1);
+await db.delete('users', [1, 2, 3]);  // bulk delete
+```
+
+### `deleteAll(table)`
+
+Removes all records in a table. Silently succeeds on an empty table.
+
+```ts
+await db.deleteAll('users');
+```
+
+### `has(table, key)`
+
+Returns `true` when a live (non-expired) record exists for the given key.
+
+```ts
+const exists = await db.has('users', 1); // boolean
+```
+
+### `count(table)`
+
+Counts live records without allocating the full result set.
+
+```ts
+const total = await db.count('users'); // number
+```
+
+### `getOrPut(table, key, factory, ttl?)`
+
+Returns the cached record if present; otherwise calls `factory()`, stores the result, and returns it.
+
+```ts
+const user = await db.getOrPut('users', 1, () => fetchUser(1), 60_000);
+```
+
+## Query Builder
+
+`db.from(table)` returns a lazy `QueryBuilder<T>` — no query runs until a terminal is called.
+
+### Filtering
+
+```ts
+const qb = db.from('users');
+
+// Strict equality
+await qb.equals('city', 'Paris').toArray();
+
+// Inclusive range (numbers or strings)
+await qb.between('age', 18, 30).toArray();
+
+// Prefix match
+await qb.startsWith('name', 'Al').toArray();
+await qb.startsWith('name', 'al', true).toArray(); // case-insensitive
+
+// Custom predicate
+await qb.filter(u => u.age > 18 && (u.city ?? '').length > 0).toArray();
+
+// Logical AND / OR
+await qb.and(u => u.city === 'Paris', u => u.age > 25).toArray();
+await qb.or(u => u.city === 'Paris', u => u.city === 'Berlin').toArray();
+```
+
+### Sorting & Pagination
+
+```ts
+// Sort
+await qb.orderBy('age', 'asc').toArray();
+await qb.orderBy('name', 'desc').toArray();
+await qb.reverse().toArray();
+
+// Slice
+await qb.limit(10).toArray();
+await qb.offset(5).toArray();
+await qb.page(2, 20).toArray(); // page 2, 20 per page
+```
+
+### Search & Contains
+
+`search` performs a **fuzzy** match across all fields using the `@vielzeug/toolkit` search engine. `contains` performs a case-insensitive **substring** match.
+
+```ts
+// Fuzzy search — all fields
+await qb.search('alice').toArray();
+await qb.search('alice', 0.5).toArray(); // with tone/sensitivity
+
+// Substring match — named fields
+await qb.contains('ali', ['name']).toArray();
+await qb.contains('paris', ['city', 'address']).toArray();
+
+// Substring match — all string fields
+await qb.contains('paris').toArray();
+```
+
+### Projection
+
+`map` transforms each record to a new type and returns a `QueryBuilder<U>`.
+
+```ts
+const ids  = await db.from('users').map(u => u.id).toArray();        // number[]
+const dtos = await db.from('users').map(u => ({ name: u.name })).toArray();
+```
+
+### Terminals
+
+```ts
+const all   = await qb.toArray();  // T[]
+const first = await qb.first();    // T | undefined
+const last  = await qb.last();     // T | undefined
+const count = await qb.count();    // number
+```
+
+### Async Iteration
+
+`QueryBuilder` implements `AsyncIterator`. Use `for await...of` for streamed processing without calling `.toArray()` explicitly.
+
+```ts
+for await (const user of db.from('users').orderBy('name').limit(100)) {
   console.log(user.name);
 }
-
-// Get with default value
-const user = await db.get('users', 'u1', {
-  id: 'u1',
-  name: 'Guest',
-  email: '',
-  age: 0,
-  role: 'user',
-  createdAt: Date.now(),
-});
-
-// Get all users
-const allUsers = await db.getAll('users');
-console.log(`Found ${allUsers.length} users`);
 ```
 
-#### Delete Records
+## TTL
+
+Pass a TTL (time-to-live in milliseconds) as the third argument to `put`, or the fourth argument to `getOrPut`. The expiry timestamp is stored in an internal envelope alongside the value.
 
 ```ts
-// Delete a single user
-await db.delete('users', 'u1');
+// Expires in 1 hour
+await db.put('sessions', { id: 's1', token: 'abc' }, 3_600_000);
 
-// Clear all users
-await db.clear('users');
+// Returns undefined after expiry — and removes the entry from storage
+const session = await db.get('sessions', 's1');
+
+// patch preserves existing TTL
+const updated = await db.patch('sessions', 's1', { token: 'xyz' });
+
+// Cache pattern with TTL
+const data = await db.getOrPut('cache', 'key', () => fetchData(), 5 * 60_000);
 ```
 
-#### Count Records
+::: tip Lazy eviction
+Expired entries are removed lazily: the LocalStorage adapter evicts on read; the IndexedDB adapter evicts in a background write after `getAll()` returns.
+:::
+
+## Transactions
+
+Transactions are only available on the IndexedDB adapter (`IndexedDBHandle`). All writes in the callback are committed atomically — if the callback throws, nothing is persisted.
 
 ```ts
-const userCount = await db.count('users');
-console.log(`Total users: ${userCount}`);
-```
+import { createIndexedDB } from '@vielzeug/deposit';
 
-## Bulk Operations
+const db = createIndexedDB({ dbName: 'my-app', version: 1, schema });
 
-### Bulk Insert/Update
+await db.transaction(['posts', 'comments'], async (tx) => {
+  // Full CRUD available on the transaction context
+  const post = await tx.get('posts', 1);
+  await tx.put('posts', { id: 1, title: 'Hello', authorId: 1, publishedAt: Date.now() });
+  await tx.patch('posts', 1, { title: 'Hello, World!' });
+  await tx.delete('posts', 99);
+  await tx.put('comments', { id: 1, postId: 1, body: 'First!' });
 
-```ts
-const newUsers = [
-  { id: 'u2', name: 'Bob', email: 'bob@example.com', age: 25, role: 'user', createdAt: Date.now() },
-  { id: 'u3', name: 'Carol', email: 'carol@example.com', age: 28, role: 'user', createdAt: Date.now() },
-  { id: 'u4', name: 'Dave', email: 'dave@example.com', age: 35, role: 'admin', createdAt: Date.now() },
-];
-
-await db.bulkPut('users', newUsers);
-```
-
-### Bulk Delete
-
-```ts
-await db.bulkDelete('users', ['u2', 'u3', 'u4']);
-```
-
-## Advanced Features
-
-### TTL (Time-To-Live)
-
-Records can automatically expire after a specified time:
-
-```ts
-// Session expires in 1 hour (3600000 ms)
-await db.put(
-  'sessions',
-  {
-    id: 's1',
-    userId: 'u1',
-    token: 'abc123',
-    createdAt: Date.now(),
-  },
-  3600000,
-);
-
-// After 1 hour, this returns undefined
-const session = await db.get('sessions', 's1'); // undefined
-
-// TTL with bulk operations
-await db.bulkPut('temp-data', records, 3600000);
-```
-
-### Query Builder
-
-Build complex queries with a fluent API:
-
-```ts
-// Find all admin users sorted by name
-const admins = await db.query('users').equals('role', 'admin').orderBy('name', 'asc').toArray();
-
-// Find users between ages 20-30
-const youngUsers = await db.query('users').between('age', 20, 30).toArray();
-
-// Complex filtering
-const special = await db
-  .query('users')
-  .filter((user) => user.age > 18 && user.email.includes('example.com'))
-  .orderBy('createdAt', 'desc')
-  .limit(10)
-  .toArray();
-
-// Pagination
-const page2 = await db
-  .query('users')
-  .orderBy('name', 'asc')
-  .page(2, 10) // Page 2, 10 items per page
-  .toArray();
-
-// Count matching records
-const totalUsers = await db.query('users').count();
-const adminCount = await db.query('users').equals('role', 'admin').count();
-
-// First / last
-const first = await db.query('users').orderBy('createdAt', 'asc').first();
-const last  = await db.query('users').orderBy('createdAt', 'asc').last();
-
-// Map to a new type
-const names = await db.query('users').map((u) => u.name).toArray();
-```
-
-### Transactions *(IndexedDB only)*
-
-Perform atomic writes across multiple tables in a single `IDBTransaction`:
-
-```ts
-await db.transaction(['users', 'posts'], async (stores) => {
-  // Add a user
-  stores.users.push({
-    id: 'u5',
-    name: 'Eve',
-    email: 'eve@example.com',
-    age: 22,
-    role: 'user',
-    createdAt: Date.now(),
-  });
-
-  // Add their first post
-  stores.posts.push({
-    id: 'p1',
-    userId: 'u5',
-    title: 'Hello World',
-    content: 'My first post!',
-    createdAt: Date.now(),
-  });
-
-  // All changes committed atomically — if the callback throws, nothing is persisted
+  const all = await tx.getAll('posts');
 });
 ```
 
 ::: warning
-`transaction()` is only available on `IndexedDBAdapter`. For localStorage, use individual `put`/`delete`/`bulkPut` calls.
+The `transaction()` method is only available on `IndexedDBHandle` (returned by `createIndexedDB()`), not on `Adapter`.
 :::
-
-### Safe Storage Keys
-
-Deposit uses `encodeURIComponent` for storage keys, safely handling special characters including colons in database and table names:
-
-```ts
-// These all work correctly, even with special characters
-const db1 = createDeposit({
-  type: 'localStorage',
-  dbName: 'my:app:db', // ✅ Colons are safely encoded
-  schema,
-});
-
-const schema2 = {
-  'user:data': {
-    // ✅ Colons in table names work too
-    key: 'id',
-  },
-};
-```
-
-### Corrupted Entry Handling
-
-Deposit gracefully handles corrupted localStorage entries without breaking batch operations:
-
-```ts
-// If a single entry is corrupted in localStorage
-// getAll() will:
-// 1. Skip the corrupted entry
-// 2. Delete it automatically
-// 3. Log a warning
-// 4. Continue processing other entries
-// 5. Return all valid entries
-
-const users = await db.getAll('users');
-// ✅ Returns all valid users, skips corrupted ones
-```
 
 ## Schema Migrations
 
-When using IndexedDB, provide a `migrationFn` to transform data when the schema version changes:
+Provide a `migrationFn` to `createIndexedDB` to migrate the database when `version` increases. The function runs inside the browser's `onupgradeneeded` event and receives the raw `IDBDatabase` and `IDBTransaction`.
 
 ```ts
 import type { MigrationFn } from '@vielzeug/deposit';
 
-const migrationFn: MigrationFn = (db, oldVersion, newVersion, tx) => {
+const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
   if (oldVersion < 2) {
-    // Version 1 → 2: add default role to existing users
+    // Add an index added in v2
     const store = tx.objectStore('users');
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      for (const user of request.result) {
-        if (!user.role) {
-          user.role = 'user';
-          store.put(user);
-        }
-      }
-    };
+    store.createIndex('email', 'v.email', { unique: true });
   }
-
   if (oldVersion < 3) {
-    // Version 2 → 3: add createdAt to posts
-    const store = tx.objectStore('posts');
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      for (const post of request.result) {
-        if (!post.createdAt) {
-          post.createdAt = Date.now();
-          store.put(post);
-        }
-      }
-    };
+    // Create a new table in v3
+    db.createObjectStore('tags', { keyPath: 'v.id' });
   }
 };
 
-const db = createDeposit({ type: 'indexedDB', dbName: 'my-app-db', version: 3, schema, migrationFn });
+const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
 ```
 
-## Environment-Specific Configuration
-
-### Development
-
-```ts
-const db = createDeposit({
-  type: 'localStorage', // Faster for development
-  dbName: 'my-app-dev',
-  schema,
-});
-```
-
-### Production
-
-```ts
-const db = createDeposit({
-  type: 'indexedDB', // More robust for production
-  dbName: 'my-app-prod',
-  version: 1,
-  schema,
-  migrationFn,
-});
-```
-
-### Testing
-
-```ts
-beforeEach(async () => {
-  const db = createDeposit({
-    type: 'localStorage',
-    dbName: `test-${Date.now()}`, // Unique per test
-    schema,
-  });
-
-  await db.clear('users');
-  await db.clear('posts');
-});
-```
-
-## Best Practices
-
-1. **Define schemas with TypeScript**: Use `{} as YourType` for full type safety
-2. **Use indexes wisely**: Only index fields you'll query frequently
-3. **Batch operations**: Use `bulkPut`/`bulkDelete` instead of loops
-4. **Handle errors**: Wrap operations in try-catch for error handling
-5. **Clean up expired data**: Regularly query and delete old records
-6. **Use TTL for temporary data**: Sessions, caches, temporary files
-7. **Version your schemas**: Increment version when structure changes
-8. **Test migrations**: Always test migration logic thoroughly
-9. **Monitor storage quota**: Check available space before large operations
-10. **Clear on logout**: Remove sensitive data when user logs out
-
-## Common Patterns
-
-### Caching API Responses
-
-```ts
-// Cache with 5-minute TTL
-async function fetchWithCache(url: string) {
-  const cached = await db.get('api-cache', url);
-  if (cached) return cached.data;
-
-  const response = await fetch(url);
-  const data = await response.json();
-
-  await db.put(
-    'api-cache',
-    {
-      id: url,
-      data,
-      fetchedAt: Date.now(),
-    },
-    300000,
-  ); // 5 minutes
-
-  return data;
-}
-```
-
-### Offline Queue
-
-```ts
-// Queue offline actions
-async function saveForLater(action: any) {
-  await db.put('offline-queue', {
-    id: crypto.randomUUID(),
-    action,
-    createdAt: Date.now(),
-  });
-}
-
-// Process queue when online
-async function processQueue() {
-  const queue = await db.getAll('offline-queue');
-
-  for (const item of queue) {
-    try {
-      await processAction(item.action);
-      await db.delete('offline-queue', item.id);
-    } catch (err) {
-      console.error('Failed to process', item.id, err);
-    }
-  }
-}
-```
-
-### Search with Autocomplete
-
-```ts
-async function searchUsers(query: string) {
-  return await db
-    .query('users')
-    .search(query) // Fuzzy search
-    .limit(10)
-    .toArray();
-}
-```
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>
+::: tip Key path prefix
+Deposit stores records inside an envelope `{ v: record, exp?: number }`. Index paths must therefore use `'v.fieldName'` as the key path.
+:::

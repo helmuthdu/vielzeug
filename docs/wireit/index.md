@@ -1,6 +1,6 @@
 ---
-title: Wireit — Dependency injection for TypeScript
-description: Lightweight, type-safe dependency injection container with tokens, lifetimes, child scopes, and async providers. Zero dependencies.
+title: Wireit — Typed dependency injection for TypeScript
+description: Zero-dependency IoC container with typed tokens, lifetimes, async resolution, child containers, and first-class test utilities.
 ---
 
 <PackageBadges package="wireit" />
@@ -9,7 +9,7 @@ description: Lightweight, type-safe dependency injection container with tokens, 
 
 # Wireit
 
-**Wireit** is a zero-dependency dependency injection container with typed tokens, singleton/transient/scoped lifetimes, child containers, async providers, and snapshot-based test utilities.
+**Wireit** is a zero-dependency IoC container for TypeScript. Register dependencies with typed tokens, resolve them synchronously or asynchronously, and scope lifetimes to containers or request cycles — all with full type inference.
 
 ## Installation
 
@@ -34,44 +34,39 @@ yarn add @vielzeug/wireit
 ```ts
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-// Create typed tokens
-const DbToken   = createToken<Database>('Database');
-const RepoToken = createToken<UserRepository>('UserRepository');
-const SvcToken  = createToken<UserService>('UserService');
+const DbToken      = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
 
 const container = createContainer();
 
-// Register providers
-container.register(DbToken, {
-  useFactory: () => new Database(process.env.DB_URL!),
-  lifetime: 'singleton',
-});
-container.register(RepoToken, { useClass: UserRepository, deps: [DbToken] });
-container.register(SvcToken,  { useClass: UserService,    deps: [RepoToken] });
+container
+  .factory(DbToken, () => new Database(process.env.DB_URL!))
+  .bind(ServiceToken, UserService, { deps: [DbToken] });
 
-// Resolve
-const service = container.get(SvcToken);
-service.getUsers();
+const service = container.get(ServiceToken);
 ```
 
 ## Features
 
-- **Typed tokens** — `createToken<T>('name')` ties a TypeScript type to the token at compile time
-- **Three provider kinds** — `useValue`, `useClass`, `useFactory` (sync or async)
-- **Lifetimes** — `'singleton'` (default), `'transient'`, `'scoped'` per registration
-- **Async providers** — `useFactory` may return a `Promise`; resolve with `getAsync()`
-- **Child containers** — `createChild()` inherits parent registrations; scoped deps get one instance per child
-- **Scoped execution** — `runInScope(fn)` creates a temporary child container, auto-cleared when `fn` returns
-- **Aliases** — `alias(token, source)` redirects a token to another, with chain and cycle detection
-- **Snapshot/restore** — `snapshot()` / `restore()` for test isolation
-- **Test utilities** — `createTestContainer` and `withMock` for isolated, auto-cleanup test setups
-- **Debug view** — `container.debug()` lists all registered tokens and aliases
+- **Typed tokens** — `createToken<T>(description)` gives every dependency a compile-time type and a human-readable name
+- **Three registration styles** — `register()`, `factory()` shorthand, `bind()` shorthand, and `value()` for constants
+- **Lifetimes** — `singleton` (default), `transient`, and `scoped` per-child-container
+- **Async providers** — factories may return `Promise<T>`; resolve via `getAsync()` and `getAllAsync()`
+- **Dispose hooks** — per-provider `dispose(instance)` called on `container.dispose()`; `[Symbol.asyncDispose]` for `await using`
+- **Child containers** — `createChild()` inherits registrations; scoped instances are isolated per child
+- **Scoped execution** — `runInScope(fn)` creates and auto-disposes a child container
+- **Aliases** — `alias(token, source)` maps interfaces to implementations, resolved through the full parent chain
+- **Batch resolution** — `getAll` and `getAllAsync` return typed tuples
+- **Optional resolution** — `getOptional` and `getOptionalAsync` return `undefined` when missing
+- **Test utilities** — `createTestContainer()` and `container.mock()` for isolated unit tests
+- **Snapshot/Restore** — `snapshot()` / `restore()` for fine-grained test state control
+- **Debug** — `debug()` walks the full hierarchy and lists all tokens and aliases
 - **Zero dependencies** — <PackageInfo package="wireit" type="size" /> gzipped
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Tokens, providers, lifetimes, child containers, and testing |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world DI patterns |
+|                           |                                                                  |
+| ------------------------- | ---------------------------------------------------------------- |
+| [Usage Guide](./usage.md) | Tokens, providers, lifetimes, async, child containers, testing   |
+| [API Reference](./api.md) | Complete type signatures and method documentation                |
+| [Examples](./examples.md) | Real-world DI patterns and framework integrations                |

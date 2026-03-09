@@ -40,11 +40,11 @@ function percent(value: number, total: number): number;
 ```ts
 import { percent } from '@vielzeug/toolkit';
 
-percent(25, 100);  // 25
-percent(1, 3);     // 33.333...
-percent(50, 200);  // 25
-percent(0, 100);   // 0
-percent(5, 0);     // 0  — zero-safe
+percent(25, 100); // 25
+percent(1, 3); // 33.333...
+percent(50, 200); // 25
+percent(0, 100); // 0
+percent(5, 0); // 0  — zero-safe
 ```
 
 ### With Rounding
@@ -75,9 +75,7 @@ progressBar(200, 200); // '100%'
 ```ts
 import { percent, round } from '@vielzeug/toolkit';
 
-const tasks = [
-  { done: true }, { done: false }, { done: true }, { done: true }, { done: false }
-];
+const tasks = [{ done: true }, { done: false }, { done: true }, { done: true }, { done: false }];
 
 const completed = tasks.filter((t) => t.done).length;
 round(percent(completed, tasks.length), 0); // 60

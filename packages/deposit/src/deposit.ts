@@ -1,26 +1,25 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 /* ============================================
    deposit - Lightweight client-side data storage
    ============================================ */
 
-import { sort, type Predicate, search } from '@vielzeug/toolkit';
+import { type Predicate, search, sort } from '@vielzeug/toolkit';
 
 /* -------------------- Core Types -------------------- */
 
-export type Logger = {
-  error(...args: any[]): void;
-  warn(...args: any[]): void;
+type Logger = {
+  error(...args: unknown[]): void;
+  warn(...args: unknown[]): void;
 };
 
-type TableDef<T, K extends keyof T = keyof T> = {
-  key: K;
-  record: T;
-  indexes?: K[];
-};
+// Phantom symbol used only in the type system to carry the original record type
+declare const _schemaRecord: unique symbol;
 
 export type Schema<S = Record<string, Record<string, unknown>>> = {
-  [K in keyof S]: TableDef<S[K], keyof S[K]>;
+  [K in keyof S]: {
+    key: keyof S[K] & string;
+    indexes?: (keyof S[K] & string)[];
+    readonly [_schemaRecord]?: S[K];
+  };
 };
 
 export type MigrationFn = (
@@ -30,31 +29,88 @@ export type MigrationFn = (
   transaction: IDBTransaction,
 ) => void | Promise<void>;
 
-type KeyType<S extends Schema, K extends keyof S> = S[K]['record'][S[K]['key']];
-type RecordType<S extends Schema, K extends keyof S> = S[K]['record'];
+// NonNullable strips the `| undefined` introduced by the optional phantom property (`?`).
+// Intersecting with Record<string, unknown> satisfies the constraint required by QueryBuilder<T>.
+type RecordType<S extends Schema, K extends keyof S> = NonNullable<S[K][typeof _schemaRecord]> &
+  Record<string, unknown>;
 
-export type LocalStorageConfig<S extends Schema> = {
-  type: 'localStorage';
+// Extracts the value-type of the key field using the phantom record type.
+type KeyType<S extends Schema, K extends keyof S> = S[K] extends {
+  key: infer KF;
+  [_schemaRecord]?: infer R;
+}
+  ? KF extends keyof NonNullable<R>
+    ? NonNullable<R>[KF & keyof NonNullable<R>]
+    : never
+  : never;
+
+export type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
   dbName: string;
-  schema: S;
+  schema: Schema<S>;
   logger?: Logger;
 };
 
-export type IndexedDBConfig<S extends Schema> = {
-  type: 'indexedDB';
+export type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = {
   dbName: string;
   version?: number;
-  schema: S;
+  schema: Schema<S>;
   migrationFn?: MigrationFn;
   logger?: Logger;
 };
 
-export type AdapterConfig<S extends Schema> = LocalStorageConfig<S> | IndexedDBConfig<S>;
+/* -------------------- Transaction context for IndexedDB -------------------- */
+
+export type TransactionContext<S extends Schema, K extends keyof S> = {
+  get<T extends K>(table: T, key: KeyType<S, T>): Promise<RecordType<S, T> | undefined>;
+  getAll<T extends K>(table: T): Promise<RecordType<S, T>[]>;
+  put<T extends K>(table: T, value: RecordType<S, T>, ttl?: number): Promise<void>;
+  delete<T extends K>(table: T, key: KeyType<S, T>): Promise<void>;
+  patch<T extends K>(
+    table: T,
+    key: KeyType<S, T>,
+    partial: Partial<RecordType<S, T>>,
+  ): Promise<RecordType<S, T> | undefined>;
+};
+
+/* -------------------- Adapter Interface -------------------- */
+
+export interface Adapter<S extends Schema> {
+  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
+  get<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined>;
+  getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>;
+  getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]>;
+  put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void>;
+  delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void>;
+  patch<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    partial: Partial<RecordType<S, K>>,
+  ): Promise<RecordType<S, K> | undefined>;
+  deleteAll<K extends keyof S>(table: K): Promise<void>;
+  count<K extends keyof S>(table: K): Promise<number>;
+  has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>;
+  getOrPut<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
+    ttl?: number,
+  ): Promise<RecordType<S, K>>;
+  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>;
+}
+
+export interface IndexedDBHandle<S extends Schema> extends Adapter<S> {
+  transaction<K extends keyof S>(tables: K[], fn: (tx: TransactionContext<S, K>) => Promise<void>): Promise<void>;
+  close(): void;
+}
 
 /* -------------------- Schema Factory -------------------- */
 
 /**
- * Helper to create a type-safe schema definition with clean syntax
+ * Helper to create a type-safe schema definition with clean syntax.
  * @example
  * ```ts
  * const schema = defineSchema<{ users: User; posts: Post }>({
@@ -64,75 +120,58 @@ export type AdapterConfig<S extends Schema> = LocalStorageConfig<S> | IndexedDBC
  * ```
  */
 export function defineSchema<S extends Record<string, Record<string, unknown>>>(
-  schema: { [K in keyof S]: { key: keyof S[K]; indexes?: (keyof S[K])[] } },
+  schema: { [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] } },
 ): Schema<S> {
   return schema as unknown as Schema<S>;
 }
 
-/* -------------------- Helper Functions -------------------- */
+/* -------------------- Adapter Factories -------------------- */
 
-function wrapWithExpiry<T extends Record<string, unknown>>(value: T, ttl?: number): T & { __deposit_ttl__?: number } {
-  if (!ttl) return value;
-  return { ...value, __deposit_ttl__: Date.now() + ttl };
+export function createLocalStorage<S extends Record<string, Record<string, unknown>>>(
+  options: LocalStorageOptions<S>,
+): Adapter<Schema<S>> {
+  return new LocalStorageAdapter(options.dbName, options.schema, options.logger);
 }
 
-function isExpired(value: unknown): boolean {
-  if (!value || typeof value !== 'object') return false;
-  const obj = value as Record<string, unknown> & { __deposit_ttl__?: number };
-  return obj.__deposit_ttl__ !== undefined && Date.now() >= obj.__deposit_ttl__;
+export function createIndexedDB<S extends Record<string, Record<string, unknown>>>(
+  options: IndexedDBOptions<S>,
+): IndexedDBHandle<Schema<S>> {
+  return new IndexedDBAdapter(
+    options.dbName,
+    options.version ?? 1,
+    options.schema,
+    options.migrationFn,
+    options.logger,
+  );
 }
 
-function stripExpiry<T extends object>(value: T): T {
-  if (!('__deposit_ttl__' in value)) return value;
-  const { __deposit_ttl__: _, ...rest } = value as any;
-  return rest as T;
+/* -------------------- TTL Envelope (storage-layer only) -------------------- */
+
+type Envelope<T> = { v: T; exp?: number };
+
+function wrap<T>(value: T, ttl?: number): Envelope<T> {
+  return ttl ? { exp: Date.now() + ttl, v: value } : { v: value };
 }
 
-/* -------------------- Adapter Interface + BaseAdapter -------------------- */
-
-export interface Adapter<S extends Schema> {
-  get<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined>;
-  getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>;
-  put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>;
-  delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
-  clear<K extends keyof S>(table: K): Promise<void>;
-  count<K extends keyof S>(table: K): Promise<number>;
-  bulkPut<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>;
-  bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
-  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>;
+function unwrap<T>(env: Envelope<T>): T | undefined {
+  return env.exp !== undefined && Date.now() >= env.exp ? undefined : env.v;
 }
 
-export function query<S extends Schema, K extends keyof S>(
-  adapter: Adapter<S>,
-  table: K,
-): QueryBuilder<RecordType<S, K>> {
-  return new QueryBuilder<RecordType<S, K>>(adapter, String(table));
-}
-
-/* -------------------- createDeposit Factory -------------------- */
-
-export function createDeposit<S extends Schema>(config: AdapterConfig<S>): Adapter<S> {
-  if (config.type === 'localStorage') {
-    return new LocalStorageAdapter(config.dbName, config.schema, config.logger);
-  }
-  return new IndexedDBAdapter(config.dbName, config.version ?? 1, config.schema, config.migrationFn, config.logger);
+function isEnvelope(value: unknown): value is Envelope<unknown> {
+  return typeof value === 'object' && value !== null && 'v' in value;
 }
 
 /* -------------------- QueryBuilder -------------------- */
 
 export class QueryBuilder<T extends Record<string, unknown>> {
-  private readonly operations: ReadonlyArray<(data: any[]) => any[]>;
+  private readonly operations: ReadonlyArray<(data: unknown[]) => unknown[]>;
   private readonly adapter: { getAll(table: string): Promise<unknown[]> };
   private readonly table: string;
 
   constructor(
     adapter: { getAll(table: string): Promise<unknown[]> },
     table: string,
-    operations: ReadonlyArray<(data: any[]) => any[]> = [],
+    operations: ReadonlyArray<(data: unknown[]) => unknown[]> = [],
   ) {
     this.adapter = adapter;
     this.table = table;
@@ -140,7 +179,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 
   private clone(op: (data: T[]) => T[]): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.adapter, this.table, [...this.operations, op]);
+    return new QueryBuilder<T>(this.adapter, this.table, [...this.operations, op as (data: unknown[]) => unknown[]]);
   }
 
   equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
@@ -172,10 +211,16 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return this.clone((data) => data.filter(fn));
   }
 
+  and(...predicates: Predicate<T>[]): QueryBuilder<T> {
+    return this.clone((data) => data.filter((r, i, a) => predicates.every((p) => p(r, i, a))));
+  }
+
+  or(...predicates: Predicate<T>[]): QueryBuilder<T> {
+    return this.clone((data) => data.filter((r, i, a) => predicates.some((p) => p(r, i, a))));
+  }
+
   orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
-    return this.clone(
-      (data) => sort(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[],
-    );
+    return this.clone((data) => sort(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[]);
   }
 
   limit(n: number): QueryBuilder<T> {
@@ -196,11 +241,24 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 
   map<U extends Record<string, unknown>>(callback: (record: T) => U): QueryBuilder<U> {
-    return new QueryBuilder<U>(this.adapter, this.table, [...this.operations, (data: T[]) => data.map(callback)]);
+    return new QueryBuilder<U>(this.adapter, this.table, [
+      ...this.operations,
+      (data: unknown[]) => (data as T[]).map(callback),
+    ]);
   }
 
   search(query: string, tone?: number): QueryBuilder<T> {
     return this.clone((data) => search(data, query, tone) as T[]);
+  }
+
+  contains(query: string, fields?: (keyof T & string)[]): QueryBuilder<T> {
+    const lq = query.toLowerCase();
+    return this.clone((data) =>
+      data.filter((r) => {
+        const keys = fields ?? (Object.keys(r) as (keyof T & string)[]);
+        return keys.some((f) => typeof r[f] === 'string' && (r[f] as string).toLowerCase().includes(lq));
+      }),
+    );
   }
 
   async count(): Promise<number> {
@@ -217,150 +275,207 @@ export class QueryBuilder<T extends Record<string, unknown>> {
   }
 
   async toArray(): Promise<T[]> {
-    let data: any[] = (await this.adapter.getAll(this.table)) as any[];
+    let data: unknown[] = await this.adapter.getAll(this.table);
     for (const op of this.operations) data = op(data);
     return data as T[];
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<T> {
+    for (const item of await this.toArray()) yield item;
   }
 }
 
 /* -------------------- LocalStorageAdapter -------------------- */
 
-export class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
-  private readonly dbName: string;
+class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   private readonly schema: S;
   private readonly logger: Logger;
-
-  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return query(this, table);
-  }
+  private readonly prefixCache: Map<string, string>;
+  private readonly dbName: string;
 
   constructor(dbName: string, schema: S, logger?: Logger) {
     this.dbName = dbName;
     this.schema = schema;
     this.logger = logger ?? console;
+    this.prefixCache = new Map();
+
+    for (const [table, def] of Object.entries(schema)) {
+      if ((def as { indexes?: unknown[] }).indexes?.length) {
+        this.logger.warn(`deposit: indexes declared for table "${table}" are ignored by the localStorage adapter`);
+      }
+    }
   }
 
+  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
+    return new QueryBuilder<RecordType<S, K>>(this, String(table));
+  }
+
+  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
+  get<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined>;
   async get<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
     defaultValue?: RecordType<S, K>,
   ): Promise<RecordType<S, K> | undefined> {
-    const storageKey = this.getStorageKey(table, String(key));
-    const item = localStorage.getItem(storageKey);
-    if (!item) return defaultValue;
-
-    try {
-      const parsed = JSON.parse(item);
-
-      if (!parsed || typeof parsed !== 'object') {
-        localStorage.removeItem(storageKey);
-        return defaultValue;
-      }
-
-      if (isExpired(parsed)) {
-        localStorage.removeItem(storageKey);
-        return defaultValue;
-      }
-      return stripExpiry(parsed) as RecordType<S, K>;
-    } catch (err) {
-      this.logger.warn(`Removing corrupted entry for key: ${String(key)}`, err);
-      localStorage.removeItem(storageKey);
-      return defaultValue;
-    }
+    return this.readEntry<RecordType<S, K>>(this.storageKey(table, String(key)), String(key)) ?? defaultValue;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
-    const prefix = this.getStorageKey(table);
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
+    const prefix = this.tablePrefix(table);
     const records: RecordType<S, K>[] = [];
-
-    for (const storageKey of keys) {
-      const item = localStorage.getItem(storageKey);
-      if (!item) continue;
-
-      try {
-        const parsed = JSON.parse(item);
-
-        if (!parsed || typeof parsed !== 'object') {
-          localStorage.removeItem(storageKey);
-          continue;
-        }
-
-        if (isExpired(parsed)) {
-          localStorage.removeItem(storageKey);
-          continue;
-        }
-
-        records.push(stripExpiry(parsed) as RecordType<S, K>);
-      } catch (err) {
-        this.logger.warn(`Removing corrupted entry: ${storageKey}`, err);
-        localStorage.removeItem(storageKey);
-      }
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith(prefix)) continue;
+      const value = this.readEntry<RecordType<S, K>>(k);
+      if (value !== undefined) records.push(value);
     }
-
     return records;
   }
 
-  async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
-    const key = this.getRecordKey(value, table);
-    localStorage.setItem(this.getStorageKey(table, String(key)), JSON.stringify(wrapWithExpiry(value, ttl)));
+  async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
+    const results: RecordType<S, K>[] = [];
+    for (const k of keys) {
+      const value = this.readEntry<RecordType<S, K>>(this.storageKey(table, String(k)));
+      if (value !== undefined) results.push(value);
+    }
+    return results;
   }
 
-  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
-    localStorage.removeItem(this.getStorageKey(table, String(key)));
+  async put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void> {
+    const values = Array.isArray(value) ? value : [value];
+    for (const v of values) {
+      const key = this.recordKey(v, table);
+      localStorage.setItem(this.storageKey(table, String(key)), JSON.stringify(wrap(v, ttl)));
+    }
   }
 
-  async clear<K extends keyof S>(table: K): Promise<void> {
-    const prefix = this.getStorageKey(table);
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith(prefix))
-      .forEach((k) => {
-        localStorage.removeItem(k);
-      });
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void> {
+    const keys = Array.isArray(key) ? key : [key];
+    for (const k of keys) {
+      localStorage.removeItem(this.storageKey(table, String(k)));
+    }
+  }
+
+  async patch<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    partial: Partial<RecordType<S, K>>,
+  ): Promise<RecordType<S, K> | undefined> {
+    const storageKey = this.storageKey(table, String(key));
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return undefined;
+    try {
+      const env = JSON.parse(raw) as Envelope<RecordType<S, K>>;
+      if (!isEnvelope(env)) {
+        localStorage.removeItem(storageKey);
+        return undefined;
+      }
+      const current = unwrap(env);
+      if (current === undefined) {
+        localStorage.removeItem(storageKey);
+        return undefined;
+      }
+      const merged = { ...current, ...partial } as RecordType<S, K>;
+      localStorage.setItem(storageKey, JSON.stringify({ ...env, v: merged }));
+      return merged;
+    } catch {
+      localStorage.removeItem(storageKey);
+      return undefined;
+    }
+  }
+
+  async getOrPut<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
+    ttl?: number,
+  ): Promise<RecordType<S, K>> {
+    const existing = await this.get(table, key);
+    if (existing !== undefined) return existing;
+    const value = await factory();
+    await this.put(table, value, ttl);
+    return value;
+  }
+
+  async deleteAll<K extends keyof S>(table: K): Promise<void> {
+    const prefix = this.tablePrefix(table);
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(prefix)) localStorage.removeItem(k);
+    }
   }
 
   async count<K extends keyof S>(table: K): Promise<number> {
-    return (await this.getAll(table)).length;
+    const prefix = this.tablePrefix(table);
+    let n = 0;
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(prefix) && this.readEntry(k) !== undefined) n++;
+    }
+    return n;
   }
 
-  async bulkPut<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
-    await Promise.all(values.map((v) => this.put(table, v, ttl)));
+  async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
+    return (await this.get(table, key)) !== undefined;
   }
 
-  async bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
-    await Promise.all(keys.map((key) => this.delete(table, key)));
+  private readEntry<T>(storageKey: string, keyHint?: string): T | undefined {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return undefined;
+    try {
+      const env = JSON.parse(raw) as Envelope<T>;
+      if (!isEnvelope(env)) {
+        localStorage.removeItem(storageKey);
+        return undefined;
+      }
+      const value = unwrap(env);
+      if (value === undefined) {
+        localStorage.removeItem(storageKey);
+        return undefined;
+      }
+      return value;
+    } catch (err) {
+      this.logger.warn(`Removing corrupted entry for key: ${keyHint ?? storageKey}`, err);
+      localStorage.removeItem(storageKey);
+      return undefined;
+    }
   }
 
-  private getRecordKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number {
-    const keyField = String((this.schema[table] as TableDef<any>).key);
+  private recordKey<K extends keyof S>(value: Record<string, unknown>, table: K): string | number {
+    const keyField = String((this.schema[table] as { key: string }).key);
     const keyValue = value[keyField];
-
     if (keyValue === undefined || keyValue === null) {
       throw new Error(`Missing required key field "${keyField}" in record for table "${String(table)}"`);
     }
-
     return keyValue as string | number;
   }
 
-  private getStorageKey<K extends keyof S>(table: K, key?: string | number): string {
-    const prefix = `${encodeURIComponent(this.dbName)}:${encodeURIComponent(String(table))}:`;
-    return key === undefined || key === '' ? prefix : prefix + encodeURIComponent(String(key));
+  private tablePrefix<K extends keyof S>(table: K): string {
+    const name = String(table);
+    let prefix = this.prefixCache.get(name);
+    if (!prefix) {
+      prefix = `${encodeURIComponent(this.dbName)}:${encodeURIComponent(name)}:`;
+      this.prefixCache.set(name, prefix);
+    }
+    return prefix;
+  }
+
+  private storageKey<K extends keyof S>(table: K, key: string): string {
+    return this.tablePrefix(table) + encodeURIComponent(key);
   }
 }
 
 /* -------------------- IndexedDBAdapter -------------------- */
 
-export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
+class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
   private db: IDBDatabase | null = null;
+  private connectPromise: Promise<void> | null = null;
   private readonly dbName: string;
   private readonly schema: S;
   private readonly version: number;
   private readonly migrationFn?: MigrationFn;
   private readonly logger: Logger;
-
-  query<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return query(this, table);
-  }
 
   constructor(dbName: string, version: number, schema: S, migrationFn?: MigrationFn, logger?: Logger) {
     this.dbName = dbName;
@@ -370,8 +485,18 @@ export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
     this.logger = logger ?? console;
   }
 
-  private async connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
+  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
+    return new QueryBuilder<RecordType<S, K>>(this, String(table));
+  }
+
+  close(): void {
+    this.db?.close();
+    this.db = null;
+    this.connectPromise = null;
+  }
+
+  private connect(): Promise<void> {
+    this.connectPromise ??= new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onupgradeneeded = (event) => {
@@ -389,7 +514,12 @@ export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
             reject(new Error('Migration failed', { cause: err }));
           };
           try {
-            const result = this.migrationFn(db, event.oldVersion, (event as any).newVersion ?? null, tx);
+            const result = this.migrationFn(
+              db,
+              event.oldVersion,
+              (event as IDBVersionChangeEvent).newVersion ?? null,
+              tx,
+            );
             Promise.resolve(result).catch(handleError);
           } catch (err) {
             handleError(err);
@@ -402,160 +532,218 @@ export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
         resolve();
       };
 
-      request.onerror = () => reject(new Error('Failed to open IndexedDB'));
+      request.onerror = () => {
+        this.connectPromise = null;
+        reject(new Error('Failed to open IndexedDB'));
+      };
     });
+    return this.connectPromise;
   }
 
+  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
+  get<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue?: RecordType<S, K>,
+  ): Promise<RecordType<S, K> | undefined>;
   async get<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
     defaultValue?: RecordType<S, K>,
   ): Promise<RecordType<S, K> | undefined> {
-    return await this.withTransaction(table, 'readonly', async (store) => {
-      const result = (await this.requestToPromise(store.get(key as IDBValidKey))) as any;
-      if (!result || isExpired(result)) return defaultValue;
-      return stripExpiry(result) as RecordType<S, K>;
+    return this.withStore(table, 'readonly', async (store) => {
+      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
+      if (!env || !isEnvelope(env)) return defaultValue;
+      const value = unwrap(env);
+      return value !== undefined ? value : defaultValue;
     });
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
-    return await this.withTransaction(table, 'readonly', async (store) => {
-      const results = await this.requestToPromise(store.getAll());
-      return results
-        .filter((rec) => rec && typeof rec === 'object' && !isExpired(rec))
-        .map((rec) => stripExpiry(rec as object)) as RecordType<S, K>[];
+    return this.withStore(table, 'readonly', async (store) => {
+      const results = await this.idbRequest<Envelope<RecordType<S, K>>[]>(store.getAll());
+      const records: RecordType<S, K>[] = [];
+      const expiredKeys: IDBValidKey[] = [];
+      const keyField = String((this.schema[table] as { key: string }).key);
+      for (const env of results) {
+        if (!isEnvelope(env)) continue;
+        const value = unwrap(env);
+        if (value !== undefined) {
+          records.push(value);
+        } else {
+          expiredKeys.push((env.v as Record<string, unknown>)[keyField] as IDBValidKey);
+        }
+      }
+      if (expiredKeys.length > 0) {
+        void this.withStore(table, 'readwrite', (s) =>
+          Promise.all(expiredKeys.map((k) => this.idbRequest(s.delete(k)))).then(() => undefined),
+        );
+      }
+      return records;
     });
   }
 
-  async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.put(wrapWithExpiry(value, ttl)));
+  async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
+    return this.withStore(table, 'readonly', async (store) => {
+      const envs = await Promise.all(
+        keys.map((k) => this.idbRequest<Envelope<RecordType<S, K>>>(store.get(k as IDBValidKey))),
+      );
+      return envs
+        .map((env) => (env && isEnvelope(env) ? unwrap(env) : undefined))
+        .filter((v): v is RecordType<S, K> => v !== undefined);
     });
   }
 
-  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.delete(key as IDBValidKey));
+  async put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void> {
+    const values = Array.isArray(value) ? value : [value];
+    await this.withStore(table, 'readwrite', async (store) => {
+      await Promise.all(values.map((v) => this.idbRequest(store.put(wrap(v, ttl)))));
     });
   }
 
-  async clear<K extends keyof S>(table: K): Promise<void> {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await this.requestToPromise(store.clear());
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void> {
+    const keys = Array.isArray(key) ? key : [key];
+    await this.withStore(table, 'readwrite', async (store) => {
+      await Promise.all(keys.map((k) => this.idbRequest(store.delete(k as IDBValidKey))));
     });
+  }
+
+  async patch<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    partial: Partial<RecordType<S, K>>,
+  ): Promise<RecordType<S, K> | undefined> {
+    return this.withStore(table, 'readwrite', async (store) => {
+      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
+      if (!env || !isEnvelope(env)) return undefined;
+      const current = unwrap(env);
+      if (current === undefined) return undefined;
+      const merged = { ...current, ...partial } as RecordType<S, K>;
+      await this.idbRequest(store.put({ ...env, v: merged }));
+      return merged;
+    });
+  }
+
+  async getOrPut<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
+    ttl?: number,
+  ): Promise<RecordType<S, K>> {
+    return this.withStore(table, 'readwrite', async (store) => {
+      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
+      if (env && isEnvelope(env)) {
+        const value = unwrap(env);
+        if (value !== undefined) return value;
+      }
+      const value = await factory();
+      await this.idbRequest(store.put(wrap(value, ttl)));
+      return value;
+    });
+  }
+
+  async deleteAll<K extends keyof S>(table: K): Promise<void> {
+    await this.withStore(table, 'readwrite', (store) => this.idbRequest<undefined>(store.clear()));
   }
 
   async count<K extends keyof S>(table: K): Promise<number> {
-    return await this.withTransaction(table, 'readonly', async (store) => {
-      return this.requestToPromise(store.count());
+    return this.withStore(table, 'readonly', async (store) => {
+      const envs = await this.idbRequest<Envelope<RecordType<S, K>>[]>(store.getAll());
+      return envs.filter((e) => isEnvelope(e) && unwrap(e) !== undefined).length;
     });
   }
 
-  async bulkPut<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await Promise.all(values.map((value) => this.requestToPromise(store.put(wrapWithExpiry(value, ttl)))));
-    });
-  }
-
-  async bulkDelete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
-    await this.withTransaction(table, 'readwrite', async (store) => {
-      await Promise.all(keys.map((key) => this.requestToPromise(store.delete(key as IDBValidKey))));
-    });
+  async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
+    return (await this.get(table, key)) !== undefined;
   }
 
   async transaction<K extends keyof S>(
     tables: K[],
-    fn: (stores: { [P in K]: RecordType<S, P>[] }) => Promise<void>,
-    ttl?: number,
+    fn: (tx: TransactionContext<S, K>) => Promise<void>,
   ): Promise<void> {
     if (!this.db) await this.connect();
 
     return new Promise<void>((resolve, reject) => {
-      const tableNames = tables.map(String);
-      const tx = this.db!.transaction(tableNames, 'readwrite');
-      const tablesStr = tableNames.join(', ');
-      let callbackError: Error | undefined;
+      const idbTx = this.db!.transaction(tables.map(String), 'readwrite');
+      let callbackError: unknown;
 
-      (async () => {
-        const storeMap = {} as { [P in K]: RecordType<S, P>[] };
-        await Promise.all(
-          tables.map(async (table) => {
-            const store = tx.objectStore(String(table));
-            const results = await this.requestToPromise(store.getAll());
-            (storeMap as any)[table] = results
-              .filter((rec) => rec && typeof rec === 'object' && !isExpired(rec))
-              .map((rec) => stripExpiry(rec as object));
-          }),
-        );
-        await fn(storeMap);
-        await Promise.all(
-          tables.map(async (table) => {
-            const store = tx.objectStore(String(table));
-            await this.requestToPromise(store.clear());
-            await Promise.all(
-              (storeMap[table] as RecordType<S, K>[]).map((value) =>
-                this.requestToPromise(store.put(wrapWithExpiry(value, ttl))),
-              ),
-            );
-          }),
-        );
-      })().catch((err) => {
+      const ctx: TransactionContext<S, K> = {
+        delete: (table, key) => this.idbRequest(idbTx.objectStore(String(table)).delete(key as IDBValidKey)),
+        get: (table, key) =>
+          this.idbRequest<Envelope<RecordType<S, K>>>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
+            (env) => (env && isEnvelope(env) ? (unwrap(env) ?? undefined) : undefined),
+          ),
+        getAll: (table) =>
+          this.idbRequest<Envelope<RecordType<S, K>>[]>(idbTx.objectStore(String(table)).getAll()).then((results) =>
+            results
+              .filter(isEnvelope)
+              .map((env) => unwrap(env))
+              .filter((v): v is RecordType<S, K> => v !== undefined),
+          ),
+        patch: (table, key, partial) =>
+          this.idbRequest<Envelope<RecordType<S, K>>>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
+            (env) => {
+              if (!env || !isEnvelope(env)) return undefined;
+              const current = unwrap(env);
+              if (current === undefined) return undefined;
+              const merged = { ...current, ...partial } as RecordType<S, K>;
+              return this.idbRequest(idbTx.objectStore(String(table)).put({ ...env, v: merged })).then(() => merged);
+            },
+          ),
+        put: (table, value, ttl) =>
+          this.idbRequest(idbTx.objectStore(String(table)).put(wrap(value, ttl))).then(() => undefined),
+      };
+
+      fn(ctx).catch((err) => {
         callbackError = err;
         try {
-          tx.abort();
+          idbTx.abort();
         } catch {
           /* ignore */
         }
       });
 
-      tx.oncomplete = () =>
-        callbackError ? reject(new Error(`Transaction failed for ${tablesStr}`, { cause: callbackError })) : resolve();
-      tx.onerror = () => reject(new Error(`Transaction error for ${tablesStr}`, { cause: tx.error }));
-      tx.onabort = () => {
-        const error = callbackError || tx.error || new Error('Transaction aborted');
-        reject(new Error(`Transaction aborted for ${tablesStr}`, { cause: error }));
+      idbTx.oncomplete = () =>
+        callbackError ? reject(new Error('Transaction failed', { cause: callbackError })) : resolve();
+      idbTx.onerror = () => reject(new Error('Transaction error', { cause: idbTx.error }));
+      idbTx.onabort = () => {
+        reject(new Error('Transaction aborted', { cause: callbackError ?? idbTx.error }));
       };
     });
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Schema creation requires validation logic
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: schema creation requires validation logic
   private createObjectStores(db: IDBDatabase): void {
     for (const [name, def] of Object.entries(this.schema)) {
       if (db.objectStoreNames.contains(name)) continue;
 
-      const recordDef = def as TableDef<any>;
-      const keyPath = recordDef.key as string;
-      const store = db.createObjectStore(name, { keyPath });
+      const keyPath = (def as { key: string }).key;
+      const store = db.createObjectStore(name, { keyPath: `v.${keyPath}` });
 
-      const indexes = recordDef.indexes;
-      if (indexes) {
-        const createdIndexes = new Set<string>();
+      const indexes = (def as { indexes?: string[] }).indexes;
+      if (!indexes) continue;
 
-        for (const index of indexes) {
-          const indexName = index as string;
-
-          if (createdIndexes.has(indexName)) {
-            this.logger.warn(`Duplicate index "${indexName}" in table "${name}" schema - skipping`);
-            continue;
-          }
-
-          if (indexName === keyPath) {
-            this.logger.warn(`Skipping index on key path "${indexName}" in table "${name}" - redundant`);
-            continue;
-          }
-
-          try {
-            store.createIndex(indexName, indexName);
-            createdIndexes.add(indexName);
-          } catch (err) {
-            this.logger.error(`Failed to create index "${indexName}" in table "${name}"`, err);
-          }
+      const created = new Set<string>();
+      for (const index of indexes) {
+        if (created.has(index)) {
+          this.logger.warn(`Duplicate index "${index}" in table "${name}" — skipping`);
+          continue;
+        }
+        if (index === keyPath) {
+          this.logger.warn(`Skipping index on key path "${index}" in table "${name}" — redundant`);
+          continue;
+        }
+        try {
+          store.createIndex(index, `v.${index}`);
+          created.add(index);
+        } catch (err) {
+          this.logger.error(`Failed to create index "${index}" in table "${name}"`, err);
         }
       }
     }
   }
 
-  private async withTransaction<T>(
+  private async withStore<T>(
     table: keyof S,
     mode: 'readonly' | 'readwrite',
     fn: (store: IDBObjectStore) => Promise<T>,
@@ -568,7 +756,7 @@ export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
       const store = tx.objectStore(name);
 
       let result: T | undefined;
-      let callbackError: Error | undefined;
+      let callbackError: unknown;
 
       fn(store)
         .then((r) => {
@@ -589,13 +777,12 @@ export class IndexedDBAdapter<S extends Schema> implements Adapter<S> {
           : resolve(result as T);
       tx.onerror = () => reject(new Error(`Transaction error for ${name}`, { cause: tx.error }));
       tx.onabort = () => {
-        const error = callbackError || tx.error || new Error('Transaction aborted');
-        reject(new Error(`Transaction aborted for ${name}`, { cause: error }));
+        reject(new Error(`Transaction aborted for ${name}`, { cause: callbackError ?? tx.error }));
       };
     });
   }
 
-  private requestToPromise<R>(req: IDBRequest<R>): Promise<R> {
+  private idbRequest<R>(req: IDBRequest<R>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error ?? new Error('IndexedDB request failed'));

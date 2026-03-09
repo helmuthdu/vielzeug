@@ -40,8 +40,8 @@ function prune<T>(value: T): T | undefined;
 import { prune } from '@vielzeug/toolkit';
 
 prune('  hello  '); // 'hello'
-prune('   ');       // undefined
-prune('');          // undefined
+prune('   '); // undefined
+prune(''); // undefined
 ```
 
 ### Arrays
@@ -50,7 +50,7 @@ prune('');          // undefined
 import { prune } from '@vielzeug/toolkit';
 
 prune([1, null, '', 2, undefined, 3]); // [1, 2, 3]
-prune([null, undefined, '']);          // undefined
+prune([null, undefined, '']); // undefined
 ```
 
 ### Objects

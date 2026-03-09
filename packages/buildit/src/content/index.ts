@@ -1,2 +1,12 @@
-export * from './card/card';
-export * from './text/text';
+export type { AvatarGroupProps, AvatarProps, AvatarStatus } from './avatar/avatar';
+export { GROUP_TAG as AVATAR_GROUP_TAG, TAG as AVATAR_TAG } from './avatar/avatar';
+export type { BreadcrumbItemProps, BreadcrumbProps } from './breadcrumb/breadcrumb';
+export { ITEM_TAG as BREADCRUMB_ITEM_TAG, TAG as BREADCRUMB_TAG } from './breadcrumb/breadcrumb';
+export type { CardProps } from './card/card';
+export { TAG as CARD_TAG } from './card/card';
+export type { BitPaginationEvents, PaginationProps } from './pagination/pagination';
+export { TAG as PAGINATION_TAG } from './pagination/pagination';
+export type { SeparatorProps } from './separator/separator';
+export { TAG as SEPARATOR_TAG } from './separator/separator';
+export type { TextProps } from './text/text';
+export { TAG as TEXT_TAG } from './text/text';

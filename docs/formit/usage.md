@@ -1,6 +1,6 @@
 ---
 title: Formit — Usage Guide
-description: Field validation, form validation, async validators, and testing for Formit.
+description: Fields, validation, submission, subscriptions, bind, reset, and advanced patterns for Formit.
 ---
 
 # Formit Usage Guide
@@ -11,44 +11,39 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Formit?
-
-Formit tracks typed form values with validators, error tracking, and async support — without framework lock-in.
+## Import
 
 ```ts
-// Before — manual validation
-function handleSubmit(e: SubmitEvent) {
-  e.preventDefault();
-  const errors: Record<string, string> = {};
-  if (!name) errors.name = 'Required';
-  // ...
-}
+import { createForm } from '@vielzeug/formit';
 
-// After — Formit
-const form = createForm({
-  values: { email: '' },
-  rules: { email: (v) => (!v ? 'Required' : undefined) },
-});
-form.subscribe(setState);
+// Standalone utility
+import { toFormData } from '@vielzeug/formit';
+
+// Error classes
+import { FormValidationError, SubmitError } from '@vielzeug/formit';
+
+// Types only
+import type {
+  Form,
+  FormOptions,
+  FormState,
+  FieldState,
+  FieldValidator,
+  FormValidator,
+  ValidateOptions,
+  SetOptions,
+  SubmitOptions,
+  BindConfig,
+} from '@vielzeug/formit';
 ```
-
-| Feature | Formit | React Hook Form | Formik |
-|---|---|---|---|
-| Framework | Agnostic | React | React |
-| Typed values | ✅ | ❌ | ❌ |
-| Async validators | ✅ | ✅ | ✅ |
-| Zero dependencies | ✅ | ❌ | ❌ |
-
-**Use Formit when** you want form validation without a framework, or in web components and vanilla JS projects.
-
 
 ## Basic Usage
 
 ### Creating a Form
 
-```typescript
+```ts
 const form = createForm({
-  values: {
+  defaultValues: {
     name: '',
     email: '',
     age: 0,
@@ -57,19 +52,19 @@ const form = createForm({
     name: (v) => (!v ? 'Name is required' : undefined),
     email: [
       (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
+      (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
     ],
   },
 });
 ```
 
-### Nested Objects in Values
+### Nested Objects
 
-Plain objects inside `values` are automatically flattened into dot-notation keys, so you can write your initial state as a natural nested structure:
+Plain objects inside `defaultValues` are automatically flattened into dot-notation keys. `values()` reconstructs the original nested shape.
 
-```typescript
+```ts
 const form = createForm({
-  values: {
+  defaultValues: {
     user: {
       name: 'Alice',
       profile: {
@@ -80,52 +75,385 @@ const form = createForm({
   },
 });
 
-form.get('user.name');        // 'Alice'
-form.get('user.profile.age'); // 25 (typed number)
+form.get('user.name'); // 'Alice'
+form.get('user.profile.age'); // 25 — typed as number
 form.set('user.name', 'Bob');
+
+// patch() — deep partial merge; only the supplied keys change; siblings are preserved
+form.patch({ user: { profile: { city: 'LA' } } });
+// user.name is still 'Bob'; user.profile.age is still 25
 ```
 
 You can also use dot-notation string keys directly — both styles are equivalent:
 
-```typescript
+```ts
 const form = createForm({
-  values: {
+  defaultValues: {
     'user.name': 'Alice',
     'user.profile.age': 25,
   },
 });
 ```
 
-::: tip What gets flattened?
-Only plain objects (`{}` literals) are flattened. Arrays, `Date` instances, class instances, `File`, and `Blob` values are stored as-is under their own key.
-:::
-
 ### Reading and Writing Values
 
-```typescript
-// Get value
-const email = form.get('email');
+```ts
+// get() — return type inferred from the field path
+const email = form.get('email'); // string
+const age = form.get('age'); // number
 
-// Set value
+// set() — value type enforced
 form.set('email', 'user@example.com');
 
-// Set multiple values at once
-form.patch({
-  email: 'user@example.com',
-  name: 'Alice',
+// patch() — deep partial merge of multiple fields at once
+form.patch({ email: 'user@example.com', name: 'Alice' });
+
+// values() — reconstruct nested shape
+const all = form.values();
+```
+
+## Validation
+
+### Field-Level Validators
+
+Single or multiple validators per field:
+
+```ts
+const form = createForm({
+  defaultValues: {
+    email: '',
+    password: '',
+  },
+  rules: {
+    email: [
+      (v) => (!v ? 'Email is required' : undefined),
+      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
+      (v) => (v && String(v).length > 100 ? 'Email too long' : undefined),
+    ],
+    password: (v) => {
+      if (!v) return 'Password is required';
+      if (String(v).length < 8) return 'Min 8 characters';
+      if (!/[A-Z]/.test(String(v))) return 'Must contain uppercase';
+      if (!/[0-9]/.test(String(v))) return 'Must contain number';
+    },
+  },
+});
+```
+
+### Form-Level Validators
+
+Cross-field validation runs only on full `validate()` or `submit()` — never during partial validation.
+
+```ts
+const form = createForm({
+  defaultValues: {
+    password: '',
+    confirmPassword: '',
+    startDate: '',
+    endDate: '',
+  },
+  validator: (values) => {
+    const errors: Record<string, string> = {};
+    if (values['password'] !== values['confirmPassword']) {
+      errors['confirmPassword'] = 'Passwords must match';
+    }
+    const start = new Date(String(values['startDate']));
+    const end = new Date(String(values['endDate']));
+    if (start > end) {
+      errors['endDate'] = 'End date must be after start date';
+    }
+    return errors;
+  },
+});
+```
+
+### Async Validators
+
+```ts
+const form = createForm({
+  defaultValues: {
+    username: '',
+  },
+  rules: {
+    username: async (value) => {
+      if (!value) return 'Username required';
+
+      const response = await fetch(`/api/check-username?username=${value}`);
+      const { exists } = await response.json();
+
+      if (exists) return 'Username already taken';
+    },
+  },
+});
+```
+
+### Manual Validation
+
+```ts
+// Single field — sets isValidating, stores result in error map
+const error = await form.validateField('email');
+
+// Full validation — replaces ALL errors, runs the form-level validator
+const errors = await form.validate();
+
+// Partial validation — updates only these fields; preserves all other errors;
+// does NOT run the form-level validator
+const errors = await form.validate({ fields: ['email', 'password'] });
+
+// Only validate fields the user has touched
+const errors = await form.validate({ onlyTouched: true });
+
+// With cancellation
+const controller = new AbortController();
+const errors = await form.validate({ signal: controller.signal });
+controller.abort();
+```
+
+## Submission
+
+```ts
+// Basic submit — validates, then calls the handler with typed values
+await form.submit(async (values) => {
+  await fetch('/api/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(values),
+  });
 });
 
-// Get all values
-const all = form.values();
+// Skip validation (e.g. auto-save)
+await form.submit(handler, { skipValidation: true });
+
+// Restrict which fields are validated before submit
+await form.submit(handler, { fields: ['email', 'password'] });
+
+// Validate only touched fields before submit
+await form.submit(handler, { onlyTouched: true });
+```
+
+`submit()` sets `isSubmitting` while running and guards against double-submits (`SubmitError`). It throws `FormValidationError` if validation fails.
+
+```ts
+try {
+  await form.submit(onSubmit);
+} catch (error) {
+  if (error instanceof FormValidationError) {
+    // errors are already stored in the form — re-throw only if you need to handle them here
+    console.log(error.errors); // Record<string, string>
+  } else if (error instanceof SubmitError) {
+    // double-submit attempt
+  } else {
+    throw error; // network or server error
+  }
+}
+```
+
+## Subscriptions
+
+### Form-Level
+
+Subscribe to the full `FormState` snapshot whenever anything changes:
+
+```ts
+const unsubscribe = form.subscribe((state) => {
+  console.log(state.isValid, state.isDirty, state.errors);
+});
+
+// Later
+unsubscribe();
+```
+
+### Field-Level
+
+Subscribe to a single field's `FieldState` — re-fires only when that field changes:
+
+```ts
+const unsubscribe = form.watch('email', ({ value, error, touched, dirty }) => {
+  emailInput.value = String(value);
+  errorSpan.textContent = touched ? (error ?? '') : '';
+});
+```
+
+::: tip
+`watch` is more efficient than `subscribe` when you only need to react to one field — it avoids re-running for unrelated changes.
+:::
+
+## Bind
+
+`bind()` returns a live descriptor whose properties are getters — the values are read fresh each time the bound element reads them:
+
+```ts
+const binding = form.bind('email');
+// { name: 'email', onBlur: fn, onChange: fn,
+//   get value(), get error(), get touched(), get dirty() }
+
+// Spread onto a native input
+inputEl.name     = binding.name;
+inputEl.value    = binding.value;
+inputEl.onblur   = binding.onBlur;
+inputEl.oninput  = binding.onChange;
+
+// Or spread in JSX
+<input {...form.bind('email')} type="email" />
+```
+
+### BindConfig
+
+```ts
+interface BindConfig {
+  /** Custom function to extract value from a change event. Default: `e.target.value` */
+  valueExtractor?: (event: Event) => unknown;
+  /** Mark the field as touched on blur. Default: true */
+  touchOnBlur?: boolean;
+}
+```
+
+```ts
+// File input — extract File instead of string
+const binding = form.bind('avatar', {
+  valueExtractor: (e) => (e.target as HTMLInputElement).files?.[0] ?? null,
+});
+
+// Number input
+const binding = form.bind('age', {
+  valueExtractor: (e) => Number((e.target as HTMLInputElement).value),
+});
+
+// Disable touch-on-blur
+const binding = form.bind('token', { touchOnBlur: false });
+```
+
+## Reset
+
+```ts
+const form = createForm({
+  defaultValues: { name: '', email: '' },
+});
+
+// Reset entire form to original defaultValues
+form.reset();
+
+// Reset to new values (they also become the new baseline for dirty tracking)
+form.reset({ name: 'Guest', email: '' });
+
+// Reset a single field without touching the rest
+form.resetField('name');
+```
+
+## File Uploads
+
+### Single File
+
+```ts
+const form = createForm({
+  defaultValues: {
+    avatar: null as File | null,
+    title: '',
+  },
+});
+
+// Handle file input
+const fileInput = document.querySelector('input[type="file"]');
+fileInput.addEventListener('change', (e) => {
+  form.set('avatar', (e.target as HTMLInputElement).files?.[0] ?? null);
+});
+
+// Submit
+await form.submit(async () => {
+  await fetch('/api/upload', {
+    method: 'POST',
+    body: form.toFormData(), // File/Blob appended as-is; null/undefined omitted
+  });
+});
+```
+
+### File Validation
+
+```ts
+const form = createForm({
+  defaultValues: {
+    avatar: null as File | null,
+  },
+  rules: {
+    avatar: (value) => {
+      if (!value) return 'Avatar is required';
+
+      const file = value as File;
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      if (file.size > maxSize) return 'File too large (max 5MB)';
+      if (!file.type.startsWith('image/')) return 'Must be an image';
+    },
+  },
+});
+```
+
+## Arrays and Multi-Select
+
+### Basic Array Handling
+
+```ts
+const form = createForm({
+  defaultValues: {
+    tags: ['javascript', 'typescript'] as string[],
+    interests: [] as string[],
+  },
+});
+
+// Add a tag
+form.set('tags', [...(form.get('tags') as string[]), 'react']);
+
+// Remove a tag
+form.set(
+  'tags',
+  (form.get('tags') as string[]).filter((t) => t !== 'react'),
+);
+```
+
+### Multi-Select Inputs
+
+```ts
+const form = createForm({
+  defaultValues: {
+    skills: [] as string[],
+  },
+  rules: {
+    skills: (v) => ((v as string[]).length < 2 ? 'Select at least 2 skills' : undefined),
+  },
+});
+
+// Handle multi-select change
+selectEl.addEventListener('change', () => {
+  const selected = Array.from(selectEl.selectedOptions).map((o) => o.value);
+  form.set('skills', selected);
+});
+```
+
+### Checkboxes
+
+```ts
+const form = createForm({
+  defaultValues: {
+    interests: [] as string[],
+  },
+});
+
+checkboxEl.addEventListener('change', (e) => {
+  const interests = form.get('interests') as string[];
+  const value = (e.target as HTMLInputElement).value;
+  const checked = (e.target as HTMLInputElement).checked;
+
+  form.set('interests', checked ? [...interests, value] : interests.filter((v) => v !== value));
+});
 ```
 
 ## Advanced Patterns
 
 ### Multi-Step Forms
 
-```typescript
+```ts
 const form = createForm({
-  values: {
+  defaultValues: {
     // Step 1
     name: '',
     email: '',
@@ -135,120 +463,92 @@ const form = createForm({
     // Step 3
     cardNumber: '',
   },
-  rules: {
-    name: (v) => (!v ? 'Required' : undefined),
-    email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    address: (v) => (!v ? 'Required' : undefined),
-    city: (v) => (!v ? 'Required' : undefined),
-    cardNumber: (v) => (!v ? 'Required' : undefined),
-  },
 });
 
-let currentStep = 1;
+const steps = [['name', 'email'], ['address', 'city'], ['cardNumber']];
 
-const stepFields = {
-  1: ['name', 'email'],
-  2: ['address', 'city'],
-  3: ['cardNumber'],
-};
-
-async function nextStep() {
-  const errors = await form.validateAll({ fields: stepFields[currentStep] });
+async function nextStep(currentStep: number) {
+  const errors = await form.validate({ fields: steps[currentStep] });
   if (Object.keys(errors).length === 0) {
-    currentStep++;
+    // advance to next step
   }
-}
-
-async function submitForm() {
-  await form.submit(async (values) => {
-    await fetch('/api/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-  });
 }
 ```
 
-### Dynamic Fields
+### Dynamic Array Fields
 
-```typescript
+```ts
+type Item = { name: string; quantity: number };
+
 const form = createForm({
-  values: {
-    items: [] as Array<{ name: string; quantity: number }>,
+  defaultValues: {
+    items: [] as Item[],
   },
 });
 
 function addItem() {
-  const items = (form.get('items') as typeof form.get<Array<unknown>>('items')) || [];
-  form.set('items', [...items, { name: '', quantity: 0 }]);
+  form.set('items', [...(form.get('items') as Item[]), { name: '', quantity: 0 }]);
 }
 
 function removeItem(index: number) {
-  const items = form.get<Array<unknown>>('items') || [];
-  form.set('items', items.filter((_, i) => i !== index));
+  const items = form.get('items') as Item[];
+  form.set(
+    'items',
+    items.filter((_, i) => i !== index),
+  );
 }
 
-function updateItem(index: number, field: 'name' | 'quantity', value: unknown) {
-  const items = form.get<Array<Record<string, unknown>>>('items') || [];
-  const updated = [...items];
-  updated[index] = { ...updated[index], [field]: value };
-  form.set('items', updated);
+function updateItem(index: number, field: keyof Item, value: Item[typeof field]) {
+  const items = [...(form.get('items') as Item[])];
+  items[index] = { ...items[index], [field]: value };
+  form.set('items', items);
 }
 ```
 
 ### Conditional Validation
 
-```typescript
+```ts
 const form = createForm({
-  values: {
-    accountType: 'personal',
+  defaultValues: {
+    accountType: 'personal' as 'personal' | 'business',
     companyName: '',
     vatNumber: '',
   },
 });
 
-form.subscribe((state) => {
-  const accountType = form.get('accountType');
-
-  if (accountType === 'business') {
-    // Add business field validation
-    if (!form.get('companyName')) {
-      form.setError('companyName', 'Company name required');
-    }
-    if (!form.get('vatNumber')) {
-      form.setError('vatNumber', 'VAT number required');
-    }
+function validateBusinessFields() {
+  if (form.get('accountType') === 'business') {
+    if (!form.get('companyName')) form.setError('companyName', 'Company name required');
+    else form.setError('companyName');
+    if (!form.get('vatNumber')) form.setError('vatNumber', 'VAT number required');
+    else form.setError('vatNumber');
   } else {
-    // Clear business field errors
     form.setError('companyName');
     form.setError('vatNumber');
   }
-});
+}
 ```
 
-### Dirty State Warning
+### Unsaved Changes Warning
 
-```typescript
+```ts
 const form = createForm({
-  values: { name: '', email: '' },
+  defaultValues: { name: '', email: '' },
 });
 
 window.addEventListener('beforeunload', (e) => {
-  const state = form.getState();
-
-  if (state.isDirty) {
+  if (form.isDirty) {
     e.preventDefault();
-    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+    e.returnValue = '';
   }
 });
 ```
 
 ### Auto-Save
 
-```typescript
+```ts
 const form = createForm({
-  values: { content: '' },
+  defaultValues: { content: '' },
 });
 
 let saveTimeout: ReturnType<typeof setTimeout>;
@@ -265,25 +565,11 @@ form.subscribe((state) => {
             body: JSON.stringify(values),
           });
         },
-        { validate: false },
+        { skipValidation: true },
       );
     }, 1000);
   }
 });
-```
-
-### Reset to Initial Values
-
-```typescript
-const form = createForm({
-  values: { name: '', email: '' },
-});
-
-// Reset to initial
-form.reset();
-
-// Reset to new values
-form.reset({ name: 'Guest', email: '' });
 ```
 
 ## Best Practices
@@ -309,24 +595,26 @@ form.subscribe(setState);
   name="email"
   value={form.get('email')}
   onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.setTouched('email')}
+  onBlur={() => form.touch('email')}
 />
 ```
 
-### 3. Handle Validation Errors
+### 3. Catch both error types from `submit()`
 
-```typescript
+```ts
 // ✅ Good
 try {
   await form.submit(onSubmit);
 } catch (error) {
-  if (error instanceof ValidationError) {
-    // Handle validation errors
+  if (error instanceof FormValidationError) {
+    // Validation failed — errors are already in the form's error map
     for (const [field, message] of Object.entries(error.errors)) {
       console.log(`${field}: ${message}`);
     }
+  } else if (error instanceof SubmitError) {
+    // Double-submit guard
   } else {
-    // Handle other errors
+    // Network or server error
   }
 }
 
@@ -336,16 +624,16 @@ form.submit(onSubmit).catch(console.error);
 
 ### 4. Use Nested Objects for Structured Data
 
-```typescript
+```ts
 // ✅ Good – natural nested structure, auto-flattened
-values: {
+defaultValues: {
   user: { name: '', email: '' },
   address: { street: '', city: '' },
 }
 // Access: form.get('user.name'), form.get('address.city')
 
 // ✅ Also fine – explicit dot-notation keys
-values: {
+defaultValues: {
   'user.name': '',
   'user.email': '',
 }
@@ -354,223 +642,14 @@ values: {
 form.get('user'); // undefined (keys are 'user.name', 'user.email', ...)
 ```
 
-### 5. Validate on Submit, Show Errors on Blur
+### 5. Show Errors Only After Touch
 
-```typescript
-const binding = form.bind('email', {
-  touchOnBlur: true,
+```ts
+const { error, touched } = form.field('email');
+// or via watch:
+form.watch('email', ({ error, touched }) => {
+  errorSpan.textContent = touched ? (error ?? '') : '';
 });
-
-// Show error only if touched
-{
-  state.touched.has('email') && state.errors['email'];
-}
-```
-
-## Validation
-
-### Field-Level Validators
-
-Single or multiple validators per field:
-
-```typescript
-const form = createForm({
-  values: {
-    email: '',
-    password: '',
-  },
-  rules: {
-    email: [
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
-      (v) => (v && String(v).length > 100 ? 'Email too long' : undefined),
-    ],
-    password: (v) => {
-      if (!v) return 'Password is required';
-      if (String(v).length < 8) return 'Min 8 characters';
-      if (!/[A-Z]/.test(String(v))) return 'Must contain uppercase';
-      if (!/[0-9]/.test(String(v))) return 'Must contain number';
-    },
-  },
-});
-```
-
-### Form-Level Validators
-
-Cross-field validation:
-
-```typescript
-const form = createForm({
-  values: {
-    password: '',
-    confirmPassword: '',
-    startDate: '',
-    endDate: '',
-  },
-  validate: (values) => {
-    const errors: Record<string, string> = {};
-
-    // Password matching
-    if (values['password'] !== values['confirmPassword']) {
-      errors['confirmPassword'] = 'Passwords must match';
-    }
-
-    // Date range validation
-    const start = new Date(String(values['startDate']));
-    const end = new Date(String(values['endDate']));
-    if (start > end) {
-      errors['endDate'] = 'End date must be after start date';
-    }
-
-    return errors;
-  },
-});
-```
-
-### Async Validation
-
-```typescript
-const form = createForm({
-  values: {
-    username: '',
-  },
-  rules: {
-    username: async (value) => {
-      if (!value) return 'Username required';
-
-      const response = await fetch(`/api/check-username?username=${value}`);
-      const { exists } = await response.json();
-
-      if (exists) return 'Username already taken';
-    },
-  },
-});
-```
-
-### Manual Validation
-
-```typescript
-// Validate specific field
-const error = await form.validate('email');
-
-// Validate all fields
-const errors = await form.validateAll();
-
-// Validate only touched fields
-const errors = await form.validateAll({ onlyTouched: true });
-
-// Validate specific fields
-const errors = await form.validateAll({ fields: ['email', 'password'] });
-```
-
-## File Uploads
-
-### Single File
-
-```typescript
-const form = createForm({
-  values: {
-    avatar: null as File | null,
-    title: '',
-  },
-});
-
-// Handle file input
-const fileInput = document.querySelector('input[type="file"]');
-fileInput.addEventListener('change', (e) => {
-  form.set('avatar', (e.target as HTMLInputElement).files?.[0] ?? null);
-});
-
-// Submit
-import { toFormData } from '@vielzeug/formit';
-await form.submit(async (values) => {
-  await fetch('/api/upload', {
-    method: 'POST',
-    body: toFormData(values), // handles File/Blob values
-  });
-});
-```
-
-### File Validation
-
-```typescript
-const form = createForm({
-  values: {
-    avatar: null as File | null,
-  },
-  rules: {
-    avatar: (value) => {
-      if (!value) return 'Avatar is required';
-
-      const file = value as File;
-      const maxSize = 5 * 1024 * 1024; // 5MB
-
-      if (file.size > maxSize) return 'File too large (max 5MB)';
-      if (!file.type.startsWith('image/')) return 'Must be an image';
-    },
-  },
-});
-```
-
-## Arrays and Multi-Select
-
-### Basic Array Handling
-
-```typescript
-const form = createForm({
-  values: {
-    tags: ['javascript', 'typescript'] as string[],
-    interests: [] as string[],
-  },
-});
-
-// Get array
-const tags = form.get<string[]>('tags'); // ['javascript', 'typescript']
-
-// Set array
-form.set('tags', ['vue', 'react']);
-
-// Empty arrays work correctly
-form.set('tags', []);
-console.log(form.get('tags')); // []
-```
-
-### Multi-Select Inputs
-
-```typescript
-const form = createForm({
-  values: {
-    skills: [] as string[],
-  },
-  rules: {
-    skills: (v) => (Array.isArray(v) && v.length === 0 ? 'Select at least one' : undefined),
-  },
-});
-
-// Bind to select element
-<select multiple {...form.bind('skills')}>
-  <option value="js">JavaScript</option>
-  <option value="ts">TypeScript</option>
-</select>
-```
-
-### Checkboxes
-
-```typescript
-const form = createForm({
-  values: {
-    interests: [] as string[],
-  },
-});
-
-// Handle checkbox change
-function handleCheckbox(value: string, checked: boolean) {
-  const current = form.get<string[]>('interests') ?? [];
-  const updated = checked
-    ? [...current, value]
-    : current.filter((v) => v !== value);
-  form.set('interests', updated);
-}
 ```
 
 ## Framework Integration
@@ -586,7 +665,7 @@ import { useEffect, useState } from 'react';
 function ContactForm() {
   const [form] = useState(() =>
     createForm({
-      values: {
+      defaultValues: {
         name: '',
         email: '',
         message: '',
@@ -597,7 +676,7 @@ function ContactForm() {
     }),
   );
 
-  const [state, setState] = useState(form.getState());
+  const [state, setState] = useState(form.state);
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -632,12 +711,12 @@ function ContactForm() {
 
 ```tsx
 import { useEffect, useState } from 'react';
-import type { FormInit } from '@vielzeug/formit';
+import type { FormOptions } from '@vielzeug/formit';
 import { createForm } from '@vielzeug/formit';
 
-function useForm(init: FormInit) {
-  const [form] = useState(() => createForm(init));
-  const [state, setState] = useState(form.getState());
+function useForm(init: FormOptions) {
+  const form = createForm(init);
+  const [state, setState] = useState(form.state);
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -647,7 +726,7 @@ function useForm(init: FormInit) {
 // Usage
 function MyForm() {
   const { form, state } = useForm({
-    values: {
+    defaultValues: {
       email: '',
     },
     rules: {
@@ -679,7 +758,7 @@ import { createForm } from '@vielzeug/formit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const form = createForm({
-  values: {
+  defaultValues: {
     email: '',
     password: '',
   },
@@ -688,7 +767,7 @@ const form = createForm({
   },
 });
 
-const state = ref(form.getState());
+const state = ref(form.state);
 let unsubscribe;
 
 onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
@@ -725,11 +804,11 @@ const handleSubmit = async () => {
 
 ```typescript
 import { ref, onMounted, onUnmounted } from 'vue';
-import { createForm, type FormInit } from '@vielzeug/formit';
+import { createForm, type FormOptions } from '@vielzeug/formit';
 
-export function useForm(init: FormInit) {
+export function useForm(init: FormOptions) {
   const form = createForm(init);
-  const state = ref(form.getState());
+  const state = ref(form.state);
   let unsubscribe;
 
   onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
@@ -748,7 +827,7 @@ import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
 
 const form = createForm({
-  values: {
+  defaultValues: {
     email: '',
     password: '',
   },
@@ -757,7 +836,7 @@ const form = createForm({
   },
 });
 
-const state = writable(form.getState());
+const state = writable(form.state);
 let unsubscribe;
 
 onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
@@ -788,15 +867,20 @@ async function handleSubmit() {
 </form>
 ```
 
+## Lifecycle
+
+```ts
+// Aborts all in-flight validators and removes all subscribers
+form.dispose();
+
+// Check if disposed
+form.disposed; // boolean
+```
+
 ## Next Steps
 
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>
+::: tip Continue Learning
+
+- [API Reference](./api.md) — Complete API documentation
+- [Examples](./examples.md) — Practical code examples
+  :::

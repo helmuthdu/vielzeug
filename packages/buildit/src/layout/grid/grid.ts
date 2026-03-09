@@ -1,19 +1,43 @@
-import { css, define, html } from '@vielzeug/craftit';
+import { css, define, defineProps, effect, html, onCleanup, onMount } from '@vielzeug/craftit';
+
+const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
+  ['cols2xl', '--size-screen-2xl'],
+  ['colsXl', '--size-screen-xl'],
+  ['colsLg', '--size-screen-lg'],
+  ['colsMd', '--size-screen-md'],
+  ['colsSm', '--size-screen-sm'],
+];
+
+const AREAS_BREAKPOINTS: ['areas2xl' | 'areasXl' | 'areasLg' | 'areasMd' | 'areasSm', string][] = [
+  ['areas2xl', '--size-screen-2xl'],
+  ['areasXl', '--size-screen-xl'],
+  ['areasLg', '--size-screen-lg'],
+  ['areasMd', '--size-screen-md'],
+  ['areasSm', '--size-screen-sm'],
+];
+
+const resolveBp = (host: HTMLElement, varName: string, fallback: number): number => {
+  const raw = getComputedStyle(host).getPropertyValue(varName).trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const BP_FALLBACKS: Record<string, number> = {
+  '--size-screen-2xl': 1536,
+  '--size-screen-lg': 1024,
+  '--size-screen-md': 768,
+  '--size-screen-sm': 640,
+  '--size-screen-xl': 1280,
+};
 
 const styles = /* css */ css`
   @layer buildit.base {
-    /* ========================================
-       Base Styles
-       ======================================== */
-
     :host {
       --_cols: var(--grid-cols, repeat(auto-fit, minmax(250px, 1fr)));
       --_rows: var(--grid-rows, auto);
       --_gap: var(--grid-gap, var(--size-4));
       --_row-gap: var(--grid-row-gap, var(--_gap));
       --_col-gap: var(--grid-col-gap, var(--_gap));
-      --_min-col-width: var(--grid-min-col-width, 250px);
-      --_max-col-width: var(--grid-max-col-width, 1fr);
 
       display: grid;
       grid-template-columns: var(--_cols);
@@ -23,623 +47,255 @@ const styles = /* css */ css`
       grid-auto-flow: row;
     }
 
-    /* ========================================
-       Responsive Mode
-       ======================================== */
-
-    :host([responsive]) {
-      --_cols: repeat(auto-fit, minmax(var(--_min-col-width), var(--_max-col-width)));
-    }
-
-    /* ========================================
-       Gap Sizes (single value sets both row and column gap)
-       ======================================== */
-
-    :host([gap='none']) {
-      --_row-gap: 0;
-      --_col-gap: 0;
-    }
-
-    :host([gap='xs']) {
-      --_row-gap: var(--size-1);
-      --_col-gap: var(--size-1);
-    }
-
-    :host([gap='sm']) {
-      --_row-gap: var(--size-2);
-      --_col-gap: var(--size-2);
-    }
-
-    :host([gap='md']) {
-      --_row-gap: var(--size-4);
-      --_col-gap: var(--size-4);
-    }
-
-    :host([gap='lg']) {
-      --_row-gap: var(--size-6);
-      --_col-gap: var(--size-6);
-    }
-
-    :host([gap='xl']) {
-      --_row-gap: var(--size-8);
-      --_col-gap: var(--size-8);
-    }
-
-    :host([gap='2xl']) {
-      --_row-gap: var(--size-12);
-      --_col-gap: var(--size-12);
-    }
-
-    /* ========================================
-       Grid Auto Flow
-       ======================================== */
-
-    :host([flow='row']) {
-      grid-auto-flow: row;
-    }
-
-    :host([flow='column']) {
-      grid-auto-flow: column;
-    }
-
-    :host([flow='row-dense']) {
-      grid-auto-flow: row dense;
-    }
-
-    :host([flow='column-dense']) {
-      grid-auto-flow: column dense;
-    }
-
-    /* Backward compatibility with old dense attribute */
-    :host([dense]) {
-      grid-auto-flow: row dense;
-    }
-
-    /* ========================================
-       Alignment
-       ======================================== */
-
-    :host([align='start']) {
-      align-items: start;
-    }
-
-    :host([align='center']) {
-      align-items: center;
-    }
-
-    :host([align='end']) {
-      align-items: end;
-    }
-
-    :host([align='stretch']) {
-      align-items: stretch;
-    }
-
-    :host([align='baseline']) {
-      align-items: baseline;
-    }
-
-    /* ========================================
-       Justify Items
-       ======================================== */
-
-    :host([justify='start']) {
-      justify-items: start;
-    }
-
-    :host([justify='center']) {
-      justify-items: center;
-    }
-
-    :host([justify='end']) {
-      justify-items: end;
-    }
-
-    :host([justify='stretch']) {
-      justify-items: stretch;
-    }
-
-    /* ========================================
-       Layout Presets
-       ======================================== */
-
-    /* Sidebar layout: 250px sidebar + flexible main */
-    :host([layout='sidebar']) {
-      --_cols: 250px 1fr;
-    }
-
-    /* Right sidebar layout: flexible main + 250px sidebar */
-    :host([layout='sidebar-right']) {
-      --_cols: 1fr 250px;
-    }
-
-    /* App Shell: Modern app layout with navigation rail */
-    :host([layout='app-shell']) {
-      --_cols: 80px 1fr;
-      --_rows: auto 1fr;
-      grid-template-areas:
-        'rail header'
-        'rail main';
-    }
-
-    :host([layout='app-shell']) ::slotted(:nth-child(1)) {
-      grid-area: rail;
-    }
-
-    :host([layout='app-shell']) ::slotted(:nth-child(2)) {
-      grid-area: header;
-    }
-
-    :host([layout='app-shell']) ::slotted(:nth-child(3)) {
-      grid-area: main;
-    }
-
-    /* Responsive: expand rail on larger screens */
-    @container (min-width: 1024px) {
-      :host([layout='app-shell']) {
-        --_cols: 256px 1fr;
-      }
-    }
-
-    /* Mobile: hide rail (assumes you'll use a drawer/modal navigation) */
-    @container (max-width: 639px) {
-      :host([layout='app-shell']) {
-        --_cols: 1fr;
-        --_rows: auto 1fr;
-        grid-template-areas:
-          'header'
-          'main';
-      }
-
-      /* Hide the rail element */
-      :host([layout='app-shell']) ::slotted(:nth-child(1)) {
-        display: none;
-        grid-area: unset;
-      }
-
-      /* Reassign header to new grid area */
-      :host([layout='app-shell']) ::slotted(:nth-child(2)) {
-        grid-area: header;
-      }
-
-      /* Reassign main to new grid area */
-      :host([layout='app-shell']) ::slotted(:nth-child(3)) {
-        grid-area: main;
-      }
-    }
-
-    /* Navigation Layout: Full-width header + side navigation + content
-       For standard navigation drawer pattern */
-    :host([layout='nav-content']) {
-      --_cols: 256px 1fr;
-      --_rows: auto 1fr;
-      grid-template-areas:
-        'header header'
-        'nav main';
-    }
-
-    :host([layout='nav-content']) ::slotted(:nth-child(1)) {
-      grid-area: nav;
-    }
-
-    :host([layout='nav-content']) ::slotted(:nth-child(2)) {
-      grid-area: header;
-    }
-
-    :host([layout='nav-content']) ::slotted(:nth-child(3)) {
-      grid-area: main;
-    }
-
-    /* Responsive: hide nav on mobile (use modal drawer instead) */
-    @container (max-width: 639px) {
-      :host([layout='nav-content']) {
-        --_cols: 1fr;
-        --_rows: auto 1fr;
-        grid-template-areas:
-          'header'
-          'main';
-      }
-
-      /* Hide the nav drawer element (M3: use modal drawer on mobile) */
-      :host([layout='nav-content']) ::slotted(:nth-child(1)) {
-        display: none;
-        grid-area: unset;
-      }
-
-      /* Reassign header to new grid area */
-      :host([layout='nav-content']) ::slotted(:nth-child(2)) {
-        grid-area: header;
-      }
-
-      /* Reassign main to new grid area */
-      :host([layout='nav-content']) ::slotted(:nth-child(3)) {
-        grid-area: main;
-      }
-    }
-
-    /* Bento grid layout: asymmetric magazine-style grid */
-    :host([layout='bento']) {
-      --_cols: repeat(4, 1fr);
-      --_rows: repeat(3, minmax(150px, 1fr));
-      grid-template-areas:
-        'hero hero featured featured'
-        'hero hero card1 card2'
-        'card3 card4 card5 card5';
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(1)) {
-      grid-area: hero;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(2)) {
-      grid-area: featured;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(3)) {
-      grid-area: card1;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(4)) {
-      grid-area: card2;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(5)) {
-      grid-area: card3;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(6)) {
-      grid-area: card4;
-    }
-
-    :host([layout='bento']) ::slotted(:nth-child(7)) {
-      grid-area: card5;
-    }
-
-    /* Responsive bento - simpler on smaller screens */
-    @container (max-width: 767px) {
-      :host([layout='bento']) {
-        --_cols: 1fr;
-        --_rows: auto;
-        grid-template-areas:
-          'hero'
-          'featured'
-          'card1'
-          'card2'
-          'card3'
-          'card4'
-          'card5';
-      }
-    }
-  }
-
-  @layer buildit.utilities {
-    /* ========================================
-       Columns
-       ======================================== */
-
-    :host([cols='1']) {
-      --_cols: repeat(1, 1fr);
-    }
-
-    :host([cols='2']) {
-      --_cols: repeat(2, 1fr);
-    }
-
-    :host([cols='3']) {
-      --_cols: repeat(3, 1fr);
-    }
-
-    :host([cols='4']) {
-      --_cols: repeat(4, 1fr);
-    }
-
-    :host([cols='5']) {
-      --_cols: repeat(5, 1fr);
-    }
-
-    :host([cols='6']) {
-      --_cols: repeat(6, 1fr);
-    }
-
-    :host([cols='7']) {
-      --_cols: repeat(7, 1fr);
-    }
-
-    :host([cols='8']) {
-      --_cols: repeat(8, 1fr);
-    }
-
-    :host([cols='9']) {
-      --_cols: repeat(9, 1fr);
-    }
-
-    :host([cols='10']) {
-      --_cols: repeat(10, 1fr);
-    }
-
-    :host([cols='11']) {
-      --_cols: repeat(11, 1fr);
-    }
-
-    :host([cols='12']) {
-      --_cols: repeat(12, 1fr);
-    }
-
-    :host([cols='auto']) {
-      --_cols: repeat(auto-fit, minmax(0, 1fr));
-    }
-
-    /* ========================================
-       Rows
-       ======================================== */
-
-    :host([rows='1']) {
-      --_rows: repeat(1, 1fr);
-    }
-
-    :host([rows='2']) {
-      --_rows: repeat(2, 1fr);
-    }
-
-    :host([rows='3']) {
-      --_rows: repeat(3, 1fr);
-    }
-
-    :host([rows='4']) {
-      --_rows: repeat(4, 1fr);
-    }
-
-    :host([rows='5']) {
-      --_rows: repeat(5, 1fr);
-    }
-
-    :host([rows='6']) {
-      --_rows: repeat(6, 1fr);
-    }
-
-    :host([rows='auto']) {
-      --_rows: auto;
-    }
-
-    /* ========================================
-       Responsive Breakpoints (Container Queries)
-       ======================================== */
-
-    /* Small (sm): ≥640px */
-    @container (min-width: 640px) {
-      :host([cols-sm='1']) {
-        --_cols: repeat(1, 1fr);
-      }
-      :host([cols-sm='2']) {
-        --_cols: repeat(2, 1fr);
-      }
-      :host([cols-sm='3']) {
-        --_cols: repeat(3, 1fr);
-      }
-      :host([cols-sm='4']) {
-        --_cols: repeat(4, 1fr);
-      }
-      :host([cols-sm='5']) {
-        --_cols: repeat(5, 1fr);
-      }
-      :host([cols-sm='6']) {
-        --_cols: repeat(6, 1fr);
-      }
-      :host([cols-sm='7']) {
-        --_cols: repeat(7, 1fr);
-      }
-      :host([cols-sm='8']) {
-        --_cols: repeat(8, 1fr);
-      }
-      :host([cols-sm='9']) {
-        --_cols: repeat(9, 1fr);
-      }
-      :host([cols-sm='10']) {
-        --_cols: repeat(10, 1fr);
-      }
-      :host([cols-sm='11']) {
-        --_cols: repeat(11, 1fr);
-      }
-      :host([cols-sm='12']) {
-        --_cols: repeat(12, 1fr);
-      }
-      :host([cols-sm='auto']) {
-        --_cols: repeat(auto-fit, minmax(0, 1fr));
-      }
-    }
-
-    /* Medium (md): ≥768px */
-    @container (min-width: 768px) {
-      :host([cols-md='1']) {
-        --_cols: repeat(1, 1fr);
-      }
-      :host([cols-md='2']) {
-        --_cols: repeat(2, 1fr);
-      }
-      :host([cols-md='3']) {
-        --_cols: repeat(3, 1fr);
-      }
-      :host([cols-md='4']) {
-        --_cols: repeat(4, 1fr);
-      }
-      :host([cols-md='5']) {
-        --_cols: repeat(5, 1fr);
-      }
-      :host([cols-md='6']) {
-        --_cols: repeat(6, 1fr);
-      }
-      :host([cols-md='7']) {
-        --_cols: repeat(7, 1fr);
-      }
-      :host([cols-md='8']) {
-        --_cols: repeat(8, 1fr);
-      }
-      :host([cols-md='9']) {
-        --_cols: repeat(9, 1fr);
-      }
-      :host([cols-md='10']) {
-        --_cols: repeat(10, 1fr);
-      }
-      :host([cols-md='11']) {
-        --_cols: repeat(11, 1fr);
-      }
-      :host([cols-md='12']) {
-        --_cols: repeat(12, 1fr);
-      }
-      :host([cols-md='auto']) {
-        --_cols: repeat(auto-fit, minmax(0, 1fr));
-      }
-    }
-
-    /* Large (lg): ≥1024px */
-    @container (min-width: 1024px) {
-      :host([cols-lg='1']) {
-        --_cols: repeat(1, 1fr);
-      }
-      :host([cols-lg='2']) {
-        --_cols: repeat(2, 1fr);
-      }
-      :host([cols-lg='3']) {
-        --_cols: repeat(3, 1fr);
-      }
-      :host([cols-lg='4']) {
-        --_cols: repeat(4, 1fr);
-      }
-      :host([cols-lg='5']) {
-        --_cols: repeat(5, 1fr);
-      }
-      :host([cols-lg='6']) {
-        --_cols: repeat(6, 1fr);
-      }
-      :host([cols-lg='7']) {
-        --_cols: repeat(7, 1fr);
-      }
-      :host([cols-lg='8']) {
-        --_cols: repeat(8, 1fr);
-      }
-      :host([cols-lg='9']) {
-        --_cols: repeat(9, 1fr);
-      }
-      :host([cols-lg='10']) {
-        --_cols: repeat(10, 1fr);
-      }
-      :host([cols-lg='11']) {
-        --_cols: repeat(11, 1fr);
-      }
-      :host([cols-lg='12']) {
-        --_cols: repeat(12, 1fr);
-      }
-      :host([cols-lg='auto']) {
-        --_cols: repeat(auto-fit, minmax(0, 1fr));
-      }
-    }
-
-    /* Extra Large (xl): ≥1280px */
-    @container (min-width: 1280px) {
-      :host([cols-xl='1']) {
-        --_cols: repeat(1, 1fr);
-      }
-      :host([cols-xl='2']) {
-        --_cols: repeat(2, 1fr);
-      }
-      :host([cols-xl='3']) {
-        --_cols: repeat(3, 1fr);
-      }
-      :host([cols-xl='4']) {
-        --_cols: repeat(4, 1fr);
-      }
-      :host([cols-xl='5']) {
-        --_cols: repeat(5, 1fr);
-      }
-      :host([cols-xl='6']) {
-        --_cols: repeat(6, 1fr);
-      }
-      :host([cols-xl='7']) {
-        --_cols: repeat(7, 1fr);
-      }
-      :host([cols-xl='8']) {
-        --_cols: repeat(8, 1fr);
-      }
-      :host([cols-xl='9']) {
-        --_cols: repeat(9, 1fr);
-      }
-      :host([cols-xl='10']) {
-        --_cols: repeat(10, 1fr);
-      }
-      :host([cols-xl='11']) {
-        --_cols: repeat(11, 1fr);
-      }
-      :host([cols-xl='12']) {
-        --_cols: repeat(12, 1fr);
-      }
-      :host([cols-xl='auto']) {
-        --_cols: repeat(auto-fit, minmax(0, 1fr));
-      }
-    }
+    :host([gap='none']) { --_row-gap: 0; --_col-gap: 0; }
+    :host([gap='xs'])   { --_row-gap: var(--size-1); --_col-gap: var(--size-1); }
+    :host([gap='sm'])   { --_row-gap: var(--size-2); --_col-gap: var(--size-2); }
+    :host([gap='md'])   { --_row-gap: var(--size-4); --_col-gap: var(--size-4); }
+    :host([gap='lg'])   { --_row-gap: var(--size-6); --_col-gap: var(--size-6); }
+    :host([gap='xl'])   { --_row-gap: var(--size-8); --_col-gap: var(--size-8); }
+    :host([gap='2xl'])  { --_row-gap: var(--size-12); --_col-gap: var(--size-12); }
+
+    :host([align='start'])    { align-items: start; }
+    :host([align='center'])   { align-items: center; }
+    :host([align='end'])      { align-items: end; }
+    :host([align='stretch'])  { align-items: stretch; }
+    :host([align='baseline']) { align-items: baseline; }
+
+    :host([justify='start'])   { justify-items: start; }
+    :host([justify='center'])  { justify-items: center; }
+    :host([justify='end'])     { justify-items: end; }
+    :host([justify='stretch']) { justify-items: stretch; }
+
+    :host([flow='row'])          { grid-auto-flow: row; }
+    :host([flow='column'])       { grid-auto-flow: column; }
+    :host([flow='row-dense'])    { grid-auto-flow: row dense; }
+    :host([flow='column-dense']) { grid-auto-flow: column dense; }
   }
 `;
+
+type ColCount = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
 
 /** Grid component properties */
 export interface GridProps {
   /** Number of columns: '1'-'12' | 'auto' */
-  cols?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  cols?: ColCount;
   /** Columns at sm breakpoint (≥640px) */
-  'cols-sm'?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  colsSm?: ColCount;
   /** Columns at md breakpoint (≥768px) */
-  'cols-md'?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  colsMd?: ColCount;
   /** Columns at lg breakpoint (≥1024px) */
-  'cols-lg'?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  colsLg?: ColCount;
   /** Columns at xl breakpoint (≥1280px) */
-  'cols-xl'?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  colsXl?: ColCount;
+  /** Columns at 2xl breakpoint (≥1536px) */
+  cols2xl?: ColCount;
   /** Number of rows: '1'-'12' | 'auto' */
   rows?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
-  /** Gap size (or 'row-gap col-gap' shorthand) */
-  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | string;
+  /** Gap between items */
+  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** Align items vertically */
   align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
   /** Justify items horizontally */
   justify?: 'start' | 'center' | 'end' | 'stretch';
   /** Grid auto flow direction */
   flow?: 'row' | 'column' | 'row-dense' | 'column-dense';
-  /** Enable auto-fit responsive columns */
+  /** Use auto-fit responsive columns */
   responsive?: boolean;
-  /** Preset layout template */
-  layout?: 'sidebar' | 'sidebar-right' | 'app-shell' | 'nav-content' | 'bento';
+  /** Minimum column width for responsive mode (default: 250px) */
+  minColWidth?: string;
+  /** CSS grid-template-areas value */
+  areas?: string;
+  /** grid-template-areas at sm breakpoint (≥640px) */
+  areasSm?: string;
+  /** grid-template-areas at md breakpoint (≥768px) */
+  areasMd?: string;
+  /** grid-template-areas at lg breakpoint (≥1024px) */
+  areasLg?: string;
+  /** grid-template-areas at xl breakpoint (≥1280px) */
+  areasXl?: string;
+  /** grid-template-areas at 2xl breakpoint (≥1536px) */
+  areas2xl?: string;
 }
 
 /**
- * bit-grid - A flexible grid layout component with intuitive responsive controls
+ * bit-grid — Flexible grid layout with responsive column control.
+ *
+ * Columns are computed in JS and applied as `--_cols` inline, so they respond
+ * to the element's own width via ResizeObserver. CSS custom properties
+ * `--grid-cols`, `--grid-rows`, `--grid-gap`, `--grid-row-gap`, `--grid-col-gap`
+ * are honoured as fallbacks when no attribute is set.
  *
  * @element bit-grid
  *
- * @attr {string} cols - Number of columns: '1'-'12' | 'auto'
- * @attr {string} cols-sm - Columns at sm breakpoint (≥640px)
- * @attr {string} cols-md - Columns at md breakpoint (≥768px)
- * @attr {string} cols-lg - Columns at lg breakpoint (≥1024px)
- * @attr {string} cols-xl - Columns at xl breakpoint (≥1280px)
- * @attr {string} rows - Number of rows: '1'-'12' | 'auto'
- * @attr {string} gap - Gap size: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (or 'md lg' for row-gap col-gap)
- * @attr {string} align - Align items vertically: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
- * @attr {string} justify - Justify items horizontally: 'start' | 'center' | 'end' | 'stretch'
- * @attr {string} flow - Grid auto flow: 'row' | 'column' | 'row-dense' | 'column-dense'
- * @attr {boolean} responsive - Enable auto-fit responsive columns
- * @attr {string} layout - Preset layouts: 'sidebar' | 'sidebar-right' | 'app-shell' | 'nav-content' | 'bento'
+ * @attr {string} cols - Column count: '1'–'12' | 'auto'
+ * @attr {string} cols-sm - Columns when width ≥ 640px
+ * @attr {string} cols-md - Columns when width ≥ 768px
+ * @attr {string} cols-lg - Columns when width ≥ 1024px
+ * @attr {string} cols-xl - Columns when width ≥ 1280px
+ * @attr {string} cols-2xl - Columns when width ≥ 1536px
+ * @attr {string} rows - Row count: '1'–'12' | 'auto'
+ * @attr {string} gap - Gap token: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+ * @attr {string} align - align-items: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
+ * @attr {string} justify - justify-items: 'start' | 'center' | 'end' | 'stretch'
+ * @attr {string} flow - grid-auto-flow: 'row' | 'column' | 'row-dense' | 'column-dense'
+ * @attr {boolean} responsive - Enables auto-fit columns without a fixed count
+ * @attr {string} min-col-width - Min column width for responsive mode (default: 250px)
+ * @attr {string} areas - CSS grid-template-areas value (e.g. "'header header' 'nav main'")
+ * @attr {string} areas-sm - grid-template-areas when width ≥ 640px
+ * @attr {string} areas-md - grid-template-areas when width ≥ 768px
+ * @attr {string} areas-lg - grid-template-areas when width ≥ 1024px
+ * @attr {string} areas-xl - grid-template-areas when width ≥ 1280px
+ * @attr {string} areas-2xl - grid-template-areas when width ≥ 1536px
  *
  * @slot - Grid items
  *
- * @cssprop --grid-cols - Custom column template
- * @cssprop --grid-rows - Custom row template
- * @cssprop --grid-gap - Gap between items
- * @cssprop --grid-row-gap - Row gap
- * @cssprop --grid-col-gap - Column gap
- * @cssprop --grid-min-col-width - Minimum column width for responsive mode (default: 250px)
- * @cssprop --grid-max-col-width - Maximum column width for responsive mode (default: 1fr)
+ * @cssprop --grid-cols - Fallback column template (used when no cols attr is set)
+ * @cssprop --grid-rows - Fallback row template
+ * @cssprop --grid-gap - Fallback gap
+ * @cssprop --grid-row-gap - Fallback row gap
+ * @cssprop --grid-col-gap - Fallback column gap
+ *
+ * @example
+ * <bit-grid cols="1" cols-sm="2" cols-lg="4" gap="md">
+ *   <div>Item</div>
+ * </bit-grid>
+ *
+ * @example
+ * <!-- Responsive auto-fit -->
+ * <bit-grid responsive min-col-width="200px" gap="sm">
+ *   <div>Card</div>
+ * </bit-grid>
+ *
+ * @example
+ * <!-- Named grid areas -->
+ * <bit-grid cols="2" rows="2" areas="'header header' 'nav main'">
+ *   <header style="grid-area: header">Header</header>
+ *   <nav style="grid-area: nav">Nav</nav>
+ *   <main style="grid-area: main">Main</main>
+ * </bit-grid>
  */
-define('bit-grid', () => {
+export const TAG = define('bit-grid', ({ host }) => {
+  const props = defineProps<GridProps>({
+    align: { default: undefined },
+    areas: { default: '' },
+    areas2xl: { default: '' },
+    areasLg: { default: '' },
+    areasMd: { default: '' },
+    areasSm: { default: '' },
+    areasXl: { default: '' },
+    cols: { default: undefined },
+    cols2xl: { default: undefined },
+    colsLg: { default: undefined },
+    colsMd: { default: undefined },
+    colsSm: { default: undefined },
+    colsXl: { default: undefined },
+    flow: { default: undefined },
+    gap: { default: undefined },
+    justify: { default: undefined },
+    minColWidth: { default: '' },
+    responsive: { default: false },
+    rows: { default: undefined },
+  });
+
+  const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
+    if (activeCols === 'auto' || (!activeCols && responsive)) {
+      return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
+    }
+    return activeCols ? `repeat(${activeCols}, 1fr)` : null;
+  };
+
+  const updateCols = () => {
+    const w = host.offsetWidth;
+    const responsive = props.responsive.value;
+    const minW = props.minColWidth.value;
+
+    let activeCols: string | undefined;
+    for (const [key, cssVar] of BREAKPOINTS) {
+      if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        activeCols = props[key].value!;
+        break;
+      }
+    }
+    activeCols ||= props.cols.value || undefined;
+
+    const colsValue = computeCols(activeCols, responsive, minW);
+    colsValue ? host.style.setProperty('--_cols', colsValue) : host.style.removeProperty('--_cols');
+  };
+
+  // Re-run cols whenever any responsive prop changes
+  onCleanup(
+    effect(() => {
+      void [
+        props.cols.value,
+        props.colsSm.value,
+        props.colsMd.value,
+        props.colsLg.value,
+        props.colsXl.value,
+        props.cols2xl.value,
+        props.responsive.value,
+        props.minColWidth.value,
+      ];
+      updateCols();
+    }),
+  );
+
+  const updateAreas = () => {
+    const w = host.offsetWidth;
+    let active = '';
+    for (const [key, cssVar] of AREAS_BREAKPOINTS) {
+      if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        active = props[key].value!;
+        break;
+      }
+    }
+    active ||= props.areas.value || '';
+    active ? host.style.setProperty('grid-template-areas', active) : host.style.removeProperty('grid-template-areas');
+  };
+
+  // Also update on element resize (drives breakpoint switching)
+  onMount(() => {
+    const update = () => {
+      updateCols();
+      updateAreas();
+    };
+    const ro = new ResizeObserver(update);
+    ro.observe(host);
+    return () => ro.disconnect();
+  });
+
+  // Rows
+  onCleanup(
+    effect(() => {
+      const rows = props.rows.value;
+      rows && rows !== 'auto'
+        ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
+        : host.style.removeProperty('--_rows');
+    }),
+  );
+
+  // Grid template areas (responsive)
+  onCleanup(
+    effect(() => {
+      void [
+        props.areas.value,
+        props.areasSm.value,
+        props.areasMd.value,
+        props.areasLg.value,
+        props.areasXl.value,
+        props.areas2xl.value,
+      ];
+      updateAreas();
+    }),
+  );
+
   return {
     styles: [styles],
     template: html`<slot></slot>`,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-grid': HTMLElement & GridProps;
+  }
+}

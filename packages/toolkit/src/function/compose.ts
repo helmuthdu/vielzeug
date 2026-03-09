@@ -28,6 +28,7 @@ export function compose<T extends Fn[]>(...fns: T): (...args: LastParameters<T>)
   const lastFn = fns[fns.length - 1];
   const restFns = fns.slice(0, -1);
 
-  return ((...args: LastParameters<T>) =>
-    restFns.reduceRight((prev, fn) => fn(prev), lastFn(...args))) as (...args: LastParameters<T>) => FirstReturnType<T>;
+  return ((...args: LastParameters<T>) => restFns.reduceRight((prev, fn) => fn(prev), lastFn(...args))) as (
+    ...args: LastParameters<T>
+  ) => FirstReturnType<T>;
 }

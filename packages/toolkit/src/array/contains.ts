@@ -25,4 +25,3 @@ export function contains<T>(array: T[], value: unknown): boolean {
 
   return array.some((val) => isEqual(val, value));
 }
-

@@ -1,6 +1,6 @@
-import { computed, css, define, defineEmits, defineProps, effect, guard, html, onMount, ref, signal } from '@vielzeug/craftit';
-import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
+import { css, define, defineEmits, defineProps, guard, html, onMount, onSlotChange, signal } from '@vielzeug/craftit';
+import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import type { AddEventListeners, BitAlertEvents, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -9,7 +9,7 @@ const componentStyles = /* css */ css`
       --_color: var(--alert-color, var(--_theme-base));
       --_border-color: var(--alert-border-color, var(--_theme-border));
       --_radius: var(--alert-radius, var(--rounded-md));
-      --_padding: var(--alert-padding, var(--size-3) var(--size-4));
+      --_padding: var(--alert-padding, var(--size-4));
       --_gap: var(--alert-gap, var(--size-3));
       --_font-size: var(--alert-font-size, var(--text-sm));
       --_shadow: var(--alert-shadow, var(--shadow-none));
@@ -21,10 +21,22 @@ const componentStyles = /* css */ css`
       display: none;
     }
 
+    :host([dismissing]) {
+      animation: var(--_motion-animation, bit-alert-exit var(--transition-slow, 0.3s) ease forwards);
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    @keyframes bit-alert-exit {
+      0% { opacity: 1; transform: scaleY(1); max-height: 200px; margin-bottom: var(--size-3); }
+      60% { opacity: 0; transform: scaleY(0.8); }
+      100% { opacity: 0; transform: scaleY(0); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+    }
+
     .alert {
-      display: flex;
-      align-items: center;
-      gap: var(--_gap);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      row-gap: var(--size-1);
       padding: var(--_padding);
       background: var(--_bg);
       border: var(--border) solid var(--_border-color);
@@ -33,8 +45,7 @@ const componentStyles = /* css */ css`
       font-size: var(--_font-size);
       line-height: var(--leading-normal);
       color: var(--_color);
-      box-sizing: border-box;
-      width: 100%;
+      overflow: hidden;
       transition:
         background var(--transition-normal),
         border-color var(--transition-normal),
@@ -42,52 +53,154 @@ const componentStyles = /* css */ css`
         color var(--transition-normal);
     }
 
-    .icon-slot {
+    /* ── Icon ──────────────────────────────────────── */
+
+    .icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
+      grid-column: 1;
+      grid-row: 1;
+      align-self: start;
+      margin-inline-end: var(--_gap);
     }
 
-    .icon-slot[hidden] {
+    /* Without heading: icon aligns with the body content */
+    .alert:has(.header[hidden]) .icon {
+      align-self: center;
+    }
+
+    .icon[hidden] {
       display: none;
     }
 
-    .body {
+    /* ── Header row (heading + meta) ───────────────── */
+
+    .header {
+      grid-column: 2;
+      grid-row: 1;
       display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-width: 0;
-      gap: var(--size-0-5);
+      align-items: baseline;
+      gap: var(--size-2);
     }
 
-    .title {
-      font-weight: var(--font-semibold);
-      line-height: var(--leading-tight);
+    .header[hidden] {
+      display: none;
     }
+
+    .heading {
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-normal);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meta {
+      font-size: var(--text-xs);
+      opacity: 0.7;
+      white-space: nowrap;
+      margin-inline-start: auto;
+    }
+
+    :host(:not(:has([slot='meta']))) .meta {
+      display: none;
+    }
+
+    /* ── Body ──────────────────────────────────────── */
+
+    .body {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      min-width: 0;
+      margin-top: var(--size-1);
+    }
+
+    /* Without heading: body moves up to share row with icon and close */
+    .alert:has(.header[hidden]) .body {
+      grid-column: 2;
+      grid-row: 1;
+      margin-top: 0;
+    }
+
+    /* ── Content ───────────────────────────────────── */
 
     .content {
       line-height: var(--leading-relaxed);
     }
 
+    /* ── Actions ───────────────────────────────────── */
+
+    .actions {
+      grid-column: 1 / -1;
+      grid-row: 3;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--size-2);
+      margin-top: var(--size-2);
+    }
+
+    /* Without heading: actions move to row 2 */
+    .alert:has(.header[hidden]) .actions {
+      grid-row: 2;
+    }
+
+    .actions[hidden] {
+      display: none;
+    }
+
+    /* Inline mode: 4-column grid — icon | body | actions | close */
+    :host([inline]) .alert {
+      grid-template-columns: auto 1fr auto auto;
+    }
+
+    :host([inline]) .body {
+      grid-column: 2;
+      grid-row: 1;
+      margin-top: 0;
+      align-self: center;
+    }
+
+    :host([inline]) .actions:not([hidden]) {
+      grid-column: 3;
+      grid-row: 1;
+      margin-top: 0;
+      flex-wrap: nowrap;
+    }
+
+    :host([inline]) .close {
+      grid-column: 4;
+      align-self: center;
+    }
+
+    /* ── Close button ──────────────────────────────── */
+
     .close {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
+      grid-column: 3;
+      grid-row: 1;
+      align-self: start;
+      margin-inline-start: var(--_gap);
       width: var(--size-5);
       height: var(--size-5);
+      min-height: var(--_touch-target);
+      min-width: var(--_touch-target);
+      padding: 0;
       border: none;
       border-radius: var(--rounded-sm);
       background: transparent;
       color: inherit;
       cursor: pointer;
       opacity: 0.7;
-      padding: 0;
-      margin-left: auto;
-      transition:
+      transition: var(--_motion-transition,
         opacity var(--transition-fast),
-        background var(--transition-fast);
+        background var(--transition-fast));
+    }
+
+    :host(:not([dismissible])) .close {
+      display: none;
     }
 
     .close:hover {
@@ -101,33 +214,22 @@ const componentStyles = /* css */ css`
       opacity: 1;
     }
 
-    /* Hide close button when not dismissable */
-    :host(:not([dismissable])) .close {
-      display: none;
-    }
-
-    /* Left accent border for flat and bordered variants */
+    /* Accented left border for flat and bordered variants */
     :host([variant='flat'][accented]) .alert,
     :host([variant='bordered'][accented]) .alert {
-      border-left-width: var(--border-4, 4px);
+      border-inline-start-width: var(--border-4, 4px);
     }
   }
 
   @layer buildit.variants {
-    /* =====================
-       Flat (default) — subtle tinted background
-       ===================== */
     :host(:not([variant])) .alert,
     :host([variant='flat']) .alert {
-      background: color-mix(in srgb, var(--_theme-backdrop) 60%, transparent);
-      border-color: color-mix(in srgb, var(--_theme-focus) 30%, transparent);
+      background: var(--color-canvas);
+      border-color: var(--_theme-base);
       color: var(--_theme-base);
-      box-shadow: var(--inset-shadow-2xs);
+      box-shadow: var(--shadow-none);
     }
 
-    /* =====================
-       Solid — opaque themed background
-       ===================== */
     :host([variant='solid']) .alert {
       background: var(--_theme-base);
       border-color: var(--_theme-base);
@@ -139,63 +241,58 @@ const componentStyles = /* css */ css`
       color: var(--_theme-contrast);
     }
 
-    /* =====================
-       Bordered — backdrop bg with visible border + shadow
-       ===================== */
     :host([variant='bordered']) .alert {
-      background: var(--_theme-backdrop);
-      border-color: var(--_theme-border);
+      background: color-mix(in srgb, var(--_theme-backdrop), var(--color-canvas));
+      border-color: color-mix(in srgb, var(--_theme-focus) 30%, transparent);
       color: var(--_theme-base);
-      box-shadow: var(--inset-shadow-xs), var(--shadow-xs);
-    }
-
-    /* =====================
-       Outline — transparent bg, colored border
-       ===================== */
-    :host([variant='outline']) .alert {
-      background: transparent;
-      border-color: var(--_theme-base);
-      color: var(--_theme-base);
-      box-shadow: var(--shadow-none);
+      box-shadow: var(--inset-shadow-2xs);
     }
   }
 `;
 
 /** Alert component properties */
 export interface AlertProps {
-  /** Theme color (primary, success, warning, error, etc.) */
+  /** Show a left accent border (for flat/bordered variants) */
+  accented?: boolean;
+  /** Theme color */
   color?: ThemeColor;
   /** Show a dismiss (×) button */
-  dismissable?: boolean;
-  /** Alert size */
-  size?: ComponentSize;
+  dismissible?: boolean;
+  /** Heading text shown above the content */
+  heading?: string;
+  /** Position action buttons inline instead of below */
+  inline?: boolean;
   /** Border radius */
   rounded?: RoundedSize | '';
-  /** Title text */
-  title?: string;
+  /** Alert size */
+  size?: ComponentSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost';
+  variant?: 'solid' | 'flat' | 'bordered';
 }
 
 /**
- * A status/feedback banner with optional title, icon slot, and dismiss button.
+ * A status/feedback banner with optional heading, icon slot, and dismiss button.
  *
  * @element bit-alert
  *
  * @attr {string} color - Theme color (primary/success/warning/error…)
- * @attr {string} variant - Visual style: 'solid' | 'flat' | 'outline' | 'frost'
+ * @attr {string} variant - Visual style: 'flat' | 'solid' | 'bordered'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius size
- * @attr {string} title - Bold title text above the content
- * @attr {boolean} dismissable - Show a close (×) button
+ * @attr {string} heading - Bold heading text above the content
+ * @attr {boolean} dismissible - Show a close (×) button
+ * @attr {boolean} accented - Add a left accent border (flat/bordered only)
+ * @attr {boolean} inline - Position action buttons to the right instead of below
  *
  * @fires dismiss - Fired when the alert is dismissed
  *
  * @slot - Default slot for the alert message content
- * @slot icon - Custom icon on the left side
+ * @slot icon - Icon on the left side
+ * @slot meta - Metadata displayed alongside the heading (lighter, right-aligned)
+ * @slot actions - Action buttons shown below the message
  *
  * @cssprop --alert-bg - Background color
- * @cssprop --alert-color - Text / icon color
+ * @cssprop --alert-color - Text/icon color
  * @cssprop --alert-border-color - Border color
  * @cssprop --alert-radius - Border radius
  * @cssprop --alert-padding - Padding
@@ -205,79 +302,129 @@ export interface AlertProps {
  * @example
  * ```html
  * <bit-alert color="success">Your changes have been saved.</bit-alert>
- * <bit-alert color="error" variant="solid" dismissable title="Something went wrong">
+ * <bit-alert color="error" variant="solid" dismissible heading="Something went wrong">
  *   Please try again later.
  * </bit-alert>
  * ```
  */
-define('bit-alert', ({ host }) => {
-  const props = defineProps({
-    color: { default: undefined as ThemeColor | undefined },
-    dismissable: { default: false },
-    rounded: { default: undefined as RoundedSize | undefined },
-    size: { default: undefined as ComponentSize | undefined },
-    title: { default: '' },
-    variant: { default: undefined as AlertProps['variant'] | undefined },
+export const TAG = define('bit-alert', ({ host }) => {
+  const props = defineProps<AlertProps>({
+    accented: { default: false },
+    color: { default: undefined },
+    dismissible: { default: false },
+    heading: { default: '' },
+    inline: { default: false },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
   });
 
   const emit = defineEmits<{
     dismiss: { originalEvent: MouseEvent };
   }>();
 
-  const dismissed = signal(false);
-
-  effect(() => {
-    if (dismissed.value) {
-      host.setAttribute('dismissed', '');
-    } else {
-      host.removeAttribute('dismissed');
-    }
-  });
-
   const handleDismiss = guard(
-    () => props.dismissable.value,
+    () => props.dismissible.value,
     (e: MouseEvent) => {
-      dismissed.value = true;
-      emit('dismiss', { originalEvent: e });
+      host.setAttribute('dismissing', '');
+
+      let finished = false;
+      let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const finalizeDismiss = () => {
+        if (finished) return;
+        finished = true;
+
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+
+        host.removeEventListener('animationend', onEnd);
+        host.removeAttribute('dismissing');
+        host.setAttribute('dismissed', '');
+        emit('dismiss', { originalEvent: e });
+      };
+
+      const onEnd = () => {
+        finalizeDismiss();
+      };
+
+      host.addEventListener('animationend', onEnd);
+
+      // Fallback for reduced-motion or overridden styles where animationend never fires.
+      queueMicrotask(() => {
+        const styles = getComputedStyle(host);
+        const names = styles.animationName.split(',').map((v) => v.trim());
+        const durations = styles.animationDuration
+          .split(',')
+          .map((v) => v.trim())
+          .map((duration) => {
+            if (duration.endsWith('ms')) return Number.parseFloat(duration);
+            if (duration.endsWith('s')) return Number.parseFloat(duration) * 1000;
+            return 0;
+          });
+
+        const hasAnimation = names.some((name) => name && name !== 'none');
+        const maxDuration = Math.max(0, ...durations);
+
+        if (!hasAnimation || maxDuration <= 0) {
+          finalizeDismiss();
+          return;
+        }
+
+        fallbackTimer = setTimeout(() => {
+          finalizeDismiss();
+        }, maxDuration + 50);
+      });
     },
   );
 
-  const hasTitle = computed(() => !!props.title.value);
   const hasIcon = signal(false);
-  const iconSlotRef = ref<HTMLSlotElement>();
+  const hasActions = signal(false);
 
   onMount(() => {
-    const slot = iconSlotRef.value;
-    if (!slot) return;
-    const update = () => { hasIcon.value = slot.assignedElements().length > 0; };
-    update();
-    slot.addEventListener('slotchange', update);
-    return () => slot.removeEventListener('slotchange', update);
+    onSlotChange('icon', (els) => {
+      hasIcon.value = els.length > 0;
+    });
+    onSlotChange('actions', (els) => {
+      hasActions.value = els.length > 0;
+    });
   });
 
   return {
     styles: [
-      colorThemeMixin,
+      ...formFieldMixins,
+      forcedColorsMixin,
       sizeVariantMixin({
         lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },
         sm: { '--_padding': 'var(--size-2) var(--size-3)', fontSize: 'var(--text-xs)', gap: 'var(--size-2)' },
       }),
-      roundedVariantMixin,
-      frostVariantMixin('.alert'),
       componentStyles,
     ],
     template: html`
-      <div class="alert" role="alert" part="alert" aria-live="polite">
-        <span class="icon-slot" part="icon" aria-hidden="true" ?hidden=${() => !hasIcon.value}>
-          <slot name="icon" ref=${iconSlotRef}></slot>
+      <div
+        class="alert"
+        role="alert"
+        part="alert"
+        aria-live=${() => (props.color.value === 'error' ? 'assertive' : 'polite')}
+      >
+        <span class="icon" part="icon" aria-hidden="true" ?hidden=${() => !hasIcon.value}>
+          <slot name="icon"></slot>
         </span>
-        <div class="body" part="body">
-          <span class="title" part="title" ?hidden=${() => !hasTitle.value}>
-            ${() => props.title.value}
+        <div class="header" part="header" ?hidden=${() => !props.heading.value}>
+          <span class="heading" part="heading">${() => props.heading.value}</span>
+          <span class="meta" part="meta">
+            <slot name="meta"></slot>
           </span>
+        </div>
+        <div class="body" part="body">
           <div class="content" part="content">
             <slot></slot>
           </div>
+        </div>
+        <div class="actions" part="actions" ?hidden=${() => !hasActions.value}>
+          <slot name="actions"></slot>
         </div>
         <button
           class="close"
@@ -306,4 +453,8 @@ define('bit-alert', ({ host }) => {
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-alert': HTMLElement & AlertProps & AddEventListeners<BitAlertEvents>;
+  }
+}

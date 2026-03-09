@@ -18,10 +18,7 @@ import type { Selector } from '../types';
  *
  * @throws {TypeError} If the provided array is not an array.
  */
-export function group<T>(
-  array: T[],
-  selector: Selector<T>,
-): Record<string, T[]> {
+export function group<T>(array: T[], selector: Selector<T>): Record<string, T[]> {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
   const result: Record<string, T[]> = {};

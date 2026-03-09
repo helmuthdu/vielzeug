@@ -1,17 +1,20 @@
-# Slider Component
+# Slider
 
-A simple, efficient range slider component for selecting numeric values. Built with accessibility in mind, supporting keyboard navigation, touch gestures, and full form integration.
+A single-thumb or dual-thumb slider for selecting a numeric value or a numeric range. Form-associated with native `<form>` support.
+
+- **Single mode** (default) — one thumb; use `value` and `name` for form integration.
+- **Range mode** (`range` attribute) — two independent thumbs; use `from` and `to` to set bounds.
 
 ## Features
 
-- 🎨 **5 Semantic Colors**: primary, secondary, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- ⌨️ **Keyboard Navigation**: Arrow keys, Home/End support
-- 👆 **Touch Support**: Pointer events for smooth dragging
-- ♿ **Accessible**: Full ARIA support, WCAG 2.1 Level AA compliant
-- 📊 **Flexible Range**: Custom min, max, step values
-- 🔧 **Customizable**: CSS custom properties for styling
-- 📦 **Lightweight**: Only 6.30 kB (1.92 kB gzipped)
+- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- 📏 **3 Sizes** — sm, md, lg
+- ↔️ **Range Mode** — two-thumb selection with `from`/`to` bounds
+- ⌨️ **Keyboard Navigation** — Arrow keys step the value; Home/End jump to min/max
+- 👆 **Touch Support** — Smooth pointer-event dragging on mobile
+- ♿ **ARIA Slider** — `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
+- 📊 **Flexible Bounds** — Configurable `min`, `max`, and `step`
+- 🔧 **Customizable** — CSS custom properties for track, fill, and thumb colors
 
 ## Source Code
 
@@ -33,8 +36,6 @@ A simple, efficient range slider component for selecting numeric values. Built w
 
 ### Colors
 
-Six semantic colors for different contexts. Defaults to neutral when no color is specified.
-
 <ComponentPreview center vertical>
 
 ```html
@@ -51,45 +52,25 @@ Six semantic colors for different contexts. Defaults to neutral when no color is
 
 ### Sizes
 
-Three sizes for different contexts.
-
 <ComponentPreview center vertical>
 
 ```html
 <bit-slider value="30" size="sm">Small</bit-slider>
-<bit-slider value="50" size="md">Medium</bit-slider>
+<bit-slider value="50" size="md">Medium (default)</bit-slider>
 <bit-slider value="70" size="lg">Large</bit-slider>
 ```
 
 </ComponentPreview>
 
-## Range Configuration
-
-### Custom Range
-
-Set custom minimum and maximum values.
+## Min, Max & Step
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider min="0" max="100" value="50">Percentage (0-100)</bit-slider>
-<bit-slider min="0" max="200" value="100">Temperature (0-200°C)</bit-slider>
-<bit-slider min="-50" max="50" value="0">Balance (-50 to 50)</bit-slider>
-```
-
-</ComponentPreview>
-
-### Step Increment
-
-Control the granularity of value changes.
-
-<ComponentPreview center vertical>
-
-```html
-<bit-slider min="0" max="100" step="1" value="50">Fine (step: 1)</bit-slider>
-<bit-slider min="0" max="100" step="5" value="50">Coarse (step: 5)</bit-slider>
-<bit-slider min="0" max="100" step="25" value="50">Quarters (step: 25)</bit-slider>
-<bit-slider min="0" max="1" step="0.1" value="0.5">Decimal (step: 0.1)</bit-slider>
+<bit-slider min="0" max="100" value="50" color="primary">Percentage (0–100)</bit-slider>
+<bit-slider min="0" max="200" value="100" color="secondary">Temperature (0–200 °C)</bit-slider>
+<bit-slider min="0" max="100" step="5" value="50" color="success">Coarse steps (step 5)</bit-slider>
+<bit-slider min="0" max="1" step="0.1" value="0.5" color="info">Decimal (step 0.1)</bit-slider>
 ```
 
 </ComponentPreview>
@@ -98,116 +79,145 @@ Control the granularity of value changes.
 
 ### Disabled
 
-Prevent interaction for unavailable controls.
-
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider value="50" disabled>Disabled slider</bit-slider>
+<bit-slider value="50" disabled>Disabled</bit-slider>
 <bit-slider value="75" color="success" disabled>Disabled with color</bit-slider>
 ```
 
 </ComponentPreview>
 
-## Usage Examples
+## Range Mode
 
-### Volume Control
+Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` to set the initial lower and upper bounds.
+
+```html
+<bit-slider range from="20" to="80">Price range</bit-slider>
+
+<script type="module">
+  import '@vielzeug/buildit/slider';
+</script>
+```
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-slider min="0" max="100" value="70" color="primary" id="volume-slider">
-  Volume: <span id="volume-value">70</span>%
+<bit-slider range from="20" to="80">Default</bit-slider>
+<bit-slider range from="20" to="80" color="primary">Primary</bit-slider>
+<bit-slider range from="30" to="70" color="success" size="sm">Small · Success</bit-slider>
+<bit-slider range from="10" to="90" color="warning" size="lg">Large · Warning</bit-slider>
+```
+
+</ComponentPreview>
+
+In range mode, the `change` event fires with `{ from, to }`:
+
+```js
+document.getElementById('price').addEventListener('change', (e) => {
+  if ('from' in e.detail) {
+    // Range mode
+    console.log(`Range: ${e.detail.from} – ${e.detail.to}`);
+  } else {
+    // Single mode
+    console.log('Value:', e.detail.value);
+  }
+});
+```
+
+## Accessible Labels
+
+Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mode) to give screen readers a readable version of the value — useful when the raw number needs a unit or currency symbol.
+
+```html
+<!-- Single mode: announce "75%" instead of "75" -->
+<bit-slider value="75" value-text="75%" color="primary">Volume</bit-slider>
+
+<!-- Range mode: announce "$20 – $80" -->
+<bit-slider range from="20" to="80" min="0" max="100" from-value-text="$20" to-value-text="$80" color="primary">
+  Price range
 </bit-slider>
-
-<script>
-  const slider = document.getElementById('volume-slider');
-  const valueDisplay = document.getElementById('volume-value');
-
-  slider.addEventListener('change', (e) => {
-    valueDisplay.textContent = e.detail.value;
-  });
-</script>
 ```
 
-</ComponentPreview>
+## Form Integration
 
-### Brightness Control
-
-<ComponentPreview center vertical>
-
-```html
-<bit-slider min="0" max="100" step="5" value="80" color="warning" id="brightness-slider"> Brightness </bit-slider>
-
-<script>
-  const brightness = document.getElementById('brightness-slider');
-  brightness.addEventListener('change', (e) => {
-    console.log('Brightness:', e.detail.value);
-  });
-</script>
-```
-
-</ComponentPreview>
-
-### Form Integration
-
-Sliders work seamlessly with forms using name and value attributes.
-
-<ComponentPreview center vertical>
+`bit-slider` is form-associated in single mode. The `name` attribute is submitted as part of `FormData`.
 
 ```html
 <form id="settings-form">
   <bit-slider name="volume" min="0" max="100" value="70">Volume</bit-slider>
   <bit-slider name="bass" min="-10" max="10" value="0">Bass</bit-slider>
-  <bit-slider name="treble" min="-10" max="10" value="0">Treble</bit-slider>
-  <bit-button type="submit">Save Settings</bit-button>
+  <bit-button type="submit">Save</bit-button>
 </form>
 
-<script>
-  const form = document.getElementById('settings-form');
-  form.addEventListener('submit', (e) => {
+<script type="module">
+  import '@vielzeug/buildit/slider';
+  import '@vielzeug/buildit/button';
+
+  document.getElementById('settings-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    const formData = new FormData(form);
-    console.log('Settings:', Object.fromEntries(formData));
+    const data = new FormData(e.target);
+    console.log('volume:', data.get('volume'));
+    console.log('bass:', data.get('bass'));
   });
 </script>
 ```
 
-</ComponentPreview>
+## Guideline Recipe: Onboard with a Range Budget Picker
 
-## Keyboard Navigation
-
-The slider supports comprehensive keyboard controls:
-
-| Key                         | Action                 |
-| --------------------------- | ---------------------- |
-| `Arrow Right` / `Arrow Up`  | Increase value by step |
-| `Arrow Left` / `Arrow Down` | Decrease value by step |
-| `Home`                      | Jump to minimum value  |
-| `End`                       | Jump to maximum value  |
-
-<ComponentPreview center vertical>
+**Guideline: onboard** — a slider with a live value display gives users an immediate, tactile way to express a preference without typing a number.
 
 ```html
-<bit-slider value="50" step="10"> Use arrow keys or Home/End </bit-slider>
+<div style="display:flex;flex-direction:column;gap:var(--size-2)">
+  <div style="display:flex;justify-content:space-between">
+    <bit-text variant="label">Monthly budget</bit-text>
+    <bit-text variant="label" id="budget-display" weight="semibold">$500</bit-text>
+  </div>
+  <bit-slider
+    id="budget-slider"
+    min="0"
+    max="2000"
+    step="50"
+    value="500"
+    color="primary"
+    aria-label="Monthly budget in dollars"></bit-slider>
+  <div style="display:flex;justify-content:space-between">
+    <bit-text variant="caption" color="subtle">$0</bit-text>
+    <bit-text variant="caption" color="subtle">$2,000</bit-text>
+  </div>
+</div>
+
+<script>
+  const slider = document.getElementById('budget-slider');
+  const display = document.getElementById('budget-display');
+  slider.addEventListener('input', (e) => {
+    display.textContent = `$${e.target.value}`;
+  });
+</script>
 ```
 
-</ComponentPreview>
+**Tip:** Always show the current value alongside the slider — users can’t tell their exact position from the thumb alone.
 
 ## API Reference
 
 ### Attributes
 
-| Attribute  | Type                                                            | Default     | Description                    |
-| ---------- | --------------------------------------------------------------- | ----------- | ------------------------------ |
-| `min`      | `number`                                                        | `0`         | Minimum value                  |
-| `max`      | `number`                                                        | `100`       | Maximum value                  |
-| `step`     | `number`                                                        | `1`         | Value increment/decrement step |
-| `value`    | `number`                                                        | `0`         | Current slider value           |
-| `disabled` | `boolean`                                                       | `false`     | Disable the slider             |
-| `name`     | `string`                                                        | -           | Form field name                |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                 |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Slider size                    |
+| Attribute         | Type                                                                      | Default | Description                                                                |
+| ----------------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| `value`           | `number`                                                                  | `0`     | Current value (single mode)                                                |
+| `from`            | `number`                                                                  | `0`     | Lower bound value (range mode)                                             |
+| `to`              | `number`                                                                  | `100`   | Upper bound value (range mode)                                             |
+| `range`           | `boolean`                                                                 | `false` | Activate two-thumb range mode                                              |
+| `min`             | `number`                                                                  | `0`     | Minimum allowed value                                                      |
+| `max`             | `number`                                                                  | `100`   | Maximum allowed value                                                      |
+| `step`            | `number`                                                                  | `1`     | Value increment/decrement step                                             |
+| `disabled`        | `boolean`                                                                 | `false` | Disable slider interaction                                                 |
+| `name`            | `string`                                                                  | —       | Form field name (single mode only)                                         |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color                                                             |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Slider size                                                                |
+| `value-text`      | `string`                                                                  | —       | Human-readable ARIA value label for single mode (e.g. `"75%"`)             |
+| `from-value-text` | `string`                                                                  | —       | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`) |
+| `to-value-text`   | `string`                                                                  | —       | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)   |
 
 ### Slots
 
@@ -215,106 +225,69 @@ The slider supports comprehensive keyboard controls:
 | --------- | -------------------- |
 | (default) | Slider label content |
 
+### Parts
+
+| Part          | Description                     |
+| ------------- | ------------------------------- |
+| `slider`      | The outer slider container      |
+| `track`       | The slider track                |
+| `fill`        | The filled portion of the track |
+| `thumb`       | The single-value thumb          |
+| `thumb-start` | The range start (lower) thumb   |
+| `thumb-end`   | The range end (upper) thumb     |
+| `label`       | The label element               |
+
 ### Events
 
-| Event    | Detail                                    | Description                |
-| -------- | ----------------------------------------- | -------------------------- |
-| `change` | `{ value: number, originalEvent: Event }` | Emitted when value changes |
+| Event    | Detail — single mode | Detail — range mode            | Description                |
+| -------- | -------------------- | ------------------------------ | -------------------------- |
+| `change` | `{ value: number }`  | `{ from: number, to: number }` | Emitted when value changes |
 
-## CSS Custom Properties
+### CSS Custom Properties
 
-| Property                | Description                            | Default                     |
-| ----------------------- | -------------------------------------- | --------------------------- |
-| `--slider-height` | Height of the slider track             | Size-dependent              |
-| `--slider-size`   | Size of the slider thumb               | Size-dependent              |
-| `--slider-track`     | Background color of the track          | `var(--color-contrast-300)` |
-| `--slider-fill`      | Background color of the filled portion | Theme color                 |
-| `--slider-thumb`     | Background color of the thumb          | `var(--color-contrast-100)` |
+| Property          | Description                     | Default                     |
+| ----------------- | ------------------------------- | --------------------------- |
+| `--slider-height` | Height of the slider track      | Size-dependent              |
+| `--slider-size`   | Diameter of the thumb           | Size-dependent              |
+| `--slider-track`  | Track background color          | `var(--color-contrast-300)` |
+| `--slider-fill`   | Filled portion background color | Theme color                 |
+| `--slider-thumb`  | Thumb background color          | `var(--color-contrast-100)` |
 
 ## Accessibility
 
 The slider component follows WAI-ARIA best practices.
 
+### `bit-slider`
+
 ✅ **Keyboard Navigation**
 
-- Arrow keys adjust the value by step increment
-- Home/End keys jump to min/max values
-- Tab moves focus to/from the slider
+- `Arrow Right` / `Arrow Up` — increase value by one step
+- `Arrow Left` / `Arrow Down` — decrease value by one step
+- `Home` — jump to minimum value
+- `End` — jump to maximum value
 
 ✅ **Screen Readers**
 
-- Announces slider role and current value
-- `aria-valuenow`, `aria-valuemin`, `aria-valuemax` reflect state
-- `aria-disabled` reflects disabled state
+- The thumb has `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`.
+- Provide `value-text` or `from-value-text` / `to-value-text` when the raw number needs a unit (e.g. `"$80"`, `"75%"`).
+- In range mode, each thumb has its own accessible label and independent ARIA attributes.
+- `aria-disabled` is set when `disabled` is active.
 
-✅ **Focus Management**
+✅ **Touch & Focus**
 
-- Visible focus indicator on keyboard focus
-- Disabled state removes from tab order
-- Touch-friendly target size (44×44px minimum)
+- Touch-friendly draggable thumb with a minimum 44 × 44 px hit area.
+- `Tab` focuses the slider; `Shift+Tab` blurs it.
 
 ## Best Practices
 
 **Do:**
 
-- Provide clear labels describing what the slider controls
-- Use appropriate step values for the use case
-- Consider decimal steps for fine-grained control (e.g., 0.1, 0.01)
-- Use semantic colors (warning for volume at high levels)
+- Always provide a visible label via the default slot to describe what the slider controls.
+- Use `value-text` / `from-value-text` / `to-value-text` when the value needs a unit or currency symbol.
+- Keep `min`, `max`, and `step` values consistent and predictable for users.
+- Use range mode for "between X and Y" inputs like price ranges or date spans.
 
 **Don't:**
 
-- Make sliders too small for touch targets (use size="lg" on mobile)
-- Use sliders for binary choices (use switches instead)
-- Forget to display the current value to users
-- Use overly large value ranges without appropriate steps
-
-## Examples in Real Applications
-
-### Audio Equalizer
-
-```html
-<div class="equalizer">
-  <bit-slider min="-12" max="12" step="1" value="0">60Hz</bit-slider>
-  <bit-slider min="-12" max="12" step="1" value="0">250Hz</bit-slider>
-  <bit-slider min="-12" max="12" step="1" value="0">1kHz</bit-slider>
-  <bit-slider min="-12" max="12" step="1" value="0">4kHz</bit-slider>
-  <bit-slider min="-12" max="12" step="1" value="0">16kHz</bit-slider>
-</div>
-```
-
-### Image Editor
-
-```html
-<bit-slider min="0" max="100" value="50" color="primary">Brightness</bit-slider>
-<bit-slider min="0" max="100" value="50" color="secondary">Contrast</bit-slider>
-<bit-slider min="0" max="100" value="50" color="success">Saturation</bit-slider>
-<bit-slider min="0" max="360" value="0" color="warning">Hue</bit-slider>
-<bit-slider min="0" max="100" value="100" color="error">Opacity</bit-slider>
-```
-
-### Temperature Control
-
-```html
-<bit-slider min="16" max="30" step="0.5" value="22" color="warning">
-  Temperature: <span id="temp">22</span>°C
-</bit-slider>
-
-<script>
-  document.querySelector('bit-slider').addEventListener('change', (e) => {
-    document.getElementById('temp').textContent = e.detail.value;
-  });
-</script>
-```
-
-## Component Comparison
-
-### Slider vs Switch
-
-| Feature         | Slider                   | Switch                  |
-| --------------- | ------------------------ | ----------------------- |
-| **Purpose**     | Numeric range selection  | Binary on/off           |
-| **Value Type**  | Number (0-100, etc.)     | Boolean                 |
-| **Interaction** | Drag or keyboard         | Click or keyboard       |
-| **Use Cases**   | Volume, brightness, zoom | Enable/disable features |
-| **Bundle Size** | 6.30 kB                  | 6.03 kB                 |
+- Use a slider for a small, discrete set of options — a `bit-select` or `bit-radio-group` is clearer.
+- Omit `value-text` when using fractional step values — screen readers announce the raw float verbatim.

@@ -3,7 +3,7 @@ title: Validit — Usage Guide
 description: Schema types, chaining, coercion, and advanced validation patterns for Validit.
 ---
 
-# Validit Usage Guide
+## Validit Usage Guide
 
 ::: tip New to Validit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
@@ -26,29 +26,28 @@ function validateUser(raw: unknown): User {
 
 // After — Validit
 import { v } from '@vielzeug/validit';
-const UserSchema = v.object({ name: v.string(), email: v.email(), age: v.number().min(0) });
+const UserSchema = v.object({ name: v.string(), email: v.string().email(), age: v.number().min(0) });
 const user = UserSchema.parse(raw);
 ```
 
-| Feature | Validit | Zod | Yup |
-|---|---|---|---|
-| Bundle size | <PackageInfo package="validit" type="size" /> | ~14 kB | ~22 kB |
-| TypeScript inference | ✅ | ✅ | ⚠️ |
-| Async validation | ✅ | ✅ | ✅ |
-| Coercion | ✅ | ✅ | ✅ |
-| Zero dependencies | ✅ | ✅ | ❌ |
+| Feature              | Validit                                       | Zod    | Yup    |
+| -------------------- | --------------------------------------------- | ------ | ------ |
+| Bundle size          | <PackageInfo package="validit" type="size" /> | ~14 kB | ~22 kB |
+| TypeScript inference | ✅                                            | ✅     | ⚠️     |
+| Async validation     | ✅                                            | ✅     | ✅     |
+| Coercion             | ✅                                            | ✅     | ✅     |
+| Zero dependencies    | ✅                                            | ✅     | ❌     |
 
 **Use Validit when** you want schema validation with full TS inference and minimal bundle size.
 
 **Consider Zod** if you need its ecosystem (trpc, drizzle, react-hook-form integration) or its error formatting API.
 
-
 ## Import
 
 ```ts
-import { v, type Infer } from '@vielzeug/validit';
-// Optional: Import types
-import type { Schema, ValidationError, ParseResult } from '@vielzeug/validit';
+import { v, type Infer, type MessageFn } from '@vielzeug/validit';
+// Optional: Import additional types
+import type { Schema, ValidationError, ParseResult, Issue, ErrorCode } from '@vielzeug/validit';
 ```
 
 ## Basic Usage
@@ -70,7 +69,7 @@ const ageSchema = v.number().int().min(18);
 // Complex schemas
 const userSchema = v.object({
   name: v.string().min(1),
-  email: v.email(),
+  email: v.string().email(),
   age: v.number().int().min(18),
 });
 ```
@@ -106,10 +105,7 @@ Add custom validation logic with `.refine()`:
 const passwordSchema = v
   .string()
   .min(8)
-  .refine(
-    (val) => /[A-Z]/.test(val) && /[0-9]/.test(val),
-    'Must contain uppercase letter and number'
-  );
+  .refine((val) => /[A-Z]/.test(val) && /[0-9]/.test(val), 'Must contain uppercase letter and number');
 ```
 
 ### Conditional Validation
@@ -117,32 +113,34 @@ const passwordSchema = v
 Apply validation rules based on other field values:
 
 ```ts
-const schema = v.object({
-  type: v.oneOf(v.literal('email'), v.literal('phone')),
-  contact: v.string(),
-}).refine((data) => {
-  if (data.type === 'email') {
-    return /^[^@]+@[^@]+$/.test(data.contact);
-  }
-  return /^\d{10}$/.test(data.contact);
-}, 'Invalid contact format');
+const schema = v
+  .object({
+    type: v.union(v.literal('email'), v.literal('phone')),
+    contact: v.string(),
+  })
+  .refine((data) => {
+    if (data.type === 'email') {
+      return /^[^@]+@[^@]+$/.test(data.contact);
+    }
+    return /^\d{10}$/.test(data.contact);
+  }, 'Invalid contact format');
 ```
 
 ### Async Validation
 
-Validate against external services or databases:
+Validate against external services or databases using `.refineAsync()`. It must be used with `parseAsync()` or `safeParseAsync()`:
 
 ```ts
-const emailSchema = v.string().email().refine(
-  async (email) => {
+const emailSchema = v
+  .string()
+  .email()
+  .refineAsync(async (email) => {
     const response = await fetch(`/api/check-email?email=${email}`);
     const { available } = await response.json();
     return available;
-  },
-  'Email already taken',
-);
+  }, 'Email already taken');
 
-// Use with parseAsync
+// Must use parseAsync / safeParseAsync
 const result = await emailSchema.safeParseAsync('test@example.com');
 ```
 
@@ -169,21 +167,22 @@ v.string();
 
 // With validation
 v.string()
-  .min(3)        // Min length
-  .max(100)      // Max length
-  .length(10)    // Exact length
-  .nonempty()    // Shorthand for .min(1)
+  .min(3) // Min length
+  .max(100) // Max length
+  .length(10) // Exact length
+  .nonempty() // Shorthand for .min(1)
   .startsWith('https', 'Must be a secure URL')
   .endsWith('.ts', 'TypeScript files only')
-  .pattern(/^[a-z]+$/) // Regex pattern
-  .email()       // Email format
-  .url()         // URL format
-  .trim();       // Trim whitespace before validation
-
-// Convenience helpers
-v.email();  // Shorthand for v.string().email()
-v.url();    // Shorthand for v.string().url()
-v.uuid();   // UUID validation
+  .includes('foo') // Must contain substring
+  .regex(/^[a-z]+$/) // Regex pattern
+  .email() // Email format
+  .url() // URL format — error code: invalid_url
+  .uuid() // UUID v4 format
+  .date() // YYYY-MM-DD string
+  .datetime() // ISO 8601 datetime string
+  .trim() // Trim whitespace before validation
+  .lowercase() // Must be all lowercase
+  .uppercase(); // Must be all uppercase
 ```
 
 ### Number
@@ -194,18 +193,14 @@ v.number();
 
 // With validation
 v.number()
-  .min(0)         // Minimum value
-  .max(100)       // Maximum value
-  .int()          // Must be integer
-  .positive()     // Must be > 0
-  .negative()     // Must be < 0
-  .nonNegative()  // Must be >= 0 (alias for .min(0))
-  .nonPositive()  // Must be <= 0 (alias for .max(0))
+  .min(0) // Minimum value
+  .max(100) // Maximum value
+  .int() // Must be integer
+  .positive() // Must be > 0
+  .negative() // Must be < 0
+  .nonNegative() // Must be >= 0
+  .nonPositive() // Must be <= 0
   .multipleOf(5); // Must be divisible by 5
-
-// Convenience helpers
-v.int();           // Shorthand for v.number().int()
-v.int().positive(); // Positive integer
 ```
 
 ### Boolean
@@ -230,17 +225,16 @@ v.literal(42); // Exactly 42
 v.literal(true); // Exactly true
 ```
 
-### Literals and Unions of Literals
+### Enums
 
 ```ts
-// Exact value
-v.literal('active'); // Exactly 'active'
-v.literal(42);       // Exactly 42
-v.literal(true);     // Exactly true
+// v.enum — a type-safe string enum from a readonly tuple
+const Status = v.enum(['active', 'inactive', 'pending'] as const);
+// Infer<typeof Status> → 'active' | 'inactive' | 'pending'
 
-// Union of literals (use v.oneOf) — raw values are accepted as shorthand for v.literal()
-v.oneOf('red', 'green', 'blue');     // 'red' | 'green' | 'blue'
-v.oneOf('admin', 'user', 'guest');   // 'admin' | 'user' | 'guest'
+// Union of literals — raw values are accepted as shorthand for v.literal()
+v.union('red', 'green', 'blue'); // 'red' | 'green' | 'blue'
+v.union('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
 ```
 
 ## Complex Schemas
@@ -253,10 +247,10 @@ v.array(v.string());
 
 // With constraints
 v.array(v.string())
-  .nonempty()  // Rejects empty arrays (shorthand for .min(1))
-  .min(1)      // At least 1 item
-  .max(10)     // At most 10 items
-  .length(5);  // Exactly 5 items
+  .nonempty() // Rejects empty arrays (shorthand for .min(1))
+  .min(1) // At least 1 item
+  .max(10) // At most 10 items
+  .length(5); // Exactly 5 items
 
 // Nested arrays
 v.array(v.array(v.number())); // number[][]
@@ -275,7 +269,7 @@ v.object({
 v.object({
   user: v.object({
     name: v.string(),
-    email: v.email(),
+    email: v.string().email(),
   }),
   settings: v.object({
     notifications: v.boolean(),
@@ -283,39 +277,60 @@ v.object({
 });
 
 // Object methods
-schema.partial();              // Make all fields optional
-schema.required();             // Remove optional from all fields
-schema.pick('name', 'email');  // Select specific fields
-schema.omit('password');       // Exclude specific fields
+schema.partial(); // Make ALL fields optional
+schema.partial('name', 'email'); // Make SPECIFIC fields optional (selective partial)
+schema.required(); // Remove optional from all fields (inverse of partial)
+schema.pick('name', 'email'); // Select specific fields
+schema.omit('password'); // Exclude specific fields
 schema.extend({ role: v.string() }); // Add/override fields
-schema.strip();                // Remove unknown keys (default)
-schema.passthrough();          // Allow unknown keys through
-schema.strict();               // Reject unknown keys
-schema.shape;                  // Access raw shape definition
+schema.strip(); // Remove unknown keys (default)
+schema.passthrough(); // Allow unknown keys through
+schema.strict(); // Reject unknown keys
+schema.shape; // Access raw shape definition
+```
+
+### Tuples
+
+```ts
+// Fixed-length tuple — each position has its own schema
+v.tuple([v.string(), v.number(), v.boolean()] as const);
+// Infer: [string, number, boolean]
+
+// With constraints
+const PointSchema = v.tuple([v.number(), v.number()] as const);
+PointSchema.parse([10, 20]); // [10, 20]
+```
+
+### Records
+
+```ts
+// Record with typed keys and values
+v.record(v.string(), v.number()); // Record<string, number>
+v.record(v.string(), v.object({ label: v.string() }));
+
+const Scores = v.record(v.string(), v.number().int().min(0).max(100));
+Scores.parse({ alice: 95, bob: 87 }); // { alice: 95, bob: 87 }
 ```
 
 ### Unions
 
 ```ts
-// v.oneOf: exactly one branch must match (mutual exclusion)
-v.oneOf('light', 'dark');         // 'light' | 'dark'
-v.oneOf(v.string(), v.number()); // string | number
+// v.union: first-match — tries each schema in order, returns first success
+v.union('light', 'dark'); // 'light' | 'dark'
+v.union(v.string(), v.number()); // string | number
 
-// Discriminated union
-v.oneOf(
-  v.object({ type: v.literal('success'), data: v.string() }),
-  v.object({ type: v.literal('error'),   message: v.string() }),
-);
+// v.intersect: all schemas must pass (intersection / mixin)
+v.intersect(v.object({ id: v.number() }), v.object({ name: v.string() }));
 
-// v.noneOf: passes when value matches NONE of the schemas (blocklist/exclusion)
-v.noneOf('admin', 'system'); // any value except those two
-v.noneOf(v.string(), v.number()); // accepts true, null, Date, etc. but not strings or numbers
-
-// v.allOf: all schemas must pass (intersection / mixin)
-v.allOf(
-  v.object({ id: v.number() }),
-  v.object({ name: v.string() }),
-);
+// v.variant: discriminated union — dictionary API, O(1) dispatch by the discriminator key
+// The key in the map IS the discriminating value (no v.literal() needed in each branch)
+v.variant('type', {
+  success: v.object({ data: v.string() }),
+  error:   v.object({ message: v.string() }),
+});
+// The discriminator field is injected automatically:
+// parse({ type: 'success', data: 'ok' }) ✓
+// parse({ type: 'error', message: 'oops' }) ✓
 ```
 
 ## Validation Methods
@@ -398,11 +413,11 @@ const schema = v.array(
       id: v.number(),
       name: v.string(),
     })
-    .refine(async (item) => {
+    .refineAsync(async (item) => {
       return await validateItem(item);
     }),
 );
-
+// Must use parseAsync
 const items = await schema.parseAsync(largeArray);
 ```
 
@@ -414,7 +429,7 @@ Makes a schema accept `undefined`.
 
 ```ts
 v.string().optional(); // string | undefined
-v.email().optional(); // string | undefined
+v.string().email().optional(); // string | undefined
 
 v.object({
   name: v.string(),
@@ -457,7 +472,7 @@ v.array(v.string()).min(1, 'At least one item required');
 ```ts
 v.object({
   name: v.string().min(1, 'Name is required'), // Non-empty string
-  email: v.email(), // Non-empty email
+  email: v.string().email(), // Email format
   age: v.number().optional(), // Optional number
 });
 ```
@@ -471,6 +486,19 @@ v.string().nullable(); // string | null
 v.number().nullable(); // number | null
 ```
 
+### nullish()
+
+Combines `.optional().nullable()` — accepts `null` or `undefined`.
+
+```ts
+v.string().nullish(); // string | null | undefined
+v.number().nullish(); // number | null | undefined
+
+v.object({
+  bio: v.string().nullish(), // present, absent, or explicitly null
+});
+```
+
 ### default()
 
 Provides a default value for `undefined`.
@@ -481,20 +509,28 @@ v.number().default(0); // Returns 0 if undefined
 v.boolean().default(false); // Returns false if undefined
 
 v.object({
-  theme: v.oneOf(v.literal('light'), v.literal('dark')).default('light' as 'light' | 'dark'),
+  theme: v.union(v.literal('light'), v.literal('dark')).default('light' as 'light' | 'dark'),
   language: v.string().default('en'),
 });
 ```
 
 ## Custom Refinements
 
-### refine() – Sync and Async
+### refine() – Sync only
 
-Add custom validation logic. Pass an async function to defer to `parseAsync()`.
+Adds a synchronous custom validator. **Throws at definition time** if given an async function — use `refineAsync()` for that.
+
+The `message` parameter accepts a `string` **or** a `MessageFn` that receives `{ value }` at runtime for dynamic messages:
 
 ```ts
-// Simple sync refinement
+// Static message
 v.string().refine((val) => val.length >= 3, 'Must be at least 3 characters');
+
+// Dynamic message via MessageFn
+v.string().refine(
+  (val) => val.length >= 3,
+  ({ value }) => `'${value}' is too short — need at least 3 characters`,
+);
 
 // Multiple refinements
 v.string()
@@ -502,17 +538,30 @@ v.string()
   .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
   .refine((val) => /[0-9]/.test(val), 'Must contain number');
 
-// Object-level validation
+// Object-level cross-field validation
 v.object({
   password: v.string(),
   confirmPassword: v.string(),
 }).refine((data) => data.password === data.confirmPassword, 'Passwords must match');
+```
 
-// Async refinement — detected automatically; use parseAsync / safeParseAsync
-v.email().refine(async (email) => {
+### refineAsync() – Async
+
+Adds an async custom validator. Schemas with async validators **must** use `parseAsync()` or `safeParseAsync()`; calling `parse()` throws.
+
+The `message` parameter accepts a static `string` or a `MessageFn<{ value: Output }>` for dynamic messages (same as `refine()`).
+
+```ts
+// Async refinement — must use parseAsync / safeParseAsync
+v.string().email().refineAsync(async (email) => {
   const exists = await db.users.findOne({ email });
   return !exists;
-}, 'Email already registered');
+}, ({ value }) => `The email address '${value}' is already registered`);
+
+// Async cross-field validation on object
+v.object({ name: v.string() }).refineAsync(async (data) => {
+  return !(await db.exists(data.name));
+}, 'Name already taken');
 ```
 
 ## Error Handling
@@ -527,7 +576,7 @@ import { ValidationError } from '@vielzeug/validit';
 try {
   schema.parse(data);
 } catch (error) {
-  if (error instanceof ValidationError) {
+  if (ValidationError.is(error)) { // typesafe static check
     // Access all issues
     error.issues.forEach((issue) => {
       console.log(issue.path); // ['user', 'email']
@@ -536,10 +585,26 @@ try {
       console.log(issue.params); // additional parameters
     });
 
-    // Formatted message
+    // Formatted message string
     console.log(error.message);
     // "user.email: Invalid email address [invalid_string]"
   }
+}
+```
+
+### Flattening Errors
+
+`flatten()` turns all issues into a form-friendly structure:
+
+```ts
+const result = userSchema.safeParse(formData);
+if (!result.success) {
+  const { fieldErrors, formErrors } = result.error.flatten();
+  // fieldErrors — Record<string, string[]>: per-field error lists
+  //   e.g. { email: ['Invalid email'], name: ['Name is required'] }
+  // formErrors — string[]: errors NOT attached to any specific field
+  //   (usually from top-level .refine() calls)
+  //   e.g. ['Passwords must match']
 }
 ```
 
@@ -584,7 +649,7 @@ import { type Infer } from '@vielzeug/validit';
 const schema = v.object({
   id: v.number(),
   name: v.string(),
-  email: v.email(),
+  email: v.string().email(),
 });
 
 type User = Infer<typeof schema>;
@@ -597,9 +662,9 @@ type User = Infer<typeof schema>;
 const schema = v.object({
   id: v.number(),
   name: v.string(),
-  email: v.email().optional(),
+  email: v.string().email().optional(),
   age: v.number().nullable(),
-  role: v.oneOf(v.literal('admin'), v.literal('user')).default('user' as 'admin' | 'user'),
+  role: v.union(v.literal('admin'), v.literal('user')).default('user' as 'admin' | 'user'),
 });
 
 type User = Infer<typeof schema>;
@@ -620,14 +685,14 @@ const schema = v.object({
     name: v.string(),
     contacts: v.array(
       v.object({
-        type: v.oneOf(v.literal('email'), v.literal('phone')),
+        type: v.union(v.literal('email'), v.literal('phone')),
         value: v.string(),
       }),
     ),
   }),
   settings: v
     .object({
-      theme: v.oneOf(v.literal('light'), v.literal('dark')),
+      theme: v.union(v.literal('light'), v.literal('dark')),
     })
     .optional(),
 });
@@ -675,7 +740,10 @@ Use `v.instanceof()` to validate class instances.
 
 ```ts
 class File {
-  constructor(public name: string, public size: number) {}
+  constructor(
+    public name: string,
+    public size: number,
+  ) {}
 }
 
 const FileSchema = v.object({
@@ -686,29 +754,12 @@ const FileSchema = v.object({
 FileSchema.parse({ file: new File('photo.png', 2048), label: 'Profile picture' });
 ```
 
-## pipe()
-
-`pipe()` chains schemas in sequence: each schema's output feeds into the next as input. Useful for coerce → validate pipelines.
-
-```ts
-import { pipe, v } from '@vielzeug/validit';
-
-// Accept a string, coerce it to a number, then apply number constraints
-const portSchema = pipe(v.string(), v.coerce.number(), v.number().int().min(1024).max(65535));
-portSchema.parse('3000'); // → 3000
-
-// CSV string → array of trimmed strings
-const tagsSchema = pipe(
-  v.string(),
-  v.string().transform((s) => s.split(',').map((t) => t.trim())),
-);
-```
 
 ## Best Practices
 
 ### ✅ Do
 
-- Use convenience schemas (`v.email()`, `v.int().positive()`)
+- Chain string/number methods (`.email()`, `.int().positive()`)
 - Add custom error messages for better UX
 - Use `safeParse()` for user input
 - Leverage type inference with `Infer<typeof schema>`

@@ -1,6 +1,17 @@
-import { computed, css, define, defineProps, html } from '@vielzeug/craftit';
-import { colorThemeMixin } from '../../styles';
+import {
+  computed,
+  css,
+  define,
+  defineProps,
+  effect,
+  html,
+  inject,
+  onCleanup,
+  syncContextProps,
+} from '@vielzeug/craftit';
+import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import { TABS_CTX } from '../tabs/tabs';
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -31,6 +42,7 @@ const styles = /* css */ css`
       position: relative;
       width: 100%;
       justify-content: center;
+      min-height: var(--_touch-target);
     }
 
     button:focus {
@@ -150,6 +162,20 @@ const styles = /* css */ css`
       opacity: 0.5;
       pointer-events: none;
     }
+
+    @media (forced-colors: active) {
+      /* Ensure focus ring is visible regardless of variant theme color */
+      button:focus-visible {
+        outline: 2px solid Highlight;
+        box-shadow: none;
+      }
+      /* Active tab: box-shadow raised indicator is stripped; use outline inste
+         ad so the selected tab remains distinguishable */
+      :host([active]) button {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+      }
+    }
   }
 `;
 
@@ -190,18 +216,30 @@ export interface TabItemProps {
  * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
  * ```
  */
-define('bit-tab-item', ({ host }) => {
-  const props = defineProps({
-    value: { default: '' },
+export const TAG = define('bit-tab-item', ({ host }) => {
+  const props = defineProps<TabItemProps>({
     active: { default: false },
+    color: { default: undefined },
     disabled: { default: false },
-    size: { default: undefined as ComponentSize | undefined },
-    variant: { default: undefined as VisualVariant | undefined },
-    color: { default: undefined as ThemeColor | undefined },
+    size: { default: undefined },
+    value: { default: '' },
+    variant: { default: undefined },
   });
 
-  const ariaSelected = computed(() => String(props.active.value));
-  const tabIndex = computed(() => (props.active.value ? '0' : '-1'));
+  const tabsCtx = inject(TABS_CTX, undefined);
+  syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
+
+  const isActive = tabsCtx
+    ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
+    : props.active;
+  onCleanup(
+    effect(() => {
+      host.toggleAttribute('active', isActive.value);
+    }),
+  );
+
+  const ariaSelected = computed(() => String(isActive.value));
+  const tabIndex = computed(() => (isActive.value ? '0' : '-1'));
 
   const handleClick = () => {
     if (props.disabled.value) return;
@@ -215,15 +253,17 @@ define('bit-tab-item', ({ host }) => {
   };
 
   return {
-    styles: [colorThemeMixin, styles],
+    styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
     template: html`
       <button
         role="tab"
         type="button"
         part="tab"
+        id="${() => `tab-${props.value.value}`}"
         :aria-selected=${ariaSelected}
         :tabindex=${tabIndex}
         :aria-disabled=${computed(() => String(props.disabled.value))}
+        :aria-controls="${() => `tabpanel-${props.value.value}`}"
         @click=${handleClick}
       >
         <slot name="prefix"></slot>
@@ -234,4 +274,8 @@ define('bit-tab-item', ({ host }) => {
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-tab-item': HTMLElement & TabItemProps;
+  }
+}

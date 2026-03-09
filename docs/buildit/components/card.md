@@ -4,16 +4,16 @@ A versatile and feature-rich card container component with purposeful variants, 
 
 ## Features
 
-- 🎨 **1 Special Variant**: Frost effect with smart color adaptation
+- 🎨 **4 Variants**: solid, flat, glass, frost
 - 🌈 **6 Color Themes**: primary, secondary, info, success, warning, error
 - 📏 **5 Padding Sizes**: none, sm, md, lg, xl
 - 📊 **6 Elevation Levels**: 0-5 for precise shadow control
 - 🖼️ **5 Slots**: media, header, content, footer, actions
-- 📱 **2 Orientations**: vertical (default) and horizontal layouts
-- 🎯 **Interactive States**: hoverable, clickable, disabled, loading
+- 📱 **Horizontal orientation** for side-by-side media layouts
+- 🎯 **Interactive States**: interactive, disabled, loading
 - ♿ **Fully Accessible**: WCAG 2.1 Level AA compliant with keyboard navigation
 - 🔧 **Customizable**: CSS custom properties for complete control
-- ⚡ **Custom Events**: Enhanced event system with detailed information
+- ⚡ **Custom Events**: Emits `activate` with event details (`trigger`, `originalEvent`)
 
 ## Source Code
 
@@ -46,23 +46,23 @@ A versatile and feature-rich card container component with purposeful variants, 
 
 ### Variants
 
-The card has a **clean default style** with optional special variants for advanced effects:
+Four named variants cover the full range from solid to translucent:
 
-- **Default** (no variant) - Subtle background with gentle border, perfect for most use cases
-- **`glass`** - Modern glassmorphism effect with backdrop blur
-- **`frost`** - Frosted glass effect with canvas-based transparency
+- **Default** (no `variant`) - Canvas background with gentle border. Picks up `color` as a tinted backdrop.
+- **`solid`** - Filled with the theme color; best for prominent cards with a `color` attribute.
+- **`flat`** - Subtle backdrop tint with a semi-transparent border; low visual weight.
+- **`glass`** - Glassmorphism with backdrop blur and inset shadow; great for overlays.
+- **`frost`** - Frosted glass with stronger blur and color-tinted transparency.
 
 ::: tip Elevation Control
-Use the `elevation` prop (0-5) to control shadow depth! The default style works beautifully with any elevation level, while glass and frost variants are perfect for floating UI elements.
-
-**Example:**
+Use the `elevation` prop (0-5) to control shadow depth. Works with any variant.
 
 ```html
-<!-- Default card with high elevation -->
-<bit-card elevation="4">High shadow</bit-card>
-
-<!-- Default card with no shadow -->
+<!-- No shadow -->
 <bit-card elevation="0">Flat appearance</bit-card>
+
+<!-- High elevation -->
+<bit-card elevation="4">High shadow</bit-card>
 ```
 
 :::
@@ -75,34 +75,14 @@ Use the `elevation` prop (0-5) to control shadow depth! The default style works 
   <bit-text>Clean, subtle background with gentle borders. Use elevation prop for shadow depth.</bit-text>
 </bit-card>
 
-<bit-card color="primary">
-  <bit-text slot="header" variant="heading" size="lg">Colored Card</bit-text>
-  <bit-text>Default style with semantic color applied.</bit-text>
-</bit-card>
-```
-
-</ComponentPreview>
-
-### Combining Colors with Elevation
-
-The real power comes from combining colors with elevation levels:
-
-<ComponentPreview center>
-
-```html
-<bit-card elevation="0">
-  <bit-text slot="header" variant="heading" size="lg">No Shadow</bit-text>
-  <bit-text>Flat appearance, subtle background.</bit-text>
+<bit-card variant="solid" color="primary">
+  <bit-text slot="header" variant="heading" size="lg">Solid Card</bit-text>
+  <bit-text>Filled with the theme color background.</bit-text>
 </bit-card>
 
-<bit-card elevation="3" color="primary">
-  <bit-text slot="header" variant="heading" size="lg">Elevated + Colored</bit-text>
-  <bit-text>High shadow with primary color.</bit-text>
-</bit-card>
-
-<bit-card elevation="1" color="secondary">
-  <bit-text slot="header" variant="heading" size="lg">Subtle Shadow + Color</bit-text>
-  <bit-text>Minimal style with secondary color.</bit-text>
+<bit-card variant="flat" color="primary">
+  <bit-text slot="header" variant="heading" size="lg">Flat Card</bit-text>
+  <bit-text>Subtle backdrop tint, low visual weight.</bit-text>
 </bit-card>
 ```
 
@@ -250,7 +230,7 @@ Control shadow depth with explicit elevation levels (0-5).
 
 ### Orientation
 
-Cards support both vertical (default) and horizontal layouts.
+Set `orientation="horizontal"` for a side-by-side media + content layout. The vertical layout is the default and requires no attribute.
 
 <ComponentPreview center>
 
@@ -322,7 +302,7 @@ Prevent interaction and show visual feedback.
 <ComponentPreview center>
 
 ```html
-<bit-card clickable disabled elevation="1">
+<bit-card interactive disabled elevation="1">
   <bit-text slot="header" variant="heading" size="lg">Disabled Card</bit-text>
   <bit-text>This card is disabled and cannot be interacted with.</bit-text>
   <div slot="actions">
@@ -350,45 +330,19 @@ Show an animated loading indicator while content is being fetched.
 
 ## Interactive Cards
 
-### Hoverable
-
-Add a hover effect that lifts the card and increases shadow on mouse over.
+Set `interactive` to enable hover/active states, keyboard activation (Enter/Space), and typed `activate` events.
 
 <ComponentPreview center>
 
 ```html
-<bit-card hoverable elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Hover Over Me</bit-text>
-  <bit-text>This card responds to hover with a subtle lift animation.</bit-text>
-</bit-card>
-
-<bit-card variant="flat" hoverable elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Flat + Hover</bit-text>
-  <bit-text>Flat variant with hover effect.</bit-text>
-</bit-card>
-```
-
-</ComponentPreview>
-
-### Clickable
-
-Make the entire card clickable with appropriate cursor, keyboard support, and custom events.
-
-<ComponentPreview center>
-
-```html
-<bit-card clickable hoverable elevation="2">
-  <bit-text slot="header" variant="heading" size="lg">Click Me</bit-text>
-  <bit-text
-    >This card is clickable, supports keyboard navigation (Enter/Space), and emits both 'click' and 'cardclick'
-    events.</bit-text
-  >
+<bit-card interactive elevation="2">
+  <bit-text slot="header" variant="heading" size="lg">Activate Me</bit-text>
+  <bit-text> This card supports keyboard activation and emits an 'activate' event with trigger metadata. </bit-text>
 </bit-card>
 
 <script>
-  document.querySelector('bit-card[clickable]')?.addEventListener('cardclick', (e) => {
-    console.log('Card clicked!', e.detail);
-    // detail includes: { originalEvent, variant, color }
+  document.querySelector('bit-card[interactive]')?.addEventListener('activate', (e) => {
+    console.log('Card activated', e.detail.trigger, e.detail.originalEvent);
   });
 </script>
 ```
@@ -430,7 +384,7 @@ Make the entire card clickable with appropriate cursor, keyboard support, and cu
 <ComponentPreview center>
 
 ```html
-<bit-card elevation="2" hoverable clickable padding="none" style="max-width: 280px">
+<bit-card elevation="2" interactive padding="none" style="max-width: 280px">
   <div
     slot="media"
     style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
@@ -502,7 +456,7 @@ Perfect for compact layouts and list views:
 
 ```html
 <div style="display: flex; flex-direction: column; gap: var(--size-3); max-width: 700px;">
-  <bit-card orientation="horizontal" variant="flat" elevation="1" hoverable clickable>
+  <bit-card orientation="horizontal" variant="flat" elevation="1" interactive>
     <div
       slot="media"
       style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
@@ -516,7 +470,7 @@ Perfect for compact layouts and list views:
     </div>
   </bit-card>
 
-  <bit-card orientation="horizontal" variant="flat" elevation="1" hoverable clickable>
+  <bit-card orientation="horizontal" variant="flat" elevation="1" interactive>
     <div
       slot="media"
       style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
@@ -534,21 +488,40 @@ Perfect for compact layouts and list views:
 
 </ComponentPreview>
 
-## API
+## Guideline Recipe: Bolder Product Card CTA
+
+**Guideline: bolder** — combining solid card elevation with a clear primary button ensures the call-to-action stands out without needing extra visual weight elsewhere.
+
+```html
+<bit-card variant="elevated" elevation="2" style="max-width:320px">
+  <img slot="media" src="/product-thumbnail.jpg" alt="Pro Plan" />
+  <bit-text slot="default" variant="heading" size="md">Pro Plan</bit-text>
+  <bit-text slot="default" variant="body" color="subtle">
+    Unlimited projects, priority support, and advanced analytics.
+  </bit-text>
+  <div slot="actions" style="display:flex;gap:var(--size-2)">
+    <bit-button variant="solid" color="primary" style="flex:1">Upgrade — $12/mo</bit-button>
+    <bit-button variant="ghost">Learn more</bit-button>
+  </div>
+</bit-card>
+```
+
+**Tip:** Use `elevation="2"` + `variant="elevated"` for product/pricing cards so they read as actionable containers.
+
+## API Reference
 
 ### Attributes
 
-| Attribute     | Type                                                                         | Default      | Description                                |
-| ------------- | ---------------------------------------------------------------------------- | ------------ | ------------------------------------------ |
-| `variant`     | `'solid' \| 'flat' \| 'frost'`                                               | `'solid'`    | Visual style variant                       |
-| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'neutral'` | `'neutral'`  | Color theme for the card                   |
-| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                     | `'md'`       | Internal padding size                      |
-| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                     | `undefined`  | Shadow elevation level (0=none, 5=maximum) |
-| `orientation` | `'vertical' \| 'horizontal'`                                                 | `'vertical'` | Card layout direction                      |
-| `hoverable`   | `boolean`                                                                    | `false`      | Enable hover effect with lift animation    |
-| `clickable`   | `boolean`                                                                    | `false`      | Make card clickable with keyboard support  |
-| `disabled`    | `boolean`                                                                    | `false`      | Disable card interaction                   |
-| `loading`     | `boolean`                                                                    | `false`      | Show loading state with animated bar       |
+| Attribute     | Type                                                                      | Default | Description                                |
+| ------------- | ------------------------------------------------------------------------- | ------- | ------------------------------------------ |
+| `variant`     | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | —       | Visual style variant                       |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Color theme for the card                   |
+| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | —       | Internal padding size                      |
+| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | —       | Shadow elevation level (0=none, 5=maximum) |
+| `orientation` | `'horizontal'`                                                            | —       | Side-by-side media + content layout        |
+| `interactive` | `boolean`                                                                 | `false` | Enable hover/active states and activation  |
+| `disabled`    | `boolean`                                                                 | `false` | Disable card interaction                   |
+| `loading`     | `boolean`                                                                 | `false` | Show animated loading bar at the top       |
 
 ### Slots
 
@@ -562,24 +535,23 @@ Perfect for compact layouts and list views:
 
 ### Events
 
-| Event       | Detail                                                     | Description                         |
-| ----------- | ---------------------------------------------------------- | ----------------------------------- |
-| `click`     | `{ originalEvent: Event }`                                 | Native click event (when clickable) |
-| `cardclick` | `{ originalEvent: Event, variant: string, color: string }` | Custom event with card details      |
+| Event      | Detail                                                                             | Description                                     |
+| ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `click`    | —                                                                                  | Native browser click (always available)         |
+| `activate` | `{ trigger: 'pointer' \| 'keyboard', originalEvent: MouseEvent \| KeyboardEvent }` | Emitted when an `interactive` card is activated |
 
 ### CSS Custom Properties
 
-| Property              | Default                     | Description          |
-| --------------------- | --------------------------- | -------------------- |
-| `--card-bg`           | `var(--color-contrast-50)`  | Background color     |
-| `--card-color`        | `var(--color-contrast-900)` | Text color           |
-| `--card-border`       | `var(--border)`             | Border width         |
-| `--card-border-color` | `var(--color-contrast-200)` | Border color         |
-| `--card-radius`       | `var(--rounded-lg)`         | Border radius        |
-| `--card-padding`      | `var(--size-4)`             | Internal padding     |
-| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow           |
-| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow   |
-| `--card-gap`          | `var(--size-3)`             | Gap between sections |
+| Property              | Default                     | Description        |
+| --------------------- | --------------------------- | ------------------ |
+| `--card-bg`           | `var(--color-canvas)`       | Background color   |
+| `--card-color`        | `var(--color-contrast-900)` | Text color         |
+| `--card-border`       | `var(--border)`             | Border width       |
+| `--card-border-color` | `var(--color-contrast-300)` | Border color       |
+| `--card-radius`       | `var(--rounded-md)`         | Border radius      |
+| `--card-padding`      | `var(--size-4)`             | Internal padding   |
+| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow         |
+| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow |
 
 ## Customization
 
@@ -606,7 +578,7 @@ Perfect for compact layouts and list views:
     --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   "
-  hoverable>
+  interactive>
   <bit-text slot="header" variant="heading" size="xl">Enhanced Shadow</bit-text>
   <bit-text>Hover to see the custom shadow effect.</bit-text>
 </bit-card>
@@ -614,66 +586,33 @@ Perfect for compact layouts and list views:
 
 ## Accessibility
 
-The card component is built with accessibility in mind:
+The card component follows WCAG 2.1 Level AA standards.
 
-- ✅ **Semantic HTML**: Uses proper structure for content organization
-- ✅ **Keyboard Navigation**: Clickable cards are fully keyboard accessible (Enter/Space)
-- ✅ **ARIA Attributes**: Proper `role="button"`, `aria-disabled`, and `tabindex` management
-- ✅ **Focus Management**: Disabled cards have `tabindex="-1"` and cannot receive focus
-- ✅ **WCAG 2.1 Level AA**: Compliant with color contrast requirements
-- ✅ **Screen Reader Friendly**: Proper content hierarchy with semantic slots
+### `bit-card`
 
-### Keyboard Support
+✅ **Keyboard Navigation**
 
-When a card has the `clickable` attribute:
+- `Enter` / `Space` activate the card when `interactive` is set.
+- `Tab` moves focus to the card.
+- Disabled cards have `tabindex="-1"` and cannot receive focus.
 
-- **Enter** or **Space**: Activates the card
-- **Tab**: Moves focus to the card
-- Disabled cards cannot receive focus
+✅ **Screen Readers**
 
-### Best Practices
+- `role="button"` is applied when `interactive` is set; `aria-disabled` reflects the disabled state.
+- `aria-busy` reflects the loading state.
+- Proper content hierarchy with semantic slots for screen reader users.
 
-1. **Use semantic headings** in the header slot to maintain proper document outline
-2. **Add meaningful alt text** for images in the media slot
-3. **Consider keyboard users** when making cards clickable
-4. **Maintain contrast** when using color variants or custom styling
-5. **Use disabled state** instead of removing clickable cards from the DOM
-6. **Provide loading feedback** with the loading state for async operations
+✅ **Semantic Structure**
 
-## TypeScript
+- Uses semantic HTML for proper content organization.
+- Compliant with WCAG 2.1 Level AA color contrast requirements.
 
-```typescript
-import type { CardProps } from '@vielzeug/buildit/card';
+## Best Practices
 
-const cardProps: CardProps = {
-  variant: 'solid',
-  color: 'primary',
-  padding: 'lg',
-  elevation: '3',
-  orientation: 'horizontal',
-  hoverable: true,
-  clickable: true,
-  disabled: false,
-  loading: false,
-};
-
-// In your component
-const card = document.querySelector('bit-card');
-if (card) {
-  card.setAttribute('variant', 'glass');
-  card.setAttribute('color', 'primary');
-  card.setAttribute('elevation', '4');
-
-  // Listen for cardclick event
-  card.addEventListener('cardclick', (e) => {
-    console.log('Card clicked', e.detail);
-    // e.detail contains: { originalEvent, variant, color }
-  });
-
-  // Programmatically control states
-  card.setAttribute('loading', '');
-  setTimeout(() => {
-    card.removeAttribute('loading');
-  }, 2000);
-}
-```
+1. Use semantic headings in the `header` slot to maintain proper document structure.
+2. Add meaningful `alt` text for images in the `media` slot.
+3. Make a card `interactive` only when the whole card acts as a single action.
+4. If you need inner actions, place buttons/links in the `actions` slot; nested interactive elements do not trigger card activation.
+5. Maintain color contrast when using custom `--card-bg` overrides.
+6. Use `disabled` instead of removing interactive cards from the DOM.
+7. Use the `loading` state to provide visual feedback during async operations.

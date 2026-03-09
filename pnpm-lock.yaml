@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@vielzeug/logit':
-        specifier: ^1.1.2
-        version: 1.1.2
+      '@vielzeug/i18nit':
+        specifier: ^1.2.0
+        version: 1.2.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.6
@@ -81,6 +81,10 @@ importers:
         version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
 
   packages/craftit:
+    dependencies:
+      '@vielzeug/stateit':
+        specifier: workspace:*
+        version: link:../stateit
     devDependencies:
       '@types/node':
         specifier: ^25.3.3
@@ -102,19 +106,35 @@ importers:
         version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
 
   packages/deposit:
+    dependencies:
+      '@vielzeug/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
     devDependencies:
       '@types/node':
         specifier: ^25.3.3
         version: 25.3.3
-      '@vielzeug/logit':
-        specifier: workspace:*
-        version: link:../logit
-      '@vielzeug/toolkit':
-        specifier: workspace:*
-        version: link:../toolkit
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.3.1
+        version: 7.3.1(@types/node@25.3.3)(lightningcss@1.31.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@25.3.3)(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(lightningcss@1.31.1))
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
+
+  packages/eventit:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.3.3
+        version: 25.3.3
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -208,9 +228,6 @@ importers:
       '@types/node':
         specifier: ^25.3.3
         version: 25.3.3
-      '@vielzeug/logit':
-        specifier: workspace:*
-        version: link:../logit
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -225,6 +242,24 @@ importers:
         version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
 
   packages/routeit:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.3.3
+        version: 25.3.3
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.3.1
+        version: 7.3.1(@types/node@25.3.3)(lightningcss@1.31.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@25.3.3)(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(lightningcss@1.31.1))
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
+
+  packages/stateit:
     devDependencies:
       '@types/node':
         specifier: ^25.3.3
@@ -300,6 +335,24 @@ importers:
         version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
 
   packages/wireit:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.3.3
+        version: 25.3.3
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.3.1
+        version: 7.3.1(@types/node@25.3.3)(lightningcss@1.31.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@25.3.3)(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.3)(lightningcss@1.31.1))
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@25.3.3)(jsdom@28.1.0)(lightningcss@1.31.1)
+
+  packages/workit:
     devDependencies:
       '@types/node':
         specifier: ^25.3.3
@@ -1039,8 +1092,8 @@ packages:
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
 
-  '@vielzeug/logit@1.1.2':
-    resolution: {integrity: sha512-ORUqla8Nr30qrzGTI4mlP0FUOuEEy0VwMnSS64UOzo7LH5mTY6GWzLlxdyUpfE9/fIwrCpQjwuUr/Y+ab1IMUg==}
+  '@vielzeug/i18nit@1.2.0':
+    resolution: {integrity: sha512-IOsMuGt3Hxivc7R7P3Cc58xcsKxW9dGWSivEmqfeeYiLWzFLZmmjibApXtsk0Yo0St5xviDk5jT6eo70ZjkEOA==}
 
   '@vitejs/plugin-vue@6.0.4':
     resolution: {integrity: sha512-uM5iXipgYIn13UUQCZNdWkYk+sysBeA97d5mHsAoAt1u/wpN3+zxOmsVJWosuzX+IMGRzeYUNytztrYznboIkQ==}
@@ -2803,7 +2856,7 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@vielzeug/logit@1.1.2': {}
+  '@vielzeug/i18nit@1.2.0': {}
 
   '@vitejs/plugin-vue@6.0.4(vite@7.3.1(@types/node@25.3.3)(lightningcss@1.31.1))(vue@3.5.29(typescript@5.9.3))':
     dependencies:

@@ -10,8 +10,8 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  * @example
  * ```ts
  * // Single field
- * sort([{ a: 2 }, { a: 1 }], item => item.a);           // [{ a:1 }, { a:2 }]
- * sort([{ a: 2 }, { a: 1 }], item => item.a, 'desc');   // [{ a:2 }, { a:1 }]
+ * sort([{ a: 2 }, { a: 1 }], item => item.a); // [{ a:1 }, { a:2 }]
+ * sort([{ a: 2 }, { a: 1 }], item => item.a, 'desc'); // [{ a:2 }, { a:1 }]
  *
  * // Multi-field
  * sort(users, { name: 'asc', age: 'desc' });
@@ -24,11 +24,15 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  *
  * @throws {TypeError} If the first argument is not an array.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
+// biome-ignore lint/suspicious/noExplicitAny: Selector function can return any comparable type (string, number, Date, etc.)
 export function sort<T>(array: T[], selector: (item: T) => any, direction?: 'asc' | 'desc'): T[];
 export function sort<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
-// biome-ignore lint/suspicious/noExplicitAny: -
-export function sort<T>(array: T[], selectorOrSelectors: ((item: T) => any) | Partial<Record<keyof T, 'asc' | 'desc'>>, direction: 'asc' | 'desc' = 'asc'): T[] {
+export function sort<T>(
+  array: T[],
+  // biome-ignore lint/suspicious/noExplicitAny: implementation overload must accept the union of both overload signatures
+  selectorOrSelectors: ((item: T) => any) | Partial<Record<keyof T, 'asc' | 'desc'>>,
+  direction: 'asc' | 'desc' = 'asc',
+): T[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
   if (typeof selectorOrSelectors === 'function') {
@@ -38,4 +42,3 @@ export function sort<T>(array: T[], selectorOrSelectors: ((item: T) => any) | Pa
 
   return [...array].sort(compareBy(selectorOrSelectors));
 }
-

@@ -1,6 +1,6 @@
 ---
 title: Eventit — Examples
-description: Real-world recipes for eventit typed event bus — app-wide event buses, module communication, analytics, and testing patterns.
+description: Copy-paste ready event bus patterns for modules, React, Vue, Svelte, async workflows, and testing.
 ---
 
 # Eventit Examples
@@ -11,236 +11,213 @@ These are copy-paste ready recipes. See the [Usage Guide](./usage.md) for detail
 
 [[toc]]
 
-## App-Wide Event Bus
+## Module-level bus
 
-Define a single event bus as a singleton module and import it across your app:
+Define a shared bus as a module singleton. Any module can import it to publish or subscribe.
 
 ```ts
-// src/events.ts
-import { eventBus } from '@vielzeug/eventit';
+// src/events/app-bus.ts
+import { createBus } from '@vielzeug/eventit';
 
-export type AppEvents = {
-  // auth
-  userLogin:    { id: string; name: string; role: 'admin' | 'user' };
-  userLogout:   void;
-  // ui
-  toastShow:    { message: string; type: 'info' | 'success' | 'error' };
-  modalOpen:    { id: string };
-  modalClose:   { id: string };
-  // data
-  dataRefresh:  { entity: string };
+type AppEvents = {
+  'user:login':    { userId: string; email: string };
+  'user:logout':   void;
+  'cart:updated':  { items: CartItem[]; total: number };
+  'theme:change':  'light' | 'dark';
 };
 
-export const appBus = eventBus<AppEvents>({
-  onError: (err, event) => console.error(`[appBus] error in "${event}":`, err),
-});
-```
-
-```ts
-// src/auth.ts
-import { appBus } from './events';
-
-export async function login(credentials: Credentials) {
-  const user = await api.login(credentials);
-  appBus.emit('userLogin', { id: user.id, name: user.name, role: user.role });
-}
-```
-
-```ts
-// src/ui/toast.ts
-import { appBus } from './events';
-
-appBus.on('userLogin', ({ name }) => {
-  appBus.emit('toastShow', { message: `Welcome back, ${name}!`, type: 'success' });
-});
-```
-
----
-
-## Module-to-Module Communication
-
-Use eventit to decouple modules without direct imports:
-
-```ts
-// cart module
-type CartEvents = {
-  itemAdded:   { productId: string; quantity: number };
-  itemRemoved: { productId: string };
-  cleared:     void;
-};
-
-const cartBus = eventBus<CartEvents>();
-
-export const cart = {
-  add(productId: string, quantity: number) {
-    // ... update internal state ...
-    cartBus.emit('itemAdded', { productId, quantity });
-  },
-  clear() {
-    // ... clear internal state ...
-    cartBus.emit('cleared');
-  },
-  onItemAdded: (cb: (e: CartEvents['itemAdded']) => void) => cartBus.on('itemAdded', cb),
-  onCleared:   (cb: () => void) => cartBus.on('cleared', cb),
-};
-```
-
-```ts
-// analytics module — no import of cart internals
-cart.onItemAdded(({ productId, quantity }) => {
-  analytics.track('add_to_cart', { productId, quantity });
-});
-```
-
----
-
-## One-Time Initialization
-
-Run setup logic exactly once when a signal fires:
-
-```ts
-type SystemEvents = {
-  dbReady:    void;
-  cacheReady: void;
-};
-
-const systemBus = eventBus<SystemEvents>();
-
-// Queue work until DB is ready
-systemBus.once('dbReady', () => {
-  runMigrations();
-  buildIndexes();
+export const appBus = createBus<AppEvents>({
+  onError: (err, event) => console.error(`[bus] error in "${event}"`, err),
 });
 
-// Later in startup:
-await connectDatabase();
-systemBus.emit('dbReady');  // migrations run, listener removed automatically
-systemBus.emit('dbReady');  // no-op — listener is already gone
+// src/cart/cart-module.ts
+import { appBus } from '../events/app-bus';
+
+appBus.on('user:login', ({ userId }) => loadCart(userId));
+appBus.on('user:logout', clearCart);
 ```
 
----
+## React — component lifecycle
 
-## Typed Analytics
-
-Event maps make analytics calls self-documenting and type-checked:
-
-```ts
-type TrackingEvents = {
-  pageView:      { path: string; referrer?: string };
-  buttonClick:   { label: string; section: string };
-  formSubmit:    { formId: string; valid: boolean };
-  errorOccurred: { code: string; message: string };
-};
-
-const trackingBus = eventBus<TrackingEvents>();
-
-// Generic analytics sink
-trackingBus.on('pageView',      (e) => ga('send', 'pageview', e.path));
-trackingBus.on('buttonClick',   (e) => ga('send', 'event', 'UI', e.section, e.label));
-trackingBus.on('errorOccurred', (e) => sentry.captureMessage(e.message, { extra: e }));
-
-// Typed emit — TypeScript errors if fields are wrong
-trackingBus.emit('pageView', { path: '/checkout' });
-trackingBus.emit('buttonClick', { label: 'Buy Now', section: 'Product' });
-```
-
----
-
-## Testing with testEventBus
-
-```ts
-import { testEventBus } from '@vielzeug/eventit';
-import { describe, expect, it } from 'vitest';
-
-type OrderEvents = {
-  placed:   { orderId: string; total: number };
-  shipped:  { orderId: string; trackingCode: string };
-  canceled: { orderId: string; reason: string };
-};
-
-describe('order flow', () => {
-  it('records all order events', () => {
-    const { bus, emitted, dispose } = testEventBus<OrderEvents>();
-
-    bus.emit('placed',   { orderId: 'O1', total: 49.99 });
-    bus.emit('shipped',  { orderId: 'O1', trackingCode: 'TRK123' });
-
-    expect(emitted.get('placed')).toEqual([{ orderId: 'O1', total: 49.99 }]);
-    expect(emitted.get('shipped')?.[0]?.trackingCode).toBe('TRK123');
-    expect(emitted.has('canceled')).toBe(false);
-
-    dispose();
-  });
-
-  it('still calls listeners', () => {
-    const { bus, dispose } = testEventBus<OrderEvents>();
-    const onPlaced = vi.fn();
-
-    bus.on('placed', onPlaced);
-    bus.emit('placed', { orderId: 'O2', total: 19.99 });
-
-    expect(onPlaced).toHaveBeenCalledWith({ orderId: 'O2', total: 19.99 });
-    dispose();
-  });
-
-  it('reset clears records between assertions', () => {
-    const { bus, emitted, reset, dispose } = testEventBus<OrderEvents>();
-
-    bus.emit('placed', { orderId: 'O3', total: 9.99 });
-    reset(); // clear history — bus and listeners still work
-
-    bus.emit('placed', { orderId: 'O4', total: 29.99 });
-    expect(emitted.get('placed')).toEqual([{ orderId: 'O4', total: 29.99 }]);
-
-    dispose();
-  });
-});
-```
-
----
-
-## React Integration
-
-Use eventit as a cross-component event channel without prop drilling or context:
+Use an `AbortController` to unsubscribe when the component unmounts:
 
 ```tsx
-// src/events.ts
-import { eventBus } from '@vielzeug/eventit';
-
-type UIEvents = {
-  sidebarToggle: void;
-  themeChange:   { theme: 'light' | 'dark' };
-};
-
-export const uiBus = eventBus<UIEvents>();
-```
-
-```tsx
-// Sidebar.tsx
 import { useEffect } from 'react';
-import { uiBus } from '../events';
+import { appBus } from './app-bus';
 
-export function Sidebar() {
-  const [open, setOpen] = useState(false);
-
+function UserGreeting() {
   useEffect(() => {
-    return uiBus.on('sidebarToggle', () => setOpen((v) => !v));
-    // returned unsubscribe is called on unmount
+    const controller = new AbortController();
+
+    appBus.on('user:login', ({ userId }) => {
+      fetchUser(userId).then(setUser);
+    }, controller.signal);
+
+    return () => controller.abort(); // unsubscribes on unmount
   }, []);
 
-  return <aside className={open ? 'open' : 'closed'}>...</aside>;
+  return <div>{user?.name}</div>;
 }
 ```
 
-```tsx
-// Header.tsx
-import { uiBus } from '../events';
+Or use the `using` keyword if your build supports it:
 
-export function Header() {
-  return (
-    <button onClick={() => uiBus.emit('sidebarToggle')}>
-      ☰
-    </button>
-  );
+```tsx
+useEffect(() => {
+  using _cleanup = appBus.on('theme:change', applyTheme);
+  // Note: using currently requires a wrapper to work in useEffect return
+}, []);
+```
+
+## Vue — composable
+
+```ts
+// src/composables/useAppBus.ts
+import { onUnmounted } from 'vue';
+import { appBus } from '../events/app-bus';
+import type { EventKey, Listener } from '@vielzeug/eventit';
+import type { AppEvents } from '../events/app-bus';
+
+export function useAppBus<K extends EventKey<AppEvents>>(
+  event: K,
+  listener: Listener<AppEvents[K]>,
+) {
+  const unsub = appBus.on(event, listener);
+  onUnmounted(unsub);
 }
+
+// In a Vue component
+useAppBus('user:login', ({ userId }) => loadProfile(userId));
+```
+
+## Svelte — store-like reactive pattern
+
+```ts
+// src/stores/theme.ts
+import { writable } from 'svelte/store';
+import { appBus } from '../events/app-bus';
+
+export const theme = writable<'light' | 'dark'>('light');
+
+appBus.on('theme:change', (value) => theme.set(value));
+```
+
+```svelte
+<!-- App.svelte -->
+<script>
+  import { theme } from './stores/theme';
+</script>
+
+<div class={$theme}>...</div>
+```
+
+## Request scoping
+
+Scope a bus to a single request and dispose it on cleanup:
+
+```ts
+async function handleRequest(req: Request): Promise<Response> {
+  using requestBus = createBus<RequestEvents>();
+
+  requestBus.on('data:loaded', (data) => cache.set(req.url, data));
+
+  await processRequest(req, requestBus);
+
+  return buildResponse();
+} // requestBus.dispose() called automatically
+```
+
+## Awaiting a one-time event
+
+Use `wait()` for async coordination between modules:
+
+```ts
+// Module A: waits for auth before doing work
+async function loadDashboard() {
+  const { userId } = await appBus.wait('user:login', AbortSignal.timeout(10_000));
+  const data = await fetchDashboard(userId);
+  renderDashboard(data);
+}
+
+// Module B: triggers the event independently
+function onAuthSuccess(user: User) {
+  appBus.emit('user:login', { userId: user.id, email: user.email });
+}
+```
+
+## Streaming with `events()`
+
+Process an ongoing sequence of events as an async generator:
+
+```ts
+async function watchCart() {
+  const controller = new AbortController();
+
+  // Stop streaming after 30 seconds of inactivity (extend pattern)
+  let timeout = setTimeout(() => controller.abort(), 30_000);
+
+  for await (const { items, total } of appBus.events('cart:updated', controller.signal)) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => controller.abort(), 30_000);
+    renderCart(items, total);
+  }
+}
+```
+
+## Testing with `createTestBus`
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { createTestBus } from '@vielzeug/eventit/test';
+
+type CartEvents = {
+  'item:added':   { id: string; qty: number };
+  'cart:cleared': void;
+};
+
+describe('cart module', () => {
+  it('emits item:added when item is added', () => {
+    using bus = createTestBus<CartEvents>();
+
+    addItemToCart(bus, { id: 'sku-1', qty: 2 });
+
+    expect(bus.emitted('item:added')).toEqual([{ id: 'sku-1', qty: 2 }]);
+  });
+
+  it('emits cart:cleared on reset', () => {
+    using bus = createTestBus<CartEvents>();
+
+    clearCart(bus);
+
+    expect(bus.emitted('cart:cleared')).toHaveLength(1);
+  });
+
+  it('reset() clears emission records without removing listeners', () => {
+    using bus = createTestBus<CartEvents>();
+
+    addItemToCart(bus, { id: 'sku-1', qty: 1 });
+    bus.reset();
+
+    expect(bus.emitted('item:added')).toHaveLength(0);
+  });
+});
+```
+
+## Custom error boundary
+
+Collect errors across an event bus session:
+
+```ts
+const errors: Array<{ event: string; err: unknown }> = [];
+
+const bus = createBus<AppEvents>({
+  onError: (err, event) => errors.push({ event, err }),
+});
+
+// All other listeners for the same emit still run even if one throws
+bus.on('user:login', throwingHandler);
+bus.on('user:login', workingHandler); // still called
+bus.emit('user:login', { userId: '1', email: 'a@example.com' });
+
+console.log(errors); // [{ event: 'user:login', err: Error(...) }]
 ```

@@ -283,6 +283,23 @@ Use the `prefix` and `suffix` slots on `bit-tab-item` to add icons or notificati
 
 ## States
 
+### Lazy Panels
+
+Add `lazy` to a `bit-tab-panel` to defer rendering its slot content until the tab is first activated. Once activated, the content stays rendered even if the tab is later switched away. This is useful for panels containing expensive components or data-fetching logic.
+
+```html
+<bit-tabs value="tab1">
+  <bit-tab-item slot="tabs" value="tab1">Quick</bit-tab-item>
+  <bit-tab-item slot="tabs" value="tab2">Heavy</bit-tab-item>
+
+  <bit-tab-panel value="tab1"><p>Rendered immediately.</p></bit-tab-panel>
+  <bit-tab-panel value="tab2" lazy>
+    <!-- Only rendered after the "Heavy" tab is first clicked -->
+    <my-heavy-component></my-heavy-component>
+  </bit-tab-panel>
+</bit-tabs>
+```
+
 ### Disabled Tabs
 
 Prevent specific tabs from being selected.
@@ -305,79 +322,121 @@ Prevent specific tabs from being selected.
 
 ## Keyboard Navigation
 
-| Key | Action |
-|---|---|
-| `ArrowRight` | Move to the next tab (wraps around) |
-| `ArrowLeft` | Move to the previous tab (wraps around) |
-| `Home` | Jump to the first tab |
-| `End` | Jump to the last tab |
+| Key          | Action                                  |
+| ------------ | --------------------------------------- |
+| `ArrowRight` | Move to the next tab (wraps around)     |
+| `ArrowLeft`  | Move to the previous tab (wraps around) |
+| `Home`       | Jump to the first tab                   |
+| `End`        | Jump to the last tab                    |
 
 Disabled tabs are skipped during keyboard navigation.
 
-## Events
+## Guideline Recipe: Bolder Active Tab as Section Anchor
 
-```js
-const tabs = document.querySelector('bit-tabs');
+**Guideline: bolder** — using the `solid` or `underline` variant gives the active tab strong visual weight, making the selected section unmistakable even in dense UIs.
 
-tabs.addEventListener('change', (e) => {
-  console.log('Active tab:', e.detail.value);
-});
+```html
+<bit-tabs value="activity" variant="underline" color="primary">
+  <bit-tab-item value="overview">Overview</bit-tab-item>
+  <bit-tab-item value="activity">Activity</bit-tab-item>
+  <bit-tab-item value="settings">Settings</bit-tab-item>
+
+  <bit-tab-panel value="overview">Project summary goes here.</bit-tab-panel>
+  <bit-tab-panel value="activity">Recent activity feed goes here.</bit-tab-panel>
+  <bit-tab-panel value="settings">Project settings form goes here.</bit-tab-panel>
+</bit-tabs>
 ```
+
+**Tip:** For long pages, use `variant="underline"` rather than `"solid"` to avoid a heavy visual anchor competing with content below the tab row.
 
 ## API Reference
 
 ### `bit-tabs` Attributes
 
-| Attribute | Type | Default | Description |
-|---|---|---|---|
-| `value` | `string` | — | Value of the currently selected tab |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'` | `'solid'` | Visual style of the tab bar |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Size applied to all tab items |
-| `color` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | — | Theme color propagated to all tab items |
+| Attribute | Type                                                                      | Default   | Description                             |
+| --------- | ------------------------------------------------------------------------- | --------- | --------------------------------------- |
+| `value`   | `string`                                                                  | —         | Value of the currently selected tab     |
+| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'` | Visual style of the tab bar             |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Size applied to all tab items           |
+| `color`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Theme color propagated to all tab items |
 
 ### `bit-tabs` Events
 
-| Event | Detail | Description |
-|---|---|---|
+| Event    | Detail              | Description                       |
+| -------- | ------------------- | --------------------------------- |
 | `change` | `{ value: string }` | Fired when the active tab changes |
 
 ### `bit-tabs` Slots
 
-| Slot | Description |
-|---|---|
-| `tabs` | Place `bit-tab-item` elements here |
+| Slot      | Description                         |
+| --------- | ----------------------------------- |
+| `tabs`    | Place `bit-tab-item` elements here  |
 | (default) | Place `bit-tab-panel` elements here |
 
 ### `bit-tab-item` Attributes
 
-| Attribute | Type | Default | Description |
-|---|---|---|---|
-| `value` | `string` | — | **Required.** Must match the corresponding `bit-tab-panel` value |
-| `active` | `boolean` | `false` | Whether this tab is selected (managed by `bit-tabs`) |
-| `disabled` | `boolean` | `false` | Prevents the tab from being selected |
-| `size` | `'sm' \| 'md' \| 'lg'` | inherited | Inherited from parent `bit-tabs` |
-| `variant` | `string` | inherited | Inherited from parent `bit-tabs` |
-| `color` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `bit-tabs` |
+| Attribute  | Type                                                                      | Default   | Description                                                      |
+| ---------- | ------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------- |
+| `value`    | `string`                                                                  | —         | **Required.** Must match the corresponding `bit-tab-panel` value |
+| `active`   | `boolean`                                                                 | `false`   | Whether this tab is selected (managed by `bit-tabs`)             |
+| `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                             |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | inherited | Inherited from parent `bit-tabs`                                 |
+| `variant`  | `string`                                                                  | inherited | Inherited from parent `bit-tabs`                                 |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `bit-tabs`                                 |
 
 ### `bit-tab-item` Slots
 
-| Slot | Description |
-|---|---|
-| `prefix` | Icon or content before the label |
-| (default) | Tab label text |
-| `suffix` | Badge or count after the label |
+| Slot      | Description                      |
+| --------- | -------------------------------- |
+| `prefix`  | Icon or content before the label |
+| (default) | Tab label text                   |
+| `suffix`  | Badge or count after the label   |
 
 ### `bit-tab-panel` Attributes
 
-| Attribute | Type | Default | Description |
-|---|---|---|---|
-| `value` | `string` | — | **Required.** Must match the corresponding `bit-tab-item` value |
-| `active` | `boolean` | `false` | Whether this panel is visible (managed by `bit-tabs`) |
+| Attribute | Type      | Default | Description                                                     |
+| --------- | --------- | ------- | --------------------------------------------------------------- |
+| `value`   | `string`  | —       | **Required.** Must match the corresponding `bit-tab-item` value |
+| `active`  | `boolean` | `false` | Whether this panel is visible (managed by `bit-tabs`)           |
+| `lazy`    | `boolean` | `false` | Defer rendering slot content until the panel is first activated |
 
 ### CSS Custom Properties
 
-| Property | Default | Description |
-|---|---|---|
-| `--tabs-transition` | `var(--transition-normal)` | Transition speed for tab hover states |
-| `--tabs-radius` | `var(--rounded-md)` | Border radius of the tab bar container |
-| `--tab-panel-padding` | `var(--size-4)` | Padding inside each tab panel |
+| Property              | Default                    | Description                            |
+| --------------------- | -------------------------- | -------------------------------------- |
+| `--tabs-transition`   | `var(--transition-normal)` | Transition speed for tab hover states  |
+| `--tabs-radius`       | `var(--rounded-md)`        | Border radius of the tab bar container |
+| `--tab-panel-padding` | `var(--size-4)`            | Padding inside each tab panel          |
+
+## Accessibility
+
+The tabs component follows the WAI-ARIA Tabs Pattern best practices.
+
+### `bit-tabs`
+
+✅ **Keyboard Navigation**
+
+- `ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last.
+- Disabled tabs are skipped during keyboard navigation.
+
+✅ **Screen Readers**
+
+- The tab list has `role="tablist"`.
+- Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel.
+- Each panel has `role="tabpanel"` with `aria-labelledby` pointing to its tab.
+- Disabled tabs have `aria-disabled="true"`.
+
+## Best Practices
+
+**Do:**
+
+- Keep tab labels short and descriptive (ideally 1–3 words).
+- Always set a default `value` on `bit-tabs` so a tab is active on first render.
+- Use the `prefix` and `suffix` slots on `bit-tab-item` to add icons or notification counts.
+- Use `variant="bordered"` or `variant="flat"` when tabs need to feel visually connected to the panel content below them.
+
+**Don't:**
+
+- Use more than 5–7 tabs — consider a sidebar navigation for larger sets of sections.
+- Use tabs to represent sequential steps; use a stepper component for linear flows.
+- Nest tabs inside tabs — it creates confusing navigation hierarchies.

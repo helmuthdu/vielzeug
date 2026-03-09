@@ -35,10 +35,16 @@ yarn add @vielzeug/toolkit
 import { chunk, group, keyBy, select, toggle, debounce, retry, merge, is } from '@vielzeug/toolkit';
 
 // Arrays
-chunk([1, 2, 3, 4, 5], 2);           // [[1,2],[3,4],[5]]
-group([{type:'a'},{type:'b'},{type:'a'}], x => x.type);
+chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
+group([{ type: 'a' }, { type: 'b' }, { type: 'a' }], (x) => x.type);
 // { a: [...], b: [...] }
-keyBy([{id:1,name:'Alice'},{id:2,name:'Bob'}], 'id');
+keyBy(
+  [
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+  ],
+  'id',
+);
 // { '1': {id:1,name:'Alice'}, '2': {id:2,name:'Bob'} }
 
 // Functions
@@ -52,8 +58,8 @@ const merged = merge('deep', { a: { x: 1 } }, { a: { y: 2 } });
 // { a: { x: 1, y: 2 } }
 
 // Type guards
-is.string('hello');   // true
-is.nil(null);         // true
+is.string('hello'); // true
+is.nil(null); // true
 ```
 
 ## Features
@@ -69,8 +75,8 @@ is.nil(null);         // true
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Category overview with common patterns |
-| [API Reference](./api.md) | Complete function signatures by category |
-| [Examples](./examples/array.md) | Real-world utility recipes |
+|                                 |                                          |
+| ------------------------------- | ---------------------------------------- |
+| [Usage Guide](./usage.md)       | Category overview with common patterns   |
+| [API Reference](./api.md)       | Complete function signatures by category |
+| [Examples](./examples/array.md) | Real-world utility recipes               |

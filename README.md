@@ -336,16 +336,16 @@ yarn add @vielzeug/formit @vielzeug/fetchit
 
 ```tsx
 import { createForm } from '@vielzeug/formit';
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createHttp, createQuery } from '@vielzeug/fetchit';
 import { Logit } from '@vielzeug/logit';
 
 // Setup HTTP client
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://api.example.com',
 });
 
 // Setup query client for caching
-const queryClient = createQueryClient({
+const queryClient = createQuery({
   staleTime: 5000,
 });
 

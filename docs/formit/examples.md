@@ -1,13 +1,11 @@
 ---
 title: Formit — Examples
-description: Real-world form patterns and framework integrations for Formit.
+description: Practical Formit examples for login, registration, multi-step forms, and framework integrations.
 ---
 
-# Formit Examples
+## Formit Examples
 
-::: tip
-These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
-:::
+[[toc]]
 
 [[toc]]
 
@@ -23,11 +21,11 @@ Complete examples showing how to integrate Formit with different frameworks usin
 
 ```tsx [React Hook]
 import { useEffect, useState } from 'react';
-import { createForm, type FormInit } from '@vielzeug/formit';
+import { createForm, type FormOptions } from '@vielzeug/formit';
 
-function useForm(init: FormInit) {
+function useForm(init: FormOptions) {
   const [form] = useState(() => createForm(init));
-  const [state, setState] = useState(form.getState());
+  const [state, setState] = useState(form.state);
 
   useEffect(() => form.subscribe(setState), [form]);
 
@@ -37,7 +35,7 @@ function useForm(init: FormInit) {
 // Usage in component
 function LoginForm() {
   const { form, state } = useForm({
-    values: {
+    defaultValues: {
       email: '',
       password: '',
     },
@@ -81,11 +79,11 @@ function LoginForm() {
 ```typescript [Vue Composable]
 // composables/useForm.ts
 import { ref, onMounted, onUnmounted } from 'vue';
-import { createForm, type FormInit } from '@vielzeug/formit';
+import { createForm, type FormOptions } from '@vielzeug/formit';
 
-export function useForm(init: FormInit) {
+export function useForm(init: FormOptions) {
   const form = createForm(init);
-  const state = ref(form.getState());
+  const state = ref(form.state);
   let unsubscribe;
 
   onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
@@ -101,7 +99,7 @@ export function useForm(init: FormInit) {
 import { useForm } from '@/composables/useForm';
 
 const { form, state } = useForm({
-  values: {
+  defaultValues: {
     email: '',
     password: '',
   },
@@ -153,7 +151,7 @@ import { writable } from 'svelte/store';
 import { onMount, onDestroy } from 'svelte';
 
 const form = createForm({
-  values: {
+  defaultValues: {
     email: '',
     password: '',
   },
@@ -163,7 +161,7 @@ const form = createForm({
   },
 });
 
-const state = writable(form.getState());
+const state = writable(form.state);
 let unsubscribe;
 
 onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
@@ -209,10 +207,10 @@ async function handleSubmit() {
 Complete login form with validation and error handling.
 
 ```typescript
-import { createForm, ValidationError } from '@vielzeug/formit';
+import { createForm, FormValidationError } from '@vielzeug/formit';
 
 const loginForm = createForm({
-  values: {
+  defaultValues: {
     email: '',
     password: '',
     rememberMe: false,
@@ -251,7 +249,7 @@ async function handleLogin() {
     console.log('Login successful:', result);
     window.location.href = '/dashboard';
   } catch (error) {
-    if (error instanceof ValidationError) {
+    if (error instanceof FormValidationError) {
       // Validation failed — errors are already set on the form
       console.log('Validation errors:', error.errors); // Record<string, string>
     } else {
@@ -271,7 +269,7 @@ Registration form with async validation and password confirmation.
 import { createForm } from '@vielzeug/formit';
 
 const registrationForm = createForm({
-  values: {
+  defaultValues: {
     username: '',
     email: '',
     password: '',
@@ -299,7 +297,7 @@ const registrationForm = createForm({
       (v) => (v && !/[0-9]/.test(String(v)) ? 'Must contain a number' : undefined),
     ],
   },
-  validate: (values) => {
+  validator: (values) => {
     const errors: Record<string, string> = {};
     if (values['password'] !== values['confirmPassword']) {
       errors['confirmPassword'] = 'Passwords must match';
@@ -329,7 +327,7 @@ Form with file upload and validation.
 import { createForm, toFormData } from '@vielzeug/formit';
 
 const contactForm = createForm({
-  values: {
+  defaultValues: {
     name: '',
     email: '',
     subject: '',
@@ -370,7 +368,7 @@ async function handleSubmit() {
     // Use toFormData to include the file attachment
     const response = await fetch('/api/contact', {
       method: 'POST',
-      body: toFormData(values),
+      body: form.toFormData(),
     });
     return response.json();
   });
@@ -385,7 +383,7 @@ Multi-step form with step-by-step validation.
 import { createForm } from '@vielzeug/formit';
 
 const wizardForm = createForm({
-  values: {
+  defaultValues: {
     // Step 1: Personal Info
     firstName: '',
     lastName: '',
@@ -435,7 +433,7 @@ let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const errors = await wizardForm.validateAll({ fields: steps[currentStep].fields });
+  const errors = await wizardForm.validate({ fields: steps[currentStep].fields });
   return Object.keys(errors).length === 0;
 }
 
@@ -482,7 +480,7 @@ type TeamMember = {
 };
 
 const dynamicForm = createForm({
-  values: {
+  defaultValues: {
     teamName: '',
     members: [] as TeamMember[],
   },
@@ -500,7 +498,10 @@ function addMember() {
 // Remove a team member
 function removeMember(index: number) {
   const members = dynamicForm.get<TeamMember[]>('members') ?? [];
-  dynamicForm.set('members', members.filter((_, i) => i !== index));
+  dynamicForm.set(
+    'members',
+    members.filter((_, i) => i !== index),
+  );
 }
 
 // Update a team member
@@ -532,7 +533,7 @@ Search form with debounced API calls.
 import { createForm } from '@vielzeug/formit';
 
 const searchForm = createForm({
-  values: {
+  defaultValues: {
     query: '',
     category: 'all',
     sortBy: 'relevance',
@@ -557,9 +558,7 @@ searchForm.subscribe(() => {
       const category = searchForm.get('category');
       const sortBy = searchForm.get('sortBy');
 
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&category=${category}&sort=${sortBy}`,
-      );
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&category=${category}&sort=${sortBy}`);
 
       const results = await response.json();
       updateResultsUI(results);
@@ -582,7 +581,7 @@ Form with fields that show/hide based on other field values.
 import { createForm } from '@vielzeug/formit';
 
 const profileForm = createForm({
-  values: {
+  defaultValues: {
     accountType: 'personal' as 'personal' | 'business',
     name: '',
     email: '',
@@ -682,7 +681,7 @@ form.subscribe(setState);
   name="email"
   value={form.get('email')}
   onChange={(e) => form.set('email', e.target.value)}
-  onBlur={() => form.setTouched('email')}
+  onBlur={() => form.touch('email')}
 />
 ```
 
@@ -693,7 +692,7 @@ form.subscribe(setState);
 try {
   await form.submit(onSubmit);
 } catch (error) {
-  if (error instanceof ValidationError) {
+  if (error instanceof FormValidationError) {
     for (const [field, message] of Object.entries(error.errors)) {
       console.log(`${field}: ${message}`);
     }
@@ -707,24 +706,37 @@ try {
 
 ```tsx
 // ✅ Good – only show after user interaction
-{state.touched.has('email') && state.errors['email'] && (
-  <span>{state.errors['email']}</span>
-)}
+{
+  form.field('email').touched && state.errors['email'] && <span>{state.errors['email']}</span>;
+}
+// or use bind() which exposes a live `touched` getter:
+const binding = form.bind('email');
+binding.touched; // read fresh each render
 
 // ❌ Bad – shows immediately on page load
-{state.errors['email'] && <span>{state.errors['email']}</span>}
+{
+  state.errors['email'] && <span>{state.errors['email']}</span>;
+}
 ```
 
 ### 5. Use `isValid` / `isDirty` / `isTouched` Flags
 
 ```typescript
 // ✅ Good – use computed flags
-if (state.isValid) { /* ... */ }
-if (state.isDirty) { /* warn before leaving */ }
+if (state.isValid) {
+  /* ... */
+}
+if (state.isDirty) {
+  /* warn before leaving */
+}
 
 // ❌ Verbose – manual checks
-if (Object.keys(state.errors).length === 0) { /* ... */ }
-if (state.dirty.size > 0) { /* ... */ }
+if (Object.keys(state.errors).length === 0) {
+  /* ... */
+}
+if (state.dirty.size > 0) {
+  /* ... */
+}
 ```
 
 ## See Also

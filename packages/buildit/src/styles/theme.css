@@ -292,6 +292,29 @@
 }
 
 /* ========================================
+   Reduced Motion
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-75: 0ms;
+    --duration-100: 0ms;
+    --duration-150: 0ms;
+    --duration-200: 0ms;
+    --duration-300: 0ms;
+    --duration-500: 0ms;
+    --duration-700: 0ms;
+    --duration-1000: 0ms;
+    --transition-fast: none;
+    --transition-normal: none;
+    --transition-slow: none;
+    --transition-slower: none;
+    --transition-spring: none;
+    --transition-all: none;
+  }
+}
+
+/* ========================================
    Dark Mode (prefers-color-scheme)
    ======================================== */
 

@@ -1,4 +1,15 @@
+---
+title: Buildit — Theming & Customization
+description: Design tokens, dark mode, CSS custom properties, and theme variants for Buildit.
+---
+
 # Theming & Customization
+
+::: tip New to Buildit?
+Start with the [Usage Guide](./usage.md) to learn the basics of importing and using components before diving into theming.
+:::
+
+[[toc]]
 
 Buildit is designed to be highly customizable through CSS Custom Properties (CSS variables). All design tokens are defined in a central theme file that you can reference and override.
 
@@ -248,8 +259,10 @@ When customizing colors, ensure proper contrast ratios:
 }
 ```
 
-## Related Resources
+## Next Steps
 
-- [API Reference](./api.md) - Complete list of CSS custom properties
-- [Components](./components/button.md) - Component-specific theming options
-- [Examples](./examples.md) - Real-world theming examples
+::: tip Continue Learning
+- [API Reference](./api.md) — Complete list of CSS custom properties per component
+- [Components](./components/button.md) — Component-specific theming options
+- [Examples](./examples.md) — Real-world theming examples and recipes
+:::

@@ -1,21 +1,19 @@
 # Grid Component
 
-A flexible and powerful CSS Grid layout component with explicit responsive controls, layout presets, and fine-grained item placement. Perfect for creating dashboard layouts, card grids, photo galleries, and complex page structures with minimal code.
+A flexible CSS Grid layout component with element-width responsive columns, named grid areas, and fine-grained item placement. Perfect for dashboards, card grids, photo galleries, and complex page layouts.
 
 ## Features
 
-- 📐 **12-Column System**: Standard 1-12 column layouts plus auto-fit mode
-- 📱 **Container Query Responsive**: Responds to container width, not viewport (works in previews, sidebars, modals)
-- 🎯 **Explicit Breakpoint Control**: Control columns at sm, md, lg, and xl container widths
+- 📐 **12-Column System**: Fixed 1–12 column layouts plus auto-fit mode
+- 📱 **Element-Width Responsive**: Breakpoints respond to the element's own width via ResizeObserver — works correctly inside sidebars, modals, and nested layouts
+- 🎯 **Explicit Breakpoint Control**: Set columns at sm, md, lg, and xl widths with dedicated attributes
 - 📏 **Row Support**: Define explicit row layouts for dashboard grids
-- 🎯 **Layout Presets**: Sidebar, App-Shell, Nav-Drawer, and Bento layouts
+- 🗺️ **Named Grid Areas**: Use `areas` to define named regions directly on the grid
 - 🔄 **Flow Control**: Row, column, and dense packing modes
-- 📏 **7 Gap Sizes**: From none to 2xl with separate row/column gap support
-- 🎯 **Alignment Control**: Align and justify items with CSS Grid properties
-- 🎨 **Grid Item Component**: Fine-grained control with `bit-grid-item` for spans and placement
-- ♿ **Fully Accessible**: Maintains semantic structure and keyboard navigation
-- 🔧 **Customizable**: CSS custom properties for complete control
-- ⚡ **Zero JavaScript**: Pure CSS Grid implementation for maximum performance
+- 📊 **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
+- 🧲 **Alignment Control**: Align and justify items with CSS Grid properties
+- 🎨 **Grid Item Component**: Precise placement with `bit-grid-item` using spans or raw CSS grid shorthand
+- 🔧 **Customizable**: CSS custom properties available as fallbacks
 
 ## Source Code
 
@@ -65,7 +63,7 @@ Create grids with a fixed number of columns from 1 to 12.
 
 ### Responsive Columns with Breakpoints
 
-Use `cols-sm`, `cols-md`, `cols-lg`, and `cols-xl` attributes for explicit responsive control.
+Use `cols-sm`, `cols-md`, `cols-lg`, `cols-xl`, and `cols-2xl` attributes for explicit responsive control.
 
 <ComponentPreview center vertical>
 
@@ -95,15 +93,16 @@ Try resizing your browser window or use the viewport controls above to see the g
 
 ### Breakpoint Reference
 
-The grid uses **CSS Container Queries** to respond to its container's width, not the browser viewport. This means it works perfectly in ComponentPreview, sidebars, modals, and any constrained space.
+Breakpoints respond to the **element's own width** via `ResizeObserver`, so they work correctly inside sidebars, modals, ComponentPreviews, and any constrained space.
 
-| Breakpoint  | Attribute     | Min Container Width | Example   |
-| ----------- | ------------- | ------------------- | --------- |
-| Mobile      | `cols="1"`    | Default             | 1 column  |
-| Small       | `cols-sm="2"` | ≥640px              | 2 columns |
-| Medium      | `cols-md="3"` | ≥768px              | 3 columns |
-| Large       | `cols-lg="4"` | ≥1024px             | 4 columns |
-| Extra Large | `cols-xl="6"` | ≥1280px             | 6 columns |
+| Breakpoint  | Attribute      | Min Element Width | Example   |
+| ----------- | -------------- | ----------------- | --------- |
+| Mobile      | `cols="1"`     | Default           | 1 column  |
+| Small       | `cols-sm="2"`  | ≥640px            | 2 columns |
+| Medium      | `cols-md="3"`  | ≥768px            | 3 columns |
+| Large       | `cols-lg="4"`  | ≥1024px           | 4 columns |
+| Extra Large | `cols-xl="6"`  | ≥1280px           | 6 columns |
+| 2X Large    | `cols-2xl="8"` | ≥1536px           | 8 columns |
 
 ## Row Layouts
 
@@ -119,143 +118,6 @@ Define explicit row counts for dashboard-style layouts.
   <bit-card padding="md"><bit-text>4</bit-text></bit-card>
   <bit-card padding="md"><bit-text>5</bit-text></bit-card>
   <bit-card padding="md"><bit-text>6</bit-text></bit-card>
-</bit-grid>
-```
-
-</ComponentPreview>
-
-## Layout Presets
-
-Pre-built layouts for common page structures.
-
-### Sidebar Layout
-
-250px fixed sidebar with flexible main content.
-
-<ComponentPreview center vertical>
-
-```html
-<bit-grid layout="sidebar" gap="md" style="width: 100%; min-height: 300px;">
-  <bit-box rounded="none" color="warning" elevation="0" padding="lg" as="aside">
-    <bit-text variant="heading" size="md">Sidebar</bit-text>
-  </bit-box>
-  <bit-box rounded="none" elevation="0" padding="lg" as="main">
-    <bit-text variant="heading" size="lg">Main Content</bit-text>
-  </bit-box>
-</bit-grid>
-```
-
-</ComponentPreview>
-
-### Right Sidebar Layout
-
-Main content first, sidebar on the right.
-
-<ComponentPreview center vertical>
-
-```html
-<bit-grid layout="sidebar-right" gap="md" style="width: 100%; min-height: 300px;">
-  <bit-box rounded="none" elevation="0" padding="lg" as="main">
-    <bit-text variant="heading" size="lg">Main Content</bit-text>
-  </bit-box>
-  <bit-box rounded="none" color="warning" elevation="0" padding="lg" as="aside">
-    <bit-text variant="heading" size="md">Sidebar</bit-text>
-  </bit-box>
-</bit-grid>
-```
-
-</ComponentPreview>
-
-## App Shell Layout (Navigation Rail)
-
-App shell with navigation rail on desktop. The rail spans the full height on the left, with the header and content offset to the right.
-
-<ComponentPreview center>
-
-```html
-<bit-grid layout="app-shell" gap="none" style="width: 100%; height: 500px;">
-  <bit-box
-    rounded="none"
-    elevation="0"
-    color="warning"
-    padding="lg"
-    as="nav"
-    style="display: flex; flex-direction: column; gap: var(--size-2); align-items: center;">
-    <bit-text size="xl">🏠</bit-text>
-    <bit-text size="xl">📊</bit-text>
-    <bit-text size="xl">⚙️</bit-text>
-  </bit-box>
-  <bit-box rounded="none" elevation="0" color="error" padding="lg" as="header">
-    <bit-text variant="heading" size="lg">App Title</bit-text>
-  </bit-box>
-  <bit-box rounded="none" elevation="0" padding="xl" as="main">
-    <bit-text variant="heading" size="xl">Main Content Area</bit-text>
-    <bit-text>On mobile, implement bottom navigation or modal drawer for access to nav items.</bit-text>
-  </bit-box>
-</bit-grid>
-```
-
-</ComponentPreview>
-
-## Navigation Drawer Layout
-
-Standard navigation drawer pattern with a full-width header and permanent side drawer. On mobile, the navigation stacks below the header as a scrollable section, keeping it accessible.
-
-<ComponentPreview center>
-
-```html
-<bit-grid layout="nav-content" gap="none" style="width: 100%; height: 500px;">
-  <bit-box rounded="none" elevation="0" color="warning" padding="lg" as="nav">
-    <bit-text variant="heading" size="md">Navigation</bit-text>
-    <bit-text size="sm">Dashboard</bit-text>
-    <bit-text size="sm">Projects</bit-text>
-    <bit-text size="sm">Team</bit-text>
-    <bit-text size="sm">Reports</bit-text>
-    <bit-text size="sm">Settings</bit-text>
-  </bit-box>
-  <bit-box rounded="none" elevation="0" color="error" padding="lg" as="header">
-    <bit-text variant="heading" size="lg">App</bit-text>
-  </bit-box>
-  <bit-box rounded="none" elevation="0" padding="xl" as="main" style="overflow: auto;">
-    <bit-text variant="heading" size="2xl">Dashboard</bit-text>
-    <bit-text>Main content</bit-text>
-  </bit-box>
-</bit-grid>
-```
-
-</ComponentPreview>
-
-### Bento Grid Layout
-
-Asymmetric magazine-style layout perfect for showcasing content with varying importance. The bento grid creates a visually interesting layout with a large hero area and smaller feature cards.
-
-<ComponentPreview center>
-
-```html
-<bit-grid layout="bento" gap="md" style="width: 100%; min-height: 500px;">
-  <bit-box padding="lg" color="primary">
-    <bit-text variant="heading" size="2xl">Hero</bit-text>
-    <bit-text>Large featured content area</bit-text>
-  </bit-box>
-  <bit-box padding="lg" color="info">
-    <bit-text variant="heading" size="lg">Featured</bit-text>
-    <bit-text>Secondary feature</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary">
-    <bit-text variant="heading" size="md">Card 1</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary">
-    <bit-text variant="heading" size="md">Card 2</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary">
-    <bit-text variant="heading" size="md">Card 3</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary">
-    <bit-text variant="heading" size="md">Card 4</bit-text>
-  </bit-box>
-  <bit-box padding="lg" color="secondary">
-    <bit-text variant="heading" size="lg">Card 5</bit-text>
-  </bit-box>
 </bit-grid>
 ```
 
@@ -353,11 +215,11 @@ Automatically fill gaps with smaller items that come later.
 
 ```html
 <bit-grid cols="5" flow="row-dense" gap="md" style="width: 100%;">
-  <bit-grid-item colSpan="3">
+  <bit-grid-item col-span="3">
     <bit-card padding="lg" color="primary"><bit-text>Wide (3 cols)</bit-text></bit-card>
   </bit-grid-item>
   <bit-card padding="md"><bit-text>A</bit-text></bit-card>
-  <bit-grid-item colSpan="3">
+  <bit-grid-item col-span="3">
     <bit-card padding="lg" color="secondary"><bit-text>Wide (3 cols)</bit-text></bit-card>
   </bit-grid-item>
   <bit-card padding="md" color="success"><bit-text>B</bit-text></bit-card>
@@ -403,25 +265,32 @@ With `flow="row-dense"`, item B fills the gap after the first wide item, rather 
 
 </ComponentPreview>
 
-## Grid Items with Spans
+## Grid Items
 
-Use `bit-grid-item` for precise control over item placement.
+Use `bit-grid-item` for precise placement and span control within a `bit-grid`.
+
+### Column and Row Spans
+
+`col-span` and `row-span` cover the common case of stretching an item across multiple tracks. Use `"full"` to span all columns or rows.
 
 <ComponentPreview center vertical>
 
 ```html
 <bit-grid cols="6" gap="md" style="width: 100%;">
-  <bit-grid-item colSpan="2">
+  <bit-grid-item col-span="2">
     <bit-card padding="md" color="primary"><bit-text>Spans 2</bit-text></bit-card>
   </bit-grid-item>
-  <bit-grid-item colSpan="4">
+  <bit-grid-item col-span="4">
     <bit-card padding="md" color="secondary"><bit-text>Spans 4</bit-text></bit-card>
   </bit-grid-item>
-  <bit-grid-item colSpan="3">
+  <bit-grid-item col-span="3">
     <bit-card padding="md" color="success"><bit-text>Spans 3</bit-text></bit-card>
   </bit-grid-item>
-  <bit-grid-item colSpan="3">
+  <bit-grid-item col-span="3">
     <bit-card padding="md" color="warning"><bit-text>Spans 3</bit-text></bit-card>
+  </bit-grid-item>
+  <bit-grid-item col-span="full">
+    <bit-card padding="md" color="info"><bit-text>Full width</bit-text></bit-card>
   </bit-grid-item>
 </bit-grid>
 ```
@@ -430,13 +299,15 @@ Use `bit-grid-item` for precise control over item placement.
 
 ### Explicit Placement
 
+Use the `col` and `row` attributes to set raw CSS `grid-column` / `grid-row` values. This accepts any valid CSS shorthand: `"2 / 5"`, `"span 3"`, `"1 / -1"`, etc.
+
 <ComponentPreview center vertical>
 
 ```html
 <bit-grid cols="4" rows="3" gap="md" style="width: 100%;">
-  <bit-grid-item colStart="1" colEnd="3" rowStart="1" rowEnd="3">
+  <bit-grid-item col="1 / 3" row="1 / 3">
     <bit-card padding="lg" color="primary"
-      ><bit-text>Large Item<br />2x2</bit-text></bit-card
+      ><bit-text>2×2 item<br />(col 1–2, row 1–2)</bit-text></bit-card
     >
   </bit-grid-item>
   <bit-card padding="md"><bit-text>A</bit-text></bit-card>
@@ -448,14 +319,99 @@ Use `bit-grid-item` for precise control over item placement.
 
 </ComponentPreview>
 
-## Responsive Auto-fit Mode
+### Item Alignment
 
-Let the grid automatically fit as many columns as possible.
+Use `align` and `justify` on `bit-grid-item` to override the grid's default alignment for a single cell.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-grid responsive gap="md" style="width: 100%; --grid-min-col-width: 200px;">
+<bit-grid cols="3" gap="md" style="width: 100%; height: 160px;">
+  <bit-grid-item align="start" justify="start">
+    <bit-card padding="sm" style="width: 80px;"><bit-text>start</bit-text></bit-card>
+  </bit-grid-item>
+  <bit-grid-item align="center" justify="center">
+    <bit-card padding="sm" style="width: 80px;"><bit-text>center</bit-text></bit-card>
+  </bit-grid-item>
+  <bit-grid-item align="end" justify="end">
+    <bit-card padding="sm" style="width: 80px;"><bit-text>end</bit-text></bit-card>
+  </bit-grid-item>
+</bit-grid>
+```
+
+</ComponentPreview>
+
+## Named Grid Areas
+
+Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `areas-xl`, `areas-2xl`) to define named regions on the grid. The active value is resolved from the element's own width via `ResizeObserver`, identical to how `cols-*` breakpoints work. Children can be placed into regions with `style="grid-area: name"` or via the `col` / `row` attrs on `bit-grid-item`.
+
+### Basic Areas
+
+<ComponentPreview center vertical>
+
+```html
+<bit-grid
+  cols="3"
+  rows="3"
+  areas="'header header header' 'nav main main' 'footer footer footer'"
+  gap="md"
+  style="width: 100%; min-height: 300px;">
+  <bit-box padding="md" color="primary" style="grid-area: header;">
+    <bit-text variant="heading" size="md">Header</bit-text>
+  </bit-box>
+  <bit-box padding="md" color="warning" style="grid-area: nav;">
+    <bit-text variant="heading" size="md">Nav</bit-text>
+  </bit-box>
+  <bit-box padding="md" style="grid-area: main;">
+    <bit-text variant="heading" size="md">Main</bit-text>
+  </bit-box>
+  <bit-box padding="md" color="secondary" style="grid-area: footer;">
+    <bit-text variant="heading" size="md">Footer</bit-text>
+  </bit-box>
+</bit-grid>
+```
+
+</ComponentPreview>
+
+### Responsive Areas
+
+Provide different area templates at each breakpoint. The grid switches between them as the element resizes — a single-column stack on small widths, full page layout on larger ones.
+
+<ComponentPreview center vertical>
+
+```html
+<bit-grid
+  cols="1"
+  cols-md="3"
+  areas="'header' 'nav' 'main' 'footer'"
+  areas-md="'header header header' 'nav main main' 'footer footer footer'"
+  gap="md"
+  style="width: 100%; min-height: 300px;">
+  <bit-box padding="md" color="primary" style="grid-area: header;">
+    <bit-text variant="heading" size="md">Header</bit-text>
+  </bit-box>
+  <bit-box padding="md" color="warning" style="grid-area: nav;">
+    <bit-text variant="heading" size="md">Nav</bit-text>
+  </bit-box>
+  <bit-box padding="md" style="grid-area: main;">
+    <bit-text variant="heading" size="md">Main</bit-text>
+  </bit-box>
+  <bit-box padding="md" color="secondary" style="grid-area: footer;">
+    <bit-text variant="heading" size="md">Footer</bit-text>
+  </bit-box>
+</bit-grid>
+```
+
+</ComponentPreview>
+
+## Responsive Auto-fit Mode
+
+Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `250px`).
+
+<ComponentPreview center vertical>
+
+```html
+<bit-grid responsive min-col-width="180px" gap="md" style="width: 100%;">
   <bit-card padding="md"><bit-text>Item 1</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
@@ -468,52 +424,73 @@ Let the grid automatically fit as many columns as possible.
 </ComponentPreview>
 
 ::: tip Auto-fit vs Fixed Columns
-Use `responsive` for fluid layouts where column count depends on available space. Use `cols` with breakpoint attributes (`cols-sm`, `cols-md`, etc.) for explicit control.
+Use `responsive` for fluid layouts where column count depends on available space. Use `cols` with optional breakpoint attributes (`cols-sm`, `cols-md`, etc.) for explicit control.
 :::
 
-## API
+## Guideline Recipe: Adapt a Responsive Dashboard
+
+**Guideline: adapt** — using breakpoint column attributes makes the same markup reflow from a single-column mobile view to a rich multi-column desktop layout with no JavaScript.
+
+```html
+<bit-grid cols="1" cols-md="2" cols-lg="3" gap="md">
+  <bit-card variant="elevated">Visitors</bit-card>
+  <bit-card variant="elevated">Signups</bit-card>
+  <bit-card variant="elevated">Revenue</bit-card>
+  <bit-card variant="elevated" colspan="1" colspan-lg="2">Conversion funnel</bit-card>
+  <bit-card variant="elevated">Churn rate</bit-card>
+</bit-grid>
+```
+
+**Tip:** Use `colspan` attributes on individual `bit-grid-item` children to let key metrics span more columns at larger breakpoints.
+
+## API Reference
 
 ### Grid Attributes
 
-| Attribute    | Type                                                                      | Default  | Description          |
-| ------------ | ------------------------------------------------------------------------- | -------- | -------------------- |
-| `cols`       | `'1'-'12' \| 'auto'`                                                      | -        | Number of columns    |
-| `cols-sm`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥640px    |
-| `cols-md`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥768px    |
-| `cols-lg`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥1024px   |
-| `cols-xl`    | `'1'-'12' \| 'auto'`                                                      | -        | Columns at ≥1280px   |
-| `rows`       | `'1'-'6' \| 'auto'`                                                       | `'auto'` | Number of rows       |
-| `gap`        | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                 | `'md'`   | Gap between items    |
-| `align`      | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'`                 | -        | Vertical alignment   |
-| `justify`    | `'start' \| 'center' \| 'end' \| 'stretch'`                               | -        | Horizontal alignment |
-| `flow`       | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`                      | `'row'`  | Grid auto flow       |
-| `layout`     | `'sidebar' \| 'sidebar-right' \| 'app-shell' \| 'nav-content' \| 'bento'` | -        | Preset layout        |
-| `responsive` | `boolean`                                                                 | `false`  | Enable auto-fit mode |
+| Attribute       | Type                                                      | Default | Description                                       |
+| --------------- | --------------------------------------------------------- | ------- | ------------------------------------------------- |
+| `cols`          | `'1'–'12' \| 'auto'`                                      | -       | Number of columns                                 |
+| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 640px                |
+| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 768px                |
+| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1024px               |
+| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1280px               |
+| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1536px               |
+| `rows`          | `'1'–'12' \| 'auto'`                                      | -       | Number of explicit rows                           |
+| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`  | Gap between items                                 |
+| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -       | `align-items` for all cells                       |
+| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -       | `justify-items` for all cells                     |
+| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'` | `grid-auto-flow` direction                        |
+| `responsive`    | `boolean`                                                 | `false` | Enable `auto-fit` mode                            |
+| `min-col-width` | `string`                                                  | `250px` | Minimum column width in `responsive` mode         |
+| `areas`         | `string`                                                  | -       | CSS `grid-template-areas` value                   |
+| `areas-sm`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 640px  |
+| `areas-md`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 768px  |
+| `areas-lg`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1024px |
+| `areas-xl`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1280px |
+| `areas-2xl`     | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1536px |
 
 ### Grid Item Attributes
 
-| Attribute  | Type                                        | Default | Description               |
-| ---------- | ------------------------------------------- | ------- | ------------------------- |
-| `colSpan`  | `'1'-'12'`                                  | `'1'`   | Number of columns to span |
-| `rowSpan`  | `'1'-'6'`                                   | `'1'`   | Number of rows to span    |
-| `colStart` | `'1'-'13'`                                  | -       | Column start position     |
-| `colEnd`   | `'1'-'13'`                                  | -       | Column end position       |
-| `rowStart` | `'1'-'7'`                                   | -       | Row start position        |
-| `rowEnd`   | `'1'-'7'`                                   | -       | Row end position          |
-| `align`    | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | Self vertical alignment   |
-| `justify`  | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | Self horizontal alignment |
+| Attribute  | Type                                        | Default | Description                                    |
+| ---------- | ------------------------------------------- | ------- | ---------------------------------------------- |
+| `col-span` | `'1'–'12' \| 'full'`                        | -       | Columns to span; `'full'` = `1 / -1`           |
+| `row-span` | `'1'–'6' \| 'full'`                         | -       | Rows to span; `'full'` = `1 / -1`              |
+| `col`      | `string`                                    | -       | Raw `grid-column` value — overrides `col-span` |
+| `row`      | `string`                                    | -       | Raw `grid-row` value — overrides `row-span`    |
+| `align`    | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `align-self` for this cell                     |
+| `justify`  | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `justify-self` for this cell                   |
 
 ### CSS Custom Properties
 
-| Property               | Default           | Description                        |
-| ---------------------- | ----------------- | ---------------------------------- |
-| `--grid-cols`          | -                 | Custom column template             |
-| `--grid-rows`          | -                 | Custom row template                |
-| `--grid-gap`           | `var(--size-4)`   | Gap between items                  |
-| `--grid-row-gap`       | `var(--grid-gap)` | Row gap specifically               |
-| `--grid-col-gap`       | `var(--grid-gap)` | Column gap specifically            |
-| `--grid-min-col-width` | `250px`           | Min column width (responsive mode) |
-| `--grid-max-col-width` | `1fr`             | Max column width (responsive mode) |
+These are fallback values — attributes take precedence when set.
+
+| Property         | Default           | Description              |
+| ---------------- | ----------------- | ------------------------ |
+| `--grid-cols`    | -                 | Fallback column template |
+| `--grid-rows`    | -                 | Fallback row template    |
+| `--grid-gap`     | `var(--size-4)`   | Fallback gap             |
+| `--grid-row-gap` | `var(--grid-gap)` | Fallback row gap         |
+| `--grid-col-gap` | `var(--grid-gap)` | Fallback column gap      |
 
 ## Examples
 
@@ -544,49 +521,13 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 </ComponentPreview>
 
-### Bento Grid Showcase
-
-<ComponentPreview center>
-
-```html
-<bit-grid layout="bento" gap="lg" style="width: 100%; min-height: 600px;">
-  <bit-card padding="xl" color="primary" elevation="3">
-    <bit-text variant="heading" size="3xl">🎯</bit-text>
-    <bit-text variant="heading" size="xl">Main Feature</bit-text>
-    <bit-text>Large hero section for your most important content</bit-text>
-  </bit-card>
-  <bit-card padding="lg" color="secondary" elevation="2">
-    <bit-text variant="heading" size="lg">✨ Featured</bit-text>
-    <bit-text>Secondary highlight</bit-text>
-  </bit-card>
-  <bit-card padding="md" elevation="1">
-    <bit-text variant="heading" size="md">📊 Stats</bit-text>
-  </bit-card>
-  <bit-card padding="md" elevation="1">
-    <bit-text variant="heading" size="md">📈 Growth</bit-text>
-  </bit-card>
-  <bit-card padding="md" color="success" elevation="1">
-    <bit-text variant="heading" size="md">✅ Tasks</bit-text>
-  </bit-card>
-  <bit-card padding="md" color="warning" elevation="1">
-    <bit-text variant="heading" size="md">⚡ Quick</bit-text>
-  </bit-card>
-  <bit-card padding="lg" color="info" elevation="2">
-    <bit-text variant="heading" size="lg">🎨 Bottom Feature</bit-text>
-    <bit-text>Wide area for additional content</bit-text>
-  </bit-card>
-</bit-grid>
-```
-
-</ComponentPreview>
-
 ### Asymmetric Layout
 
 <ComponentPreview center vertical>
 
 ```html
 <bit-grid cols="4" gap="md" style="width: 100%;">
-  <bit-grid-item colSpan="3">
+  <bit-grid-item col-span="3">
     <bit-card padding="lg" color="primary">
       <bit-text variant="heading" size="lg">Featured Content</bit-text>
       <bit-text>This is the main featured area.</bit-text>
@@ -595,7 +536,7 @@ Use `responsive` for fluid layouts where column count depends on available space
   <bit-card padding="md"><bit-text>Side 1</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
-  <bit-grid-item colSpan="2">
+  <bit-grid-item col-span="2">
     <bit-card padding="md" color="secondary"><bit-text>Spans 2</bit-text></bit-card>
   </bit-grid-item>
 </bit-grid>
@@ -603,21 +544,63 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 </ComponentPreview>
 
+### Bento-style Layout with Named Areas
+
+<ComponentPreview center vertical>
+
+```html
+<bit-grid
+  cols="4"
+  rows="3"
+  areas="'hero hero hero side' 'hero hero hero side' 'a b c d'"
+  gap="md"
+  style="width: 100%; min-height: 400px;">
+  <bit-box padding="xl" color="primary" style="grid-area: hero;">
+    <bit-text variant="heading" size="2xl">🎯 Main Feature</bit-text>
+    <bit-text>Large hero section for your most important content.</bit-text>
+  </bit-box>
+  <bit-box padding="lg" color="secondary" style="grid-area: side;">
+    <bit-text variant="heading" size="lg">✨ Side</bit-text>
+  </bit-box>
+  <bit-box padding="md" style="grid-area: a;"><bit-text variant="heading" size="md">A</bit-text></bit-box>
+  <bit-box padding="md" style="grid-area: b;"><bit-text variant="heading" size="md">B</bit-text></bit-box>
+  <bit-box padding="md" style="grid-area: c;"><bit-text variant="heading" size="md">C</bit-text></bit-box>
+  <bit-box padding="md" style="grid-area: d;"><bit-text variant="heading" size="md">D</bit-text></bit-box>
+</bit-grid>
+```
+
+</ComponentPreview>
+
 ## Accessibility
 
-- ✅ Maintains semantic HTML structure
-- ✅ Preserves document reading order by default
-- ✅ Works with keyboard navigation
-- ✅ Compatible with screen readers
-- ⚠️ Be mindful of visual vs. DOM order when using `flow="dense"` or explicit placement
+The grid component follows WAI-ARIA best practices.
+
+### `bit-grid`
+
+✅ **Semantic Structure**
+
+- Maintains semantic HTML structure and document reading order by default.
+- Grid layout is purely visual — keyboard navigation follows DOM order.
+
+✅ **Screen Readers**
+
+- Compatible with screen readers.
+- Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement.
 
 ::: warning Dense Packing & Accessibility
-When using `flow="row-dense"` or `flow="column-dense"`, items may appear in a different visual order than they exist in the DOM. This can confuse screen reader users and keyboard navigators. Use dense packing only when layout is more important than reading order, or ensure meaningful tab order with `tabindex`.
+When using `flow="row-dense"` or `flow="column-dense"`, items may appear in a different visual order than they exist in the DOM. This can confuse screen reader users and keyboard navigators. Use dense packing only when layout aesthetics outweigh reading order, or restore meaningful order with `tabindex`.
 :::
 
-## Related Components
+## Best Practices
 
-- [Card](/buildit/components/card) - Perfect for grid items
-- [Grid Item](/buildit/components/grid-item) - Fine-grained item control
-- [Button Group](/buildit/components/button-group) - Group actions in grid cells
-- [Text](/buildit/components/text) - Typography for grid content
+**Do:**
+
+- Start mobile-first: set `cols="1"` as the base and scale up with `cols-sm`, `cols-md`, etc.
+- Use `responsive` mode for content-driven layouts where column count should adjust automatically to available space.
+- Use `bit-grid-item` with `col-span` for featured items that need to span multiple columns.
+- Use `areas` with named regions for complex or asymmetric page layouts.
+
+**Don't:**
+
+- Use `flow="dense"` when reading order matters — it visually reorders items relative to the DOM.
+- Mix `responsive` with a fixed `cols` attribute; they target different layout modes.

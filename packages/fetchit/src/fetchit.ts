@@ -7,70 +7,109 @@ import { retry } from '@vielzeug/toolkit';
 /* -------------------- Types -------------------- */
 
 export type QueryKey = readonly unknown[];
+export type Unsubscribe = () => void;
 
 export type QueryStatus = 'idle' | 'pending' | 'success' | 'error';
 
 export type QueryState<T = unknown> = {
-  data: T | undefined;
-  error: Error | null;
-  status: QueryStatus;
-  updatedAt: number;
-  isLoading: boolean;
-  isSuccess: boolean;
-  isError: boolean;
-  isIdle: boolean;
+  readonly isPending: boolean;
+  readonly isSuccess: boolean;
+  readonly isError: boolean;
+  readonly isIdle: boolean;
+} & (
+  | { status: 'idle'; data: undefined; error: null; updatedAt: number }
+  | { status: 'pending'; data: T | undefined; error: null; updatedAt: number }
+  | { status: 'success'; data: T; error: null; updatedAt: number }
+  | { status: 'error'; data: T | undefined; error: Error; updatedAt: number }
+);
+
+export type MutationState<TData = unknown> = {
+  readonly isPending: boolean;
+  readonly isSuccess: boolean;
+  readonly isError: boolean;
+  readonly isIdle: boolean;
+} & (
+  | { status: 'idle'; data: undefined; error: null; updatedAt: number }
+  | { status: 'pending'; data: undefined; error: null; updatedAt: number }
+  | { status: 'success'; data: TData; error: null; updatedAt: number }
+  | { status: 'error'; data: undefined; error: Error; updatedAt: number }
+);
+
+export type RetryOptions = {
+  retry?: number | false;
+  /**
+   * Delay between retry attempts in ms, or a zero-based function where
+   * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
+   * Defaults to exponential backoff: 1 s → 2 s → … capped at 30 s.
+   */
+  retryDelay?: number | ((attempt: number) => number);
 };
 
-/** Mutation state is the same shape as query state. */
-export type MutationState<TData = unknown> = QueryState<TData>;
+export type MutationOptions<TData = unknown, TVariables = unknown> = RetryOptions & {
+  onSuccess?: (data: TData, variables: TVariables) => void;
+  onError?: (error: Error, variables: TVariables) => void;
+  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
+};
+
+export type QueryFnContext = {
+  signal: AbortSignal;
+  /** The cache key for the query that triggered this fetch. */
+  key: QueryKey;
+};
 
 export type QueryOptions<T> = {
   key: QueryKey;
-  fn: () => Promise<T>;
+  fn: (ctx: QueryFnContext) => Promise<T>;
   staleTime?: number;
   gcTime?: number;
   enabled?: boolean;
-  retry?: number | false;
-  retryDelay?: number | ((attempt: number) => number);
-};
+} & RetryOptions;
 
 export type ParamValue = string | number | boolean | undefined;
 export type Params = Record<string, ParamValue>;
 
-export type HttpRequestConfig = Omit<RequestInit, 'body' | 'method'> & {
-  body?: unknown;
-  params?: Params;
-  search?: Params;
-  dedupe?: boolean;
-};
+// Type-safe path params: extracts {param} placeholders from a path string
+type ExtractPathParams<P extends string> = P extends `${string}{${infer K}}${infer R}`
+  ? K | ExtractPathParams<R>
+  : never;
+
+type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
+  ? { params?: never }
+  : { params: Record<ExtractPathParams<P>, string | number | boolean> };
+
+export type HttpRequestConfig<P extends string = string> = Omit<RequestInit, 'body' | 'method'> &
+  PathConfig<P> & {
+    body?: unknown;
+    query?: Params;
+    dedupe?: boolean;
+    timeout?: number;
+  };
 
 export type FetchContext = { url: string; init: RequestInit };
 
 export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 
-export type HttpClientOptions = {
+export type ApiClientOptions = {
   baseUrl?: string;
   headers?: Record<string, string>;
   timeout?: number;
   dedupe?: boolean;
-  logger?: (level: 'info' | 'error', msg: string, meta?: unknown) => void;
+  logger?: (level: 'info' | 'warn' | 'error', msg: string, meta?: unknown) => void;
 };
 
 export type QueryClientOptions = {
   staleTime?: number;
   gcTime?: number;
-};
-
-export type ClientOptions = HttpClientOptions & QueryClientOptions;
+} & RetryOptions;
 
 /* -------------------- Constants -------------------- */
 
 const DEFAULT_GC = 5 * 60_000;
 const DEFAULT_TIMEOUT = 30_000;
-const DEFAULT_RETRY = 3;
+const DEFAULT_RETRY = 1;
 const CONTENT_TYPE_JSON = 'application/json';
 const HEADER_CONTENT_TYPE = 'content-type';
-const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
 
 /* -------------------- Errors -------------------- */
 
@@ -79,14 +118,35 @@ export class HttpError extends Error {
   readonly url: string;
   readonly method: string;
   readonly status?: number;
-  readonly cause?: unknown;
+  readonly data?: unknown;
+  readonly response?: Response;
+  /** True when the request failed due to a timeout (`AbortSignal.timeout`). */
+  readonly isTimeout: boolean;
+  /** True when the request was cancelled via an `AbortSignal`. */
+  readonly isAborted: boolean;
 
-  constructor(opts: { message: string; url: string; method: string; status?: number; cause?: unknown }) {
-    super(opts.message);
+  constructor(opts: {
+    message: string;
+    url: string;
+    method: string;
+    status?: number;
+    cause?: unknown;
+    data?: unknown;
+    response?: Response;
+  }) {
+    super(opts.message, { cause: opts.cause });
     this.url = opts.url;
     this.method = opts.method;
     this.status = opts.status;
-    this.cause = opts.cause;
+    this.data = opts.data;
+    this.response = opts.response;
+    const causeName = opts.cause instanceof Error ? opts.cause.name : undefined;
+    this.isTimeout = causeName === 'TimeoutError';
+    this.isAborted = causeName === 'AbortError';
+  }
+
+  static is(err: unknown, status?: number): err is HttpError {
+    return err instanceof HttpError && (status === undefined || err.status === status);
   }
 }
 
@@ -96,26 +156,23 @@ function toError(e: unknown): Error {
 
 /* -------------------- URL & Body Utilities -------------------- */
 
-function buildUrl(base: string, path: string, params?: Params, search?: Params) {
+function buildUrl(base: string, path: string, params?: Params, query?: Params) {
   const baseClean = base.replace(/\/+$/, '');
   let pathClean = path.replace(/^\/+/, '');
 
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {
-        const colonPattern = new RegExp(`:${key}(?=/|$)`, 'g');
-        const bracePattern = new RegExp(`\\{${key}\\}`, 'g');
-        const valueStr = String(value);
-        pathClean = pathClean.replace(colonPattern, valueStr).replace(bracePattern, valueStr);
+        pathClean = pathClean.replaceAll(`{${key}}`, encodeURIComponent(String(value)));
       }
     }
   }
 
-  const url = baseClean ? `${baseClean}/${pathClean}` : pathClean;
+  const url = baseClean && pathClean ? `${baseClean}/${pathClean}` : baseClean || pathClean;
 
-  if (!search) return url;
+  if (!query) return url;
 
-  const qs = Object.entries(search)
+  const qs = Object.entries(query)
     .filter(([, v]) => v !== undefined)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join('&');
@@ -130,17 +187,20 @@ function isBodyInit(value: unknown): value is BodyInit {
     value instanceof URLSearchParams ||
     typeof value === 'string' ||
     value instanceof ArrayBuffer ||
-    !!ArrayBuffer.isView(value)
+    ArrayBuffer.isView(value)
   );
 }
 
 function stableStringify(value: unknown): string {
-  if (value === null) return 'null';
   if (value === undefined) return 'undefined';
+  if (value === null) return 'null';
   if (typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const keys = Object.keys(value as object).sort();
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`).join(',')}}`;
+  const rec = value as Record<string, unknown>;
+  const keys = Object.keys(rec)
+    .filter((k) => rec[k] !== undefined)
+    .sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k])}`).join(',')}}`;
 }
 
 function serializeBodyKey(body: unknown): string {
@@ -154,38 +214,19 @@ function serializeBodyKey(body: unknown): string {
   try {
     return stableStringify(body);
   } catch {
+    // Circular / unserializable — fall through so JSON.stringify raises the real error
     return '[Object]';
   }
 }
 
 /* -------------------- Signal & Timeout -------------------- */
 
-function timeoutSignal(timeoutMs: number, external?: AbortSignal | null) {
+function timeoutSignal(timeoutMs: number, external?: AbortSignal | null): AbortSignal | undefined {
   if (timeoutMs === 0 || timeoutMs === Number.POSITIVE_INFINITY) {
-    return { clear: () => {}, signal: external ?? undefined };
+    return external ?? undefined;
   }
-
-  if ('timeout' in AbortSignal && !external) {
-    return { clear: () => {}, signal: AbortSignal.timeout(timeoutMs) };
-  }
-
-  const controller = new AbortController();
-  const onAbort = () => controller.abort();
-
-  if (external) {
-    if (external.aborted) controller.abort();
-    else external.addEventListener('abort', onAbort, { once: true });
-  }
-
-  const tid = setTimeout(() => controller.abort(), timeoutMs);
-
-  return {
-    clear: () => {
-      clearTimeout(tid);
-      external?.removeEventListener('abort', onAbort);
-    },
-    signal: controller.signal,
-  };
+  const t = AbortSignal.timeout(timeoutMs);
+  return external ? AbortSignal.any([t, external]) : t;
 }
 
 /* -------------------- Response Parsing -------------------- */
@@ -195,41 +236,22 @@ async function parseResponse(res: Response): Promise<unknown> {
   const contentType = res.headers.get(HEADER_CONTENT_TYPE) ?? '';
   if (contentType.includes(CONTENT_TYPE_JSON)) return res.json();
   if (contentType.startsWith('text/')) return res.text();
-  try {
-    return await res.blob();
-  } catch {
-    return res.text();
-  }
+  return res.blob();
 }
 
 /* -------------------- Retry Config -------------------- */
 
-function getRetryConfig(
-  retryCount: number | false | undefined,
-  retryDelay: number | ((attempt: number) => number) | undefined,
-  defaultRetryCount = DEFAULT_RETRY,
-) {
-  // retry: N = N retries after initial attempt = N+1 total attempts
-  const times = retryCount === false ? 1 : (retryCount ?? defaultRetryCount) + 1;
-
-  let delay: number | undefined;
-  let backoff: ((attempt: number, currentDelay: number) => number) | undefined;
-
-  if (typeof retryDelay === 'function') {
-    backoff = (attempt) => retryDelay(attempt - 1);
-  } else if (typeof retryDelay === 'number') {
-    delay = retryDelay;
-  } else {
-    delay = 1000;
-    backoff = (_a, cur) => Math.min(cur * 2, 30_000);
-  }
-
-  return { backoff, delay, times };
+function getRetryConfig(retryCount: number | false, userDelay: number | ((attempt: number) => number) | undefined) {
+  const times = retryCount === false ? 1 : retryCount + 1;
+  if (typeof userDelay === 'function') return { retryDelay: userDelay, times };
+  if (typeof userDelay === 'number') return { delay: userDelay, times };
+  // Default: exponential backoff 1 s → 2 s → … capped at 30 s
+  return { backoff: (_a: number, cur: number) => Math.min(cur * 2, 30_000), delay: 1000, times };
 }
 
-/* -------------------- HTTP Client -------------------- */
+/* -------------------- HTTP / API Client -------------------- */
 
-export function createHttpClient(opts: HttpClientOptions = {}) {
+export function createApi(opts: ApiClientOptions = {}) {
   const { baseUrl = '', headers: initialHeaders = {}, timeout = DEFAULT_TIMEOUT, dedupe = false, logger } = opts;
 
   const globalHeaders: Record<string, string> = { ...initialHeaders };
@@ -263,26 +285,75 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
     return p;
   }
 
-  async function request<T>(method: string, url: string, config: HttpRequestConfig = {}) {
-    const full = buildUrl(baseUrl, url, config.params, config.search);
+  async function handleResponse<T>(res: Response, m: string, full: string, start: number): Promise<T> {
+    const parsed = await parseResponse(res);
+    if (!res.ok) {
+      logger?.(res.status >= 500 ? 'error' : 'warn', `${m} ${full} - ${res.status}`);
+      throw new HttpError({
+        data: parsed,
+        message: res.statusText || 'Non-OK response',
+        method: m,
+        response: res,
+        status: res.status,
+        url: full,
+      });
+    }
+    logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`, { res: parsed });
+    return parsed as T;
+  }
+
+  async function execute<T>(init: RequestInit, full: string, m: string, dedupeKey: string | undefined): Promise<T> {
+    const start = Date.now();
+    try {
+      const res = await getPipeline()({ init, url: full });
+      return await handleResponse<T>(res, m, full, start);
+    } catch (err) {
+      if (err instanceof HttpError) throw err;
+      logger?.('error', `${m} ${full} - ERROR`, err);
+      throw new HttpError({ cause: err, message: toError(err).message, method: m, url: full });
+    } finally {
+      if (dedupeKey) inFlight.delete(dedupeKey);
+    }
+  }
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: HTTP adapter must handle method, body, headers, dedup, timeout, and signal in one place
+  async function request<T, P extends string = string>(
+    method: string,
+    url: P,
+    config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
+  ) {
+    if (_disposed) throw new Error('[fetchit] ApiClient has been disposed');
+    const full = buildUrl(baseUrl, url, config.params as Params | undefined, config.query);
     const m = method.toUpperCase();
-    const { body, headers, dedupe: cfgDedupe, signal: extSignal, params, search, ...rest } = config;
+    const {
+      body,
+      headers,
+      dedupe: cfgDedupe,
+      signal: extSignal,
+      params,
+      query,
+      timeout: cfgTimeout,
+      ...rest
+    } = config as HttpRequestConfig;
 
     // Dedupe idempotent methods by default; non-idempotent only when explicitly opted in
     const shouldDedupe = cfgDedupe === true || (cfgDedupe !== false && (dedupe || IDEMPOTENT_METHODS.has(m)));
 
-    const dedupeKey = shouldDedupe ? `${m}:${full}:${serializeBodyKey(body)}` : '';
+    const mergedHeaders = { ...globalHeaders, ...(headers as Record<string, string> | undefined) };
+    const dedupeKey = shouldDedupe
+      ? `${m}:${full}:${stableStringify(mergedHeaders)}:${serializeBodyKey(body)}`
+      : undefined;
 
-    if (shouldDedupe) {
+    if (dedupeKey) {
       const existing = inFlight.get(dedupeKey);
       if (existing) return existing as Promise<T>;
     }
 
-    const { signal, clear } = timeoutSignal(timeout, extSignal ?? null);
+    const signal = timeoutSignal(cfgTimeout ?? timeout, extSignal ?? null);
 
     const init: RequestInit = {
       ...rest,
-      headers: { ...globalHeaders, ...(headers as Record<string, string> | undefined) },
+      headers: mergedHeaders,
       method: m,
       signal,
     };
@@ -294,193 +365,198 @@ export function createHttpClient(opts: HttpClientOptions = {}) {
       init.body = body as BodyInit;
     }
 
-    const p = (async () => {
-      const start = Date.now();
-      try {
-        const res = await getPipeline()({ url: full, init });
-        const parsed = await parseResponse(res);
-        logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`, { res: parsed });
-        if (!res.ok)
-          throw new HttpError({ cause: parsed, message: 'Non-OK response', method: m, status: res.status, url: full });
-        return parsed as T;
-      } catch (err) {
-        logger?.('error', `${m} ${full} - ERROR`, err);
-        if (err instanceof HttpError) throw err;
-        throw new HttpError({ cause: err, message: toError(err).message, method: m, url: full });
-      } finally {
-        clear();
-        if (shouldDedupe) inFlight.delete(dedupeKey);
-      }
-    })();
+    const p = execute<T>(init, full, m, dedupeKey);
 
-    if (shouldDedupe) inFlight.set(dedupeKey, p);
+    if (dedupeKey) inFlight.set(dedupeKey, p);
     return p as Promise<T>;
   }
 
+  let _disposed = false;
+
   return {
-    delete: <T>(url: string, cfg?: HttpRequestConfig) => request<T>('DELETE', url, cfg),
-    get: <T>(url: string, cfg?: HttpRequestConfig) => request<T>('GET', url, cfg),
-    patch: <T>(url: string, cfg?: HttpRequestConfig) => request<T>('PATCH', url, cfg),
-    post: <T>(url: string, cfg?: HttpRequestConfig) => request<T>('POST', url, cfg),
-    put: <T>(url: string, cfg?: HttpRequestConfig) => request<T>('PUT', url, cfg),
-    request,
-    setHeaders(headers: Record<string, string | undefined>) {
-      for (const [key, value] of Object.entries(headers)) {
+    delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
+    dispose(): void {
+      _disposed = true;
+      inFlight.clear();
+      interceptors.length = 0;
+      pipeline = null;
+    },
+    get disposed() {
+      return _disposed;
+    },
+    get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
+    headers(updates: Record<string, string | undefined>) {
+      for (const [key, value] of Object.entries(updates)) {
         if (value === undefined) delete globalHeaders[key];
         else globalHeaders[key] = value;
       }
     },
+    patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
+    post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
+    put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
+    request,
     use,
+    [Symbol.dispose]() {
+      this.dispose();
+    },
   };
 }
 
 /* -------------------- Query Client -------------------- */
 
 type CacheEntry<T = unknown> = {
-  data?: T;
+  key: QueryKey;
+  data: T | undefined;
   status: QueryStatus;
   error: Error | null;
   updatedAt: number;
   observers: Set<(state: QueryState<T>) => void>;
-  promise: Promise<T> | null;
-  abortController: AbortController | null;
-  gcTimer?: ReturnType<typeof setTimeout> | null;
+  inflight: { promise: Promise<T>; controller: AbortController } | null;
+  gcTimer: ReturnType<typeof setTimeout> | undefined;
 };
 
-type MutationEntry<TData> = {
+function makeState<T>(entry: {
   status: QueryStatus;
-  data: TData | undefined;
+  data: T | undefined;
   error: Error | null;
   updatedAt: number;
-};
-
-function toQueryState<T>(entry: CacheEntry<T>): QueryState<T> {
+}): QueryState<T> {
+  const { status, data, error, updatedAt } = entry;
   return {
-    data: entry.data,
-    error: entry.error,
-    isError: entry.status === 'error',
-    isIdle: entry.status === 'idle',
-    isLoading: entry.status === 'pending',
-    isSuccess: entry.status === 'success',
-    status: entry.status,
-    updatedAt: entry.updatedAt,
-  };
+    data,
+    error,
+    isError: status === 'error',
+    isIdle: status === 'idle',
+    isPending: status === 'pending',
+    isSuccess: status === 'success',
+    status,
+    updatedAt,
+  } as unknown as QueryState<T>;
 }
 
-function toMutationState<T>(entry: MutationEntry<T>): MutationState<T> {
-  return {
-    data: entry.data,
-    error: entry.error,
-    isError: entry.status === 'error',
-    isIdle: entry.status === 'idle',
-    isLoading: entry.status === 'pending',
-    isSuccess: entry.status === 'success',
-    status: entry.status,
-    updatedAt: entry.updatedAt,
-  };
+function dispatch<T>(observers: Set<(s: T) => void>, state: T) {
+  observers.forEach((fn) => {
+    try {
+      fn(state);
+    } catch (err) {
+      console.error('[fetchit] observer threw', err);
+    }
+  });
 }
 
-export function createQueryClient(opts?: QueryClientOptions) {
+export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
+  const retryDefault = opts?.retry ?? DEFAULT_RETRY;
+  const retryDelayDefault = opts?.retryDelay;
 
   const cache = new Map<string, CacheEntry>();
 
-  function keyToStr(k: QueryKey) {
-    return stableStringify(k);
+  function makeEntry<T>(key: QueryKey): CacheEntry<T> {
+    return {
+      data: undefined,
+      error: null,
+      gcTimer: undefined,
+      inflight: null,
+      key,
+      observers: new Set(),
+      status: 'idle',
+      updatedAt: 0,
+    };
   }
 
   function ensureEntry<T>(key: QueryKey): CacheEntry<T> {
-    const id = keyToStr(key);
+    const id = stableStringify(key);
     let e = cache.get(id) as CacheEntry<T> | undefined;
     if (!e) {
-      e = {
-        abortController: null,
-        data: undefined,
-        error: null,
-        gcTimer: null,
-        observers: new Set(),
-        promise: null,
-        status: 'idle',
-        updatedAt: 0,
-      } as CacheEntry<T>;
+      e = makeEntry<T>(key);
       cache.set(id, e as CacheEntry<unknown>);
     }
     return e;
   }
 
   function notify<T>(entry: CacheEntry<T>) {
-    const state = toQueryState(entry);
-    entry.observers.forEach((fn) => {
-      try {
-        fn(state);
-      } catch {}
-    });
+    dispatch(entry.observers, makeState(entry));
   }
 
-  function scheduleGc(id: string, entry: { gcTimer?: CacheEntry['gcTimer'] }, gcTime: number) {
+  function cancelGcTimer(entry: Pick<CacheEntry, 'gcTimer'>) {
     if (entry.gcTimer) {
       clearTimeout(entry.gcTimer);
-      entry.gcTimer = null;
+      entry.gcTimer = undefined;
     }
-    if (gcTime > 0) {
+  }
+
+  function scheduleGc<T>(id: string, entry: CacheEntry<T>, gcTime: number) {
+    cancelGcTimer(entry);
+    if (gcTime === 0) {
+      cache.delete(id);
+    } else if (gcTime > 0 && gcTime !== Number.POSITIVE_INFINITY) {
       entry.gcTimer = setTimeout(() => {
-        entry.gcTimer = null;
+        entry.gcTimer = undefined;
         cache.delete(id);
       }, gcTime);
     }
   }
 
   function cleanupEntry(entry: CacheEntry) {
-    entry.abortController?.abort();
-    clearTimeout(entry.gcTimer ?? undefined);
-    entry.gcTimer = null;
+    entry.inflight?.controller.abort();
+    clearTimeout(entry.gcTimer);
+    entry.gcTimer = undefined;
   }
 
+  function isKeyOrPrefix(entryKey: QueryKey, prefix: QueryKey): boolean {
+    if (prefix.length > entryKey.length) return false;
+    return prefix.every((seg, i) => stableStringify(seg) === stableStringify(entryKey[i]));
+  }
+
+  async function fetchQuery<T>(options: QueryOptions<T> & { enabled: false }): Promise<T | undefined>;
+  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T>;
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T | undefined> {
+    if (_disposed) throw new Error('[fetchit] QueryClient has been disposed');
     const {
       key: queryKey,
       fn: queryFn,
       staleTime = staleTimeDefault,
       gcTime = gcTimeDefault,
       enabled = true,
-      retry: retryCount = DEFAULT_RETRY,
-      retryDelay,
+      retry: retryCount = retryDefault,
+      retryDelay = retryDelayDefault,
     } = options;
 
-    if (!enabled) return ensureEntry<T>(queryKey).data;
+    if (!enabled) return cache.get(stableStringify(queryKey))?.data as T | undefined;
 
-    const id = keyToStr(queryKey);
+    const id = stableStringify(queryKey);
     const entry = ensureEntry<T>(queryKey);
 
     if (entry.status === 'success' && Date.now() - entry.updatedAt < staleTime) {
       return entry.data as T;
     }
 
-    if (entry.promise) return entry.promise;
+    if (entry.inflight) return entry.inflight.promise;
 
-    const abortController = new AbortController();
-    entry.abortController = abortController;
+    const controller = new AbortController();
     entry.status = 'pending';
     notify(entry);
 
-    const { times, delay, backoff } = getRetryConfig(retryCount, retryDelay);
+    const retryOpts = getRetryConfig(retryCount, retryDelay);
 
     const p = (async () => {
       try {
-        const data = await retry(() => queryFn(), { backoff, delay, signal: abortController.signal, times });
+        const data = await retry(() => queryFn({ key: queryKey, signal: controller.signal }), {
+          ...retryOpts,
+          signal: controller.signal,
+        });
         entry.data = data;
         entry.status = 'success';
         entry.updatedAt = Date.now();
         entry.error = null;
-        entry.promise = null;
-        entry.abortController = null;
+        entry.inflight = null;
         scheduleGc(id, entry, gcTime);
         notify(entry);
         return data;
       } catch (err) {
         const error = toError(err);
-        const isAborted = abortController.signal.aborted || error.name === 'AbortError';
+        const isAborted = controller.signal.aborted || error.name === 'AbortError';
         if (isAborted) {
           entry.status = 'idle';
           entry.error = null;
@@ -489,162 +565,190 @@ export function createQueryClient(opts?: QueryClientOptions) {
           entry.error = error;
           entry.updatedAt = Date.now();
         }
-        entry.promise = null;
-        entry.abortController = null;
+        entry.inflight = null;
         notify(entry);
         throw error;
       }
     })();
 
-    entry.promise = p;
+    entry.inflight = { controller, promise: p };
     return p;
   }
 
-  async function prefetch<T>(options: QueryOptions<T>): Promise<void> {
-    await fetchQuery<T>({ ...options, enabled: true }).catch(() => {});
+  async function prefetch<T>(options: Omit<QueryOptions<T>, 'enabled'>): Promise<T | undefined> {
+    return fetchQuery<T>({ ...options, enabled: true }).catch(() => undefined);
+  }
+
+  function evictEntry(id: string, entry: CacheEntry) {
+    cleanupEntry(entry);
+    if (entry.observers.size > 0) {
+      entry.status = 'idle';
+      entry.data = undefined;
+      entry.error = null;
+      notify(entry);
+    } else {
+      cache.delete(id);
+    }
   }
 
   function invalidate(key: QueryKey) {
-    const keyStr = keyToStr(key);
-    const exactEntry = cache.get(keyStr);
-    if (exactEntry) {
-      cleanupEntry(exactEntry);
-      cache.delete(keyStr);
-      return;
-    }
-    const prefix = `${keyStr.slice(0, -1)},`;
-    for (const id of [...cache.keys()]) {
-      if (id.startsWith(prefix)) {
-        const entry = cache.get(id);
-        if (entry) cleanupEntry(entry);
-        cache.delete(id);
-      }
+    for (const [id, entry] of cache) {
+      if (isKeyOrPrefix(entry.key, key)) evictEntry(id, entry);
     }
   }
 
   function clearCache() {
-    cache.forEach(cleanupEntry);
-    cache.clear();
+    for (const [id, entry] of cache) {
+      evictEntry(id, entry);
+    }
+    // evictEntry intentionally keeps entries with active observers in the cache
+    // (reset to idle). Do not call cache.clear() here — it would orphan live subscriptions.
   }
 
-  function setData<T>(key: QueryKey, dataOrUpdater: T | ((old?: T) => T)) {
-    const id = keyToStr(key);
+  function set<T>(key: QueryKey, data: T): void;
+  function set<T>(key: QueryKey, updater: (old: T | undefined) => T): void;
+  function set<T>(key: QueryKey, dataOrUpdater: T | ((old: T | undefined) => T)) {
+    const id = stableStringify(key);
     const entry = ensureEntry<T>(key);
-    entry.data = typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old?: T) => T)(entry.data) : dataOrUpdater;
+    entry.data =
+      typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old: T | undefined) => T)(entry.data) : dataOrUpdater;
     entry.updatedAt = Date.now();
     entry.status = 'success';
     scheduleGc(id, entry, gcTimeDefault);
     notify(entry);
   }
 
-  function getData<T>(key: QueryKey): T | undefined {
-    return cache.get(keyToStr(key))?.data as T | undefined;
+  function get<T>(key: QueryKey): T | undefined {
+    return cache.get(stableStringify(key))?.data as T | undefined;
   }
 
   function getState<T>(key: QueryKey): QueryState<T> | null {
-    const entry = cache.get(keyToStr(key)) as CacheEntry<T> | undefined;
-    return entry ? toQueryState(entry) : null;
+    const entry = cache.get(stableStringify(key)) as CacheEntry<T> | undefined;
+    return entry ? makeState(entry) : null;
   }
 
-  function subscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void) {
+  function subscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void): Unsubscribe {
+    const id = stableStringify(key);
     const entry = ensureEntry<T>(key);
+    cancelGcTimer(entry);
     entry.observers.add(listener);
-    listener(toQueryState(entry));
-    return () => entry.observers.delete(listener);
-  }
-
-  function mutation<TData, TVariables = void>(
-    mutationFn: (variables: TVariables) => Promise<TData>,
-    mutOpts?: { retry?: number | false; retryDelay?: number | ((attempt: number) => number) },
-  ) {
-    const idleEntry: MutationEntry<TData> = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
-    let entry: MutationEntry<TData> = { ...idleEntry };
-    const observers = new Set<(state: MutationState<TData>) => void>();
-
-    function notifyMutation() {
-      const snap = toMutationState(entry);
-      observers.forEach((fn) => {
-        try {
-          fn(snap);
-        } catch {}
-      });
-    }
-
-    return {
-      getState(): MutationState<TData> {
-        return toMutationState(entry);
-      },
-
-      async mutate(variables: TVariables): Promise<TData> {
-        const { times, delay, backoff } = getRetryConfig(mutOpts?.retry ?? false, mutOpts?.retryDelay, 0);
-        entry = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
-        notifyMutation();
-        try {
-          const data = await retry(() => mutationFn(variables), { backoff, delay, times });
-          entry = { data, error: null, status: 'success', updatedAt: Date.now() };
-          notifyMutation();
-          return data;
-        } catch (err) {
-          entry = { data: undefined, error: toError(err), status: 'error', updatedAt: Date.now() };
-          notifyMutation();
-          throw entry.error;
-        }
-      },
-
-      reset() {
-        entry = { ...idleEntry };
-        notifyMutation();
-      },
-
-      subscribe(listener: (state: MutationState<TData>) => void) {
-        observers.add(listener);
-        listener(toMutationState(entry));
-        return () => observers.delete(listener);
-      },
+    listener(makeState(entry));
+    return () => {
+      entry.observers.delete(listener);
+      if (entry.observers.size === 0 && entry.status === 'idle') {
+        cache.delete(id);
+      }
     };
   }
 
+  function cancel(key: QueryKey) {
+    const id = stableStringify(key);
+    const entry = cache.get(id);
+    if (!entry) return;
+    entry.inflight?.controller.abort();
+    entry.inflight = null;
+    if (entry.status === 'pending') {
+      entry.status = entry.data !== undefined ? 'success' : 'idle';
+      if (entry.status === 'success') scheduleGc(id, entry, gcTimeDefault);
+      notify(entry);
+      if (entry.status === 'idle' && entry.observers.size === 0) cache.delete(id);
+    }
+  }
+
+  let _disposed = false;
+
   return {
+    cancel,
     clear: clearCache,
-    getData,
+    dispose(): void {
+      _disposed = true;
+      cache.forEach(cleanupEntry);
+      cache.clear();
+    },
+    get disposed() {
+      return _disposed;
+    },
+    get,
     getState,
     invalidate,
-    mutation,
     prefetch,
     query: fetchQuery,
-    setData,
+    set,
     subscribe,
+    [Symbol.dispose]() {
+      this.dispose();
+    },
   };
 }
 
-/* -------------------- Unified Client -------------------- */
+/* -------------------- Standalone Mutation -------------------- */
 
-export function createClient(opts: ClientOptions = {}) {
-  const { staleTime, gcTime, ...httpOpts } = opts;
-  const http = createHttpClient(httpOpts);
-  const qc = createQueryClient({ gcTime, staleTime });
+export function createMutation<TData, TVariables = void>(
+  mutationFn: (variables: TVariables) => Promise<TData>,
+  mutOpts?: MutationOptions<TData, TVariables>,
+) {
+  const retryConfig = getRetryConfig(mutOpts?.retry ?? false, mutOpts?.retryDelay);
+  let snap: { status: QueryStatus; data: TData | undefined; error: Error | null; updatedAt: number } = {
+    data: undefined,
+    error: null,
+    status: 'idle',
+    updatedAt: 0,
+  };
+  const observers = new Set<(state: MutationState<TData>) => void>();
+
+  function notify() {
+    dispatch(observers, makeState(snap) as unknown as MutationState<TData>);
+  }
 
   return {
-    delete: http.delete,
-    get: http.get,
-    patch: http.patch,
-    post: http.post,
-    put: http.put,
-    request: http.request,
-    setHeaders: http.setHeaders,
-    use: http.use,
-    clear: qc.clear,
-    getData: qc.getData,
-    getState: qc.getState,
-    invalidate: qc.invalidate,
-    mutation: qc.mutation,
-    prefetch: qc.prefetch,
-    query: qc.query,
-    setData: qc.setData,
-    subscribe: qc.subscribe,
+    getState(): MutationState<TData> {
+      return makeState(snap) as unknown as MutationState<TData>;
+    },
+
+    async mutate(
+      variables: TVariables,
+      callOpts?: { signal?: AbortSignal; retry?: number | false; retryDelay?: number | ((attempt: number) => number) },
+    ): Promise<TData> {
+      if (snap.status === 'pending') {
+        throw new Error('[fetchit] mutation already in flight — await the previous call or call reset() first');
+      }
+      const retryOpts =
+        callOpts?.retry !== undefined || callOpts?.retryDelay !== undefined
+          ? getRetryConfig(callOpts.retry ?? mutOpts?.retry ?? false, callOpts.retryDelay ?? mutOpts?.retryDelay)
+          : retryConfig;
+      snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
+      notify();
+      try {
+        const data = await retry(() => mutationFn(variables), { ...retryOpts, signal: callOpts?.signal });
+        snap = { data, error: null, status: 'success', updatedAt: Date.now() };
+        notify();
+        mutOpts?.onSuccess?.(data, variables);
+        mutOpts?.onSettled?.(data, null, variables);
+        return data;
+      } catch (err) {
+        const error = toError(err);
+        snap = { data: undefined, error, status: 'error', updatedAt: Date.now() };
+        notify();
+        mutOpts?.onError?.(error, variables);
+        mutOpts?.onSettled?.(undefined, error, variables);
+        throw error;
+      }
+    },
+
+    reset() {
+      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+      notify();
+    },
+
+    subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
+      observers.add(listener);
+      listener(makeState(snap) as unknown as MutationState<TData>);
+      return () => observers.delete(listener);
+    },
   };
 }
 
-export type HttpClient = ReturnType<typeof createHttpClient>;
-export type QueryClient = ReturnType<typeof createQueryClient>;
-export type Client = ReturnType<typeof createClient>;
+export type ApiClient = ReturnType<typeof createApi>;
+export type QueryClient = ReturnType<typeof createQuery>;
+export type Mutation<TData, TVariables = void> = ReturnType<typeof createMutation<TData, TVariables>>;
+export { stableStringify as serializeKey };

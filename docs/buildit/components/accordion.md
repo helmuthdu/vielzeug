@@ -6,8 +6,7 @@ A flexible accordion component for organizing collapsible content sections. Buil
 
 - 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
 - 🔄 **Selection Modes**: Single or multiple expansion
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
+- 📏 **3 Sizes**: sm, md, lg- 🎬 **Smooth Animation**: content height animates via CSS `grid-template-rows` — no layout thrashing- ♿ **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
 - 🎯 **Flexible Content**: Support for icons, subtitles, and custom content
 
 ## Source Code
@@ -269,6 +268,26 @@ Prevent interaction with specific items.
 
 </ComponentPreview>
 
+## Guideline Recipe: Quieter FAQ Section
+
+**Guideline: quieter** — collapse secondary content so users focus on only what they need right now.
+
+```html
+<bit-accordion value="1">
+  <bit-accordion-item value="1" label="What's included?">
+    Access to all features and 30 days of history.
+  </bit-accordion-item>
+  <bit-accordion-item value="2" label="Can I cancel anytime?">
+    Yes — no contracts, cancel from account settings.
+  </bit-accordion-item>
+  <bit-accordion-item value="3" label="How do I get support?">
+    Use in-app chat or email support@example.com.
+  </bit-accordion-item>
+</bit-accordion>
+```
+
+**Tip:** Combine with `multiple` selection mode when users need to compare items side by side.
+
 ## API Reference
 
 ### `bit-accordion` Attributes
@@ -315,22 +334,31 @@ Prevent interaction with specific items.
 | `expand`   | `{ expanded: true, item: HTMLElement }`  | Emitted when the item is expanded  |
 | `collapse` | `{ expanded: false, item: HTMLElement }` | Emitted when the item is collapsed |
 
-## CSS Custom Properties
+### CSS Custom Properties
 
 | Property                   | Description      | Default        |
 | -------------------------- | ---------------- | -------------- |
 | `--accordion-item-bg`      | Background color | `transparent`  |
 | `--accordion-item-radius`  | Border radius    | `0.375rem`     |
 | `--accordion-item-padding` | Inner padding    | Size-dependent |
+| `--accordion-item-transition` | Transition duration for expand/collapse animation | `var(--transition-normal)` |
 
 ## Accessibility
 
 The accordion component follows WAI-ARIA Accordion Pattern best practices.
 
+### `bit-accordion`
+
 ✅ **Native Semantics**
 
 - Built with native `<details>` and `<summary>` elements.
 - Progressive enhancement - works without JavaScript.
+
+✅ **Smooth Animation**
+
+- Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing.
+- Respects `prefers-reduced-motion`: the transition plays only when the user hasn’t opted out of animations.
+- Override the speed with `--accordion-item-transition`.
 
 ✅ **Keyboard Navigation**
 

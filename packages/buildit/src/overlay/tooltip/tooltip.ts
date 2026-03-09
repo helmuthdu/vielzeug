@@ -1,10 +1,24 @@
-import { computed, css, define, defineProps, effect, html, onMount, signal } from '@vielzeug/craftit';
+import {
+  computed,
+  createId,
+  css,
+  define,
+  defineProps,
+  html,
+  onMount,
+  onSlotChange,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
+import type { Placement } from '@vielzeug/floatit';
+import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { forcedColorsMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';
 
-const ARROW_OFFSET = 8; // distance from tooltip edge to target
+const ARROW_OFFSET = 8; // offset from trigger to tooltip edge
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -14,8 +28,12 @@ const styles = /* css */ css`
     }
 
     .tooltip {
+      /* Popover UA resets */
+      inset: unset;
+      margin: 0;
+      border: 0;
+      /* Positioning — JS sets top/left inline */
       position: fixed;
-      z-index: var(--z-tooltip, 9000);
       background: var(--color-contrast-900);
       color: var(--color-contrast-50);
       border-radius: var(--rounded-sm);
@@ -28,17 +46,21 @@ const styles = /* css */ css`
       white-space: pre-line;
       word-break: break-word;
       box-shadow: var(--shadow-md);
-      /* Start hidden */
+      /* Hidden by default (also serves as exit state) */
       opacity: 0;
-      visibility: hidden;
       transition:
         opacity var(--transition-fast),
-        visibility var(--transition-fast);
+        display var(--transition-fast) allow-discrete,
+        overlay var(--transition-fast) allow-discrete;
     }
 
-    .tooltip[data-visible] {
+    /* Entry animation via @starting-style */
+    .tooltip:popover-open {
       opacity: 1;
-      visibility: visible;
+
+      @starting-style {
+        opacity: 0;
+      }
     }
 
     /* ========================================
@@ -136,12 +158,16 @@ export interface TooltipProps {
   trigger?: string;
   /** Show delay in ms */
   delay?: number;
+  /** Hide delay in ms (useful to keep tooltip open when moving focus between trigger and tooltip) */
+  'close-delay'?: number;
   /** Tooltip size */
   size?: ComponentSize;
   /** Visual variant: 'dark' (default) or 'light' */
   variant?: 'dark' | 'light';
   /** Disable the tooltip */
   disabled?: boolean;
+  /** Controlled open state. When provided, the tooltip acts as a controlled component and ignores trigger events for open/close. */
+  open?: boolean;
 }
 
 /**
@@ -173,23 +199,28 @@ export interface TooltipProps {
  * </bit-tooltip>
  * ```
  */
-define('bit-tooltip', ({ host }) => {
-  const props = defineProps({
+export const TAG = define('bit-tooltip', ({ host }) => {
+  const props = defineProps<TooltipProps>({
+    'close-delay': { default: 0 },
     content: { default: '' },
     delay: { default: 0 },
     disabled: { default: false },
-    placement: { default: 'top' as TooltipPlacement },
-    size: { default: undefined as ComponentSize | undefined },
+    open: { default: undefined },
+    placement: { default: 'top' },
+    size: { default: undefined },
     trigger: { default: 'hover,focus' },
-    variant: { default: undefined as 'dark' | 'light' | undefined },
+    variant: { default: undefined },
   });
 
   const visible = signal(false);
-  const position = signal({ left: 0, top: 0 });
   const activePlacement = signal<TooltipPlacement>('top');
 
+  let autoUpdateCleanup: (() => void) | null = null;
+
   let showTimer: ReturnType<typeof setTimeout> | null = null;
+  let hideTimer: ReturnType<typeof setTimeout> | null = null;
   let tooltipEl: HTMLElement | null = null;
+  const tooltipId = createId('tooltip');
 
   const triggers = computed<TooltipTrigger[]>(() =>
     String(props.trigger.value)
@@ -205,78 +236,69 @@ define('bit-tooltip', ({ host }) => {
     return assigned?.[0] ?? null;
   }
 
-  function computePosition(tooltipRect: DOMRect, triggerRect: DOMRect, pref: TooltipPlacement) {
-    const OFFSET = ARROW_OFFSET;
-    const vp = { h: window.innerHeight, w: window.innerWidth };
-
-    const placements: Record<TooltipPlacement, { top: number; left: number }> = {
-      bottom: {
-        left: triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2,
-        top: triggerRect.bottom + OFFSET,
-      },
-      left: {
-        left: triggerRect.left - tooltipRect.width - OFFSET,
-        top: triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2,
-      },
-      right: {
-        left: triggerRect.right + OFFSET,
-        top: triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2,
-      },
-      top: {
-        left: triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2,
-        top: triggerRect.top - tooltipRect.height - OFFSET,
-      },
-    };
-
-    // Try preferred, then fallback to opposite/perpendicular
-    const fallbackOrder: TooltipPlacement[] = [pref, 'top', 'bottom', 'left', 'right'];
-    for (const p of fallbackOrder) {
-      const pos = placements[p];
-      const fits =
-        pos.top >= 0 && pos.top + tooltipRect.height <= vp.h && pos.left >= 0 && pos.left + tooltipRect.width <= vp.w;
-      if (fits) return { placement: p, pos };
-    }
-
-    // Last resort — clamp to viewport
-    const pos = placements[pref];
-    return {
-      placement: pref,
-      pos: {
-        left: Math.max(4, Math.min(pos.left, vp.w - tooltipRect.width - 4)),
-        top: Math.max(4, Math.min(pos.top, vp.h - tooltipRect.height - 4)),
-      },
-    };
-  }
-
   function updatePosition() {
     if (!tooltipEl) return;
     const triggerEl = getTriggerEl();
     if (!triggerEl) return;
 
-    const triggerRect = triggerEl.getBoundingClientRect();
-    const tooltipRect = tooltipEl.getBoundingClientRect();
-
-    const { pos, placement } = computePosition(tooltipRect, triggerRect, props.placement.value as TooltipPlacement);
-    position.value = pos;
-    activePlacement.value = placement;
+    positionFloat(triggerEl, tooltipEl, {
+      middleware: [offset(ARROW_OFFSET), flip(), shift({ padding: 6 })],
+      placement: props.placement.value as Placement,
+    }).then((placement) => {
+      if (!tooltipEl) return;
+      activePlacement.value = placement.split('-')[0] as TooltipPlacement;
+    });
   }
 
   function show() {
+    if (props.open.value !== undefined) return; // controlled mode
     if (props.disabled.value || !props.content.value) return;
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
     if (showTimer) clearTimeout(showTimer);
     showTimer = setTimeout(() => {
       visible.value = true;
-      // updatePosition after a micro-tick so the tooltip is visible in DOM
-      requestAnimationFrame(() => updatePosition());
+      if (tooltipEl && !tooltipEl.matches(':popover-open')) {
+        tooltipEl.showPopover();
+      }
+      // Start autoUpdate: repositions on scroll, resize, and reference size change
+      const triggerEl = getTriggerEl();
+      if (triggerEl && tooltipEl) {
+        autoUpdateCleanup?.();
+        autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
+      } else {
+        requestAnimationFrame(() => updatePosition());
+      }
     }, Number(props.delay.value) || 0);
   }
 
   function hide() {
+    if (props.open.value !== undefined) return; // controlled mode
     if (showTimer) {
       clearTimeout(showTimer);
       showTimer = null;
     }
+    const closeDelay = Number(props['close-delay'].value) || 0;
+    if (closeDelay > 0) {
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        hideTimer = null;
+        _doHide();
+      }, closeDelay);
+    } else {
+      _doHide();
+    }
+  }
+
+  function _doHide() {
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
     visible.value = false;
+    if (tooltipEl?.matches(':popover-open')) {
+      tooltipEl.hidePopover();
+    }
   }
 
   function toggleClick() {
@@ -292,6 +314,8 @@ define('bit-tooltip', ({ host }) => {
       unbindTriggerEvents(); // clean up previous bindings
       const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
       if (!triggerEl) return;
+
+      triggerEl.setAttribute('aria-describedby', tooltipId);
 
       const t = triggers.value;
 
@@ -314,6 +338,7 @@ define('bit-tooltip', ({ host }) => {
     const unbindTriggerEvents = () => {
       const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
       if (!triggerEl) return;
+      triggerEl.removeAttribute('aria-describedby');
       triggerEl.removeEventListener('mouseenter', show);
       triggerEl.removeEventListener('mouseleave', hide);
       triggerEl.removeEventListener('focusin', show);
@@ -322,13 +347,36 @@ define('bit-tooltip', ({ host }) => {
       document.removeEventListener('keydown', handleKeydown);
     };
 
-    slot.addEventListener('slotchange', bindTriggerEvents);
-    bindTriggerEvents();
+    onSlotChange('default', bindTriggerEvents);
+
+    // Controlled mode: watch the `open` prop and show/hide accordingly
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Controlled open/close must coordinate positioning, visibility, popover state, and auto-update lifecycle
+    watch(props.open, (openVal) => {
+      if (openVal === undefined || openVal === null) return;
+      if (openVal) {
+        visible.value = true;
+        if (tooltipEl && !tooltipEl.matches(':popover-open')) tooltipEl.showPopover();
+        const triggerEl = getTriggerEl();
+        if (triggerEl && tooltipEl) {
+          autoUpdateCleanup?.();
+          autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
+        } else {
+          requestAnimationFrame(() => updatePosition());
+        }
+      } else {
+        _doHide();
+      }
+    });
 
     return () => {
       unbindTriggerEvents();
-      slot.removeEventListener('slotchange', bindTriggerEvents);
       if (showTimer) clearTimeout(showTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+      autoUpdateCleanup?.();
+      autoUpdateCleanup = null;
+      if (tooltipEl?.matches(':popover-open')) {
+        tooltipEl.hidePopover();
+      }
     };
   });
 
@@ -336,34 +384,20 @@ define('bit-tooltip', ({ host }) => {
     if (e.key === 'Escape') hide();
   }
 
-  // Reposition on scroll/resize while visible
-  effect(() => {
-    if (!visible.value) return;
-
-    const scrollHandler = () => updatePosition();
-    window.addEventListener('scroll', scrollHandler, true);
-    window.addEventListener('resize', scrollHandler);
-
-    return () => {
-      window.removeEventListener('scroll', scrollHandler, true);
-      window.removeEventListener('resize', scrollHandler);
-    };
-  });
-
   return {
-    styles: [styles],
+    styles: [forcedColorsMixin, styles],
     template: html`
       <slot></slot>
       <div
         class="tooltip"
         part="tooltip"
+        id="${tooltipId}"
         role="tooltip"
+        popover="manual"
         ref=${(el: HTMLElement) => {
           tooltipEl = el;
         }}
-        :data-visible="${() => visible.value || null}"
         :data-placement="${activePlacement}"
-        :style="${() => `top:${position.value.top}px;left:${position.value.left}px`}"
         :aria-hidden="${() => String(!visible.value)}"
       >
         <slot name="content">${() => props.content.value}</slot>
@@ -373,4 +407,8 @@ define('bit-tooltip', ({ host }) => {
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-tooltip': HTMLElement & TooltipProps;
+  }
+}

@@ -9,11 +9,11 @@ Date utilities provide a set of helpers to work with dates and times in a type-s
 
 ## 📚 Quick Reference
 
-| Method | Description |
-| :----- | :---------- |
-| [`expires`](./date/expires.md) | Check if a given date or timestamp has already passed. |
+| Method                           | Description                                                       |
+| :------------------------------- | :---------------------------------------------------------------- |
+| [`expires`](./date/expires.md)   | Check if a given date or timestamp has already passed.            |
 | [`interval`](./date/interval.md) | Generate an array of dates between two dates at a given interval. |
-| [`timeDiff`](./date/timeDiff.md) | Get the most significant time difference between two dates. |
+| [`timeDiff`](./date/timeDiff.md) | Get the most significant time difference between two dates.       |
 
 ## 💡 Practical Examples
 
@@ -33,16 +33,16 @@ if (expires(tokenExpiry)) {
 
 The `interval` function accepts a string interval code:
 
-| Code | Description |
-| ---- | ----------- |
-| `'day'` | Increment by one calendar day |
-| `'week'` | Increment by 7 days |
-| `'month'` | Increment by one month (same day) |
-| `'monthStart'` | Increment to the 1st of the next month |
-| `'monthEnd'` | Increment to the last day of the next month |
-| `'year'` | Increment by one year (same month/day) |
-| `'yearStart'` | Increment to January 1 of the next year |
-| `'yearEnd'` | Increment to December 31 of the next year |
+| Code           | Description                                 |
+| -------------- | ------------------------------------------- |
+| `'day'`        | Increment by one calendar day               |
+| `'week'`       | Increment by 7 days                         |
+| `'month'`      | Increment by one month (same day)           |
+| `'monthStart'` | Increment to the 1st of the next month      |
+| `'monthEnd'`   | Increment to the last day of the next month |
+| `'year'`       | Increment by one year (same month/day)      |
+| `'yearStart'`  | Increment to January 1 of the next year     |
+| `'yearEnd'`    | Increment to December 31 of the next year   |
 
 ```ts
 import { interval } from '@vielzeug/toolkit';

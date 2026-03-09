@@ -1,10 +1,10 @@
 # @vielzeug/logit
 
-> Structured, colourful logging with log levels, namespaces, scopes, and remote transport
+> Zero-dependency logging with log levels, scoped loggers, styled output, and optional remote transport
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/logit)](https://www.npmjs.com/package/@vielzeug/logit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Logit** is a developer-friendly logger that adds colour, log-level filtering, timestamps, and scoped contexts on top of the browser/Node console — with optional remote transport for production error reporting.
+**Logit** is a developer-friendly logger that works in both browser and Node.js. It adds colour, log-level filtering, timestamps, and scoped namespaces on top of the native console — with a non-blocking async remote handler for production error reporting.
 
 ## Installation
 
@@ -17,124 +17,168 @@ pnpm add @vielzeug/logit
 ## Quick Start
 
 ```typescript
-import { Logit } from '@vielzeug/logit';
+import { createLogger, Logit } from '@vielzeug/logit';
 
-// Global configuration
-Logit.config({
-  logLevel: 'debug',
-  variant: 'compact',   // 'pretty' | 'compact' | 'json'
-  namespace: 'myapp',
-  timestamp: true,
+// Log at different levels
+Logit.debug('Debugging info', { userId: '123' });
+Logit.info('Server started', { port: 3000 });
+Logit.success('User created');
+Logit.warn('Memory usage high', { usage: '85%' });
+Logit.error('Connection failed', new Error('Timeout'));
+
+// Scoped loggers — namespaced, isolated from the parent
+const api = Logit.scope('api');
+api.info('GET /users');              // [api] GET /users
+api.scope('auth').info('login');     // [api.auth] login
+
+// Isolated instance with its own config
+const log = createLogger({ namespace: 'Worker', logLevel: 'warn' });
+
+// Callback-style timer — timeEnd fires automatically (sync or async)
+const rows = await log.time('db-query', () => db.find(id));
+
+// Callback-style group — groupEnd fires automatically, even on throw/reject
+const order = await log.group('Checkout', async () => {
+  log.info('validating cart');
+  return processOrder(cart);
 });
 
-const log = Logit('auth');
-
-log.info('User logged in', { userId: 42 });
-log.warn('Token expiring soon');
-log.error('Login failed', new Error('Invalid credentials'));
+// setConfig returns the logger for fluent chaining
+Logit.setConfig({ logLevel: 'warn', variant: 'symbol', timestamp: true });
 ```
 
 ## Features
 
-- ✅ **Log levels** — `debug`, `trace`, `info`, `success`, `warn`, `error`
-- ✅ **Namespaces** — create named loggers with `Logit(name)` or `Logit.scope(name)`
-- ✅ **Variants** — `pretty` (coloured), `compact`, or `json` output
-- ✅ **Timestamps** — opt-in ISO timestamps on every log line
-- ✅ **Remote transport** — send logs to a remote URL for production observability
-- ✅ **Assertions** — `Logit.assert(condition, ...args)` — logs if condition is falsy
-- ✅ **Timers** — `Logit.time(label)` / `Logit.timeEnd(label)` for profiling
-- ✅ **Tables** — `Logit.table(data)` for structured tabular output
+- ✅ **Log levels** — `debug`, `trace`, `info`, `success`, `warn`, `error`; filter with `setConfig({ logLevel })`
+- ✅ **Level query** — `enabled(type)` to guard against computing expensive arguments
+- ✅ **Scoped loggers** — `scope(name)` and `child(overrides?)` return isolated instances that never mutate the parent
+- ✅ **Styled output** — browser CSS badges; `symbol`, `icon`, or `text` variants
+- ✅ **Remote logging** — non-blocking async handler; respects its own `logLevel` threshold
+- ✅ **Callback timer** — `time<T>(label, fn)` wraps `console.time/timeEnd`, returns `T`, fires `timeEnd` on throw/reject too
+- ✅ **Callback group** — `group<T>(label, fn, collapsed?)` wraps `console.group/groupEnd`, returns `T`, fires `groupEnd` on throw/reject too
+- ✅ **Assertions** — `assert(condition, ...args)` forwards to `console.assert`
+- ✅ **Tables** — `table(data, properties?)` forwards to `console.table`
+- ✅ **Zero dependencies**
 
 ## Usage
 
-### Named Loggers
+### Log levels
 
 ```typescript
 import { Logit } from '@vielzeug/logit';
 
-const log = Logit('network');
-
-log.debug('Fetching', url);
-log.info('Response', { status: 200, url });
-log.success('Loaded', data);
-log.warn('Slow response', { ms: 1200 });
-log.error('Request failed', error);
+Logit.debug('Verbose info', { detail: 'value' });
+Logit.trace('Deep trace');
+Logit.info('User logged in', { userId: '123' });
+Logit.success('Order placed');
+Logit.warn('Rate limit approaching', { remaining: 10 });
+Logit.error('Payment failed', new Error('Card declined'));
 ```
 
-### Global Configuration
+### Configuration
 
 ```typescript
-Logit.config({
-  logLevel: 'warn',           // suppress debug/trace/info below this level
-  variant: 'json',            // structured JSON output
-  namespace: '[myapp]',       // prefix for all logs
-  timestamp: true,            // include ISO timestamp
+Logit.setConfig({
+  logLevel: 'warn',    // 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error' | 'off'
+  variant: 'symbol',   // 'symbol' | 'icon' | 'text'
+  timestamp: true,     // include HH:MM:SS.mmm
+  environment: true,   // 🅿 (prod) / 🅳 (dev) badge
+  namespace: 'MyApp',
   remote: {
-    url: 'https://logs.example.com/ingest',
-    level: 'error',           // only send errors remotely
+    logLevel: 'error', // only send errors remotely
+    handler: (type, data) => sendToSentry(type, data),
   },
 });
 
-// Read current config
-const cfg = Logit.getConfig();
+// Read current config — getter, returns a frozen snapshot
+const cfg = Logit.config;
 ```
 
-### Scoped Loggers
+### Scoped and child loggers
 
 ```typescript
-const baseLog = Logit('app');
-const authLog = Logit.scope('auth');  // inherits parent config
+const api = Logit.scope('api');        // [api] prefix
+const auth = api.scope('auth');        // [api.auth] prefix
 
-authLog.info('Session started');
+// child() — fully independent copy of the config, with optional overrides
+const verbose = Logit.child({ logLevel: 'debug', namespace: 'verbose' });
 ```
 
-### Timers and Tables
+### Timer
 
 ```typescript
-Logit.time('render');
-await render();
-Logit.timeEnd('render');
+// Sync — timeEnd fires automatically, value is returned
+const rows = log.time('db-query', () => db.querySync());
 
-Logit.table([{ name: 'Alice', age: 30 }, { name: 'Bob', age: 25 }]);
+// Async — timeEnd fires after the promise settles (resolve or reject)
+const data = await log.time('fetch', () => fetch('/api').then(r => r.json()));
 ```
 
-### Assertions and Groups
+### Group
 
 ```typescript
-Logit.assert(condition, 'Condition failed', { context });
+// groupEnd fires automatically after fn returns (or throws, or rejects)
+const order = await log.group('Checkout', async () => {
+  log.info('validating cart');
+  const result = await processOrder(cart);
+  log.success('order created', result.id);
+  return result;
+});
 
-Logit.groupCollapsed('Details');
-log.debug('Detail 1');
-log.debug('Detail 2');
-Logit.groupEnd();
+// Collapsed by default in DevTools
+log.group('debug details', () => log.debug(payload), true);
+```
+
+### Remote logging
+
+```typescript
+Logit.setConfig({
+  remote: {
+    logLevel: 'error',
+    handler: async (type, data) => {
+      // data: { args, env, namespace?, timestamp? }
+      await fetch('/api/logs', {
+        method: 'POST',
+        body: JSON.stringify({ level: type, ...data }),
+      });
+    },
+  },
+});
 ```
 
 ## API
 
 | Export | Description |
 |---|---|
-| `Logit(name?)` | Create a named logger |
-| `Logit.config(options)` | Set global log configuration |
-| `Logit.getConfig()` | Read current global config |
-| `Logit.scope(name)` | Create a scoped child logger |
-| `Logit.assert(cond, ...args)` | Log if condition is falsy |
-| `Logit.time(label)` | Start a named timer |
-| `Logit.timeEnd(label)` | End and print a timer |
-| `Logit.table(data)` | Print tabular data |
-| `Logit.groupCollapsed(label)` | Start a collapsed group |
-| `Logit.groupEnd()` | End a group |
-| `Logit.toggleEnvironment()` | Toggle dev/prod environment filter |
-| `Logit.toggleTimestamp()` | Toggle timestamps on/off |
+| `createLogger(initial?)` | Create an isolated `Logger` instance |
+| `Logit` | Pre-created default `Logger` instance |
+
+**Logger methods**
+
+| Method | Description |
+|---|---|
+| `debug / trace / info / success / warn / error(...args)` | Log at the given level |
+| `setConfig(opts)` | Partially update config; returns `this` for chaining |
+| `config` | Getter — returns a frozen config snapshot |
+| `enabled(level)` | Returns `true` if `level` passes the current filter |
+| `scope(name)` | Create a child logger with the namespace appended |
+| `child(overrides?)` | Create an independent copy with optional overrides |
+| `time<T>(label, fn)` | Wrap `fn` in `console.time/timeEnd`; returns `T` |
+| `group<T>(label, fn, collapsed?)` | Wrap `fn` in `console.group/groupEnd`; returns `T` |
+| `assert(condition, ...args)` | Forward to `console.assert` |
+| `table(data, properties?)` | Forward to `console.table` |
 
 ### Config Options
 
-| Option | Type | Description |
-|---|---|---|
-| `logLevel` | `'debug' \| 'trace' \| 'info' \| 'warn' \| 'error'` | Minimum level to output |
-| `variant` | `'pretty' \| 'compact' \| 'json'` | Output format |
-| `namespace` | `string` | Global prefix applied to all loggers |
-| `timestamp` | `boolean` | Include ISO timestamp |
-| `remote` | `{ url, level, headers? }` | Remote transport config |
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `logLevel` | `LogLevel` | `'debug'` | Minimum level to output |
+| `variant` | `'symbol' \| 'icon' \| 'text'` | `'symbol'` | Badge display style |
+| `namespace` | `string` | `''` | Prefix applied to all logs |
+| `timestamp` | `boolean` | `true` | Include `HH:MM:SS.mmm` timestamp |
+| `environment` | `boolean` | `true` | Show 🅿/🅳 env indicator |
+| `remote.handler` | `RemoteHandler` | — | Async remote log function |
+| `remote.logLevel` | `LogLevel` | `'debug'` | Minimum level to send remotely |
 
 ## Documentation
 
@@ -142,7 +186,7 @@ Full docs at **[vielzeug.dev/logit](https://vielzeug.dev/logit)**
 
 | | |
 |---|---|
-| [Usage Guide](https://vielzeug.dev/logit/usage) | Log levels, namespaces, configuration |
+| [Usage Guide](https://vielzeug.dev/logit/usage) | Configuration, scoped loggers, timers, groups, remote logging |
 | [API Reference](https://vielzeug.dev/logit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/logit/examples) | Real-world logging patterns |
 

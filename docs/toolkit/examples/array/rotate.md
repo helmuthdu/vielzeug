@@ -47,8 +47,8 @@ import { rotate } from '@vielzeug/toolkit';
 
 const arr = [1, 2, 3, 4, 5];
 
-rotate(arr, 2);              // [3, 4, 5]
-rotate(arr, 3);              // [4, 5]
+rotate(arr, 2); // [3, 4, 5]
+rotate(arr, 3); // [4, 5]
 ```
 
 ### Rotate With Wrap (Cycle)

@@ -1,5 +1,8 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
 
+/** A function that tears down a subscription or listener registration. */
+export type Unsubscribe = () => void;
+
 export type Fn = (...args: any[]) => any;
 
 export type Obj = Record<string, any>;

@@ -1,13 +1,15 @@
 ---
-title: Workit — Typed Web Worker abstraction for TypeScript
-description: Tiny, type-safe Web Worker wrapper with pooling, queuing, timeouts, AbortSignal support, and a main-thread fallback for SSR and tests.
+title: Workit — Web Workers made type-safe
+description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, cancellation, and a graceful main-thread fallback.
 ---
 
 <PackageBadges package="workit" />
 
+<img src="/logo-workit.svg" alt="Workit Logo" width="156" class="logo-highlight"/>
+
 # Workit
 
-**Workit** makes Web Workers ergonomic. Define a task function once — workit handles Worker creation, serialization, lifecycle, pooling, and error propagation. Falls back to Promise-based execution in environments where Workers are unavailable.
+**Workit** wraps Web Workers in a clean, fully-typed async API. Define a task function once — workit handles worker creation, message passing, timeouts, cancellation, and pooling. Falls back to main-thread execution gracefully when Workers are unavailable (SSR, tests).
 
 ## Installation
 
@@ -27,44 +29,48 @@ yarn add @vielzeug/workit
 
 :::
 
-## Features
-
-- **Type-safe** — `TaskFn<TInput, TOutput>` types flow through every `run()` call
-- **Web Worker backed** — CPU-bound work runs off the main thread
-- **Graceful fallback** — runs in the main thread when Workers aren't available (SSR, tests)
-- **Worker pool** — distribute tasks across N workers with a built-in queue
-- **Timeout support** — reject tasks that run too long
-- **AbortSignal** — cancel queued tasks with the standard `AbortController` API
-- **Testing utilities** — `createTestWorker` runs tasks synchronously with call recording
-- **Zero dependencies** — minimal bundle, no supply chain risk
-
 ## Quick Start
 
 ```ts
-import { createWorker, createWorkerPool } from '@vielzeug/workit';
+import { createWorker } from '@vielzeug/workit';
 
-// Single worker — one task at a time
+// Single worker — process one task at a time
 const worker = createWorker<number[], number>(
   (nums) => nums.reduce((a, b) => a + b, 0),
 );
-const sum = await worker.run([1, 2, 3, 4, 5]); // 15
-worker.terminate();
 
-// Worker pool — 4 concurrently running tasks
-const pool = createWorkerPool<{ n: number }, number>(
-  ({ n }) => fibonacci(n),
-  { size: 4 },
+const sum = await worker.run([1, 2, 3, 4, 5]); // 15
+worker.dispose();
+
+// Worker pool — 4 concurrent workers with a timeout
+const pool = createWorker<string, string>(
+  (text) => text.toUpperCase(),
+  { size: 4, timeout: 5000 },
 );
-const results = await pool.runAll([{ n: 35 }, { n: 36 }, { n: 37 }]);
-pool.terminate();
+
+const results = await Promise.all(items.map((item) => pool.run(item)));
+pool.dispose();
 ```
 
-## Documentation
+## Features
 
-- [Usage Guide](./usage.md) — task functions, pool, timeouts, AbortSignal, testing
-- [API Reference](./api.md) — full type signatures
-- [Examples](./examples.md) — image processing, data transformation, React integration
+- **Type-safe** — payload types flow from `TaskFn` declaration to every `run()` call
+- **Web Worker backed** — CPU-bound work runs off the main thread, no jank
+- **Graceful fallback** — runs tasks on the main thread when Workers are unavailable
+- **Pool support** — create N workers via the `size` option with built-in queuing
+- **Timeout support** — reject tasks that exceed a configurable time limit
+- **AbortSignal** — cancel queued tasks with the standard `AbortController` API
+- **Transferables** — move large buffers to the Worker without a structured-clone copy
+- **`isNative`** — know at runtime whether a real Worker is active or fallback is in use
+- **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
+- **`WorkerError` hierarchy** — single `instanceof WorkerError` covers all error types
+- **Testing utilities** — `createTestWorker` runs tasks in-process with call recording
+- **Zero dependencies** — no supply chain risk, minimal bundle size
 
-## License
+## Next Steps
 
-MIT © [Vielzeug](https://github.com/helmuthdu/vielzeug)
+|                           |                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| [Usage Guide](./usage.md) | Task functions, pools, timeouts, AbortSignal, fallback mode, and testing     |
+| [API Reference](./api.md) | Complete type signatures and method documentation                            |
+| [Examples](./examples.md) | Image processing, data pipelines, cancellable batches, and React integration |

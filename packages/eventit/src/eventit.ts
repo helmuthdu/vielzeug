@@ -5,58 +5,95 @@ export type EventKey<T extends EventMap> = keyof T & string;
 export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
-export type EventBusOptions<T extends EventMap = EventMap> = {
-  /** Custom error handler. If not provided, listener errors are re-thrown. */
-  onError?: (err: unknown, event: EventKey<T>) => void;
-  /** Called on every emit, before listeners run. Useful for logging and testing. */
+export type BusOptions<T extends EventMap = EventMap> = {
+  /** Called on every emit before listeners run. Useful for logging/tracing. */
   onEmit?: (event: EventKey<T>, payload: unknown) => void;
+  /** If provided, listener errors are forwarded here instead of re-thrown. */
+  onError?: (err: unknown, event: EventKey<T>, payload: unknown) => void;
 };
 
-export type EventBus<T extends EventMap> = {
-  /** Subscribe to an event. Returns an unsubscribe function. */
-  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
-  /** Subscribe once — auto-unsubscribes after the first emit. */
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe;
+export type Bus<T extends EventMap> = {
+  /** Whether the bus has been permanently disposed. */
+  readonly disposed: boolean;
+  /** Subscribe to an event. Returns an unsubscribe function. Stops automatically when signal aborts. */
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  /** Subscribe once — auto-unsubscribes after the first emit. Stops early when signal aborts. */
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  /** Resolve on the next emit. Rejects if the bus is disposed or signal aborts. */
+  wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>;
+  /** Async-iterate over all future emits of an event. Terminates when the bus is disposed or signal aborts. */
+  events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]>;
   /** Emit an event, calling all registered listeners synchronously. */
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
-  /** Remove all listeners for a specific event, or all events if none provided. */
-  clear(event?: EventKey<T>): void;
-  /** Permanently dispose the bus — clears all listeners; emit and on become no-ops. */
+  /** Permanently dispose the bus — clears all listeners; pending waits are rejected. Idempotent. */
   dispose(): void;
-};
-
-export type TestBus<T extends EventMap> = {
-  bus: EventBus<T>;
-  /** All payloads emitted per event key, in order. */
-  emitted: Map<EventKey<T>, unknown[]>;
-  /** Clear emitted records without disposing the bus. */
-  reset(): void;
-  /** Dispose the bus and clear all records. */
-  dispose(): void;
+  /** Alias for dispose() — enables the `using` keyword for automatic cleanup. */
+  [Symbol.dispose](): void;
 };
 
 /** -------------------- Factory -------------------- **/
 
-export function eventBus<T extends EventMap>(options?: EventBusOptions<T>): EventBus<T> {
+const ERR_DISPOSED = 'Bus is disposed';
+
+export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const subs = new Map<string, Set<Listener<unknown>>>();
+  const pending = new Set<(err: unknown) => void>();
   let disposed = false;
 
-  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe {
-    if (disposed) return () => {};
+  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe {
+    if (disposed || signal?.aborted) return () => {};
+    const l = listener as Listener<unknown>;
     let set = subs.get(event);
-    if (!set) subs.set(event, (set = new Set()));
-    set.add(listener as Listener<unknown>);
-    return () => {
-      subs.get(event)?.delete(listener as Listener<unknown>);
-    };
+    if (!set) {
+      set = new Set();
+      subs.set(event, set);
+    }
+    set.add(l);
+    function unsub() {
+      subs.get(event)?.delete(l);
+      signal?.removeEventListener('abort', unsub);
+    }
+    signal?.addEventListener('abort', unsub, { once: true });
+    return unsub;
   }
 
-  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>): Unsubscribe {
-    const unsub = on(event, (payload) => {
+  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe {
+    let unsub: Unsubscribe;
+    const wrapper = (payload: T[K]) => {
       unsub();
       listener(payload);
-    });
+    };
+    unsub = on(event, wrapper as Listener<T[K]>, signal);
     return unsub;
+  }
+
+  function wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]> {
+    if (disposed) return Promise.reject(new Error(ERR_DISPOSED));
+    if (signal?.aborted) return Promise.reject(signal.reason);
+    return new Promise<T[K]>((resolve, reject) => {
+      function onDispose(reason: unknown) {
+        signal?.removeEventListener('abort', onAbort);
+        reject(reason);
+      }
+      function onAbort() {
+        pending.delete(onDispose);
+        unsub();
+        reject(signal!.reason);
+      }
+      const unsub = once(event, (payload) => {
+        pending.delete(onDispose);
+        signal?.removeEventListener('abort', onAbort);
+        resolve(payload);
+      });
+      pending.add(onDispose);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+
+  async function* events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]> {
+    while (true) {
+      yield await wait(event, signal);
+    }
   }
 
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
@@ -69,46 +106,31 @@ export function eventBus<T extends EventMap>(options?: EventBusOptions<T>): Even
       try {
         listener(payload);
       } catch (err) {
-        if (options?.onError) options.onError(err, event);
+        if (options?.onError) options.onError(err, event, payload);
         else throw err;
       }
     }
   }
 
-  function clear(event?: EventKey<T>): void {
-    if (event !== undefined) subs.delete(event);
-    else subs.clear();
-  }
-
   function dispose(): void {
+    if (disposed) return;
     disposed = true;
+    const err = new Error(ERR_DISPOSED);
+    for (const reject of pending) reject(err);
+    pending.clear();
     subs.clear();
   }
 
-  return { on, once, emit, clear, dispose };
-}
-
-/** -------------------- Test Utilities -------------------- **/
-
-export function testEventBus<T extends EventMap>(options?: Omit<EventBusOptions<T>, 'onEmit'>): TestBus<T> {
-  const emitted = new Map<EventKey<T>, unknown[]>();
-
-  const bus = eventBus<T>({
-    ...options,
-    onEmit(event, payload) {
-      const list = emitted.get(event) ?? [];
-      list.push(payload);
-      emitted.set(event, list);
-    },
-  });
-
   return {
-    bus,
-    emitted,
-    reset: () => emitted.clear(),
-    dispose(): void {
-      emitted.clear();
-      bus.dispose();
+    dispose,
+    get disposed() {
+      return disposed;
     },
+    emit,
+    events,
+    on,
+    once,
+    wait,
+    [Symbol.dispose]: dispose,
   };
 }

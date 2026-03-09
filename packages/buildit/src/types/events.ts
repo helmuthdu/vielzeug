@@ -90,11 +90,21 @@ export interface BitSwitchChangeEvent extends CustomEvent<CheckedChangeDetail> {
   readonly type: 'change';
 }
 
+/** Detail emitted by `bit-slider` change events. */
+export interface SliderChangeDetail extends BaseEventDetail {
+  /** Single-value mode: the new value. */
+  value?: number;
+  /** Range mode: the lower-bound value. */
+  from?: number;
+  /** Range mode: the upper-bound value. */
+  to?: number;
+}
+
 /**
  * Slider change event
  * @fires bit-slider#change
  */
-export interface BitSliderChangeEvent extends CustomEvent<ValueChangeDetail<number>> {
+export interface BitSliderChangeEvent extends CustomEvent<SliderChangeDetail> {
   readonly type: 'change';
 }
 
@@ -102,7 +112,7 @@ export interface BitSliderChangeEvent extends CustomEvent<ValueChangeDetail<numb
  * Slider input event (fired during dragging)
  * @fires bit-slider#input
  */
-export interface BitSliderInputEvent extends CustomEvent<ValueChangeDetail<number>> {
+export interface BitSliderInputEvent extends CustomEvent<SliderChangeDetail> {
   readonly type: 'input';
 }
 
@@ -147,18 +157,6 @@ export interface BitAlertDismissEvent extends CustomEvent<BaseEventDetail> {
 }
 
 // ============================================
-// Button Component Events
-// ============================================
-
-/**
- * Button click event
- * @fires bit-button#click
- */
-export interface BitButtonClickEvent extends CustomEvent<BaseEventDetail> {
-  readonly type: 'click';
-}
-
-// ============================================
 // Accordion Component Events
 // ============================================
 
@@ -182,12 +180,20 @@ export interface BitAccordionChangeEvent extends CustomEvent<SelectionDetail> {
 // Card Component Events
 // ============================================
 
+/** Detail emitted by `bit-card` activate events. */
+export interface CardActivateDetail extends BaseEventDetail {
+  /** Input modality that triggered card activation. */
+  trigger: 'pointer' | 'keyboard';
+  /** Original user interaction event. */
+  originalEvent: MouseEvent | KeyboardEvent;
+}
+
 /**
- * Card click event (when clickable)
- * @fires bit-card#click
+ * Card activate event (interactive card activation)
+ * @fires bit-card#activate
  */
-export interface BitCardClickEvent extends CustomEvent<BaseEventDetail> {
-  readonly type: 'click';
+export interface BitCardActivateEvent extends CustomEvent<CardActivateDetail> {
+  readonly type: 'activate';
 }
 
 // ============================================
@@ -248,8 +254,33 @@ export interface BitSelectEvents {
   change: BitSelectChangeEvent;
 }
 
-export interface BitButtonEvents {
-  click: BitButtonClickEvent;
+/** Detail emitted by `bit-combobox` change events. */
+export interface ComboboxChangeDetail extends BaseEventDetail {
+  value: string;
+  values: string[];
+  label: string;
+  originalEvent?: Event;
+}
+
+/**
+ * Combobox change event (fired when a selection is made)
+ * @fires bit-combobox#change
+ */
+export interface BitComboboxChangeEvent extends CustomEvent<ComboboxChangeDetail> {
+  readonly type: 'change';
+}
+
+/**
+ * Combobox search event (fired while the user types)
+ * @fires bit-combobox#search
+ */
+export interface BitComboboxSearchEvent extends CustomEvent<{ query: string }> {
+  readonly type: 'search';
+}
+
+export interface BitComboboxEvents {
+  change: BitComboboxChangeEvent;
+  search: BitComboboxSearchEvent;
 }
 
 export interface BitAccordionItemEvents {
@@ -261,7 +292,39 @@ export interface BitAccordionEvents {
 }
 
 export interface BitCardEvents {
-  click: BitCardClickEvent;
+  activate: BitCardActivateEvent;
+}
+
+/** Detail emitted by `bit-chip` remove events. */
+export interface ChipRemoveDetail extends BaseEventDetail {
+  value: string | undefined;
+}
+
+/** Detail emitted by `bit-chip` change events. */
+export interface ChipChangeDetail extends BaseEventDetail {
+  value: string | undefined;
+  checked: boolean;
+}
+
+/**
+ * Chip remove event
+ * @fires bit-chip#remove
+ */
+export interface BitChipRemoveEvent extends CustomEvent<ChipRemoveDetail> {
+  readonly type: 'remove';
+}
+
+/**
+ * Chip change event
+ * @fires bit-chip#change
+ */
+export interface BitChipChangeEvent extends CustomEvent<ChipChangeDetail> {
+  readonly type: 'change';
+}
+
+export interface BitChipEvents {
+  remove: BitChipRemoveEvent;
+  change: BitChipChangeEvent;
 }
 
 // ============================================
@@ -277,15 +340,47 @@ export interface BitCardEvents {
  *   AddEventListeners<BitCheckboxEvents>;
  * ```
  */
-export type AddEventListeners<T extends Record<string, Event>> = {
-  addEventListener<K extends keyof T>(
+export type AddEventListeners<T> = {
+  addEventListener<K extends keyof T & string>(
     type: K,
-    listener: (this: HTMLElement, ev: T[K]) => any,
+    listener: (this: HTMLElement, ev: T[K]) => void,
     options?: boolean | AddEventListenerOptions,
   ): void;
-  removeEventListener<K extends keyof T>(
+  removeEventListener<K extends keyof T & string>(
     type: K,
-    listener: (this: HTMLElement, ev: T[K]) => any,
+    listener: (this: HTMLElement, ev: T[K]) => void,
     options?: boolean | EventListenerOptions,
   ): void;
 };
+
+// Dialog events
+export interface BitDialogOpenEvent extends CustomEvent<never> {
+  readonly type: 'open';
+}
+export interface BitDialogCloseEvent extends CustomEvent<never> {
+  readonly type: 'close';
+}
+export interface BitDialogEvents {
+  open: BitDialogOpenEvent;
+  close: BitDialogCloseEvent;
+}
+
+// Tabs events
+export interface BitTabsChangeEvent extends CustomEvent<{ value: string }> {
+  readonly type: 'change';
+}
+export interface BitTabsEvents {
+  change: BitTabsChangeEvent;
+}
+
+// FileInput events
+export interface BitFileInputChangeEvent extends CustomEvent<{ files: File[]; originalEvent?: Event }> {
+  readonly type: 'change';
+}
+export interface BitFileInputRemoveEvent extends CustomEvent<{ file: File; files: File[] }> {
+  readonly type: 'remove';
+}
+export interface BitFileInputEvents {
+  change: BitFileInputChangeEvent;
+  remove: BitFileInputRemoveEvent;
+}

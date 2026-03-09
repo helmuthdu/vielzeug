@@ -10,6 +10,21 @@
 // ============================================
 
 /**
+ * Form validity methods exposed on form-associated custom elements.
+ * Mirrors the constraint validation API so form libraries (React Hook Form,
+ * etc.) and native `<form>` can interact with bit-* form controls directly.
+ */
+export interface FormValidityMethods {
+  /** Returns true if the element's value satisfies all constraints. */
+  checkValidity(): boolean;
+  /** Same as checkValidity() but also fires an invalid event and shows the
+   *  browser's validation UI when the element is invalid. */
+  reportValidity(): boolean;
+  /** Sets a custom validation message. Pass an empty string to clear. */
+  setCustomValidity(message: string): void;
+}
+
+/**
  * Component size variants
  * Consistent across all sized components
  */
@@ -24,7 +39,7 @@ export type ThemeColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning
 /**
  * All available colors (including neutral)
  */
-export type AllColors = ThemeColor | 'neutral';
+export type AllColors = ThemeColor;
 
 /**
  * Visual variant types

@@ -12,38 +12,51 @@ import { sleep } from './sleep';
  *
  * @param fn - The asynchronous function to retry.
  * @param options - (optional) Options for retrying the function.
- * @param [options.times=3] - The number of retry attempts.
- * @param [options.delay=250] - The delay in milliseconds between retries.
- * @param [options.backoff=1] - Exponential backoff factor (default: 1 → no backoff).
- * @param [options.signal] - `AbortSignal` to allow canceling retries.
+ * @param [options.times=3] - Total number of attempts (including the first).
+ * @param [options.delay=250] - The delay in milliseconds between retries. Ignored when `retryDelay` is provided.
+ * @param [options.backoff=1] - Exponential backoff factor (default: 1 → no backoff). Ignored when `retryDelay` is provided.
+ * @param [options.retryDelay] - Per-attempt delay function. `attempt` is 0-based (0 = waiting before the 2nd try). Supersedes `delay` and `backoff`.
+ * @param [options.signal] - `AbortSignal` to cancel retries; throws the signal's `reason` on abort.
+ * @param [options.shouldRetry] - Return `false` to stop retrying immediately for a specific error. `attempt` is 0-based failure count.
  *
  * @returns The result of the asynchronous function.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: retry logic branches over abort, shouldRetry, retryDelay, and backoff — each is a distinct, necessary code path
 export async function retry<T>(
   fn: () => Promise<T>,
   {
     times = 3,
     delay = 250,
     backoff = 1,
+    retryDelay,
     signal,
+    shouldRetry,
   }: {
     times?: number;
     delay?: number;
-    backoff?: number | ((attempt: number, delay: number) => number);
+    backoff?: number | ((attempt: number, currentDelay: number) => number);
+    /** Per-attempt delay override. `attempt` is 0-based (0 = before the 2nd try). Supersedes `delay` and `backoff`. */
+    retryDelay?: (attempt: number) => number;
     signal?: AbortSignal;
+    /** Return `false` to stop retrying for a specific error. `attempt` is 0-based failure count. */
+    shouldRetry?: (error: unknown, attempt: number) => boolean;
   } = {},
 ): Promise<T> {
   let currentDelay = delay;
 
   for (let attempt = 1; attempt <= times; attempt++) {
-    if (signal?.aborted) throw new Error('Retry aborted');
+    if (signal?.aborted) throw signal.reason ?? new DOMException('Retry aborted', 'AbortError');
 
     try {
       return await fn();
     } catch (err) {
       if (attempt === times) throw err;
-      if (currentDelay > 0) await sleep(currentDelay);
-      currentDelay = typeof backoff === 'function' ? backoff(attempt, currentDelay) : currentDelay * backoff;
+      if (shouldRetry && !shouldRetry(err, attempt - 1)) throw err;
+      const ms = retryDelay ? retryDelay(attempt - 1) : currentDelay;
+      if (ms > 0) await sleep(ms);
+      if (!retryDelay) {
+        currentDelay = typeof backoff === 'function' ? backoff(attempt, currentDelay) : currentDelay * backoff;
+      }
     }
   }
 

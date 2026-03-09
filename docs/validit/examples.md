@@ -3,7 +3,7 @@ title: Validit — Examples
 description: Real-world validation recipes and framework integrations for Validit.
 ---
 
-# Validit Examples
+## Validit Examples
 
 ::: tip
 These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
@@ -40,7 +40,7 @@ import { useState } from 'react';
 
 const userSchema = v.object({
   name: v.string().min(1, 'Name is required'),
-  email: v.email('Invalid email'),
+  email: v.string().email('Invalid email'),
 });
 
 function UserForm() {
@@ -104,7 +104,7 @@ import { reactive } from 'vue';
 
 const userSchema = v.object({
   name: v.string().min(1, 'Name is required'),
-  email: v.email('Invalid email'),
+  email: v.string().email('Invalid email'),
 });
 
 const state = reactive({
@@ -147,7 +147,7 @@ const handleSubmit = (e: Event) => {
 
   const userSchema = v.object({
     name: v.string().min(1, 'Name is required'),
-    email: v.email('Invalid email'),
+    email: v.string().email('Invalid email'),
   });
 
   let state = {
@@ -198,7 +198,7 @@ import { v } from '@vielzeug/validit';
 class UserForm extends HTMLElement {
   #schema = v.object({
     name: v.string().min(1, 'Name is required'),
-    email: v.email('Invalid email'),
+    email: v.string().email('Invalid email'),
   });
 
   connectedCallback() {
@@ -292,7 +292,7 @@ export function useFormValidation<T extends Record<string, any>>(schema: Schema<
 // UserForm.tsx
 const userSchema = v.object({
   name: v.string().min(1, 'Name is required'),
-  email: v.email('Invalid email'),
+  email: v.string().email('Invalid email'),
 });
 
 function UserForm() {
@@ -355,7 +355,7 @@ export function useFormValidation<T extends Record<string, any>>(schema: Schema<
 <script setup lang="ts">
 const userSchema = v.object({
   name: v.string().min(1, 'Name is required'),
-  email: v.email('Invalid email'),
+  email: v.string().email('Invalid email'),
 });
 
 const { state, handleChange, handleSubmit } = useFormValidation(userSchema);
@@ -431,7 +431,7 @@ export function createFormValidation<T extends Record<string, any>>(schema: Sche
 
   const userSchema = v.object({
     name: v.string().min(1, 'Name is required'),
-    email: v.email('Invalid email'),
+    email: v.string().email('Invalid email'),
   });
 
   const { state, handleChange, handleSubmit } = createFormValidation(userSchema);
@@ -515,9 +515,9 @@ const registrationSchema = v
       .string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username cannot exceed 20 characters')
-      .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
 
-    email: v.email(),
+    email: v.string().email(),
 
     password: v
       .string()
@@ -535,9 +535,7 @@ const registrationSchema = v
       .min(13, 'You must be at least 13 years old')
       .max(120, 'Please enter a valid age'),
 
-    agreeToTerms: v
-      .boolean()
-      .refine((val) => val === true, 'You must accept the terms and conditions'),
+    agreeToTerms: v.boolean().refine((val) => val === true, 'You must accept the terms and conditions'),
 
     newsletter: v.boolean().default(false),
   })
@@ -606,10 +604,10 @@ const profileSchema = v.object({
   }),
 
   contact: v.object({
-    email: v.email().min(1),
+    email: v.string().email().min(1),
     phone: v
       .string()
-      .pattern(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
       .optional(),
     address: v
       .object({
@@ -618,7 +616,7 @@ const profileSchema = v.object({
         country: v.string().optional(),
         zipCode: v
           .string()
-          .pattern(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code')
+          .regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code')
           .optional(),
       })
       .optional(),
@@ -626,9 +624,9 @@ const profileSchema = v.object({
 
   social: v
     .object({
-      twitter: v.url().optional(),
-      linkedin: v.url().optional(),
-      github: v.url().optional(),
+      twitter: v.string().url().optional(),
+      linkedin: v.string().url().optional(),
+      github: v.string().url().optional(),
     })
     .optional(),
 });
@@ -651,7 +649,9 @@ const createArticleSchema = v.object({
 
   tags: v.array(v.string()).min(1, 'At least one tag is required').max(5, 'Maximum 5 tags allowed'),
 
-  status: v.oneOf(v.literal('draft'), v.literal('published'), v.literal('archived')).default('draft' as 'draft' | 'published' | 'archived'),
+  status: v
+    .union(v.literal('draft'), v.literal('published'), v.literal('archived'))
+    .default('draft' as 'draft' | 'published' | 'archived'),
 
   publishedAt: v.date().optional(),
 });
@@ -682,10 +682,10 @@ Validate API responses for type safety.
 const userResponseSchema = v.object({
   success: v.boolean(),
   data: v.object({
-    id: v.int().positive(),
+    id: v.number().int().positive(),
     username: v.string(),
-    email: v.email(),
-    avatar: v.url().optional(),
+    email: v.string().email(),
+    avatar: v.string().url().optional(),
     createdAt: v.string(), // ISO date string
   }),
   meta: v
@@ -720,9 +720,13 @@ const searchQuerySchema = v
 
     limit: v.coerce.number().int().min(1).max(100).default(20),
 
-    sort: v.oneOf(v.literal('relevance'), v.literal('date'), v.literal('popularity')).default('relevance' as 'relevance' | 'date' | 'popularity'),
+    sort: v
+      .union(v.literal('relevance'), v.literal('date'), v.literal('popularity'))
+      .default('relevance' as 'relevance' | 'date' | 'popularity'),
 
-    category: v.oneOf(v.literal('all'), v.literal('tech'), v.literal('science'), v.literal('business'), v.literal('sports')).default('all' as 'all' | 'tech' | 'science' | 'business' | 'sports'),
+    category: v
+      .union(v.literal('all'), v.literal('tech'), v.literal('science'), v.literal('business'), v.literal('sports'))
+      .default('all' as 'all' | 'tech' | 'science' | 'business' | 'sports'),
 
     minPrice: v.coerce.number().positive().optional(),
     maxPrice: v.coerce.number().positive().optional(),
@@ -792,8 +796,10 @@ const appConfigSchema = v.object({
   }),
 
   logging: v.object({
-    level: v.oneOf(v.literal('debug'), v.literal('info'), v.literal('warn'), v.literal('error')).default('info' as 'debug' | 'info' | 'warn' | 'error'),
-    format: v.oneOf(v.literal('json'), v.literal('pretty')).default('json' as 'json' | 'pretty'),
+    level: v
+      .union(v.literal('debug'), v.literal('info'), v.literal('warn'), v.literal('error'))
+      .default('info' as 'debug' | 'info' | 'warn' | 'error'),
+    format: v.union(v.literal('json'), v.literal('pretty')).default('json' as 'json' | 'pretty'),
   }),
 
   features: v.object({
@@ -834,13 +840,13 @@ function loadConfig(): AppConfig {
 
 ```ts
 const productSchema = v.object({
-  id: v.uuid(),
+  id: v.string().uuid(),
   name: v.string().min(1).max(200),
   description: v.string().max(2000).optional(),
 
   price: v.object({
     amount: v.number().positive(),
-    currency: v.oneOf(v.literal('USD'), v.literal('EUR'), v.literal('GBP')).default('USD' as 'USD' | 'EUR' | 'GBP'),
+    currency: v.union(v.literal('USD'), v.literal('EUR'), v.literal('GBP')).default('USD' as 'USD' | 'EUR' | 'GBP'),
   }),
 
   inventory: v.object({
@@ -854,7 +860,7 @@ const productSchema = v.object({
   images: v
     .array(
       v.object({
-        url: v.url(),
+        url: v.string().url(),
         alt: v.string().optional(),
         isPrimary: v.boolean().default(false),
       }),
@@ -865,9 +871,9 @@ const productSchema = v.object({
   variants: v
     .array(
       v.object({
-        id: v.uuid(),
+        id: v.string().uuid(),
         name: v.string(),
-        sku: v.string().pattern(/^[A-Z0-9-]+$/),
+        sku: v.string().regex(/^[A-Z0-9-]+$/),
         price: v.number().positive(),
         stock: v.number().int().min(0),
       }),
@@ -887,16 +893,16 @@ type Product = Infer<typeof productSchema>;
 const orderSchema = v
   .object({
     customer: v.object({
-      id: v.uuid(),
-      email: v.email(),
+      id: v.string().uuid(),
+      email: v.string().email(),
       name: v.string().min(1),
     }),
 
     items: v
       .array(
         v.object({
-          productId: v.uuid(),
-          variantId: v.uuid().optional(),
+          productId: v.string().uuid(),
+          variantId: v.string().uuid().optional(),
           quantity: v.number().int().positive(),
           price: v.number().positive(),
         }),
@@ -908,16 +914,16 @@ const orderSchema = v
         street: v.string().min(1),
         city: v.string().min(1),
         state: v.string().min(1),
-        zipCode: v.string().pattern(/^\d{5}(-\d{4})?$/),
+        zipCode: v.string().regex(/^\d{5}(-\d{4})?$/),
         country: v.string().min(1),
       }),
-      method: v.oneOf(v.literal('standard'), v.literal('express'), v.literal('overnight')),
+      method: v.union(v.literal('standard'), v.literal('express'), v.literal('overnight')),
       tracking: v.string().optional(),
     }),
 
     payment: v.object({
-      method: v.oneOf(v.literal('credit_card'), v.literal('paypal'), v.literal('bank_transfer')),
-      status: v.oneOf(v.literal('pending'), v.literal('completed'), v.literal('failed')),
+      method: v.union(v.literal('credit_card'), v.literal('paypal'), v.literal('bank_transfer')),
+      status: v.union(v.literal('pending'), v.literal('completed'), v.literal('failed')),
       transactionId: v.string().optional(),
     }),
 
@@ -949,7 +955,7 @@ const usernameSchema = v
   .string()
   .min(3, 'Username must be at least 3 characters')
   .max(20, 'Username cannot exceed 20 characters')
-  .pattern(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
   .refine(async (username) => {
     const user = await db.users.findOne({ username });
     return user === null;
@@ -977,7 +983,7 @@ Validate email and check domain MX records.
 ```ts
 import { resolveMx } from 'dns/promises';
 
-const emailSchema = v.email().refine(async (email) => {
+const emailSchema = v.string().email().refine(async (email) => {
   const domain = email.split('@')[1];
   try {
     const records = await resolveMx(domain);
@@ -998,7 +1004,7 @@ Verify API key against external service.
 ```ts
 const apiKeySchema = v
   .string()
-  .pattern(/^sk_[a-zA-Z0-9]{32}$/, 'Invalid API key format')
+  .regex(/^sk_[a-zA-Z0-9]{32}$/, 'Invalid API key format')
   .refine(async (key) => {
     const response = await fetch('https://api.service.com/validate', {
       headers: { Authorization: `Bearer ${key}` },
@@ -1028,7 +1034,7 @@ const errorResponseSchema = v.object({
   }),
 });
 
-const apiResponseSchema = v.oneOf(successResponseSchema, errorResponseSchema);
+const apiResponseSchema = v.union(successResponseSchema, errorResponseSchema);
 
 type ApiResponse = Infer<typeof apiResponseSchema>;
 // { success: true; data: {...} } | { success: false; error: {...} }
@@ -1048,25 +1054,25 @@ function handleResponse(response: ApiResponse) {
 ```ts
 const creditCardSchema = v.object({
   type: v.literal('credit_card'),
-  cardNumber: v.string().pattern(/^\d{16}$/),
+  cardNumber: v.string().regex(/^\d{16}$/),
   expiryMonth: v.number().int().min(1).max(12),
   expiryYear: v.number().int(),
-  cvv: v.string().pattern(/^\d{3,4}$/),
+  cvv: v.string().regex(/^\d{3,4}$/),
 });
 
 const paypalSchema = v.object({
   type: v.literal('paypal'),
-  email: v.email(),
+  email: v.string().email(),
 });
 
 const bankTransferSchema = v.object({
   type: v.literal('bank_transfer'),
   accountNumber: v.string(),
   routingNumber: v.string(),
-  accountType: v.oneOf(v.literal('checking'), v.literal('savings')),
+  accountType: v.union(v.literal('checking'), v.literal('savings')),
 });
 
-const paymentMethodSchema = v.oneOf(creditCardSchema, paypalSchema, bankTransferSchema);
+const paymentMethodSchema = v.union(creditCardSchema, paypalSchema, bankTransferSchema);
 
 type PaymentMethod = Infer<typeof paymentMethodSchema>;
 ```
@@ -1087,7 +1093,7 @@ type Comment = {
 
 const CommentSchema: Schema<Comment> = v.lazy(() =>
   v.object({
-    id: v.int().positive(),
+    id: v.number().int().positive(),
     text: v.string().min(1).max(1000),
     author: v.string(),
     replies: v.array(CommentSchema).optional(),
@@ -1102,7 +1108,7 @@ type CommentType = Infer<typeof CommentSchema>;
 ```ts
 const shipmentSchema = v
   .object({
-    shippingMethod: v.oneOf(v.literal('pickup'), v.literal('delivery')),
+    shippingMethod: v.union(v.literal('pickup'), v.literal('delivery')),
     address: v
       .object({
         street: v.string(),

@@ -5,20 +5,30 @@ import {
   css,
   define,
   defineEmits,
+  defineField,
   defineProps,
   defineSlots,
-  field,
+  effect,
   guard,
   handle,
   html,
-  onFormReset,
+  inject,
   onMount,
   ref,
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import type { ComponentSize, ThemeColor } from '../../types';
+import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitRadioEvents,
+  CheckableProps,
+  DisablableProps,
+  FormValidityMethods,
+  SizableProps,
+  ThemableProps,
+} from '../../types';
+import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -33,10 +43,12 @@ const componentStyles = /* css */ css`
       --_border: var(--radio-border-color, var(--color-contrast-300));
 
       display: inline-flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: var(--_gap, var(--size-2));
       cursor: pointer;
       user-select: none;
+      min-height: var(--_touch-target);
     }
 
     .radio-wrapper {
@@ -45,10 +57,6 @@ const componentStyles = /* css */ css`
       width: var(--_size);
       height: var(--_size);
       flex-shrink: 0;
-    }
-
-    input {
-      display: none;
     }
 
     .circle {
@@ -69,7 +77,7 @@ const componentStyles = /* css */ css`
        Focus State
        ======================================== */
 
-    input:focus-visible + .circle {
+    :host(:focus-visible) .circle {
       box-shadow: var(--_focus-shadow);
     }
 
@@ -100,6 +108,22 @@ const componentStyles = /* css */ css`
       font-size: var(--_font-size);
       color: var(--color-contrast);
     }
+
+    /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+    .helper-text {
+      color: var(--color-contrast-500);
+      font-size: var(--text-xs);
+      line-height: var(--leading-tight);
+      padding-inline-start: calc(var(--_size) + var(--size-2));
+      width: 100%;
+    }
+
+    .helper-text[role='alert'] {
+      color: var(--color-error);
+    }
   }
 
   @layer buildit.overrides {
@@ -127,19 +151,11 @@ const componentStyles = /* css */ css`
 `;
 
 /** Radio component properties */
-export interface RadioProps {
-  /** Checked state */
-  checked?: boolean;
-  /** Disable radio interaction */
-  disabled?: boolean;
-  /** Field value */
-  value?: string;
-  /** Form field name (required for radio groups) */
-  name?: string;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Radio size */
-  size?: ComponentSize;
+export interface RadioProps extends CheckableProps, ThemableProps, SizableProps, DisablableProps {
+  /** Helper text displayed below the radio */
+  helper?: string;
+  /** Error message (marks field as invalid) */
+  error?: string;
 }
 
 /**
@@ -151,7 +167,7 @@ export interface RadioProps {
  * @attr {boolean} disabled - Disable radio interaction
  * @attr {string} value - Field value
  * @attr {string} name - Form field name (required for radio groups)
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Radio size: 'sm' | 'md' | 'lg'
  *
  * @fires change - Emitted when radio is selected
@@ -176,33 +192,42 @@ export interface RadioProps {
  * <bit-radio name="size" value="large">Large</bit-radio>
  * ```
  */
-define(
+export const TAG = define(
   'bit-radio',
   ({ host }) => {
     const slots = defineSlots();
     const emit = defineEmits<{ change: { checked: boolean; originalEvent: Event } }>();
-    const props = defineProps({
+    const props = defineProps<RadioProps>({
       checked: { default: false },
-      color: { default: undefined as ThemeColor | undefined },
+      color: { default: undefined },
       disabled: { default: false },
+      error: { default: '', omit: true },
+      helper: { default: '' },
       name: { default: '' },
-      size: { default: undefined as ComponentSize | undefined },
+      size: { default: undefined },
       value: { default: '' },
     });
 
     const checkedSignal = signal(false);
 
-    field({
-      disabled: computed(() => props.disabled.value),
-      toFormValue: (v: string | null) => v,
-      value: computed(() => (checkedSignal.value ? props.value.value : null)),
-    });
+    const groupCtx = inject(RADIO_GROUP_CTX);
 
-    onFormReset(() => {
-      checkedSignal.value = props.checked.value;
-    });
+    defineField(
+      {
+        disabled: computed(() => props.disabled.value),
+        toFormValue: (v: string | null) => v,
+        value: computed(() => (checkedSignal.value ? props.value.value : null)),
+      },
+      {
+        onReset: () => {
+          checkedSignal.value = props.checked.value;
+        },
+      },
+    );
 
     const labelRef = ref<HTMLSpanElement>();
+    const helperRef = ref<HTMLDivElement>();
+    const helperId = createId('radio-helper');
 
     watch(
       props.checked,
@@ -254,7 +279,11 @@ define(
     const handleClick = guard(
       () => !props.disabled.value && !host.hasAttribute('checked'),
       (e: Event) => {
-        selectRadio(host, e);
+        if (groupCtx) {
+          groupCtx.select(props.value.value ?? '');
+        } else {
+          selectRadio(host, e);
+        }
       },
     );
 
@@ -271,20 +300,32 @@ define(
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault();
           if (!host.hasAttribute('checked')) {
-            selectRadio(host, e);
+            if (groupCtx) {
+              groupCtx.select(props.value.value ?? '');
+            } else {
+              selectRadio(host, e);
+            }
           }
         } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
           e.preventDefault();
           const nextIndex = (currentIndex + 1) % radios.length;
           const nextRadio = radios[nextIndex];
           nextRadio.focus();
-          selectRadio(nextRadio, e);
+          if (groupCtx) {
+            groupCtx.select(nextRadio.getAttribute('value') ?? '');
+          } else {
+            selectRadio(nextRadio, e);
+          }
         } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
           e.preventDefault();
           const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
           const prevRadio = radios[prevIndex];
           prevRadio.focus();
-          selectRadio(prevRadio, e);
+          if (groupCtx) {
+            groupCtx.select(prevRadio.getAttribute('value') ?? '');
+          } else {
+            selectRadio(prevRadio, e);
+          }
         }
       },
     );
@@ -292,20 +333,51 @@ define(
     handle(host, 'click', handleClick);
     handle(host, 'keydown', handleKeydown);
 
+    // Pre-register the slot signal during setup so its onMount runs before ours,
+    // ensuring slots.has('default').value returns the correct value inside onMount.
+    slots.has('default');
+
     onMount(() => {
+      host.setAttribute('role', 'radio');
+      if (!props.disabled.value) host.setAttribute('tabindex', checkedSignal.value ? '0' : '-1');
+
       // labelRef.value is only populated after template render
       const label = labelRef.value;
-      if (slots.has('default') && label) {
+      if (slots.has('default').value && label) {
         const labelId = createId('radio-label');
         label.id = labelId;
         aria({ labelledby: labelId });
       }
+
+      effect(() => {
+        const helperEl = helperRef.value;
+        if (!helperEl) return;
+        helperEl.id = helperId;
+        helperEl.textContent = props.error.value || props.helper.value || '';
+        helperEl.hidden = !props.error.value && !props.helper.value;
+        if (props.error.value) helperEl.setAttribute('role', 'alert');
+        else helperEl.removeAttribute('role');
+      });
     });
+
+    aria({
+      checked: () => String(checkedSignal.value),
+      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+      invalid: () => !!props.error.value,
+    });
+
+    watch(
+      computed(() => ({ checked: checkedSignal.value, disabled: props.disabled.value })),
+      ({ checked, disabled }) => {
+        if (disabled) host.removeAttribute('tabindex');
+        else host.setAttribute('tabindex', checked ? '0' : '-1');
+      },
+    );
 
     return {
       styles: [
-        colorThemeMixin,
-        disabledStateMixin(),
+        ...formControlMixins,
+        coarsePointerMixin,
         sizeVariantMixin({
           lg: {
             fontSize: 'var(--text-base)',
@@ -321,15 +393,19 @@ define(
         componentStyles,
       ],
       template: html` <div class="radio-wrapper" part="radio">
-          <input type="radio" aria-hidden="true" tabindex="-1" />
           <div class="circle" part="circle">
-            <div class="dot"></div>
+            <div class="dot" part="dot"></div>
           </div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+        <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`,
     };
   },
   { formAssociated: true },
 );
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-radio': HTMLElement & RadioProps & FormValidityMethods & AddEventListeners<BitRadioEvents>;
+  }
+}

@@ -1,240 +1,306 @@
 ---
 title: Getting Started
-description: Learn how to use Vielzeug — a collection of lightweight, framework-agnostic TypeScript utilities for modern web development.
+description: Vielzeug is a collection of focused TypeScript packages — each one does one thing well, and they all fit together naturally.
 ---
 
-# Welcome to Vielzeug
+# Getting Started
 
-**Vielzeug** (German for "many tools") is a collection of lightweight, framework-agnostic TypeScript utilities for modern web development. Each package is designed to solve one problem exceptionally well, with minimal dependencies and maximum type safety.
+**Vielzeug** (German for "many tools") is a set of focused TypeScript packages. Each one solves a single problem — state, forms, routing, storage, HTTP, UI components — and they all fit together without friction.
 
-## The Vielzeug Ecosystem
+You don't need to adopt the whole ecosystem. Pick the packages you need and import only what you use.
 
-### 🔧 Core & Utilities
+::: tip Try it first
+The [REPL](/repl.html) lets you run any package in the browser without installing anything.
+:::
 
-Perfect starting point for any project:
+## Install a Package
 
-| Package                  | Description                                                                       | Size                                        |
-| ------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------- |
-| **[Toolkit](/toolkit/)** | 100+ utilities for arrays, objects, strings, math, async, and more — fully tree-shakeable | Tree-shakeable                              |
-| **[Logit](/logit/)**     | Structured logging with log levels, scoped loggers, styled output, and remote logging     | <PackageInfo package="logit" type="size" /> |
-
-### 💾 Data & State
-
-Client-side data management made simple:
-
-| Package                  | Description                                                                  | Size                                          |
-| ------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------- |
-| **[Deposit](/deposit/)** | Schema-driven client-side storage with a rich query builder across LocalStorage and IndexedDB | <PackageInfo package="deposit" type="size" /> |
-| **[Fetchit](/fetchit/)** | Modern HTTP client with smart caching, request deduplication, and a query layer            | <PackageInfo package="fetchit" type="size" /> |
-| **[Stateit](/stateit/)** | Tiny reactive state management with computed values, transactions, and selective subscriptions | <PackageInfo package="stateit" type="size" /> |
-
-### 🎨 Frontend & Forms
-
-Build better user interfaces:
-
-| Package                  | Description                                                             | Size                                          |
-| ------------------------ | ----------------------------------------------------------------------- | --------------------------------------------- |
-| **[Craftit](/craftit/)** | Web Components framework with reactive state and DOM reconciliation     | <PackageInfo package="craftit" type="size" /> |
-| **[Formit](/formit/)**   | Form state management with validation, dirty tracking, and file uploads | <PackageInfo package="formit" type="size" />  |
-| **[Validit](/validit/)** | Schema validation with async support and detailed error messages        | <PackageInfo package="validit" type="size" /> |
-| **[i18nit](/i18nit/)**   | I18n with nested key lookup, variable interpolation, async locale loading, and reactive subscriptions | <PackageInfo package="i18nit" type="size" />  |
-
-### 🏗️ Architecture & Security
-
-Structure your application properly:
-
-| Package                  | Description                                                              | Size                                          |
-| ------------------------ | ------------------------------------------------------------------------ | --------------------------------------------- |
-| **[Permit](/permit/)**   | RBAC with wildcard roles, dynamic permission functions, and anonymous user support                  | <PackageInfo package="permit" type="size" />  |
-| **[Routeit](/routeit/)** | Hash/history router with middleware, async handlers, type-safe params, and View Transitions API     | <PackageInfo package="routeit" type="size" /> |
-| **[Wireit](/wireit/)**   | Dependency injection with typed tokens, singleton/transient lifetimes, and scoped child containers  | <PackageInfo package="wireit" type="size" />  |
-
-## Quick Start
-
-### Installation
-
-Each package can be installed independently:
+Every package is independent. Install just what you need:
 
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/toolkit
+pnpm add @vielzeug/stateit
 ```
 
 ```sh [npm]
-npm install @vielzeug/toolkit
+npm install @vielzeug/stateit
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/toolkit
+yarn add @vielzeug/stateit
 ```
 
 :::
 
-### Your First Lines
+## The Packages
+
+### Reactive State — [Stateit](/stateit/)
+
+Fine-grained signals with computed values, effects, and batched updates. No classes, no decorators — just functions.
 
 ```typescript
-import { debounce, group } from '@vielzeug/toolkit';
-import { createSnapshot } from '@vielzeug/stateit';
-import { createHttpClient } from '@vielzeug/fetchit';
+import { signal, computed, effect } from '@vielzeug/stateit';
 
-// Debounce search input
-const search = debounce((query: string) => {
-  console.log('Searching for:', query);
-}, 300);
+const count = signal(0);
+const doubled = computed(() => count.value * 2);
 
-// Group items by a field
-const users = [{ role: 'admin', name: 'Alice' }, { role: 'user', name: 'Bob' }];
-const byRole = group(users, 'role'); // { admin: [Alice], user: [Bob] }
+effect(() => console.log(doubled.value)); // logs whenever count changes
 
-// Reactive state
-const store = createSnapshot({ count: 0 });
-store.subscribe((data) => console.log(data.count));
-store.set((data) => ({ count: data.count + 1 }));
-
-// HTTP client with deduplication
-const http = createHttpClient({ baseUrl: '/api' });
-const allUsers = await http.get<User[]>('/users');
+count.value++; // → 2
 ```
 
-## Common Use Cases
+**Start here if** you need reactive state in a vanilla TS/JS project or want to power your own UI layer.
 
-### Building a Form
+---
+
+### Web Components — [Craftit](/craftit/)
+
+Define custom elements with a clean setup function, reactive templates, and automatic lifecycle management. Built on top of Stateit signals.
+
+```typescript
+import { define, html, signal } from '@vielzeug/craftit';
+
+define('my-counter', () => {
+  const count = signal(0);
+
+  return html` <button @click=${() => count.value++}>Clicked ${count} times</button> `;
+});
+```
+
+**Start here if** you want to build framework-agnostic UI components that work in any app.
+
+---
+
+### Component Library — [Buildit](/buildit/)
+
+A collection of accessible, themeable UI components — buttons, inputs, modals, and more — all built with Craftit. Drop them straight into your project.
+
+```html
+<bl-button variant="primary" @click="${handleSave}">Save</bl-button> <bl-input label="Email" :value="${emailSignal}" />
+```
+
+**Start here if** you want production-ready components without building from scratch.
+
+---
+
+### Forms — [Formit](/formit/)
+
+Form state management with field validation, dirty tracking, submission handling, and file upload support.
 
 ```typescript
 import { createForm } from '@vielzeug/formit';
 import { v } from '@vielzeug/validit';
 
-const emailSchema = v.string().email();
-const ageSchema = v.number().min(18);
-
 const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: (val) => {
-        const result = emailSchema.safeParse(val);
-        return result.success ? undefined : result.error.message;
-      },
+  values: { email: '', age: 0 },
+  rules: {
+    email: (val) => {
+      const r = v.string().email().safeParse(val);
+      return r.success ? undefined : r.error.message;
     },
-    age: {
-      value: 0,
-      validators: (val) => {
-        const result = ageSchema.safeParse(Number(val));
-        return result.success ? undefined : result.error.message;
-      },
+    age: (val) => {
+      const r = v.number().min(18).safeParse(Number(val));
+      return r.success ? undefined : r.error.message;
     },
   },
 });
 
-await form.submit(async (formData) => {
-  await fetch('/api/users', { method: 'POST', body: formData });
+await form.submit(async (values) => {
+  await fetch('/api/users', { method: 'POST', body: JSON.stringify(values) });
 });
 ```
 
-### Fetching & Caching Data
+**Start here if** you're tired of writing boilerplate for controlled inputs and error state.
+
+---
+
+### Validation — [Validit](/validit/)
+
+Schema-based validation with a chainable builder, async validators, and detailed error messages. Pairs naturally with Formit.
 
 ```typescript
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { v } from '@vielzeug/validit';
 
-const http = createHttpClient({ baseUrl: '/api' });
-const queryClient = createQueryClient({ staleTime: 5000 });
+const schema = v.object({
+  name: v.string().min(2).max(50),
+  email: v.string().email(),
+  age: v.number().min(18).optional(),
+});
 
-// Cached and deduplicated — concurrent calls share one request
-const userId = 'user-42';
-const user = await queryClient.fetch({
-  queryKey: ['user', userId],
-  queryFn: () => http.get<User>(`/users/${userId}`),
+const result = schema.safeParse(input);
+if (!result.success) console.log(result.error.issues);
+```
+
+**Start here if** you need type-safe validation that works both in forms and on raw API payloads.
+
+---
+
+### HTTP Client — [Fetchit](/fetchit/)
+
+A modern HTTP client with request deduplication, smart caching, retries, and a query layer.
+
+```typescript
+import { createHttp, createQuery } from '@vielzeug/fetchit';
+
+const http = createHttp({ baseUrl: '/api' });
+const query = createQuery({ staleTime: 5_000 });
+
+// Concurrent calls share one in-flight request
+const user = await query.fetch({
+  key: ['user', id],
+  fn: () => http.get<User>(`/users/${id}`),
 });
 
 // Invalidate after a mutation
-await http.post(`/users/${userId}`, { body: { name: 'Bob' } });
-queryClient.invalidate(['user', userId]);
+await http.patch(`/users/${id}`, { body: { name: 'Alice' } });
+query.invalidate(['user', id]);
 ```
 
-### Permission Management
+**Start here if** you want caching and deduplication without pulling in a full server-state library.
+
+---
+
+### Client Storage — [Deposit](/deposit/)
+
+Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
+
+```typescript
+import { createDeposit, defineSchema } from '@vielzeug/deposit';
+
+type User = { id: string; name: string; role: string };
+
+const schema = defineSchema<{ users: User }>({ users: { key: 'id', indexes: ['role'] } });
+const db = createDeposit({ type: 'indexedDB', dbName: 'myapp', schema });
+
+await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
+const admins = await db.query('users').equals('role', 'admin').toArray();
+```
+
+**Start here if** you need structured, queryable storage that survives page reloads.
+
+---
+
+### Routing — [Routeit](/routeit/)
+
+Hash and History router with type-safe params, middleware, async handlers, and View Transitions API support.
+
+```typescript
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({
+  // Guard all routes with a middleware
+  middleware: async (ctx, next) => {
+    if (!isLoggedIn()) return router.navigate('/login');
+    await next();
+  },
+});
+
+router.on('/', () => renderHome()).on('/users/:id', ({ params }) => renderUser(params.id));
+
+router.start();
+```
+
+**Start here if** you need client-side routing without a frontend framework.
+
+---
+
+### Permissions — [Permit](/permit/)
+
+Role-based access control with wildcard support, dynamic permission functions, and anonymous user handling.
 
 ```typescript
 import { createPermit } from '@vielzeug/permit';
 
 const permit = createPermit();
+permit.define('admin', 'posts', { create: true, update: true, delete: true });
+permit.define('user', 'posts', { create: true });
 
-permit.set('admin', 'posts', { create: true, update: true, delete: true });
-permit.set('user', 'posts', { create: true });
-
-const canDelete = permit.check(currentUser, 'posts', 'delete');
+if (!permit.check(currentUser, 'posts', 'delete')) {
+  throw new ForbiddenError();
+}
 ```
 
-### Reactive State
+**Start here if** you need fine-grained access control without a full auth service.
+
+---
+
+### Dependency Injection — [Wireit](/wireit/)
+
+Typed DI container with singleton and transient lifetimes, child scopes, and circular dependency detection.
 
 ```typescript
-import { createSnapshot } from '@vielzeug/stateit';
+import { createContainer, createToken } from '@vielzeug/wireit';
 
-const store = createSnapshot({ todos: [], filter: 'all' });
+const LoggerToken = createToken<Logger>('Logger');
+const ApiToken = createToken<ApiService>('ApiService');
 
-// Subscribe to specific values
-store.subscribe(
-  (state) => state.filter,
-  (filter) => console.log('Filter changed:', filter),
-);
+const container = createContainer();
+container.register(LoggerToken, { useClass: ConsoleLogger, lifetime: 'singleton' });
+container.register(ApiToken, { useClass: ApiService, deps: [LoggerToken] });
 
-// Update state
-store.set((state) => ({
-  todos: [...state.todos, { id: 1, text: 'Learn Vielzeug' }],
-}));
+const api = container.get(ApiToken);
 ```
 
-## Package Pairings
+**Start here if** you want clean service wiring without coupling classes to each other.
 
-These combinations complement each other particularly well:
+---
 
-| Pairing | Why it works |
-|---|---|
-| **Validit + Formit** | Use Validit schemas directly as field validators — one schema drives both API validation and form error messages |
-| **Fetchit + Stateit** | Fetch remote data with caching, then push results into a snapshot for reactive UI state |
-| **Craftit + Stateit** | Share global app state across multiple web components via snapshots |
-| **Deposit + Fetchit** | Persist API responses in IndexedDB for offline-capable apps with a typed query layer |
-| **Permit + Routeit** | Guard route navigation with permission checks in router middleware |
-| **Wireit + Logit** | Register a scoped logger per service in your DI container for structured, context-aware logging |
+### Utilities — [Toolkit](/toolkit/)
 
-## Design Philosophy
+Over 100 tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
 
-### 1. Simple Over Clever
+```typescript
+import { debounce, group, clamp, deepEqual } from '@vielzeug/toolkit';
 
-We prefer straightforward, readable code over clever abstractions. If you can understand what's happening at a glance, we've done our job.
+const search = debounce(fetchResults, 300);
+const byRole = group(users, 'role'); // { admin: [...], user: [...] }
+const clamped = clamp(value, 0, 100);
+const unchanged = deepEqual(prev, next);
+```
 
-### 2. TypeScript First
+**Start here if** you want to stop copying utility snippets between projects.
 
-Every package is built with TypeScript from the ground up. Type inference works out of the box — no extra config, no separate type packages.
+---
 
-### 3. Zero/Minimal Dependencies
+### Other Packages
 
-Most packages have 0–1 dependencies. Smaller bundles, fewer security vulnerabilities, less supply chain risk, faster installs.
+| Package                  | What it does                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| **[Logit](/logit/)**     | Structured logging with scoped loggers, log levels, and styled console output                   |
+| **[i18nit](/i18nit/)**   | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
+| **[Eventit](/eventit/)** | Typed event bus for decoupled, reactive inter-module communication                              |
+| **[Workit](/workit/)**   | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
 
-### 4. Framework Agnostic
+## Packages That Work Well Together
 
-Use Vielzeug with React, Vue, Svelte, Angular, or plain TypeScript. No framework assumptions anywhere in the API.
+| Combination           | Why                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| **Stateit + Craftit** | Craftit templates are powered by Stateit signals — same reactive primitives, zero glue    |
+| **Validit + Formit**  | Pass a Validit schema directly as a field validator — one schema serves both form and API |
+| **Fetchit + Stateit** | Fetch remote data with caching, push results into a signal for reactive rendering         |
+| **Deposit + Fetchit** | Persist query results in IndexedDB for offline-capable apps                               |
+| **Permit + Routeit**  | Check permissions in router middleware before the route handler ever runs                 |
+| **Wireit + Logit**    | Register a scoped logger per service in your DI container                                 |
 
-### 5. Consistent Conventions
+## Philosophy
 
-Learn one package's patterns — `create*` factories, `on*` subscriptions, `safeParse` for fallible operations — and you'll feel at home in all of them.
+**One problem per package.** We don't build "meta-frameworks". Each package has a tight scope and does that one thing well. You pull in exactly what you need.
 
-## Getting Help
+**TypeScript first.** Types are not bolted on after the fact. Everything is designed around inference — you rarely write a type annotation and you never reach for `as any`.
 
-| | |
-|---|---|
-| [Documentation](/toolkit/) | Each package has detailed usage guides, API references, and examples |
-| [Discussions](https://github.com/helmuthdu/vielzeug/discussions) | Ask questions and share what you're building |
-| [Issues](https://github.com/helmuthdu/vielzeug/issues) | Report bugs or request features |
-| [REPL](/repl.html) | Try any package in your browser without installing |
+**Zero surprises.** APIs follow consistent conventions: `create*` for factories, `on*` for subscriptions, `safeParse` for fallible operations. Learn one package and the next one feels familiar.
+
+**No magic.** No proxies chasing object mutations, no decorators, no global singletons. If you want to know what a function does, reading it is enough.
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Toolkit](/toolkit/) | Start here — 100+ utilities for arrays, objects, strings, and async |
-| [Stateit](/stateit/) | Add reactive state management to your app |
-| [Fetchit](/fetchit/) | HTTP client with caching, retries, and deduplication |
-| [Deposit](/deposit/) | Type-safe client-side storage with IndexedDB or LocalStorage |
-| [Formit](/formit/) | Form state management with validation and dirty tracking |
-| [REPL](/repl.html) | Explore all packages interactively without any setup |
+Not sure where to begin? Here's a recommended path:
+
+1. **[Stateit](/stateit/)** — understand the reactive foundation everything else builds on
+2. **[Toolkit](/toolkit/)** — pick up utilities you'll use in every project
+3. **[Fetchit](/fetchit/)** — add a proper HTTP layer with caching
+4. **[Craftit](/craftit/)** — build your first custom element with reactive templates
+5. **[Formit](/formit/) + [Validit](/validit/)** — wire up forms with schema validation
+
+Or jump straight to the [REPL](/repl.html) and experiment without any setup.

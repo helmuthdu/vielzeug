@@ -1,15 +1,15 @@
-# Switch Component
+# Switch
 
 A toggle switch component for binary on/off states. Perfect for settings, feature toggles, and preferences. Built with accessibility in mind and fully customizable through CSS custom properties.
 
 ## Features
 
-- 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: Full keyboard support, ARIA switch role, screen reader friendly
-- 🎭 **States**: checked, unchecked, disabled
-- 🔧 **Customizable**: CSS custom properties for styling
-- ⚡ **Touch-Optimized**: 44px minimum touch target for mobile
+- ⚡ **Touch-Optimized** — 44 × 44 px minimum touch target for mobile
+- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- 🎭 **States** — checked, unchecked, disabled
+- 📏 **3 Sizes** — sm, md, lg
+- 🔗 **Form-Associated** — participates in native form submission
+- 🔧 **Customizable** — CSS custom properties for styling
 
 ## Source Code
 
@@ -137,6 +137,34 @@ Listen to change events for custom logic.
 
 </ComponentPreview>
 
+## Guideline Recipe: Onboard with a Preferences Summary
+
+**Guideline: onboard** — a concise row of feature switches during setup shows users what’s possible and lets them opt in or out immediately.
+
+```html
+<form>
+  <div style="display:flex;flex-direction:column;gap:var(--size-3)">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <bit-text variant="label" weight="semibold">Keyboard shortcuts</bit-text>
+        <bit-text variant="caption" color="subtle">Use ⌘K to open command palette</bit-text>
+      </div>
+      <bit-switch name="shortcuts" checked></bit-switch>
+    </div>
+    <bit-separator></bit-separator>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <bit-text variant="label" weight="semibold">Desktop notifications</bit-text>
+        <bit-text variant="caption" color="subtle">Alerts for mentions and assignments</bit-text>
+      </div>
+      <bit-switch name="notifications"></bit-switch>
+    </div>
+  </div>
+</form>
+```
+
+**Tip:** Pair each switch with a one-line caption explaining the impact so users can make an informed choice without opening a help article.
+
 ## API Reference
 
 ### Attributes
@@ -162,35 +190,34 @@ Listen to change events for custom logic.
 | -------- | ------------------------------------------------------------------- | ---------------------------------- |
 | `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
 
-## CSS Custom Properties
+### CSS Custom Properties
 
 | Property             | Description                   | Default                |
 | -------------------- | ----------------------------- | ---------------------- |
 | `--switch-width`     | Width of the switch track     | Size-dependent         |
 | `--switch-height`    | Height of the switch track    | Size-dependent         |
 | `--switch-bg`        | Background when checked       | Color-dependent        |
-| `--switch-track`  | Background of unchecked track | `--color-contrast-300` |
-| `--switch-thumb`  | Background of the thumb       | `white`                |
+| `--switch-track`     | Background of unchecked track | `--color-contrast-300` |
+| `--switch-thumb`     | Background of the thumb       | `white`                |
 | `--switch-font-size` | Font size of the label        | Size-dependent         |
 
 ## Accessibility
 
-The switch component follows WAI-ARIA best practices for the switch role.
+The switch component follows WCAG 2.1 Level AA standards.
+
+### `bit-switch`
 
 ✅ **Keyboard Navigation**
 
-- `Space` and `Enter` toggle the switch.
-- `Tab` moves focus to/from the switch.
+- `Space` / `Enter` toggle the switch.
+- `Tab` moves focus to and from the control.
 
 ✅ **Screen Readers**
 
-- Announces switch role and label.
-- `aria-checked` reflects current state (true, false).
-- `aria-disabled` reflects disabled state.
-
-✅ **Touch Targets**
-
-- Minimum 44px touch target height for mobile accessibility.
+- Uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`).
+- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
+- `aria-disabled` reflects the disabled state.
+- Minimum 44 × 44 px touch target for mobile.
 
 ## Best Practices
 

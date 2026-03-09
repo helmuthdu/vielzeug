@@ -3,7 +3,7 @@ title: Buildit — API Reference
 description: Complete API reference for Buildit web components.
 ---
 
-# Buildit API Reference
+## Buildit API Reference
 
 [[toc]]
 
@@ -19,10 +19,12 @@ import '@vielzeug/buildit/badge';
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/card';
+import '@vielzeug/buildit/chip';
 import '@vielzeug/buildit/checkbox';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/radio';
 import '@vielzeug/buildit/select';
+import '@vielzeug/buildit/skeleton';
 import '@vielzeug/buildit/switch';
 import '@vielzeug/buildit/text';
 import '@vielzeug/buildit/textarea';
@@ -74,40 +76,129 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute   | Type                                                                           | Default   | Description                               |
-| ----------- | ------------------------------------------------------------------------------ | --------- | ----------------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'` | Visual style variant                      |
-| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg'`                                               | `'md'`    | Internal padding size                     |
-| `hoverable` | `boolean`                                                                      | `false`   | Enable hover effect with lift animation   |
-| `clickable` | `boolean`                                                                      | `false`   | Make card clickable and emit click events |
+| Attribute     | Type                                                                      | Default | Description                                           |
+| ------------- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------------- |
+| `variant`     | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | —       | Visual style variant                                  |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Theme color                                           |
+| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | —       | Internal padding size                                 |
+| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | —       | Shadow elevation level                                |
+| `orientation` | `'horizontal'`                                                            | —       | Side-by-side media + content layout                   |
+| `interactive` | `boolean`                                                                 | `false` | Enable card activation via pointer and keyboard       |
+| `disabled`    | `boolean`                                                                 | `false` | Disable interaction                                   |
+| `loading`     | `boolean`                                                                 | `false` | Show an animated loading bar and set `aria-busy=true` |
 
 ### Slots
 
-| Slot      | Description                              |
-| --------- | ---------------------------------------- |
-| (default) | Main content area of the card            |
-| `header`  | Header section at the top of the card    |
-| `footer`  | Footer section at the bottom of the card |
+| Slot      | Description                               |
+| --------- | ----------------------------------------- |
+| `media`   | Media section at the top/left of the card |
+| (default) | Main content area of the card             |
+| `header`  | Header section at the top of the card     |
+| `footer`  | Footer section at the bottom of the card  |
+| `actions` | Action buttons section                    |
 
 ### Events
 
-| Event   | Detail                     | Description                            |
-| ------- | -------------------------- | -------------------------------------- |
-| `click` | `{ originalEvent: Event }` | Emitted when clickable card is clicked |
+| Event      | Detail                                                                             | Description                                   |
+| ---------- | ---------------------------------------------------------------------------------- | --------------------------------------------- |
+| `activate` | `{ originalEvent: MouseEvent \| KeyboardEvent, trigger: 'pointer' \| 'keyboard' }` | Emitted when an interactive card is activated |
 
 ### CSS Custom Properties
 
-| Property              | Default                     | Description          |
-| --------------------- | --------------------------- | -------------------- |
-| `--card-bg`           | `var(--color-contrast-50)`  | Background color     |
-| `--card-color`        | `var(--color-contrast-900)` | Text color           |
-| `--card-border`       | `var(--border)`             | Border width         |
-| `--card-border-color` | `var(--color-contrast-200)` | Border color         |
-| `--card-radius`       | `var(--rounded-lg)`         | Border radius        |
-| `--card-padding`      | `var(--size-4)`             | Internal padding     |
-| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow           |
-| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow   |
-| `--card-gap`          | `var(--size-3)`             | Gap between sections |
+| Property              | Default                     | Description        |
+| --------------------- | --------------------------- | ------------------ |
+| `--card-bg`           | `var(--color-contrast-50)`  | Background color   |
+| `--card-color`        | `var(--color-contrast-900)` | Text color         |
+| `--card-border`       | `var(--border)`             | Border width       |
+| `--card-border-color` | `var(--color-contrast-200)` | Border color       |
+| `--card-radius`       | `var(--rounded-lg)`         | Border radius      |
+| `--card-padding`      | `var(--size-4)`             | Internal padding   |
+| `--card-shadow`       | `var(--shadow-sm)`          | Box shadow         |
+| `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow |
+
+## Chip Component
+
+### Tag Name
+
+`<bit-chip>`
+
+### Attributes
+
+| Attribute         | Type                                                                      | Default    | Description                                            |
+| ----------------- | ------------------------------------------------------------------------- | ---------- | ------------------------------------------------------ |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`  | Visual style variant                                   |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -          | Semantic color                                         |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Chip size                                              |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | -          | Border radius override                                 |
+| `mode`            | `'static' \| 'removable' \| 'selectable'`                                 | `'static'` | Interaction mode                                       |
+| `disabled`        | `boolean`                                                                 | `false`    | Disable interactions                                   |
+| `value`           | `string`                                                                  | -          | Value forwarded in event detail                        |
+| `checked`         | `boolean`                                                                 | -          | Controlled checked state for `mode="selectable"`       |
+| `default-checked` | `boolean`                                                                 | `false`    | Initial checked state for uncontrolled selectable mode |
+
+### Slots
+
+| Slot      | Description                |
+| --------- | -------------------------- |
+| (default) | Chip label content         |
+| `icon`    | Leading icon or decoration |
+
+### Events
+
+| Event    | Detail                                                                    | Description                            |
+| -------- | ------------------------------------------------------------------------- | -------------------------------------- |
+| `remove` | `{ value: string \| undefined, originalEvent?: Event }`                   | Emitted when removable chip is removed |
+| `change` | `{ value: string \| undefined, checked: boolean, originalEvent?: Event }` | Emitted when selectable state changes  |
+
+### CSS Custom Properties
+
+| Property              | Default           | Description                                |
+| --------------------- | ----------------- | ------------------------------------------ |
+| `--chip-bg`           | Variant-dependent | Background color                           |
+| `--chip-color`        | Variant-dependent | Text color                                 |
+| `--chip-border-color` | Variant-dependent | Border color                               |
+| `--chip-radius`       | `--rounded-full`  | Border radius                              |
+| `--chip-font-size`    | `--text-sm`       | Font size                                  |
+| `--chip-font-weight`  | `--font-medium`   | Font weight                                |
+| `--chip-padding-x`    | `--size-2-5`      | Horizontal padding                         |
+| `--chip-padding-y`    | `--size-0-5`      | Vertical padding                           |
+| `--chip-gap`          | `--size-1`        | Gap between icon, label, and remove button |
+
+## Skeleton Component
+
+### Tag Name
+
+`<bit-skeleton>`
+
+### Attributes
+
+| Attribute  | Type                           | Default  | Description                                       |
+| ---------- | ------------------------------ | -------- | ------------------------------------------------- |
+| `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                               |
+| `size`     | `'sm' \| 'md' \| 'lg'`         | -        | Height preset (`text`) and circle size (`circle`) |
+| `width`    | `string`                       | -        | Width override (for example `12rem`, `70%`)       |
+| `height`   | `string`                       | -        | Height override                                   |
+| `radius`   | `string`                       | -        | Border-radius override                            |
+| `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer         |
+| `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)           |
+
+### Events
+
+This component does not emit custom events.
+
+### CSS Custom Properties
+
+| Property                     | Default                     | Description                  |
+| ---------------------------- | --------------------------- | ---------------------------- |
+| `--skeleton-bg`              | `var(--color-contrast-200)` | Base shimmer color           |
+| `--skeleton-highlight`       | `var(--color-contrast-100)` | Shimmer highlight color      |
+| `--skeleton-radius`          | `var(--rounded-md)`         | Border radius                |
+| `--skeleton-size`            | `var(--size-10)`            | Circle fallback size         |
+| `--skeleton-width`           | `100%`                      | Component width              |
+| `--skeleton-height`          | `var(--size-4)`             | Component height             |
+| `--skeleton-line-gap`        | `var(--size-2)`             | Gap between text lines       |
+| `--skeleton-last-line-width` | `60%`                       | Width of the final text line |
+| `--skeleton-duration`        | `1.6s`                      | Shimmer animation duration   |
 
 ## Accordion Component
 
@@ -290,8 +381,8 @@ Refer to the component source for a full list of overridable CSS variables.
 | `--switch-width`     | Width of the switch track     | Size-dependent         |
 | `--switch-height`    | Height of the switch track    | Size-dependent         |
 | `--switch-bg`        | Background when checked       | Color-dependent        |
-| `--switch-track`  | Background of unchecked track | `--color-contrast-300` |
-| `--switch-thumb`  | Background of the thumb       | `white`                |
+| `--switch-track`     | Background of unchecked track | `--color-contrast-300` |
+| `--switch-thumb`     | Background of the thumb       | `white`                |
 | `--switch-font-size` | Font size of the label        | Size-dependent         |
 
 ### CSS Custom Properties
@@ -380,33 +471,33 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute | Type                                                                          | Default     | Description                                        |
-| --------- | ----------------------------------------------------------------------------- | ----------- | -------------------------------------------------- |
-| `variant` | `'solid' \| 'flat' \| 'outline'`                                              | `'solid'`   | Visual style variant                               |
-| `color`   | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
-| `size`    | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Badge size                                         |
-| `count`   | `number`                                                                      | —           | Display a numeric count                            |
-| `max`     | `number`                                                                      | `99`        | Max visible count (shows `{max}+` when exceeded)   |
-| `dot`     | `boolean`                                                                     | `false`     | Show as a small dot instead of a label             |
-| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                             |
+| Attribute | Type                                                                                   | Default     | Description                                      |
+| --------- | -------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ |
+| `variant` | `'solid' \| 'flat' \| 'outline'`                                                       | `'solid'`   | Visual style variant                             |
+| `color`   | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                                      |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Badge size                                       |
+| `count`   | `number`                                                                               | —           | Display a numeric count                          |
+| `max`     | `number`                                                                               | `99`        | Max visible count (shows `{max}+` when exceeded) |
+| `dot`     | `boolean`                                                                              | `false`     | Show as a small dot instead of a label           |
+| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | —           | Override border-radius                           |
 
 ### Slots
 
-| Slot     | Description                           |
-| -------- | ------------------------------------- |
-| (default)| Badge text / label content            |
-| `icon`   | Icon to display inside the badge      |
+| Slot      | Description                      |
+| --------- | -------------------------------- |
+| (default) | Badge text / label content       |
+| `icon`    | Icon to display inside the badge |
 
 ### CSS Custom Properties
 
-| Property               | Description          | Default         |
-| ---------------------- | -------------------- | --------------- |
-| `--badge-bg`           | Background color     | Per variant     |
-| `--badge-color`        | Text / icon color    | Per variant     |
-| `--badge-border-color` | Border color         | Per variant     |
-| `--badge-font-size`    | Font size            | Per size        |
-| `--badge-padding`      | Internal padding     | Per size        |
-| `--badge-radius`       | Border radius        | Per rounded     |
+| Property               | Description       | Default     |
+| ---------------------- | ----------------- | ----------- |
+| `--badge-bg`           | Background color  | Per variant |
+| `--badge-color`        | Text / icon color | Per variant |
+| `--badge-border-color` | Border color      | Per variant |
+| `--badge-font-size`    | Font size         | Per size    |
+| `--badge-padding`      | Internal padding  | Per size    |
+| `--badge-radius`       | Border radius     | Per rounded |
 
 ## Alert Component
 
@@ -416,39 +507,43 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute     | Type                                                                          | Default     | Description                                       |
-| ------------- | ----------------------------------------------------------------------------- | ----------- | ------------------------------------------------- |
-| `variant`     | `'flat' \| 'solid' \| 'outline' \| 'frost'`                                   | `'flat'`    | Visual style variant                              |
-| `color`       | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Semantic color theme                  |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Alert size                                        |
-| `title`       | `string`                                                                      | `''`        | Bold title rendered above the body                |
-| `dismissable` | `boolean`                                                                     | `false`     | Show a close button; emit `dismiss` when clicked  |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                            |
+| Attribute     | Type                                                                      | Default  | Description                                      |
+| ------------- | ------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
+| `variant`     | `'flat' \| 'solid' \| 'bordered'`                                         | `'flat'` | Visual style variant                             |
+| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | —        | Semantic color theme                             |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`   | Alert size                                       |
+| `heading`     | `string`                                                                  | `''`     | Bold heading rendered above the body             |
+| `dismissible` | `boolean`                                                                 | `false`  | Show a close button; emit `dismiss` when clicked |
+| `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only) |
+| `inline`      | `boolean`                                                                 | `false`  | Position action buttons to the right of content  |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | —        | Override border-radius                           |
 
 ### Slots
 
-| Slot      | Description                                     |
-| --------- | ----------------------------------------------- |
-| (default) | Alert body content                              |
-| `icon`    | Icon displayed to the left of the body          |
+| Slot      | Description                                                         |
+| --------- | ------------------------------------------------------------------- |
+| (default) | Alert body content                                                  |
+| `icon`    | Icon displayed on the leading edge of the alert                     |
+| `meta`    | Metadata alongside the heading (lighter color, right-aligned)       |
+| `actions` | Action buttons shown below the message (or beside it when `inline`) |
 
 ### Events
 
-| Event     | Detail | Description                                    |
-| --------- | ------ | ---------------------------------------------- |
-| `dismiss` | `{}`   | Emitted when the close button is clicked       |
+| Event     | Detail                          | Description                              |
+| --------- | ------------------------------- | ---------------------------------------- |
+| `dismiss` | `{ originalEvent: MouseEvent }` | Emitted when the close button is clicked |
 
 ### CSS Custom Properties
 
-| Property                 | Description         | Default     |
-| ------------------------ | ------------------- | ----------- |
-| `--alert-bg`             | Background color    | Per variant |
-| `--alert-color`          | Text color          | Per variant |
-| `--alert-border-color`   | Border color        | Per variant |
-| `--alert-font-size`      | Font size           | Per size    |
-| `--alert-padding`        | Internal padding    | Per size    |
-| `--alert-radius`         | Border radius       | Per rounded |
-| `--alert-icon-color`     | Icon color          | Per color   |
+| Property               | Description                              | Default         |
+| ---------------------- | ---------------------------------------- | --------------- |
+| `--alert-bg`           | Background color                         | Per variant     |
+| `--alert-color`        | Text/icon color                          | Per variant     |
+| `--alert-border-color` | Border color                             | Per variant     |
+| `--alert-font-size`    | Font size                                | Per size        |
+| `--alert-padding`      | Internal padding                         | Per size        |
+| `--alert-radius`       | Border radius                            | Per rounded     |
+| `--alert-gap`          | Gap between icon, body, and close button | `var(--size-3)` |
 
 ## Tooltip Component
 
@@ -458,28 +553,28 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute   | Type                                      | Default         | Description                                          |
-| ----------- | ----------------------------------------- | --------------- | ---------------------------------------------------- |
-| `content`   | `string`                                  | `''`            | Tooltip text content                                 |
+| Attribute   | Type                                     | Default         | Description                                          |
+| ----------- | ---------------------------------------- | --------------- | ---------------------------------------------------- |
+| `content`   | `string`                                 | `''`            | Tooltip text content                                 |
 | `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges) |
-| `trigger`   | `string`                                  | `'hover,focus'` | Trigger mode(s), comma-separated                     |
-| `delay`     | `number`                                  | `0`             | Show delay in milliseconds                           |
-| `variant`   | `'dark' \| 'light'`                       | `'dark'`        | Visual style variant                                 |
-| `size`      | `'sm' \| 'md' \| 'lg'`                    | `'md'`          | Tooltip bubble size                                  |
-| `disabled`  | `boolean`                                 | `false`         | Disable the tooltip entirely                         |
+| `trigger`   | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                     |
+| `delay`     | `number`                                 | `0`             | Show delay in milliseconds                           |
+| `variant`   | `'dark' \| 'light'`                      | `'dark'`        | Visual style variant                                 |
+| `size`      | `'sm' \| 'md' \| 'lg'`                   | `'md'`          | Tooltip bubble size                                  |
+| `disabled`  | `boolean`                                | `false`         | Disable the tooltip entirely                         |
 
 ### Slots
 
-| Slot      | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| (default) | The trigger element the tooltip is anchored to               |
-| `content` | Rich tooltip content (overrides the `content` attribute)     |
+| Slot      | Description                                              |
+| --------- | -------------------------------------------------------- |
+| (default) | The trigger element the tooltip is anchored to           |
+| `content` | Rich tooltip content (overrides the `content` attribute) |
 
 ### CSS Custom Properties
 
-| Property              | Description            | Default  |
-| --------------------- | ---------------------- | -------- |
-| `--tooltip-max-width` | Max width of the bubble| `18rem`  |
+| Property              | Description             | Default |
+| --------------------- | ----------------------- | ------- |
+| `--tooltip-max-width` | Max width of the bubble | `18rem` |
 
 ## Textarea Component
 
@@ -489,44 +584,44 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute         | Type                                                                          | Default     | Description                                             |
-| ----------------- | ----------------------------------------------------------------------------- | ----------- | ------------------------------------------------------- |
-| `value`           | `string`                                                                      | `''`        | Current textarea value                                  |
-| `name`            | `string`                                                                      | `''`        | Form field name                                         |
-| `label`           | `string`                                                                      | `''`        | Label text                                              |
-| `label-placement` | `'inset' \| 'outside'`                                                        | `'inset'`   | Label positioning                                       |
-| `placeholder`     | `string`                                                                      | `''`        | Placeholder text                                        |
-| `rows`            | `number`                                                                      | `3`         | Visible rows                                            |
-| `maxlength`       | `number`                                                                      | —           | Maximum character count; enables live counter           |
-| `auto-resize`     | `boolean`                                                                     | `false`     | Grow automatically with content                         |
-| `resize`          | `'none' \| 'both' \| 'horizontal' \| 'vertical'`                             | —           | CSS `resize` override                                   |
-| `no-resize`       | `boolean`                                                                     | `false`     | Disable manual resize handle                            |
-| `helper`          | `string`                                                                      | `''`        | Helper text below the control                           |
-| `error`           | `string`                                                                      | `''`        | Error message; overrides helper text                    |
-| `variant`         | `'flat' \| 'solid' \| 'outline'`                                              | `'flat'`    | Visual style variant                                    |
-| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Control size                                            |
-| `disabled`        | `boolean`                                                                     | `false`     | Disable the control                                     |
-| `readonly`        | `boolean`                                                                     | `false`     | Make the field read-only                                |
-| `required`        | `boolean`                                                                     | `false`     | Mark as required                                        |
+| Attribute         | Type                                                                                   | Default     | Description                                   |
+| ----------------- | -------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- |
+| `value`           | `string`                                                                               | `''`        | Current textarea value                        |
+| `name`            | `string`                                                                               | `''`        | Form field name                               |
+| `label`           | `string`                                                                               | `''`        | Label text                                    |
+| `label-placement` | `'inset' \| 'outside'`                                                                 | `'inset'`   | Label positioning                             |
+| `placeholder`     | `string`                                                                               | `''`        | Placeholder text                              |
+| `rows`            | `number`                                                                               | `3`         | Visible rows                                  |
+| `maxlength`       | `number`                                                                               | —           | Maximum character count; enables live counter |
+| `auto-resize`     | `boolean`                                                                              | `false`     | Grow automatically with content               |
+| `resize`          | `'none' \| 'both' \| 'horizontal' \| 'vertical'`                                       | —           | CSS `resize` override                         |
+| `no-resize`       | `boolean`                                                                              | `false`     | Disable manual resize handle                  |
+| `helper`          | `string`                                                                               | `''`        | Helper text below the control                 |
+| `error`           | `string`                                                                               | `''`        | Error message; overrides helper text          |
+| `variant`         | `'flat' \| 'solid' \| 'outline'`                                                       | `'flat'`    | Visual style variant                          |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                                   |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                                  |
+| `disabled`        | `boolean`                                                                              | `false`     | Disable the control                           |
+| `readonly`        | `boolean`                                                                              | `false`     | Make the field read-only                      |
+| `required`        | `boolean`                                                                              | `false`     | Mark as required                              |
 
 ### Events
 
-| Event    | Detail                        | Description                              |
-| -------- | ----------------------------- | ---------------------------------------- |
-| `input`  | `{ value: string }`           | Emitted on every keystroke               |
-| `change` | `{ value: string }`           | Emitted when the field loses focus       |
+| Event    | Detail              | Description                        |
+| -------- | ------------------- | ---------------------------------- |
+| `input`  | `{ value: string }` | Emitted on every keystroke         |
+| `change` | `{ value: string }` | Emitted when the field loses focus |
 
 ### CSS Custom Properties
 
-| Property                       | Description                  | Default         |
-| ------------------------------ | ---------------------------- | --------------- |
-| `--textarea-border-color`      | Default border color         | `--color-border`|
-| `--textarea-focus-color`       | Focus ring / active color    | Per color theme |
-| `--textarea-bg`                | Background color             | Per variant     |
-| `--textarea-color`             | Text color                   | Per variant     |
-| `--textarea-font-size`         | Font size                    | Per size        |
-| `--textarea-counter-color`     | Character counter text color | `--color-muted` |
+| Property                   | Description                  | Default          |
+| -------------------------- | ---------------------------- | ---------------- |
+| `--textarea-border-color`  | Default border color         | `--color-border` |
+| `--textarea-focus-color`   | Focus ring / active color    | Per color theme  |
+| `--textarea-bg`            | Background color             | Per variant      |
+| `--textarea-color`         | Text color                   | Per variant      |
+| `--textarea-font-size`     | Font size                    | Per size         |
+| `--textarea-counter-color` | Character counter text color | `--color-muted`  |
 
 ## Select Component
 
@@ -536,46 +631,46 @@ Refer to the component source for a full list of overridable CSS variables.
 
 ### Attributes
 
-| Attribute         | Type                                                                          | Default     | Description                                           |
-| ----------------- | ----------------------------------------------------------------------------- | ----------- | ----------------------------------------------------- |
-| `value`           | `string`                                                                      | `''`        | Currently selected value                              |
-| `name`            | `string`                                                                      | `''`        | Form field name                                       |
-| `label`           | `string`                                                                      | `''`        | Label text                                            |
-| `label-placement` | `'inset' \| 'outside'`                                                        | `'inset'`   | Label positioning                                     |
-| `placeholder`     | `string`                                                                      | `''`        | Empty-state placeholder text                          |
-| `helper`          | `string`                                                                      | `''`        | Helper text below the control                         |
-| `error`           | `string`                                                                      | `''`        | Error message; overrides helper text                  |
-| `variant`         | `'flat' \| 'solid' \| 'outline'`                                              | `'flat'`    | Visual style variant                                  |
-| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                         |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Control size                                          |
-| `multiple`        | `boolean`                                                                     | `false`     | Allow multiple selections                             |
-| `disabled`        | `boolean`                                                                     | `false`     | Disable the control                                   |
-| `readonly`        | `boolean`                                                                     | `false`     | Prevent the dropdown from opening                     |
-| `required`        | `boolean`                                                                     | `false`     | Mark as required                                      |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                                |
+| Attribute         | Type                                                                                   | Default     | Description                          |
+| ----------------- | -------------------------------------------------------------------------------------- | ----------- | ------------------------------------ |
+| `value`           | `string`                                                                               | `''`        | Currently selected value             |
+| `name`            | `string`                                                                               | `''`        | Form field name                      |
+| `label`           | `string`                                                                               | `''`        | Label text                           |
+| `label-placement` | `'inset' \| 'outside'`                                                                 | `'inset'`   | Label positioning                    |
+| `placeholder`     | `string`                                                                               | `''`        | Empty-state placeholder text         |
+| `helper`          | `string`                                                                               | `''`        | Helper text below the control        |
+| `error`           | `string`                                                                               | `''`        | Error message; overrides helper text |
+| `variant`         | `'flat' \| 'solid' \| 'outline'`                                                       | `'flat'`    | Visual style variant                 |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                         |
+| `multiple`        | `boolean`                                                                              | `false`     | Allow multiple selections            |
+| `disabled`        | `boolean`                                                                              | `false`     | Disable the control                  |
+| `readonly`        | `boolean`                                                                              | `false`     | Prevent the dropdown from opening    |
+| `required`        | `boolean`                                                                              | `false`     | Mark as required                     |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | —           | Override border-radius               |
 
 ### Slots
 
-| Slot      | Description                                           |
-| --------- | ----------------------------------------------------- |
-| (default) | `<option>` and `<optgroup>` elements to display       |
+| Slot      | Description                                     |
+| --------- | ----------------------------------------------- |
+| (default) | `<option>` and `<optgroup>` elements to display |
 
 ### Events
 
-| Event    | Detail                                  | Description                                |
-| -------- | --------------------------------------- | ------------------------------------------ |
-| `change` | `{ value: string, values: string[] }`   | Emitted when the selected value(s) change  |
+| Event    | Detail                                | Description                               |
+| -------- | ------------------------------------- | ----------------------------------------- |
+| `change` | `{ value: string, values: string[] }` | Emitted when the selected value(s) change |
 
 ### CSS Custom Properties
 
-| Property                     | Description                   | Default          |
-| ---------------------------- | ----------------------------- | ---------------- |
-| `--select-border-color`      | Default border color          | `--color-border` |
-| `--select-focus-color`       | Focus ring / active color     | Per color theme  |
-| `--select-bg`                | Trigger background            | Per variant      |
-| `--select-dropdown-bg`       | Dropdown panel background     | `--color-surface`|
-| `--select-option-hover-bg`   | Option hover state background | `--color-hover`  |
-| `--select-height`            | Trigger height                | Per size         |
+| Property                   | Description                   | Default           |
+| -------------------------- | ----------------------------- | ----------------- |
+| `--select-border-color`    | Default border color          | `--color-border`  |
+| `--select-focus-color`     | Focus ring / active color     | Per color theme   |
+| `--select-bg`              | Trigger background            | Per variant       |
+| `--select-dropdown-bg`     | Dropdown panel background     | `--color-surface` |
+| `--select-option-hover-bg` | Option hover state background | `--color-hover`   |
+| `--select-height`          | Trigger height                | Per size          |
 
 ## Theme Variables
 

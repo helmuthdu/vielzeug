@@ -1,6 +1,6 @@
 ---
 title: Eventit — Typed event bus for TypeScript
-description: Tiny, type-safe pub/sub event bus with per-event payload typing, one-time listeners, error handling, and first-class testing utilities.
+description: Zero-dependency typed event bus with async/await, streaming, AbortSignal, and test utilities. Works anywhere TypeScript runs.
 ---
 
 <PackageBadges package="eventit" />
@@ -9,7 +9,7 @@ description: Tiny, type-safe pub/sub event bus with per-event payload typing, on
 
 # Eventit
 
-**Eventit** is a tiny, zero-dependency typed event bus. Declare your events once with full payload types, then publish and subscribe with complete type safety — no casting, no guessing.
+**Eventit** is a zero-dependency typed event bus: define your event map once, then emit, subscribe, await, and stream events with full TypeScript inference — no magic strings, no runtime surprises.
 
 ## Installation
 
@@ -29,51 +29,59 @@ yarn add @vielzeug/eventit
 
 :::
 
-## Features
-
-- **Fully typed** — payload types flow from event map declaration to every listener
-- **Void events** — emit signal events with no payload, no workarounds required
-- **One-time listeners** — `once()` auto-unsubscribes after the first emit
-- **Error isolation** — custom `onError` keeps one failing listener from crashing others
-- **Emit hook** — optional `onEmit` intercepts every emission for logging or debugging
-- **Dispose** — permanently tear down a bus; `emit` and `on` become no-ops
-- **Testing utilities** — `testEventBus` records all payloads for easy assertions
-- **Zero dependencies** — no supply chain risk, minimal bundle size
-
 ## Quick Start
 
 ```ts
-import { eventBus } from '@vielzeug/eventit';
+import { createBus } from '@vielzeug/eventit';
 
-// 1. Declare your event map
 type AppEvents = {
-  userLogin: { id: string; name: string };
-  userLogout: void;
-  messageReceived: { text: string; from: string };
+  'user:login':   { userId: string; email: string };
+  'user:logout':  void;
+  'cart:updated': { items: CartItem[]; total: number };
 };
 
-// 2. Create a bus
-const bus = eventBus<AppEvents>();
+const bus = createBus<AppEvents>();
 
-// 3. Subscribe
-const unsub = bus.on('userLogin', ({ id, name }) => {
-  console.log(`${name} (${id}) logged in`);
+// Subscribe
+const unsub = bus.on('user:login', ({ userId }) => {
+  loadUserProfile(userId);
 });
 
-// 4. Emit
-bus.emit('userLogin', { id: '42', name: 'Alice' });
-bus.emit('userLogout'); // void event — no payload
+// Emit
+bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
+bus.emit('user:logout'); // void event — no payload
 
-// 5. Clean up
-unsub();
+// Await the next emit
+const { userId } = await bus.wait('user:login');
+
+// Stream all future emits
+for await (const { items } of bus.events('cart:updated')) {
+  renderCart(items);
+}
+
+// Auto-cleanup with `using`
+{
+  using bus = createBus<AppEvents>();
+  bus.on('user:login', handler);
+} // bus.dispose() called automatically at block exit
 ```
 
-## Documentation
+## Features
 
-- [Usage Guide](./usage.md) — event maps, subscriptions, error handling, testing
-- [API Reference](./api.md) — full type signatures
-- [Examples](./examples.md) — real-world patterns
+- **Typed event maps** — define all events and payloads once; TypeScript enforces them everywhere
+- **Void events** — emit signal events cleanly: `bus.emit('refresh')`
+- **`once`** — auto-unsubscribing one-shot listeners
+- **`wait`** — `await bus.wait('event')` resolves on the next emit
+- **`events`** — async generator for pull-based streaming of all future emits
+- **AbortSignal** — pass any `AbortSignal` to `on`, `once`, `wait`, or `events` for lifecycle-driven cleanup
+- **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
+- **Error isolation** — optional `onError` keeps a failing listener from crashing others
+- **Zero dependencies** — <PackageInfo package="eventit" type="size" /> gzipped, <PackageInfo package="eventit" type="dependencies" /> dependencies
 
-## License
+## Next Steps
 
-MIT © [Vielzeug](https://github.com/helmuthdu/vielzeug)
+| | |
+| --- | --- |
+| [Usage Guide](./usage.md) | Subscribing, async patterns, AbortSignal, testing |
+| [API Reference](./api.md) | Complete type signatures and method documentation |
+| [Examples](./examples.md) | Real-world event bus patterns and recipes |

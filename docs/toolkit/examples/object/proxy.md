@@ -60,7 +60,7 @@ const observed = proxy(state, {
   },
 });
 
-observed.count = 5;   // logs: count: 0 → 5
+observed.count = 5; // logs: count: 0 → 5
 observed.name = 'Bob'; // logs: name: Alice → Bob
 ```
 
@@ -78,7 +78,7 @@ const secured = proxy(config, {
   },
 });
 
-secured.apiUrl;  // 'https://api.example.com'
+secured.apiUrl; // 'https://api.example.com'
 secured.timeout; // '***'
 ```
 
@@ -91,7 +91,10 @@ const user = { id: 1, name: 'Alice', role: 'admin' };
 const changes: string[] = [];
 
 const watched = proxy(user, {
-  set: (prop, curr) => { changes.push(String(prop)); return curr; },
+  set: (prop, curr) => {
+    changes.push(String(prop));
+    return curr;
+  },
   watch: ['name'], // only 'name' is intercepted
 });
 

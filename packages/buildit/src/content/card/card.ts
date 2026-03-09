@@ -1,9 +1,44 @@
-import { aria, css, define, defineEmits, defineProps, guard, handle, html, watch } from '@vielzeug/craftit';
-import { colorThemeMixin, frostVariantMixin } from '../../styles';
-import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
+import {
+  aria,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  handle,
+  html,
+  onMount,
+  onSlotChange,
+  ref,
+  signal,
+  watch,
+} from '@vielzeug/craftit';
+import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
+import type { AddEventListeners, BitCardEvents, ElevationLevel, PaddingSize, ThemeColor } from '../../types';
+
+const INTERACTIVE_DESCENDANT_SELECTOR =
+  'button, a[href], input, select, textarea, summary, [role="button"], [role="link"], [contenteditable=""], [contenteditable="true"]';
+
+function slotHasMeaningfulContent(slot: HTMLSlotElement | null | undefined): boolean {
+  if (!slot) return false;
+  return slot.assignedNodes({ flatten: true }).some((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) return true;
+    if (node.nodeType === Node.TEXT_NODE) return !!node.textContent?.trim();
+    return false;
+  });
+}
+
+function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
+  for (const node of event.composedPath()) {
+    if (!(node instanceof HTMLElement)) continue;
+    if (node === host) return false;
+    if (node.matches(INTERACTIVE_DESCENDANT_SELECTOR) || !!node.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 const componentStyles = /* css */ css`
-  @layer buildit.base {
   @layer buildit.base {
     :host {
       --_bg: var(--card-bg, var(--color-canvas));
@@ -14,7 +49,6 @@ const componentStyles = /* css */ css`
       --_padding: var(--card-padding, var(--size-4));
       --_shadow: var(--card-shadow, var(--shadow-sm));
       --_hover-shadow: var(--card-hover-shadow, var(--shadow-md));
-      --_gap: var(--card-gap, var(--size-3));
 
       display: block;
       position: relative;
@@ -27,20 +61,17 @@ const componentStyles = /* css */ css`
       color: var(--_color);
       border-radius: var(--_radius);
       overflow: hidden;
-      transition:
+      position: relative;
+      transition: var(--_motion-transition,
         backdrop-filter var(--transition-slow),
         box-shadow var(--transition-normal),
         transform var(--transition-normal),
         background var(--transition-normal),
         border-color var(--transition-normal),
-        opacity var(--transition-normal);
-      will-change: box-shadow, transform;
-      position: relative;
+        opacity var(--transition-normal));
     }
 
-    /* ========================================
-       Card Structure
-       ======================================== */
+    /* ── Card Structure ───────────────────────── */
 
     .card-media {
       overflow: hidden;
@@ -58,7 +89,7 @@ const componentStyles = /* css */ css`
       display: flex;
       flex-direction: column;
       flex: 1;
-      min-height: 0; /* Enable proper flex shrinking */
+      min-height: 0;
     }
 
     .card-header,
@@ -88,74 +119,43 @@ const componentStyles = /* css */ css`
       flex-wrap: wrap;
     }
 
-    /* Hide sections when no content is slotted */
-    :host:not(:has([slot='media'])) .card-media,
-    :host:not(:has([slot='header'])) .card-header,
-    :host:not(:has([slot='footer'])) .card-footer,
-    :host:not(:has([slot='actions'])) .card-actions {
+    [hidden] {
       display: none;
-    }
-
-    /* Adjust content padding when adjacent sections are visible */
-    :host(:has([slot='header'])) .card-header + .card-content {
-      padding-top: calc(var(--_padding) / 2);
-    }
-
-    :host(:has([slot='footer'])) .card-content:has(+ .card-footer) {
-      padding-bottom: calc(var(--_padding) / 2);
-    }
-
-    :host(:has([slot='actions'])) .card-content:has(+ .card-actions) {
-      padding-bottom: calc(var(--_padding) / 2);
     }
   }
 
   @layer buildit.variants {
-    /* Variant-specific host styles */
-    :host(:not([variant]):not([color])) {
-      --_bg: var(--color-canvas);
-      --_border-color: var(--color-contrast-300);
-    }
-
-    :host(:not([variant])[color]) {
-      --_bg: var(--_theme-backdrop);
-      --_border-color: var(--_theme-border);
-    }
-
-    /* Frost - Translucent effect with backdrop blur */
-    :host([variant='frost']:not([color])) {
-      --_bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-      --_border-color: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    }
-
-    :host([variant='frost'][color]) {
-      --_bg: color-mix(in srgb, var(--_theme-base) 70%, var(--color-contrast) 10%);
-      --_border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-      --_color: color-mix(in srgb, var(--color-contrast) 90%, transparent);
-    }
-
-    /* Default with color gets subtle hover effect */
-    :host(:not([variant])[color]:hover) .card {
-      --_bg: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
-      --_border-color: var(--_theme-focus);
-    }
-
-    /* ========================================
-       Card-Specific Variant Element Styles
-       ======================================== */
-
-    /* Solid & Flat - Apply borders and shadows to .card element */
-    :host(:not([variant])) .card,
-    :host([variant='solid']) .card {
+    /* Default (no variant) */
+    :host(:not([variant]):not([color])) .card {
       box-shadow: var(--_shadow);
       border: var(--_border) solid var(--_border-color);
     }
 
-    :host([variant='flat']) .card {
-      border: var(--_border) solid var(--_border-color);
+    :host(:not([variant])[color]) .card {
+      background: var(--_theme-backdrop);
+      border: var(--_border) solid var(--_theme-border);
     }
 
-    /* Glass & Frost - Apply backdrop filters to .card element */
+    :host(:not([variant])[color]:hover) .card {
+      background: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
+      border-color: var(--_theme-focus);
+    }
+
+    /* Solid */
+    :host([variant='solid']) .card {
+      background: var(--_theme-base);
+      color: var(--_theme-contrast);
+      border: var(--_border) solid var(--_theme-base);
+      box-shadow: var(--_shadow);
+    }
+
+    /* Flat */
+    :host([variant='flat']) .card {
+      background: var(--_theme-backdrop);
+      border: var(--_border) solid color-mix(in srgb, var(--_theme-border) 50%, transparent);
+    }
+
+    /* Glass */
     :host([variant='glass']) .card {
       backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
       -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
@@ -164,108 +164,79 @@ const componentStyles = /* css */ css`
       text-shadow: var(--text-shadow-xs);
     }
 
-    /* Card-specific hover states for glass/frost */
-    :host([variant='glass']) .card:hover {
-      --_bg: color-mix(in srgb, var(--color-secondary) 60%, var(--color-contrast) 20%);
+    :host([variant='glass']:hover) .card {
       backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
       -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
       box-shadow: var(--shadow-xl), var(--inset-shadow-sm);
     }
 
-    :host([variant='glass'][clickable]) .card:hover {
+    :host([variant='glass'][interactive]:hover) .card {
       box-shadow: var(--shadow-2xl), var(--inset-shadow-sm);
     }
   }
 
-
-  @layer buildit.utilities {
-    /* Elevation & Padding - IN utilities layer for proper cascade */
-    :host([elevation='0']) {
-      --_shadow: none;
-    }
-    :host([elevation='1']) {
-      --_shadow: var(--shadow-sm);
-    }
-    :host([elevation='2']) {
-      --_shadow: var(--shadow-md);
-    }
-    :host([elevation='3']) {
-      --_shadow: var(--shadow-lg);
-    }
-    :host([elevation='4']) {
-      --_shadow: var(--shadow-xl);
-    }
-    :host([elevation='5']) {
-      --_shadow: var(--shadow-2xl);
-    }
-
-    :host([padding='none']) {
-      --_padding: var(--size-0);
-    }
-    :host([padding='sm']) {
-      --_padding: var(--size-3);
-    }
-    :host([padding='md']) {
-      --_padding: var(--size-4);
-    }
-    :host([padding='lg']) {
-      --_padding: var(--size-6);
-    }
-    :host([padding='xl']) {
-      --_padding: var(--size-8);
-    }
-  }
-
   @layer buildit.overrides {
-    /* ========================================
-       States: Disabled & Loading
-       ======================================== */
+    /* ── Loading bar ──────────────────────────── */
+
+    /* Bar lives inside .card which already has overflow:hidden,
+       so translateX can sweep freely without any overflow. */
+    .loading-bar {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 65%;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--_theme-base, var(--color-primary)) 50%,
+        transparent 100%
+      );
+    }
+
+    :host([loading]) .loading-bar {
+      display: block;
+      animation: var(--_motion-animation, loading-bar 1.4s ease-in-out infinite);
+    }
+
+    /* ── Disabled ─────────────────────────────── */
 
     :host([disabled]) {
       pointer-events: none;
       opacity: 0.6;
     }
 
-    :host([disabled]) .card {
+    :host([disabled][interactive]) .card {
       cursor: not-allowed;
     }
 
-    :host([loading]) .card::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--_theme-base, var(--color-primary)), transparent);
-      animation: loading-bar 1.5s ease-in-out infinite;
-    }
+    /* ── Interactive hover/active ─────────────── */
 
-    /* ========================================
-       Interactive States
-       ======================================== */
-
-    :host([hoverable]:hover) .card,
-    :host([clickable]:hover) .card {
+    :host([interactive]:not([disabled]):hover) .card {
       box-shadow: var(--_hover-shadow);
       transform: translateY(calc(-1 * var(--size-1))) scale(1.01);
+      will-change: box-shadow, transform;
     }
 
-    :host([clickable]) .card {
+    :host([interactive]) .card {
       cursor: pointer;
     }
 
-    :host([clickable]:active) .card {
+    :host([interactive]:not([disabled]):active) .card {
       transform: translateY(0) scale(0.99);
       box-shadow: var(--_shadow);
-      transition:
+      transition: var(--_motion-transition,
         box-shadow var(--transition-fast),
-        transform var(--transition-fast);
+        transform var(--transition-fast));
     }
 
-    /* ========================================
-       Orientation
-       ======================================== */
+    :host([interactive]:focus-visible) .card {
+      outline: var(--border-2) solid var(--_theme-focus, var(--color-primary));
+      outline-offset: var(--border-2);
+    }
+
+    /* ── Horizontal orientation ───────────────── */
 
     :host([orientation='horizontal']) .card {
       flex-direction: row;
@@ -288,21 +259,16 @@ const componentStyles = /* css */ css`
     }
   }
 
-  /* Loading animation - unlayered for easy override */
   @keyframes loading-bar {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
   }
 `;
 
 /** Card component properties */
 export interface CardProps {
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'frost';
+  variant?: 'solid' | 'flat' | 'glass' | 'frost';
   /** Theme color */
   color?: ThemeColor;
   /** Internal padding size */
@@ -310,35 +276,32 @@ export interface CardProps {
   /** Shadow elevation level (0-5) */
   elevation?: `${ElevationLevel}`;
   /** Card orientation */
-  orientation?: 'vertical' | 'horizontal';
-  /** Show hover effects */
-  hoverable?: boolean;
-  /** Enable click interaction */
-  clickable?: boolean;
-  /** Disable card interaction */
+  orientation?: 'horizontal';
+  /** Make the card interactive (role=button, keyboard nav, emits activate) */
+  interactive?: boolean;
+  /** Disable interaction */
   disabled?: boolean;
-  /** Show loading state */
+  /** Show a loading progress bar */
   loading?: boolean;
 }
 
 /**
- * A versatile card container with semantic slots for header, body, and footer content.
+ * A versatile card container with semantic slots for media, header, body, footer, and actions.
  *
  * @element bit-card
  *
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'frost'
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'glass' | 'frost'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} padding - Internal padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
- * @attr {string} orientation - Card orientation: 'vertical' | 'horizontal'
- * @attr {boolean} hoverable - Show hover effects
- * @attr {boolean} clickable - Enable click interaction
+ * @attr {string} orientation - Card layout: 'horizontal'
+ * @attr {boolean} interactive - Enable pointer/keyboard activation
  * @attr {boolean} disabled - Disable card interaction
- * @attr {boolean} loading - Show loading state
+ * @attr {boolean} loading - Show loading progress bar
  *
- * @fires cardclick - Emitted when a clickable card is clicked
+ * @fires activate - Emitted when an interactive card is activated
  *
- * @slot media - Media content (images, videos) displayed at top/left
+ * @slot media - Media content displayed at top/left
  * @slot header - Card header (title, subtitle)
  * @slot - Main card content
  * @slot footer - Card footer content
@@ -352,96 +315,125 @@ export interface CardProps {
  * @cssprop --card-padding - Internal padding
  * @cssprop --card-shadow - Box shadow
  * @cssprop --card-hover-shadow - Shadow on hover
- * @cssprop --card-gap - Gap between sections
  *
  * @example
  * ```html
  * <bit-card elevation="2"><h3 slot="header">Title</h3><p>Content</p></bit-card>
- * <bit-card clickable hoverable><h3 slot="header">Click me</h3></bit-card>
+ * <bit-card interactive color="primary"><h3 slot="header">Click me</h3></bit-card>
  * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
  * ```
  */
-define('bit-card', ({ host }) => {
-  const props = defineProps({
-    clickable: { default: false },
-    color: { default: undefined as ThemeColor | undefined },
-    disabled: { default: false },
-    elevation: { default: undefined as `${ElevationLevel}` | undefined },
-    hoverable: { default: false },
-    loading: { default: false },
-    orientation: { default: undefined as 'vertical' | 'horizontal' | undefined },
-    padding: { default: undefined as PaddingSize | undefined },
-    variant: { default: undefined as 'solid' | 'flat' | 'frost' | undefined },
+export const TAG = define('bit-card', ({ host }) => {
+  const props = defineProps<CardProps>({
+    color: { default: undefined },
+    disabled: { default: false, type: Boolean },
+    elevation: { default: undefined },
+    interactive: { default: false, type: Boolean },
+    loading: { default: false, type: Boolean },
+    orientation: { default: undefined },
+    padding: { default: undefined },
+    variant: { default: undefined },
   });
 
+  const mediaSlot = ref<HTMLSlotElement>();
+  const headerSlot = ref<HTMLSlotElement>();
+  const contentSlot = ref<HTMLSlotElement>();
+  const footerSlot = ref<HTMLSlotElement>();
+  const actionsSlot = ref<HTMLSlotElement>();
+
+  const hasMedia = signal(false);
+  const hasHeader = signal(false);
+  const hasContent = signal(false);
+  const hasFooter = signal(false);
+  const hasActions = signal(false);
+
   const emit = defineEmits<{
-    cardclick: { color: ThemeColor | undefined; originalEvent: Event; variant: string | undefined };
+    activate: {
+      originalEvent: MouseEvent | KeyboardEvent;
+      trigger: 'pointer' | 'keyboard';
+    };
   }>();
 
-  aria({ disabled: () => (props.clickable.value ? props.disabled.value : null) });
+  function updateSlotState() {
+    hasMedia.value = slotHasMeaningfulContent(mediaSlot.value);
+    hasHeader.value = slotHasMeaningfulContent(headerSlot.value);
+    hasContent.value = slotHasMeaningfulContent(contentSlot.value);
+    hasFooter.value = slotHasMeaningfulContent(footerSlot.value);
+    hasActions.value = slotHasMeaningfulContent(actionsSlot.value);
+  }
 
-  // Role/tabindex for clickable cards
+  onMount(() => {
+    onSlotChange('media', updateSlotState);
+    onSlotChange('header', updateSlotState);
+    onSlotChange('default', updateSlotState);
+    onSlotChange('footer', updateSlotState);
+    onSlotChange('actions', updateSlotState);
+  });
+
   watch(
-    [props.clickable, props.disabled],
+    [props.interactive, props.disabled, props.loading, props.variant, props.color, props.padding, props.orientation],
     () => {
-      if (props.clickable.value) {
+      if (props.interactive.value) {
         host.setAttribute('role', 'button');
         host.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
+        aria({ disabled: () => props.disabled.value });
       } else {
         host.removeAttribute('role');
         host.removeAttribute('tabindex');
+        aria({ disabled: () => null });
       }
+
+      host.setAttribute('aria-busy', props.loading.value ? 'true' : 'false');
     },
     { immediate: true },
   );
 
-  const handleClick = guard(
-    () => props.clickable.value,
-    (e: MouseEvent) => {
-      if (props.disabled.value) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      emit('cardclick', { color: props.color.value, originalEvent: e, variant: props.variant.value });
-    },
-  );
+  const handleClick = (e: MouseEvent) => {
+    if (!props.interactive.value || props.disabled.value) return;
+    if (isNestedInteractiveTarget(host, e)) return;
+    emit('activate', { originalEvent: e, trigger: 'pointer' });
+  };
 
-  const handleKeydown = guard(
-    () => props.clickable.value && !props.disabled.value,
-    (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        host.click();
-      }
-    },
-  );
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (!props.interactive.value || props.disabled.value) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      emit('activate', { originalEvent: e, trigger: 'keyboard' });
+    }
+  };
 
   handle(host, 'click', handleClick);
   handle(host, 'keydown', handleKeydown);
 
   return {
-    styles: [colorThemeMixin, frostVariantMixin('.card'), componentStyles],
-    template: html` <div class="card" part="card">
-      <div class="card-media" part="media">
-        <slot name="media"></slot>
+    styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
+    template: html`
+      <div class="card" part="card">
+        <div class="loading-bar" part="loading-bar"></div>
+        <div class="card-media" part="media" ?hidden="${() => !hasMedia.value}">
+          <slot ref=${mediaSlot} name="media"></slot>
+        </div>
+        <div class="card-body" part="body">
+          <div class="card-header" part="header" ?hidden="${() => !hasHeader.value}">
+            <slot ref=${headerSlot} name="header"></slot>
+          </div>
+          <div class="card-content" part="content" ?hidden="${() => !hasContent.value}">
+            <slot ref=${contentSlot}></slot>
+          </div>
+          <div class="card-footer" part="footer" ?hidden="${() => !hasFooter.value}">
+            <slot ref=${footerSlot} name="footer"></slot>
+          </div>
+          <div class="card-actions" part="actions" ?hidden="${() => !hasActions.value}">
+            <slot ref=${actionsSlot} name="actions"></slot>
+          </div>
+        </div>
       </div>
-      <div class="card-body" part="body">
-        <div class="card-header" part="header">
-          <slot name="header"></slot>
-        </div>
-        <div class="card-content" part="content">
-          <slot></slot>
-        </div>
-        <div class="card-footer" part="footer">
-          <slot name="footer"></slot>
-        </div>
-        <div class="card-actions" part="actions">
-          <slot name="actions"></slot>
-        </div>
-      </div>
-    </div>`,
+    `,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-card': HTMLElement & CardProps & AddEventListeners<BitCardEvents>;
+  }
+}

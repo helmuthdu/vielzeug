@@ -3,34 +3,567 @@ title: Routeit — Examples
 description: Real-world routing patterns and framework integrations for Routeit.
 ---
 
-# Routeit Examples
+## Routeit Examples
 
 ::: tip
-These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations.
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations and [API Reference](./api.md) for complete type signatures.
 :::
 
 [[toc]]
 
-::: tip 💡 Complete Applications
-These are complete, production-ready application examples. For API reference and basic usage, see [Usage Guide](./usage.md).
+## Framework Integration
+
+### Basic Integration
+
+Integrate Routeit with your UI framework by subscribing to route state.
+
+::: code-group
+
+```tsx [React]
+import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
+import { useState, useEffect } from 'react';
+
+const router = createRouter();
+
+router
+  .on('/', () => {})
+  .on('/about', () => {})
+  .on('/users/:id', () => {})
+  .start();
+
+function App() {
+  const [state, setState] = useState<RouteState>(() => router.state);
+
+  useEffect(() => router.subscribe(setState), []);
+
+  const { pathname, params } = state;
+
+  return (
+    <div>
+      <nav>
+        <button onClick={() => router.navigate('/')}>Home</button>
+        <button onClick={() => router.navigate('/about')}>About</button>
+        <button onClick={() => router.navigate('/users/123')}>User</button>
+      </nav>
+      <main>
+        {pathname === '/' && <h1>Home</h1>}
+        {pathname === '/about' && <h1>About</h1>}
+        {pathname.startsWith('/users/') && <h1>User {params.id}</h1>}
+      </main>
+    </div>
+  );
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const router = createRouter();
+router.on('/', () => {}).on('/about', () => {}).on('/users/:id', () => {}).start();
+
+const state = ref<RouteState>(router.state);
+let unsubscribe: () => void;
+
+onMounted(() => { unsubscribe = router.subscribe((s) => { state.value = s; }); });
+onUnmounted(() => unsubscribe?.());
+</script>
+
+<template>
+  <div>
+    <nav>
+      <button @click="router.navigate('/')">Home</button>
+      <button @click="router.navigate('/about')">About</button>
+      <button @click="router.navigate('/users/123')">User</button>
+    </nav>
+    <main>
+      <h1 v-if="state.pathname === '/'">Home</h1>
+      <h1 v-else-if="state.pathname === '/about'">About</h1>
+      <h1 v-else>User {{ state.params.id }}</h1>
+    </main>
+  </div>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createRouter } from '@vielzeug/routeit';
+  import { onDestroy } from 'svelte';
+  import { writable } from 'svelte/store';
+
+  const router = createRouter();
+  const state = writable(router.state);
+
+  router.on('/', () => {}).on('/about', () => {}).on('/users/:id', () => {}).start();
+
+  const unsubscribe = router.subscribe((s) => state.set(s));
+  onDestroy(unsubscribe);
+</script>
+
+<div>
+  <nav>
+    <button on:click={() => router.navigate('/')}>Home</button>
+    <button on:click={() => router.navigate('/about')}>About</button>
+    <button on:click={() => router.navigate('/users/123')}>User</button>
+  </nav>
+  <main>
+    {#if $state.pathname === '/'}
+      <h1>Home</h1>
+    {:else if $state.pathname === '/about'}
+      <h1>About</h1>
+    {:else}
+      <h1>User {$state.params.id}</h1>
+    {/if}
+  </main>
+</div>
+```
+
 :::
+
+### React Hook
+
+```tsx
+import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
+import { useState, useEffect, createContext, useContext } from 'react';
+
+const RouterContext = createContext<ReturnType<typeof createRouter> | null>(null);
+
+export function useRouter() {
+  const router = useContext(RouterContext);
+  if (!router) throw new Error('useRouter must be used inside <RouterProvider>');
+  const [state, setState] = useState<RouteState>(() => router.state);
+  useEffect(() => router.subscribe(setState), [router]);
+  return {
+    state,
+    navigate: (t: Parameters<typeof router.navigate>[0], o?: Parameters<typeof router.navigate>[1]) =>
+      router.navigate(t, o),
+    isActive: (p: string, exact?: boolean) => router.isActive(p, exact),
+    url: (p: string, params?: Record<string, string>) => router.url(p, params),
+  };
+}
+
+function RouterProvider({ children }: { children: React.ReactNode }) {
+  return <RouterContext.Provider value={router}>{children}</RouterContext.Provider>;
+}
+
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  const { state, navigate } = useRouter();
+  return (
+    <a
+      href={to}
+      onClick={(e) => { e.preventDefault(); navigate(to); }}
+      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}
+    >
+      {children}
+    </a>
+  );
+}
+```
+
+### Vue Composable
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
+const router = createRouter();
+
+export function useRouter() {
+  const state = ref<RouteState>(router.state);
+  let unsubscribe: () => void;
+
+  onMounted(() => { unsubscribe = router.subscribe((s) => { state.value = s; }); });
+  onUnmounted(() => unsubscribe?.());
+
+  return {
+    state,
+    navigate: router.navigate.bind(router),
+    isActive: router.isActive.bind(router),
+    url: router.url.bind(router),
+  };
+}
+```
+
+## Authentication
+
+Protected routes with a middleware guard that loads the current user into `ctx.locals`:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import type { Middleware } from '@vielzeug/routeit';
+
+interface User { id: string; name: string; roles: string[] }
+
+const authService = {
+  async getCurrentUser(): Promise<User | null> {
+    const token = localStorage.getItem('authToken');
+    if (!token) return null;
+    const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? res.json() : null;
+  },
+};
+
+const requireAuth: Middleware = async (ctx, next) => {
+  const user = await authService.getCurrentUser();
+  if (!user) {
+    await ctx.navigate('/login', { replace: true });
+    return;
+  }
+  ctx.locals.user = user;
+  await next();
+};
+
+const requireRole = (role: string): Middleware => async (ctx, next) => {
+  const user = ctx.locals.user as User | undefined;
+  if (!user?.roles.includes(role)) {
+    await ctx.navigate('/forbidden', { replace: true });
+    return;
+  }
+  await next();
+};
+
+const router = createRouter();
+
+router
+  .on('/', () => renderHome())
+  .on('/login', () => renderLogin())
+  .on('/forbidden', () => renderForbidden())
+
+  .group('/dashboard', (r) => {
+    r.on('/', (ctx) => renderDashboard(ctx.locals.user as User));
+    r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
+  }, { middleware: requireAuth })
+
+  .group('/admin', (r) => {
+    r.on('/reports', () => renderReports());
+    r.on('/users',   () => renderAdminUsers());
+  }, { middleware: [requireAuth, requireRole('admin')] })
+
+  .start();
+```
+
+## Role-based Access Control
+
+Using `@vielzeug/permit` for fine-grained permissions:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import { createPermit } from '@vielzeug/permit';
+import type { Middleware } from '@vielzeug/routeit';
+import type { BaseUser } from '@vielzeug/permit';
+
+const permit = createPermit();
+permit
+  .register('admin',  'posts', { read: true, create: true, update: true, delete: true })
+  .register('editor', 'posts', {
+    read: true,
+    create: true,
+    update: (user, data) => user.id === data?.authorId,
+    delete: false,
+  });
+
+const requireAuth: Middleware = async (ctx, next) => {
+  const user = await getCurrentUser();
+  if (!user) { await ctx.navigate('/login'); return; }
+  ctx.locals.user = user;
+  await next();
+};
+
+const requirePermission = (resource: string, action: string): Middleware =>
+  async (ctx, next) => {
+    const user = ctx.locals.user as BaseUser;
+    if (!permit.check(user, resource, action)) {
+      await ctx.navigate('/forbidden');
+      return;
+    }
+    await next();
+  };
+
+const router = createRouter();
+
+router
+  .on('/posts',         () => renderPosts(),     { middleware: [requireAuth, requirePermission('posts', 'read')] })
+  .on('/posts/new',     () => renderNewPost(),   { middleware: [requireAuth, requirePermission('posts', 'create')] })
+  .on('/posts/:id/edit', ({ params }) => renderEditPost(params.id), {
+    middleware: [requireAuth, requirePermission('posts', 'update')],
+  })
+  .start();
+```
+
+## Lazy Loading
+
+Load route modules on demand:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import type { Middleware, RouteContext } from '@vielzeug/routeit';
+
+type RouteModule = { default: (ctx: RouteContext) => void };
+
+const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
+  async (ctx, next) => {
+    const module = await importFn();
+    ctx.locals.component = module.default;
+    await next();
+  };
+
+const router = createRouter();
+
+router
+  .on('/dashboard',  (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
+    middleware: lazyLoad(() => import('./routes/dashboard')),
+  })
+  .on('/analytics',  (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
+    middleware: lazyLoad(() => import('./routes/analytics')),
+  })
+  .start();
+```
+
+## Named Routes & URL Builder
+
+Keep navigation refactor-proof with named routes:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({ base: '/app' });
+
+router
+  .on('/',                                   () => renderHome(),                  { name: 'home' })
+  .on('/users',                              () => renderUsers(),                 { name: 'userList' })
+  .on('/users/:id',                          ({ params }) => renderUser(params.id), { name: 'userDetail' })
+  .on('/users/:id/posts/:postId',            ({ params }) => renderPost(params),  { name: 'userPost' })
+  .start();
+
+// Navigate by name — paths never hard-coded
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
+
+// Build URLs for links
+router.url('userDetail', { id: '42' });              // '/app/users/42'
+router.url('userPost',   { id: '1', postId: '99' }); // '/app/users/1/posts/99'
+router.url('userList',   undefined, { page: '2' });  // '/app/users?page=2'
+```
+
+## Navigation Tracking & Analytics
+
+Log every navigation with route metadata using global middleware:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+type PageMeta = { page?: string };
+
+const router = createRouter({
+  middleware: async (ctx, next) => {
+    const start = performance.now();
+    await next();
+    const meta = ctx.meta as PageMeta | undefined;
+    analytics.track('page_view', {
+      pathname: ctx.pathname,
+      page: meta?.page,
+      params: ctx.params,
+      duration: performance.now() - start,
+    });
+  },
+});
+
+router
+  .on('/',         () => renderHome(),              { meta: { page: 'home' } })
+  .on('/pricing',  () => renderPricing(),           { meta: { page: 'pricing' } })
+  .on('/users/:id', ({ params }) => renderUser(params.id), { meta: { page: 'user_detail' } })
+  .start();
+```
+
+## Page Titles from Meta
+
+Update `document.title` reactively from route metadata:
+
+```ts
+type RouteMeta = { title?: string };
+
+const router = createRouter();
+
+router
+  .on('/',       () => renderHome(),   { name: 'home',  meta: { title: 'Home' } })
+  .on('/about',  () => renderAbout(),  { name: 'about', meta: { title: 'About' } })
+  .on('/users',  () => renderUsers(),  { name: 'users', meta: { title: 'Users' } })
+  .start();
+
+router.subscribe(({ meta }) => {
+  const m = meta as RouteMeta | undefined;
+  document.title = m?.title ? `${m.title} — My App` : 'My App';
+});
+```
+
+## Error Handling
+
+Global error handling with `onError` and `onNotFound`:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({
+  onNotFound: ({ pathname }) => {
+    document.getElementById('app')!.innerHTML = `
+      <h1>404 – Not Found</h1>
+      <p>The page "${pathname}" does not exist.</p>
+    `;
+  },
+  onError: async (error, ctx) => {
+    console.error('Route error at', ctx.pathname, error);
+    await ctx.navigate('/error');
+  },
+});
+
+router
+  .on('/flaky', async () => {
+    const data = await fetchData(); // may throw — caught by onError
+    render(data);
+  })
+  .on('/error', () => render('<h1>Something went wrong</h1>'))
+  .start();
+```
+
+## Hash Fragment Navigation
+
+Navigate to in-page anchors via named routes:
+
+```ts
+const router = createRouter();
+
+router.on('/docs/:page', ({ params, hash }) => {
+  renderPage(params.page);
+  if (hash) {
+    requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+}, { name: 'docsPage' }).start();
+
+// Navigate to a specific section
+await router.navigate({ name: 'docsPage', params: { page: 'api' }, hash: 'navigate' });
+// → /docs/api#navigate
+```
+
+## Hash Mode (SPA without server config)
+
+```ts
+const router = createRouter({ mode: 'hash' });
+
+router
+  .on('/', () => renderHome())
+  .on('/users/:id', ({ params }) => renderUser(params.id))
+  .start();
+
+// URLs: https://example.com/#/users/42
+await router.navigate('/users/42'); // sets location.hash = '/users/42'
+```
+
+## Scroll Restoration
+
+Manually restore scroll position on navigation:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+const scrollPositions = new Map<string, number>();
+
+const router = createRouter({
+  middleware: async (ctx, next) => {
+    // Save current scroll before navigating away
+    scrollPositions.set(router.state.pathname, window.scrollY);
+    await next();
+    // Restore after handler renders new content
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollPositions.get(ctx.pathname) ?? 0);
+    });
+  },
+});
+
+router.on('/', () => renderHome()).on('/about', () => renderAbout()).start();
+```
+
+## Middleware-only Routes
+
+Register route-wide hooks without a terminal handler — useful for analytics, auth guards on a broad path prefix:
+
+```ts
+const router = createRouter();
+
+// Log every navigation under /dashboard without a separate handler
+router.on('/dashboard/*', { middleware: async (ctx, next) => {
+  console.log('[analytics]', ctx.pathname);
+  await next();
+}});
+
+// Then register the actual handlers — middleware runs first
+router.group('/dashboard', (r) => {
+  r.on('/',      () => renderDashboard());
+  r.on('/users', () => renderUsers());
+}).start();
+```
+
+## View Transitions
+
+Animate page changes with the View Transition API:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+// Enable globally
+const router = createRouter({ viewTransition: true });
+
+router
+  .on('/', () => renderHome())
+  .on('/about', () => renderAbout())
+  .start();
+
+// Or per navigation
+await router.navigate('/about', { viewTransition: true });
+```
+
+CSS to animate the transition:
+
+```css
+::view-transition-old(root) { animation: fade-out 150ms ease; }
+::view-transition-new(root) { animation: fade-in  150ms ease; }
+
+@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes fade-in  { from { opacity: 0 } to { opacity: 1 } }
+```
+
+## `using` — Explicit Resource Management
+
+Automatically clean up the router when leaving a scope:
+
+```ts
+async function renderPage() {
+  using router = createRouter();
+  router.on('/', () => renderHome()).start();
+
+  await doWork();
+  // router.dispose() is called automatically here
+  // → subscribers cleared, popstate listener removed
+}
+```
+
+::: tip
+These are copy-paste ready recipes. See [Usage Guide](./usage.md) for detailed explanations and [API Reference](./api.md) for complete type signatures.
+:::
+
+[[toc]]
 
 ## Framework Integration
 
-::: details 🎯 Why Two Patterns?
-We provide both **inline** and **hook/composable** patterns because:
+### Basic Integration
 
-- **Inline**: Quick prototyping, global router instance
-- **Hook/Composable**: Reactive integration, component-scoped state
-
-Choose based on your project structure and team preferences.
-:::
-
-Complete examples showing how to integrate Routeit with React, Vue, Svelte, and Web Components.
-
-### Basic Integration (Inline)
-
-Directly create and use a router instance.
+Integrate Routeit with your framework by subscribing to route state.
 
 ::: code-group
 
@@ -41,19 +574,17 @@ import { useState, useEffect } from 'react';
 const router = createRouter();
 
 router
-  .get('/', () => ({ view: 'home' }))
-  .get('/about', () => ({ view: 'about' }))
-  .get('/users/:id', ({ params }) => ({ view: 'user', id: params.id }))
+  .on('/', () => {})
+  .on('/about', () => {})
+  .on('/users/:id', () => {})
   .start();
 
 function App() {
-  const [route, setRoute] = useState({ view: 'home' });
+  const [state, setState] = useState(() => router.state);
 
-  useEffect(() => {
-    return router.subscribe(() => {
-      setRoute({ ...router.getState() });
-    });
-  }, []);
+  useEffect(() => router.subscribe(setState), []);
+
+  const { pathname, params } = state;
 
   return (
     <div>
@@ -63,9 +594,9 @@ function App() {
         <button onClick={() => router.navigate('/users/123')}>User</button>
       </nav>
       <main>
-        {route.view === 'home' && <h1>Home</h1>}
-        {route.view === 'about' && <h1>About</h1>}
-        {route.view === 'user' && <h1>User {route.id}</h1>}
+        {pathname === '/' && <h1>Home</h1>}
+        {pathname === '/about' && <h1>About</h1>}
+        {pathname.startsWith('/users') && <h1>User {params.id}</h1>}
       </main>
     </div>
   );
@@ -75,26 +606,22 @@ function App() {
 ```vue [Vue 3]
 <script setup lang="ts">
 import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const router = createRouter();
 
 router
-  .get('/', () => ({ view: 'home' }))
-  .get('/about', () => ({ view: 'about' }))
-  .get('/users/:id', ({ params }) => ({ view: 'user', id: params.id }))
+  .on('/', () => {})
+  .on('/about', () => {})
+  .on('/users/:id', () => {})
   .start();
 
-const currentView = ref('home');
-const userId = ref('');
+const state = ref(router.state);
+let unsubscribe: () => void;
 
-let unsubscribe;
 onMounted(() => {
-  unsubscribe = router.subscribe(() => {
-    const state = router.getState();
-    currentView.value = state.pathname === '/' ? 'home' : state.pathname === '/about' ? 'about' : 'user';
-    userId.value = state.params.id || '';
-  });
+  unsubscribe = router.subscribe((s) => { state.value = s; });
 });
 onUnmounted(() => unsubscribe?.());
 </script>
@@ -107,9 +634,9 @@ onUnmounted(() => unsubscribe?.());
       <button @click="router.navigate('/users/123')">User</button>
     </nav>
     <main>
-      <h1 v-if="currentView === 'home'">Home</h1>
-      <h1 v-else-if="currentView === 'about'">About</h1>
-      <h1 v-else>User {{ userId }}</h1>
+      <h1 v-if="state.pathname === '/'">Home</h1>
+      <h1 v-else-if="state.pathname === '/about'">About</h1>
+      <h1 v-else>User {{ state.params.id }}</h1>
     </main>
   </div>
 </template>
@@ -119,26 +646,18 @@ onUnmounted(() => unsubscribe?.());
 <script lang="ts">
   import { createRouter } from '@vielzeug/routeit';
   import { onDestroy } from 'svelte';
+  import { writable } from 'svelte/store';
 
   const router = createRouter();
-
-  let currentView = 'home';
-  let userId = '';
+  const state = writable(router.state);
 
   router
-    .get('/', () => { currentView = 'home'; })
-    .get('/about', () => { currentView = 'about'; })
-    .get('/users/:id', ({ params }) => {
-      currentView = 'user';
-      userId = params.id;
-    })
+    .on('/', () => {})
+    .on('/about', () => {})
+    .on('/users/:id', () => {})
     .start();
 
-  const unsubscribe = router.subscribe(() => {
-    // Trigger reactivity
-    currentView = currentView;
-  });
-
+  const unsubscribe = router.subscribe((s) => state.set(s));
   onDestroy(unsubscribe);
 </script>
 
@@ -149,348 +668,88 @@ onUnmounted(() => unsubscribe?.());
     <button on:click={() => router.navigate('/users/123')}>User</button>
   </nav>
   <main>
-    {#if currentView === 'home'}
+    {#if $state.pathname === '/'}
       <h1>Home</h1>
-    {:else if currentView === 'about'}
+    {:else if $state.pathname === '/about'}
       <h1>About</h1>
     {:else}
-      <h1>User {userId}</h1>
+      <h1>User {$state.params.id}</h1>
     {/if}
   </main>
 </div>
 ```
 
-```ts [Web Component]
-import { createRouter } from '@vielzeug/routeit';
-
-class SimpleRouter extends HTMLElement {
-  #router = createRouter();
-  #unsubscribe;
-
-  connectedCallback() {
-    this.innerHTML = `
-      <nav>
-        <button id="home">Home</button>
-        <button id="about">About</button>
-        <button id="user">User</button>
-      </nav>
-      <main id="content"></main>
-    `;
-
-    this.#router
-      .get('/', () => this.render('<h1>Home</h1>'))
-      .get('/about', () => this.render('<h1>About</h1>'))
-      .get('/users/:id', ({ params }) => this.render(`<h1>User ${params.id}</h1>`))
-      .start();
-
-    this.querySelector('#home').onclick = () => this.#router.navigate('/');
-    this.querySelector('#about').onclick = () => this.#router.navigate('/about');
-    this.querySelector('#user').onclick = () => this.#router.navigate('/users/123');
-
-    this.#unsubscribe = this.#router.subscribe(() => {
-      // Router handles rendering via handlers
-    });
-  }
-
-  render(html) {
-    this.querySelector('#content').innerHTML = html;
-  }
-
-  disconnectedCallback() {
-    this.#router.stop();
-    this.#unsubscribe?.();
-  }
-}
-customElements.define('simple-router', SimpleRouter);
-```
-
 :::
 
-### Advanced Integration (Hook/Composable)
+### React Hook
 
-Create reusable router hooks for better component integration.
+A reusable hook exposing router state reactively:
 
-::: code-group
-
-```tsx [React]
+```tsx
 import { createRouter } from '@vielzeug/routeit';
-import type { Router } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
 import { useState, useEffect, createContext, useContext } from 'react';
 
-// Create router instance
-const router = createRouter();
+const RouterContext = createContext<ReturnType<typeof createRouter> | null>(null);
 
-// Router context
-const RouterContext = createContext<Router>(router);
-
-// Custom hook
-function useRouter() {
+export function useRouter() {
   const router = useContext(RouterContext);
-  const [state, setState] = useState(() => router.getState());
-
-  useEffect(() => {
-    return router.subscribe(() => {
-      setState(router.getState());
-    });
-  }, [router]);
-
-  return {
-    ...state,
-    navigate: router.navigate.bind(router),
-    navigateTo: router.navigateTo.bind(router),
-    isActive: router.isActive.bind(router),
-  };
+  if (!router) throw new Error('useRouter must be used inside <RouterProvider>');
+  const [state, setState] = useState<RouteState>(() => router.state);
+  useEffect(() => router.subscribe(setState), [router]);
+  return { state, navigate: router.navigate.bind(router), isActive: router.isActive.bind(router) };
 }
 
-// Define routes
-router
-  .get('/', () => {})
-  .get('/about', () => {})
-  .get('/users/:id', () => {})
-  .start();
+// App setup
+const router = createRouter();
+router.on('/', () => {}).on('/about', () => {}).start();
 
-// Components
-function Home() {
-  return <h1>Home</h1>;
+function RouterProvider({ children }: { children: React.ReactNode }) {
+  return <RouterContext.Provider value={router}>{children}</RouterContext.Provider>;
 }
 
-function About() {
-  return <h1>About</h1>;
-}
-
-function User() {
-  const { params } = useRouter();
-  return <h1>User {params.id}</h1>;
-}
-
-function App() {
-  const { pathname, navigate, isActive } = useRouter();
-
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  const { state, navigate } = useRouter();
   return (
-    <RouterContext.Provider value={router}>
-      <nav>
-        <button onClick={() => navigate('/')} className={isActive('/') ? 'active' : ''}>
-          Home
-        </button>
-        <button onClick={() => navigate('/about')} className={isActive('/about') ? 'active' : ''}>
-          About
-        </button>
-        <button onClick={() => navigate('/users/123')}>User</button>
-      </nav>
-      <main>
-        {pathname === '/' && <Home />}
-        {pathname === '/about' && <About />}
-        {pathname.startsWith('/users') && <User />}
-      </main>
-    </RouterContext.Provider>
+    <a
+      href={to}
+      onClick={(e) => { e.preventDefault(); navigate(to); }}
+      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}
+    >
+      {children}
+    </a>
   );
 }
 ```
 
-```vue [Vue 3]
-<script setup lang="ts">
-import { createRouter } from '@vielzeug/routeit';
-import type { Router } from '@vielzeug/routeit';
-import { ref, onMounted, onUnmounted, provide, inject } from 'vue';
+### Vue Composable
 
-// Create router
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import type { RouteState } from '@vielzeug/routeit';
+import { ref, onMounted, onUnmounted } from 'vue';
+
 const router = createRouter();
 
-// Composable
-function useRouter() {
-  const router = inject<Router>('router');
-  const { pathname: p, params: r, query: q } = router.getState();
-  const pathname = ref(p);
-  const params = ref(r);
-  const query = ref(q);
+export function useRouter() {
+  const state = ref<RouteState>(router.state);
+  let unsubscribe: () => void;
 
-  let unsubscribe;
   onMounted(() => {
-    unsubscribe = router.subscribe(() => {
-      const state = router.getState();
-      pathname.value = state.pathname;
-      params.value = state.params;
-      query.value = state.query;
-    });
+    unsubscribe = router.subscribe((s) => { state.value = s; });
   });
-
   onUnmounted(() => unsubscribe?.());
 
   return {
-    pathname,
-    params,
-    query,
+    state,
     navigate: router.navigate.bind(router),
-    navigateTo: router.navigateTo.bind(router),
     isActive: router.isActive.bind(router),
+    url: router.url.bind(router),
   };
 }
-
-// App setup
-router
-  .get('/', () => {})
-  .get('/about', () => {})
-  .get('/users/:id', () => {})
-  .start();
-
-provide('router', router);
-const { pathname, params, navigate, isActive } = useRouter();
-</script>
-
-<template>
-  <div>
-    <nav>
-      <button @click="navigate('/')" :class="{ active: isActive('/') }">Home</button>
-      <button @click="navigate('/about')" :class="{ active: isActive('/about') }">About</button>
-      <button @click="navigate('/users/123')">User</button>
-    </nav>
-    <main>
-      <h1 v-if="pathname === '/'">Home</h1>
-      <h1 v-else-if="pathname === '/about'">About</h1>
-      <h1 v-else>User {{ params.id }}</h1>
-    </main>
-  </div>
-</template>
 ```
 
-```svelte [SvelteKit]
-<script context="module" lang="ts">
-  import { createRouter } from '@vielzeug/routeit';
-  import { writable } from 'svelte/store';
-
-  const router = createRouter();
-
-  function createRouterStore() {
-    const { subscribe, set } = writable(router.getState());
-
-    router.subscribe(() => {
-      set(router.getState());
-    });
-
-    return {
-      subscribe,
-      navigate: router.navigate.bind(router),
-      navigateTo: router.navigateTo.bind(router),
-      isActive: router.isActive.bind(router),
-    };
-  }
-
-  export const routerStore = createRouterStore();
-
-  router
-    .get('/', () => {})
-    .get('/about', () => {})
-    .get('/users/:id', () => {})
-    .start();
-</script>
-
-<script lang="ts">
-  $: ({ pathname, params } = $routerStore);
-</script>
-
-<div>
-  <nav>
-    <button
-      on:click={() => routerStore.navigate('/')}
-      class:active={routerStore.isActive('/')}>
-      Home
-    </button>
-    <button
-      on:click={() => routerStore.navigate('/about')}
-      class:active={routerStore.isActive('/about')}>
-      About
-    </button>
-    <button on:click={() => routerStore.navigate('/users/123')}>
-      User
-    </button>
-  </nav>
-  <main>
-    {#if pathname === '/'}
-      <h1>Home</h1>
-    {:else if pathname === '/about'}
-      <h1>About</h1>
-    {:else}
-      <h1>User {params.id}</h1>
-    {/if}
-  </main>
-</div>
-```
-
-```ts [Web Component with Store]
-import { createRouter } from '@vielzeug/routeit';
-
-class AdvancedRouter extends HTMLElement {
-  static #router = createRouter();
-  static #subscribers = new Set();
-
-  static subscribe(callback) {
-    this.#subscribers.add(callback);
-    callback(this.getState());
-    return () => this.#subscribers.delete(callback);
-  }
-
-  static getState() {
-    return this.#router.getState();
-  }
-
-  static navigate(path) {
-    this.#router.navigate(path);
-  }
-
-  #unsubscribe;
-  #routerUnsubscribe;
-
-  connectedCallback() {
-    // Set up routes (once)
-    if (!AdvancedRouter.#router._started) {
-      AdvancedRouter.#router
-        .get('/', () => {})
-        .get('/about', () => {})
-        .get('/users/:id', () => {})
-        .start();
-
-      this.#routerUnsubscribe = AdvancedRouter.#router.subscribe(() => {
-        AdvancedRouter.#subscribers.forEach((cb) => cb(AdvancedRouter.getState()));
-      });
-    }
-
-    this.#unsubscribe = AdvancedRouter.subscribe((state) => {
-      this.render(state);
-    });
-  }
-
-  render(state) {
-    const { pathname, params } = state;
-    let content = '';
-
-    if (pathname === '/') content = '<h1>Home</h1>';
-    else if (pathname === '/about') content = '<h1>About</h1>';
-    else if (pathname.startsWith('/users')) content = `<h1>User ${params.id}</h1>`;
-
-    this.innerHTML = `
-      <nav>
-        <button id="home">Home</button>
-        <button id="about">About</button>
-        <button id="user">User</button>
-      </nav>
-      <main>${content}</main>
-    `;
-
-    this.querySelector('#home').onclick = () => AdvancedRouter.navigate('/');
-    this.querySelector('#about').onclick = () => AdvancedRouter.navigate('/about');
-    this.querySelector('#user').onclick = () => AdvancedRouter.navigate('/users/123');
-  }
-
-  disconnectedCallback() {
-    this.#unsubscribe?.();
-  }
-}
-customElements.define('advanced-router', AdvancedRouter);
-```
-
-:::
-
-## Authentication & Authorization
+## Authentication
 
 Complete authentication flow with protected routes.
 
@@ -498,139 +757,76 @@ Complete authentication flow with protected routes.
 import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
-// Types
-interface User {
-  id: string;
-  name: string;
-  roles: string[];
-}
+interface User { id: string; name: string; roles: string[] }
 
-// Auth service
 const authService = {
   async getCurrentUser(): Promise<User | null> {
     const token = localStorage.getItem('authToken');
     if (!token) return null;
-
-    try {
-      const res = await fetch('/api/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.ok ? await res.json() : null;
-    } catch {
-      return null;
-    }
+    const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? res.json() : null;
   },
-
   async login(email: string, password: string): Promise<User> {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-
     const data = await res.json();
     localStorage.setItem('authToken', data.token);
     return data.user;
   },
-
-  logout() {
-    localStorage.removeItem('authToken');
-  },
+  logout() { localStorage.removeItem('authToken'); },
 };
 
-// Create router first so middleware can reference it
 const router = createRouter();
 
-// Middleware — store user in ctx.meta so downstream handlers can access it
+// Load authenticated user into ctx.locals so downstream handlers can read it
 const requireAuth: Middleware = async (ctx, next) => {
   const user = await authService.getCurrentUser();
-
   if (!user) {
-    router.navigate('/login');
+    await ctx.navigate('/login', { replace: true });
     return;
   }
-
-  ctx.meta.user = user;
+  ctx.locals.user = user;
   await next();
 };
 
-const requireRole = (role: string): Middleware => {
-  return async (ctx, next) => {
-    const user = ctx.meta.user as User | undefined;
-
-    if (!user || !user.roles.includes(role)) {
-      router.navigate('/forbidden');
-      return;
-    }
-
-    await next();
-  };
+const requireRole = (role: string): Middleware => async (ctx, next) => {
+  const user = ctx.locals.user as User | undefined;
+  if (!user?.roles.includes(role)) {
+    await ctx.navigate('/forbidden', { replace: true });
+    return;
+  }
+  await next();
 };
 
 router
-  // Public routes
-  .get('/', () => {
-    document.getElementById('app').innerHTML = '<h1>Home</h1>';
-  })
-  .get('/login', () => {
-    document.getElementById('app').innerHTML = `
-      <form id="loginForm">
-        <input name="email" type="email" placeholder="Email" required />
-        <input name="password" type="password" placeholder="Password" required />
-        <button type="submit">Login</button>
-      </form>
-    `;
-
-    document.getElementById('loginForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const form = e.target as HTMLFormElement;
-      const email = (form.email as HTMLInputElement).value;
-      const password = (form.password as HTMLInputElement).value;
-
-      try {
-        await authService.login(email, password);
-        router.navigate('/dashboard');
-      } catch (error) {
-        alert('Login failed');
-      }
-    };
-  })
+  .on('/', () => renderHome())
+  .on('/login', () => renderLogin())
+  .on('/forbidden', () => renderForbidden())
 
   // Protected routes
-  .route({
-    path: '/dashboard',
-    middleware: requireAuth,
-    handler: (ctx) => {
-      const user = ctx.meta.user as User;
-      document.getElementById('app').innerHTML = `
-        <h1>Dashboard</h1>
-        <p>Welcome, ${user?.name}!</p>
-        <button id="logout">Logout</button>
-      `;
+  .group('/dashboard', (r) => {
+    r.on('/', (ctx) => {
+      const user = ctx.locals.user as User;
+      renderDashboard(user);
+    });
+    r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
+  }, { middleware: requireAuth })
 
-      document.getElementById('logout').onclick = () => {
-        authService.logout();
-        router.navigate('/login');
-      };
-    },
-  })
-  .route({
-    path: '/admin',
-    middleware: [requireAuth, requireRole('admin')],
-    handler: (ctx) => {
-      const user = ctx.meta.user as User;
-      document.getElementById('app').innerHTML = `
-        <h1>Admin Panel</h1>
-        <p>Hello, ${user?.name} (Admin)</p>
-      `;
-    },
-  })
+  // Admin-only routes
+  .group('/admin', (r) => {
+    r.on('/reports', renderReports);
+    r.on('/users', renderAdminUsers);
+  }, { middleware: [requireAuth, requireRole('admin')] })
+
   .start();
 ```
 
-## Permission Integration
+## Role-based Access Control
 
-Using @vielzeug/permit for fine-grained access control.
+Using `@vielzeug/permit` for fine-grained permissions:
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
@@ -640,14 +836,7 @@ import type { BaseUser, PermissionAction } from '@vielzeug/permit';
 
 const permit = createPermit();
 
-// Define permissions
-permit.set('admin', 'posts', {
-  read: true,
-  create: true,
-  update: true,
-  delete: true,
-});
-
+permit.set('admin', 'posts', { read: true, create: true, update: true, delete: true });
 permit.set('editor', 'posts', {
   read: true,
   create: true,
@@ -655,285 +844,308 @@ permit.set('editor', 'posts', {
   delete: false,
 });
 
-permit.set('viewer', 'posts', {
-  read: true,
-  create: false,
-  update: false,
-  delete: false,
-});
-
-// Create router before middleware so it can be referenced
 const router = createRouter();
 
-// Permission middleware factory
-function requirePermission(resource: string, action: PermissionAction): Middleware {
-  return async (ctx, next) => {
-    const user = ctx.meta.user as BaseUser;
+const requireAuth: Middleware = async (ctx, next) => {
+  const user = await getCurrentUser();
+  if (!user) { await ctx.navigate('/login'); return; }
+  ctx.locals.user = user;
+  await next();
+};
 
-    if (!user) {
-      router.navigate('/login');
-      return;
-    }
-
+const requirePermission = (resource: string, action: PermissionAction): Middleware =>
+  async (ctx, next) => {
+    const user = ctx.locals.user as BaseUser;
     if (!permit.check(user, resource, action)) {
-      router.navigate('/forbidden');
+      await ctx.navigate('/forbidden');
       return;
     }
-
     await next();
   };
-}
 
 router
-  .route({
-    path: '/posts',
-    middleware: requirePermission('posts', 'read'),
-    handler: () => {
-      // List posts
-      console.log('Posts list');
-    },
-  })
-  .route({
-    path: '/posts/new',
-    middleware: requirePermission('posts', 'create'),
-    handler: () => {
-      // Create post form
-      console.log('Create post');
-    },
-  })
-  .route({
-    path: '/posts/:id/edit',
-    middleware: requirePermission('posts', 'update'),
-    handler: ({ params }) => {
-      // Edit post form
-      console.log('Edit post:', params.id);
-    },
-  })
-  .route({
-    path: '/posts/:id/delete',
-    middleware: requirePermission('posts', 'delete'),
-    handler: ({ params }) => {
-      // Delete post
-      console.log('Delete post:', params.id);
-    },
+  .on('/posts', renderPosts, { middleware: [requireAuth, requirePermission('posts', 'read')] })
+  .on('/posts/new', renderNewPost, { middleware: [requireAuth, requirePermission('posts', 'create')] })
+  .on('/posts/:id/edit', ({ params }) => renderEditPost(params.id), {
+    middleware: [requireAuth, requirePermission('posts', 'update')],
   })
   .start();
 ```
 
 ## Lazy Loading
 
-Load route modules on demand for better performance.
+Load route modules on demand:
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
-import type { Middleware } from '@vielzeug/routeit';
+import type { Middleware, RouteContext } from '@vielzeug/routeit';
 
-// Create router first so middleware closures can reference it
 const router = createRouter();
 
-// Lazy loading middleware
-const lazyLoad = (importFn: () => Promise<{ default: (ctx: any) => void }>): Middleware => {
-  return async (ctx, next) => {
-    try {
-      ctx.meta.loading = true;
+type RouteModule = { default: (ctx: RouteContext) => void | Promise<void> };
 
-      const module = await importFn();
-      ctx.meta.loading = false;
-
-      await module.default(ctx);
-      await next();
-    } catch (error) {
-      console.error('Failed to load route:', error);
-      router.navigate('/error');
-    }
+const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
+  async (ctx, next) => {
+    const module = await importFn();
+    ctx.locals.component = module.default;
+    await next();
   };
-};
 
 router
-  .route({
-    path: '/dashboard',
-    middleware: lazyLoad(() => import('./routes/dashboard')),
-    handler: () => {
-      // Handler called after module loads
-      console.log('Dashboard loaded');
-    },
-  })
-  .route({
-    path: '/analytics',
-    middleware: lazyLoad(() => import('./routes/analytics')),
-    handler: () => {
-      console.log('Analytics loaded');
-    },
-  })
+  .on('/dashboard', (ctx) => {
+    (ctx.locals.component as RouteModule['default'])(ctx);
+  }, { middleware: lazyLoad(() => import('./routes/dashboard')) })
+
+  .on('/analytics', (ctx) => {
+    (ctx.locals.component as RouteModule['default'])(ctx);
+  }, { middleware: lazyLoad(() => import('./routes/analytics')) })
+
   .start();
-
-// routes/dashboard.ts
-export default function dashboard(ctx) {
-  const user = ctx.meta?.user;
-  document.getElementById('app').innerHTML = `
-    <h1>Dashboard</h1>
-    <p>User: ${user?.name}</p>
-  `;
-}
-
-// routes/analytics.ts
-export default function analytics(ctx) {
-  document.getElementById('app').innerHTML = `
-    <h1>Analytics</h1>
-    <div id="charts"></div>
-  `;
-
-  // Load charts library lazily
-  import('./charts').then(({ renderCharts }) => {
-    renderCharts('#charts');
-  });
-}
 ```
 
-## SPA with Layouts
+## Navigation Tracking & Analytics
 
-Build a complete SPA with nested layouts.
+Log every navigation with route metadata:
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
 
-// Layout components
-const layouts = {
-  default: (content: string) => `
-    <div class="layout">
-      <header>
-        <nav>
-          <a href="/" onclick="event.preventDefault(); router.navigate('/')">Home</a>
-          <a href="/about" onclick="event.preventDefault(); router.navigate('/about')">About</a>
-        </nav>
-      </header>
-      <main>${content}</main>
-      <footer>© 2024 My App</footer>
-    </div>
-  `,
+type PageMeta = { page?: string };
 
-  dashboard: (content: string) => `
-    <div class="dashboard-layout">
-      <aside class="sidebar">
-        <nav>
-          <a href="/dashboard" onclick="event.preventDefault(); router.navigate('/dashboard')">Overview</a>
-          <a href="/dashboard/profile" onclick="event.preventDefault(); router.navigate('/dashboard/profile')">Profile</a>
-          <a href="/dashboard/settings" onclick="event.preventDefault(); router.navigate('/dashboard/settings')">Settings</a>
-        </nav>
-      </aside>
-      <main>${content}</main>
-    </div>
-  `,
-};
+const router = createRouter({
+  middleware: async (ctx, next) => {
+    const start = performance.now();
+    await next();
+    const meta = ctx.meta as PageMeta | undefined;
+    analytics.track('page_view', {
+      pathname: ctx.pathname,
+      page: meta?.page,
+      params: ctx.params,
+      duration: performance.now() - start,
+    });
+  },
+});
 
-// Render helper
-function render(content: string, layout: 'default' | 'dashboard' = 'default') {
-  document.getElementById('app').innerHTML = layouts[layout](content);
-}
-
-// Router
-const router = createRouter();
-
-router
-  // Public pages with default layout
-  .get('/', () => {
-    render('<h1>Home</h1><p>Welcome to our app!</p>');
-  })
-  .get('/about', () => {
-    render('<h1>About</h1><p>Learn more about us.</p>');
-  })
-
-  // Dashboard with custom layout
-  .route({
-    path: '/dashboard',
-    handler: () => {
-      render('<h1>Dashboard</h1><p>Overview content</p>', 'dashboard');
-    },
-    children: [
-      {
-        path: '/profile',
-        handler: () => {
-          render('<h1>Profile</h1><p>User profile</p>', 'dashboard');
-        },
-      },
-      {
-        path: '/settings',
-        handler: () => {
-          render('<h1>Settings</h1><p>App settings</p>', 'dashboard');
-        },
-      },
-    ],
-  })
-  .start();
+router.routes([
+  { path: '/', meta: { page: 'home' }, handler: renderHome },
+  { path: '/pricing', meta: { page: 'pricing' }, handler: renderPricing },
+  { path: '/users/:id', meta: { page: 'user_detail' }, handler: ({ params }) => renderUser(params.id) },
+]);
+router.start();
 ```
 
 ## Error Handling
 
-Comprehensive error handling with error boundaries.
+Global error handling with `onError` and `onNotFound`:
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
-import type { Middleware } from '@vielzeug/routeit';
 
-// Error handler middleware
-const errorHandler: Middleware = async (ctx, next) => {
-  try {
-    await next();
-  } catch (error) {
-    console.error('Route error:', error);
-
-    // Log to error tracking service
-    logError(error, {
-      pathname: ctx.pathname,
-      params: ctx.params,
-      query: ctx.query,
-    });
-
-    // Show error page
-    document.getElementById('app').innerHTML = `
-      <div class="error">
-        <h1>Oops! Something went wrong</h1>
-        <p>${error.message}</p>
-        <button onclick="router.navigate('/')">Go Home</button>
-      </div>
-    `;
-  }
-};
-
-// 404 handler
-const notFoundHandler = ({ pathname }) => {
-  document.getElementById('app').innerHTML = `
-    <div class="not-found">
-      <h1>404 – Page Not Found</h1>
-      <p>The page "${pathname}" does not exist.</p>
-      <button onclick="router.navigate('/')">Go Home</button>
-    </div>
-  `;
-};
-
-// Router with error handling
 const router = createRouter({
-  middleware: [errorHandler],
-  onNotFound: notFoundHandler,
+  onError: async (error, ctx) => {
+    console.error('Route error at', ctx.pathname, error);
+    await ctx.navigate('/error');
+  },
+  onNotFound: ({ pathname }) => {
+    document.getElementById('app')!.innerHTML = `
+      <h1>404 – Not Found</h1>
+      <p>The page "${pathname}" does not exist.</p>
+    `;
+  },
 });
 
 router
-  .get('/error-test', () => {
-    throw new Error('Test error');
+  .on('/flaky', async () => {
+    const data = await fetchData(); // may throw — caught by onError
+    render(data);
   })
+  .on('/error', () => render('<h1>Something went wrong</h1>'))
+  .start();
+```
+
+## Named Routes & URL Builder
+
+Keep navigation refactor-proof with named routes:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({ base: '/app' });
+
+router.routes([
+  { path: '/', name: 'home', handler: renderHome },
+  { path: '/users', name: 'userList', handler: renderUsers },
+  { path: '/users/:id', name: 'userDetail', handler: ({ params }) => renderUser(params.id) },
+  { path: '/users/:id/posts/:postId', name: 'userPost', handler: ({ params }) => renderPost(params) },
+]);
+router.start();
+
+// Navigate by name — never hard-code paths
+router.navigate({ name: 'userDetail', params: { id: '42' } });
+router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
+
+// Build URLs for links
+router.url('userDetail', { id: '42' });             // '/app/users/42'
+router.url('userPost', { id: '1', postId: '99' });  // '/app/users/1/posts/99'
+router.url('userList', undefined, { page: '2' });   // '/app/users?page=2'
+```
+
+## Hash Fragment Navigation
+
+Navigate to in-page anchors via named routes:
+
+```ts
+const router = createRouter();
+
+router.on('/docs/:page', ({ params, hash }) => {
+  renderPage(params.page);
+  if (hash) {
+    requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+}, { name: 'docs' });
+
+router.start();
+
+// Navigate to a section
+router.navigate({ name: 'docs', params: { page: 'api' }, hash: 'createrouter' });
+// → /docs/api#createrouter
+```
+
+## Wildcard Routes
+
+Capture the rest of a path as a named param:
+
+```ts
+const router = createRouter();
+
+// Named wildcard — ctx.params.rest = 'guide/getting-started'
+router.on('/docs/:rest*', ({ params }) => {
+  renderDoc(params.rest);
+}, { name: 'doc' });
+
+// Catch-all 404
+router.on('*', () => render404());
+
+router.start();
+
+// URL builder works with named wildcard params
+router.url('doc', { rest: 'api/createrouter' });  // → '/docs/api/createrouter'
+```
+
+## SPA with Layout Selection
+
+Use route `meta` to select layouts without repeating middleware:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+type LayoutMeta = { layout?: 'default' | 'dashboard' | 'fullscreen' };
+
+const router = createRouter({
+  middleware: async (ctx, next) => {
+    await next();
+    const layout = (ctx.meta as LayoutMeta | undefined)?.layout ?? 'default';
+    document.body.dataset.layout = layout;
+  },
+});
+
+router.routes([
+  { path: '/',                  meta: { layout: 'default' },    handler: renderHome },
+  { path: '/about',             meta: { layout: 'default' },    handler: renderAbout },
+  { path: '/dashboard',         meta: { layout: 'dashboard' },  handler: renderDashboard },
+  { path: '/dashboard/settings',meta: { layout: 'dashboard' },  handler: renderSettings },
+  { path: '/preview/:id',       meta: { layout: 'fullscreen' }, handler: ({ params }) => renderPreview(params.id) },
+]);
+router.start();
+```
+
+## Redirects
+
+Permanent and temporary URL redirects:
+
+```ts
+const router = createRouter();
+
+// Redirect old paths to new canonical ones (replaces history entry by default)
+router.redirect('/old-about', '/about');
+router.redirect('/legacy/users/:id', '/users/:id');
+
+// Temporary redirect — push a new history entry
+router.redirect('/beta', '/dashboard', { replace: false });
+
+router
+  .on('/about', renderAbout)
+  .on('/users/:id', ({ params }) => renderUser(params.id))
+  .on('/dashboard', renderDashboard)
+  .start();
+```
+
+## Same-URL Deduplication
+
+By default, navigating to the current URL is a no-op. Use `force: true` to bypass this:
+
+```ts
+const router = createRouter();
+router.on('/feed', () => refreshFeed()).start();
+
+// No-op if already at /feed
+router.navigate('/feed');
+
+// Force re-run even if already at /feed
+document.getElementById('refreshBtn')!.onclick = () => {
+  router.navigate('/feed', { force: true });
+};
+```
+
+## Base Path Deployment
+
+Deploy at a subdirectory without changing route definitions:
+
+```ts
+const router = createRouter({ mode: 'history', base: '/my-app' });
+
+router.routes([
+  { path: '/',          handler: renderHome },
+  { path: '/about',     handler: renderAbout },
+  { path: '/users/:id', name: 'user', handler: ({ params }) => renderUser(params.id) },
+]);
+router.start();
+
+// Navigation and URL building automatically prepend /my-app
+router.navigate('/about');         // pushes /my-app/about
+router.url('user', { id: '7' });  // → '/my-app/users/7'
+router.isActive('/about');         // true when at /my-app/about
+```
+
+## autoStart
+
+Skip the `.start()` call using the `autoStart` option:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+
+const router = createRouter({ autoStart: true });
+
+// Routes registered before the first tick are matched automatically on load
+router
+  .on('/', renderHome)
+  .on('/about', renderAbout);
+```
+
+## View Transitions API
+
+Enable browser-native page transitions:
+
+```ts
+const router = createRouter({ viewTransition: true });
+
+router
+  .on('/', renderHome)
+  .on('/gallery', renderGallery)
   .start();
 
-function logError(error, context) {
-  // Send to error tracking service
-  fetch('/api/errors', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: error.message,
-      stack: error.stack,
-      context,
-      timestamp: new Date().toISOString(),
-    }),
-  });
-}
+// Override per-navigation
+router.navigate('/gallery', { viewTransition: false });
 ```

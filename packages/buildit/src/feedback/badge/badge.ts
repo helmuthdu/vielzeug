@@ -1,5 +1,11 @@
 import { computed, css, define, html, prop } from '@vielzeug/craftit';
-import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+import {
+  colorThemeMixin,
+  forcedColorsMixin,
+  frostVariantMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 
 const componentStyles = /* css */ css`
@@ -36,6 +42,9 @@ const componentStyles = /* css */ css`
       padding: var(--_padding-y) var(--_padding-x);
       line-height: 1;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: var(--badge-max-width, 24ch);
       /* Dot-only (no text slot) gets circular shape */
       min-width: var(--size-2);
     }
@@ -118,6 +127,46 @@ const componentStyles = /* css */ css`
       background: var(--_theme-base);
       border-color: var(--_theme-base);
     }
+
+    /* ========================================
+       Anchor overlay mode
+       ======================================== */
+
+    :host([anchor]) {
+      display: inline-flex;
+      position: relative;
+    }
+
+    :host([anchor]) .badge {
+      position: absolute;
+      z-index: 1;
+      transform: translate(50%, -50%);
+    }
+
+    :host([anchor]:not([anchor='top-start']):not([anchor='bottom-start']):not([anchor='bottom-end'])) .badge,
+    :host([anchor='top-end']) .badge {
+      top: 0;
+      right: 0;
+      transform: translate(50%, -50%);
+    }
+
+    :host([anchor='top-start']) .badge {
+      top: 0;
+      left: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    :host([anchor='bottom-end']) .badge {
+      bottom: 0;
+      right: 0;
+      transform: translate(50%, 50%);
+    }
+
+    :host([anchor='bottom-start']) .badge {
+      bottom: 0;
+      left: 0;
+      transform: translate(-50%, 50%);
+    }
   }
 `;
 
@@ -137,6 +186,12 @@ export interface BadgeProps {
   dot?: boolean;
   /** Border radius override */
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+  /**
+   * When set, switches to overlay mode: the host becomes `position:relative`
+   * and the badge pins to a corner over the slotted content.
+   * Value controls which corner: 'top-end' (default) | 'top-start' | 'bottom-end' | 'bottom-start'
+   */
+  anchor?: 'top-end' | 'top-start' | 'bottom-end' | 'bottom-start';
 }
 
 /**
@@ -175,15 +230,15 @@ export interface BadgeProps {
  * <bit-badge color="warning" variant="flat">Beta</bit-badge>
  * ```
  */
-define('bit-badge', () => {
+export const TAG = define('bit-badge', () => {
   const countProp = prop('count', undefined as number | undefined);
   const maxProp = prop('max', undefined as number | undefined);
 
   const label = computed(() => {
-    const count = countProp.value;
-    const max = maxProp.value;
-    if (count === undefined || count < 0) return undefined;
-    if (max !== undefined && count > max) return `${max}+`;
+    const count = countProp.value != null ? Number(countProp.value) : undefined;
+    const max = maxProp.value != null ? Number(maxProp.value) : undefined;
+    if (count === undefined || Number.isNaN(count) || count < 0) return undefined;
+    if (max !== undefined && !Number.isNaN(max) && count > max) return `${max}+`;
     return String(count);
   });
 
@@ -192,6 +247,7 @@ define('bit-badge', () => {
   return {
     styles: [
       colorThemeMixin,
+      forcedColorsMixin,
       roundedVariantMixin,
       frostVariantMixin('.badge'),
       sizeVariantMixin({
@@ -205,8 +261,13 @@ define('bit-badge', () => {
       <slot name="icon"></slot>
       <span ?hidden=${() => !showLabel.value}>${() => label.value}</span>
       <slot ?hidden=${() => showLabel.value}></slot>
-    </span>`,
+    </span>
+    <slot name="anchor"></slot>`,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-badge': HTMLElement & BadgeProps;
+  }
+}

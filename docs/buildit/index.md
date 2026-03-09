@@ -41,7 +41,7 @@ yarn add @vielzeug/buildit
 <bit-button variant="primary" @click="handleClick">Save</bit-button>
 <bit-input label="Email" type="email" required></bit-input>
 <bit-card>
-  <bit-text slot="title">Card Title</bit-text>
+  <bit-text slot="header">Card Title</bit-text>
   <p>Card content goes here.</p>
 </bit-card>
 ```
@@ -53,9 +53,11 @@ import { BdtButton, BdtInput } from '@vielzeug/buildit';
 
 ## Components
 
-**Base:** `bit-button`, `bit-button-group`, `bit-card`, `bit-text`, `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`, `bit-badge`, `bit-alert`, `bit-tooltip`
+**Base:** `bit-button`, `bit-button-group`, `bit-card`, `bit-text`, `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`, `bit-badge`, `bit-alert`, `bit-tooltip`, `bit-dialog`
 
-**Form:** `bit-checkbox`, `bit-input`, `bit-radio`, `bit-slider`, `bit-switch`, `bit-textarea`, `bit-select`
+**Form:** `bit-checkbox`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-radio`, `bit-radio-group`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
+
+**Feedback:** `bit-alert`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
 **Layout:** `bit-box`, `bit-grid`, `bit-grid-item`
 
@@ -70,8 +72,8 @@ import { BdtButton, BdtInput } from '@vielzeug/buildit';
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Theming, customization, and accessibility patterns |
-| [API Reference](./api.md) | Component props, events, and CSS variables |
-| [Examples](./examples.md) | Framework integration recipes |
+|                           |                                                    |
+| ------------------------- | -------------------------------------------------- |
+| [Usage Guide](./usage.md) | Import patterns, slots, events, and accessibility |
+| [API Reference](./api.md) | Component props, events, and CSS variables         |
+| [Examples](./examples.md) | Framework integration recipes                      |

@@ -7,18 +7,25 @@ import {
   defineEmits,
   defineProps,
   defineSlots,
-  field,
+  effect,
   guard,
   handle,
   html,
-  onFormReset,
   onMount,
   ref,
-  signal,
   watch,
 } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import type { ComponentSize, ThemeColor } from '../../types';
+import { formControlMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitSwitchEvents,
+  CheckableProps,
+  DisablableProps,
+  FormValidityMethods,
+  SizableProps,
+  ThemableProps,
+} from '../../types';
+import { useToggleField } from '../_common/use-toggle-field';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -32,6 +39,7 @@ const componentStyles = /* css */ css`
       --_font-size: var(--switch-font-size, var(--text-sm));
 
       display: inline-flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: var(--_gap, var(--size-2-5));
       min-height: var(--size-11);
@@ -47,12 +55,6 @@ const componentStyles = /* css */ css`
     .switch-wrapper {
       display: flex;
       flex-shrink: 0;
-    }
-
-    input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
     }
 
     .switch-track {
@@ -100,7 +102,6 @@ const componentStyles = /* css */ css`
     }
   }
 
-
   @layer buildit.overrides {
     /* Map theme variables to switch-specific variables */
     :host {
@@ -131,23 +132,31 @@ const componentStyles = /* css */ css`
     :host(:hover:not([disabled])[checked]) .switch-track {
       filter: brightness(1.1);
     }
+
+    /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+    .helper-text {
+      color: var(--color-contrast-500);
+      font-size: var(--text-xs);
+      line-height: var(--leading-tight);
+      padding-inline-start: calc(var(--_width) + var(--size-2-5));
+      width: 100%;
+    }
+
+    .helper-text[role='alert'] {
+      color: var(--color-error);
+    }
   }
 `;
 
 /** Switch component properties */
-export interface SwitchProps {
-  /** Checked/on state */
-  checked?: boolean;
-  /** Disable switch interaction */
-  disabled?: boolean;
-  /** Field value */
-  value?: string;
-  /** Form field name */
-  name?: string;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Switch size */
-  size?: ComponentSize;
+export interface SwitchProps extends CheckableProps, ThemableProps, SizableProps, DisablableProps {
+  /** Helper text displayed below the switch */
+  helper?: string;
+  /** Error message (marks field as invalid) */
+  error?: string;
 }
 
 /**
@@ -159,7 +168,7 @@ export interface SwitchProps {
  * @attr {boolean} disabled - Disable switch interaction
  * @attr {string} value - Field value
  * @attr {string} name - Form field name
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Switch size: 'sm' | 'md' | 'lg'
  *
  * @fires change - Emitted when switch is toggled
@@ -185,41 +194,46 @@ export interface SwitchProps {
  * <bit-switch size="lg">Large toggle</bit-switch>
  * ```
  */
-define(
+export const TAG = define(
   'bit-switch',
   ({ host }) => {
     const slots = defineSlots();
     const emit = defineEmits<{ change: { checked: boolean } }>();
-    const props = defineProps({
+    const props = defineProps<SwitchProps>({
       checked: { default: false },
-      color: { default: undefined as ThemeColor | undefined },
+      color: { default: undefined },
       disabled: { default: false },
+      error: { default: '', omit: true },
+      helper: { default: '' },
       name: { default: '' },
-      size: { default: undefined as ComponentSize | undefined },
+      size: { default: undefined },
       value: { default: 'on' },
     });
 
-    const checkedSignal = signal(false);
+    const { formCtx, checkedSignal, triggerValidation } = useToggleField(props);
 
-    field({
-      disabled: computed(() => props.disabled.value),
-      toFormValue: (v: string | null) => v,
-      value: computed(() => (checkedSignal.value ? props.value.value : null)),
-    });
-
-    onFormReset(() => {
-      checkedSignal.value = props.checked.value;
-    });
+    // Propagate form context size/disabled to host when not explicitly set
+    if (formCtx) {
+      watch(
+        computed(() => formCtx.disabled.value),
+        (ctxDisabled) => {
+          if (ctxDisabled) host.setAttribute('disabled', '');
+          else if (!props.disabled.value) host.removeAttribute('disabled');
+        },
+        { immediate: true },
+      );
+      watch(
+        computed(() => formCtx.size.value),
+        (ctxSize) => {
+          if (ctxSize && !props.size.value) host.setAttribute('size', ctxSize);
+        },
+        { immediate: true },
+      );
+    }
 
     const labelRef = ref<HTMLSpanElement>();
-
-    watch(
-      props.checked,
-      (v) => {
-        checkedSignal.value = v;
-      },
-      { immediate: true },
-    );
+    const helperRef = ref<HTMLDivElement>();
+    const helperId = createId('switch-helper');
 
     const toggle = guard(
       () => !props.disabled.value,
@@ -229,6 +243,7 @@ define(
         const isChecked = checkedSignal.value;
         isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
         emit('change', { checked: isChecked });
+        triggerValidation('change');
       },
     );
 
@@ -242,20 +257,47 @@ define(
     handle(host, 'click', toggle);
     handle(host, 'keydown', handleKeydown);
 
+    // Pre-register the slot signal during setup so its onMount runs before ours,
+    // ensuring slots.has('default').value returns the correct value inside onMount.
+    slots.has('default');
+
     onMount(() => {
+      host.setAttribute('role', 'switch');
+      if (!props.disabled.value) host.setAttribute('tabindex', '0');
+
       // labelRef.value is only available after the template has been rendered
       const label = labelRef.value;
-      if (slots.has('default') && label) {
+      if (slots.has('default').value && label) {
         const labelId = createId('switch-label');
         label.id = labelId;
         aria({ labelledby: labelId });
       }
+
+      effect(() => {
+        const helperEl = helperRef.value;
+        if (!helperEl) return;
+        helperEl.id = helperId;
+        helperEl.textContent = props.error.value || props.helper.value || '';
+        helperEl.hidden = !props.error.value && !props.helper.value;
+        if (props.error.value) helperEl.setAttribute('role', 'alert');
+        else helperEl.removeAttribute('role');
+      });
+    });
+
+    aria({
+      checked: () => String(checkedSignal.value),
+      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+      invalid: () => !!props.error.value,
+    });
+
+    watch(props.disabled, (disabled) => {
+      if (disabled) host.removeAttribute('tabindex');
+      else host.setAttribute('tabindex', '0');
     });
 
     return {
       styles: [
-        colorThemeMixin,
-        disabledStateMixin(),
+        ...formControlMixins,
         sizeVariantMixin({
           lg: {
             fontSize: 'var(--text-base)',
@@ -274,16 +316,20 @@ define(
         }),
         componentStyles,
       ],
-      template: html` <div class="switch-wrapper" part="switch">
-          <input type="checkbox" aria-hidden="true" tabindex="-1" />
+      template: html`<div class="switch-wrapper" part="switch">
           <div class="switch-track" part="track">
             <div class="switch-thumb" part="thumb"></div>
           </div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>`,
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+        <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`,
     };
   },
   { formAssociated: true },
 );
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-switch': HTMLElement & SwitchProps & FormValidityMethods & AddEventListeners<BitSwitchEvents>;
+  }
+}

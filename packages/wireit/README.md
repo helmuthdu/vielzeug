@@ -1,10 +1,10 @@
 # @vielzeug/wireit
 
-> Lightweight dependency injection container for TypeScript with typed tokens, lifetimes, and test utilities
+> Lightweight typed dependency injection container for TypeScript with tokens, lifetimes, async resolution, child containers, and test utilities
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/wireit)](https://www.npmjs.com/package/@vielzeug/wireit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Wireit** is a zero-dependency IoC container that uses typed tokens to register and resolve dependencies — with singleton/transient/scoped lifetimes, async providers, child containers, and first-class test helpers.
+**Wireit** is a zero-dependency IoC container built around typed tokens — register and resolve dependencies with singleton/transient/scoped lifetimes, async factories, dispose hooks, child containers, and first-class test helpers.
 
 ## Installation
 
@@ -19,160 +19,286 @@ pnpm add @vielzeug/wireit
 ```typescript
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-interface ILogger { log(msg: string): void }
-interface IUserRepo { findById(id: string): Promise<User> }
-
-const LoggerToken  = createToken<ILogger>('Logger');
-const UserRepoToken = createToken<IUserRepo>('UserRepo');
+const DbToken      = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
 
 const container = createContainer();
 
-container.registerValue(LoggerToken, { log: (msg) => console.log(msg) });
-container.register(UserRepoToken, { useClass: SqlUserRepo, deps: [LoggerToken] });
+container
+  .factory(DbToken, () => new Database(process.env.DB_URL!))
+  .bind(ServiceToken, UserService, { deps: [DbToken] });
 
-const repo = container.get(UserRepoToken);
-await repo.findById('123');
+const service = container.get(ServiceToken);
 ```
 
 ## Features
 
-- **Typed tokens** — `createToken<T>(name)` ties a TypeScript type to the token at compile time
-- **Three provider kinds** — `useValue`, `useClass`, `useFactory` (sync or async)
-- **Lifetimes** — `'singleton'` (default), `'transient'`, `'scoped'` per registration
-- **Child containers** — `createChild()` inherits parent registrations; scoped deps get one instance per child
-- **Scoped execution** — `runInScope(fn)` creates a child container, runs `fn`, then clears it
-- **Aliases** — `alias(token, source)` redirects one token to another, with chain and cycle detection
-- **Async providers** — `useFactory` may return a `Promise`; resolve with `getAsync()`
-- **Test utilities** — `createTestContainer` and `withMock` for isolated, auto-cleanup test setups
-- **Snapshot/restore** — `snapshot()` / `restore()` for rollback in tests
-- **Zero runtime dependencies**
+- ✅ **Typed tokens** — `createToken<T>(description)` — type-safe, no magic strings
+- ✅ **Three registration styles** — `register()`, `factory()` shorthand, `bind()` shorthand
+- ✅ **Plain values** — `container.value(token, value)` for constants and config
+- ✅ **Lifetimes** — `singleton` (default), `transient`, and `scoped` per-child-container
+- ✅ **Async providers** — factories may return `Promise<T>`; resolve with `getAsync()`
+- ✅ **Dispose hooks** — per-provider `dispose(instance)` called on `container.dispose()`
+- ✅ **Child containers** — `createChild()` inherits registrations; `scoped` lifetime creates one instance per child
+- ✅ **Scoped execution** — `runInScope(fn)` creates, uses, and auto-disposes a child
+- ✅ **Aliases** — `alias(token, source)` maps one token to another, resolved through parent chain
+- ✅ **Batch resolution** — `getAll([...tokens])` and `getAllAsync([...tokens])` return typed tuples
+- ✅ **Optional resolution** — `getOptional()` and `getOptionalAsync()` return `undefined` when missing
+- ✅ **Test helpers** — `createTestContainer(base?)` and `container.mock(token, mock, fn)`
+- ✅ **Snapshot/Restore** — `snapshot()` and `restore(snap)` for stateless test isolation
+- ✅ **Debug** — `debug()` walks the full parent chain and lists all tokens and aliases
+- ✅ **Zero dependencies** — <2 kB gzipped, pure TypeScript ESM
 
 ## Usage
 
 ### Tokens
 
+Every dependency is identified by a typed token, not a string or class reference:
+
 ```typescript
 import { createToken } from '@vielzeug/wireit';
 
-const DbToken     = createToken<Database>('Database');
-const LoggerToken = createToken<ILogger>('Logger');
-const ConfigToken = createToken<Config>('Config');
+const ConfigToken  = createToken<AppConfig>('AppConfig');
+const DbToken      = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
 ```
 
-### Registration
+The description is required — it appears in error messages and `debug()` output.
+
+### Registering Providers
+
+#### Value
+
+Use `value()` for constants, config, and plain objects:
 
 ```typescript
-const container = createContainer();
+container.value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 });
+```
 
-// Value — register a constant instance
-container.registerValue(ConfigToken, { apiUrl: 'https://api.example.com' });
+#### Factory
 
-// Class — container instantiates and injects deps
-container.register(LoggerToken, { useClass: ConsoleLogger });
-container.register(DbToken, { useClass: PostgresDb, deps: [ConfigToken] });
+Use `factory()` for any function that creates an instance:
 
-// Factory — full control; may be async
-container.register(DbToken, {
-  useFactory: async (config) => {
-    const db = new PostgresDb(config.apiUrl);
-    await db.connect();
-    return db;
-  },
+```typescript
+container.factory(DbToken, (config) => new Database(config.apiUrl), {
   deps: [ConfigToken],
-  lifetime: 'singleton',
-});
-
-// Alias — redirect AltLoggerToken → LoggerToken
-container.alias(AltLoggerToken, LoggerToken);
-```
-
-### Resolution
-
-```typescript
-const logger = container.get(LoggerToken);           // sync
-const db     = await container.getAsync(DbToken);    // async factory
-const cache  = container.getOptional(CacheToken);    // undefined if missing
-```
-
-### Child Containers & Scoped Execution
-
-```typescript
-// Child inherits all parent registrations
-const child = container.createChild();
-child.registerValue(UserToken, currentUser);
-const svc = child.get(ServiceToken);
-
-// runInScope creates an auto-disposed child
-const result = await container.runInScope(async (scope) => {
-  scope.registerValue(RequestIdToken, generateId());
-  return scope.get(RequestHandlerToken).handle(data);
 });
 ```
 
-### Testing
+#### Class (bind)
+
+Use `bind()` to pair a class directly with a token:
 
 ```typescript
-import { createTestContainer, withMock } from '@vielzeug/wireit';
-
-// Isolated child container + dispose helper
-const { container, dispose } = createTestContainer(baseContainer);
-container.registerValue(DbToken, mockDb);
-const service = container.get(ServiceToken);
-dispose(); // clears the child container
-
-// Scoped override via snapshot/restore
-await withMock(container, LoggerToken, mockLogger, async () => {
-  await container.get(ServiceToken).doWork();
-  // original LoggerToken is restored after this block
-});
+container.bind(ServiceToken, UserService, { deps: [DbToken] });
 ```
 
-## API
+#### Full register
 
-### Factory functions
+Use `register()` for the full provider object — useful when the provider type matters:
 
-| Export | Description |
-|---|---|
-| `createToken<T>(description)` | Create a typed DI token |
-| `createContainer()` | Create a new root container |
-| `createTestContainer(base?)` | Create a child test container — returns `{ container, dispose }` |
-| `withMock(container, token, mock, fn)` | Run `fn` with `token` temporarily overridden by `mock` |
-
-### Container methods
-
-| Method | Description |
-|---|---|
-| `register(token, provider)` | Register a `useClass`, `useFactory`, or `useValue` provider |
-| `registerValue(token, value)` | Shorthand for `register(token, { useValue })` |
-| `alias(token, source)` | Redirect `token` resolution to `source` |
-| `unregister(token)` | Remove a registration |
-| `clear()` | Remove all registrations and aliases |
-| `has(token)` | Check if registered (own or parent) |
-| `get(token)` | Resolve synchronously; throws `AsyncProviderError` for async factories |
-| `getAsync(token)` | Resolve asynchronously; deduplicates concurrent singleton requests |
-| `getOptional(token)` | Returns `undefined` if not found instead of throwing |
-| `getOptionalAsync(token)` | Async version of `getOptional` |
-| `createChild()` | Create a child container that inherits this one |
-| `runInScope(fn)` | Run `fn` in a temporary child container, auto-cleared on completion |
-| `snapshot()` | Deep-copy current registry state (includes cached instances) |
-| `restore(snap)` | Restore a previously taken snapshot |
-| `debug()` | Returns `{ tokens: string[], aliases: [string, string][] }` |
+```typescript
+container.register(ServiceToken, { useClass: UserService, deps: [DbToken], lifetime: 'transient' });
+```
 
 ### Lifetimes
 
 | Lifetime | Behaviour |
 |---|---|
-| `'singleton'` | One instance per container, cached after first resolution (default for class/factory) |
-| `'transient'` | New instance on every `get()` call |
-| `'scoped'` | One instance per child container; behaves as singleton in the root |
+| `singleton` (default) | One instance per container — created on first `get()` |
+| `transient` | New instance on every `get()` |
+| `scoped` | One instance per child container; singletons in the root |
 
-### Errors
+```typescript
+container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'transient' });
+container.bind(RequestHandler, RequestHandlerImpl, { deps: [RequestId], lifetime: 'scoped' });
+```
 
-| Class | When thrown |
+### Child Containers and Hierarchy
+
+Child containers inherit all registrations from their parent. Registrations in the child take precedence:
+
+```typescript
+const child = container.createChild();
+child.value(RequestContext, { userId: 'u1' });
+
+const handler = child.get(RequestHandler); // uses child context
+```
+
+### Scoped Execution
+
+`runInScope()` creates a child container, passes it to your function, then disposes it automatically:
+
+```typescript
+await container.runInScope(async (scope) => {
+  scope.value(RequestId, crypto.randomUUID());
+  const handler = scope.get(RequestHandler);
+  await handler.process(request);
+});
+```
+
+### Async Resolution
+
+Factories can return a `Promise<T>`. Use `getAsync()` (or `getAllAsync()`) to resolve them:
+
+```typescript
+container.factory(DbToken, async () => {
+  const db = new Database(env.DB_URL);
+  await db.connect();
+  return db;
+});
+
+const db = await container.getAsync(DbToken);
+```
+
+### Aliases
+
+Map one token to another — useful for interface-to-implementation bindings:
+
+```typescript
+const IUserServiceToken = createToken<IUserService>('IUserService');
+
+container.bind(UserServiceToken, UserServiceImpl, { deps: [DbToken] });
+container.alias(IUserServiceToken, UserServiceToken);
+
+const svc = container.get(IUserServiceToken); // resolves to UserServiceImpl
+```
+
+### Batch Resolution
+
+Resolve multiple tokens at once with a typed tuple result:
+
+```typescript
+const [db, config, logger] = container.getAll([DbToken, ConfigToken, LoggerToken]);
+const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
+```
+
+### Dispose Hooks
+
+Register a `dispose` callback on any class or factory provider:
+
+```typescript
+container.factory(DbToken, () => new Database(env.DB_URL), {
+  dispose: (db) => db.close(),
+});
+
+await container.dispose(); // calls db.close() on the cached singleton
+```
+
+`dispose()` is idempotent — calling it multiple times is safe. The container also implements `[Symbol.asyncDispose]` for `await using` syntax.
+
+### Testing
+
+#### createTestContainer
+
+`createTestContainer(base?)` returns a container that is automatically cleared after each test scope:
+
+```typescript
+import { createTestContainer, createToken } from '@vielzeug/wireit';
+
+const container = createTestContainer(appContainer);
+container.value(DbToken, mockDb, { overwrite: true });
+
+afterEach(() => container.dispose());
+```
+
+#### container.mock
+
+`mock()` temporarily replaces a token for the duration of a callback, then restores the original:
+
+```typescript
+const result = await container.mock(DbToken, fakeDb, () => service.loadUsers());
+
+// Or with a full provider:
+await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, async () => {
+  // ... test code
+});
+```
+
+#### Snapshot / Restore
+
+For lower-level test isolation:
+
+```typescript
+const snap = container.snapshot();
+container.value(DbToken, fakeDb, { overwrite: true });
+// ... test
+container.restore(snap);
+```
+
+## API
+
+**Factory functions**
+
+| Export | Description |
 |---|---|
-| `ProviderNotFoundError` | Token not registered and no parent provides it |
-| `AsyncProviderError` | `get()` called on an async factory; use `getAsync()` |
-| `CircularDependencyError` | Circular dependency detected during resolution |
+| `createToken<T>(description)` | Create a typed dependency injection token |
+| `createContainer()` | Create a new root container |
+| `createTestContainer(base?)` | Create a test container (auto-clears, no dispose hooks) |
+
+**Container registration**
+
+| Method | Description |
+|---|---|
+| `register(token, provider, opts?)` | Register a full `Provider<T>` |
+| `value(token, val, opts?)` | Register a plain value |
+| `factory(token, fn, opts?)` | Register a factory function |
+| `bind(token, cls, opts?)` | Bind a class to a token |
+| `alias(token, source)` | Map `token` to `source` |
+| `unregister(token)` | Remove a registration |
+| `clear()` | Clear all registrations (no dispose hooks) |
+
+**Container resolution**
+
+| Method | Description |
+|---|---|
+| `get<T>(token)` | Resolve synchronously — throws if async |
+| `getAsync<T>(token)` | Resolve asynchronously |
+| `getAll(tokens)` | Resolve a tuple of tokens synchronously |
+| `getAllAsync(tokens)` | Resolve a tuple of tokens asynchronously |
+| `getOptional<T>(token)` | Resolve or return `undefined` |
+| `getOptionalAsync<T>(token)` | Resolve async or return `undefined` |
+| `has(token)` | Check if a token is registered |
+
+**Container lifecycle**
+
+| Method / Property | Description |
+|---|---|
+| `createChild()` | Create a child container |
+| `runInScope(fn)` | Run `fn` in an auto-disposed child |
+| `dispose()` | Run dispose hooks and clear registrations |
+| `disposed` | Whether the container has been disposed |
+| `[Symbol.asyncDispose]` | `await using` support |
+
+**Container testing**
+
+| Method | Description |
+|---|---|
+| `mock(token, mock, fn)` | Temporarily replace a token; restore after `fn` |
+| `snapshot()` | Capture current registrations |
+| `restore(snap)` | Restore a previous snapshot |
+| `debug()` | List all tokens and aliases (including inherited) |
+
+**Exported types**
+
+| Type | Description |
+|---|---|
+| `Token<T>` | Typed injection token |
+| `Lifetime` | `'singleton' \| 'transient' \| 'scoped'` |
+| `Provider<T>` | Union of `ValueProvider`, `ClassProvider`, `FactoryProvider` |
+| `ProviderOptions<T, Deps>` | Options for `factory()` and `bind()` |
+| `TokenValues<T>` | Extracts value types from a tuple of tokens |
+| `Snapshot` | Opaque snapshot handle |
+
+**Exported errors**
+
+| Error | Thrown when |
+|---|---|
+| `ProviderNotFoundError` | No provider is registered for a token |
+| `CircularDependencyError` | A dependency graph cycle is detected |
+| `AsyncProviderError` | An async provider is resolved with `get()` |
+| `AliasCycleError` | Alias definitions form a cycle |
+| `ContainerDisposedError` | Any method is called on a disposed container |
 
 ## Documentation
 
@@ -180,7 +306,7 @@ Full docs at **[vielzeug.dev/wireit](https://vielzeug.dev/wireit)**
 
 | | |
 |---|---|
-| [Usage Guide](https://vielzeug.dev/wireit/usage) | Tokens, providers, lifetimes, child containers, testing |
+| [Usage Guide](https://vielzeug.dev/wireit/usage) | Registration, lifetimes, async, testing |
 | [API Reference](https://vielzeug.dev/wireit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/wireit/examples) | Real-world DI patterns |
 

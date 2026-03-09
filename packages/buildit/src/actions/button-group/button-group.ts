@@ -1,6 +1,16 @@
+import { createContext, css, define, defineProps, html, provide } from '@vielzeug/craftit';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-const styles = /* css */ `
+/** Context provided by bit-button-group to its bit-button children. */
+export interface ButtonGroupContext {
+  color: import('@vielzeug/craftit').ReadonlySignal<ThemeColor | undefined>;
+  size: import('@vielzeug/craftit').ReadonlySignal<ComponentSize | undefined>;
+  variant: import('@vielzeug/craftit').ReadonlySignal<Exclude<VisualVariant, 'glass'> | undefined>;
+}
+/** Injection key for the button-group context. */
+export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext>();
+
+const styles = /* css */ css`
   @layer buildit.base {
     /* ========================================
        Base Styles
@@ -65,11 +75,11 @@ const styles = /* css */ `
     /* Horizontal attached - remove inner borders and round corners */
     :host([attached]:not([orientation='vertical'])) ::slotted(bit-button) {
       --button-radius: 0;
-      margin-left: calc(-1 * var(--border));
+      margin-inline-start: calc(-1 * var(--border));
     }
 
     :host([attached]:not([orientation='vertical'])) ::slotted(bit-button:first-child) {
-      margin-left: 0;
+      margin-inline-start: 0;
       --button-radius: var(--group-radius) 0 0 var(--group-radius);
     }
 
@@ -108,6 +118,8 @@ export interface ButtonGroupProps {
   attached?: boolean;
   /** Make all buttons full width */
   fullwidth?: boolean;
+  /** Accessible group label */
+  label?: string;
 }
 
 // -------------------- Component Definition --------------------
@@ -116,12 +128,13 @@ export interface ButtonGroupProps {
  *
  * @element bit-button-group
  *
- * @attr {string} size - Button size: 'sm' | 'md' | 'lg' (propagated to children)
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost' (propagated to children)
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral' (propagated to children)
+ * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} orientation - Group orientation: 'horizontal' | 'vertical'
  * @attr {boolean} attached - Attach buttons together (no gap, rounded only on edges)
  * @attr {boolean} fullwidth - Make all buttons full width
+ * @attr {string} label - Accessible group label
  *
  * @slot - Button elements (bit-button)
  *
@@ -131,41 +144,42 @@ export interface ButtonGroupProps {
  * @example
  * ```html
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
- * <bit-button-group attached color="primary"><bit-button>Left</bit-button><bit-button>Right</bit-button></bit-button-group>
  * ```
  */
-import { define, defineProps, handle, html, onMount, watch } from '@vielzeug/craftit';
-
-define('bit-button-group', ({ host }) => {
-  const props = defineProps({
-    color: { default: undefined as ThemeColor | undefined },
-    size: { default: undefined as ComponentSize | undefined },
-    variant: { default: undefined as Exclude<VisualVariant, 'glass'> | undefined },
+export const TAG = define('bit-button-group', () => {
+  const props = defineProps<ButtonGroupProps>({
+    attached: { default: false },
+    color: { default: undefined },
+    fullwidth: { default: false },
+    label: { default: undefined },
+    orientation: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
   });
 
-  const applyToChildren = () => {
-    const size = props.size.value;
-    const variant = props.variant.value;
-    const color = props.color.value;
-    host.querySelectorAll('bit-button').forEach((btn) => {
-      if (size) btn.setAttribute('size', size);
-      if (variant) btn.setAttribute('variant', variant);
-      if (color) btn.setAttribute('color', color);
-    });
-  };
-
-  watch([props.size, props.variant, props.color], () => applyToChildren(), { immediate: true });
-
-  onMount(() => {
-    // slot is only queryable from shadow DOM after template render
-    const slot = host.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
-    if (slot) handle(slot, 'slotchange', applyToChildren);
+  provide(BUTTON_GROUP_CTX, {
+    color: props.color,
+    size: props.size,
+    variant: props.variant,
   });
 
   return {
     styles: [styles],
-    template: html`<div class="button-group" part="group" role="group"><slot></slot></div>`,
+    template: html`
+      <div
+        class="button-group"
+        part="group"
+        role="group"
+        :aria-label="${() => props.label.value ?? null}"
+      >
+        <slot></slot>
+      </div>
+    `,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-button-group': HTMLElement & ButtonGroupProps;
+  }
+}

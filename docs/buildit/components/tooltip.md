@@ -148,39 +148,76 @@ Set `disabled` to suppress the tooltip entirely.
 </bit-tooltip>
 ```
 
+## Guideline Recipe: Clarify Icon-Only Controls
+
+**Guideline: clarify** — adding a tooltip to every icon-only button ensures their purpose is discoverable without cluttering the visual design.
+
+```html
+<div role="toolbar" aria-label="Text formatting" style="display:flex;gap:var(--size-1)">
+  <bit-tooltip content="Bold (Ctrl+B)">
+    <bit-button variant="ghost" size="sm" icon-only aria-label="Bold">
+      <b>B</b>
+    </bit-button>
+  </bit-tooltip>
+
+  <bit-tooltip content="Italic (Ctrl+I)">
+    <bit-button variant="ghost" size="sm" icon-only aria-label="Italic">
+      <i>I</i>
+    </bit-button>
+  </bit-tooltip>
+
+  <bit-tooltip content="Underline (Ctrl+U)">
+    <bit-button variant="ghost" size="sm" icon-only aria-label="Underline">
+      <u>U</u>
+    </bit-button>
+  </bit-tooltip>
+</div>
+```
+
+**Tip:** Always include the keyboard shortcut in the tooltip label — it doubles as a discoverability hint for power users.
+
 ## API Reference
 
 ### Attributes
 
-| Attribute   | Type                                     | Default         | Description                                             |
-| ----------- | ---------------------------------------- | --------------- | ------------------------------------------------------- |
-| `content`   | `string`                                 | `''`            | Tooltip text                                            |
-| `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)    |
-| `trigger`   | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                        |
-| `delay`     | `number`                                 | `0`             | Show delay in milliseconds                              |
-| `variant`   | `'dark' \| 'light'`                      | `'dark'`        | Visual style variant                                    |
-| `size`      | `'sm' \| 'md' \| 'lg'`                   | `'md'`          | Tooltip bubble size                                     |
-| `disabled`  | `boolean`                                | `false`         | Disable the tooltip entirely                            |
+| Attribute   | Type                                     | Default         | Description                                          |
+| ----------- | ---------------------------------------- | --------------- | ---------------------------------------------------- |
+| `content`   | `string`                                 | `''`            | Tooltip text                                         |
+| `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges) |
+| `trigger`   | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                     |
+| `delay`     | `number`                                 | `0`             | Show delay in milliseconds                           |
+| `variant`   | `'dark' \| 'light'`                      | `'dark'`        | Visual style variant                                 |
+| `size`      | `'sm' \| 'md' \| 'lg'`                   | `'md'`          | Tooltip bubble size                                  |
+| `disabled`  | `boolean`                                | `false`         | Disable the tooltip entirely                         |
 
 ### Slots
 
-| Slot      | Description                                                 |
-| --------- | ----------------------------------------------------------- |
-| (default) | The trigger element the tooltip is anchored to              |
-| `content` | Rich tooltip content (overrides the `content` attribute)    |
+| Slot      | Description                                              |
+| --------- | -------------------------------------------------------- |
+| (default) | The trigger element the tooltip is anchored to           |
+| `content` | Rich tooltip content (overrides the `content` attribute) |
 
 ### CSS Custom Properties
 
-| Property              | Description             | Default  |
-| --------------------- | ----------------------- | -------- |
-| `--tooltip-max-width` | Max width of the bubble | `18rem`  |
+| Property              | Description             | Default |
+| --------------------- | ----------------------- | ------- |
+| `--tooltip-max-width` | Max width of the bubble | `18rem` |
 
 ## Accessibility
 
-✅ The tooltip bubble has `role="tooltip"`.
-✅ The trigger element should be augmented with `aria-describedby` pointing to the tooltip — this happens automatically when using the `focus` trigger.
-✅ Pressing `Escape` while a tooltip is visible dismisses it.
-✅ The arrow pointer is `aria-hidden="true"` to avoid noise for screen readers.
+The tooltip component follows WAI-ARIA best practices.
+
+### `bit-tooltip`
+
+✅ **Keyboard Navigation**
+
+- Pressing `Escape` while a tooltip is visible dismisses it.
+
+✅ **Screen Readers**
+
+- The tooltip bubble has `role="tooltip"`.
+- The trigger element is augmented with `aria-describedby` pointing to the tooltip — this happens automatically when using the `focus` trigger.
+- The arrow pointer is `aria-hidden="true"` to avoid noise for screen readers.
 
 ::: tip
 When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description for the focused element, which benefits screen reader users.
@@ -189,11 +226,13 @@ When `trigger` includes `focus`, the tooltip is automatically wired as a program
 ## Best Practices
 
 **Do:**
+
 - Keep tooltip text short — one sentence or a keyboard shortcut label.
 - Use `trigger="focus"` (or `"hover,focus"`) for form field hints so keyboard-only users see them.
 - Use `delay` (e.g. `400`–`600`ms) in action-dense toolbars to avoid visual noise on quick cursor sweeps.
 - Prefer `variant="light"` on dark backgrounds.
 
 **Don't:**
+
 - Use tooltips to hold essential information — if the user must see it to act, put it in helper text or an alert instead.
 - Add interactive elements (buttons, links) inside the tooltip bubble; tooltips are not focusable.

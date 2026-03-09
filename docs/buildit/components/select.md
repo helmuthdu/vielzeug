@@ -1,20 +1,22 @@
-# Select Component
+# Select
 
 A fully-featured, form-associated select widget that reads native `<option>` and `<optgroup>` children, supports single and multiple selection, keyboard navigation, grouped options, and ARIA combobox semantics.
 
 ## Features
 
-- 📋 **Native Options**: use standard `<option>` and `<optgroup>` children — no custom syntax
-- 🎨 **5 Variants**: solid, flat, bordered, outline, ghost
-- 🌈 **Color Themes**: default, primary, secondary, success, warning, error, info
-- 📏 **3 Sizes**: sm, md, lg
-- 🏷️ **Label Placement**: inset (floating) or outside
-- 🧩 **Grouped Options**: `<optgroup label="...">` renders as section headers
-- ✅ **Multiple Selection**: toggle multi-select via `multiple` attribute
-- ⌨️ **Full Keyboard Nav**: Arrow keys, Enter, Space, Escape, Home, End, Tab
-- ♿ **ARIA Combobox**: `role="combobox"` /`role="listbox"` / `role="option"` with live attributes
-- 📝 **Helper & Error Text**: inline helper or error message below the control
-- 🔗 **Form-Associated**: participates in native form submission
+- ⌨️ **Full Keyboard Nav** — Arrow keys, Enter, Space, Escape, Home, End, Tab
+- ⏳ **Loading State** — `loading` attribute shows a loading indicator while options are being fetched
+- ♿ **ARIA Combobox** — `role="combobox"`, `role="listbox"`, `role="option"` with live attributes
+- ⚡ **Virtualised Rendering** — powered by `@vielzeug/virtualit` for smooth performance with thousands of options
+- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
+- 🏷️ **Label Placement** — inset (floating) or outside
+- 📋 **Native Options** — use standard `<option>` and `<optgroup>` children; no custom syntax
+- 📏 **3 Sizes** — sm, md, lg
+- 📝 **Helper & Error Text** — inline helper or error message below the control
+- 🔗 **Form-Associated** — participates in native form submission
+- 🔲 **Multiple Selection** — chip-based multi-select via `multiple` attribute
+- 🧩 **Grouped Options** — `<optgroup label="...">` renders as section headers
 
 ## Source Code
 
@@ -166,12 +168,12 @@ Use native `<optgroup>` elements to create labelled groups.
 
 ## Multiple Selection
 
-Add `multiple` to allow choosing more than one option. The trigger shows "N selected" when multiple options are chosen.
+Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `bit-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown.
 
 <ComponentPreview vertical>
 
 ```html
-<bit-select label="Skills" multiple>
+<bit-select label="Skills" multiple color="primary">
   <option value="ts">TypeScript</option>
   <option value="rust">Rust</option>
   <option value="go">Go</option>
@@ -181,6 +183,15 @@ Add `multiple` to allow choosing more than one option. The trigger shows "N sele
 ```
 
 </ComponentPreview>
+
+The `change` event detail includes both `value` (comma-separated string) and `values` (array of selected values):
+
+```js
+document.querySelector('bit-select').addEventListener('change', (e) => {
+  console.log('csv:', e.detail.value); // "ts,rust"
+  console.log('array:', e.detail.values); // ["ts", "rust"]
+});
+```
 
 ## Helper & Error Text
 
@@ -222,12 +233,48 @@ Add `multiple` to allow choosing more than one option. The trigger shows "N sele
 
 </ComponentPreview>
 
+## Loading State
+
+Set `loading` to show a loading indicator inside the dropdown while options are being fetched from a server. The option list is hidden during loading.
+
+<ComponentPreview vertical>
+
+```html
+<bit-select label="Country" loading></bit-select>
+```
+
+</ComponentPreview>
+
+```js
+const select = document.querySelector('bit-select');
+select.loading = true;
+const data = await fetch('/api/countries').then((r) => r.json());
+select.options = data.map((c) => ({ value: c.code, label: c.name }));
+select.loading = false;
+```
+
+## JavaScript Options
+
+For dynamic or large option lists, set the `options` property directly in JavaScript instead of using `<option>` children. Each item is an object with `value`, `label`, and optional `group` properties.
+
+```js
+const select = document.querySelector('bit-select');
+select.options = [
+  { value: 'us', label: 'United States' },
+  { value: 'gb', label: 'United Kingdom', group: 'Europe' },
+  { value: 'de', label: 'Germany', group: 'Europe' },
+  { value: 'fr', label: 'France', group: 'Europe' },
+];
+```
+
+Assigning a new array to `options` at any time updates the dropdown immediately. When both `<option>` children and `options` are provided, the JS property takes precedence.
+
 ## In a Form
 
 `bit-select` is form-associated. Read the value via `FormData` or a `change` event.
 
 ```html
-<form id="myForm">
+<bit-form id="myForm">
   <bit-select name="category" label="Category" required>
     <option value="">Select a category…</option>
     <option value="tech">Technology</option>
@@ -254,69 +301,103 @@ Add `multiple` to allow choosing more than one option. The trigger shows "N sele
 </script>
 ```
 
+## Guideline Recipe: Clarify with Grouped Options
+
+**Guideline: clarify** — grouping related options reduces scan time and makes large option lists easy to navigate at a glance.
+
+```html
+<bit-select label="Notify me about" name="notification-scope" value="all-comments">
+  <optgroup label="Comments">
+    <option value="all-comments">All comments</option>
+    <option value="mentions">Only @mentions</option>
+  </optgroup>
+  <optgroup label="Activity">
+    <option value="assignments">Assignments</option>
+    <option value="status-changes">Status changes</option>
+  </optgroup>
+  <optgroup label="Other">
+    <option value="none">None</option>
+  </optgroup>
+</bit-select>
+```
+
+**Tip:** Keep each group to 5 options or fewer. If a group would exceed that, consider a searchable `bit-combobox` instead.
+
 ## API Reference
 
 ### Attributes
 
-| Attribute         | Type                                                                          | Default     | Description                                         |
-| ----------------- | ----------------------------------------------------------------------------- | ----------- | --------------------------------------------------- |
-| `value`           | `string`                                                                      | `''`        | Currently selected value                            |
-| `name`            | `string`                                                                      | `''`        | Form field name                                     |
-| `label`           | `string`                                                                      | `''`        | Label text                                          |
-| `label-placement` | `'inset' \| 'outside'`                                                        | `'inset'`   | Label positioning                                   |
-| `placeholder`     | `string`                                                                      | `''`        | Empty-state placeholder text                        |
-| `helper`          | `string`                                                                      | `''`        | Helper text shown below the control                 |
-| `error`           | `string`                                                                      | `''`        | Error message; overrides helper text                |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                       | `'solid'`   | Visual style variant                                |
-| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                          |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                        | `'md'`      | Control size                                        |
-| `multiple`        | `boolean`                                                                     | `false`     | Allow multiple selections                           |
-| `disabled`        | `boolean`                                                                     | `false`     | Disable the control                                 |
-| `readonly`        | `boolean`                                                                     | `false`     | Prevent the dropdown from opening                   |
-| `required`        | `boolean`                                                                     | `false`     | Mark field as required for form validation          |
-| `fullwidth`       | `boolean`                                                                     | `false`     | Expand to full width                                |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                   | —           | Override border-radius                              |
+| Attribute         | Type                                                                                   | Default     | Description                                |
+| ----------------- | -------------------------------------------------------------------------------------- | ----------- | ------------------------------------------ |
+| `value`           | `string`                                                                               | `''`        | Currently selected value                   |
+| `name`            | `string`                                                                               | `''`        | Form field name                            |
+| `label`           | `string`                                                                               | `''`        | Label text                                 |
+| `label-placement` | `'inset' \| 'outside'`                                                                 | `'inset'`   | Label positioning                          |
+| `placeholder`     | `string`                                                                               | `''`        | Empty-state placeholder text               |
+| `helper`          | `string`                                                                               | `''`        | Helper text shown below the control        |
+| `error`           | `string`                                                                               | `''`        | Error message; overrides helper text       |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                              | `'solid'`   | Visual style variant                       |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                                |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                               |
+| `multiple`        | `boolean`                                                                              | `false`     | Allow multiple selections                  |
+| `disabled`        | `boolean`                                                                              | `false`     | Disable the control                        |
+| `readonly`        | `boolean`                                                                              | `false`     | Prevent the dropdown from opening          |
+| `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation |
+| `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                       |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | —           | Override border-radius                     |
+| `loading`         | `boolean`                                                                              | `false`     | Show loading indicator in the dropdown     |
 
 ### Slots
 
-| Slot      | Description                                         |
-| --------- | --------------------------------------------------- |
-| (default) | `<option>` and `<optgroup>` elements to display     |
+| Slot      | Description                                     |
+| --------- | ----------------------------------------------- |
+| (default) | `<option>` and `<optgroup>` elements to display |
 
 ### Events
 
-| Event    | Detail                                  | Description                               |
-| -------- | --------------------------------------- | ----------------------------------------- |
-| `change` | `{ value: string, values: string[] }`   | Emitted when the selected value(s) change |
+| Event    | Detail                                | Description                               |
+| -------- | ------------------------------------- | ----------------------------------------- |
+| `change` | `{ value: string, values: string[] }` | Emitted when the selected value(s) change |
 
 ### CSS Custom Properties
 
-| Property                     | Description                    | Default         |
-| ---------------------------- | ------------------------------ | --------------- |
-| `--select-border-color`      | Default border color           | `--color-border`|
-| `--select-focus-color`       | Focus ring / active color      | Per color theme |
-| `--select-bg`                | Trigger background             | Per variant     |
-| `--select-dropdown-bg`       | Dropdown panel background      | `--color-surface`|
-| `--select-option-hover-bg`   | Option hover state background  | `--color-hover` |
-| `--select-height`            | Trigger height                 | Per size        |
+| Property                   | Description                   | Default           |
+| -------------------------- | ----------------------------- | ----------------- |
+| `--select-border-color`    | Default border color          | `--color-border`  |
+| `--select-focus-color`     | Focus ring / active color     | Per color theme   |
+| `--select-bg`              | Trigger background            | Per variant       |
+| `--select-dropdown-bg`     | Dropdown panel background     | `--color-surface` |
+| `--select-option-hover-bg` | Option hover state background | `--color-hover`   |
+| `--select-height`          | Trigger height                | Per size          |
 
 ## Accessibility
 
-✅ The trigger has `role="combobox"`, `aria-haspopup="listbox"`, and `aria-expanded`.
-✅ The dropdown panel has `role="listbox"` with `aria-multiselectable` when `multiple` is set.
-✅ Each option has `role="option"` and `aria-selected`.
-✅ The focused option is tracked via `aria-activedescendant` on the combobox.
-✅ Arrow keys move focus, `Enter`/`Space` select, `Escape` closes, `Home`/`End` jump to first/last.
-✅ `Tab` closes the dropdown and moves browser focus to the next element.
+The select component follows WCAG 2.1 Level AA standards.
+
+### `bit-select`
+
+✅ **Keyboard Navigation**
+
+- `Tab` focuses the trigger; `Enter` / `Space` open the dropdown.
+- Arrow keys navigate options; `Home` / `End` jump to first / last; `Escape` closes; `Tab` closes and moves focus out.
+
+✅ **Screen Readers**
+
+- The trigger uses `role="combobox"` with `aria-haspopup="listbox"`, `aria-expanded`, and `aria-activedescendant`.
+- The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected`; `aria-multiselectable` is set when `multiple` is active.
+- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
+- `aria-disabled` reflects the disabled state.
 
 ## Best Practices
 
 **Do:**
+
 - Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.
 - Use `<optgroup>` for lists longer than ~8 options to improve scanability.
 - Combine `required` with `error` text to give users clear validation feedback.
 - For long single-select lists, consider a searchable implementation instead.
 
 **Don't:**
+
 - Use `multiple` for selections where only one makes logical sense.
 - Put more than ~20 ungrouped options in one select — consider a multi-level pattern.

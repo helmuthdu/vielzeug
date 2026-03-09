@@ -1,25 +1,35 @@
 import {
+  aria,
   computed,
-  createId,
+  createFormIds,
   css,
   define,
   defineEmits,
+  defineField,
   defineProps,
   effect,
-  field,
   html,
-  onFormReset,
+  inject,
   onMount,
+  onSlotChange,
   ref,
   signal,
 } from '@vielzeug/craftit';
-import {
-  colorThemeMixin,
-  disabledLoadingMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
+import { createVirtualizer } from '@vielzeug/virtualit';
+import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitSelectEvents,
+  DisablableProps,
+  FormValidityMethods,
+  RoundedSize,
+  SizableProps,
+  ThemableProps,
+  VisualVariant,
+} from '../../types';
+import { FORM_CTX } from '../form/form';
 
 // ============================================
 // Types
@@ -41,6 +51,8 @@ const componentStyles = /* css */ css`
     :host {
       --_font-size: var(--select-font-size, var(--text-sm));
       --_gap: var(--select-gap, var(--size-2));
+      --_field-height: var(--select-height, var(--size-10));
+      --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
       --_padding: var(--select-padding, var(--size-1-5) var(--size-3));
       --_radius: var(--select-radius, var(--rounded-md));
       --_placeholder: var(--select-placeholder-color, var(--color-contrast-500));
@@ -85,21 +97,28 @@ const componentStyles = /* css */ css`
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-height: var(--size-10);
+      height: var(--_field-height);
+      min-height: max(var(--_field-height), var(--_touch-target, 0px));
       padding: var(--_padding);
-      padding-right: calc(var(--_padding) + var(--size-6));
+      padding-inline-end: var(--size-8);
       position: relative;
-      transition:
+      transition: var(--_motion-transition,
         background var(--transition-fast),
         backdrop-filter var(--transition-slow),
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
-        transform var(--transition-fast);
+        transform var(--transition-fast));
       user-select: none;
     }
 
     .field:focus {
       outline: none;
+    }
+
+    /* Expand height for multi-select chips or inset label */
+    :host([multiple]) .field,
+    .field:has(.label-inset:not([hidden])) {
+      height: auto;
     }
 
     .label-inset {
@@ -127,16 +146,26 @@ const componentStyles = /* css */ css`
       align-items: center;
       display: flex;
       flex: 1;
+      flex-wrap: wrap;
       gap: var(--_gap);
-      min-height: var(--size-6);
       max-width: calc(100% - var(--size-10));
+      min-height: var(--_row-min-height);
+    }
+
+    .chips-row {
+      align-items: center;
+      display: none;
+      flex-wrap: wrap;
+      gap: var(--size-1);
+      flex: 1;
+      min-width: 0;
     }
 
     .trigger-value {
       color: var(--_theme-content);
       flex: 1;
       font-size: var(--_font-size);
-      line-height: var(--leading-normal);
+      line-height: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -166,6 +195,29 @@ const componentStyles = /* css */ css`
       transform: rotate(180deg);
     }
 
+    .loader {
+      animation: var(--_motion-animation, bit-select-spin 0.6s linear infinite);
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      display: none;
+      flex-shrink: 0;
+      height: 1em;
+      width: 1em;
+    }
+
+    :host([loading]) .loader {
+      display: inline-block;
+    }
+
+    :host([loading]) .trigger-icon svg {
+      display: none;
+    }
+
+    @keyframes bit-select-spin {
+      to { transform: rotate(360deg); }
+    }
+
     /* ========================================
        Dropdown Listbox
        ======================================== */
@@ -191,10 +243,10 @@ const componentStyles = /* css */ css`
       pointer-events: none;
       transform: translateY(-4px);
       visibility: hidden;
-      transition:
+      transition: var(--_motion-transition,
         opacity var(--transition-fast),
         transform var(--transition-fast),
-        visibility var(--transition-fast);
+        visibility var(--transition-fast));
     }
 
     .dropdown[data-open] {
@@ -251,7 +303,7 @@ const componentStyles = /* css */ css`
       color: var(--_theme-base);
       display: inline-flex;
       flex-shrink: 0;
-      margin-left: auto;
+      margin-inline-start: auto;
       opacity: 0;
       transition: opacity var(--transition-fast);
     }
@@ -271,6 +323,18 @@ const componentStyles = /* css */ css`
       letter-spacing: var(--tracking-wide, 0.05em);
       padding: var(--size-1-5) var(--size-2-5) var(--size-1);
       text-transform: uppercase;
+    }
+
+    /* ========================================
+       Loading / No-Results
+       ======================================== */
+
+    .dropdown-loading,
+    .dropdown-empty {
+      color: var(--color-contrast-500);
+      font-size: var(--_font-size);
+      padding: var(--size-3) var(--size-2-5);
+      text-align: center;
     }
 
     /* ========================================
@@ -310,17 +374,17 @@ const componentStyles = /* css */ css`
        Error State
        ======================================== */
 
-    :host([error]) .field {
+    :host([has-error]) .field {
       border-color: var(--color-error);
     }
 
-    :host([error]) .field:focus-within {
+    :host([has-error]) .field:focus-within {
       border-color: var(--color-error);
       box-shadow: var(--color-error-focus-shadow);
     }
 
-    :host([error]) .label-inset,
-    :host([error]) .label-outside {
+    :host([has-error]) .label-inset,
+    :host([has-error]) .label-outside {
       color: var(--color-error);
     }
   }
@@ -404,11 +468,7 @@ const componentStyles = /* css */ css`
 // ============================================
 
 /** Select component properties */
-export interface SelectProps {
-  /** Theme color */
-  color?: ThemeColor;
-  /** Disable interaction */
-  disabled?: boolean;
+export interface SelectProps extends ThemableProps, SizableProps, DisablableProps {
   /** Error message */
   error?: string;
   /** Helper text */
@@ -417,18 +477,20 @@ export interface SelectProps {
   label?: string;
   /** Label placement: 'inset' | 'outside' */
   'label-placement'?: 'inset' | 'outside';
+  /** Show loading state in dropdown */
+  loading?: boolean;
   /** Allow selecting multiple options */
   multiple?: boolean;
   /** Form field name */
   name?: string;
+  /** JS options array (alternative to slotted <option> elements) */
+  options?: OptionItem[];
   /** Placeholder text when no option is selected */
   placeholder?: string;
   /** Mark the field as required */
   required?: boolean;
   /** Border radius size */
   rounded?: RoundedSize | '';
-  /** Component size */
-  size?: ComponentSize;
   /** Current value (use comma-separated for multiple) */
   value?: string;
   /** Visual style variant */
@@ -489,29 +551,31 @@ export interface SelectProps {
  * </bit-select>
  * ```
  */
-define(
+export const TAG = define(
   'bit-select',
   ({ host }) => {
     const emit = defineEmits<{
       change: { value: string; values: string[]; originalEvent?: Event };
     }>();
 
-    const props = defineProps({
-      color: { default: undefined as ThemeColor | undefined, reflect: true },
-      disabled: { default: false, reflect: true },
-      error: { default: '' },
-      fullwidth: { default: false, reflect: true },
+    const props = defineProps<Omit<SelectProps, 'options'>>({
+      // 'options' is a JS-only prop handled via Object.defineProperty
+      color: { default: undefined },
+      disabled: { default: false },
+      error: { default: '', omit: true },
+      fullwidth: { default: false },
       helper: { default: '' },
       label: { default: '' },
       'label-placement': { default: 'inset' },
+      loading: { default: false },
       multiple: { default: false },
       name: { default: '' },
       placeholder: { default: '' },
       required: { default: false },
-      rounded: { default: undefined as RoundedSize | undefined, reflect: true },
-      size: { default: undefined as ComponentSize | undefined, reflect: true },
+      rounded: { default: undefined },
+      size: { default: undefined },
       value: { default: '' },
-      variant: { default: undefined as Exclude<VisualVariant, 'glass' | 'text' | 'frost'> | undefined, reflect: true },
+      variant: { default: undefined },
     });
 
     // ============================================
@@ -519,20 +583,33 @@ define(
     // ============================================
 
     const selectedValues = signal<string[]>([]);
-    const options = signal<OptionItem[]>([]);
+    const slottedOptions = signal<OptionItem[]>([]);
     const isOpen = signal(false);
     const focusedIndex = signal(-1);
+    const isLoading = signal(false);
+
+    // Merged options: JS prop overrides slotted options
+    const options = computed(() => {
+      const jsProp = (host as unknown as { _optionsProp?: OptionItem[] })._optionsProp;
+      return jsProp && jsProp.length > 0 ? jsProp : slottedOptions.value;
+    });
+
+    const formCtx = inject(FORM_CTX);
 
     // Form-associated value (comma-separated for multiple)
     const formValue = computed(() => selectedValues.value.join(','));
-    field({
-      disabled: computed(() => Boolean(props.disabled.value)),
-      value: formValue,
-    });
+    const fd = defineField(
+      { disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)), value: formValue },
+      {
+        onReset: () => {
+          selectedValues.value = [];
+        },
+      },
+    );
 
-    onFormReset(() => {
-      selectedValues.value = [];
-    });
+    function triggerValidation(on: 'blur' | 'change'): void {
+      if (formCtx?.validateOn.value === on) fd.reportValidity();
+    }
 
     // Sync open attribute on host
     effect(() => {
@@ -543,18 +620,17 @@ define(
       }
     });
 
-    // Sync error attribute on host (error is a string prop, needs boolean attribute for CSS)
+    // Sync has-error attribute on host (error is a string prop, needs boolean attribute for CSS)
     effect(() => {
       if (props.error.value) {
-        host.setAttribute('error', '');
+        host.setAttribute('has-error', '');
       } else {
-        host.removeAttribute('error');
+        host.removeAttribute('has-error');
       }
     });
 
     // Accessibility IDs
-    const selectId = props.name.value ? `select-${props.name.value}` : createId('select');
-    const labelId = `label-${selectId}`;
+    const { fieldId: selectId, labelId } = createFormIds('select', props.name);
     const listboxId = `listbox-${selectId}`;
 
     // DOM refs
@@ -566,12 +642,17 @@ define(
     const labelInsetRef = ref<HTMLSpanElement>();
     const helperRef = ref<HTMLDivElement>();
     const triggerValueRef = ref<HTMLSpanElement>();
+    const chipsRowRef = ref<HTMLDivElement>();
     const dropdownContentRef = ref<HTMLDivElement>();
+    const dropdownSpacerRef = ref<HTMLDivElement>();
+    const dropdownLoadingRef = ref<HTMLDivElement>();
+    const dropdownEmptyRef = ref<HTMLDivElement>();
 
     // ============================================
     // Option reading from slot
     // ============================================
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parsing slotted options/optgroups requires multiple conditional branches
     function readOptions() {
       const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
       if (!slot) return;
@@ -591,7 +672,7 @@ define(
           }
         }
       }
-      options.value = items;
+      slottedOptions.value = items;
     }
 
     // Initialize selectedValues from prop
@@ -602,6 +683,22 @@ define(
           .map((v) => v.trim())
           .filter(Boolean);
       }
+    });
+
+    // Sync loading prop
+    effect(() => {
+      isLoading.value = Boolean(props.loading.value);
+    });
+
+    // Expose JS options property setter
+    Object.defineProperty(host, 'options', {
+      get() {
+        return options.value;
+      },
+      set(val: OptionItem[]) {
+        (host as unknown as { _optionsProp?: OptionItem[] })._optionsProp = val;
+        slottedOptions.value = [...slottedOptions.value]; // trigger recompute
+      },
     });
 
     // ============================================
@@ -621,23 +718,24 @@ define(
     // Dropdown positioning
     // ============================================
 
+    let autoUpdateCleanup: (() => void) | null = null;
+
     function updateDropdownPosition() {
       if (!dropdownEl || !triggerEl) return;
-      const triggerRect = triggerEl.getBoundingClientRect();
-      const dropRect = dropdownEl.getBoundingClientRect();
-      const vp = { h: window.innerHeight, w: window.innerWidth };
-
-      const spaceBelow = vp.h - triggerRect.bottom;
-      const spaceAbove = triggerRect.top;
-      const openUpward = spaceBelow < dropRect.height && spaceAbove > spaceBelow;
-
-      const top = openUpward ? triggerRect.top - dropRect.height - 4 : triggerRect.bottom + 4;
-      const left = Math.max(8, Math.min(triggerRect.left, vp.w - dropRect.width - 8));
-      const width = triggerRect.width;
-
-      dropdownEl.style.top = `${top}px`;
-      dropdownEl.style.left = `${left}px`;
-      dropdownEl.style.width = `${width}px`;
+      const referenceWidth = triggerEl.getBoundingClientRect().width;
+      positionFloat(triggerEl, dropdownEl, {
+        middleware: [
+          flip({ padding: 6 }),
+          shift({ padding: 6 }),
+          size({
+            apply({ elements }) {
+              elements.floating.style.width = `${referenceWidth}px`;
+            },
+            padding: 6,
+          }),
+        ],
+        placement: 'bottom-start',
+      });
     }
 
     // ============================================
@@ -650,15 +748,24 @@ define(
       focusedIndex.value =
         selectedValues.value.length > 0 ? options.value.findIndex((o) => o.value === selectedValues.value[0]) : 0;
       requestAnimationFrame(() => {
-        updateDropdownPosition();
+        // Start autoUpdate: repositions on scroll, resize, reference size change
+        if (triggerEl && dropdownEl) {
+          autoUpdateCleanup?.();
+          autoUpdateCleanup = autoUpdate(triggerEl, dropdownEl, updateDropdownPosition);
+        } else {
+          updateDropdownPosition();
+        }
         scrollFocusedIntoView();
       });
     }
 
     function close() {
+      autoUpdateCleanup?.();
+      autoUpdateCleanup = null;
       isOpen.value = false;
       focusedIndex.value = -1;
       triggerEl?.focus();
+      triggerValidation('blur');
     }
 
     // ============================================
@@ -676,6 +783,7 @@ define(
         close();
       }
       emit('change', { originalEvent: e, value: formValue.value, values: [...selectedValues.value] });
+      triggerValidation('change');
     }
 
     // ============================================
@@ -683,11 +791,20 @@ define(
     // ============================================
 
     function scrollFocusedIntoView() {
+      const idx = focusedIndex.value;
+      if (virtualizer && idx >= 0) {
+        // Use flat-list index (groups shift real indices), but scrollToIndex uses flat list index
+        const flatList = buildFlatList(options.value);
+        const flatIdx = flatList.findIndex((r) => r.type === 'option' && r.idx === idx);
+        if (flatIdx >= 0) virtualizer.scrollToIndex(flatIdx, { align: 'auto' });
+        return;
+      }
       if (!dropdownEl) return;
       const focusedEl = dropdownEl.querySelector<HTMLElement>('[data-focused]');
       focusedEl?.scrollIntoView({ block: 'nearest' });
     }
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling many key combinations and states
     function handleTriggerKeydown(e: KeyboardEvent) {
       if (props.disabled.value) return;
       const opts = options.value;
@@ -757,15 +874,122 @@ define(
     // Lifecycle
     // ============================================
 
-    onMount(() => {
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-      if (slot) {
-        slot.addEventListener('slotchange', readOptions);
-        readOptions();
+    // ============================================
+    // Virtualizer
+    // ============================================
+
+    // Flatten options to a linear renderable list (group headers + options)
+    function buildFlatList(
+      opts: OptionItem[],
+    ): Array<{ type: 'option'; opt: OptionItem; idx: number } | { type: 'group'; label: string }> {
+      const flat: Array<{ type: 'option'; opt: OptionItem; idx: number } | { type: 'group'; label: string }> = [];
+      const groups = new Map<string | undefined, OptionItem[]>();
+      for (const opt of opts) {
+        const key = opt.group;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(opt);
       }
+      let globalIdx = 0;
+      for (const [groupLabel, groupOpts] of groups) {
+        if (groupLabel !== undefined) flat.push({ label: groupLabel, type: 'group' });
+        for (const opt of groupOpts) flat.push({ idx: globalIdx++, opt, type: 'option' });
+      }
+      return flat;
+    }
+
+    let virtualizer: ReturnType<typeof createVirtualizer> | null = null;
+
+    function setupVirtualizer() {
+      virtualizer?.destroy();
+      const scrollEl = dropdownEl;
+      if (!scrollEl || !dropdownContentRef.value) return;
+
+      const flatList = buildFlatList(options.value);
+      virtualizer = createVirtualizer({
+        count: flatList.length,
+        estimateSize: (i) => (flatList[i]?.type === 'group' ? 28 : 36),
+        getScrollElement: () => scrollEl,
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Virtualizer onChange renders option rows including selected, focused, group, and disabled states
+        onChange: (virtualItems, totalSize) => {
+          const container = dropdownContentRef.value;
+          const spacer = dropdownSpacerRef.value;
+          if (!container || !spacer) return;
+
+          spacer.style.height = `${totalSize}px`;
+          container.innerHTML = '';
+
+          for (const item of virtualItems) {
+            const row = flatList[item.index];
+            if (!row) continue;
+
+            if (row.type === 'group') {
+              const groupHeader = document.createElement('div');
+              groupHeader.className = 'optgroup-label';
+              groupHeader.setAttribute('role', 'presentation');
+              groupHeader.textContent = row.label;
+              groupHeader.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+              container.appendChild(groupHeader);
+            } else {
+              const { opt, idx } = row;
+              const isFocused = idx === focusedIndex.value;
+              const isSelected = selectedValues.value.includes(opt.value);
+
+              const optionEl = document.createElement('div');
+              optionEl.className = 'option';
+              optionEl.setAttribute('role', 'option');
+              optionEl.id = `${selectId}-opt-${idx}`;
+              optionEl.setAttribute('aria-selected', String(isSelected));
+              optionEl.setAttribute('aria-disabled', String(opt.disabled));
+              optionEl.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+
+              if (isFocused) optionEl.setAttribute('data-focused', '');
+              if (isSelected) optionEl.setAttribute('data-selected', '');
+              if (opt.disabled) optionEl.setAttribute('data-disabled', '');
+
+              const label = document.createElement('span');
+              label.textContent = opt.label;
+              optionEl.appendChild(label);
+
+              const check = document.createElement('span');
+              check.className = 'option-check';
+              check.setAttribute('aria-hidden', 'true');
+              check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+              optionEl.appendChild(check);
+
+              optionEl.addEventListener('click', (e: MouseEvent) => {
+                e.stopPropagation();
+                selectOption(opt, e);
+              });
+              optionEl.addEventListener('mouseenter', () => {
+                focusedIndex.value = idx;
+              });
+              container.appendChild(optionEl);
+            }
+          }
+        },
+        overscan: 4,
+      });
+    }
+
+    onMount(() => {
+      onSlotChange('default', readOptions);
+
+      // Rebuild virtualizer when options list changes
+      effect(() => {
+        // Access options & isOpen to re-create virtualizer when either changes
+        const opts = options.value;
+        const open = isOpen.value;
+        if (open && opts.length > 0) {
+          requestAnimationFrame(() => setupVirtualizer());
+        } else if (!open) {
+          virtualizer?.destroy();
+          virtualizer = null;
+        }
+      });
 
       // Effect to manage dynamic content and visibility
-      const stopEffects = effect(() => {
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form component requires synchronizing many props to DOM elements reactively
+      effect(() => {
         // Label visibility
         const placement = props['label-placement'].value;
         const labelText = props.label.value;
@@ -785,79 +1009,60 @@ define(
           helperRef.value.style.color = props.error.value ? 'var(--color-error)' : '';
         }
 
-        // Trigger value
-        if (triggerValueRef.value) {
+        // Trigger value / chips
+        if (triggerValueRef.value && chipsRowRef.value) {
+          if (props.multiple.value && selectedValues.value.length > 0) {
+            // Multiple mode: render chips
+            triggerValueRef.value.hidden = true;
+            chipsRowRef.value.style.display = 'flex';
+            // Re-build chips
+            chipsRowRef.value.innerHTML = '';
+            for (const val of selectedValues.value) {
+              const optLabel = options.value.find((o) => o.value === val)?.label ?? val;
+              const chip = document.createElement(CHIP_TAG) as HTMLElement & { value?: string; mode?: string };
+              chip.setAttribute('value', val);
+              chip.setAttribute('mode', 'removable');
+              chip.setAttribute('variant', 'flat');
+              chip.setAttribute('size', 'sm');
+              if (props.color.value) chip.setAttribute('color', props.color.value);
+              chip.textContent = optLabel;
+              chip.addEventListener('remove', (e: Event) => {
+                e.stopPropagation();
+                const detail = (e as CustomEvent<{ value: string | undefined }>).detail;
+                if (detail.value !== undefined) {
+                  selectedValues.value = selectedValues.value.filter((v) => v !== detail.value);
+                  emit('change', { value: formValue.value, values: [...selectedValues.value] });
+                  triggerValidation('change');
+                }
+              });
+              chipsRowRef.value.appendChild(chip);
+            }
+          } else {
+            // Single mode (or multiple with no selection)
+            chipsRowRef.value.style.display = '';
+            triggerValueRef.value.hidden = false;
+            const display = displayLabel.value || props.placeholder.value || '';
+            triggerValueRef.value.textContent = display;
+            triggerValueRef.value.className = displayLabel.value
+              ? 'trigger-value'
+              : 'trigger-value trigger-placeholder';
+          }
+        } else if (triggerValueRef.value) {
           const display = displayLabel.value || props.placeholder.value || '';
           triggerValueRef.value.textContent = display;
           triggerValueRef.value.className = displayLabel.value ? 'trigger-value' : 'trigger-value trigger-placeholder';
         }
 
-        // Render options into dropdown
-        if (dropdownContentRef.value) {
-          const container = dropdownContentRef.value;
-          container.innerHTML = ''; // Clear existing options
+        // Loading / empty states
+        if (dropdownLoadingRef.value) dropdownLoadingRef.value.hidden = !isLoading.value;
+        if (dropdownEmptyRef.value) dropdownEmptyRef.value.hidden = isLoading.value || options.value.length > 0;
 
-          const opts = options.value;
-          const focused = focusedIndex.value;
+        // Spacer + virtual container visibility
+        if (dropdownContentRef.value) dropdownContentRef.value.hidden = isLoading.value;
+        if (dropdownSpacerRef.value) dropdownSpacerRef.value.hidden = isLoading.value;
 
-          // Group by optgroup label
-          const groups = new Map<string | undefined, OptionItem[]>();
-          for (const opt of opts) {
-            const key = opt.group;
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key)!.push(opt);
-          }
-
-          let globalIdx = 0;
-          for (const [groupLabel, groupOpts] of groups) {
-            if (groupLabel !== undefined) {
-              const groupHeader = document.createElement('div');
-              groupHeader.className = 'optgroup-label';
-              groupHeader.setAttribute('role', 'presentation');
-              groupHeader.textContent = groupLabel;
-              container.appendChild(groupHeader);
-            }
-
-            for (const opt of groupOpts) {
-              const idx = globalIdx++;
-              const isFocused = idx === focused;
-              const isSelected = selectedValues.value.includes(opt.value);
-
-              const optionEl = document.createElement('div');
-              optionEl.className = 'option';
-              optionEl.setAttribute('role', 'option');
-              optionEl.id = `${selectId}-opt-${idx}`;
-              optionEl.setAttribute('aria-selected', String(isSelected));
-              optionEl.setAttribute('aria-disabled', String(opt.disabled));
-
-              if (isFocused) optionEl.setAttribute('data-focused', '');
-              if (isSelected) optionEl.setAttribute('data-selected', '');
-              if (opt.disabled) optionEl.setAttribute('data-disabled', '');
-
-              const label = document.createElement('span');
-              label.textContent = opt.label;
-              optionEl.appendChild(label);
-
-              const check = document.createElement('span');
-              check.className = 'option-check';
-              check.setAttribute('aria-hidden', 'true');
-              check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
-              optionEl.appendChild(check);
-
-              // Event handlers
-              optionEl.addEventListener('click', (e: MouseEvent) => {
-                e.stopPropagation();
-                selectOption(opt, e);
-              });
-
-              optionEl.addEventListener('mouseenter', () => {
-                focusedIndex.value = idx;
-              });
-
-              container.appendChild(optionEl);
-            }
-          }
-        }
+        // Re-render virtualizer on focused/selected changes (options handled by separate effect)
+        virtualizer?.measure();
 
         // Dropdown open state
         if (dropdownEl) {
@@ -868,24 +1073,21 @@ define(
           }
         }
 
-        // Field aria attributes
+        // Field tabindex
         if (triggerEl) {
-          triggerEl.setAttribute('aria-expanded', String(isOpen.value));
-          triggerEl.setAttribute('aria-invalid', props.error.value ? 'true' : 'false');
-          triggerEl.setAttribute('aria-disabled', String(props.disabled.value));
           triggerEl.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
-          if (hasLabel.value) {
-            triggerEl.setAttribute('aria-labelledby', labelId);
-          } else {
-            triggerEl.removeAttribute('aria-labelledby');
-          }
-          if (focusedIndex.value >= 0) {
-            triggerEl.setAttribute('aria-activedescendant', `${selectId}-opt-${focusedIndex.value}`);
-          } else {
-            triggerEl.removeAttribute('aria-activedescendant');
-          }
         }
       });
+
+      if (triggerEl) {
+        aria(triggerEl, {
+          activedescendant: () => (focusedIndex.value >= 0 ? `${selectId}-opt-${focusedIndex.value}` : null),
+          disabled: () => props.disabled.value,
+          expanded: () => isOpen.value,
+          invalid: () => !!props.error.value,
+          labelledby: () => (hasLabel.value ? labelId : null),
+        });
+      }
 
       // Close on outside click
       const handleOutsideClick = (e: MouseEvent) => {
@@ -895,21 +1097,30 @@ define(
         }
       };
 
-      // Reposition on scroll/resize
-      const handleReposition = () => {
-        if (isOpen.value) updateDropdownPosition();
-      };
-
       document.addEventListener('click', handleOutsideClick, true);
-      window.addEventListener('scroll', handleReposition, true);
-      window.addEventListener('resize', handleReposition);
+
+      // Effect: propagate form context disabled/size/variant to host when not explicitly set
+      let ctxDisabledActive = false;
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
+      effect(() => {
+        if (!formCtx) return;
+        const ctxDisabled = formCtx.disabled.value;
+        if (ctxDisabled && !ctxDisabledActive) {
+          host.setAttribute('disabled', '');
+          ctxDisabledActive = true;
+        } else if (!ctxDisabled && ctxDisabledActive) {
+          host.removeAttribute('disabled');
+          ctxDisabledActive = false;
+        }
+        if (!props.size.value && formCtx.size.value) host.setAttribute('size', formCtx.size.value);
+        if (!props.variant.value && formCtx.variant.value) host.setAttribute('variant', formCtx.variant.value);
+      });
 
       return () => {
-        stopEffects();
-        slot?.removeEventListener('slotchange', readOptions);
+        virtualizer?.destroy();
+        autoUpdateCleanup?.();
+        autoUpdateCleanup = null;
         document.removeEventListener('click', handleOutsideClick, true);
-        window.removeEventListener('scroll', handleReposition, true);
-        window.removeEventListener('resize', handleReposition);
       };
     });
 
@@ -922,12 +1133,22 @@ define(
     return {
       styles: [
         sizeVariantMixin({
-          lg: { '--_padding': 'var(--size-2-5) var(--size-3-5)', fontSize: 'var(--text-base)', gap: 'var(--size-2-5)' },
-          sm: { '--_padding': 'var(--size-1) var(--size-2)', fontSize: 'var(--text-xs)', gap: 'var(--size-1-5)' },
+          lg: {
+            '--_field-height': 'var(--size-12)',
+            '--_padding': 'var(--size-2-5) var(--size-3-5)',
+            fontSize: 'var(--text-base)',
+            gap: 'var(--size-2-5)',
+          },
+          sm: {
+            '--_field-height': 'var(--size-8)',
+            '--_padding': 'var(--size-1) var(--size-2)',
+            fontSize: 'var(--text-xs)',
+            gap: 'var(--size-1-5)',
+          },
         }),
-        roundedVariantMixin,
-        colorThemeMixin,
+        ...formFieldMixins,
         disabledLoadingMixin(),
+        forcedColorsFocusMixin('.field'),
         componentStyles,
       ],
       template: html`<slot style="display:none"></slot>
@@ -950,8 +1171,7 @@ define(
             }}
             @keydown=${handleTriggerKeydown}>
             <label class="label-inset" id="${labelId}" ref=${labelInsetRef} hidden></label>
-            <div class="trigger-row">
-              <span class="trigger-value" ref=${triggerValueRef}></span>
+            <div class="trigger-row">              <div class="chips-row" ref=${chipsRowRef}></div>              <span class="trigger-value" ref=${triggerValueRef}></span>
             </div>
             <span class="trigger-icon" aria-hidden="true">
               <svg
@@ -966,9 +1186,10 @@ define(
                 stroke-linejoin="round">
                 <path d="m6 9 6 6 6-6" />
               </svg>
+              <span class="loader" aria-label="Loading"></span>
             </span>
           </div>
-          <div class="helper-text" ref=${helperRef} hidden></div>
+          <div class="helper-text" aria-live="polite" ref=${helperRef} hidden></div>
         </div>
         <div
           class="dropdown"
@@ -978,11 +1199,19 @@ define(
           ref=${(el: HTMLElement) => {
             dropdownEl = el;
           }}>
-          <div ref=${dropdownContentRef}></div>
+          <div ref=${dropdownLoadingRef} class="dropdown-loading" hidden>Loading…</div>
+          <div ref=${dropdownEmptyRef} class="dropdown-empty" hidden>No options</div>
+          <div style="position:relative" ref=${dropdownSpacerRef}>
+            <div ref=${dropdownContentRef} style="position:absolute;top:0;left:0;right:0"></div>
+          </div>
         </div>`,
     };
   },
-  { formAssociated: true },
+  { formAssociated: true, shadow: { delegatesFocus: true } },
 );
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-select': HTMLElement & SelectProps & FormValidityMethods & AddEventListeners<BitSelectEvents>;
+  }
+}

@@ -43,7 +43,9 @@ import { signal, writable, effect } from '@vielzeug/stateit';
 const raw = signal('  Hello World  ');
 const trimmed = writable(
   () => raw.value.trim(),
-  (v) => { raw.value = v; },
+  (v) => {
+    raw.value = v;
+  },
 );
 
 effect(() => console.log('trimmed:', trimmed.value));
@@ -73,8 +75,8 @@ const error = signal<Error | null>(null);
 
 const status = computed(() => {
   if (loading.value) return 'loading' as const;
-  if (error.value)   return 'error' as const;
-  if (data.value)    return 'success' as const;
+  if (error.value) return 'error' as const;
+  if (data.value) return 'success' as const;
   return 'idle' as const;
 });
 
@@ -116,8 +118,6 @@ const unsub = watch(
 );
 ```
 
----
-
 ## React
 
 ### `useSyncExternalStore` Hooks
@@ -132,7 +132,7 @@ import type { Store } from '@vielzeug/stateit';
 /** Subscribe to the full state of a store. */
 export function useStoreState<T extends object>(store: Store<T>): T {
   return useSyncExternalStore(
-    (notify) => store.watch(notify, { immediate: false }),
+    (notify) => store.subscribe(notify, { immediate: false }),
     () => store.value,
     () => store.value,
   );
@@ -140,19 +140,16 @@ export function useStoreState<T extends object>(store: Store<T>): T {
 
 /** Subscribe to a projected slice of a store. Re-renders only when the
  *  slice changes (shallowEqual by default). */
-export function useStoreSelector<T extends object, U>(
-  store: Store<T>,
-  selector: (state: T) => U,
-): U {
+export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): U {
   return useSyncExternalStore(
-    (notify) => store.watch(selector, notify),
+    (notify) => store.subscribe(selector, notify),
     () => selector(store.value),
     () => selector(store.value),
   );
 }
 ```
 
-> Note: `watch()` defaults to `immediate: false`, meaning the subscribe callback passed to `useSyncExternalStore` only gets called on *changes* — which is exactly what React expects.
+> Note: `watch()` defaults to `immediate: false`, meaning the subscribe callback passed to `useSyncExternalStore` only gets called on _changes_ — which is exactly what React expects.
 
 Usage:
 
@@ -188,11 +185,9 @@ export const toggleTodo = (id: number) =>
     todos: s.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
   }));
 
-export const setFilter = (filter: TodoState['filter']) =>
-  todoStore.set({ filter });
+export const setFilter = (filter: TodoState['filter']) => todoStore.set({ filter });
 
-export const clearDone = () =>
-  todoStore.set((s) => ({ todos: s.todos.filter((t) => !t.done) }));
+export const clearDone = () => todoStore.set((s) => ({ todos: s.todos.filter((t) => !t.done) }));
 ```
 
 ```tsx
@@ -204,9 +199,7 @@ function TodoApp() {
   const filter = useStoreSelector(todoStore, (s) => s.filter);
   const todos = useStoreSelector(todoStore, (s) => {
     const { todos, filter } = s;
-    return todos.filter((t) =>
-      filter === 'all' ? true : filter === 'done' ? t.done : !t.done,
-    );
+    return todos.filter((t) => (filter === 'all' ? true : filter === 'done' ? t.done : !t.done));
   });
   const leftCount = useStoreSelector(todoStore, (s) => s.todos.filter((t) => !t.done).length);
 
@@ -219,11 +212,7 @@ function TodoApp() {
       <ul>
         {todos.map((todo) => (
           <li key={todo.id}>
-            <input
-              type="checkbox"
-              checked={todo.done}
-              onChange={() => toggleTodo(todo.id)}
-            />
+            <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(todo.id)} />
             {todo.text}
           </li>
         ))}
@@ -287,8 +276,6 @@ function UserProfile({ id }: { id: string }) {
 }
 ```
 
----
-
 ## Vue
 
 ### `useStoreState` / `useStoreSelector` Composables
@@ -301,7 +288,7 @@ import type { Store } from '@vielzeug/stateit';
 /** Reactive ref that stays in sync with the full store state. */
 export function useStoreState<T extends object>(store: Store<T>): Ref<T> {
   const state = ref(store.value) as Ref<T>;
-  const unsub = store.watch((next) => {
+  const unsub = store.subscribe((next) => {
     state.value = next;
   });
   onUnmounted(unsub);
@@ -309,12 +296,9 @@ export function useStoreState<T extends object>(store: Store<T>): Ref<T> {
 }
 
 /** Reactive ref that stays in sync with a projected slice. */
-export function useStoreSelector<T extends object, U>(
-  store: Store<T>,
-  selector: (state: T) => U,
-): Ref<U> {
+export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): Ref<U> {
   const selected = ref(selector(store.value)) as Ref<U>;
-  const unsub = store.watch(selector, (next) => {
+  const unsub = store.subscribe(selector, (next) => {
     selected.value = next;
   });
   onUnmounted(unsub);
@@ -351,9 +335,12 @@ import { counterStore } from '@/stores/counter.store';
 export default defineComponent({
   setup() {
     const count = ref(counterStore.value.count);
-    const unsub = counterStore.watch((s) => s.count, (next) => {
-      count.value = next;
-    });
+    const unsub = counterStore.subscribe(
+      (s) => s.count,
+      (next) => {
+        count.value = next;
+      },
+    );
 
     return { count, cleanup: unsub };
   },
@@ -362,8 +349,6 @@ export default defineComponent({
   },
 });
 ```
-
----
 
 ## Svelte
 
@@ -381,20 +366,17 @@ export function readable<T extends object>(source: Store<T>): Readable<T> {
   return {
     subscribe(run) {
       run(source.value); // immediate: true equivalent
-      return source.watch((next) => run(next));
+      return source.subscribe((next) => run(next));
     },
   };
 }
 
 /** Wraps a projected slice as a Svelte readable store. */
-export function readableSelector<T extends object, U>(
-  source: Store<T>,
-  selector: (state: T) => U,
-): Readable<U> {
+export function readableSelector<T extends object, U>(source: Store<T>, selector: (state: T) => U): Readable<U> {
   return {
     subscribe(run) {
       run(selector(source.value));
-      return source.watch(selector, (next) => run(next));
+      return source.subscribe(selector, (next) => run(next));
     },
   };
 }
@@ -414,8 +396,6 @@ Usage in a Svelte component:
   {$count}
 </button>
 ```
-
----
 
 ## Pattern: Shared Module Store
 
@@ -456,15 +436,15 @@ export function logout() {
 }
 ```
 
----
-
 ## Pattern: Batch for Complex Mutations
 
-When a domain operation touches multiple fields of the same store at once, wrap in `batch()` so watchers see only the final state:
+When a domain operation touches multiple fields of the same store at once, wrap in the top-level `batch()` so watchers see only the final state:
 
 ```ts
+import { batch } from '@vielzeug/stateit';
+
 export function applySettings(settings: UserSettings) {
-  userStore.batch(() => {
+  batch(() => {
     userStore.set({ theme: settings.theme });
     userStore.set({ language: settings.language });
     userStore.set({ notifications: settings.notifications });

@@ -6,11 +6,12 @@ A versatile button component with multiple variants, colors, sizes, and states. 
 
 **Button**
 
-- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
-- 🌈 **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
+- 🌈 **6 Semantic Colors**: primary, secondary, info, success, warning, error
+- 🎨 **6 Variants**: solid, flat, bordered, outline, ghost, text
 - 🎭 **States**: loading, disabled
+- 📏 **3 Sizes**: sm, md, lg
+- 🔗 **Link Mode**: renders as an accessible `<a role="button">` when `href` is set
 - 🔧 **Customizable**: CSS custom properties for styling
 
 **Button Group**
@@ -181,14 +182,16 @@ Add prefix or suffix icons using slots.
 
 ```html
 <bit-button>
-  <span slot="prefix">←</span>
+  <span slot="prefix" class="material-symbols-rounded">arrow_back</span>
   Back
 </bit-button>
 <bit-button variant="outline" color="success">
   Save
-  <span slot="suffix">💾</span>
+  <span slot="suffix" class="material-symbols-rounded">save</span>
 </bit-button>
-<bit-button icon-only aria-label="Delete" color="error"> 🗑️ </bit-button>
+<bit-button icon-only label="Delete" color="error">
+  <span class="material-symbols-rounded">delete</span>
+</bit-button>
 ```
 
 </ComponentPreview>
@@ -213,7 +216,9 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 <bit-button rounded="2xl">2XL Radius</bit-button>
 
 <!-- Icon-only always uses perfect circle -->
-<bit-button rounded icon-only aria-label="Check">✓</bit-button>
+<bit-button rounded icon-only label="Check">
+  <span class="material-symbols-rounded">check</span>
+</bit-button>
 ```
 
 </ComponentPreview>
@@ -227,6 +232,66 @@ Button expands to fill the full width of its container.
 ```html
 <bit-button fullwidth>Full Width Button</bit-button>
 <bit-button fullwidth variant="bordered" color="success">Full Width Bordered</bit-button>
+```
+
+</ComponentPreview>
+
+## Link Buttons
+
+When `href` is provided, `bit-button` renders as an `<a role="button">` element instead of `<button>`. All visual variants, sizes, states, and slots behave exactly the same.
+
+<ComponentPreview center>
+
+```html
+<bit-button href="#">Default Link</bit-button>
+<bit-button href="#" variant="outline">Outline Link</bit-button>
+<bit-button href="#" target="_blank" rel="noopener noreferrer" variant="ghost">
+  Open in new tab
+  <span slot="suffix" class="material-symbols-rounded">open_in_new</span>
+</bit-button>
+```
+
+</ComponentPreview>
+
+::: info Security
+Always set `rel="noopener noreferrer"` when using `target="_blank"` to prevent tabnapping attacks.
+:::
+
+## Guideline Recipes
+
+### Bolder Primary Action
+
+Use one high-emphasis action and keep alternatives quieter.
+
+<ComponentPreview center>
+
+```html
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+  <bit-button
+    color="primary"
+    variant="solid"
+    style="--button-padding: 0.75rem 1.2rem; --button-shadow: var(--shadow-lg); --button-font-size: var(--text-base);">
+    Publish Changes
+  </bit-button>
+  <bit-button color="primary" variant="outline">Preview</bit-button>
+  <bit-button variant="ghost" color="secondary">Cancel</bit-button>
+</div>
+```
+
+</ComponentPreview>
+
+### Quieter Action Cluster
+
+Use outline, ghost, and text variants for dense toolbars and secondary actions.
+
+<ComponentPreview center>
+
+```html
+<bit-button-group attached>
+  <bit-button variant="text" size="sm">Sort</bit-button>
+  <bit-button variant="ghost" size="sm">Filter</bit-button>
+  <bit-button variant="outline" size="sm" color="secondary">Export</bit-button>
+</bit-button-group>
 ```
 
 </ComponentPreview>
@@ -316,29 +381,33 @@ Buttons expand to fill the container equally.
 
 ### `bit-button` Attributes
 
-| Attribute   | Type                                                                           | Default     | Description                          |
-| ----------- | ------------------------------------------------------------------------------ | ----------- | ------------------------------------ |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual style variant                 |
-| `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Semantic color                       |
-| `size`      | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Button size                          |
-| `type`      | `'button' \| 'submit' \| 'reset'`                                              | `'button'`  | Button type (for forms)              |
-| `disabled`  | `boolean`                                                                      | `false`     | Disable the button                   |
-| `loading`   | `boolean`                                                                      | `false`     | Show loading state                   |
-| `rainbow`   | `boolean`                                                                      | `false`     | Animated rainbow border effect       |
-| `icon-only` | `boolean`                                                                      | `false`     | Icon-only mode (smaller padding)     |
-| `fullwidth` | `boolean`                                                                      | `false`     | Button takes full width of container |
-| `rounded`   | `boolean`                                                                      | `false`     | Fully rounded corners                |
+| Attribute    | Type                                                                           | Default     | Description                                                             |
+| ------------ | ------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------- |
+| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual style variant                                                    |
+| `color`      | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Semantic color                                                          |
+| `size`       | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Button size                                                             |
+| `type`       | `'button' \| 'submit' \| 'reset'`                                              | `'button'`  | Button type (for forms)                                                 |
+| `disabled`   | `boolean`                                                                      | `false`     | Disable the button                                                      |
+| `loading`    | `boolean`                                                                      | `false`     | Show loading state                                                      |
+| `rainbow`    | `boolean`                                                                      | `false`     | Animated rainbow border effect                                          |
+| `icon-only`  | `boolean`                                                                      | `false`     | Icon-only mode (square aspect ratio, no padding)                        |
+| `label`      | `string`                                                                       | —           | Accessible label for the inner element — required for icon-only buttons |
+| `fullwidth`  | `boolean`                                                                      | `false`     | Button takes full width of container                                    |
+| `rounded`    | `boolean`                                                                      | `false`     | Fully rounded corners                                                   |
+| `href`       | `string`                                                                       | —           | URL to navigate to; renders as `<a role="button">`                      |
+| `target`     | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —           | Link target (requires `href`)                                           |
+| `rel`        | `string`                                                                       | —           | Link `rel` attribute (requires `href`)                                  |
 
 ### `bit-button-group` Attributes
 
-| Attribute     | Type                                                                           | Default        | Description                        |
-| ------------- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------- |
-| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Group layout direction             |
-| `attached`    | `boolean`                                                                      | `false`        | Remove spacing and connect buttons |
-| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand to fill container   |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | -              | Apply size to all child buttons    |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -              | Apply variant to all child buttons |
-| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | -              | Apply color to all child buttons   |
+| Attribute     | Type                                                                           | Default        | Description                                                      |
+| ------------- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------- |
+| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Group layout direction                                           |
+| `attached`    | `boolean`                                                                      | `false`        | Remove spacing and connect buttons                               |
+| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand to fill container                                 |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | -              | Apply size to all child buttons                                  |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -              | Apply variant to all child buttons                               |
+| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | -              | Apply color to all child buttons                                 |
 
 ### Slots
 
@@ -360,11 +429,15 @@ Buttons expand to fill the container equally.
 
 #### `bit-button`
 
-| Event   | Detail                          | Description                                              |
-| ------- | ------------------------------- | -------------------------------------------------------- |
-| `click` | `{ originalEvent: MouseEvent }` | Emitted when button is clicked (if not disabled/loading) |
+| Event   | Detail       | Description                                                |
+| ------- | ------------ | ---------------------------------------------------------- |
+| `click` | `MouseEvent` | Native click event — standard `MouseEvent`, not suppressed |
 
-## CSS Custom Properties
+#### `bit-button-group`
+
+No events.
+
+### CSS Custom Properties
 
 ### `bit-button`
 
@@ -398,19 +471,22 @@ Both components follow WAI-ARIA best practices.
 - Announces button role and label.
 - `aria-disabled` when disabled.
 - `aria-busy` when loading.
-- Icon-only buttons require `aria-label`.
+- Icon-only buttons require `label` attribute.
 
 ### `bit-button-group`
 
 ✅ **Semantic Structure**
 
 - Automatically includes `role="group"` on the container.
-- Use `aria-label` to provide context (e.g., "Text alignment").
+- Use the `label` attribute to provide context for screen readers (e.g., `label="Text alignment"`).
 
 ✅ **Keyboard Navigation**
 
 - `Tab` moves focus between buttons.
-- Standard button keyboard interaction is maintained.
+
+✅ **Screen Readers**
+
+- Buttons within a group are announced in context.
 
 ## Best Practices
 

@@ -43,6 +43,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/floatit",
+      "projectFolder": "packages/floatit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/formit",
       "projectFolder": "packages/formit",
       "shouldPublish": true,
@@ -99,6 +105,18 @@
     {
       "packageName": "@vielzeug/workit",
       "projectFolder": "packages/workit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/virtualit",
+      "projectFolder": "packages/virtualit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/dragit",
+      "projectFolder": "packages/dragit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

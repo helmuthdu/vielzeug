@@ -1,26 +1,28 @@
 import {
-  computed,
-  createId,
+  aria,
   css,
   define,
   defineEmits,
   defineProps,
   effect,
-  field,
   handle,
   html,
-  onFormReset,
   onMount,
   ref,
   signal,
 } from '@vielzeug/craftit';
-import {
-  colorThemeMixin,
-  disabledLoadingMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
-import type { ComponentSize, InputType, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitInputEvents,
+  ComponentSize,
+  FormValidityMethods,
+  InputType,
+  RoundedSize,
+  ThemeColor,
+  VisualVariant,
+} from '../../types';
+import { useTextField } from '../_common/use-text-field';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -31,6 +33,7 @@ const componentStyles = /* css */ css`
     :host {
       --_font-size: var(--input-font-size, var(--text-sm));
       --_gap: var(--input-gap, var(--size-2));
+      --_field-height: var(--input-height, var(--size-10));
       --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
       --_radius: var(--input-radius, var(--rounded-md));
       --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
@@ -54,20 +57,26 @@ const componentStyles = /* css */ css`
       background: var(--_bg);
       border-radius: var(--_radius);
       border: var(--border) solid var(--_border-color);
-      box-shadow: var(--_shadown, var(--shadow-2xs));
+      box-shadow: var(--_shadow, var(--shadow-2xs));
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       gap: 0;
       justify-content: center;
-      min-height: var(--size-10);
+      height: var(--_field-height);
+      min-height: var(--_field-height);
       padding: var(--_padding);
-      transition:
+      transition: var(--_motion-transition,
         background var(--transition-fast),
         backdrop-filter var(--transition-slow),
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
-        transform var(--transition-fast);
+        transform var(--transition-fast));
+    }
+
+    /* Expand height to fit inset label + input row */
+    .field:has(.label-inset:not([hidden])) {
+      height: auto;
     }
 
     .input-row {
@@ -88,8 +97,11 @@ const componentStyles = /* css */ css`
       color: var(--color-contrast-500);
       cursor: pointer;
       font-weight: var(--font-medium);
-      transition: color var(--transition-fast);
+      transition: var(--_motion-transition, color var(--transition-fast));
       user-select: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .label-inset,
@@ -114,6 +126,7 @@ const componentStyles = /* css */ css`
       font-size: var(--text-xs);
       line-height: var(--leading-tight);
       padding-inline: 2px;
+      overflow-wrap: anywhere;
     }
 
     /* ========================================
@@ -128,7 +141,7 @@ const componentStyles = /* css */ css`
       font-size: var(--size-4);
       justify-content: center;
       opacity: 0.8;
-      transition: color var(--transition-fast);
+      transition: var(--_motion-transition, color var(--transition-fast));
       user-select: none;
     }
 
@@ -184,6 +197,102 @@ const componentStyles = /* css */ css`
     }
 
     /* ========================================
+       Clear button
+       ======================================== */
+
+    .clear-btn {
+      align-items: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--rounded-sm);
+      color: var(--color-contrast-500);
+      cursor: pointer;
+      display: none;
+      flex-shrink: 0;
+      height: var(--size-5);
+      justify-content: center;
+      padding: 0;
+      transition: var(--_motion-transition, color var(--transition-fast));
+      width: var(--size-5);
+      min-height: var(--_touch-target);
+      min-width: var(--_touch-target);
+    }
+
+    .clear-btn:hover {
+      color: var(--color-contrast-900);
+    }
+
+    .clear-btn:focus-visible {
+      outline: var(--border-2) solid var(--_theme-focus);
+      outline-offset: var(--border);
+    }
+
+    :host([clearable]) .clear-btn {
+      display: flex;
+    }
+
+    :host([clearable]:not([has-value])) .clear-btn {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* ========================================
+       Password visibility toggle
+       ======================================== */
+
+    .pwd-toggle-btn {
+      align-items: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--rounded-sm);
+      color: var(--color-contrast-500);
+      cursor: pointer;
+      display: none;
+      flex-shrink: 0;
+      height: var(--size-5);
+      justify-content: center;
+      padding: 0;
+      transition: var(--_motion-transition, color var(--transition-fast));
+      width: var(--size-5);
+      min-height: var(--_touch-target);
+      min-width: var(--_touch-target);
+    }
+
+    .pwd-toggle-btn:hover {
+      color: var(--color-contrast-900);
+    }
+
+    .pwd-toggle-btn:focus-visible {
+      outline: var(--border-2) solid var(--_theme-focus);
+      outline-offset: var(--border);
+    }
+
+    :host([type='password']) .pwd-toggle-btn {
+      display: flex;
+    }
+
+    /* ========================================
+       Character counter
+       ======================================== */
+
+    .char-counter {
+      color: var(--color-contrast-400);
+      font-size: var(--text-xs);
+      line-height: var(--leading-tight);
+      padding-inline: 2px;
+      text-align: end;
+      white-space: nowrap;
+    }
+
+    .char-counter[data-near-limit] {
+      color: var(--color-warning, #f59e0b);
+    }
+
+    .char-counter[data-at-limit] {
+      color: var(--color-error);
+    }
+
+    /* ========================================
        Error State
        ======================================== */
 
@@ -198,6 +307,10 @@ const componentStyles = /* css */ css`
 
     :host([error]) .label-inset,
     :host([error]) .label-outside {
+      color: var(--color-error);
+    }
+
+    .helper-text[role='alert'] {
       color: var(--color-error);
     }
   }
@@ -299,12 +412,16 @@ export type InputProps = {
   'label-placement'?: 'inset' | 'outside';
   /** Theme color */
   color?: ThemeColor;
+  /** Show a clear (×) button when the field has a value */
+  clearable?: boolean;
   /** Disable input interaction */
   disabled?: boolean;
   /** Helper text displayed below the input */
   helper?: string;
   /** Error message (marks field as invalid) */
   error?: string;
+  /** Maximum character length — shows a counter below the input */
+  maxlength?: number;
   /** Form field name */
   name?: string;
   /** Placeholder text */
@@ -325,9 +442,30 @@ export type InputProps = {
   variant?: Exclude<VisualVariant, 'glass' | 'frost'>;
   /** Full width mode (100% of container) */
   fullwidth?: boolean;
+  /** HTML pattern attribute for client-side validation */
+  pattern?: string;
+  /** Virtual keyboard hint for mobile devices */
+  inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+  /** Autocomplete hint */
+  autocomplete?: string;
+  /** Minimum character length */
+  minlength?: number;
 };
 
-const VALID_INPUT_TYPES = ['text', 'email', 'password', 'search', 'url', 'tel', 'number'] as const;
+const VALID_INPUT_TYPES = [
+  'text',
+  'email',
+  'password',
+  'search',
+  'url',
+  'tel',
+  'number',
+  'date',
+  'time',
+  'datetime-local',
+  'month',
+  'week',
+] as const;
 
 const validateInputType = (type: string | null): string => {
   return VALID_INPUT_TYPES.includes(type as (typeof VALID_INPUT_TYPES)[number]) ? type! : 'text';
@@ -349,7 +487,7 @@ const validateInputType = (type: string | null): string => {
  * @attr {boolean} disabled - Disable input interaction
  * @attr {boolean} readonly - Make the input read-only
  * @attr {boolean} required - Mark the field as required
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
+ * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
@@ -384,91 +522,120 @@ const validateInputType = (type: string | null): string => {
  * <bit-input label="Name" variant="bordered" color="primary" />
  * ```
  */
-define(
+export const TAG = define(
   'bit-input',
-  () => {
+  ({ host }) => {
     const emit = defineEmits<{
       change: { originalEvent: Event; value: string };
       input: { originalEvent: Event; value: string };
     }>();
-    const props = defineProps({
-      color: { default: undefined as ThemeColor | undefined },
+    const props = defineProps<InputProps>({
+      autocomplete: { default: undefined },
+      clearable: { default: false },
+      color: { default: undefined },
       disabled: { default: false },
-      error: { default: '' },
+      error: { default: '', omit: true },
       fullwidth: { default: false },
       helper: { default: '' },
+      inputmode: { default: undefined },
       label: { default: '' },
       'label-placement': { default: 'inset' },
+      maxlength: { default: undefined },
+      minlength: { default: undefined },
       name: { default: '' },
+      pattern: { default: undefined },
       placeholder: { default: '' },
       readonly: { default: false },
       required: { default: false },
-      rounded: { default: undefined as RoundedSize | undefined },
-      size: { default: undefined as ComponentSize | undefined },
-      type: { default: 'text' as InputType },
+      rounded: { default: undefined },
+      size: { default: undefined },
+      type: { default: 'text' },
       value: { default: '' },
-      variant: { default: undefined as Exclude<VisualVariant, 'glass' | 'frost'> | undefined },
+      variant: { default: undefined },
     });
 
-    const valueSignal = signal('');
+    const showPassword = signal(false);
 
-    field({
-      disabled: computed(() => props.disabled.value),
-      value: valueSignal,
-    });
+    // Shared text-field setup: value signal, form registration, IDs, label refs
+    const tf = useTextField(props, 'input');
+    const {
+      valueSignal,
+      fieldId: inputId,
+      labelInsetId,
+      labelOutsideId,
+      helperId,
+      errorId,
+      labelInsetRef,
+      labelOutsideRef,
+    } = tf;
 
-    onFormReset(() => {
-      valueSignal.value = '';
-    });
+    function togglePasswordVisibility() {
+      showPassword.value = !showPassword.value;
+      inputRef.value?.focus();
+    }
 
-    // Stable accessibility IDs (generated once)
-    const inputId = props.name.value ? `input-${props.name.value}` : createId('input');
-    const labelId = `label-${inputId}`;
-    const helperId = `helper-${inputId}`;
-    const errorId = `error-${inputId}`;
-
-    // Refs
+    // Input-specific refs
     const inputRef = ref<HTMLInputElement>();
-    const labelInsetRef = ref<HTMLLabelElement>();
-    const labelOutsideRef = ref<HTMLLabelElement>();
     const helperRef = ref<HTMLDivElement>();
     const errorRef = ref<HTMLDivElement>();
+    const clearBtnRef = ref<HTMLButtonElement>();
+    const charCounterRef = ref<HTMLDivElement>();
 
     onMount(() => {
-      valueSignal.value = props.value.value;
+      const inp = inputRef.value;
+      if (!inp) return;
 
-      const stopEffects = effect(() => {
-        const inp = inputRef.value;
-        if (!inp) return;
+      // Define event handlers
+      const handleInput = (e: Event) => {
+        if (e.target !== inp) return;
+        valueSignal.value = inp.value;
+        emit('input', { originalEvent: e, value: inp.value });
+      };
 
-        inp.type = validateInputType(props.type.value);
-        inp.value = props.value.value;
-        inp.name = props.name.value;
-        inp.placeholder = props.placeholder.value;
+      const handleChange = (e: Event) => {
+        if (e.target !== inp) return;
+        valueSignal.value = inp.value;
+        emit('change', { originalEvent: e, value: inp.value });
+        tf.triggerValidation('change');
+      };
+
+      const handleBlur = () => tf.triggerValidation('blur');
+
+      // Attach event listeners
+      handle(inp, 'input', handleInput);
+      handle(inp, 'change', handleChange);
+      handle(inp, 'blur', handleBlur);
+
+      // Effect 1: label visibility (via shared composable)
+      tf.mountLabelSync();
+
+      // Effect 2: sync input element attributes to props
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many optional attributes requires branching
+      effect(() => {
         inp.disabled = props.disabled.value;
+        inp.name = props.name.value || '';
+        inp.placeholder = props.placeholder.value;
         inp.readOnly = props.readonly.value;
         inp.required = props.required.value;
-        inp.setAttribute('aria-invalid', props.error.value ? 'true' : 'false');
-        inp.setAttribute('aria-describedby', props.error.value ? errorId : helperId);
-        if (props.error.value) {
-          inp.setAttribute('aria-errormessage', errorId);
-        } else {
-          inp.removeAttribute('aria-errormessage');
-        }
+        inp.type = props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
+        inp.value = valueSignal.value;
 
-        // Label visibility
-        const placement = props['label-placement'].value;
-        const labelText = props.label.value;
-        if (labelInsetRef.value) {
-          labelInsetRef.value.textContent = labelText;
-          labelInsetRef.value.hidden = !labelText || placement !== 'inset';
-        }
-        if (labelOutsideRef.value) {
-          labelOutsideRef.value.textContent = labelText;
-          labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
-        }
+        const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+        if (maxLen > 0) inp.maxLength = maxLen;
 
-        // Helper / error
+        const minLen = props.minlength.value != null ? Number(props.minlength.value) : -1;
+        if (minLen > 0) inp.minLength = minLen;
+
+        if (props.pattern.value != null) inp.pattern = props.pattern.value;
+        else inp.removeAttribute('pattern');
+        if (props.inputmode.value != null) inp.inputMode = props.inputmode.value;
+        else inp.removeAttribute('inputmode');
+        if (props.autocomplete.value != null) inp.autocomplete = props.autocomplete.value as AutoFill;
+        else inp.removeAttribute('autocomplete');
+      });
+
+      // Effect 3: sync helper and error text
+      effect(() => {
         if (helperRef.value) {
           helperRef.value.textContent = props.helper.value;
           helperRef.value.hidden = !!props.error.value || !props.helper.value;
@@ -479,56 +646,131 @@ define(
         }
       });
 
-      const handleInput = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        valueSignal.value = target.value;
-        emit('input', { originalEvent: e, value: target.value });
-      };
+      // Effect 4: sync character counter
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Counter state has several threshold conditions
+      effect(() => {
+        if (!charCounterRef.value) return;
+        const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+        if (maxLen > 0) {
+          const len = valueSignal.value.length;
+          charCounterRef.value.textContent = `${len} / ${maxLen}`;
+          charCounterRef.value.hidden = false;
+          charCounterRef.value.removeAttribute('data-near-limit');
+          charCounterRef.value.removeAttribute('data-at-limit');
+          if (len >= maxLen) charCounterRef.value.setAttribute('data-at-limit', '');
+          else if (len >= maxLen * 0.9) charCounterRef.value.setAttribute('data-near-limit', '');
+        } else {
+          charCounterRef.value.hidden = true;
+        }
+      });
 
-      const handleChange = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        valueSignal.value = target.value;
-        emit('change', { originalEvent: e, value: target.value });
-      };
+      // Effect 5: manage has-value attribute for clearable button visibility
+      effect(() => {
+        if (valueSignal.value) host.setAttribute('has-value', '');
+        else host.removeAttribute('has-value');
+      });
 
-      if (inputRef.value) {
-        handle(inputRef.value, 'input', handleInput);
-        handle(inputRef.value, 'change', handleChange);
+      // Effect 6: propagate form context size/variant/disabled to host when not explicitly set
+      let ctxDisabledActive = false;
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
+      effect(() => {
+        const fCtx = tf.formCtx;
+        if (!fCtx) return;
+        const ctxDisabled = fCtx.disabled.value;
+        if (ctxDisabled && !ctxDisabledActive) {
+          host.setAttribute('disabled', '');
+          ctxDisabledActive = true;
+        } else if (!ctxDisabled && ctxDisabledActive) {
+          host.removeAttribute('disabled');
+          ctxDisabledActive = false;
+        }
+        if (!props.size.value && fCtx.size.value) host.setAttribute('size', fCtx.size.value);
+        if (!props.variant.value && fCtx.variant.value) host.setAttribute('variant', fCtx.variant.value);
+      });
+
+      aria(inp, {
+        describedby: () => (props.error.value ? errorId : helperId),
+        errormessage: () => (props.error.value ? errorId : null),
+        invalid: () => !!props.error.value,
+      });
+
+      // Clear button
+      if (clearBtnRef.value) {
+        clearBtnRef.value.addEventListener('click', (e: MouseEvent) => {
+          e.preventDefault();
+          valueSignal.value = '';
+          emit('input', { originalEvent: e, value: '' });
+          emit('change', { originalEvent: e, value: '' });
+          tf.triggerValidation('change');
+          inputRef.value?.focus();
+        });
       }
-
-      return () => stopEffects();
     });
 
     return {
       styles: [
         sizeVariantMixin({
-          lg: { '--_padding': 'var(--size-2-5) var(--size-3-5)', fontSize: 'var(--text-base)', gap: 'var(--size-2-5)' },
-          sm: { '--_padding': 'var(--size-1) var(--size-2)', fontSize: 'var(--text-xs)', gap: 'var(--size-1-5)' },
+          lg: {
+            '--_field-height': 'var(--size-12)',
+            '--_padding': 'var(--size-2-5) var(--size-3-5)',
+            fontSize: 'var(--text-base)',
+            gap: 'var(--size-2-5)',
+          },
+          sm: {
+            '--_field-height': 'var(--size-8)',
+            '--_padding': 'var(--size-1) var(--size-2)',
+            fontSize: 'var(--text-xs)',
+            gap: 'var(--size-1-5)',
+          },
         }),
-        roundedVariantMixin,
-        colorThemeMixin,
+        ...formFieldMixins,
         disabledLoadingMixin(),
+        forcedColorsFocusMixin('input'),
         componentStyles,
       ],
       template: html` <div class="input-wrapper" part="wrapper">
         <label
           class="label-outside"
           for="${inputId}"
-          id="${labelId}"
+          id="${labelOutsideId}"
           part="label"
           ref=${labelOutsideRef}
           hidden></label>
         <div class="field" part="field">
-          <label class="label-inset" for="${inputId}" id="${labelId}" part="label" ref=${labelInsetRef} hidden></label>
+          <label class="label-inset" for="${inputId}" id="${labelInsetId}" part="label" ref=${labelInsetRef} hidden></label>
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
               part="input"
               id="${inputId}"
-              aria-labelledby="${labelId}"
+              :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
               aria-describedby="${helperId}"
               ref=${inputRef} />
             <slot name="suffix"></slot>
+            <button
+              class="pwd-toggle-btn"
+              part="pwd-toggle"
+              type="button"
+              :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
+              :aria-pressed="${() => String(showPassword.value)}"
+              tabindex="-1"
+              @click="${togglePasswordVisibility}"
+            >
+              ${() =>
+                showPassword.value
+                  ? html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
+                  : html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`}
+            </button>
+            <button
+              class="clear-btn"
+              part="clear"
+              type="button"
+              aria-label="Clear"
+              tabindex="-1"
+              ref=${clearBtnRef}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
         </div>
         <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
@@ -536,14 +778,18 @@ define(
           class="helper-text"
           id="${errorId}"
           role="alert"
-          style="color: var(--color-error);"
           part="error"
           ref=${errorRef}
           hidden></div>
+        <div class="char-counter" part="char-counter" ref=${charCounterRef} hidden></div>
       </div>`,
     };
   },
-  { formAssociated: true },
+  { formAssociated: true, shadow: { delegatesFocus: true } },
 );
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-input': HTMLElement & InputProps & FormValidityMethods & AddEventListeners<BitInputEvents>;
+  }
+}

@@ -98,5 +98,4 @@ describe('cache', () => {
     c.set(key, 'complex');
     expect(c.get(key)).toBe('complex');
   });
-
 });

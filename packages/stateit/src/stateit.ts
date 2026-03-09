@@ -3,11 +3,11 @@
  * Reactive primitives:
  *   Signal<T>         -- synchronous, fine-grained reactive atom
  *   ReadonlySignal<T> -- read-only view of a signal
- *   ComputedSignal<T> -- derived read-only signal with dispose()
- *   Store<T>          -- object-state store with set/reset/watch/dispose
+ *   Store<T>          -- object-state store with set/freeze/reset/select
  *
- * Store is Signal-compatible: computed, effect, watch, batch, readonly, toValue
- * all accept Signal<T> and work on Store<T> natively.
+ * All primitives interoperate: computed, derived, effect, watch, batch,
+ * untrack, onCleanup, toValue, configureStateit work uniformly
+ * on Signal<T> and Store<T>.
  */
 
 /* ========== Internal reactive runtime ========== */
@@ -15,23 +15,94 @@
 /** A function that tears down a subscription or effect. */
 export type CleanupFn = () => void;
 // biome-ignore lint/suspicious/noConfusingVoidType: void needed for optional cleanup return
-export type EffectFn = () => CleanupFn | void;
+type EffectFn = () => CleanupFn | void;
 
-/** @internal Centralised reactive context -- avoids scattered module-level globals. */
+/** @internal Centralised reactive context. */
 const ctx = {
   batchDepth: 0,
-  currentDeps: null as Set<SignalImpl<unknown>> | null,
+  currentCleanups: null as CleanupFn[] | null,
+  currentDeps: null as Set<CleanupFn> | null,
   currentEffect: null as EffectFn | null,
   pendingEffects: new Set<EffectFn>(),
 };
 
 const _SIGNAL_BRAND = Symbol('stateit.signal');
 const _STORE_BRAND = Symbol('stateit.store');
-const _REMOVE_SUBSCRIBER = Symbol('stateit.removeSubscriber');
+const _UNINITIALIZED = Symbol('stateit.uninitialized');
+
+export type EqualityFn<T> = (a: T, b: T) => boolean;
+
+/** Options accepted by signal(), computed(), writable(), and store(). */
+export type ReactiveOptions<T> = { equals?: EqualityFn<T> };
+
+/** Shared interface for disposable reactive values (computed, writable). */
+export interface Disposable {
+  dispose(): void;
+}
+
+/* ========== configureStateit ========== */
+
+let _maxEffectIterations = 100;
+
+/**
+ * Configures global stateit behaviour.
+ * @example configureStateit({ maxEffectIterations: 200 });
+ */
+export const configureStateit = (opts: { maxEffectIterations?: number }): void => {
+  if (opts.maxEffectIterations !== undefined) _maxEffectIterations = opts.maxEffectIterations;
+};
+
+/**
+ * Resets the shared reactive context. Use in test setup/teardown to prevent state
+ * leaks between tests when a batch or effect throws without being fully cleaned up.
+ */
+export const _resetContextForTesting = (): void => {
+  ctx.batchDepth = 0;
+  ctx.currentDeps = null;
+  ctx.currentEffect = null;
+  ctx.currentCleanups = null;
+  ctx.pendingEffects.clear();
+};
+
+/* ========== ReactiveNode — shared subscriber-management base ========== */
+
+/** @internal Base reactive node: manages a subscriber set and batch-aware notification. */
+class ReactiveNode {
+  #subscribers = new Set<EffectFn>();
+
+  /** Register the current tracking context as a subscriber and store an unsubscribe
+   *  function in ctx.currentDeps for automatic cleanup when the effect re-runs. */
+  protected _track(): void {
+    if (ctx.currentDeps !== null && ctx.currentEffect !== null) {
+      const fn = ctx.currentEffect;
+      this.#subscribers.add(fn);
+      ctx.currentDeps.add(() => this.#subscribers.delete(fn));
+    }
+  }
+
+  /** Notify all subscribers. Respects batchDepth. */
+  protected _notify(): void {
+    if (ctx.batchDepth > 0) {
+      for (const fn of this.#subscribers) ctx.pendingEffects.add(fn);
+      return;
+    }
+    const errors: unknown[] = [];
+    for (const fn of [...this.#subscribers]) {
+      try {
+        fn();
+      } catch (e) {
+        errors.push(e);
+      }
+    }
+    if (errors.length) {
+      throw errors.length === 1 ? errors[0] : new AggregateError(errors, '[stateit] multiple subscriber errors');
+    }
+  }
+}
 
 /* ========== Signal ========== */
 
-/** Public read-only signal interface -- minimal surface: value and peek only. */
+/** Public read-only signal interface. */
 export interface ReadonlySignal<T> {
   readonly [_SIGNAL_BRAND]: true;
   readonly value: T;
@@ -43,51 +114,27 @@ export interface Signal<T> extends ReadonlySignal<T> {
   value: T;
 }
 
-/** @internal Implementation class -- not intended for direct subclassing by consumers. */
-class SignalImpl<T> implements Signal<T> {
+/** @internal */
+class SignalImpl<T> extends ReactiveNode implements Signal<T> {
   readonly [_SIGNAL_BRAND] = true as const;
-
-  #subscribers = new Set<EffectFn>();
   #value: T;
+  #equals: EqualityFn<T>;
 
-  constructor(initial: T) {
+  constructor(initial: T, options?: ReactiveOptions<T>) {
+    super();
     this.#value = initial;
+    this.#equals = options?.equals ?? Object.is;
   }
 
   get value(): T {
-    if (ctx.currentDeps) {
-      this.#subscribers.add(ctx.currentEffect!);
-      ctx.currentDeps.add(this as SignalImpl<unknown>);
-    }
+    this._track();
     return this.#value;
   }
 
   set value(next: T) {
-    this.#notify(next);
-  }
-
-  #notify(next: T): void {
-    if (Object.is(this.#value, next)) return;
+    if (this.#equals(this.#value, next)) return;
     this.#value = next;
-    if (ctx.batchDepth > 0) {
-      for (const fn of this.#subscribers) ctx.pendingEffects.add(fn);
-      return;
-    }
-    // Snapshot before iterating -- effect runners unsubscribe and re-subscribe during execution.
-    // Collect errors so all subscribers are notified even when one throws.
-    const errors: unknown[] = [];
-    for (const fn of [...this.#subscribers]) {
-      try {
-        fn();
-      } catch (e) {
-        errors.push(e);
-      }
-    }
-    _rethrow(errors, '[stateit] multiple subscriber errors');
-  }
-
-  [_REMOVE_SUBSCRIBER](fn: EffectFn): void {
-    this.#subscribers.delete(fn);
+    this._notify();
   }
 
   peek(): T {
@@ -96,85 +143,122 @@ class SignalImpl<T> implements Signal<T> {
 }
 
 /** Creates a reactive signal holding a single value. */
-export const signal = <T>(initial: T): Signal<T> => new SignalImpl(initial);
+export const signal = <T>(initial: T, options?: ReactiveOptions<T>): Signal<T> => new SignalImpl(initial, options);
 
-const _noop: CleanupFn = () => {};
+const _readonlyCache = new WeakMap<object, ReadonlySignal<unknown>>();
 
-/** @internal Rethrow collected subscriber errors -- 1 error rethrown as-is, multiple as AggregateError. */
-const _rethrow = (errors: unknown[], msg: string): void => {
-  if (errors.length === 1) throw errors[0];
-  if (errors.length > 1) throw new AggregateError(errors, msg);
+/**
+ * Returns a stable read-only view of a signal. Hides the setter at both type and runtime
+ * level. The wrapper is cached — repeated calls with the same signal return the same reference.
+ */
+export const readonly = <T>(sig: ReadonlySignal<T>): ReadonlySignal<T> => {
+  const cached = _readonlyCache.get(sig as object);
+  if (cached) return cached as ReadonlySignal<T>;
+  const wrapper: ReadonlySignal<T> = {
+    get [_SIGNAL_BRAND]() {
+      return true as const;
+    },
+    peek: () => sig.peek(),
+    get value() {
+      return sig.value;
+    },
+  };
+  _readonlyCache.set(sig as object, wrapper as ReadonlySignal<unknown>);
+  return wrapper;
 };
 
-/** Type guard -- identifies Signal instances without instanceof (works through Proxies and subclasses). */
+/** Type guard -- identifies Signal instances (works through composition and subclasses). */
 export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T> =>
-  typeof value === 'object' && value !== null && _SIGNAL_BRAND in value;
+  typeof value === 'object' && value !== null && _SIGNAL_BRAND in (value as object);
 
 /** Unwraps a plain value or Signal to its current value. Reads are tracked if called inside an effect. */
 export const toValue = <T>(v: T | ReadonlySignal<T>): T => (isSignal<T>(v) ? v.value : v);
 
-// biome-ignore lint/suspicious/noExplicitAny: required to bind internal fields through Proxy
-const _proxyGet = (target: ReadonlySignal<any>, prop: string | symbol) => {
-  const val = Reflect.get(target, prop, target);
-  return typeof val === 'function' ? val.bind(target) : val;
-};
+/* ========== effect / untrack / onCleanup ========== */
 
-/** Wraps a Signal in a Proxy that throws on writes to `value`. */
-export const readonly = <T>(s: ReadonlySignal<T>): ReadonlySignal<T> =>
-  new Proxy(s, {
-    get: _proxyGet,
-    set(_target, prop, _value, receiver) {
-      if (prop === 'value') throw new TypeError('[stateit] Cannot assign to value on a ReadonlySignal');
-      return Reflect.set(_target, prop, _value, receiver);
-    },
-  }) as ReadonlySignal<T>;
-
-/* ========== effect / untrack ========== */
-
-/** @internal Save ctx, set to (eff, deps), call fn, restore -- shared by effect and untrack. */
-const _withCtx = <T>(eff: EffectFn | null, deps: Set<SignalImpl<unknown>> | null, fn: () => T): T => {
+/** @internal Save ctx fields, swap to new values, call fn, restore. */
+const _withCtx = <T>(
+  eff: EffectFn | null,
+  deps: Set<CleanupFn> | null,
+  cleanups: CleanupFn[] | null,
+  fn: () => T,
+): T => {
   const pe = ctx.currentEffect;
   const pd = ctx.currentDeps;
+  const pc = ctx.currentCleanups;
   ctx.currentEffect = eff;
   ctx.currentDeps = deps;
+  ctx.currentCleanups = cleanups;
   try {
     return fn();
   } finally {
     ctx.currentEffect = pe;
     ctx.currentDeps = pd;
+    ctx.currentCleanups = pc;
   }
 };
 
+/** Options for the `effect()` primitive. */
+export type EffectOptions = {
+  /**
+   * Called when the effect function throws. When provided, the effect is automatically
+   * disposed after the first error — it won't re-run on subsequent dependency changes.
+   */
+  onError?: (error: unknown) => void;
+};
+
 /** Runs fn immediately and re-runs it whenever any Signal read inside it changes. Returns a dispose fn. */
-export const effect = (fn: EffectFn): CleanupFn => {
+export const effect = (fn: EffectFn, options?: EffectOptions): CleanupFn => {
   let cleanup: CleanupFn | undefined;
-  let deps = new Set<SignalImpl<unknown>>();
+  let deps = new Set<CleanupFn>();
   let running = false;
   let dirty = false;
+  let disposed = false;
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Effect runner handles dependency tracking, re-entrancy, dirty state, and error recovery
   const runner: EffectFn = () => {
-    // Re-entrancy guard: if fn() writes to a signal it reads, defer the re-run until the
-    // current execution finishes rather than recursing. The do-while loop then replays it.
-    if (running) {
-      dirty = true;
+    if (disposed || running) {
+      if (running) dirty = true;
       return;
     }
     running = true;
     try {
       let iterations = 0;
       do {
-        if (++iterations > 100) throw new Error('[stateit] effect: possible infinite reactive loop (> 100 iterations)');
+        if (++iterations > _maxEffectIterations)
+          throw new Error(`[stateit] effect: possible infinite reactive loop (> ${_maxEffectIterations} iterations)`);
         dirty = false;
-        // Clear cleanup before calling it -- prevents double-call when fn() throws.
-        const prev = cleanup;
+        cleanup?.();
         cleanup = undefined;
-        prev?.();
-        for (const sig of deps) sig[_REMOVE_SUBSCRIBER](runner);
+        for (const unsub of deps) unsub();
         deps = new Set();
-        _withCtx(runner, deps, () => {
-          const result = fn();
-          cleanup = typeof result === 'function' ? result : undefined;
-        });
+        const cleanups: CleanupFn[] = [];
+        let thrownError: unknown;
+        let threw = false;
+        try {
+          _withCtx(runner, deps, cleanups, () => {
+            const result = fn();
+            if (typeof result === 'function') cleanups.push(result);
+          });
+        } catch (e) {
+          if (options?.onError) {
+            threw = true;
+            thrownError = e;
+          } else throw e;
+        }
+        cleanup =
+          cleanups.length > 0
+            ? () => {
+                for (const c of cleanups) c();
+              }
+            : undefined;
+        if (threw) {
+          options!.onError!(thrownError);
+          disposed = true;
+          for (const unsub of deps) unsub();
+          deps = new Set();
+          break;
+        }
       } while (dirty);
     } finally {
       running = false;
@@ -184,154 +268,255 @@ export const effect = (fn: EffectFn): CleanupFn => {
   runner();
 
   return () => {
+    if (disposed) return;
+    disposed = true;
     cleanup?.();
     cleanup = undefined;
-    for (const sig of deps) sig[_REMOVE_SUBSCRIBER](runner);
+    for (const unsub of deps) unsub();
     deps = new Set();
   };
 };
 
-/** Runs fn without registering any reactive dependencies. Useful for reading signals inside an effect
- * without creating subscriptions. */
-export const untrack = <T>(fn: () => T): T => _withCtx(null, null, fn);
+/** Runs fn without registering any reactive dependencies. */
+export const untrack = <T>(fn: () => T): T => _withCtx(null, null, null, fn);
 
-/* ========== ComputedSignal / writable ========== */
+/**
+ * Registers a cleanup function within the currently running effect.
+ * Called before the effect re-runs and on final dispose.
+ * Allows nested helpers to register teardown without needing the effect's return value.
+ *
+ * @example
+ * effect(() => {
+ *   const id = setInterval(() => { ... }, 1000);
+ *   onCleanup(() => clearInterval(id));
+ * });
+ */
+export const onCleanup = (fn: CleanupFn): void => {
+  ctx.currentCleanups?.push(fn);
+};
 
-/** A computed (derived) Signal: read-only value + a `dispose()` to stop recomputation and free deps. */
-export class ComputedSignal<T> implements ReadonlySignal<T> {
-  readonly [_SIGNAL_BRAND] = true as const;
-  readonly dispose: CleanupFn;
+/* ========== computed / writable ========== */
 
-  readonly #sig: SignalImpl<T>;
+/** A derived read-only signal with an explicit dispose method. */
+export interface ComputedSignal<T> extends ReadonlySignal<T>, Disposable {
+  /** True when the computed value is stale (deps changed but not yet re-read) or disposed. */
+  readonly stale: boolean;
+}
 
-  constructor(compute: () => T) {
-    this.#sig = new SignalImpl<T>(null!);
-    this.dispose = effect(() => {
-      this.#sig.value = compute();
-    });
+/** @internal
+ * Lazy computed node. Seeded once at construction so .peek() is immediately valid
+ * (unless { lazy: true } is passed, in which case first compute defers to first read).
+ *  - On dep change: marks dirty, notifies downstream (no recompute yet).
+ *  - On .value read: recomputes if dirty, re-tracks fresh deps.
+ *  - After dispose: _track() is skipped to prevent leaking outer effects.
+ */
+class ComputedNode<T> extends ReactiveNode {
+  #compute: () => T;
+  #value: T | typeof _UNINITIALIZED = _UNINITIALIZED;
+  #dirty = true;
+  #disposed = false;
+  #equals: EqualityFn<T>;
+  #deps = new Set<CleanupFn>();
+
+  readonly #onDepChange: EffectFn = () => {
+    if (!this.#dirty) {
+      this.#dirty = true;
+      this._notify();
+    }
+  };
+
+  constructor(compute: () => T, options?: ReactiveOptions<T> & { lazy?: boolean }) {
+    super();
+    this.#compute = compute;
+    this.#equals = options?.equals ?? Object.is;
+    if (!options?.lazy) this.#recompute(); // seed: ensures peek() is valid immediately
+  }
+
+  #recompute(): void {
+    for (const unsub of this.#deps) unsub();
+    this.#deps = new Set();
+    const result = _withCtx(this.#onDepChange, this.#deps, null, this.#compute);
+    this.#dirty = false;
+    if (this.#value === _UNINITIALIZED || !this.#equals(this.#value as T, result)) {
+      this.#value = result;
+    }
   }
 
   get value(): T {
-    return this.#sig.value;
+    if (!this.#disposed) {
+      if (this.#dirty) this.#recompute();
+      this._track();
+    }
+    return this.#value as T;
   }
 
   peek(): T {
-    return this.#sig.peek();
+    if (this.#value === _UNINITIALIZED) this.#recompute();
+    return this.#value as T;
+  }
+
+  get stale(): boolean {
+    return this.#dirty || this.#disposed;
+  }
+
+  dispose(): void {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    for (const unsub of this.#deps) unsub();
+    this.#deps = new Set();
   }
 }
 
-/** Creates a derived read-only Signal whose value is recomputed whenever its dependencies change.
- * Call `.dispose()` when the computed is no longer needed to stop recomputation and free deps. */
-export const computed = <T>(compute: () => T): ComputedSignal<T> => new ComputedSignal(compute);
+/** Creates a derived read-only Signal whose value is recomputed lazily on `.value` read
+ * when dependencies have changed. Call `.dispose()` to stop tracking and free dependencies.
+ * Pass `{ lazy: true }` to defer the initial computation until the first `.value` read. */
+export const computed = <T>(compute: () => T, options?: ReactiveOptions<T> & { lazy?: boolean }): ComputedSignal<T> => {
+  const node = new ComputedNode(compute, options);
+  return {
+    get [_SIGNAL_BRAND]() {
+      return true as const;
+    },
+    dispose: () => node.dispose(),
+    peek: () => node.peek(),
+    get stale() {
+      return node.stale;
+    },
+    get value() {
+      return node.value;
+    },
+  };
+};
 
-/** A bi-directional computed Signal: reactive read, writes forwarded to a setter, `dispose()` to stop tracking. */
-export interface WritableSignal<T> extends Signal<T> {
-  dispose(): void;
-}
+/** A bidirectional computed Signal with an explicit dispose method. */
+export interface WritableSignal<T> extends Signal<T>, Disposable {}
+
+/** Creates a bidirectional computed Signal. Reads track the getter reactively;
+ * writes are forwarded to `set`. Call `.dispose()` to stop tracking and free dependencies. */
+export const writable = <T>(get: () => T, set: (value: T) => void, options?: ReactiveOptions<T>): WritableSignal<T> => {
+  const node = new ComputedNode(get, options);
+  return {
+    get [_SIGNAL_BRAND]() {
+      return true as const;
+    },
+    dispose: () => node.dispose(),
+    peek: () => node.peek(),
+    get value() {
+      return node.value;
+    },
+    set value(v: T) {
+      set(v);
+    },
+  };
+};
 
 /**
- * Creates a bi-directional computed Signal. Reads track the getter reactively;
- * writes are forwarded to `set`. Useful for form adapters and transformations that write back.
- * Call `.dispose()` to stop tracking the getter.
+ * Creates a derived ComputedSignal by combining multiple source signals through a projector
+ * function. Each source is passed as a positional argument to `fn`; the projector is
+ * re-evaluated whenever any source changes.
+ *
+ * @example
+ * const total = derived([price, quantity, discount], (p, q, d) => p * q * (1 - d));
  */
-export const writable = <T>(get: () => T, set: (value: T) => void): WritableSignal<T> => {
-  const s = new ComputedSignal<T>(get);
-  return new Proxy(s, {
-    get: _proxyGet,
-    set(_target, prop, newValue) {
-      if (prop === 'value') {
-        set(newValue as T);
-        return true;
-      }
-      return Reflect.set(_target, prop, newValue, _target);
-    },
-  }) as unknown as WritableSignal<T>;
-};
+export const derived = <const Srcs extends ReadonlyArray<ReadonlySignal<unknown>>, R>(
+  sources: Srcs,
+  fn: (...values: { [K in keyof Srcs]: Srcs[K] extends ReadonlySignal<infer V> ? V : never }) => R,
+  options?: ReactiveOptions<R>,
+): ComputedSignal<R> => computed(() => fn(...(sources.map((s) => s.value) as never)), options);
 
 /* ========== batch ========== */
 
 /** Runs fn and defers all Signal notifications until fn returns, then flushes once. */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Batch must handle errors, nested batches, and subscriber notification flushing correctly
 export const batch = <T>(fn: () => T): T => {
   ctx.batchDepth++;
+  let result!: T;
+  let fnError: unknown;
+  let fnThrew = false;
+
   try {
-    return fn();
-  } finally {
-    if (--ctx.batchDepth === 0) {
-      const toFlush = [...ctx.pendingEffects];
-      ctx.pendingEffects.clear();
-      const errors: unknown[] = [];
-      for (const f of toFlush) {
-        try {
-          f();
-        } catch (e) {
-          errors.push(e);
-        }
+    result = fn();
+  } catch (e) {
+    fnError = e;
+    fnThrew = true;
+  }
+
+  if (--ctx.batchDepth === 0) {
+    const toFlush = [...ctx.pendingEffects];
+    ctx.pendingEffects.clear();
+    const errors: unknown[] = [];
+    for (const f of toFlush) {
+      try {
+        f();
+      } catch (e) {
+        errors.push(e);
       }
-      _rethrow(errors, '[stateit] multiple batch flush errors');
+    }
+    if (errors.length) {
+      const all = fnThrew ? [fnError, ...errors] : errors;
+      throw all.length === 1 ? all[0] : new AggregateError(all, '[stateit] batch errors');
     }
   }
+
+  if (fnThrew) throw fnError;
+  return result;
 };
 
 /* ========== watch ========== */
 
-export type EqualityFn<T> = (a: T, b: T) => boolean;
-export type WatchOptions = { immediate?: boolean; once?: boolean };
-export type WatchSelectorOptions<U> = WatchOptions & { equals?: EqualityFn<U> };
+export type WatchOptions<T, U = T> = {
+  /** Derive the watched value from a slice of the signal. Only fires when the slice changes. */
+  select?: (state: T) => U;
+  /** Fire the callback immediately with the current value on subscribe. */
+  immediate?: boolean;
+  /** Auto-unsubscribe after the first callback invocation. */
+  once?: boolean;
+  /** Custom equality; suppresses the callback when old and new values are equal. Default: Object.is */
+  equals?: EqualityFn<U>;
+};
 
-function _watch<T, U>(
-  sig: ReadonlySignal<T>,
-  select: (s: T) => U,
-  cb: (next: U, prev: U) => void,
-  opts?: WatchSelectorOptions<U>,
-): CleanupFn {
-  const eq: EqualityFn<U> = opts?.equals ?? Object.is;
-  let prev = select(sig.peek());
-  if (opts?.immediate) cb(prev, prev);
-  let dispose: CleanupFn = _noop;
-  dispose = effect(() => {
-    const next = select(sig.value);
+/**
+ * Watches a Signal and calls cb when its value changes. Returns a dispose function.
+ * Does not fire on initial subscription unless `{ immediate: true }` is passed.
+ *
+ * @example Plain signal
+ * const stop = watch(count, (next, prev) => console.log(prev, '->', next));
+ *
+ * @example With selector (only fires when the selected slice changes)
+ * const stop = watch(userStore, (next, prev) => ..., { select: s => s.name });
+ */
+export const watch = <T, U = T>(
+  source: ReadonlySignal<T>,
+  cb: (value: U, prev: U) => void,
+  options?: WatchOptions<T, U>,
+): CleanupFn => {
+  const select = (options?.select ?? ((v: T) => v)) as (s: T) => U;
+  const eq: EqualityFn<U> = options?.equals ?? Object.is;
+  let prev = select(source.peek());
+  if (options?.immediate) cb(prev, prev);
+  let stopped = false;
+  const dispose = effect(() => {
+    const next = select(source.value);
     if (!eq(prev, next)) {
       const old = prev;
       prev = next;
       cb(next, old);
-      if (opts?.once) dispose();
+      if (options?.once && !stopped) {
+        stopped = true;
+        dispose();
+      }
     }
   });
   return dispose;
-}
-
-/**
- * Watches a Signal and calls cb when its value changes. Returns a dispose function.
- *
- * @example Plain signal
- * watch(count, (next, prev) => console.log(prev, '->', next));
- *
- * @example With selector (only fires when the selected value changes)
- * watch(userStore, s => s.name, (next, prev) => ...);
- */
-export function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
-export function watch<T, U>(
-  source: ReadonlySignal<T>,
-  selector: (state: T) => U,
-  cb: (value: U, prev: U) => void,
-  options?: WatchSelectorOptions<U>,
-): CleanupFn;
-export function watch<T>(
-  source: ReadonlySignal<T>,
-  cbOrSelector: ((value: T, prev: T) => void) | ((state: T) => unknown),
-  cbOrOptions?: ((value: unknown, prev: unknown) => void) | WatchOptions,
-  options?: WatchSelectorOptions<unknown>,
-): CleanupFn {
-  if (typeof cbOrOptions === 'function') {
-    return _watch(source as ReadonlySignal<T>, cbOrSelector as (s: T) => unknown, cbOrOptions, options);
-  }
-  return _watch(source as ReadonlySignal<T>, (v: T) => v, cbOrSelector as (value: T, prev: T) => void, cbOrOptions);
-}
+};
 
 /* ========== Store ========== */
 
-/** Shallow structural equality -- compares own enumerable keys by reference. */
-export function shallowEqual(a: unknown, b: unknown): boolean {
+/**
+ * Shallow structural equality — compares own enumerable keys by reference.
+ * This is the default equality function used by `store()`. Export it to avoid
+ * reimplementation when composing custom `StoreOptions.equals`.
+ */
+export const shallowEqual: EqualityFn<unknown> = (a, b) => {
   if (a === b) return true;
   if (a == null || b == null) return a === b;
   if (typeof a !== 'object' || typeof b !== 'object') return false;
@@ -345,121 +530,70 @@ export function shallowEqual(a: unknown, b: unknown): boolean {
   }
 
   return true;
-}
+};
 
 export type StoreOptions<T extends object> = {
   /** Custom equality for top-level change detection. Default: shallowEqual */
   equals?: EqualityFn<T>;
 };
 
-/**
- * Store<T> is Signal-compatible: computed, effect, watch, batch, readonly, and toValue
- * all accept Signal<T> and work natively with Store<T>.
- *
- * Extra helpers: set(patch|updater), reset(), watch(), dispose().
- */
-export class Store<T extends object> implements Signal<T> {
-  readonly [_SIGNAL_BRAND] = true as const;
-  readonly [_STORE_BRAND] = true;
+/** Reactive store for object state. Implements Signal<T> so all signal primitives work natively. */
+export interface Store<T extends object> extends Signal<T> {
+  readonly frozen: boolean;
+  /** Shallow-merge a partial object into the current state. */
+  set(patch: Partial<T>): void;
+  /** Derive the next state from the current state via an updater function.
+   *  Receives a shallow copy of the current state — mutations in the updater are safe. */
+  update(fn: (s: T) => T): void;
+  /** Reset to the original initial state. */
+  reset(): void;
+  /** Create a lazily recomputed derived signal from a slice of this store's state. */
+  select<U>(selector: (s: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U>;
+  /** Freeze the store. Further writes via set/update/reset are silently ignored. */
+  freeze(): void;
+}
 
-  readonly #sig: SignalImpl<T>;
+/** @internal */
+class StoreImpl<T extends object> extends SignalImpl<T> implements Store<T> {
+  readonly [_STORE_BRAND] = true as const;
+
   readonly #initial: T;
-  readonly #equals: EqualityFn<T>;
-  readonly #watchCleanups = new Set<CleanupFn>();
-  #disposed = false;
+  #frozen = false;
 
   constructor(initial: T, options?: StoreOptions<T>) {
-    this.#sig = new SignalImpl(initial);
+    super(initial, { equals: options?.equals ?? (shallowEqual as EqualityFn<T>) });
     this.#initial = initial;
-    this.#equals = options?.equals ?? (shallowEqual as EqualityFn<T>);
   }
 
-  #write(next: T): void {
-    const prev = this.#sig.peek();
-    if (Object.is(prev, next) || this.#equals(prev, next)) return;
-    this.#sig.value = next;
+  get frozen(): boolean {
+    return this.#frozen;
   }
 
-  get value(): T {
-    return this.#sig.value;
+  set(patch: Partial<T>): void {
+    if (!this.#frozen) this.value = { ...this.peek(), ...patch };
   }
 
-  set value(next: T) {
-    if (this.#disposed) return;
-    this.#write(next);
+  update(fn: (s: T) => T): void {
+    if (!this.#frozen) this.value = fn({ ...this.peek() });
   }
 
-  get disposed(): boolean {
-    return this.#disposed;
-  }
-
-  peek(): T {
-    return this.#sig.peek();
-  }
-
-  /**
-   * Shallow-merge a partial object, or replace the full state via an updater function.
-   * - `set({ count: 1 })` -- shallow-merges with the current state
-   * - `set(s => ({ ...s, count: s.count + 1 }))` -- full replacement; return the complete next state
-   */
-  set(patch: Partial<T>): void;
-  set(updater: (s: T) => T): void;
-  set(patchOrUpdater: Partial<T> | ((s: T) => T)): void {
-    if (this.#disposed) return;
-    const current = this.#sig.peek();
-    this.#write(
-      typeof patchOrUpdater === 'function' ? patchOrUpdater(current) : ({ ...current, ...patchOrUpdater } as T),
-    );
-  }
-
-  /** Reset to the original initial state. */
   reset(): void {
-    if (this.#disposed) return;
-    this.#write(this.#initial);
+    if (!this.#frozen) this.value = this.#initial;
   }
 
-  /** Watch the full state. */
-  watch(cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
-  watch<U>(selector: (state: T) => U, cb: (value: U, prev: U) => void, options?: WatchSelectorOptions<U>): CleanupFn;
-  watch<U>(
-    cbOrSelector: ((value: T, prev: T) => void) | ((state: T) => U),
-    cbOrOptions?: ((value: U, prev: U) => void) | WatchOptions,
-    options?: WatchSelectorOptions<U>,
-  ): CleanupFn {
-    if (this.#disposed) return _noop;
-    const cleanup =
-      typeof cbOrOptions === 'function'
-        ? _watch(this, cbOrSelector as (s: T) => U, cbOrOptions, options)
-        : _watch(
-            this,
-            (v: T) => v as unknown as U,
-            cbOrSelector as unknown as (value: U, prev: U) => void,
-            cbOrOptions,
-          );
-    this.#watchCleanups.add(cleanup);
-    return () => {
-      cleanup();
-      this.#watchCleanups.delete(cleanup);
-    };
+  select<U>(selector: (s: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
+    return computed(() => selector(this.value), options);
   }
 
-  /**
-   * Clear all `store.watch` subscriptions and freeze the store. Further writes are silently ignored.
-   *
-   * Note: does not tear down external `effect`/`watch` calls that read `store.value` directly.
-   * Those must be disposed where they are created.
-   */
-  dispose(): void {
-    if (this.#disposed) return;
-    this.#disposed = true;
-    for (const cleanup of this.#watchCleanups) cleanup();
-    this.#watchCleanups.clear();
+  freeze(): void {
+    this.#frozen = true;
   }
 }
 
-/** Creates a reactive store for object state. */
-export const store = <T extends object>(initial: T, options?: StoreOptions<T>): Store<T> => new Store(initial, options);
+/** Creates a reactive store for the object state. */
+export const store = <T extends object>(initial: T, options?: StoreOptions<T>): Store<T> =>
+  new StoreImpl(initial, options);
 
 /** Type guard -- identifies Store instances. */
 export const isStore = <T extends object = Record<string, unknown>>(value: unknown): value is Store<T> =>
-  typeof value === 'object' && value !== null && _STORE_BRAND in (value as object);
+  typeof value === 'object' && value !== null && _STORE_BRAND in value;

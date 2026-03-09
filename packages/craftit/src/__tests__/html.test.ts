@@ -329,7 +329,12 @@ describe('Template: HTML System', () => {
         const items = signal<number[]>([]);
         return html`
           <div class="container">
-            ${html.each(items, (_, i) => i, (item) => html`<li>${item}</li>`, () => html`<div class="empty">Empty</div>`)}
+            ${html.each(
+              items,
+              (_, i) => i,
+              (item) => html`<li>${item}</li>`,
+              () => html`<div class="empty">Empty</div>`,
+            )}
           </div>
         `;
       });
@@ -363,7 +368,11 @@ describe('Template: HTML System', () => {
         const items = signal([1, 2, 3]);
         return html`
           <ul>
-            ${html.each(items, (item) => item, (item) => html`<li>${item}</li>`)}
+            ${html.each(
+              items,
+              (item) => item,
+              (item) => html`<li>${item}</li>`,
+            )}
           </ul>
         `;
       });
@@ -394,7 +403,12 @@ describe('Template: HTML System', () => {
         const items = signal<{ id: number; name: string }[]>([]);
         return html`
           <div>
-            ${html.each(items, (item) => item.id, (item) => html`<div class="item">${item.name}</div>`, () => html`<div class="empty">No items</div>`)}
+            ${html.each(
+              items,
+              (item) => item.id,
+              (item) => html`<div class="item">${item.name}</div>`,
+              () => html`<div class="empty">No items</div>`,
+            )}
           </div>
         `;
       });

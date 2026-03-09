@@ -1,5 +1,10 @@
-export * from './accordion-item/accordion-item';
-export * from './accordion/accordion';
-export * from './tab-item/tab-item';
-export * from './tab-panel/tab-panel';
-export * from './tabs/tabs';
+export type { AccordionContext, AccordionProps } from './accordion/accordion';
+export { ACCORDION_CTX, TAG as ACCORDION_TAG } from './accordion/accordion';
+export type { AccordionItemProps } from './accordion-item/accordion-item';
+export { TAG as ACCORDION_ITEM_TAG } from './accordion-item/accordion-item';
+export type { TabItemProps } from './tab-item/tab-item';
+export { TAG as TAB_ITEM_TAG } from './tab-item/tab-item';
+export type { TabPanelProps } from './tab-panel/tab-panel';
+export { TAG as TAB_PANEL_TAG } from './tab-panel/tab-panel';
+export type { TabsContext, TabsProps } from './tabs/tabs';
+export { TABS_CTX, TAG as TABS_TAG } from './tabs/tabs';

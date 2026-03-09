@@ -284,10 +284,11 @@ await waitFor(() => window.myGlobal !== undefined, {
 import { retry, attempt } from '@vielzeug/toolkit';
 
 async function fetchWithRetry(url: string) {
-  return retry(
-    () => attempt(() => fetch(url).then(r => r.json()), { timeout: 5000 }),
-    { times: 3, delay: 1000, backoff: 2 },
-  );
+  return retry(() => attempt(() => fetch(url).then((r) => r.json()), { timeout: 5000 }), {
+    times: 3,
+    delay: 1000,
+    backoff: 2,
+  });
 }
 ```
 

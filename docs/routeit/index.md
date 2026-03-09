@@ -1,6 +1,6 @@
 ---
 title: Routeit — Client-side router for TypeScript
-description: Lightweight hash/history router with middleware, async handlers, View Transitions API, and reactive subscriptions. Zero dependencies.
+description: Lightweight, type-safe client-side router with history and hash modes, typed path params, middleware, named routes, and a URL builder. Zero dependencies.
 ---
 
 <PackageBadges package="routeit" />
@@ -9,7 +9,7 @@ description: Lightweight hash/history router with middleware, async handlers, Vi
 
 # Routeit
 
-**Routeit** is a lightweight client-side router with middleware, async handlers, View Transitions API support, and reactive subscriptions.
+**Routeit** is a lightweight, framework-agnostic client-side router with typed path params, middleware, named routes, route groups, and a URL builder. Works in any browser environment.
 
 ## Installation
 
@@ -33,56 +33,42 @@ yarn add @vielzeug/routeit
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
-import type { Middleware } from '@vielzeug/routeit';
 
-// Create the router first so middleware can reference it
-const router = createRouter({ viewTransitions: true });
+const router = createRouter();
 
-// Global auth guard — applies to admin section via group()
-const authGuard: Middleware = async (ctx, next) => {
-  if (!isAuthenticated()) {
-    router.navigate('/login');
-    return;
-  }
-  await next();
-};
-
-router.routes([
-  { path: '/',          handler: () => renderHome() },
-  { path: '/users',     handler: () => renderUsers() },
-  { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
-  { path: '*',          handler: () => render404() },
-]);
-
-// Protected routes share the auth guard via group()
-router.group('/admin', authGuard, (r) => {
-  r.on('/dashboard', () => renderDashboard());
-});
-
-router.start();
+router
+  .on('/', () => renderHome())
+  .on('/users', () => renderUsers())
+  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'userDetail' })
+  .start();
 
 // Navigate programmatically
-router.navigate('/users/42');
-
-// Subscribe to route changes — listener receives the new state directly
-router.subscribe((state) => {
-  console.log('Current path:', state.pathname);
-});
+await router.navigate('/users/42');
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
 ```
 
 ## Features
 
-- **Hash & history modes** — `createRouter({ mode: 'history' | 'hash' })`
-- **Dynamic params** — `/users/:id` with params accessible in handler context
-- **Middleware** — `async (ctx, next) => void` for auth guards, logging, etc.
-- **View Transitions** — built-in `viewTransitions` option + per-`navigate()` override
-- **Reactive** — `subscribe(listener)` returns an unsubscribe function
-- **Zero dependencies** — <PackageInfo package="routeit" type="size" /> gzipped
+- **History and hash modes** — `history` (default) or `hash`
+- **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
+- **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
+- **Middleware** — global (`createRouter`/`use()`), per-group, and per-route; `ctx.locals` for passing data down the chain
+- **Route groups** — `group(prefix, definer, { middleware? })` for shared prefixes and middleware
+- **Named routes** — navigate and build URLs by name, never hard-code paths
+- **URL builder** — `url(nameOrPattern, params?, query?)` with base-path awareness
+- **Async navigation** — `navigate()` returns a `Promise`; errors are rejections
+- **Same-URL deduplication** — skips redundant history pushes; `force: true` bypasses it
+- **Subscriptions** — `subscribe((state) => ...)` returns an unsubscribe function
+- **Resolve without navigating** — `resolve(pathname)` for prefetching and data loading
+- **Not-found & error hooks** — `onNotFound` and `onError` in router options
+- **View Transition API** — opt-in globally or per-navigation
+- **Disposable** — `[Symbol.dispose]()` for `using` declarations
+- **Lightweight** — <PackageInfo package="routeit" type="size" /> gzipped
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Route definition, middleware, navigation, and testing |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world routing patterns and framework integrations |
+|                           |                                                       |
+| ------------------------- | ----------------------------------------------------- |
+| [Usage Guide](./usage.md) | Routes, middleware, groups, navigation, and patterns  |
+| [API Reference](./api.md) | Complete type signatures and method documentation     |
+| [Examples](./examples.md) | Real-world routing patterns and framework integration |

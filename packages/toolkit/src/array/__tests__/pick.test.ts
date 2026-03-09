@@ -75,5 +75,4 @@ describe('pick', () => {
     // @ts-expect-error
     expect(() => pick({}, (x) => x)).toThrow(TypeError);
   });
-
 });

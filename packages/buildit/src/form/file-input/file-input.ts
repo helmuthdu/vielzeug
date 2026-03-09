@@ -1,26 +1,31 @@
 import {
+  aria,
   computed,
   createId,
   css,
   define,
   defineEmits,
+  defineField,
   defineProps,
   effect,
-  field,
   handle,
   html,
-  onFormReset,
+  onCleanup,
   onMount,
   ref,
   signal,
 } from '@vielzeug/craftit';
-import {
-  colorThemeMixin,
-  disabledLoadingMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { createDropZone } from '@vielzeug/dragit';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitFileInputEvents,
+  ComponentSize,
+  FormValidityMethods,
+  RoundedSize,
+  ThemeColor,
+  VisualVariant,
+} from '../../types';
 
 // ============================================
 // Helpers
@@ -31,7 +36,7 @@ function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB'] as const;
   const k = 1024;
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
-  return `${parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
+  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
 }
 
 function matchesAccept(file: File, accept: string): boolean {
@@ -432,7 +437,7 @@ export type FileInputProps = {
  * <bit-file-input variant="bordered" color="primary" />
  * ```
  */
-define(
+export const TAG = define(
   'bit-file-input',
   ({ host }) => {
     const emit = defineEmits<{
@@ -440,12 +445,12 @@ define(
       remove: { file: File; files: File[] };
     }>();
 
-    const props = defineProps({
+    const props = defineProps<FileInputProps>({
       accept: { default: '' },
-      color: { default: undefined as ThemeColor | undefined, reflect: true },
-      disabled: { default: false, reflect: true },
-      error: { default: '' },
-      fullwidth: { default: false, reflect: true },
+      color: { default: undefined },
+      disabled: { default: false },
+      error: { default: '', omit: true },
+      fullwidth: { default: false },
       helper: { default: '' },
       label: { default: '' },
       'max-files': { default: 0, type: Number },
@@ -453,9 +458,9 @@ define(
       multiple: { default: false },
       name: { default: '' },
       required: { default: false },
-      rounded: { default: undefined as Exclude<RoundedSize, 'full'> | undefined, reflect: true },
-      size: { default: undefined as ComponentSize | undefined, reflect: true },
-      variant: { default: undefined as Exclude<VisualVariant, 'glass' | 'text' | 'frost'> | undefined, reflect: true },
+      rounded: { default: undefined },
+      size: { default: undefined },
+      variant: { default: undefined },
     });
 
     // ============================================
@@ -469,26 +474,29 @@ define(
     // Form Integration
     // ============================================
 
-    field({
-      disabled: computed(() => Boolean(props.disabled.value)),
-      value: files,
-      toFormValue: (f: File[]) => {
-        if (f.length === 0) return null;
-        const name = props.name.value || 'file';
-        const fd = new FormData();
-        for (const file of f) fd.append(name, file);
-        return fd;
+    defineField(
+      {
+        disabled: computed(() => Boolean(props.disabled.value)),
+        toFormValue: (fi: File[]) => {
+          if (fi.length === 0) return null;
+          const name = props.name.value || 'file';
+          const fd = new FormData();
+          for (const file of fi) fd.append(name, file);
+          return fd;
+        },
+        value: files,
       },
-    });
-
-    onFormReset(() => {
-      files.value = [];
-    });
+      {
+        onReset: () => {
+          files.value = [];
+        },
+      },
+    );
 
     // Sync boolean host attributes for CSS selectors
     effect(() => {
       const errVal = props.error.value;
-      // Set attr to actual error string to avoid changing the attribute value
+      // Set attr to the actual error string to avoid changing the attribute value
       // when it was already set externally. This prevents the feedback cycle
       // (setAttribute('', '') would change the attr value → re-trigger prop update → loop).
       if (errVal) {
@@ -527,6 +535,7 @@ define(
     // File Management
     // ============================================
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: File validation requires checking multiple constraints (accept, size, count limits)
     function addFiles(newFiles: File[], originalEvent?: Event): void {
       if (props.disabled.value) return;
 
@@ -576,7 +585,8 @@ define(
 
     onMount(() => {
       // ── Props → DOM sync effect ─────────────────
-      const stopPropEffects = effect(() => {
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form component requires synchronizing many props to DOM elements reactively
+      effect(() => {
         const inp = inputRef.value;
         if (!inp) return;
 
@@ -586,11 +596,10 @@ define(
         inp.disabled = props.disabled.value;
         if (props.name.value) inp.name = props.name.value;
 
-        // Dropzone tabindex / aria
+        // Dropzone tabindex
         const dz = dropzoneRef.value;
         if (dz) {
           dz.tabIndex = props.disabled.value ? -1 : 0;
-          dz.setAttribute('aria-disabled', String(props.disabled.value));
         }
 
         // Label
@@ -610,7 +619,8 @@ define(
             parts.push(types);
           }
           if (props['max-size'].value > 0) parts.push(`max ${formatBytes(props['max-size'].value)}`);
-          if (props['max-files'].value > 0) parts.push(`up to ${props['max-files'].value} file${props['max-files'].value !== 1 ? 's' : ''}`);
+          if (props['max-files'].value > 0)
+            parts.push(`up to ${props['max-files'].value} file${props['max-files'].value !== 1 ? 's' : ''}`);
           hintRef.value.textContent = parts.join(' · ');
           hintRef.value.hidden = parts.length === 0;
         }
@@ -627,7 +637,7 @@ define(
       });
 
       // ── File list render effect ─────────────────
-      const stopFileEffect = effect(() => {
+      effect(() => {
         const list = fileListRef.value;
         if (!list) return;
 
@@ -675,6 +685,7 @@ define(
       // ── Event bindings ──────────────────────────
       const inp = inputRef.value!;
       const dz = dropzoneRef.value!;
+      aria(dz, { disabled: () => String(props.disabled.value) });
       const list = fileListRef.value!;
 
       // Native input → add files
@@ -697,36 +708,16 @@ define(
         }
       });
 
-      let dragCounter = 0;
-
-      handle(dz, 'dragenter', (e: DragEvent) => {
-        e.preventDefault();
-        dragCounter++;
-        if (!props.disabled.value) isDragging.value = true;
+      const dropZone = createDropZone({
+        accept: props.accept.value ? props.accept.value.split(',').map((s) => s.trim()) : [],
+        disabled: () => props.disabled.value,
+        element: dz,
+        onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
+        onHoverChange: (hovered) => {
+          isDragging.value = hovered;
+        },
       });
-
-      handle(dz, 'dragover', (e: DragEvent) => {
-        e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-        if (!props.disabled.value) isDragging.value = true;
-      });
-
-      handle(dz, 'dragleave', () => {
-        dragCounter--;
-        if (dragCounter <= 0) {
-          dragCounter = 0;
-          isDragging.value = false;
-        }
-      });
-
-      handle(dz, 'drop', (e: DragEvent) => {
-        e.preventDefault();
-        dragCounter = 0;
-        isDragging.value = false;
-        if (props.disabled.value) return;
-        const dropped = e.dataTransfer?.files;
-        if (dropped?.length) addFiles(Array.from(dropped), e);
-      });
+      onCleanup(() => dropZone.destroy());
 
       // File list: delegated remove click
       handle(list, 'click', (e: MouseEvent) => {
@@ -735,16 +726,9 @@ define(
         const item = btn.closest<HTMLElement>('.file-item');
         if (!item) return;
         const { fileName, fileSize } = item.dataset;
-        const file = files.value.find(
-          (f) => f.name === fileName && String(f.size) === fileSize,
-        );
+        const file = files.value.find((f) => f.name === fileName && String(f.size) === fileSize);
         if (file) removeFile(file);
       });
-
-      return () => {
-        stopPropEffects();
-        stopFileEffect();
-      };
     });
 
     // ============================================
@@ -753,13 +737,13 @@ define(
 
     return {
       styles: [
+        ...formFieldMixins,
         sizeVariantMixin({
-          sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
           lg: { '--_min-height': 'var(--size-40)', fontSize: 'var(--text-base)' },
+          sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
         }),
-        roundedVariantMixin,
-        colorThemeMixin,
         disabledLoadingMixin(),
+        forcedColorsFocusMixin('.dropzone'),
         componentStyles,
       ],
       template: html`
@@ -780,7 +764,7 @@ define(
               part="input"
               id="${fileInputId}"
               hidden
-              aria-hidden="true"
+              inert
               tabindex="-1" />
             <div class="dropzone-content">
               <span class="dropzone-icon" aria-hidden="true">
@@ -822,7 +806,11 @@ define(
       `,
     };
   },
-  { formAssociated: true },
+  { formAssociated: true, shadow: { delegatesFocus: true } },
 );
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-file-input': HTMLElement & FileInputProps & FormValidityMethods & AddEventListeners<BitFileInputEvents>;
+  }
+}

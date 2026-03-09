@@ -1,6 +1,6 @@
 ---
 title: I18nit — Internationalization for TypeScript
-description: Zero-dependency i18n library with nested keys, interpolation, async locale loading, and reactive subscription support.
+description: Zero-dependency i18n library with type-safe keys, nested messages, variable interpolation, pluralisation, lazy loaders, formatting helpers, and reactive subscriptions.
 ---
 
 <PackageBadges package="i18nit" />
@@ -9,7 +9,7 @@ description: Zero-dependency i18n library with nested keys, interpolation, async
 
 # I18nit
 
-**I18nit** is a zero-dependency internationalization library with nested keys, variable interpolation, async locale loading, and reactive subscriptions.
+**i18nit** is a minimal, zero-dependency internationalisation library for TypeScript. Define messages as typed objects, access them with dot-notation keys, interpolate variables, pluralise, load locale bundles on demand, and subscribe to locale changes — all with first-class TypeScript inference throughout.
 
 ## Installation
 
@@ -36,52 +36,48 @@ import { createI18n } from '@vielzeug/i18nit';
 
 const i18n = createI18n({
   locale: 'en',
+  fallback: 'en',
   messages: {
     en: {
       greeting: 'Hello, {name}!',
-      items: { one: 'You have one item', other: 'You have {count} items' },
+      inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
       nav: { home: 'Home', about: 'About' },
     },
-    es: {
-      greeting: '¡Hola, {name}!',
-      nav: { home: 'Inicio', about: 'Acerca de' },
+    de: {
+      greeting: 'Hallo, {name}!',
+      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
     },
   },
 });
 
-// Translate
 i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
 i18n.t('nav.home');                     // "Home"
-i18n.t('items', { count: 1 });          // "You have one item"
-i18n.t('items', { count: 5 });          // "You have 5 items"
+i18n.t('inbox', { count: 0 });          // "No messages"
+i18n.t('inbox', { count: 3 });          // "3 messages"
 
-// Switch locale
-i18n.locale = 'es';
-i18n.t('greeting', { name: 'Alice' }); // "¡Hola, Alice!"
-
-// Reactive subscription
-const unsubscribe = i18n.subscribe(() => {
-  renderUI(); // re-render on locale change
-});
+i18n.locale = 'de';
+i18n.t('greeting', { name: 'Alice' }); // "Hallo, Alice!"
+i18n.t('nav.home');                     // "Home" (fallback to 'en')
 ```
 
 ## Features
 
-- **Nested keys** — `'nav.home'` dot-notation access into nested message objects
-- **Interpolation** — `{name}`, `{user.name}`, `{items[0]}`, `{items|and}`, `{items| / }`
-- **Pluralisation** — `Intl.PluralRules`-based `zero/one/two/few/many/other` forms
-- **Async loading** — `load()` and `addLoader()` for lazy locale bundles
-- **Fallback chain** — walks `locale → lang-root → fallback(s)` for missing keys
-- **Scoped** — `scoped(locale)` translates in another locale without changing the active one
-- **Formatting** — `number()` and `date()` backed by `Intl`
-- **Subscriptions** — reactive updates when locale changes
-- **Key checking** — `has(key, locale?)` / `hasLocale(locale)` to test presence
-- **Zero dependencies** — <PackageInfo package="i18nit" type="size" /> gzipped
+- **Type-safe keys** — `TranslationKey<T>` resolves all valid dot-notation paths from your message object
+- **Variable interpolation** — `{var}`, `{obj.prop}`, `{arr[0]}`, `{arr|and}`, `{arr| - }` and more
+- **Pluralisation** — `Intl.PluralRules`-based with `zero/one/two/few/many/other` plural forms
+- **Nested messages** — deeply nested message trees accessed via dot-notation keys
+- **Fallback chain** — automatic `locale → lang-root → fallback(s)` resolution for missing keys
+- **Message management** — `add()` deep-merges, `replace()` swaps the entire catalog
+- **Async loading** — `registerLoader()` + `setLocale()` for on-demand locale bundles
+- **Scope & withLocale** — `scope(ns)` for key-prefix binding, `withLocale(locale)` for locale-pinned translations
+- **Formatting helpers** — `number()`, `date()`, `list()`, `relative()`, `currency()` all backed by `Intl`
+- **Reactive subscriptions** — `subscribe(fn, immediate?)` + `dispose()` for locale-change notifications
+- **Lightweight** — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Locale setup, interpolation, pluralisation, async loading, and subscriptions |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world i18n patterns and framework integrations |
+|                           |                                                   |
+| ------------------------- | ------------------------------------------------- |
+| [Usage Guide](./usage.md) | Messages, interpolation, pluralisation, and patterns |
+| [API Reference](./api.md) | Complete type signatures and API documentation    |
+| [Examples](./examples.md) | Real-world i18n recipes                           |

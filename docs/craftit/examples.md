@@ -103,13 +103,17 @@ define('todo-list', () => {
         <button @click=${addTodo}>Add</button>
       </div>
       <ul class="todo-list">
-        ${html.each(todos, (todo) => todo.id, (todo) => html`
+        ${html.each(
+          todos,
+          (todo) => todo.id,
+          (todo) => html`
             <li class=${() => html.classes({ done: todo.done })}>
               <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
               <span>${todo.text}</span>
               <button @click=${() => removeTodo(todo.id)}>×</button>
             </li>
-          `)}
+          `,
+        )}
       </ul>
     </div>
   `;
@@ -125,41 +129,44 @@ Basic custom input with form integration using ElementInternals.
 ```ts
 import { define, signal, html, css, field } from '@vielzeug/craftit';
 
-define('custom-input', () => {
-  const value = signal('');
-  const placeholder = prop('placeholder', '');
+define(
+  'custom-input',
+  () => {
+    const value = signal('');
+    const placeholder = prop('placeholder', '');
 
-  // Register as form field
-  const formField = field({ value });
+    // Register as form field
+    const formField = field({ value });
 
-  const styles = css`
-    input {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+    const styles = css`
+      input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
 
-    input:focus {
-      outline: none;
-      border-color: #0070f3;
-      box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.1);
-    }
-  `;
+      input:focus {
+        outline: none;
+        border-color: #0070f3;
+        box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.1);
+      }
+    `;
 
-  return {
-    template: html`
-      <input
-        type="text"
-        :value=${value}
-        :placeholder=${placeholder}
-        @input=${(e) => value.value = e.target.value}
-      />
-    `,
-    styles: [styles.content]
-  };
-}, { formAssociated: true });
+    return {
+      template: html`
+        <input
+          type="text"
+          :value=${value}
+          :placeholder=${placeholder}
+          @input=${(e) => (value.value = e.target.value)} />
+      `,
+      styles: [styles.content],
+    };
+  },
+  { formAssociated: true },
+);
 ```
 
 Usage in a form:
@@ -178,79 +185,76 @@ Email input with built-in validation using ElementInternals.
 ```ts
 import { define, signal, computed, watch, html, css, field } from '@vielzeug/craftit';
 
-define('email-input', () => {
-  const value = signal('');
-  const required = prop('required', false, {
-    parse: (v) => v !== null
-  });
+define(
+  'email-input',
+  () => {
+    const value = signal('');
+    const required = prop('required', false, {
+      parse: (v) => v !== null,
+    });
 
-  const formField = field({ value });
+    const formField = field({ value });
 
-  const emailValid = computed(() =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
-  );
+    const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
-  // Update validation state
-  watch([value, required], () => {
-    if (required.value && !value.value) {
-      formField.setValidity(
-        { valueMissing: true },
-        'Email is required'
-      );
-    } else if (value.value && !emailValid.value) {
-      formField.setValidity(
-        { typeMismatch: true },
-        'Please enter a valid email address'
-      );
-    } else {
-      formField.setValidity({}, '');
-    }
-  }, { immediate: true });
+    // Update validation state
+    watch(
+      [value, required],
+      () => {
+        if (required.value && !value.value) {
+          formField.setValidity({ valueMissing: true }, 'Email is required');
+        } else if (value.value && !emailValid.value) {
+          formField.setValidity({ typeMismatch: true }, 'Please enter a valid email address');
+        } else {
+          formField.setValidity({}, '');
+        }
+      },
+      { immediate: true },
+    );
 
-  const styles = css`
-    .input-wrapper {
-      position: relative;
-    }
+    const styles = css`
+      .input-wrapper {
+        position: relative;
+      }
 
-    input {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+      input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
 
-    input:invalid {
-      border-color: #ef4444;
-    }
+      input:invalid {
+        border-color: #ef4444;
+      }
 
-    input:valid:not(:placeholder-shown) {
-      border-color: #10b981;
-    }
+      input:valid:not(:placeholder-shown) {
+        border-color: #10b981;
+      }
 
-    .error {
-      color: #ef4444;
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
-    }
-  `;
+      .error {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+      }
+    `;
 
-  return {
-    template: html`
-      <div class="input-wrapper">
-        <input
-          type="email"
-          :value=${value}
-          @input=${(e) => value.value = e.target.value}
-          placeholder="email@example.com"
-        />
-        ${html.when(!emailValid && value, () => html`
-          <div class="error">Please enter a valid email</div>
-        `)}
-      </div>
-    `,
-    styles: [styles.content]
-  };
-}, { formAssociated: true });
+    return {
+      template: html`
+        <div class="input-wrapper">
+          <input
+            type="email"
+            :value=${value}
+            @input=${(e) => (value.value = e.target.value)}
+            placeholder="email@example.com" />
+          ${html.when(() => value.value && !emailValid.value, () => html` <div class="error">Please enter a valid email</div> `)}
+        </div>
+      `,
+      styles: [styles.content],
+    };
+  },
+  { formAssociated: true },
+);
 ```
 
 ### Rating Component
@@ -260,79 +264,85 @@ Star rating component with form integration.
 ```ts
 import { define, signal, watch, html, css, field, prop } from '@vielzeug/craftit';
 
-define('star-rating', () => {
-  const rating = signal(0);
-  const maxRating = prop('max', 5, {
-    parse: (v) => Number(v) || 5
-  });
-  const required = prop('required', false, {
-    parse: (v) => v !== null
-  });
+define(
+  'star-rating',
+  () => {
+    const rating = signal(0);
+    const maxRating = prop('max', 5, {
+      parse: (v) => Number(v) || 5,
+    });
+    const required = prop('required', false, {
+      parse: (v) => v !== null,
+    });
 
-  const formField = field({
-    value: rating,
-    toFormValue: (v) => String(v)
-  });
+    const formField = field({
+      value: rating,
+      toFormValue: (v) => String(v),
+    });
 
-  // Validation
-  watch([rating, required], () => {
-    if (required.value && rating.value === 0) {
-      formField.setValidity(
-        { valueMissing: true },
-        'Please select a rating'
-      );
-    } else {
-      formField.setValidity({}, '');
-    }
-  }, { immediate: true });
+    // Validation
+    watch(
+      [rating, required],
+      () => {
+        if (required.value && rating.value === 0) {
+          formField.setValidity({ valueMissing: true }, 'Please select a rating');
+        } else {
+          formField.setValidity({}, '');
+        }
+      },
+      { immediate: true },
+    );
 
-  const styles = css`
-    .rating {
-      display: flex;
-      gap: 0.25rem;
-    }
+    const styles = css`
+      .rating {
+        display: flex;
+        gap: 0.25rem;
+      }
 
-    button {
-      background: none;
-      border: none;
-      font-size: 2rem;
-      cursor: pointer;
-      color: #d1d5db;
-      padding: 0;
-      transition: color 0.2s;
-    }
+      button {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        cursor: pointer;
+        color: #d1d5db;
+        padding: 0;
+        transition: color 0.2s;
+      }
 
-    button.active,
-    button:hover {
-      color: #fbbf24;
-    }
+      button.active,
+      button:hover {
+        color: #fbbf24;
+      }
 
-    button:focus {
-      outline: 2px solid #0070f3;
-      outline-offset: 2px;
-    }
-  `;
+      button:focus {
+        outline: 2px solid #0070f3;
+        outline-offset: 2px;
+      }
+    `;
 
-  return {
-    template: html`
-      <div class="rating" role="radiogroup" aria-label="Rating">
-        ${Array.from({ length: maxRating.value }, (_, i) => i + 1).map(star => html`
-          <button
-            type="button"
-            class=${() => html.classes({ active: rating.value >= star })}
-            @click=${() => rating.value = star}
-            aria-label="${star} star${star > 1 ? 's' : ''}"
-            role="radio"
-            aria-checked=${rating.value === star}
-          >
-            ★
-          </button>
-        `)}
-      </div>
-    `,
-    styles: [styles.content]
-  };
-}, { formAssociated: true });
+    return {
+      template: html`
+        <div class="rating" role="radiogroup" aria-label="Rating">
+          ${Array.from({ length: maxRating.value }, (_, i) => i + 1).map(
+            (star) => html`
+              <button
+                type="button"
+                class=${() => html.classes({ active: rating.value >= star })}
+                @click=${() => (rating.value = star)}
+                aria-label="${star} star${star > 1 ? 's' : ''}"
+                role="radio"
+                aria-checked=${rating.value === star}>
+                ★
+              </button>
+            `,
+          )}
+        </div>
+      `,
+      styles: [styles.content],
+    };
+  },
+  { formAssociated: true },
+);
 ```
 
 Usage:
@@ -354,85 +364,90 @@ import { define, signal, html, css, field } from '@vielzeug/craftit';
 
 type Option = { value: string; label: string };
 
-define('multi-select', () => {
-  const options: Option[] = [
-    { value: 'js', label: 'JavaScript' },
-    { value: 'ts', label: 'TypeScript' },
-    { value: 'py', label: 'Python' },
-    { value: 'rs', label: 'Rust' }
-  ];
+define(
+  'multi-select',
+  () => {
+    const options: Option[] = [
+      { value: 'js', label: 'JavaScript' },
+      { value: 'ts', label: 'TypeScript' },
+      { value: 'py', label: 'Python' },
+      { value: 'rs', label: 'Rust' },
+    ];
 
-  const selected = signal<string[]>([]);
+    const selected = signal<string[]>([]);
 
-  const formField = field({
-    value: selected,
-    toFormValue: (values) => {
-      // Send as comma-separated string or FormData
-      return values.join(',');
-    }
-  });
-
-  const toggleOption = (value: string) => {
-    selected.update(current => {
-      if (current.includes(value)) {
-        return current.filter(v => v !== value);
-      }
-      return [...current, value];
+    const formField = field({
+      value: selected,
+      toFormValue: (values) => {
+        // Send as comma-separated string or FormData
+        return values.join(',');
+      },
     });
-  };
 
-  const styles = css`
-    .options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+    const toggleOption = (value: string) => {
+      selected.update((current) => {
+        if (current.includes(value)) {
+          return current.filter((v) => v !== value);
+        }
+        return [...current, value];
+      });
+    };
 
-    label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      padding: 0.5rem;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
+    const styles = css`
+      .options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
 
-    label:hover {
-      background: #f3f4f6;
-    }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
 
-    input[type="checkbox"] {
-      width: 1.25rem;
-      height: 1.25rem;
-      cursor: pointer;
-    }
-  `;
+      label:hover {
+        background: #f3f4f6;
+      }
 
-  return {
-    template: html`
-      <div class="options">
-        ${options.map(option => html`
-          <label>
-            <input
-              type="checkbox"
-              ?checked=${selected.value.includes(option.value)}
-              @change=${() => toggleOption(option.value)}
-            />
-            <span>${option.label}</span>
-          </label>
-        `)}
-      </div>
-      <div style="margin-top: 0.5rem; color: #666; font-size: 0.875rem">
-        Selected: ${selected.value.length} item${selected.value.length !== 1 ? 's' : ''}
-      </div>
-    `,
-    styles: [styles.content]
-  };
-}, { formAssociated: true });
+      input[type='checkbox'] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+      }
+    `;
+
+    return {
+      template: html`
+        <div class="options">
+          ${options.map(
+            (option) => html`
+              <label>
+                <input
+                  type="checkbox"
+                  ?checked=${() => selected.value.includes(option.value)}
+                  @change=${() => toggleOption(option.value)} />
+                <span>${option.label}</span>
+              </label>
+            `,
+          )}
+        </div>
+        <div style="margin-top: 0.5rem; color: #666; font-size: 0.875rem">
+          Selected: ${selected.value.length} item${selected.value.length !== 1 ? 's' : ''}
+        </div>
+      `,
+      styles: [styles.content],
+    };
+  },
+  { formAssociated: true },
+);
 ```
 
 ### File Upload Component
@@ -442,128 +457,128 @@ Custom file uploader with preview and form integration.
 ```ts
 import { define, signal, html, css, field } from '@vielzeug/craftit';
 
-define('file-upload', () => {
-  const files = signal<FileList | null>(null);
-  const multiple = prop('multiple', false, {
-    parse: (v) => v !== null
-  });
+define(
+  'file-upload',
+  () => {
+    const files = signal<FileList | null>(null);
+    const multiple = prop('multiple', false, {
+      parse: (v) => v !== null,
+    });
 
-  const formField = field({
-    value: files,
-    toFormValue: (fileList) => {
-      if (!fileList || fileList.length === 0) return null;
+    const formField = field({
+      value: files,
+      toFormValue: (fileList) => {
+        if (!fileList || fileList.length === 0) return null;
 
-      if (fileList.length === 1) {
-        return fileList[0];
+        if (fileList.length === 1) {
+          return fileList[0];
+        }
+
+        // Multiple files - return FormData
+        const formData = new FormData();
+        for (let i = 0; i < fileList.length; i++) {
+          formData.append('files[]', fileList[i]);
+        }
+        return formData;
+      },
+    });
+
+    const handleChange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      files.value = target.files;
+    };
+
+    const removeFile = (index: number) => {
+      if (!files.value) return;
+
+      const dt = new DataTransfer();
+      for (let i = 0; i < files.value.length; i++) {
+        if (i !== index) {
+          dt.items.add(files.value[i]);
+        }
+      }
+      files.value = dt.files.length > 0 ? dt.files : null;
+    };
+
+    const styles = css`
+      .upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
       }
 
-      // Multiple files - return FormData
-      const formData = new FormData();
-      for (let i = 0; i < fileList.length; i++) {
-        formData.append('files[]', fileList[i]);
+      .upload-area:hover {
+        border-color: #0070f3;
+        background: #f0f9ff;
       }
-      return formData;
-    }
-  });
 
-  const handleChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    files.value = target.files;
-  };
-
-  const removeFile = (index: number) => {
-    if (!files.value) return;
-
-    const dt = new DataTransfer();
-    for (let i = 0; i < files.value.length; i++) {
-      if (i !== index) {
-        dt.items.add(files.value[i]);
+      .file-list {
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
       }
-    }
-    files.value = dt.files.length > 0 ? dt.files : null;
-  };
 
-  const styles = css`
-    .upload-area {
-      border: 2px dashed #ccc;
-      border-radius: 8px;
-      padding: 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        background: #f3f4f6;
+        border-radius: 4px;
+      }
 
-    .upload-area:hover {
-      border-color: #0070f3;
-      background: #f0f9ff;
-    }
+      .remove-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    `;
 
-    .file-list {
-      margin-top: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .file-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem;
-      background: #f3f4f6;
-      border-radius: 4px;
-    }
-
-    .remove-btn {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 0.25rem 0.75rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  `;
-
-  return {
-    template: html`
-      <div>
-        <div class="upload-area" @click=${() => {
-          const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-          input?.click();
-        }}>
-          <input
-            type="file"
-            ?multiple=${multiple}
-            @change=${handleChange}
-            style="display: none"
-          />
-          <p>Click to upload or drag and drop</p>
-          <p style="font-size: 0.875rem; color: #666">
-            ${multiple.value ? 'Multiple files allowed' : 'Single file only'}
-          </p>
-        </div>
-
-        ${html.when(files && files.value, () => html`
-          <div class="file-list">
-            ${Array.from(files.value!).map((file, i) => html`
-              <div class="file-item">
-                <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
-                <button
-                  type="button"
-                  class="remove-btn"
-                  @click=${() => removeFile(i)}
-                >
-                  Remove
-                </button>
-              </div>
-            `)}
+    return {
+      template: html`
+        <div>
+          <div
+            class="upload-area"
+            @click=${() => {
+              const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+              input?.click();
+            }}>
+            <input type="file" ?multiple=${multiple} @change=${handleChange} style="display: none" />
+            <p>Click to upload or drag and drop</p>
+            <p style="font-size: 0.875rem; color: #666">
+              ${multiple.value ? 'Multiple files allowed' : 'Single file only'}
+            </p>
           </div>
-        `)}
-      </div>
-    `,
-    styles: [styles.content]
-  };
-}, { formAssociated: true });
+
+          ${html.when(
+            files && files.value,
+            () => html`
+              <div class="file-list">
+                ${Array.from(files.value!).map(
+                  (file, i) => html`
+                    <div class="file-item">
+                      <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+                      <button type="button" class="remove-btn" @click=${() => removeFile(i)}>Remove</button>
+                    </div>
+                  `,
+                )}
+              </div>
+            `,
+          )}
+        </div>
+      `,
+      styles: [styles.content],
+    };
+  },
+  { formAssociated: true },
+);
 ```
 
 ## Form Examples
@@ -870,71 +885,78 @@ Reusable modal with portal rendering.
 
 ```ts
 import { define, signal, html, css } from '@vielzeug/craftit';
-define('modal-dialog', () => {
-  const isOpen = prop('open', false, {
-    parse: (v) => v !== null,
-    reflect: true,
-  });
-  const handleClose = () => {
-    isOpen.value = false;
-    // Dispatch custom event
-    dispatchEvent(new CustomEvent('modal-close', { bubbles: true }));
-  };
-  const styles = css`
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .modal {
-      background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow: auto;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .close-button {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 0;
-      width: 2rem;
-      height: 2rem;
-    }
-  `;
+define(
+  'modal-dialog',
+  () => {
+    const isOpen = prop('open', false, {
+      parse: (v) => v !== null,
+      reflect: true,
+    });
+    const handleClose = () => {
+      isOpen.value = false;
+      // Dispatch custom event
+      dispatchEvent(new CustomEvent('modal-close', { bubbles: true }));
+    };
+    const styles = css`
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal {
+        background: white;
+        border-radius: 8px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow: auto;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .close-button {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        width: 2rem;
+        height: 2rem;
+      }
+    `;
 
-  return html`
-    ${html.when(isOpen, () => html`
-      <div class="modal-overlay" @click.self=${handleClose}>
-        <div class="modal">
-          <div class="modal-header">
-            <h2><slot name="title">Modal</slot></h2>
-            <button class="close-button" @click=${handleClose} aria-label="Close">×</button>
+    return html`
+      ${html.when(
+        isOpen,
+        () => html`
+          <div class="modal-overlay" @click.self=${handleClose}>
+            <div class="modal">
+              <div class="modal-header">
+                <h2><slot name="title">Modal</slot></h2>
+                <button class="close-button" @click=${handleClose} aria-label="Close">×</button>
+              </div>
+              <div class="modal-content">
+                <slot></slot>
+              </div>
+            </div>
           </div>
-          <div class="modal-content">
-            <slot></slot>
-          </div>
-        </div>
-      </div>
-    `)}
-  `;
-}, { styles: [styles.content], target: 'body' });
+        `,
+      )}
+    `;
+  },
+  { styles: [styles.content], target: 'body' },
+);
 ```
 
 Usage:
@@ -1147,34 +1169,34 @@ import '@vielzeug/craftit';
 ### Testing a Counter
 
 ```ts
-import { mount, fireEvent } from '@vielzeug/craftit/trial';
+import { mount, fire } from '@vielzeug/craftit/test';
 import { describe, it, expect } from 'vitest';
 import './simple-counter';
+
 describe('simple-counter', () => {
   it('increments count when + button clicked', async () => {
-    const { query, queryAll, waitForUpdates } = await mount('simple-counter');
+    const { query, queryAll, act } = await mount('simple-counter');
     const buttons = queryAll('button');
     const incrementBtn = buttons[2]; // Third button is increment
     const h2 = query('h2');
     expect(h2?.textContent).toBe('Count: 0');
-    fireEvent.click(incrementBtn);
-    await waitForUpdates();
+    await act(() => fire.click(incrementBtn));
     expect(h2?.textContent).toBe('Count: 1');
   });
   it('resets count when reset button clicked', async () => {
-    const { query, queryAll, waitForUpdates } = await mount('simple-counter');
+    const { query, queryAll, act } = await mount('simple-counter');
     const buttons = queryAll('button');
     const incrementBtn = buttons[2];
     const resetBtn = buttons[1];
     const h2 = query('h2');
     // Increment a few times
-    fireEvent.click(incrementBtn);
-    fireEvent.click(incrementBtn);
-    await waitForUpdates();
+    await act(() => {
+      fire.click(incrementBtn);
+      fire.click(incrementBtn);
+    });
     expect(h2?.textContent).toBe('Count: 2');
     // Reset
-    fireEvent.click(resetBtn);
-    await waitForUpdates();
+    await act(() => fire.click(resetBtn));
     expect(h2?.textContent).toBe('Count: 0');
   });
 });

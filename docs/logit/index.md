@@ -43,12 +43,12 @@ Logit.error('Connection failed', new Error('Timeout'));
 
 // Scoped logger — namespaced child, never mutates the parent
 const api = Logit.scope('api');
-api.info('GET /users');        // [api] GET /users
-api.error('404 Not Found');    // [api] 404 Not Found
+api.info('GET /users'); // [api] GET /users
+api.error('404 Not Found'); // [api] 404 Not Found
 
 // Nest scopes (dot-separated)
 const auth = api.scope('auth');
-auth.info('Token validated');  // [api.auth] Token validated
+auth.info('Token validated'); // [api.auth] Token validated
 
 // Create a fully isolated instance
 const log = createLogger({ namespace: 'Worker', logLevel: 'warn' });
@@ -56,12 +56,12 @@ const log = createLogger({ namespace: 'Worker', logLevel: 'warn' });
 // Check whether a level passes the current filter
 if (log.enabled('debug')) log.debug('verbose', buildDiagnostics());
 
-// Configure globally (returns logger for fluent chaining)
-Logit.config({
-  logLevel: 'warn',    // Only warn + error
-  variant: 'symbol',   // Emoji badge indicators
-  timestamp: true,     // HH:MM:SS.mmm
-  namespace: 'MyApp',  // Prefix all global logs
+// setConfig returns the logger for fluent chaining
+Logit.setConfig({
+  logLevel: 'warn', // Only warn + error
+  variant: 'symbol', // Emoji badge indicators
+  timestamp: true, // HH:MM:SS.mmm
+  namespace: 'MyApp', // Prefix all global logs
 });
 ```
 
@@ -72,15 +72,16 @@ Logit.config({
 - **Scoped loggers** — `scope(name)` and `child(overrides?)` return isolated instances that never mutate the parent
 - **Styled output** — browser CSS badges with `symbol`, `icon`, or `text` variants
 - **Remote logging** — non-blocking async handler for Sentry, Datadog, custom endpoints
-- **Timing & tables** — `time/timeEnd` and `table` backed by native console APIs
-- **Groups** — `group/groupCollapsed/groupEnd` for structured collapsible log sections
+- **Timing** — `time<T>(label, fn)` wraps `console.time/timeEnd`; returns `T`, fires `timeEnd` on throw/reject too
+- **Groups** — `group<T>(label, fn, collapsed?)` wraps `console.group/groupEnd`; returns `T`, fires `groupEnd` on throw/reject too
+- **Tables** — `table(data, properties?)` forwards to `console.table`
 - **Assertions** — `assert(condition, ...args)` forwards to `console.assert`
 - **Zero dependencies** — <PackageInfo package="logit" type="size" /> gzipped, <PackageInfo package="logit" type="dependencies" /> dependencies
 
 ## Next Steps
 
-| | |
-|---|---|
+|                           |                                                            |
+| ------------------------- | ---------------------------------------------------------- |
 | [Usage Guide](./usage.md) | Configuration, scoped loggers, remote logging, and testing |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world recipes and framework integrations |
+| [API Reference](./api.md) | Complete type signatures and method documentation          |
+| [Examples](./examples.md) | Real-world recipes and framework integrations              |

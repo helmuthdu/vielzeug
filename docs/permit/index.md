@@ -32,48 +32,54 @@ yarn add @vielzeug/permit
 ## Quick Start
 
 ```ts
-import { createPermit, hasRole } from '@vielzeug/permit';
+import { createPermit, hasRole, WILDCARD, ANONYMOUS } from '@vielzeug/permit';
 
 const permit = createPermit();
 
-// Define role permissions (any string actions, not just CRUD)
+// Shorthand setup — grant/deny multiple actions at once
 permit
-  .define('admin', '*', { read: true, write: true, delete: true })
-  .define('editor', 'posts', { read: true, write: (user, data) => user.id === data?.authorId })
-  .define('viewer', 'posts', { read: true });
+  .grant('admin', WILDCARD, 'read', 'write', 'delete')
+  .grant('editor', 'posts', 'read')
+  .register('editor', 'posts', { write: (user, data) => user.id === data?.authorId })
+  .grant(ANONYMOUS, 'posts', 'read'); // public read
 
-// Check permissions
 const user = { id: 'u1', roles: ['editor'] };
 
-permit.check(user, 'posts', 'read');                          // true
-permit.check(user, 'posts', 'write', { authorId: 'u1' });    // true
-permit.check(user, 'posts', 'delete');                        // false
+// Direct check
+permit.check(user, 'posts', 'read');                       // true
+permit.check(user, 'posts', 'write', { authorId: 'u1' }); // true
+permit.check(user, 'posts', 'delete');                     // false
 
-// Pre-bind a guard for a single user
-const can = permit.for(user);
-can('posts', 'read');                       // true
-can('posts', 'write', { authorId: 'u1' }); // true
+// Pre-bound guard with canAll / canAny
+const guard = permit.for(user);
+guard.can('posts', 'read');                  // true
+guard.canAll('posts', ['read', 'write']);    // true
+guard.canAny('posts', ['write', 'delete']);  // true
+guard.can('posts', 'delete');                // false
 
-// Check role membership (standalone utility)
+// Check role membership
 hasRole(user, 'editor'); // true
 ```
 
 ## Features
 
 - **Role-based rules** — map roles to resources and any string actions
+- **`grant` / `deny` shorthands** — boolean shortcuts without writing `{ action: true/false }` objects
 - **Dynamic permissions** — use functions `(user, data) => boolean` for context-aware rules
 - **Wildcard role/resource** — `'*'` applies to all users or all resources
-- **Anonymous users** — automatic `anonymous` role for unauthenticated users
-- **Pre-bound guards** — `permit.for(user)` returns a single-user check function
-- **Fluent API** — `define()` chains return the permit instance
-- **Immutable snapshot** — `snapshot()` returns a safe plain-object copy
+- **Partial wildcard override** — specific resources override individual wildcard actions, inheriting the rest
+- **First-match-wins** — explicit `false` on an earlier role stops the chain
+- **Anonymous users** — automatic `anonymous` role for null/unauthenticated users
+- **Pre-bound guards** — `permit.for(user)` returns a `PermitGuard` with `can`, `canAny`, `canAll`
+- **Fluent API** — all write methods return the permit instance for chaining
+- **Snapshot / restore** — export and re-import the full permission set as a plain object
 - **TypeScript generics** — type your user shape with `createPermit<MyUser>()`
-- **Zero dependencies** — <PackageInfo package="permit" type="size" /> gzipped
+- **Zero dependencies** — <PackageInfo package="permit" type="size" /> gzipped, <PackageInfo package="permit" type="dependencies" /> dependencies
 
 ## Next Steps
 
-| | |
-|---|---|
-| [Usage Guide](./usage.md) | Role setup, wildcards, dynamic rules, and testing |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
+|                           |                                                     |
+| ------------------------- | --------------------------------------------------- |
+| [Usage Guide](./usage.md) | Role setup, wildcards, dynamic rules, and testing   |
+| [API Reference](./api.md) | Complete type signatures and method documentation   |
 | [Examples](./examples.md) | Real-world RBAC patterns and framework integrations |

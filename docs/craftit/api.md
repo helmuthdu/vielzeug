@@ -3,7 +3,7 @@ title: Craftit — API Reference
 description: Complete API reference for Craftit web component framework.
 ---
 
-# Craftit API Reference
+## Craftit API Reference
 
 [[toc]]
 
@@ -20,7 +20,7 @@ Define and register a custom element with a setup function.
 
 **DefineOptions:**
 
-- `formAssociated?: boolean` – Enable form-associated custom element (required for `field()`)
+- `formAssociated?: boolean` – Enable form-associated custom element (required for `defineField()`)
 - `target?: string | HTMLElement` – Render the shadow root into this selector or element (portal)
 
 **Returns:** `string` (the registered element tag name)
@@ -37,21 +37,21 @@ define('my-button', () => {
 **With Form Association:**
 
 ```ts
-import { define, signal, html, field } from '@vielzeug/craftit';
+import { define, signal, html, defineField } from '@vielzeug/craftit';
 
-// Must set formAssociated: true to use field()
+// Must set formAssociated: true to use defineField()
 define(
   'custom-input',
   () => {
     const value = signal('');
 
     // Register as form field
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     return html` <input type="text" :value=${value} @input=${(e) => (value.value = e.target.value)} /> `;
   },
   { formAssociated: true },
-); // ← Required for field()
+); // ← Required for defineField()
 ```
 
 **With Styles:**
@@ -70,8 +70,6 @@ define('styled-button', () => {
   };
 });
 ```
-
----
 
 ## Signals
 
@@ -163,15 +161,12 @@ Watch signals for changes with explicit callback.
 **Signatures:**
 
 ```ts
-// Watch single signal
+// Watch single signal — callback receives (newValue, prevValue)
 function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
-// Watch multiple signals
-function watch<T extends readonly Signal<unknown>[]>(
-  sources: [...T],
-  cb: (
-    values: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
-    prevValues: { [K in keyof T]: T[K] extends Signal<infer V> ? V : never },
-  ) => void,
+// Watch multiple signals — callback takes no arguments; read .value inside
+function watch(
+  sources: ReadonlyArray<ReadonlySignal<unknown>>,
+  cb: () => void,
   options?: WatchOptions,
 ): CleanupFn;
 ```
@@ -190,10 +185,10 @@ const count = signal(0);
 watch(count, (newValue, oldValue) => {
   console.log(`Changed from ${oldValue} to ${newValue}`);
 });
-// Watch multiple
+// Watch multiple — read .value inside callback; no values are passed
 const name = signal('Alice');
-watch([count, name], ([c, n], [prevC, prevN]) => {
-  console.log(`Count: ${c} (was ${prevC}), Name: ${n} (was ${prevN})`);
+watch([count, name], () => {
+  console.log(`Count: ${count.value}, Name: ${name.value}`);
 });
 // With immediate
 watch(
@@ -322,8 +317,6 @@ console.log(readonlyCount.value); // 0
 count.value = 10; // OK
 ```
 
----
-
 ## Template System
 
 ### `html`
@@ -441,8 +434,6 @@ Efficient keyed list rendering. Three call signatures:
 html.each(source, keyFn, templateFn, emptyFn?);
 // Simple (index as key)
 html.each(source, templateFn);
-// Options object
-html.each(source, { key?, template, empty? });
 ```
 
 **Parameters:**
@@ -466,41 +457,6 @@ html`
 `;
 // Simple form
 html`${html.each(todos, (todo) => html`<li>${todo.text}</li>`)}`;
-// Options object
-html`${html.each(todos, { key: (t) => t.id, template: (t) => html`<li>${t.text}</li>` })}`;
-```
-
----
-
-### `html.match(value, cases, default?)`
-
-Switch/case pattern matching.
-**Signatures:**
-
-```ts
-// Static value (returns V directly)
-html.match(value: T, cases: Array<[T, () => V]>, default?: () => V): V;
-// Reactive (Signal or function — returns () => V)
-html.match(value: Signal<T> | (() => T), cases: Array<[T, () => V]>, default?: () => V): () => V;
-```
-
-**Returns:** `V` for static values; `() => V` for reactive values
-**Example:**
-
-```ts
-const status = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
-html`
-  ${html.match(
-    status,
-    [
-      ['idle', () => html`<p>Ready</p>`],
-      ['loading', () => html`<p>Loading…</p>`],
-      ['success', () => html`<p>Done!</p>`],
-      ['error', () => html`<p>Something went wrong</p>`],
-    ],
-    () => html`<p>Unknown</p>`,
-  )}
-`;
 ```
 
 ---
@@ -619,16 +575,13 @@ html`
 Generate dynamic class strings.
 **Parameters:**
 
-- `classes: Record<string, boolean> | Array<...>` – Classes object or array
-  **Returns:** `string`
+- `classes: Record<string, boolean | Signal<boolean> | (() => boolean) | undefined>` – Object map of class names to conditions (reactive signals and getter functions supported)
+  **Returns:** `string | ReadonlySignal<string>` (signal when any condition is reactive)
   **Example:**
 
 ````ts
 const isActive = signal(true);
-// Object syntax
-```ts
-const isActive = signal(true);
-// Object syntax - wrap in arrow function for reactivity
+// Wrap in arrow function for reactivity
 html`
   <div
     class=${() =>
@@ -638,13 +591,7 @@ html`
         'btn-primary': true,
       })}></div>
 `;
-// Array syntax
-html` <div class=${() => html.classes(['btn', isActive.value && 'active', { primary: true }])}></div> `;
-````
-
----
-
----
+```
 
 ## Styling
 
@@ -713,8 +660,6 @@ const styles = css`
   ${theme}/* Inject theme CSS */
 `;
 ```
-
----
 
 ## Lifecycle Hooks
 
@@ -856,7 +801,11 @@ Must be called synchronously during component setup.
 ```ts
 type AriaAttrValue =
   | (() => string | boolean | number | null | undefined) // reactive getter
-  | string | boolean | number | null | undefined;        // static value
+  | string
+  | boolean
+  | number
+  | null
+  | undefined; // static value
 ```
 
 **Returns:** `void`
@@ -868,23 +817,21 @@ define('custom-checkbox', () => {
   const checked = signal(false);
   aria({
     role: 'checkbox',
-    checked: () => checked.value,  // reactive — updates on signal change
-    label: 'Toggle option',        // static — set once
+    checked: () => checked.value, // reactive — updates on signal change
+    label: 'Toggle option', // static — set once
   });
   return html`<div @click=${() => (checked.value = !checked.value)}></div>`;
 });
 ```
 
----
-
 ## Props & Context
 
-### `field(options)`
+### `defineField(options)`
 
 Create a form-associated custom element using ElementInternals API.
 
 ::: warning Important
-The component must be defined with `{ formAssociated: true }` option to use `field()`.
+The component must be defined with `{ formAssociated: true }` option to use `defineField()`.
 :::
 
 **Parameters:**
@@ -1035,13 +982,13 @@ Define a reactive prop that syncs with HTML attributes.
 | `number` | `Number(v)` |
 | `string` | raw attribute string, or `defaultValue` when absent |
 
-  **Returns:** `Signal<T>`
-  **Example:**
+**Returns:** `Signal<T>`
+**Example:**
 
 ```ts
 define('user-card', () => {
   const name = prop('name', 'Guest');
-  const count = prop('count', 0);        // auto: Number(v)
+  const count = prop('count', 0); // auto: Number(v)
   const disabled = prop('disabled', false); // auto: v !== null
   return html`<div>${name}</div>`;
 });
@@ -1143,8 +1090,6 @@ define('themed-button', () => {
 });
 ```
 
----
-
 ## Advanced Features
 
 ## Utilities
@@ -1154,6 +1099,7 @@ define('themed-button', () => {
 Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`, and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
 
 **Parameters:**
+
 - `prefix?: string` – Optional prefix for the generated ID
 
 **Returns:** `string`
@@ -1180,6 +1126,7 @@ define('labeled-input', () => {
 Wraps an event handler with a condition. The handler is only invoked when `condition()` returns `true`. Use for disabled checks, readonly guards, or any runtime condition.
 
 **Parameters:**
+
 - `condition: () => boolean` – Guard predicate evaluated at call time
 - `handler: (e: E) => void` – Handler to invoke when condition passes
 
@@ -1216,9 +1163,9 @@ Access slotted content from the host element. Must be called inside a `define` s
 
 **SlotsAPI methods:**
 
-- `has(name): boolean` – True if the named slot has content
-- `render(name, props?, fallback?): V` – Render a named slot (with optional fallback)
-- `default(props?, fallback?): V` – Render the default slot
+- `has(name): boolean` – Returns `true` if the named slot has assigned nodes
+
+Slot content is rendered using `<slot>` HTML elements in the template. `defineSlots()` is primarily used with `has()` to conditionally render slot wrappers.
 
 **Example:**
 
@@ -1227,11 +1174,19 @@ define('card-component', () => {
   const s = defineSlots<{ default: unknown; footer: unknown }>();
   return html`
     <div class="card">
-      <div class="body">${s.default({}, () => html`<p>No content</p>`)}</div>
-      ${s.has('footer') ? html`<footer>${s.render('footer')}</footer>` : ''}
+      <div class="body"><slot></slot></div>
+      ${s.has('footer') ? html`<footer><slot name="footer"></slot></footer>` : ''}
     </div>
   `;
 });
+
+// Usage:
+html`
+  <card-component>
+    <p>Main content goes here</p>
+    <p slot="footer">Footer content</p>
+  </card-component>
+`;
 ```
 
 ---
@@ -1292,115 +1247,190 @@ define(
 );
 ```
 
----
-
 ## Testing Utilities
 
-Import from `@vielzeug/craftit/trial`:
+Import from `@vielzeug/craftit/test`:
 
 ```ts
-import { mount, fireEvent, userEvent } from '@vielzeug/craftit/trial';
+import { mount, fire, user, waitFor, within, flush, install } from '@vielzeug/craftit/test';
 ```
 
-### `mount(tagName, options?)`
+### Setup
 
-Mount a component for testing.
-**Parameters:**
-
-- `tagName: string` – Component tag name
-- `options?: object` – Mount options
-  **Returns:** `Promise<ComponentFixture>`
-  **ComponentFixture:**
-- `element: HTMLElement` – Component element
-- `shadow: ShadowRoot | null` – Shadow root
-- `container: HTMLElement` – Parent container
-- `query<E>(selector: string): E | null` – Query element
-- `queryAll<E>(selector: string): E[]` – Query all elements
-- `waitForUpdates(): Promise<void>` – Wait for reactive updates
-- `unmount(): void` – Unmount component
-  **Example:**
+Register auto-cleanup in your test setup file so mounted components are removed after each test:
 
 ```ts
-const { query, waitForUpdates } = await mount('my-component');
-const button = query('button');
-fireEvent.click(button!);
-await waitForUpdates();
+// vitest.setup.ts
+import { afterEach } from 'vitest';
+import { install } from '@vielzeug/craftit/test';
+install(afterEach);
 ```
 
 ---
 
-### `fireEvent`
+### `mount(tagOrSetup, options?)`
 
-Object with methods to fire DOM events.
-**Methods:**
-
-- `click(element, options?)`
-- `input(element, options?)`
-- `change(element, options?)`
-- `keyDown(element, options?)`
-- `keyUp(element, options?)`
-- `focus(element, options?)`
-- `blur(element, options?)`
-- `submit(element, options?)`
-- `mouseEnter(element, options?)`
-- `mouseLeave(element, options?)`
-- `custom(element, eventName, options?)`
-  **Example:**
-
-```ts
-fireEvent.click(button);
-fireEvent.input(input);
-fireEvent.keyDown(input, { key: 'Enter' });
-fireEvent.custom(element, 'my-event', { detail: { value: 123 } });
-```
-
----
-
-### `userEvent`
-
-Object with methods for realistic user interactions.
-**Methods:**
-
-- `click(element): Promise<void>`
-- `type(element, text): Promise<void>`
-- `clear(element): Promise<void>`
-- `selectOptions(element, value): Promise<void>`
-- `upload(element, file): Promise<void>`
-  **Example:**
-
-```ts
-await userEvent.click(button);
-await userEvent.type(input, 'Hello');
-await userEvent.clear(input);
-```
-
----
-
-### `withRuntime(fn)`
-
-Runs `fn` with an isolated component runtime context. Use in unit tests to call composable setup functions (`prop`, `signal`, `effect`, `onMount`, etc.) outside of a real `define` lifecycle.
+Mount a component into the DOM, flush reactive updates, and return a `Fixture`.
 
 **Parameters:**
 
-- `fn: () => T` – Function to execute within the runtime context
+- `tagOrSetup: string | SetupFn` – Registered tag name **or** an inline setup function (no `define()` ceremony needed)
+- `options?: MountOptions` – Mount options
+  - `props?: Record<string, unknown>` – Properties set directly on the element
+  - `attrs?: Record<string, string | number | boolean>` – HTML attributes
+  - `html?: string` – Inner HTML for slot content
+  - `container?: HTMLElement` – Parent container (default: `document.body`)
 
-**Returns:** `T` (the return value of `fn`)
+**Returns:** `Promise<Fixture<T>>`
+
+**Fixture members:**
+
+- `query<E>(selector): E | null` – Query inside shadow root
+- `queryAll<E>(selector): E[]` – Query all inside shadow root
+- `queryByText<E>(text, selector?): E | null` – Find by trimmed text content
+- `queryByTestId<E>(testId): E | null` – Find by `data-testid`
+- `act(fn): Promise<void>` – Run callback then flush updates
+- `attr(name, value): Promise<void>` – Set attribute then flush
+- `attrs(record): Promise<void>` – Set multiple attributes then flush
+- `flush(): Promise<void>` – Wait for all reactive updates
+- `destroy(): void` – Remove the component from the DOM
+- `element: T` – The component element
+- `shadow: ShadowRoot` – The component's shadow root
 
 **Example:**
 
 ```ts
-import { withRuntime, signal, prop } from '@vielzeug/craftit';
-import { withRuntime } from '@vielzeug/craftit/trial';
-
-test('prop defaults to provided value', () => {
-  withRuntime(() => {
-    const count = prop('count', 42);
-    expect(count.value).toBe(42);
-  });
+// Inline setup (recommended — no define() or tag name needed)
+const { query, act } = await mount(() => {
+  const count = signal(0);
+  return html`<button @click=${() => count.value++}>${count}</button>`;
 });
+
+const button = query('button')!;
+await act(() => fire.click(button));
+expect(button.textContent?.trim()).toBe('1');
+
+// Registered tag name
+const fixture = await mount('my-counter');
 ```
 
 ---
+
+### `fire`
+
+Synchronous low-level DOM event helpers.
+
+**Methods:**
+
+- `fire.click(element, options?)`
+- `fire.input(element, options?)`
+- `fire.change(element, options?)`
+- `fire.keyDown(element, options?)`
+- `fire.keyUp(element, options?)`
+- `fire.focus(element, options?)`
+- `fire.blur(element, options?)`
+- `fire.submit(element, options?)`
+- `fire.mouseEnter(element, options?)`
+- `fire.mouseLeave(element, options?)`
+- `fire.custom(element, eventName, detail?, options?)`
+
+**Example:**
+
+```ts
+fire.click(button);
+fire.input(input);
+fire.keyDown(input, { key: 'Enter' });
+fire.custom(element, 'value-change', { value: 42 });
+```
+
+---
+
+### `user`
+
+Async higher-level user interactions that mirror real browser behavior.
+
+**Methods:**
+
+- `user.click(element, options?): Promise<void>`
+- `user.type(element, text): Promise<void>` – Types character-by-character (appends)
+- `user.fill(element, text): Promise<void>` – Clears then types
+- `user.clear(element): Promise<void>`
+- `user.select(element, value | value[]): Promise<void>`
+- `user.press(element, key, options?): Promise<void>`
+- `user.hover(element): Promise<void>`
+- `user.unhover(element): Promise<void>`
+- `user.dblClick(element): Promise<void>`
+
+**Example:**
+
+```ts
+await user.click(button);
+await user.type(input, 'Hello');
+await user.fill(input, 'replacement');
+await user.select(select, 'option1');
+```
+
+---
+
+### `waitFor(fn, options?)`
+
+Poll until a callback returns truthy or completes without throwing. Supports both boolean conditions and `expect()` assertions.
+
+**Parameters:**
+
+- `fn: () => unknown` – Assertion or boolean condition
+- `options?.timeout?: number` – Max wait in ms (default: `1000`)
+- `options?.interval?: number` – Poll interval in ms (default: `50`)
+- `options?.message?: string` – Custom error message on timeout
+
+**Example:**
+
+```ts
+await waitFor(() => query('.status')?.textContent === 'loaded');
+await waitFor(() => expect(count).toBe(3));
+```
+
+---
+
+### `within(element)`
+
+Create query helpers scoped to any element — useful for slotted/light DOM content.
+
+**Returns:** `QueryScope` (`query`, `queryAll`, `queryByText`, `queryAllByText`, `queryByTestId`, `queryAllByTestId`)
+
+**Example:**
+
+```ts
+const panel = fixture.query('.panel')!;
+const { query } = within(panel);
+expect(query('.title')?.textContent).toBe('Hello');
+```
+
+---
+
+### `flush()`
+
+Flush all pending reactive updates and one animation frame.
+
+**Returns:** `Promise<void>`
+
+---
+
+### `install(afterEachHook)`
+
+Register automatic cleanup as an `afterEach` hook. Call once in your test setup file.
+
+**Parameters:**
+
+- `afterEachHook: (fn: () => void) => void` – The `afterEach` from your test runner
+
+**Example:**
+
+```ts
+import { afterEach } from 'vitest';
+import { install } from '@vielzeug/craftit/test';
+install(afterEach);
+```
 
 ## TypeScript Types
 
@@ -1480,8 +1510,6 @@ interface FormFieldHandle {
   reportValidity: () => boolean;
 }
 ```
-
----
 
 ## Next Steps
 

@@ -8,8 +8,8 @@ import {
   createId,
   define,
   defineEmits,
+  defineField,
   defineSlots,
-  field,
   guard,
   html,
   type InjectionKey,
@@ -114,12 +114,12 @@ describe('Composables', () => {
     });
   });
 
-  describe('field()', () => {
+  describe('defineField()', () => {
     it('should create form field with validation methods', async () => {
-      let formField!: ReturnType<typeof field>;
+      let formField!: ReturnType<typeof defineField>;
       await mount(
         () => {
-          formField = field({ value: signal('test') });
+          formField = defineField({ value: signal('test') });
           return html`<div></div>`;
         },
         { defineOptions: { formAssociated: true } },
@@ -134,7 +134,7 @@ describe('Composables', () => {
       let transformCalled = false;
       await mount(
         () => {
-          field({
+          defineField({
             toFormValue: (v) => {
               transformCalled = true;
               return `number:${v}`;
@@ -153,7 +153,7 @@ describe('Composables', () => {
         () => {
           const value = signal('test');
           const disabled = signal(false);
-          field({ disabled, value });
+          defineField({ disabled, value });
           return html`<input :value=${value} ?disabled=${disabled} />`;
         },
         { defineOptions: { formAssociated: true } },
@@ -259,8 +259,8 @@ describe('Composables', () => {
         { html: '<span slot="header">Title</span>' },
       );
       await flush();
-      expect(capturedSlots.has('header')).toBe(true);
-      expect(capturedSlots.has('default')).toBe(false);
+      expect(capturedSlots.has('header').value).toBe(true);
+      expect(capturedSlots.has('default').value).toBe(false);
     });
   });
 

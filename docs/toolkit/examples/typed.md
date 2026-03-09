@@ -15,44 +15,44 @@ import { is } from '@vielzeug/toolkit';
 
 ### Type Guards
 
-| Method | Description |
-| :----- | :---------- |
-| `is.string(v)` | Check if a value is a string. |
-| `is.number(v)` | Check if a value is a number. |
-| `is.boolean(v)` | Check if a value is a boolean. |
-| `is.array(v)` | Check if a value is an array. |
-| `is.object(v)` | Check if a value is a plain object. |
-| `is.fn(v)` | Check if a value is a function. |
-| `is.defined(v)` | Check if a value is neither `null` nor `undefined`. |
-| `is.nil(v)` | Check if a value is `null` or `undefined`. |
-| `is.empty(v)` | Check if a value is an empty string, array, or object. |
-| `is.date(v)` | Check if a value is a `Date` instance. |
-| `is.regex(v)` | Check if a value is a `RegExp` instance. |
-| `is.promise(v)` | Check if a value is a `Promise`. |
+| Method            | Description                                                      |
+| :---------------- | :--------------------------------------------------------------- |
+| `is.string(v)`    | Check if a value is a string.                                    |
+| `is.number(v)`    | Check if a value is a number.                                    |
+| `is.boolean(v)`   | Check if a value is a boolean.                                   |
+| `is.array(v)`     | Check if a value is an array.                                    |
+| `is.object(v)`    | Check if a value is a plain object.                              |
+| `is.fn(v)`        | Check if a value is a function.                                  |
+| `is.defined(v)`   | Check if a value is neither `null` nor `undefined`.              |
+| `is.nil(v)`       | Check if a value is `null` or `undefined`.                       |
+| `is.empty(v)`     | Check if a value is an empty string, array, or object.           |
+| `is.date(v)`      | Check if a value is a `Date` instance.                           |
+| `is.regex(v)`     | Check if a value is a `RegExp` instance.                         |
+| `is.promise(v)`   | Check if a value is a `Promise`.                                 |
 | `is.primitive(v)` | Check if a value is a primitive (string, number, boolean, etc.). |
-| `is.typeOf(v, t)` | Check the `typeof` a value against a string tag. |
+| `is.typeOf(v, t)` | Check the `typeof` a value against a string tag.                 |
 
 ### Value Checks
 
-| Method | Description |
-| :----- | :---------- |
-| `is.equal(a, b)` | Deep equality comparison between two values. |
-| `is.match(v, p)` | Check if an object matches a partial pattern or regex. |
-| `is.within(v, r)` | Check if a number is within a given range. |
-| `is.even(v)` | Check if a number is even. |
-| `is.odd(v)` | Check if a number is odd. |
-| `is.zero(v)` | Check if a value is `0`. |
-| `is.positive(v)` | Check if a number is positive. |
-| `is.negative(v)` | Check if a number is negative. |
+| Method            | Description                                            |
+| :---------------- | :----------------------------------------------------- |
+| `is.equal(a, b)`  | Deep equality comparison between two values.           |
+| `is.match(v, p)`  | Check if an object matches a partial pattern or regex. |
+| `is.within(v, r)` | Check if a number is within a given range.             |
+| `is.even(v)`      | Check if a number is even.                             |
+| `is.odd(v)`       | Check if a number is odd.                              |
+| `is.zero(v)`      | Check if a value is `0`.                               |
+| `is.positive(v)`  | Check if a number is positive.                         |
+| `is.negative(v)`  | Check if a number is negative.                         |
 
 ### Comparison Helpers
 
-| Method | Description |
-| :----- | :---------- |
-| `is.gt(a, b)` | Greater than (`a > b`). |
+| Method        | Description                       |
+| :------------ | :-------------------------------- |
+| `is.gt(a, b)` | Greater than (`a > b`).           |
 | `is.ge(a, b)` | Greater than or equal (`a >= b`). |
-| `is.lt(a, b)` | Less than (`a < b`). |
-| `is.le(a, b)` | Less than or equal (`a <= b`). |
+| `is.lt(a, b)` | Less than (`a < b`).              |
+| `is.le(a, b)` | Less than or equal (`a <= b`).    |
 
 ## 💡 Practical Examples
 
@@ -90,7 +90,7 @@ is.equal(user, { id: 1, name: 'Alice', settings: { theme: 'dark' } }); // true
 
 // Partial pattern match
 is.match(user, { settings: { theme: 'dark' } }); // true
-is.match(user, { name: /^A/ });                   // true (regex support)
+is.match(user, { name: /^A/ }); // true (regex support)
 ```
 
 ### Comparison Helpers
@@ -98,10 +98,10 @@ is.match(user, { name: /^A/ });                   // true (regex support)
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is.gt(5, 3);         // true  (5 > 3)
-is.ge(5, 5);         // true  (5 >= 5)
-is.lt(2, 10);        // true  (2 < 10)
-is.le(4, 4);         // true  (4 <= 4)
+is.gt(5, 3); // true  (5 > 3)
+is.ge(5, 5); // true  (5 >= 5)
+is.lt(2, 10); // true  (2 < 10)
+is.le(4, 4); // true  (4 <= 4)
 is.within(7, [1, 10]); // true
 ```
 
@@ -110,11 +110,11 @@ is.within(7, [1, 10]); // true
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-is.even(4);          // true
-is.odd(7);           // true
-is.positive(1);      // true
-is.negative(-3);     // true
-is.zero(0);          // true
+is.even(4); // true
+is.odd(7); // true
+is.positive(1); // true
+is.negative(-3); // true
+is.zero(0); // true
 ```
 
 ## 🔗 All Typed Utilities

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: 'Vielzeug'
   text: 'Many tools. One good decision.'
-  tagline: "Each tool does one thing well. All of them play nicely together. TypeScript-first, zero dependencies."
+  tagline: 'Each tool does one thing well. All of them play nicely together. TypeScript-first, zero dependencies.'
   image:
     src: '/logo.svg'
     alt: 'Vielzeug Logo'
@@ -32,6 +32,9 @@ features:
   - title: '@vielzeug/fetchit'
     details: "<img src='/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
     link: /fetchit/
+  - title: '@vielzeug/floatit'
+    details: "<img src='/logo-floatit.svg' class='logo-highlight-smaller' alt='Floatit Logo' width='72'/>Type-safe utility for precise floating-point math without pitfalls."
+    link: /floatit/
   - title: '@vielzeug/formit'
     details: "<img src='/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
     link: /formit/

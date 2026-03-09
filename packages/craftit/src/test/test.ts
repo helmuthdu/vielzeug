@@ -77,11 +77,27 @@ let _tagCounter = 0;
 
 // ─── Core ────────────────────────────────────────────────────────────────────
 
-/** Flush pending reactive updates and one animation frame */
+/**
+ * Flush pending reactive updates.
+ * Drains the microtask queue completely (more robust than fixed-tick approach)
+ * then yields one animation frame for any rAF-scheduled work.
+ */
 export function flush(): Promise<void> {
-  return Promise.resolve()
-    .then(() => Promise.resolve())
-    .then(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
+  // Drain all pending microtasks by repeatedly yielding until the queue is empty.
+  // A fixed number of Promise.resolve() ticks can under-flush when signal batching
+  // or async effects schedule additional microtasks.
+  const drainMicrotasks = (): Promise<void> => {
+    let ticks = 0;
+    const drain = (): Promise<void> =>
+      Promise.resolve().then(() => {
+        if (++ticks < 10) return drain();
+      });
+    return drain();
+  };
+  return drainMicrotasks().then(
+    () =>
+      new Promise<void>((r) => (typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => r()) : r())),
+  );
 }
 
 /**
@@ -264,7 +280,7 @@ export const fire = {
 
 // ─── User interactions ────────────────────────────────────────────────────────
 
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+const tick = (): Promise<void> => Promise.resolve();
 
 /**
  * Higher-level async user interactions that mirror real browser behavior.

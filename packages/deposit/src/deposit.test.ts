@@ -1,499 +1,608 @@
-import { Logit } from '@vielzeug/logit';
 import {
   type Adapter,
-  createDeposit,
+  createIndexedDB,
+  createLocalStorage,
   defineSchema,
-  IndexedDBAdapter,
-  LocalStorageAdapter,
+  type IndexedDBHandle,
   QueryBuilder,
 } from './deposit';
 
-// Define a minimal DataSchemaDef for testing
-type User = { id: number; name?: string; age?: number; city?: string };
-type TestSchemaDef = { users: User };
+/* -------------------- Shared types & fixtures -------------------- */
 
-const userSchema = defineSchema<TestSchemaDef>({
-  users: {
-    indexes: ['name', 'age', 'city'],
-    key: 'id',
-  },
+type User = { id: number; name?: string; age?: number; city?: string };
+type Post = { id: number; userId: number; title: string };
+
+const userSchema = defineSchema<{ users: User }>({
+  users: { indexes: ['name', 'age', 'city'], key: 'id' },
 });
 
+const multiSchema = defineSchema<{ users: User; posts: Post }>({
+  posts: { key: 'id' },
+  users: { key: 'id' },
+});
+
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/* ==================== QueryBuilder ==================== */
+
 describe('QueryBuilder', () => {
-  const sampleData = [
+  const rows = [
     { age: 25, city: 'Paris', id: 1, name: 'Alice' },
     { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
     { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
   ];
 
-  const mockAdapter = {
-    getAll: async (_table: string) => sampleData,
-  };
-
-  let builder: QueryBuilder<(typeof sampleData)[0]>;
+  const mock = { getAll: async (_: string) => rows };
+  let qb: QueryBuilder<(typeof rows)[0]>;
 
   beforeEach(() => {
-    builder = new QueryBuilder<(typeof sampleData)[0]>(mockAdapter, 'users');
+    qb = new QueryBuilder(mock, 'users');
   });
 
   describe('Filtering', () => {
+    test('filter – custom predicate', async () => {
+      const r = await qb.filter((u) => (u.age ?? 0) > 25).toArray();
+      expect(r).toHaveLength(2);
+    });
+
     test('equals', async () => {
-      const result = await builder.equals('city', 'Paris').toArray();
-      expect(result).toHaveLength(2);
-      expect(result.every((r) => r.city === 'Paris')).toBe(true);
+      expect(await qb.equals('city', 'Paris').toArray()).toHaveLength(2);
     });
 
-    test('between', async () => {
-      const result = await builder.between('age', 25, 35).toArray();
-      expect(result).toHaveLength(3);
+    test('between – inclusive bounds', async () => {
+      const ages = (await qb.between('age', 25, 30).toArray()).map((u) => u.age).sort();
+      expect(ages).toEqual([25, 30]);
     });
 
-    test('startsWith', async () => {
-      const result = await builder.startsWith('name', 'A').toArray();
-      expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
+    test('startsWith – case-sensitive', async () => {
+      expect(await qb.startsWith('name', 'A').toArray()).toEqual([rows[0]]);
+      expect(await qb.startsWith('name', 'a').toArray()).toEqual([]);
     });
 
-    test('and combines multiple predicates', async () => {
-      const result = await builder.filter((item) => item.city === 'Paris' && (item.age ?? 0) > 30).toArray();
-      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+    test('startsWith – case-insensitive', async () => {
+      expect(await qb.startsWith('name', 'a', true).toArray()).toEqual([rows[0]]);
     });
 
-    test('or combines predicates with OR logic', async () => {
-      const result = await builder.filter((item) => item.city === 'Berlin' || item.age === 35).toArray();
-      expect(result).toHaveLength(2);
+    test('and – all predicates must match', async () => {
+      const r = await qb
+        .and(
+          (u) => u.city === 'Paris',
+          (u) => (u.age ?? 0) > 30,
+        )
+        .toArray();
+      expect(r).toEqual([rows[2]]);
+    });
+
+    test('or – any predicate matches', async () => {
+      const r = await qb
+        .or(
+          (u) => u.city === 'Berlin',
+          (u) => u.age === 35,
+        )
+        .toArray();
+      expect(r).toHaveLength(2);
     });
   });
 
-  describe('Ordering and Pagination', () => {
-    test('orderBy desc', async () => {
-      const result = await builder.orderBy('age', 'desc').toArray();
-      expect(result.map((r) => r.age)).toEqual([35, 30, 25]);
+  describe('Sorting & Pagination', () => {
+    test('orderBy asc and desc', async () => {
+      expect((await qb.orderBy('age', 'asc').toArray()).map((u) => u.age)).toEqual([25, 30, 35]);
+      expect((await qb.orderBy('age', 'desc').toArray()).map((u) => u.age)).toEqual([35, 30, 25]);
     });
 
     test('limit', async () => {
-      const result = await builder.limit(2).toArray();
-      expect(result).toHaveLength(2);
+      expect(await qb.limit(2).toArray()).toHaveLength(2);
     });
 
     test('offset', async () => {
-      const result = await builder.offset(1).toArray();
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe(2);
+      const r = await qb.offset(2).toArray();
+      expect(r).toHaveLength(1);
+      expect(r[0].id).toBe(3);
     });
 
     test('page', async () => {
-      const result = await builder.page(2, 2).toArray();
-      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+      expect(await qb.page(1, 2).toArray()).toEqual([rows[0], rows[1]]);
+      expect(await qb.page(2, 2).toArray()).toEqual([rows[2]]);
     });
 
     test('reverse', async () => {
-      const result = await builder.reverse().toArray();
-      expect(result[0].id).toBe(3);
-    });
-  });
-
-  describe('Aggregations', () => {
-    test('first and last', async () => {
-      expect(await builder.first()).toEqual(sampleData[0]);
-      expect(await builder.last()).toEqual(sampleData[2]);
+      const r = await qb.reverse().toArray();
+      expect(r[0].id).toBe(3);
+      expect(r[2].id).toBe(1);
     });
   });
 
   describe('Transformations', () => {
     test('map', async () => {
-      const result = await builder.map((item) => ({ ...item, age: item.age + 1 })).toArray();
-      expect(result.map((r) => r.age)).toEqual([26, 31, 36]);
+      const r = await qb.map((u) => ({ ...u, age: (u.age ?? 0) + 1 })).toArray();
+      expect(r.map((u) => u.age)).toEqual([26, 31, 36]);
     });
 
     test('search', async () => {
-      const result = await builder.search('Alice', 1).toArray();
-      expect(result).toEqual([{ age: 25, city: 'Paris', id: 1, name: 'Alice' }]);
+      expect(await qb.search('Alice', 1).toArray()).toEqual([rows[0]]);
+    });
+
+    test('contains – substring match on specific fields', async () => {
+      expect(await qb.contains('paris', ['name']).toArray()).toHaveLength(0);
+      expect(await qb.contains('alice', ['name']).toArray()).toHaveLength(1);
+      expect(await qb.contains('paris', ['city']).toArray()).toHaveLength(2);
+    });
+
+    test('contains – no fields = all string fields', async () => {
+      expect(await qb.contains('paris').toArray()).toHaveLength(2);
+      expect(await qb.contains('ali').toArray()).toHaveLength(1);
     });
   });
 
-  describe('Utilities', () => {
-    test('fluent chaining applies multiple conditions', async () => {
-      const result = await builder.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
-      expect(result).toEqual([{ age: 35, city: 'Paris', id: 3, name: 'Charlie' }]);
+  describe('Terminals', () => {
+    test('first / last', async () => {
+      expect(await qb.first()).toEqual(rows[0]);
+      expect(await qb.last()).toEqual(rows[2]);
+    });
+
+    test('count', async () => {
+      expect(await qb.equals('city', 'Paris').count()).toBe(2);
+    });
+
+    test('asyncIterator – yields all matching records', async () => {
+      const collected: (typeof rows)[0][] = [];
+      for await (const row of qb.equals('city', 'Paris')) {
+        collected.push(row);
+      }
+      expect(collected).toHaveLength(2);
+    });
+
+    test('chaining – filter + sort + limit', async () => {
+      const r = await qb.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
+      expect(r).toEqual([rows[2]]);
     });
   });
 });
 
-describe('LocalStorageAdapter', () => {
-  let adapter: LocalStorageAdapter<typeof userSchema>;
+/* ==================== LocalStorage adapter ==================== */
+
+describe('LocalStorage adapter', () => {
+  let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
     localStorage.clear();
-    adapter = new LocalStorageAdapter('TestDB', userSchema);
+    db = createLocalStorage({ dbName: 'LS', schema: userSchema });
   });
 
-  describe('CRUD Operations', () => {
-    test('put and get', async () => {
-      await adapter.put('users', { id: 1, name: 'Alice' });
-      const result = await adapter.get('users', 1);
-      expect(result).toEqual({ id: 1, name: 'Alice' });
+  describe('CRUD', () => {
+    test('put / get', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
     });
 
-    test('bulkPut and getAll', async () => {
-      await adapter.bulkPut('users', [
+    test('put array / getAll', async () => {
+      await db.put('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
-      expect(await adapter.getAll('users')).toHaveLength(2);
+      expect(await db.getAll('users')).toHaveLength(2);
     });
 
-    test('delete', async () => {
-      await adapter.put('users', { id: 1 });
-      await adapter.delete('users', 1);
-      expect(await adapter.get('users', 1)).toBeUndefined();
+    test('patch – returns merged record on hit', async () => {
+      await db.put('users', { age: 25, id: 1, name: 'Alice' });
+      expect(await db.patch('users', 1, { name: 'Alicia' })).toEqual({ age: 25, id: 1, name: 'Alicia' });
     });
 
-    test('bulkDelete', async () => {
-      await adapter.bulkPut('users', [
+    test('patch – returns undefined when key absent', async () => {
+      expect(await db.patch('users', 99, { name: 'Ghost' })).toBeUndefined();
+    });
+
+    test('patch – no follow-up get needed', async () => {
+      await db.put('users', { age: 25, id: 1, name: 'Alice' });
+      const updated = await db.patch('users', 1, { age: 26 });
+      expect(updated).toEqual({ age: 26, id: 1, name: 'Alice' });
+    });
+
+    test('delete single', async () => {
+      await db.put('users', { id: 1 });
+      await db.delete('users', 1);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('delete array removes only specified keys', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+      await db.delete('users', [1, 3]);
+      expect(await db.getAll('users')).toEqual([{ id: 2 }]);
+    });
+
+    test('deleteAll empties the table', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.deleteAll('users');
+      expect(await db.getAll('users')).toEqual([]);
+    });
+
+    test('count tracks live records', async () => {
+      expect(await db.count('users')).toBe(0);
+      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      expect(await db.count('users')).toBe(2);
+    });
+
+    test('has', async () => {
+      await db.put('users', { id: 1 });
+      expect(await db.has('users', 1)).toBe(true);
+      expect(await db.has('users', 99)).toBe(false);
+    });
+
+    test('getOrPut – returns cached value; factory not called', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      const factory = vi.fn();
+      expect(await db.getOrPut('users', 1, factory)).toEqual({ id: 1, name: 'Alice' });
+      expect(factory).not.toHaveBeenCalled();
+    });
+
+    test('getOrPut – stores factory value on miss', async () => {
+      const result = await db.getOrPut('users', 5, () => ({ id: 5, name: 'Eve' }));
+      expect(result).toEqual({ id: 5, name: 'Eve' });
+      expect(await db.get('users', 5)).toEqual({ id: 5, name: 'Eve' });
+    });
+
+    test('getMany – returns only found records', async () => {
+      await db.put('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
-        { id: 3, name: 'Charlie' },
       ]);
-      await adapter.bulkDelete('users', [1, 3]);
-      expect(await adapter.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
-    });
-
-    test('clear', async () => {
-      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
-      await adapter.clear('users');
-      expect(await adapter.getAll('users')).toEqual([]);
-    });
-
-    test('count', async () => {
-      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
-      expect(await adapter.count('users')).toBe(2);
-      await adapter.delete('users', 1);
-      expect(await adapter.count('users')).toBe(1);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    test('get returns defaultValue if not found', async () => {
-      const def = { id: 99, name: 'Default' };
-      expect(await adapter.get('users', 99, def)).toBe(def);
-    });
-
-    test('delete non-existent key does not throw', async () => {
-      await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
-    });
-
-    test('corrupted JSON is skipped gracefully', async () => {
-      const key = 'TestDB:users:1';
-      localStorage.setItem(key, '{invalid json');
-      expect(await adapter.get('users', 1)).toBeUndefined();
-      expect(localStorage.getItem(key)).toBeNull();
+      expect(await db.getMany('users', [1, 2, 99])).toEqual([
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
     });
   });
 
   describe('TTL', () => {
-    test('put with TTL expires record', async () => {
-      await adapter.put('users', { id: 1, name: 'Alice' }, 1);
-      await new Promise((r) => setTimeout(r, 5));
-      expect(await adapter.get('users', 1)).toBeUndefined();
+    test('record is invisible after TTL expires', async () => {
+      await db.put('users', { id: 1, name: 'Alice' }, 1);
+      await delay(5);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('getAll excludes all expired records', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await delay(5);
+      expect(await db.getAll('users')).toEqual([]);
+    });
+
+    test('count excludes expired records', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.put('users', { id: 3 });
+      await delay(5);
+      expect(await db.count('users')).toBe(1);
+    });
+
+    test('update preserves TTL', async () => {
+      await db.put('users', { id: 1, name: 'Alice' }, 50);
+      const updated = await db.patch('users', 1, { name: 'Alicia' });
+      expect(updated).toEqual({ id: 1, name: 'Alicia' });
+      await delay(55);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('getOrPut with TTL – stored value expires', async () => {
+      await db.getOrPut('users', 1, () => ({ id: 1, name: 'Alice' }), 1);
+      await delay(5);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    test('get returns defaultValue when key absent', async () => {
+      const fallback = { id: 0, name: 'Fallback' };
+      expect(await db.get('users', 0, fallback)).toBe(fallback);
+    });
+
+    test('delete non-existent key is silent', async () => {
+      await expect(db.delete('users', 999)).resolves.toBeUndefined();
+    });
+
+    test('deleteAll on empty table is silent', async () => {
+      await expect(db.deleteAll('users')).resolves.toBeUndefined();
+    });
+
+    test('corrupted entry is evicted and returns undefined', async () => {
+      localStorage.setItem('LS:users:1', '{bad json');
+      expect(await db.get('users', 1)).toBeUndefined();
+      expect(localStorage.getItem('LS:users:1')).toBeNull();
+    });
+
+    test('indexes declaration emits a warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      createLocalStorage({ dbName: 'Warn', schema: userSchema });
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('indexes'));
+      warnSpy.mockRestore();
+    });
+
+    test('from filters stored records', async () => {
+      await db.put('users', [
+        { age: 25, id: 1, name: 'Alice' },
+        { age: 30, id: 2, name: 'Bob' },
+      ]);
+      const r = await db.from('users').equals('age', 30).toArray();
+      expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
+    });
+
+    test('inline schema without separate defineSchema variable', async () => {
+      const inlineDb = createLocalStorage<{ items: { id: number; label: string } }>({
+        dbName: 'Inline',
+        schema: { items: { key: 'id' } },
+      });
+      await inlineDb.put('items', { id: 1, label: 'hello' });
+      expect(await inlineDb.get('items', 1)).toEqual({ id: 1, label: 'hello' });
     });
   });
 });
 
-describe('IndexedDBAdapter', () => {
-  let adapter: IndexedDBAdapter<typeof userSchema>;
+/* ==================== IndexedDB adapter ==================== */
+
+describe('IndexedDB adapter', () => {
+  let db: IndexedDBHandle<typeof userSchema>;
 
   beforeEach(async () => {
-    adapter = new IndexedDBAdapter('TestDB', 1, userSchema);
-    await adapter.clear('users');
+    db = createIndexedDB({ dbName: 'IDB', schema: userSchema, version: 1 });
+    await db.deleteAll('users');
   });
 
-  describe('CRUD Operations', () => {
-    test('put and get', async () => {
-      await adapter.put('users', { id: 1, name: 'Alice' });
-      expect(await adapter.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  afterEach(() => {
+    db.close();
+  });
+
+  describe('CRUD', () => {
+    test('put / get', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
     });
 
-    test('bulkPut and getAll', async () => {
-      await adapter.bulkPut('users', [
+    test('put array / getAll', async () => {
+      await db.put('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
-      expect(await adapter.getAll('users')).toHaveLength(2);
+      expect(await db.getAll('users')).toHaveLength(2);
     });
 
-    test('delete', async () => {
-      await adapter.put('users', { id: 1 });
-      await adapter.delete('users', 1);
-      expect(await adapter.get('users', 1)).toBeUndefined();
+    test('patch – returns merged record on hit', async () => {
+      await db.put('users', { age: 25, id: 1, name: 'Alice' });
+      expect(await db.patch('users', 1, { name: 'Alicia' })).toEqual({ age: 25, id: 1, name: 'Alicia' });
     });
 
-    test('bulkDelete', async () => {
-      await adapter.bulkPut('users', [
+    test('patch – returns undefined when key absent', async () => {
+      expect(await db.patch('users', 99, { name: 'Ghost' })).toBeUndefined();
+    });
+
+    test('patch – no follow-up get needed', async () => {
+      await db.put('users', { age: 25, id: 1, name: 'Alice' });
+      const updated = await db.patch('users', 1, { age: 26 });
+      expect(updated).toEqual({ age: 26, id: 1, name: 'Alice' });
+    });
+
+    test('delete single', async () => {
+      await db.put('users', { id: 1 });
+      await db.delete('users', 1);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('delete array removes only specified keys', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+      await db.delete('users', [1, 3]);
+      expect(await db.getAll('users')).toEqual([{ id: 2 }]);
+    });
+
+    test('deleteAll empties the table', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.deleteAll('users');
+      expect(await db.getAll('users')).toEqual([]);
+    });
+
+    test('count tracks live records', async () => {
+      expect(await db.count('users')).toBe(0);
+      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      expect(await db.count('users')).toBe(2);
+    });
+
+    test('has', async () => {
+      await db.put('users', { id: 1 });
+      expect(await db.has('users', 1)).toBe(true);
+      expect(await db.has('users', 99)).toBe(false);
+    });
+
+    test('getOrPut – returns cached value; factory not called', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      const factory = vi.fn();
+      expect(await db.getOrPut('users', 1, factory)).toEqual({ id: 1, name: 'Alice' });
+      expect(factory).not.toHaveBeenCalled();
+    });
+
+    test('getOrPut – stores factory value on miss', async () => {
+      const result = await db.getOrPut('users', 5, () => ({ id: 5, name: 'Eve' }));
+      expect(result).toEqual({ id: 5, name: 'Eve' });
+      expect(await db.get('users', 5)).toEqual({ id: 5, name: 'Eve' });
+    });
+
+    test('getMany – returns only found records', async () => {
+      await db.put('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
-        { id: 3, name: 'Charlie' },
       ]);
-      await adapter.bulkDelete('users', [1, 3]);
-      expect(await adapter.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
-    });
-
-    test('clear', async () => {
-      await adapter.put('users', { id: 1 });
-      await adapter.clear('users');
-      expect(await adapter.getAll('users')).toEqual([]);
-    });
-
-    test('count', async () => {
-      await adapter.bulkPut('users', [{ id: 1 }, { id: 2 }]);
-      expect(await adapter.count('users')).toBe(2);
-      await adapter.delete('users', 1);
-      expect(await adapter.count('users')).toBe(1);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    test('get returns defaultValue if not found', async () => {
-      const def = { id: 99, name: 'Default' };
-      expect(await adapter.get('users', 99, def)).toBe(def);
-    });
-
-    test('delete non-existent key does not throw', async () => {
-      await expect(adapter.delete('users', 999)).resolves.toBeUndefined();
+      expect(await db.getMany('users', [1, 2, 99])).toEqual([
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
     });
   });
 
   describe('TTL', () => {
-    test('put with TTL expires record', async () => {
-      await adapter.put('users', { id: 1, name: 'Alice' }, 1);
-      await new Promise((r) => setTimeout(r, 5));
-      expect(await adapter.get('users', 1)).toBeUndefined();
+    test('record is invisible after TTL expires', async () => {
+      await db.put('users', { id: 1, name: 'Alice' }, 1);
+      await delay(5);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('getAll returns live records and evicts expired from store', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.put('users', { id: 3, name: 'Charlie' });
+      await delay(5);
+      expect(await db.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
+      await delay(0); // let background eviction settle
+      const db2 = createIndexedDB({ dbName: 'IDB', schema: userSchema, version: 1 });
+      expect(await db2.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
+      db2.close();
+    });
+
+    test('count excludes expired records', async () => {
+      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.put('users', { id: 3 });
+      await delay(5);
+      expect(await db.count('users')).toBe(1);
+    });
+
+    test('update preserves TTL', async () => {
+      await db.put('users', { id: 1, name: 'Alice' }, 50);
+      const updated = await db.patch('users', 1, { name: 'Alicia' });
+      expect(updated).toEqual({ id: 1, name: 'Alicia' });
+      await delay(55);
+      expect(await db.get('users', 1)).toBeUndefined();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    test('get returns defaultValue when key absent', async () => {
+      const fallback = { id: 0, name: 'Fallback' };
+      expect(await db.get('users', 0, fallback)).toBe(fallback);
+    });
+
+    test('delete non-existent key is silent', async () => {
+      await expect(db.delete('users', 999)).resolves.toBeUndefined();
+    });
+
+    test('from filters stored records', async () => {
+      await db.put('users', [
+        { age: 25, id: 1, name: 'Alice' },
+        { age: 30, id: 2, name: 'Bob' },
+      ]);
+      const r = await db.from('users').equals('age', 30).toArray();
+      expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
     });
   });
 
   describe('Transaction', () => {
-    test('commits changes', async () => {
-      await adapter.bulkPut('users', [
+    test('put and delete commit atomically', async () => {
+      await db.put('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
-      await adapter.transaction(['users'], async (stores) => {
-        stores.users = stores.users.filter((u) => u.id !== 1);
-        stores.users.push({ id: 3, name: 'Charlie' });
+      await db.transaction(['users'], async (tx) => {
+        await tx.delete('users', 1);
+        await tx.put('users', { id: 3, name: 'Charlie' });
       });
-      expect(await adapter.getAll('users')).toEqual([
-        { id: 2, name: 'Bob' },
-        { id: 3, name: 'Charlie' },
-      ]);
+      const all = await db.getAll('users');
+      expect(all).toContainEqual({ id: 2, name: 'Bob' });
+      expect(all).toContainEqual({ id: 3, name: 'Charlie' });
+      expect(all.find((u) => u.id === 1)).toBeUndefined();
     });
 
-    test('does not apply changes on error', async () => {
-      await adapter.bulkPut('users', [{ id: 1, name: 'Alice' }]);
+    test('get inside transaction sees in-flight writes', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      let seen: User | undefined;
+      await db.transaction(['users'], async (tx) => {
+        await tx.put('users', { id: 2, name: 'Bob' });
+        seen = await tx.get('users', 2);
+      });
+      expect(seen).toEqual({ id: 2, name: 'Bob' });
+    });
+
+    test('patch inside transaction updates atomically', async () => {
+      await db.put('users', { age: 25, id: 1, name: 'Alice' });
+      let patched: User | undefined;
+      await db.transaction(['users'], async (tx) => {
+        patched = await tx.patch('users', 1, { age: 26 });
+      });
+      expect(patched).toEqual({ age: 26, id: 1, name: 'Alice' });
+      expect(await db.get('users', 1)).toEqual({ age: 26, id: 1, name: 'Alice' });
+    });
+
+    test('getAll inside transaction sees all committed records', async () => {
+      await db.put('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+      let count = 0;
+      await db.transaction(['users'], async (tx) => {
+        const all = await tx.getAll('users');
+        count = all.length;
+      });
+      expect(count).toBe(2);
+    });
+
+    test('changes across multiple tables commit atomically', async () => {
+      const multi = createIndexedDB({ dbName: 'Multi', schema: multiSchema, version: 1 });
+      await multi.deleteAll('users');
+      await multi.deleteAll('posts');
+      await multi.put('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+      await multi.put('posts', [
+        { id: 1, title: 'P1', userId: 1 },
+        { id: 2, title: 'P2', userId: 2 },
+      ]);
+      await multi.transaction(['users', 'posts'], async (tx) => {
+        await tx.delete('users', 1);
+        await tx.delete('posts', 1);
+      });
+      expect(await multi.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+      expect(await multi.getAll('posts')).toEqual([{ id: 2, title: 'P2', userId: 2 }]);
+      multi.close();
+    });
+
+    test('rolls back all changes on callback error', async () => {
+      await db.put('users', [{ id: 1, name: 'Alice' }]);
       await expect(
-        adapter.transaction(['users'], async () => {
+        db.transaction(['users'], async (tx) => {
+          await tx.put('users', { id: 2, name: 'Bob' });
           throw new Error('fail');
         }),
       ).rejects.toThrow();
-      expect(await adapter.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
     });
   });
 });
 
-describe('Depot', () => {
-  let deposit: Adapter<typeof userSchema>;
+/* ==================== Logger ==================== */
 
-  beforeEach(() => {
-    localStorage.clear();
-    deposit = createDeposit({
-      dbName: 'TestDB',
-      schema: userSchema,
-      type: 'localStorage',
-    });
-  });
-
-  test('basic CRUD', async () => {
-    await deposit.put('users', { id: 1, name: 'Alice' });
-    expect(await deposit.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-
-    await deposit.bulkPut('users', [
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    expect((await deposit.getAll('users')).length).toBe(3);
-
-    await deposit.delete('users', 1);
-    expect(await deposit.get('users', 1)).toBeUndefined();
-
-    await deposit.clear('users');
-    expect(await deposit.getAll('users')).toEqual([]);
-  });
-
-  test('bulkDelete removes multiple users', async () => {
-    await deposit.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    await deposit.bulkDelete('users', [1, 3]);
-    expect(await deposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
-  });
-
-  test('bulkDelete with non-existent keys does not throw', async () => {
-    await deposit.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    await expect(deposit.bulkDelete('users', [1, 999])).resolves.toBeUndefined();
-    expect(await deposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
-  });
-
-  test('bulkPut with TTL stores and expires records', async () => {
-    await deposit.bulkPut(
-      'users',
-      [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ],
-      1,
-    );
-    await new Promise((r) => setTimeout(r, 5));
-    expect(await deposit.getAll('users')).toEqual([]);
-  });
-
-  test('clear on empty table does not throw', async () => {
-    await expect(deposit.clear('users')).resolves.toBeUndefined();
-    expect(await deposit.getAll('users')).toEqual([]);
-  });
-
-  test('count returns correct number after operations', async () => {
-    expect(await deposit.count('users')).toBe(0);
-    await deposit.put('users', { id: 1, name: 'Alice' });
-    expect(await deposit.count('users')).toBe(1);
-    await deposit.bulkPut('users', [
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
-    expect(await deposit.count('users')).toBe(3);
-    await deposit.delete('users', 2);
-    expect(await deposit.count('users')).toBe(2);
-    await deposit.clear('users');
-    expect(await deposit.count('users')).toBe(0);
-  });
-
-  test('delete non-existent key does not throw', async () => {
-    await expect(deposit.delete('users', 999)).resolves.toBeUndefined();
-  });
-
-  test('get returns defaultValue if not found', async () => {
-    const def = { id: 99, name: 'Default' };
-    expect(await deposit.get('users', 99, def)).toBe(def);
-  });
-
-  test('put with TTL expires record', async () => {
-    await deposit.put('users', { id: 1, name: 'Alice' }, 1);
-    await new Promise((r) => setTimeout(r, 5));
-    expect(await deposit.get('users', 1)).toBeUndefined();
-  });
-
-  test('query chaining works', async () => {
-    await deposit.bulkPut('users', [
-      { age: 25, id: 1, name: 'Alice' },
-      { age: 30, id: 2, name: 'Bob' },
-      { age: 28, id: 3, name: 'Charlie' },
-    ]);
-    const results = await deposit.query('users').equals('age', 30).orderBy('id', 'desc').toArray();
-    expect(results).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
-  });
-
-  test('transaction is atomic for IndexedDB with multiple tables', async () => {
-    type Post = { id: number; userId: number; title: string };
-    type MultiTableSchema = { users: User; posts: Post };
-
-    const idbSchema = defineSchema<MultiTableSchema>({
-      posts: { key: 'id' },
-      users: { key: 'id' },
-    });
-
-    const idbDeposit = new IndexedDBAdapter('AtomicTestDB', 1, idbSchema);
-
-    await idbDeposit.bulkPut('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    await idbDeposit.bulkPut('posts', [
-      { id: 1, title: 'Post 1', userId: 1 },
-      { id: 2, title: 'Post 2', userId: 2 },
-    ]);
-
-    await idbDeposit.transaction(['users', 'posts'], async (stores) => {
-      stores.users = stores.users.filter((u) => u.id !== 1);
-      stores.posts = stores.posts.filter((p) => p.userId !== 1);
-    });
-
-    expect(await idbDeposit.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
-    expect(await idbDeposit.getAll('posts')).toEqual([{ id: 2, title: 'Post 2', userId: 2 }]);
-
-    await idbDeposit.clear('users');
-    await idbDeposit.clear('posts');
-  });
-
-  test('integrates with Logit as custom logger', async () => {
-    // Spy on console since Logit outputs to console
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const depositWithLogger = createDeposit({
-      dbName: 'LoggerTestDB',
-      logger: Logit.scope('createDeposit'),
-      schema: userSchema,
-      type: 'localStorage',
-    });
-
-    // Test that logger is used when handling corrupted data
-    const key = 'LoggerTestDB:users:1';
-    localStorage.setItem(key, '{invalid json');
-
-    await depositWithLogger.get('users', 1);
-
-    // Verify Logit logged the warning (Logit outputs to the console with its own formatting)
-    expect(consoleWarnSpy).toHaveBeenCalled();
-    const warnCall = consoleWarnSpy.mock.calls.find((call) =>
-      call.some((arg) => typeof arg === 'string' && arg.includes('createDeposit')),
-    );
-    expect(warnCall).toBeDefined();
-
-    // Restore console.warn
-    consoleWarnSpy.mockRestore();
-
-    // Clean up
+describe('Logger', () => {
+  afterEach(() => {
     localStorage.clear();
   });
 
-  test('uses console as default logger when not provided', async () => {
-    // Spy on console.warn to verify default logger behavior
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const depositNoLogger = createDeposit({
-      dbName: 'NoLoggerDB',
+  test('custom logger receives warnings for corrupted data', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const db = createLocalStorage({
+      dbName: 'LogTest',
+      logger: {
+        error: (...args: unknown[]) => console.error('[deposit-test]', ...args),
+        warn: (...args: unknown[]) => console.warn('[deposit-test]', ...args),
+      },
       schema: userSchema,
-      type: 'localStorage',
-      // No logger provided - should use console
     });
-
-    // Test that the console is used when handling corrupted data
-    const key = 'NoLoggerDB:users:1';
-    localStorage.setItem(key, '{invalid json');
-
-    await depositNoLogger.get('users', 1);
-
-    // Verify console.warn was called
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Removing corrupted entry for key: 1'),
-      expect.any(Error),
+    localStorage.setItem('LogTest:users:1', '{bad json');
+    await db.get('users', 1);
+    const scopedCall = warnSpy.mock.calls.find((c) =>
+      c.some((a) => typeof a === 'string' && a.includes('deposit-test')),
     );
+    expect(scopedCall).toBeDefined();
+    warnSpy.mockRestore();
+  });
 
-    // Restore console.warn
-    consoleWarnSpy.mockRestore();
-
-    // Clean up
-    localStorage.clear();
+  test('console is used as default logger', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const simpleSchema = defineSchema<{ items: { id: number } }>({ items: { key: 'id' } });
+    const db = createLocalStorage({ dbName: 'Default', schema: simpleSchema });
+    localStorage.setItem('Default:items:1', '{bad json');
+    await db.get('items', 1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Removing corrupted entry'), expect.any(Error));
+    warnSpy.mockRestore();
   });
 });

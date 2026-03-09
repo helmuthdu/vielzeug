@@ -1,5 +1,5 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: */
-import { createHttpClient, createQueryClient, HttpError, type MutationState, type QueryState } from './fetchit';
+/** biome-ignore-all lint/suspicious/noExplicitAny: Test mocks require any type for flexibility */
+import { createApi, createMutation, createQuery, HttpError, type MutationState, type QueryState } from './fetchit';
 
 describe('fetchit', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -32,59 +32,57 @@ describe('fetchit', () => {
     // -----------------------------------------------------------------------
 
     describe('URL Construction', () => {
-      it('interpolates :param style path parameters', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-        fetchMock.mockResolvedValue(jsonResponse({}));
-
-        await http.get('/users/:id/posts/:postId', { params: { id: 1, postId: 42 } });
-
-        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/1/posts/42', expect.any(Object));
-      });
-
-      it('interpolates {param} style path parameters', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+      it('interpolates {param} placeholders — single and multiple', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/users/{id}', { params: { id: 'abc' } });
+        expect(fetchMock).toHaveBeenLastCalledWith('https://api.example.com/users/abc', expect.any(Object));
 
-        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/abc', expect.any(Object));
+        await http.get('/users/{id}/posts/{postId}', { params: { id: 1, postId: 42 } });
+        expect(fetchMock).toHaveBeenLastCalledWith('https://api.example.com/users/1/posts/42', expect.any(Object));
       });
 
-      it('appends search params as a query string', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+      it('appends query string and omits undefined values', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse([]));
 
-        await http.get('/users', { search: { page: 2, role: 'admin' } });
+        await http.get('/users', { query: { page: 2, role: 'admin' } });
+        expect(fetchMock).toHaveBeenLastCalledWith(
+          'https://api.example.com/users?page=2&role=admin',
+          expect.any(Object),
+        );
 
-        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?page=2&role=admin', expect.any(Object));
+        await http.get('/users', { query: { page: 1, role: undefined } });
+        expect(fetchMock).toHaveBeenLastCalledWith('https://api.example.com/users?page=1', expect.any(Object));
       });
 
-      it('combines path params and search params', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+      it('combines path params and query params', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse([]));
 
-        await http.get('/users/:id/posts', { params: { id: 5 }, search: { limit: 10 } });
+        await http.get('/users/{id}/posts', { params: { id: 5 }, query: { limit: 10 } });
 
         expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users/5/posts?limit=10', expect.any(Object));
       });
 
-      it('omits undefined search params', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
-        fetchMock.mockResolvedValue(jsonResponse([]));
+      it('does not add a trailing slash when path is empty', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({}));
 
-        await http.get('/users', { search: { page: 1, role: undefined } });
+        await http.get('');
 
-        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/users?page=1', expect.any(Object));
+        expect(fetchMock).toHaveBeenCalledWith('https://api.example.com', expect.any(Object));
       });
     });
 
     // -----------------------------------------------------------------------
-    // HTTP Methods & Body Serialization
+    // Methods & Body
     // -----------------------------------------------------------------------
 
-    describe('HTTP Methods & Body Serialization', () => {
-      it('dispatches GET, POST, PUT, PATCH, DELETE and custom methods', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+    describe('Methods & Body', () => {
+      it('dispatches correct method for GET, POST, PUT, PATCH, DELETE, and custom methods', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/r');
@@ -107,7 +105,7 @@ describe('fetchit', () => {
       });
 
       it('auto-serializes a plain-object body as JSON with content-type header', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await http.post('/users', { body: { name: 'Alice' } });
@@ -122,7 +120,7 @@ describe('fetchit', () => {
       });
 
       it('passes BodyInit types (FormData, Blob, ArrayBuffer, TypedArray) through without serialization', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
         const formData = new FormData();
@@ -143,7 +141,7 @@ describe('fetchit', () => {
       });
 
       it('returns undefined for 204 No Content responses', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue({ headers: new Headers(), ok: true, status: 204 });
 
         const result = await http.delete('/users/1');
@@ -157,8 +155,8 @@ describe('fetchit', () => {
     // -----------------------------------------------------------------------
 
     describe('Headers', () => {
-      it('sends initial headers on every request', async () => {
-        const http = createHttpClient({ headers: { Authorization: 'Bearer token', 'x-app': 'test' } });
+      it('sends initial client headers on every request', async () => {
+        const http = createApi({ headers: { Authorization: 'Bearer token', 'x-app': 'test' } });
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/test');
@@ -171,23 +169,14 @@ describe('fetchit', () => {
         );
       });
 
-      it('setHeaders() updates a header dynamically', async () => {
-        const http = createHttpClient({ headers: { Authorization: 'Bearer old' } });
-        http.setHeaders({ Authorization: 'Bearer new' });
+      it('headers() updates existing headers and removes headers when value is undefined', async () => {
+        const http = createApi({ headers: { Authorization: 'Bearer old', 'x-trace': 'abc' } });
+        http.headers({ Authorization: 'Bearer new', 'x-trace': undefined });
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/test');
 
         expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer new');
-      });
-
-      it('setHeaders() removes a header when value is undefined', async () => {
-        const http = createHttpClient({ headers: { 'x-trace': 'abc' } });
-        http.setHeaders({ 'x-trace': undefined });
-        fetchMock.mockResolvedValue(jsonResponse({}));
-
-        await http.get('/test');
-
         expect(fetchMock.mock.calls[0][1].headers['x-trace']).toBeUndefined();
       });
     });
@@ -197,12 +186,12 @@ describe('fetchit', () => {
     // -----------------------------------------------------------------------
 
     describe('Interceptors', () => {
-      it('runs an interceptor that can modify request context', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+      it('interceptor can modify request context', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         http.use(async ({ url, init }, next) =>
-          next({ url, init: { ...init, headers: { ...(init.headers as Record<string, string>), 'x-custom': 'yes' } } }),
+          next({ init: { ...init, headers: { ...(init.headers as Record<string, string>), 'x-custom': 'yes' } }, url }),
         );
 
         await http.get('/users/1');
@@ -211,7 +200,7 @@ describe('fetchit', () => {
       });
 
       it('chains multiple interceptors in onion order', async () => {
-        const http = createHttpClient();
+        const http = createApi();
         fetchMock.mockResolvedValue(jsonResponse({}));
         const log: number[] = [];
 
@@ -233,7 +222,7 @@ describe('fetchit', () => {
       });
 
       it('use() returns a dispose function that removes the interceptor', async () => {
-        const http = createHttpClient();
+        const http = createApi();
         fetchMock.mockResolvedValue(jsonResponse({}));
         let callCount = 0;
 
@@ -250,8 +239,8 @@ describe('fetchit', () => {
         expect(callCount).toBe(1); // not called again
       });
 
-      it('an interceptor can short-circuit fetch entirely', async () => {
-        const http = createHttpClient();
+      it('an interceptor can short-circuit without calling next', async () => {
+        const http = createApi();
 
         http.use(
           async () =>
@@ -268,26 +257,35 @@ describe('fetchit', () => {
     });
 
     // -----------------------------------------------------------------------
-    // Request Deduplication
+    // Deduplication
     // -----------------------------------------------------------------------
 
-    describe('Request Deduplication', () => {
-      it('auto-deduplicates concurrent GET requests (idempotent by default)', async () => {
-        const http = createHttpClient();
+    describe('Deduplication', () => {
+      it('auto-deduplicates concurrent requests for idempotent methods (GET, DELETE)', async () => {
+        const http = createApi();
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
 
-        const [r1, r2, r3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
+        const [g1, g2, g3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
+        expect(g1).toEqual({ id: 1 });
+        expect(g2).toEqual({ id: 1 });
+        expect(g3).toEqual({ id: 1 });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
 
-        expect(r1).toEqual({ id: 1 });
-        expect(r2).toEqual({ id: 1 });
-        expect(r3).toEqual({ id: 1 });
+        fetchMock.mockClear();
+        fetchMock.mockImplementation(
+          () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ deleted: true })), 50)),
+        );
+
+        const [d1, d2] = await Promise.all([http.delete('/users/1'), http.delete('/users/1')]);
+        expect(d1).toEqual({ deleted: true });
+        expect(d2).toEqual({ deleted: true });
         expect(fetchMock).toHaveBeenCalledTimes(1);
       });
 
       it('does NOT deduplicate POST requests by default', async () => {
-        const http = createHttpClient();
+        const http = createApi();
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await Promise.all([http.post('/users', { body: { name: 'A' } }), http.post('/users', { body: { name: 'A' } })]);
@@ -295,8 +293,8 @@ describe('fetchit', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
       });
 
-      it('deduplicates POST when global dedupe:true is set', async () => {
-        const http = createHttpClient({ dedupe: true });
+      it('global dedupe:true deduplicates any method', async () => {
+        const http = createApi({ dedupe: true });
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
@@ -312,7 +310,7 @@ describe('fetchit', () => {
       });
 
       it('per-request dedupe:false opts out of deduplication', async () => {
-        const http = createHttpClient();
+        const http = createApi();
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await Promise.all([http.get('/users/1', { dedupe: false }), http.get('/users/1', { dedupe: false })]);
@@ -320,28 +318,8 @@ describe('fetchit', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
       });
 
-      it('handles BodyInit binary types in dedupe key without crashing', async () => {
-        const http = createHttpClient({ dedupe: true });
-        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
-
-        const fd = new FormData();
-        fd.append('x', '1');
-        await expect(http.post('/upload', { body: fd })).resolves.toBeDefined();
-        await expect(http.post('/upload', { body: new Blob(['hi']) })).resolves.toBeDefined();
-        await expect(http.post('/binary', { body: new ArrayBuffer(4) })).resolves.toBeDefined();
-      });
-
-      it('rejects with TypeError when a plain-object body has circular references', async () => {
-        const http = createHttpClient({ dedupe: true });
-
-        const circular: any = { a: 1 };
-        circular.self = circular;
-
-        await expect(http.post('/json', { body: circular })).rejects.toThrow(TypeError);
-      });
-
-      it('deduplicates FormData requests since they share the same serialized body key', async () => {
-        const http = createHttpClient({ dedupe: true });
+      it('deduplicates FormData requests sharing the same serialized key', async () => {
+        const http = createApi({ dedupe: true });
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
@@ -357,6 +335,23 @@ describe('fetchit', () => {
         expect(r2).toEqual({ id: 1 });
         expect(fetchMock).toHaveBeenCalledTimes(1);
       });
+
+      it('handles BodyInit binary types (Blob, ArrayBuffer) in dedup key without crashing', async () => {
+        const http = createApi({ dedupe: true });
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+        await expect(http.post('/upload', { body: new Blob(['hi']) })).resolves.toBeDefined();
+        await expect(http.post('/binary', { body: new ArrayBuffer(4) })).resolves.toBeDefined();
+      });
+
+      it('rejects with TypeError when body has circular references', async () => {
+        const http = createApi({ dedupe: true });
+
+        const circular: any = { a: 1 };
+        circular.self = circular;
+
+        await expect(http.post('/json', { body: circular })).rejects.toThrow(TypeError);
+      });
     });
 
     // -----------------------------------------------------------------------
@@ -364,11 +359,20 @@ describe('fetchit', () => {
     // -----------------------------------------------------------------------
 
     describe('Timeout', () => {
-      it('timeout:0 and timeout:Infinity complete requests without timer errors', async () => {
+      it('edge values — timeout:0 and timeout:Infinity complete without errors', async () => {
         fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
-        await expect(createHttpClient({ timeout: 0 }).get('/test')).resolves.toBeDefined();
-        await expect(createHttpClient({ timeout: Number.POSITIVE_INFINITY }).get('/test')).resolves.toBeDefined();
+        await expect(createApi({ timeout: 0 }).get('/test')).resolves.toBeDefined();
+        await expect(createApi({ timeout: Number.POSITIVE_INFINITY }).get('/test')).resolves.toBeDefined();
+      });
+
+      it('per-request timeout overrides client-level timeout', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+        const http = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
+
+        await http.get('/data', { timeout: 0 });
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -378,7 +382,7 @@ describe('fetchit', () => {
 
     describe('Error Handling', () => {
       it('wraps network errors in HttpError preserving url and method', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockRejectedValue(new Error('Network error'));
 
         const err = await http.get('/users/1').catch((e) => e);
@@ -389,8 +393,8 @@ describe('fetchit', () => {
         expect(err.method).toBe('GET');
       });
 
-      it('wraps non-OK responses in HttpError with status and parsed body as cause', async () => {
-        const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+      it('wraps non-OK responses in HttpError with status, data, and raw response', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
         fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
         const err = await http.get('/users/999').catch((e) => e);
@@ -398,7 +402,20 @@ describe('fetchit', () => {
         expect(err).toBeInstanceOf(HttpError);
         if (!(err instanceof HttpError)) throw err;
         expect(err.status).toBe(404);
-        expect(err.cause).toEqual({ error: 'Not found' });
+        expect(err.data).toEqual({ error: 'Not found' });
+        expect(err.response).toBeDefined();
+      });
+
+      it('HttpError.is() narrows type and optionally matches status code', async () => {
+        const http = createApi({ baseUrl: 'https://api.example.com' });
+        fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
+
+        const err = await http.get('/users/999').catch((e) => e);
+
+        expect(HttpError.is(err)).toBe(true);
+        expect(HttpError.is(err, 404)).toBe(true);
+        expect(HttpError.is(err, 500)).toBe(false);
+        expect(HttpError.is(new Error('plain'))).toBe(false);
       });
     });
   });
@@ -409,12 +426,12 @@ describe('fetchit', () => {
 
   describe('Query Client', () => {
     // -----------------------------------------------------------------------
-    // Caching
+    // Fetching & Caching
     // -----------------------------------------------------------------------
 
-    describe('Caching', () => {
+    describe('Fetching & Caching', () => {
       it('serves fresh data from cache without re-executing fn', async () => {
-        const qc = createQueryClient();
+        const qc = createQuery();
         let calls = 0;
         const fn = async () => {
           calls++;
@@ -429,7 +446,7 @@ describe('fetchit', () => {
 
       it('refetches after staleTime expires', async () => {
         vi.useFakeTimers();
-        const qc = createQueryClient();
+        const qc = createQuery();
         let calls = 0;
         const fn = async () => {
           calls++;
@@ -445,7 +462,7 @@ describe('fetchit', () => {
       });
 
       it('deduplicates concurrent in-flight queries for the same key', async () => {
-        const qc = createQueryClient();
+        const qc = createQuery();
         let calls = 0;
         const fn = () => new Promise<{ id: number }>((resolve) => setTimeout(() => resolve({ id: ++calls }), 50));
 
@@ -461,11 +478,27 @@ describe('fetchit', () => {
         expect(calls).toBe(1);
       });
 
-      it('enabled:false returns undefined without executing fn', async () => {
-        const qc = createQueryClient();
+      it('passes an AbortSignal to fn via context object', async () => {
+        const qc = createQuery();
+        let receivedSignal: AbortSignal | undefined;
+
+        await qc.query({
+          fn: async ({ signal }) => {
+            receivedSignal = signal;
+            return { id: 1 };
+          },
+          key: ['signal-test'],
+        });
+
+        expect(receivedSignal).toBeInstanceOf(AbortSignal);
+      });
+
+      it('enabled:false skips fn, creates no phantom entry, and returns existing cache data if present', async () => {
+        const qc = createQuery();
         let called = false;
 
-        const result = await qc.query({
+        // No cache — returns undefined without calling fn or creating an entry
+        const r1 = await qc.query({
           enabled: false,
           fn: async () => {
             called = true;
@@ -473,18 +506,14 @@ describe('fetchit', () => {
           },
           key: ['x'],
         });
-
-        expect(result).toBeUndefined();
+        expect(r1).toBeUndefined();
         expect(called).toBe(false);
-      });
+        expect(qc.getState(['x'])).toBeNull();
 
-      it('enabled:false returns existing cached data', async () => {
-        const qc = createQueryClient();
-        qc.setData(['users', 1], { id: 1, name: 'Alice' });
-
-        const result = await qc.query({ enabled: false, fn: async () => ({ id: 99 }), key: ['users', 1] });
-
-        expect(result).toEqual({ id: 1, name: 'Alice' });
+        // With pre-seeded cache — returns existing data without calling fn
+        qc.set(['x'], { id: 99 });
+        const r2 = await qc.query({ enabled: false, fn: async () => ({ id: 0 }), key: ['x'] });
+        expect(r2).toEqual({ id: 99 });
       });
     });
 
@@ -493,26 +522,27 @@ describe('fetchit', () => {
     // -----------------------------------------------------------------------
 
     describe('Prefetch', () => {
-      it('populates the cache', async () => {
-        const qc = createQueryClient();
+      it('populates the cache and returns the fetched data', async () => {
+        const qc = createQuery();
 
-        await qc.prefetch({ fn: async () => ({ id: 1, name: 'Test' }), key: ['users', 1] });
+        const result = await qc.prefetch({ fn: async () => ({ id: 1, name: 'Test' }), key: ['users', 1] });
 
-        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Test' });
+        expect(result).toEqual({ id: 1, name: 'Test' });
+        expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Test' });
       });
 
-      it('silently ignores errors — returns undefined, never throws', async () => {
-        const qc = createQueryClient();
+      it('silently ignores errors and returns undefined — never throws', async () => {
+        const qc = createQuery();
 
-        await expect(
-          qc.prefetch({
-            fn: async () => {
-              throw new Error('fail');
-            },
-            key: ['users', 1],
-            retry: false,
-          }),
-        ).resolves.toBeUndefined();
+        const result = await qc.prefetch({
+          fn: async () => {
+            throw new Error('fail');
+          },
+          key: ['users', 1],
+          retry: false,
+        });
+
+        expect(result).toBeUndefined();
       });
     });
 
@@ -522,7 +552,7 @@ describe('fetchit', () => {
 
     describe('Retry', () => {
       it('retries the fn up to the specified count before succeeding', async () => {
-        const qc = createQueryClient();
+        const qc = createQuery();
         let attempts = 0;
 
         await qc.query({
@@ -538,7 +568,7 @@ describe('fetchit', () => {
       });
 
       it('retry:false makes exactly one attempt then rejects', async () => {
-        const qc = createQueryClient();
+        const qc = createQuery();
         let attempts = 0;
 
         await expect(
@@ -557,17 +587,76 @@ describe('fetchit', () => {
     });
 
     // -----------------------------------------------------------------------
-    // State & Subscriptions
+    // Data Management
     // -----------------------------------------------------------------------
 
-    describe('State & Subscriptions', () => {
-      it('getState() returns null before any query', () => {
-        const qc = createQueryClient();
-        expect(qc.getState(['never'])).toBeNull();
+    describe('Data Management', () => {
+      it('set/get round-trip with value and updater function', () => {
+        const qc = createQuery();
+
+        qc.set(['users', 1], { id: 1, name: 'Alice' });
+        expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Alice' });
+
+        qc.set<{ id: number; name: string }>(['users', 1], (old) => ({ ...old!, name: 'Bob' }));
+        expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Bob' });
       });
 
-      it('getState() returns full state shape after a successful query', async () => {
-        const qc = createQueryClient();
+      it('invalidate() forces a re-fetch on the next query call', async () => {
+        const qc = createQuery();
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return { id: 1 };
+        };
+
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+        qc.invalidate(['users', 1]);
+        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+
+        expect(calls).toBe(2);
+      });
+
+      it('gcTime:0 evicts the entry immediately after fetch', async () => {
+        const qc = createQuery({ gcTime: 0 });
+
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
+
+        expect(qc.get(['x'])).toBeUndefined();
+      });
+
+      it('clear() removes all cached entries', () => {
+        const qc = createQuery();
+        qc.set(['a'], 1);
+        qc.set(['b'], 2);
+        qc.clear();
+
+        expect(qc.get(['a'])).toBeUndefined();
+        expect(qc.get(['b'])).toBeUndefined();
+      });
+
+      it('clear() keeps entries with active observers in cache (reset to idle) so subscriptions stay live', async () => {
+        const qc = createQuery();
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['x'], staleTime: 10_000 });
+
+        const states: QueryState[] = [];
+        qc.subscribe(['x'], (s) => states.push(s));
+        qc.clear();
+
+        // Entry remains accessible — subscriptions are not orphaned
+        expect(qc.getState(['x'])?.status).toBe('idle');
+        expect(states[states.length - 1]?.status).toBe('idle');
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Subscriptions & State
+    // -----------------------------------------------------------------------
+
+    describe('Subscriptions & State', () => {
+      it('getState() returns null before any query, then full shape after success', async () => {
+        const qc = createQuery();
+
+        expect(qc.getState(['never'])).toBeNull();
 
         await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
 
@@ -576,15 +665,15 @@ describe('fetchit', () => {
           error: null,
           isError: false,
           isIdle: false,
-          isLoading: false,
+          isPending: false,
           isSuccess: true,
           status: 'success',
         });
         expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
       });
 
-      it('subscribe() fires through idle -> pending -> success transitions', async () => {
-        const qc = createQueryClient();
+      it('subscribe() fires idle -> pending -> success state transitions', async () => {
+        const qc = createQuery();
         const states: QueryState[] = [];
 
         const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
@@ -598,62 +687,101 @@ describe('fetchit', () => {
         expect(states[states.length - 1].data).toEqual({ id: 1 });
       });
 
-      it('setData() notifies subscribers immediately with the new value', () => {
-        const qc = createQueryClient();
+      it('subscribe() fires idle -> pending -> error state transitions', async () => {
+        const qc = createQuery();
+        const states: QueryState[] = [];
+
+        qc.subscribe(['fail'], (s) => states.push({ ...s }));
+        await qc
+          .query({
+            fn: async () => {
+              throw new Error('boom');
+            },
+            key: ['fail'],
+            retry: false,
+          })
+          .catch(() => {});
+
+        const statuses = states.map((s) => s.status);
+        expect(statuses[0]).toBe('idle');
+        expect(statuses).toContain('pending');
+        expect(statuses[statuses.length - 1]).toBe('error');
+        expect(states[states.length - 1].error?.message).toBe('boom');
+        expect(states[states.length - 1].isError).toBe(true);
+      });
+
+      it('set() notifies subscribers immediately with the new value', () => {
+        const qc = createQuery();
         const states: QueryState[] = [];
 
         qc.subscribe(['users', 1], (s) => states.push({ ...s }));
-        qc.setData(['users', 1], { id: 1, name: 'Alice' });
+        qc.set(['users', 1], { id: 1, name: 'Alice' });
 
         expect(states[states.length - 1].data).toEqual({ id: 1, name: 'Alice' });
       });
-    });
 
-    // -----------------------------------------------------------------------
-    // Cache Management
-    // -----------------------------------------------------------------------
+      it('subscribe() cancels a pending GC timer to keep entry alive', async () => {
+        vi.useFakeTimers();
+        const qc = createQuery({ gcTime: 1_000 });
 
-    describe('Cache Management', () => {
-      it('setData with a value and getData round-trip', () => {
-        const qc = createQueryClient();
-        qc.setData(['users', 1], { id: 1, name: 'Manual' });
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
+        // GC timer is now ticking — subscribe before it fires
+        qc.subscribe(['x'], () => {});
+        vi.advanceTimersByTime(2_000);
 
-        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Manual' });
-        expect(fetchMock).not.toHaveBeenCalled();
+        // Entry should still be accessible because subscribe cancelled the GC timer
+        expect(qc.get(['x'])).toEqual({ id: 1 });
+        vi.useRealTimers();
       });
 
-      it('setData with a function updater merges with existing data', () => {
-        const qc = createQueryClient();
-        qc.setData(['users', 1], { id: 1, name: 'Alice' });
-        qc.setData<{ id: number; name: string }>(['users', 1], (old) => ({ ...old!, name: 'Bob' }));
+      it('invalidate() notifies subscribers with idle state and keeps the observed entry in cache', async () => {
+        const qc = createQuery();
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 10_000 });
 
-        expect(qc.getData(['users', 1])).toEqual({ id: 1, name: 'Bob' });
-      });
-
-      it('invalidate() clears the exact key and forces a re-fetch', async () => {
-        const qc = createQueryClient();
-        let calls = 0;
-        const fn = async () => {
-          calls++;
-          return { id: 1 };
-        };
-
-        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
-        expect(calls).toBe(1);
+        const states: QueryState[] = [];
+        const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
 
         qc.invalidate(['users', 1]);
-        await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
-        expect(calls).toBe(2);
+
+        expect(states[states.length - 1]?.status).toBe('idle');
+        expect(states[states.length - 1]?.data).toBeUndefined();
+        expect(qc.getState(['users', 1])).not.toBeNull(); // entry remains — subscribers are not orphaned
+        unsub();
       });
 
-      it('clear() removes all cached entries', () => {
-        const qc = createQueryClient();
-        qc.setData(['a'], 1);
-        qc.setData(['b'], 2);
+      it('clear() notifies active subscribers with idle state before wiping the cache', async () => {
+        const qc = createQuery();
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+
+        const states: QueryState[] = [];
+        qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+
         qc.clear();
 
-        expect(qc.getData(['a'])).toBeUndefined();
-        expect(qc.getData(['b'])).toBeUndefined();
+        const last = states[states.length - 1];
+        expect(last?.status).toBe('idle');
+        expect(last?.data).toBeUndefined();
+      });
+
+      it('cancel() transitions pending -> success when data exists and schedules GC', async () => {
+        vi.useFakeTimers();
+        const gcTime = 1_000;
+        const qc = createQuery({ gcTime });
+
+        let resolve!: (v: unknown) => void;
+        const pending = new Promise((r) => {
+          resolve = r;
+        });
+        qc.query({ fn: () => pending as Promise<unknown>, key: ['x'] });
+        qc.set(['x'], { id: 42 }); // seed data so cancel transitions to 'success'
+        qc.cancel(['x']);
+
+        expect(qc.get(['x'])).toEqual({ id: 42 });
+
+        vi.advanceTimersByTime(gcTime + 1);
+        expect(qc.get(['x'])).toBeUndefined(); // GC fired and evicted the entry
+        vi.useRealTimers();
+        resolve(undefined);
       });
     });
 
@@ -663,7 +791,7 @@ describe('fetchit', () => {
 
     describe('Key Serialization', () => {
       it('treats objects with different property order as the same cache key', async () => {
-        const qc = createQueryClient({ staleTime: 10_000 });
+        const qc = createQuery({ staleTime: 10_000 });
         let calls = 0;
         const fn = async () => {
           calls++;
@@ -671,26 +799,13 @@ describe('fetchit', () => {
         };
 
         await qc.query({ fn, key: ['users', { page: 1, role: 'admin' }] });
-        await qc.query({ fn, key: ['users', { role: 'admin', page: 1 }] });
+        await qc.query({ fn, key: ['users', { page: 1, role: 'admin' }] });
 
         expect(calls).toBe(1);
       });
 
-      it('invalidate() with a prefix clears all matching entries', async () => {
-        const qc = createQueryClient();
-        const fn = async () => ({ id: 1 });
-
-        await qc.query({ fn, key: ['users', { page: 1 }] });
-        await qc.query({ fn, key: ['users', { page: 2 }] });
-
-        qc.invalidate(['users']);
-
-        expect(qc.getData(['users', { page: 1 }])).toBeUndefined();
-        expect(qc.getData(['users', { page: 2 }])).toBeUndefined();
-      });
-
-      it('handles deeply nested objects as stable cache keys', async () => {
-        const qc = createQueryClient({ staleTime: 10_000 });
+      it('handles deeply nested objects as stable keys', async () => {
+        const qc = createQuery({ staleTime: 10_000 });
         let calls = 0;
         const fn = async () => {
           calls++;
@@ -703,6 +818,47 @@ describe('fetchit', () => {
 
         expect(calls).toBe(1);
       });
+
+      it('filters undefined object values so {a:1,b:undefined} and {a:1} produce the same key', async () => {
+        const qc = createQuery({ staleTime: 10_000 });
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return {};
+        };
+
+        await qc.query({ fn, key: ['x', { a: 1, b: undefined }] });
+        await qc.query({ fn, key: ['x', { a: 1 }] });
+
+        expect(calls).toBe(1);
+      });
+
+      it('serializes undefined array elements to a stable string', async () => {
+        const qc = createQuery({ staleTime: 10_000 });
+        let calls = 0;
+        const fn = async () => {
+          calls++;
+          return {};
+        };
+
+        await qc.query({ fn, key: ['x', undefined] });
+        await qc.query({ fn, key: ['x', undefined] });
+
+        expect(calls).toBe(1);
+      });
+
+      it('prefix invalidation clears all entries whose key starts with the given prefix', async () => {
+        const qc = createQuery();
+        const fn = async () => ({ id: 1 });
+
+        await qc.query({ fn, key: ['users', { page: 1 }] });
+        await qc.query({ fn, key: ['users', { page: 2 }] });
+
+        qc.invalidate(['users']);
+
+        expect(qc.get(['users', { page: 1 }])).toBeUndefined();
+        expect(qc.get(['users', { page: 2 }])).toBeUndefined();
+      });
     });
   });
 
@@ -712,10 +868,9 @@ describe('fetchit', () => {
 
   describe('Mutation', () => {
     it('executes the mutationFn and returns the result', async () => {
-      const qc = createQueryClient();
       fetchMock.mockResolvedValue(jsonResponse({ id: 1, name: 'Created' }, 201));
 
-      const addUser = qc.mutation((data: { name: string }) =>
+      const addUser = createMutation((data: { name: string }) =>
         fetch('/users', { body: JSON.stringify(data), method: 'POST' }).then((r) => r.json()),
       );
 
@@ -723,11 +878,10 @@ describe('fetchit', () => {
       expect(result).toEqual({ id: 1, name: 'Created' });
     });
 
-    it('reports idle -> pending -> success state lifecycle via subscribe', async () => {
-      const qc = createQueryClient();
+    it('reports idle -> pending -> success state lifecycle', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ id: 1 }, 201));
 
-      const addUser = qc.mutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+      const addUser = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
 
       const states: MutationState[] = [];
       const unsub = addUser.subscribe((s) => states.push({ ...s }));
@@ -740,16 +894,15 @@ describe('fetchit', () => {
       expect(states[2].updatedAt).toBeGreaterThan(0);
     });
 
-    it('reports idle -> pending -> error state lifecycle on failure', async () => {
-      const qc = createQueryClient();
+    it('reports idle -> pending -> error state lifecycle and rejects the caller', async () => {
       fetchMock.mockRejectedValue(new Error('Server error'));
 
-      const fail = qc.mutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
+      const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
 
       const states: MutationState[] = [];
       fail.subscribe((s) => states.push({ ...s }));
 
-      await expect(fail.mutate(undefined)).rejects.toThrow();
+      await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
 
       expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
       expect(states[2].isError).toBe(true);
@@ -757,23 +910,77 @@ describe('fetchit', () => {
     });
 
     it('reset() returns state to idle with no data or error', async () => {
-      const qc = createQueryClient();
       fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
-      const mut = qc.mutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+      const mut = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
       await mut.mutate(undefined);
 
       expect(mut.getState().status).toBe('success');
       mut.reset();
-      expect(mut.getState()).toMatchObject({ status: 'idle', data: undefined, error: null });
+      expect(mut.getState()).toMatchObject({ data: undefined, error: null, status: 'idle' });
     });
 
-    it('throws the original error to the caller', async () => {
-      const qc = createQueryClient();
+    it('throws when mutate() is called while a previous mutation is already in flight', async () => {
+      let resolve!: () => void;
+      const slow = createMutation<void>(
+        () =>
+          new Promise<void>((r) => {
+            resolve = r;
+          }),
+      );
+
+      const first = slow.mutate(undefined);
+      await expect(slow.mutate(undefined)).rejects.toThrow('mutation already in flight');
+      resolve();
+      await first;
+    });
+
+    it('per-call signal aborts the mutation', async () => {
+      const ac = new AbortController();
+
+      const slow = createMutation(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const id = setTimeout(resolve, 10_000);
+            ac.signal.addEventListener('abort', () => {
+              clearTimeout(id);
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      );
+
+      const promise = slow.mutate(undefined, { signal: ac.signal });
+      ac.abort();
+      await expect(promise).rejects.toThrow();
+    });
+
+    it('calls onSuccess callback with result and variables', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ id: 1 }, 201));
+
+      const onSuccess = vi.fn();
+      const addUser = createMutation((_name: string) => fetch('/users', { method: 'POST' }).then((r) => r.json()), {
+        onSuccess,
+      });
+
+      await addUser.mutate('Alice');
+
+      expect(onSuccess).toHaveBeenCalledWith({ id: 1 }, 'Alice');
+    });
+
+    it('calls onError and onSettled callbacks on failure', async () => {
       fetchMock.mockRejectedValue(new Error('boom'));
 
-      const fail = qc.mutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
+      const onError = vi.fn();
+      const onSettled = vi.fn();
+      const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()), {
+        onError,
+        onSettled,
+      });
+
       await expect(fail.mutate(undefined)).rejects.toThrow('boom');
+
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), undefined);
+      expect(onSettled).toHaveBeenCalledWith(undefined, expect.any(Error), undefined);
     });
   });
 });

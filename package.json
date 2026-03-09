@@ -7,7 +7,7 @@
   "scripts": {
     "setup": "rush install",
     "build": "rush build",
-    "fix": "biome check --write --unsafe packages/**/src",
+    "fix": "biome check --write packages/**/src",
     "lint": "biome check packages/**/src",
     "test": "vitest",
     "docs:dev": "vitepress dev docs",
@@ -27,8 +27,5 @@
     "vite-plugin-dts": "^4.5.4",
     "vitepress": "^2.0.0-alpha.16",
     "vitest": "^4.0.18"
-  },
-  "dependencies": {
-    "@vielzeug/logit": "^1.1.2"
   }
 }

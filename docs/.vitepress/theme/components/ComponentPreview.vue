@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, useSlots, onMounted, onUnmounted } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, useSlots } from 'vue';
 
 const props = defineProps<{
   title?: string;
-  showCode?: boolean;
   vertical?: boolean;
   center?: boolean;
   background?: string;
@@ -13,16 +12,13 @@ const props = defineProps<{
 type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 
 const slots = useSlots();
-const showCodeState = ref(props.showCode ?? false);
 const extractedCode = ref('');
 const processedCodeBlock = ref<any>(null);
-const buttonRef = ref<HTMLElement | null>(null);
 const isMaximized = ref(false);
 const viewportSize = ref<ViewportSize>('full');
-
-const toggleCode = () => {
-  showCodeState.value = !showCodeState.value;
-};
+const scriptCode = ref('');
+const previewContainerRef = ref<HTMLDivElement | null>(null);
+const activeTab = ref('preview');
 
 const toggleMaximize = () => {
   isMaximized.value = !isMaximized.value;
@@ -75,15 +71,9 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 
 // Extract code from slot content
-onMounted(() => {
+onMounted(async () => {
   // Add keyboard listener
   document.addEventListener('keydown', handleKeydown);
-
-  // Listen to the custom 'click' event from the bit-button to avoid double-firing
-  // The button emits a custom event, so we use addEventListener instead of @click
-  if (buttonRef.value) {
-    buttonRef.value.addEventListener('click', toggleCode as EventListener);
-  }
 
   if (slots.default) {
     const slotContent = slots.default();
@@ -99,10 +89,24 @@ onMounted(() => {
         const codeText = extractCodeText(codeBlockVNode);
         if (codeText) {
           extractedCode.value = codeText;
+
+          // Extract and store script block content for iframe execution
+          const scriptMatch = codeText.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
+          if (scriptMatch) {
+            scriptCode.value = scriptMatch[1]
+              .split('\n')
+              .filter((line: string) => !line.trim().startsWith('import '))
+              .join('\n')
+              .trim();
+          }
         }
       }
     }
   }
+
+  // Render preview after mounting
+  await nextTick();
+  renderPreview();
 });
 
 onUnmounted(() => {
@@ -168,8 +172,30 @@ function extractText(children: any): string {
 }
 
 const displayCode = computed(() => {
-  return extractedCode.value.trim();
+  // Strip <script> blocks — they won't execute via v-html anyway, and we run them separately
+  return extractedCode.value
+    .trim()
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .trim();
 });
+
+// Render content in preview container with CSS reset
+const renderPreview = () => {
+  if (!previewContainerRef.value) return;
+
+  // Set the HTML content
+  previewContainerRef.value.innerHTML = displayCode.value;
+
+  // Execute script if present
+  if (scriptCode.value) {
+    try {
+      // Create a new function scope for the script
+      new Function(scriptCode.value)();
+    } catch (e) {
+      console.warn('[ComponentPreview] Script execution error:', e);
+    }
+  }
+};
 
 const backgroundStyle = computed(() => {
   if (props.background) {
@@ -196,71 +222,15 @@ const backgroundStyle = computed(() => {
         {{ title }}
       </div>
 
-      <div class="preview-scroll-container">
-        <div class="preview-container-wrapper" :style="{ width: getViewportWidth }">
-          <div
-            class="preview-container"
-            :class="{
-              vertical,
-              center,
-              colorful,
-            }"
-            :style="backgroundStyle">
-            <ClientOnly>
-              <div class="preview-demo" v-html="displayCode"></div>
-            </ClientOnly>
-          </div>
-        </div>
-      </div>
-
-      <div class="preview-actions">
-        <div class="actions-left">
-          <!-- Maximize button -->
-          <bit-button
-            color="secondary"
-            variant="ghost"
-            size="sm"
-            icon-only
-            @click="toggleMaximize"
-            :title="isMaximized ? 'Exit fullscreen' : 'Maximize'">
-            <svg
-              v-if="!isMaximized"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="m 15,3 h 6 v 6" id="path1" />
-              <path d="m 21,3 -7,7" id="path2" />
-              <path d="m 3,21 7,-7" id="path3" />
-              <path d="M 9,21 H 3 v -6" id="path4" />
-            </svg>
-            <svg
-              v-else
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              version="1.1"
-              id="svg4"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="M 14,10 21,3" id="path1" />
-              <path d="M 20,10 H 14 V 4" id="path2" />
-              <path d="m 3,21 7,-7" id="path3" />
-              <path d="m 4,14 h 6 v 6" id="path4" />
-            </svg>
-          </bit-button>
+      <!-- Tabs with proper slot structure -->
+      <bit-tabs :value="activeTab" variant="flat" class="preview-tabs">
+        <bit-tab-item slot="tabs" value="preview">Preview</bit-tab-item>
+        <bit-tab-item slot="tabs" value="code">Code</bit-tab-item>
+        <!-- Actions bar above tabs -->
+        <div class="preview-actions" slot="tabs">
           <!-- Viewport size buttons -->
           <div class="viewport-controls">
-            <bit-button-group attached color="secondary" size="sm">
+            <bit-button-group attached size="sm">
               <bit-button
                 icon-only
                 :variant="viewportSize === 'mobile' ? 'solid' : 'flat'"
@@ -275,8 +245,8 @@ const backgroundStyle = computed(() => {
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round">
-                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2" id="rect1" />
-                  <path d="m 12,18 h 0.01" id="path1" />
+                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+                  <path d="m 12,18 h 0.01" />
                 </svg>
               </bit-button>
               <bit-button
@@ -293,8 +263,8 @@ const backgroundStyle = computed(() => {
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round">
-                  <rect width="17.564447" height="20" x="3.2177763" y="2" rx="2" ry="2" id="rect1" />
-                  <line x1="12" x2="12.01" y1="18" y2="18" id="line1" />
+                  <rect width="17.564447" height="20" x="3.2177763" y="2" rx="2" ry="2" />
+                  <line x1="12" x2="12.01" y1="18" y2="18" />
                 </svg>
               </bit-button>
               <bit-button
@@ -311,27 +281,24 @@ const backgroundStyle = computed(() => {
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round">
-                  <rect width="20" height="14" x="2" y="3" rx="2" id="rect1" />
-                  <line x1="8" x2="16" y1="21" y2="21" id="line1" />
-                  <line x1="12" x2="12" y1="17" y2="21" id="line2" />
+                  <rect width="20" height="14" x="2" y="3" rx="2" />
+                  <line x1="8" x2="16" y1="21" y2="21" />
+                  <line x1="12" x2="12" y1="17" y2="21" />
                 </svg>
               </bit-button>
             </bit-button-group>
           </div>
-        </div>
-
-        <div class="actions-right">
-          <!-- Show/Hide code button -->
+          <!-- Maximize button -->
           <bit-button
-            color="secondary"
-            ref="buttonRef"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            :class="{ active: showCodeState }"
-            :aria-expanded="showCodeState">
+            icon-only
+            @click="toggleMaximize"
+            :title="isMaximized ? 'Exit fullscreen' : 'Maximize'">
             <svg
-              v-if="!showCodeState"
-              slot="prefix"
+              v-if="!isMaximized"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -339,12 +306,15 @@ const backgroundStyle = computed(() => {
               stroke-linecap="round"
               stroke-linejoin="round"
               xmlns="http://www.w3.org/2000/svg">
-              <path d="M 16,18 22,12 16,6" />
-              <path d="m 8,6 -6,6 6,6" />
+              <path d="m 15,3 h 6 v 6" />
+              <path d="m 21,3 -7,7" />
+              <path d="m 3,21 7,-7" />
+              <path d="M 9,21 H 3 v -6" />
             </svg>
             <svg
               v-else
-              slot="prefix"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -352,26 +322,42 @@ const backgroundStyle = computed(() => {
               stroke-linecap="round"
               stroke-linejoin="round"
               xmlns="http://www.w3.org/2000/svg">
-              <path d="M 12,22 V 16" />
-              <path d="M 12,8 V 2" />
-              <path d="M 4,12 H 2" />
-              <path d="M 10,12 H 8" />
-              <path d="M 16,12 H 14" />
-              <path d="M 22,12 H 20" />
-              <path d="M 15,19 12,16 9,19" />
-              <path d="M 15,5 12,8 9,5" />
+              <path d="M 14,10 21,3" />
+              <path d="M 20,10 H 14 V 4" />
+              <path d="m 3,21 7,-7" />
+              <path d="m 4,14 h 6 v 6" />
             </svg>
-            {{ showCodeState ? 'Hide Code' : 'Show Code' }}
           </bit-button>
         </div>
-      </div>
 
-      <Transition name="slide">
-        <div v-if="showCodeState" class="preview-code">
-          <!-- Use VitePress's already-processed code block -->
-          <component v-if="processedCodeBlock" :is="processedCodeBlock" />
-        </div>
-      </Transition>
+        <!-- Preview tab panel -->
+        <bit-tab-panel value="preview" padding="none">
+          <div class="preview-scroll-container">
+            <div class="preview-container-wrapper" :style="{ width: getViewportWidth }">
+              <div
+                class="preview-container"
+                :class="{
+                  vertical,
+                  center,
+                  colorful,
+                }"
+                :style="backgroundStyle">
+                <ClientOnly>
+                  <div ref="previewContainerRef" class="preview-demo"></div>
+                </ClientOnly>
+              </div>
+            </div>
+          </div>
+        </bit-tab-panel>
+
+        <!-- Code tab panel -->
+        <bit-tab-panel value="code">
+          <div class="preview-code">
+            <!-- Use VitePress's already-processed code block -->
+            <component v-if="processedCodeBlock" :is="processedCodeBlock" />
+          </div>
+        </bit-tab-panel>
+      </bit-tabs>
     </div>
   </div>
 </template>
@@ -379,8 +365,6 @@ const backgroundStyle = computed(() => {
 <style scoped>
 .component-preview {
   margin: var(--size-6) 0;
-  border: var(--border) solid var(--color-contrast-300);
-  border-radius: var(--rounded-lg);
   overflow: hidden;
   position: relative;
 }
@@ -445,11 +429,31 @@ const backgroundStyle = computed(() => {
     linear-gradient(to bottom, var(--color-contrast-100) 1px, transparent 1px);
   background-size: 16px 16px;
   background-position: 0 0;
-  height: var(--size-full);
+  min-height: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+/* Full height in maximized mode */
+.preview-wrapper.maximized .preview-scroll-container {
+  height: 100%;
+  min-height: 100%;
+  /* Keep centering consistent with normal mode */
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-wrapper.maximized .preview-container-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-wrapper.maximized .preview-container {
+  flex: 1;
+  min-height: 100%;
 }
 
 .preview-container-wrapper {
@@ -498,25 +502,64 @@ const backgroundStyle = computed(() => {
 }
 
 .preview-demo {
+  /* Provide a clean context for components */
   display: contents;
+
+  /* Reset common inherited properties that might interfere */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
 }
 
+/* Isolate preview content from VitePress documentation styles */
+.preview-demo > * {
+  /* Reset margin/padding that docs might add */
+  margin: 0;
+  padding: 0;
+}
+
+/* Override VitePress paragraph styles inside preview */
+.preview-demo :deep(p),
+.preview-demo p {
+  margin: 0;
+  line-height: var(--leading-normal);
+}
+
+/* Ensure buildit components render properly within preview */
+.preview-demo
+  :where(
+    bit-button,
+    bit-input,
+    bit-card,
+    bit-dialog,
+    bit-select,
+    bit-checkbox,
+    bit-radio,
+    bit-switch,
+    bit-slider,
+    bit-textarea,
+    bit-alert,
+    bit-dialog,
+    bit-tooltip,
+    bit-accordion,
+    bit-tabs,
+    bit-tab-item,
+    bit-tab-panel,
+    bit-file-input,
+    bit-button-group,
+    bit-grid
+  ) {
+  /* Ensure components don't inherit problematic doc styles */
+  all: revert-layer;
+}
+
+/* Actions bar in tabs slot */
 .preview-actions {
-  padding: var(--size-2) var(--size-4);
-  background: var(--vp-c-bg);
-  border-top: var(--border) solid var(--vp-c-divider);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--size-4);
-  flex-shrink: 0;
-}
-
-.actions-left,
-.actions-right {
   display: flex;
   align-items: center;
   gap: var(--size-2);
+  margin-left: auto; /* Push to the right side of the tab bar */
 }
 
 .viewport-controls {
@@ -524,10 +567,26 @@ const backgroundStyle = computed(() => {
   gap: var(--size-2);
 }
 
+/* Tabs container */
+.preview-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Ensure tab panels flow full height */
+.preview-tabs::part(panels) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .preview-code {
-  border-top: var(--border) solid var(--vp-c-divider);
-  background: var(--vp-code-block-bg);
-  flex-shrink: 0;
+  overflow: auto;
+  max-height: 600px;
 }
 
 /* VitePress code blocks already have styling, just ensure they fit */
@@ -539,20 +598,6 @@ const backgroundStyle = computed(() => {
 
 .preview-code :deep(pre) {
   margin: 0;
-}
-
-/* Slide transition */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.3s ease;
-  max-height: var(--size-screen-xl);
-  overflow: hidden;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  max-height: 0;
-  opacity: 0;
 }
 
 /* Fade transition for overlay */
@@ -585,6 +630,10 @@ const backgroundStyle = computed(() => {
     display: none;
   }
 
+  .preview-actions {
+    justify-content: center;
+  }
+
   .preview-scroll-container {
     overflow: auto;
   }
@@ -597,17 +646,6 @@ const backgroundStyle = computed(() => {
     width: var(--size-screen-width);
     height: var(--size-screen-height);
     border-radius: var(--rounded-none);
-  }
-
-  .preview-actions {
-    flex-direction: column;
-    gap: var(--size-2);
-  }
-
-  .actions-left,
-  .actions-right {
-    width: var(--size-full);
-    justify-content: center;
   }
 }
 </style>

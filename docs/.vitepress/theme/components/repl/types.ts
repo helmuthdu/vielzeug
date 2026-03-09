@@ -409,9 +409,6 @@ declare module '@vielzeug/craftit' {
   /** Set ARIA attributes on the component host. */
   export function aria(attrs: Record<string, string | boolean | null>): void;
 
-  /** Attach an alternative runtime renderer (e.g. Lit). */
-  export function withRuntime(runtime: unknown): void;
-
   /** Associate a form field with this element (used inside form-associated components). */
   export function field(options?: { name?: string }): ElementInternals;
 
@@ -442,17 +439,17 @@ declare module '@vielzeug/fetchit' {
     signal?: AbortSignal;
   };
 
-  export function createHttpClient(opts?: HttpClientOptions): {
+  export function createHttp(opts?: HttpClientOptions): {
     delete: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
     get: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
     patch: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
     post: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
     put: (url: string, cfg?: HttpRequestConfig) => Promise<unknown>;
     request: <T>(method: string, url: string, config?: HttpRequestConfig) => Promise<T>;
-    setHeaders(next: Record<string, string | undefined>): void;
+    headers(next: Record<string, string | undefined>): void;
   };
 
-  export function createQueryClient(opts?: QueryClientOptions): {
+  export function createQuery(opts?: QueryClientOptions): {
     clear: () => void;
     fetch: <T>(options: any) => Promise<T>;
     getData: <T>(key: any) => T | undefined;
@@ -543,7 +540,7 @@ declare module '@vielzeug/formit' {
 
     // Subscriptions
     subscribe(listener: (state: FormState) => void): () => void;
-    subscribeField<TValue>(name: string, listener: (payload: {
+    subscribeOnly<TValue>(name: string, listener: (payload: {
       value: TValue | undefined;
       error?: string;
       touched: boolean;

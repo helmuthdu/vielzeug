@@ -25,6 +25,7 @@ html,
   tab-size: 4;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  color-scheme: light dark;
 }
 
 body {

@@ -36,16 +36,15 @@ define('my-counter', () => {
 });
 ```
 
-| Feature | Craftit | Lit | Stencil |
-|---|---|---|---|
-| Bundle size | <PackageInfo package="craftit" type="size" /> | ~7 kB | ~50 kB (compiler) |
-| Signals | ✅ Built-in | ✅ @lit-labs | ❌ |
-| Decorators | ❌ | ✅ | ✅ |
-| SSR | ❌ | ✅ | ✅ |
-| Zero dependencies | ✅ | ✅ | ❌ |
+| Feature           | Craftit                                       | Lit          | Stencil           |
+| ----------------- | --------------------------------------------- | ------------ | ----------------- |
+| Bundle size       | <PackageInfo package="craftit" type="size" /> | ~7 kB        | ~50 kB (compiler) |
+| Signals           | ✅ Built-in                                   | ✅ @lit-labs | ❌                |
+| Decorators        | ❌                                            | ✅           | ✅                |
+| SSR               | ❌                                            | ✅           | ✅                |
+| Zero dependencies | ✅                                            | ✅           | ❌                |
 
 **Use Craftit when** you want signals-based web components without decorators or a build compiler step.
-
 
 ## Import
 
@@ -88,7 +87,16 @@ import {
   field,
 } from '@vielzeug/craftit';
 // Optional: Import types
-import type { Signal, ReadonlySignal, Ref, RefList, InjectionKey, HTMLResult, CSSResult, FormFieldHandle } from '@vielzeug/craftit';
+import type {
+  Signal,
+  ReadonlySignal,
+  Ref,
+  RefList,
+  InjectionKey,
+  HTMLResult,
+  CSSResult,
+  FormFieldHandle,
+} from '@vielzeug/craftit';
 ```
 
 ## Basic Usage
@@ -254,11 +262,11 @@ Useful for form adapters, unit converters, and any derived state that needs to w
 ```ts
 import { isSignal, toValue, signal } from '@vielzeug/craftit';
 const s = signal(42);
-console.log(isSignal(s));    // true
-console.log(isSignal(42));   // false
+console.log(isSignal(s)); // true
+console.log(isSignal(42)); // false
 // toValue unwraps a Signal or returns a plain value as-is
-console.log(toValue(s));     // 42
-console.log(toValue(42));    // 42
+console.log(toValue(s)); // 42
+console.log(toValue(42)); // 42
 ```
 
 ## Computed Signals
@@ -326,10 +334,10 @@ const count = signal(0);
 watch(count, (newValue, oldValue) => {
   console.log(`Changed from ${oldValue} to ${newValue}`);
 });
-// Watch multiple signals
+// Watch multiple signals — callback takes no arguments; read .value inside
 const name = signal('Alice');
-watch([count, name], ([countValue, nameValue]) => {
-  console.log(`Count: ${countValue}, Name: ${nameValue}`);
+watch([count, name], () => {
+  console.log(`Count: ${count.value}, Name: ${name.value}`);
 });
 // With immediate option
 watch(
@@ -405,7 +413,7 @@ raw`<div>${trustedContent}</div>`;
 html`<div>${rawHtml(trustedContent)}</div>`;
 // escapeHtml() — explicit escape a value
 import { escapeHtml } from '@vielzeug/craftit';
-console.log(escapeHtml('<script>')); // &lt;script&gt;
+console.log(escapeHtml('<script>')); // &lt;script&gt;
 ```
 
 ## Template System
@@ -557,7 +565,7 @@ html`
 ```ts
 const name = signal('');
 // Long form
-html`<input :value=${name} @input=${(e: Event) => name.value = (e.target as HTMLInputElement).value} />`;
+html`<input :value=${name} @input=${(e: Event) => (name.value = (e.target as HTMLInputElement).value)} />`;
 // Short form — same result
 html`<input ${html.bind(name)} />`;
 ```
@@ -579,7 +587,7 @@ html` ${() => html`<p>Count: ${count.value}</p>`} `;
 html` <p>${() => `Hello, ${name.value}!`}</p> `;
 
 // Reactive attributes
-html` <button class=${() => count.value > 0 ? 'btn active' : 'btn'}>Click</button> `;
+html` <button class=${() => (count.value > 0 ? 'btn active' : 'btn')}>Click</button> `;
 ```
 
 ::: tip Why Arrow Functions?
@@ -587,6 +595,7 @@ Craftit is a runtime library without a compiler. When you write `count.value`, J
 :::
 
 ::: warning Common Mistake
+
 ```ts
 // ❌ Static - evaluated once, never updates
 html`<p>${count.value}</p>`;
@@ -594,6 +603,7 @@ html`<p>${count.value}</p>`;
 // ✅ Reactive - re-evaluates when count changes
 html`<p>${() => count.value}</p>`;
 ```
+
 :::
 
 ## Control Flow
@@ -618,7 +628,7 @@ html`
 const role = signal('guest');
 html`
   ${html.when(
-    [() => role.value === 'admin',  () => html`<admin-panel />`],
+    [() => role.value === 'admin', () => html`<admin-panel />`],
     [() => role.value === 'editor', () => html`<editor-panel />`],
     () => html`<guest-panel />`,
   )}
@@ -632,11 +642,14 @@ Keeps DOM **mounted**, only toggles `display`. Use this for components with expe
 ```ts
 const panelOpen = signal(true);
 html`
-  ${html.show(panelOpen, () => html`
-    <div class="panel">
-      <heavy-chart />
-    </div>
-  `)}
+  ${html.show(
+    panelOpen,
+    () => html`
+      <div class="panel">
+        <heavy-chart />
+      </div>
+    `,
+  )}
 `;
 ```
 
@@ -654,40 +667,18 @@ html`
   ${html.each(
     todos,
     (todo) => todo.id,
-    (todo, index) => html`
-      <li>${index + 1}. ${todo.text}</li>
-    `,
+    (todo, index) => html` <li>${index + 1}. ${todo.text}</li> `,
     () => html`<p>No todos yet!</p>`,
   )}
 `;
 // Simple form (index as key, no empty):
 html`${html.each(todos, (todo) => html`<li>${todo.text}</li>`)}`;
-// Options object form:
-html`
-  ${html.each(todos, {
-    key: (todo) => todo.id,
-    template: (todo, i) => html`<li>${i + 1}. ${todo.text}</li>`,
-    empty: () => html`<p>No todos</p>`,
-  })}
-`;
 // Function source (reactive computed list):
-html`${html.each(() => todos.value.filter(t => !t.done), (t) => t.id, (t) => html`<li>${t.text}</li>`)}`;
-```
-
-### Pattern Matching (`html.match`)
-
-Switch/case style. Returns `V` for static values; returns `() => V` for `Signal`/function values (reactive):
-
-```ts
-const status = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
-html`
-  ${html.match(status, [
-    ['idle',    () => html`<p>Ready</p>`],
-    ['loading', () => html`<p>Loading…</p>`],
-    ['success', () => html`<p>Done!</p>`],
-    ['error',   () => html`<p>Something went wrong</p>`],
-  ], () => html`<p>Unknown</p>`)}
-`;
+html`${html.each(
+  () => todos.value.filter((t) => !t.done),
+  (t) => t.id,
+  (t) => html`<li>${t.text}</li>`,
+)}`;
 ```
 
 ### Async Content (`suspense`)
@@ -811,7 +802,7 @@ Use `html.classes()` to build dynamic class names. Wrap in an arrow function for
 const isActive = signal(true);
 const isDisabled = signal(false);
 
-// Object syntax - wrap in arrow function for reactivity
+// Wrap in arrow function for reactivity
 html`
   <div
     class=${() =>
@@ -820,13 +811,6 @@ html`
         disabled: isDisabled.value,
         'button-primary': true,
       })}>
-    Styled
-  </div>
-`;
-
-// Array syntax
-html`
-  <div class=${() => html.classes(['btn', isActive.value && 'active', { primary: true, disabled: isDisabled.value }])}>
     Styled
   </div>
 `;
@@ -842,6 +826,7 @@ class=${() => html.classes({ active: priority.value === 'high' })}
 // ❌ Static - evaluated once with current value
 class=${html.classes({ active: priority.value === 'high' })}
 ```
+
 :::
 
 ## Lifecycle Hooks
@@ -941,10 +926,15 @@ Craftit provides native form integration through the `field()` helper, which use
 To use `field()`, you must define your component with the `formAssociated: true` option:
 
 ```ts
-define('my-input', () => {
-  // component code
-}, { formAssociated: true }); // ← Required!
+define(
+  'my-input',
+  () => {
+    // component code
+  },
+  { formAssociated: true },
+); // ← Required!
 ```
+
 :::
 
 ### Basic Form Field
@@ -954,22 +944,20 @@ Create a custom input that participates in form submission:
 ```ts
 import { define, signal, html, field } from '@vielzeug/craftit';
 
-define('custom-input', () => {
-  const value = signal('');
+define(
+  'custom-input',
+  () => {
+    const value = signal('');
 
-  // Register as a form field
-  const formField = field({
-    value: value
-  });
+    // Register as a form field
+    const formField = field({
+      value: value,
+    });
 
-  return html`
-    <input
-      type="text"
-      :value=${value}
-      @input=${(e) => value.value = e.target.value}
-    />
-  `;
-}, { formAssociated: true }); // ← Must set this!
+    return html` <input type="text" :value=${value} @input=${(e) => (value.value = e.target.value)} /> `;
+  },
+  { formAssociated: true },
+); // ← Must set this!
 ```
 
 ```html
@@ -984,22 +972,20 @@ define('custom-input', () => {
 Transform the signal value before sending to the form:
 
 ```ts
-define('number-input', () => {
-  const value = signal(0);
+define(
+  'number-input',
+  () => {
+    const value = signal(0);
 
-  const formField = field({
-    value: value,
-    toFormValue: (v) => String(v) // Convert number to string
-  });
+    const formField = field({
+      value: value,
+      toFormValue: (v) => String(v), // Convert number to string
+    });
 
-  return html`
-    <input
-      type="number"
-      :value=${value}
-      @input=${(e) => value.value = Number(e.target.value)}
-    />
-  `;
-}, { formAssociated: true });
+    return html` <input type="number" :value=${value} @input=${(e) => (value.value = Number(e.target.value))} /> `;
+  },
+  { formAssociated: true },
+);
 ```
 
 ### With Validation
@@ -1009,38 +995,40 @@ Use ElementInternals validation API:
 ```ts
 import { define, signal, computed, html, field } from '@vielzeug/craftit';
 
-define('email-input', () => {
-  const value = signal('');
+define(
+  'email-input',
+  () => {
+    const value = signal('');
 
-  const formField = field({ value });
+    const formField = field({ value });
 
-  const isValid = computed(() =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)
-  );
+    const isValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
-  // Update validity when value changes
-  watch(value, () => {
-    if (!value.value) {
-      formField.setValidity({}, ''); // Clear validation
-    } else if (!isValid.value) {
-      formField.setValidity(
-        { typeMismatch: true },
-        'Please enter a valid email address'
-      );
-    } else {
-      formField.setValidity({}, ''); // Valid
-    }
-  }, { immediate: true });
+    // Update validity when value changes
+    watch(
+      value,
+      () => {
+        if (!value.value) {
+          formField.setValidity({}, ''); // Clear validation
+        } else if (!isValid.value) {
+          formField.setValidity({ typeMismatch: true }, 'Please enter a valid email address');
+        } else {
+          formField.setValidity({}, ''); // Valid
+        }
+      },
+      { immediate: true },
+    );
 
-  return html`
-    <input
-      type="email"
-      :value=${value}
-      @input=${(e) => value.value = e.target.value}
-      placeholder="email@example.com"
-    />
-  `;
-}, { formAssociated: true });
+    return html`
+      <input
+        type="email"
+        :value=${value}
+        @input=${(e) => (value.value = e.target.value)}
+        placeholder="email@example.com" />
+    `;
+  },
+  { formAssociated: true },
+);
 ```
 
 ### With Disabled State
@@ -1048,29 +1036,26 @@ define('email-input', () => {
 Sync disabled state with form internals:
 
 ```ts
-define('toggle-input', () => {
-  const value = signal('');
-  const disabled = signal(false);
+define(
+  'toggle-input',
+  () => {
+    const value = signal('');
+    const disabled = signal(false);
 
-  const formField = field({
-    value: value,
-    disabled: disabled // Automatically syncs with internals.states
-  });
+    const formField = field({
+      value: value,
+      disabled: disabled, // Automatically syncs with internals.states
+    });
 
-  return html`
-    <div>
-      <input
-        type="text"
-        :value=${value}
-        ?disabled=${disabled}
-        @input=${(e) => value.value = e.target.value}
-      />
-      <button @click=${() => disabled.value = !disabled.value}>
-        ${disabled.value ? 'Enable' : 'Disable'}
-      </button>
-    </div>
-  `;
-}, { formAssociated: true });
+    return html`
+      <div>
+        <input type="text" :value=${value} ?disabled=${disabled} @input=${(e) => (value.value = e.target.value)} />
+        <button @click=${() => (disabled.value = !disabled.value)}>${disabled.value ? 'Enable' : 'Disable'}</button>
+      </div>
+    `;
+  },
+  { formAssociated: true },
+);
 ```
 
 ### Complex Form Control
@@ -1078,43 +1063,49 @@ define('toggle-input', () => {
 Full-featured custom form control with validation:
 
 ```ts
-define('rating-input', () => {
-  const rating = signal(0);
-  const required = prop('required', false, {
-    parse: (v) => v !== null
-  });
+define(
+  'rating-input',
+  () => {
+    const rating = signal(0);
+    const required = prop('required', false, {
+      parse: (v) => v !== null,
+    });
 
-  const formField = field({
-    value: rating,
-    toFormValue: (v) => String(v)
-  });
+    const formField = field({
+      value: rating,
+      toFormValue: (v) => String(v),
+    });
 
-  // Validate
-  watch([rating, required], () => {
-    if (required.value && rating.value === 0) {
-      formField.setValidity(
-        { valueMissing: true },
-        'Please select a rating'
-      );
-    } else {
-      formField.setValidity({}, '');
-    }
-  }, { immediate: true });
+    // Validate
+    watch(
+      [rating, required],
+      () => {
+        if (required.value && rating.value === 0) {
+          formField.setValidity({ valueMissing: true }, 'Please select a rating');
+        } else {
+          formField.setValidity({}, '');
+        }
+      },
+      { immediate: true },
+    );
 
-  return html`
-    <div class="rating">
-      ${[1, 2, 3, 4, 5].map(star => html`
-        <button
-          type="button"
-          class=${() => html.classes({ active: rating.value >= star })}
-          @click=${() => rating.value = star}
-        >
-          ★
-        </button>
-      `)}
-    </div>
-  `;
-}, { formAssociated: true });
+    return html`
+      <div class="rating">
+        ${[1, 2, 3, 4, 5].map(
+          (star) => html`
+            <button
+              type="button"
+              class=${() => html.classes({ active: rating.value >= star })}
+              @click=${() => (rating.value = star)}>
+              ★
+            </button>
+          `,
+        )}
+      </div>
+    `;
+  },
+  { formAssociated: true },
+);
 ```
 
 ```html
@@ -1135,11 +1126,7 @@ const formField = field({ value });
 formField.internals; // ElementInternals | null
 
 // Set validity
-formField.setValidity(
-  { valueMissing: true },
-  'This field is required',
-  inputElement
-);
+formField.setValidity({ valueMissing: true }, 'This field is required', inputElement);
 
 // Report validity (shows validation message)
 const isValid = formField.reportValidity(); // boolean
@@ -1148,27 +1135,34 @@ const isValid = formField.reportValidity(); // boolean
 ## File Upload Control
 
 ```ts
-define('file-uploader', () => {
-  const files = signal<FileList | null>(null);
+define(
+  'file-uploader',
+  () => {
+    const files = signal<FileList | null>(null);
 
-  const formField = field({
-    value: files,
-    toFormValue: (fileList) => {
-      if (!fileList?.length) return null;
-      if (fileList.length === 1) return fileList[0];
-      const fd = new FormData();
-      for (let i = 0; i < fileList.length; i++) fd.append('files[]', fileList[i]);
-      return fd;
-    },
-  });
+    const formField = field({
+      value: files,
+      toFormValue: (fileList) => {
+        if (!fileList?.length) return null;
+        if (fileList.length === 1) return fileList[0];
+        const fd = new FormData();
+        for (let i = 0; i < fileList.length; i++) fd.append('files[]', fileList[i]);
+        return fd;
+      },
+    });
 
-  return html`
-    <input type="file" multiple @change=${(e: Event) => {
-      files.value = (e.target as HTMLInputElement).files;
-    }} />
-    ${html.when(files, () => html`<p>Selected: ${() => files.value?.length ?? 0} file(s)</p>`)}
-  `;
-}, { formAssociated: true });
+    return html`
+      <input
+        type="file"
+        multiple
+        @change=${(e: Event) => {
+          files.value = (e.target as HTMLInputElement).files;
+        }} />
+      ${html.when(files, () => html`<p>Selected: ${() => files.value?.length ?? 0} file(s)</p>`)}
+    `;
+  },
+  { formAssociated: true },
+);
 ```
 
 ### Browser Support
@@ -1223,9 +1217,9 @@ import { define, defineProps, html } from '@vielzeug/craftit';
 define('product-card', () => {
   // defineProps({ camelKey: { default, ...options } })
   const props = defineProps({
-    title:    { default: '' },
-    price:    { default: 0,     type: Number },
-    inStock:  { default: true,  type: Boolean },
+    title: { default: '' },
+    price: { default: 0, type: Number },
+    inStock: { default: true, type: Boolean },
     category: { default: 'all', reflect: true },
   });
   // props.title → Signal<string>,  attribute: "title"
@@ -1236,7 +1230,8 @@ define('product-card', () => {
     <div>
       <h2>${props.title}</h2>
       <p>$${props.price}</p>
-      ${html.when(props.inStock,
+      ${html.when(
+        props.inStock,
         () => html`<span class="badge">In stock</span>`,
         () => html`<span class="badge out">Out of stock</span>`,
       )}
@@ -1255,10 +1250,8 @@ define('card-component', () => {
   const s = defineSlots<{ default: unknown; footer: unknown }>();
   return html`
     <div class="card">
-      <div class="body">
-        ${s.default({}, () => html`<p>No content provided</p>`)}
-      </div>
-      ${s.has('footer') ? html`<div class="footer">${s.render('footer')}</div>` : ''}
+      <div class="body"><slot></slot></div>
+      ${s.has('footer') ? html`<div class="footer"><slot name="footer"></slot></div>` : ''}
     </div>
   `;
 });
@@ -1278,10 +1271,13 @@ define('counter-button', () => {
   const fire = defineEmits<ButtonEvents>();
 
   return html`
-    <button @click=${() => {
-      count.value++;
-      fire('clicked', { count: count.value });
-    }}>Clicked ${count} times</button>
+    <button
+      @click=${() => {
+        count.value++;
+        fire('clicked', { count: count.value });
+      }}>
+      Clicked ${count} times
+    </button>
   `;
 });
 ```
@@ -1333,22 +1329,34 @@ Render components to different DOM locations using the `target` option in `defin
 import { define, prop, html } from '@vielzeug/craftit';
 
 // Define a modal component that renders to body
-define('modal-dialog', () => {
-  const isOpen = prop('open', false, {
-    parse: (v) => v === '' || v === 'true',
-  });
+define(
+  'modal-dialog',
+  () => {
+    const isOpen = prop('open', false, {
+      parse: (v) => v === '' || v === 'true',
+    });
 
-  return html`
-    ${html.when(isOpen, () => html`
-      <div class="modal-overlay">
-        <div class="modal">
-          <h2>Modal Title</h2>
-          <button @click=${() => { isOpen.value = false; }}>Close</button>
-        </div>
-      </div>
-    `)}
-  `;
-}, { target: 'body' }); // Component renders to body instead of parent
+    return html`
+      ${html.when(
+        isOpen,
+        () => html`
+          <div class="modal-overlay">
+            <div class="modal">
+              <h2>Modal Title</h2>
+              <button
+                @click=${() => {
+                  isOpen.value = false;
+                }}>
+                Close
+              </button>
+            </div>
+          </div>
+        `,
+      )}
+    `;
+  },
+  { target: 'body' },
+); // Component renders to body instead of parent
 
 // Use the modal component
 define('app-component', () => {
@@ -1381,63 +1389,82 @@ define('safe-component', () => {
 
 ## Testing
 
-Craftit includes testing utilities for component testing:
+Craftit provides testing utilities at `@vielzeug/craftit/test`. Call `install(afterEach)` once in your setup file to enable automatic cleanup:
 
 ```ts
-import { mount, fireEvent, userEvent } from '@vielzeug/craftit/trial';
+// vitest.setup.ts
+import { afterEach } from 'vitest';
+import { install } from '@vielzeug/craftit/test';
+install(afterEach);
+```
+
+Test components using either an inline setup function or a registered tag name:
+
+```ts
+import { mount, fire, user, waitFor } from '@vielzeug/craftit/test';
 import { describe, it, expect } from 'vitest';
+
 describe('counter-app', () => {
   it('increments on click', async () => {
-    const { query, waitForUpdates } = await mount('counter-app');
+    const { query, act } = await mount('counter-app');
     const button = query('button');
     const display = query('p');
     expect(display?.textContent).toBe('Count: 0');
-    fireEvent.click(button!);
-    await waitForUpdates();
+    await act(() => fire.click(button!));
     expect(display?.textContent).toBe('Count: 1');
   });
 });
 ```
 
-### Testing API
+### Fixture API
 
 ```ts
-// Mount component
 const fixture = await mount('my-component');
-// Query elements
+
+// Query inside shadow root
 const button = fixture.query('button');
 const buttons = fixture.queryAll('button');
-// Access internals
-fixture.element; // HTMLElement
-fixture.shadow; // ShadowRoot
-fixture.container; // Parent container
-// Wait for updates
-await fixture.waitForUpdates();
-// Cleanup
-fixture.unmount();
+const item = fixture.queryByText('Submit');
+const el = fixture.queryByTestId('submit-btn');
+
+// Trigger updates
+await fixture.act(() => fire.click(button!));
+await fixture.flush();
+
+// Set attributes
+await fixture.attr('disabled', true);
+await fixture.attrs({ label: 'Save', disabled: false });
+
+// Access the element
+fixture.element;  // HTMLElement
+fixture.shadow;   // ShadowRoot
+
+// Remove from DOM
+fixture.destroy();
 ```
 
 ### Fire Events
 
 ```ts
-fireEvent.click(element);
-fireEvent.input(element);
-fireEvent.change(element);
-fireEvent.keyDown(element, { key: 'Enter' });
-fireEvent.submit(form);
-fireEvent.custom(element, 'my-event', { detail: { value: 123 } });
+fire.click(element);
+fire.input(element);
+fire.change(element);
+fire.keyDown(element, { key: 'Enter' });
+fire.submit(form);
+fire.custom(element, 'my-event', { value: 123 });
 ```
 
-### User Events
+### User Interactions
 
-More realistic user interactions:
+Higher-level async interactions that mirror real browser behavior:
 
 ```ts
-await userEvent.click(button);
-await userEvent.type(input, 'Hello');
-await userEvent.clear(input);
-await userEvent.selectOptions(select, 'option1');
-await userEvent.upload(fileInput, file);
+await user.click(button);
+await user.type(input, 'Hello');        // appends character-by-character
+await user.fill(input, 'replacement'); // clear then type
+await user.clear(input);
+await user.select(select, 'option1');
+await user.press(input, 'Enter');
 ```
 
 ## TypeScript

@@ -192,9 +192,7 @@ const transactions = [
 const byUser = group(transactions, 'user');
 
 // Then group each user's transactions by category
-const nested = Object.fromEntries(
-  Object.entries(byUser).map(([user, txns]) => [user, group(txns, 'category')]),
-);
+const nested = Object.fromEntries(Object.entries(byUser).map(([user, txns]) => [user, group(txns, 'category')]));
 /*
 {
   Alice: { food: [...], transport: [...] },

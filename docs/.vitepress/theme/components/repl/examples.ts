@@ -91,7 +91,7 @@ define('price-calculator', () => {
 document.getElementById('output')?.appendChild(document.createElement('price-calculator'))`,
       name: 'Computed Signals',
     },
-    'watchers': {
+    watchers: {
       code: `import { define, signal, watch, effect, html } from '@vielzeug/craftit'
 
 define('watcher-demo', () => {
@@ -432,9 +432,9 @@ console.log('After 1.5s:', await db.get('cache', 1)) // undefined — expired`,
   },
   fetchit: {
     'http-client-basic': {
-      code: `import { createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com',
   timeout: 5000
 })
@@ -453,9 +453,9 @@ console.log('POST /todos:', newTodo)`,
       name: 'HTTP Client - Basic Requests',
     },
     'http-client-headers': {
-      code: `import { createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com',
   headers: {
     'Authorization': 'Bearer token123',
@@ -466,7 +466,7 @@ const http = createHttpClient({
 console.log('HTTP client created with custom headers')
 
 // Update headers dynamically
-http.setHeaders({
+http.headers({
   'Authorization': 'Bearer newtoken456'
 })
 
@@ -478,9 +478,9 @@ console.log('Fetched with new headers:', data.title)`,
       name: 'HTTP Client - Custom Headers',
     },
     'http-client-methods': {
-      code: `import { createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
@@ -512,9 +512,9 @@ console.log('DELETE: Success')`,
       name: 'HTTP Client - All Methods',
     },
     'http-client-params': {
-      code: `import { createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
@@ -543,13 +543,13 @@ console.log('User posts:', userPosts.length, 'items')`,
       name: 'HTTP Client - Path & Query Parameters',
     },
     'query-client-basic': {
-      code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
-const queryClient = createQueryClient({
+const queryClient = createQuery({
   staleTime: 5000,
   gcTime: 300000
 })
@@ -573,13 +573,13 @@ console.log('✓ Second request used cached data!')`,
       name: 'Query Client - Basic Caching',
     },
     'query-client-invalidate': {
-      code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
-const queryClient = createQueryClient()
+const queryClient = createQuery()
 
 // Fetch and cache
 await queryClient.fetch({
@@ -611,13 +611,13 @@ console.log('✓ All "users" queries invalidated via prefix match')`,
       name: 'Query Client - Cache Invalidation',
     },
     'query-client-mutations': {
-      code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
-const queryClient = createQueryClient()
+const queryClient = createQuery()
 
 // Mutation with callbacks
 const result = await queryClient.mutate({
@@ -641,13 +641,13 @@ console.log('Mutation result:', result)`,
       name: 'Query Client - Mutations',
     },
     'query-client-subscriptions': {
-      code: `import { createQueryClient, createHttpClient } from '@vielzeug/fetchit'
+      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
 
-const http = createHttpClient({
+const http = createHttp({
   baseUrl: 'https://jsonplaceholder.typicode.com'
 })
 
-const queryClient = createQueryClient()
+const queryClient = createQuery()
 
 // Subscribe to query state changes
 const unsubscribe = queryClient.subscribe(['posts', 1], (state) => {
@@ -822,7 +822,7 @@ const unsubscribe = form.subscribe((state) => {
 })
 
 // Subscribe to specific field
-const unsubEmail = form.subscribeField('email', (field) => {
+const unsubEmail = form.subscribeOnly('email', (field) => {
   console.log('Email field:', {
     value: field.value,
     error: field.error,
@@ -2215,7 +2215,7 @@ cart.set((state) => ({
 console.log('\\nNew Total:', total.get().toFixed(2))`,
       name: 'Computed Values',
     },
-    'transactions': {
+    transactions: {
       code: `import { createSnapshot } from '@vielzeug/stateit'
 
 const user = createSnapshot({

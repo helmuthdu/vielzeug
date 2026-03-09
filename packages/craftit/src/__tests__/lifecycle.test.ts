@@ -1,9 +1,9 @@
 /**
  * Core - Lifecycle Hooks Tests
- * Tests for onMount, onUnmount, and onUpdated hooks
+ * Tests for onMount, onUnmount, and onRendered hooks
  */
 
-import { handle, html, onError, onMount, onUnmount, onUpdated, signal } from '..';
+import { handle, html, onError, onMount, onRendered, onUnmount, signal } from '..';
 import { mount } from '../test';
 
 describe('Core: Lifecycle Hooks', () => {
@@ -79,13 +79,13 @@ describe('Core: Lifecycle Hooks', () => {
     });
   });
 
-  describe('onUpdated()', () => {
-    it('should run after signal updates', async () => {
+  describe('onRendered()', () => {
+    it('should run after initial render', async () => {
       const spy = vi.fn();
       let count!: ReturnType<typeof signal<number>>;
       const { act } = await mount(() => {
         count = signal(0);
-        onUpdated(spy);
+        onRendered(spy);
         return html`<div>${count}</div>`;
       });
       await act(() => count.value++);
@@ -117,7 +117,7 @@ describe('Core: Lifecycle Hooks', () => {
         onMount(() => {
           count.value = 5;
         });
-        onUpdated(() => values.push(count.value));
+        onRendered(() => values.push(count.value));
         return html`<div>${count}</div>`;
       });
       await flush();

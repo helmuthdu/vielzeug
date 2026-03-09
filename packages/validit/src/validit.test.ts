@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: - */
-import { type Infer, pipe, v, ValidationError } from './validit';
+import { type Infer, type InferOutput, ValidationError, v } from './validit';
 
 describe('validit', () => {
   /* ============================================
@@ -7,19 +7,19 @@ describe('validit', () => {
      ============================================ */
 
   describe('ValidationError', () => {
-    it('formats a root-level issue as "value: message"', () => {
-      const err = new ValidationError([{ message: 'Invalid', path: [] }]);
-      expect(err.message).toBe('value: Invalid');
+    it('formats a root-level issue as "value: message [code]"', () => {
+      const err = new ValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
+      expect(err.message).toBe('value: Invalid [custom]');
     });
 
     it('formats nested paths with dots', () => {
-      const err = new ValidationError([{ message: 'Required', path: ['user', 'address', 'city'] }]);
-      expect(err.message).toBe('user.address.city: Required');
+      const err = new ValidationError([{ code: 'required', message: 'Required', path: ['user', 'address', 'city'] }]);
+      expect(err.message).toBe('user.address.city: Required [required]');
     });
 
     it('formats array-index paths', () => {
-      const err = new ValidationError([{ message: 'Invalid', path: ['items', 0, 'name'] }]);
-      expect(err.message).toBe('items.0.name: Invalid');
+      const err = new ValidationError([{ code: 'custom', message: 'Invalid', path: ['items', 0, 'name'] }]);
+      expect(err.message).toBe('items.0.name: Invalid [custom]');
     });
 
     it('includes error code in square brackets', () => {
@@ -33,7 +33,41 @@ describe('validit', () => {
       if (!result.success) {
         const issue = result.error.issues[0];
         expect(issue.code).toBe('too_small');
-        expect(issue.params).toEqual({ minimum: 5, type: 'string' });
+        expect(issue.params).toEqual({ minimum: 5 });
+      }
+    });
+
+    it('flatten() separates field errors from form-level errors', () => {
+      const result = v
+        .object({ email: v.string().email(), name: v.string().min(2) })
+        .refine((d) => d.name !== 'admin', 'Reserved name')
+        .safeParse({ email: 'bad', name: 'admin' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const { fieldErrors, formErrors } = result.error.flatten();
+        expect(fieldErrors.email).toEqual(['Invalid email address']);
+        expect(formErrors).toEqual(['Reserved name']);
+      }
+    });
+
+    it('flatten() collects multiple errors per field', () => {
+      const result = v.object({ tag: v.string().min(3).max(1) }).safeParse({ tag: 'ab' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const { fieldErrors } = result.error.flatten();
+        expect(fieldErrors.tag?.length).toBeGreaterThanOrEqual(2);
+      }
+    });
+
+    it('flatten() uses full dotted paths for nested fields', () => {
+      const result = v
+        .object({ address: v.object({ zip: v.string().regex(/^\d{5}$/) }) })
+        .safeParse({ address: { zip: 'bad' } });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const { fieldErrors } = result.error.flatten();
+        expect(fieldErrors['address.zip']).toEqual(['Invalid format']);
+        expect(fieldErrors.address).toBeUndefined();
       }
     });
   });
@@ -57,6 +91,15 @@ describe('validit', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('too_small');
+      }
+    });
+
+    it('collects all constraint issues when type is correct', () => {
+      const result = v.string().min(5).max(3).safeParse('abcd');
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.length).toBeGreaterThanOrEqual(2);
+        expect(result.error.issues.every((i) => i.code !== 'invalid_type')).toBe(true);
       }
     });
   });
@@ -88,29 +131,32 @@ describe('validit', () => {
       expect(() => v.string().length(5).parse('hi')).toThrow('Must be exactly 5 characters');
     });
 
-    it('pattern / email / url / uuid', () => {
+    it('regex / email / url / uuid', () => {
       expect(
         v
           .string()
-          .pattern(/^[a-z]+$/)
+          .regex(/^[a-z]+$/)
           .parse('hello'),
       ).toBe('hello');
       expect(() =>
         v
           .string()
-          .pattern(/^[a-z]+$/)
+          .regex(/^[a-z]+$/)
           .parse('Hello'),
       ).toThrow('Invalid format');
 
-      expect(v.email().parse('user@example.com')).toBe('user@example.com');
-      expect(() => v.email().parse('bad')).toThrow('Invalid email address');
+      expect(v.string().email().parse('user@example.com')).toBe('user@example.com');
+      expect(() => v.string().email().parse('bad')).toThrow('Invalid email address');
 
-      expect(v.url().parse('https://example.com')).toBe('https://example.com');
-      expect(() => v.url().parse('not-a-url')).toThrow('Invalid URL');
+      expect(v.string().url().parse('https://example.com')).toBe('https://example.com');
+      expect(() => v.string().url().parse('not-a-url')).toThrow('Invalid URL');
+
+      const urlResult = v.string().url().safeParse('not-a-url');
+      if (!urlResult.success) expect(urlResult.error.issues[0].code).toBe('invalid_url');
 
       const id = '550e8400-e29b-41d4-a716-446655440000';
-      expect(v.uuid().parse(id)).toBe(id);
-      expect(() => v.uuid().parse('bad-uuid')).toThrow();
+      expect(v.string().uuid().parse(id)).toBe(id);
+      expect(() => v.string().uuid().parse('bad-uuid')).toThrow();
     });
 
     it('trim() strips whitespace before validation', () => {
@@ -118,8 +164,49 @@ describe('validit', () => {
       expect(() => v.string().trim().min(3).parse('  hi  ')).toThrow('Must be at least 3 characters');
     });
 
+    it('includes() validates substring presence', () => {
+      expect(v.string().includes('@').parse('user@example.com')).toBe('user@example.com');
+      expect(() => v.string().includes('@').parse('noemail')).toThrow('Must include "@"');
+    });
+
+    it('lowercase() and uppercase() normalize before validation', () => {
+      expect(v.string().lowercase().parse('HELLO')).toBe('hello');
+      expect(v.string().uppercase().parse('hello')).toBe('HELLO');
+      expect(
+        v
+          .string()
+          .lowercase()
+          .regex(/^[a-z]+$/)
+          .parse('HELLO'),
+      ).toBe('hello');
+    });
+
+    it('date() and datetime() validate ISO formats', () => {
+      expect(v.string().date().parse('2024-01-15')).toBe('2024-01-15');
+      expect(() => v.string().date().parse('not-a-date')).toThrow('Invalid date');
+      expect(() => v.string().date().parse('2024-01-15T10:00:00Z')).toThrow();
+      expect(v.string().datetime().parse('2024-01-15T10:00:00Z')).toBe('2024-01-15T10:00:00Z');
+      expect(() => v.string().datetime().parse('2024-01-15')).toThrow('Invalid datetime');
+    });
+
+    it('date() rejects non-existent calendar dates (roll-over guard)', () => {
+      expect(() => v.string().date().parse('2024-02-30')).toThrow('Invalid date');
+      expect(() => v.string().date().parse('2024-04-31')).toThrow('Invalid date');
+      expect(v.string().date().parse('2024-02-29')).toBe('2024-02-29'); // valid leap day
+    });
+
+    it('datetime() rejects strings that merely contain T', () => {
+      expect(() => v.string().datetime().parse('abcTdef')).toThrow('Invalid datetime');
+      expect(() => v.string().datetime().parse('T')).toThrow('Invalid datetime');
+    });
+
     it('supports custom error messages', () => {
       expect(() => v.string().min(5, 'Too short!').parse('hi')).toThrow('Too short!');
+    });
+
+    it('nonempty() message function receives { min, value } context', () => {
+      const schema = v.string().nonempty(({ min, value }) => `Need at least ${min}, got "${value}"`);
+      expect(() => schema.parse('')).toThrow('Need at least 1, got ""');
     });
 
     it('chains multiple validators', () => {
@@ -127,7 +214,7 @@ describe('validit', () => {
         .string()
         .min(3)
         .max(10)
-        .pattern(/^[a-z]+$/);
+        .regex(/^[a-z]+$/);
       expect(s.parse('hello')).toBe('hello');
       expect(() => s.parse('hi')).toThrow();
       expect(() => s.parse('toolongstring')).toThrow();
@@ -145,7 +232,7 @@ describe('validit', () => {
     });
 
     it('rejects non-numbers and NaN', () => {
-      for (const val of ['1', true, null, NaN]) {
+      for (const val of ['1', true, null, Number.NaN]) {
         expect(() => v.number().parse(val)).toThrow(ValidationError);
       }
     });
@@ -157,8 +244,8 @@ describe('validit', () => {
       expect(v.number().max(5).parse(5)).toBe(5);
       expect(() => v.number().max(5).parse(6)).toThrow('Must be at most 5');
 
-      expect(v.int().parse(3)).toBe(3);
-      expect(() => v.int().parse(3.14)).toThrow('Must be an integer');
+      expect(v.number().int().parse(3)).toBe(3);
+      expect(() => v.number().int().parse(3.14)).toThrow('Must be an integer');
 
       expect(() => v.number().positive().parse(0)).toThrow('Must be positive');
       expect(v.number().positive().parse(0.1)).toBe(0.1);
@@ -171,6 +258,16 @@ describe('validit', () => {
 
       expect(v.number().nonPositive().parse(0)).toBe(0);
       expect(() => v.number().nonPositive().parse(1)).toThrow();
+    });
+    it('multipleOf validates integer steps', () => {
+      expect(v.number().multipleOf(3).parse(9)).toBe(9);
+      expect(() => v.number().multipleOf(3).parse(8)).toThrow();
+    });
+
+    it('multipleOf handles decimal steps correctly', () => {
+      expect(v.number().multipleOf(0.1).parse(0.3)).toBe(0.3);
+      expect(v.number().multipleOf(0.5).parse(1.5)).toBe(1.5);
+      expect(() => v.number().multipleOf(0.1).parse(0.31)).toThrow();
     });
   });
 
@@ -267,6 +364,14 @@ describe('validit', () => {
       expect(schema.parse([[1, 2], [3]])).toEqual([[1, 2], [3]]);
       expect(() => schema.parse([[1, 'x']])).toThrow(ValidationError);
     });
+
+    it('refine() on an array receives the parsed items, not the raw input', () => {
+      // Each item is coerced to number; the refine should see [1, 2, 3], not ['1','2','3']
+      const schema = v
+        .array(v.coerce.number())
+        .refine((items) => items.every((n) => typeof n === 'number'), 'Items should be numbers');
+      expect(schema.parse(['1', '2', '3'])).toEqual([1, 2, 3]);
+    });
   });
 
   /* ============================================
@@ -297,7 +402,7 @@ describe('validit', () => {
 
     it('includes nested path in errors', () => {
       const schema = v.object({ user: v.object({ email: v.string().email() }) });
-      const result = schema.safeParse({ user: { email: 'bad' } });
+      const result = schema.safeParse({ user: { email: 'bad@' } });
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].path).toEqual(['user', 'email']);
@@ -306,18 +411,18 @@ describe('validit', () => {
 
     describe('unknown key modes (Change 3)', () => {
       it('strip (default) removes unknown keys', () => {
-        const parsed = User.parse({ id: 1, name: 'Alice', extra: true } as any);
+        const parsed = User.parse({ extra: true, id: 1, name: 'Alice' } as any);
         expect(parsed).toEqual({ id: 1, name: 'Alice' });
         expect((parsed as any).extra).toBeUndefined();
       });
 
       it('passthrough() keeps unknown keys', () => {
-        const parsed = User.passthrough().parse({ id: 1, name: 'Alice', extra: true } as any);
+        const parsed = User.passthrough().parse({ extra: true, id: 1, name: 'Alice' } as any);
         expect((parsed as any).extra).toBe(true);
       });
 
       it('strict() rejects unknown keys', () => {
-        const result = User.strict().safeParse({ id: 1, name: 'Alice', extra: true } as any);
+        const result = User.strict().safeParse({ extra: true, id: 1, name: 'Alice' } as any);
         expect(result.success).toBe(false);
         if (!result.success) {
           expect(result.error.issues[0].code).toBe('unrecognized_keys');
@@ -331,6 +436,36 @@ describe('validit', () => {
         expect(schema.parse({})).toEqual({});
         expect(schema.parse({ name: 'Alice' })).toEqual({ name: 'Alice' });
         expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
+      });
+
+      it('partial(keys) makes only specified fields optional', () => {
+        const schema = v.object({ email: v.string(), id: v.number(), name: v.string() });
+        const partial = schema.partial('email', 'name');
+        expect(partial.parse({ id: 1 })).toEqual({ id: 1 });
+        expect(partial.parse({ email: 'a@b.c', id: 1, name: 'Alice' })).toEqual({
+          email: 'a@b.c',
+          id: 1,
+          name: 'Alice',
+        });
+        expect(() => partial.parse({ name: 'Alice' })).toThrow();
+      });
+
+      it('partial() preserves refinements', () => {
+        const base = User.refine((d) => d.name !== 'admin', 'Reserved name');
+        expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
+      });
+    });
+
+    describe('required()', () => {
+      it('makes all optional fields required again', () => {
+        const schema = User.partial().required();
+        expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
+        expect(() => schema.parse({ name: 'Alice' })).toThrow();
+      });
+
+      it('required() preserves refinements', () => {
+        const base = User.partial().refine((d) => d.name !== 'admin', 'Reserved name');
+        expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
       });
     });
 
@@ -349,6 +484,13 @@ describe('validit', () => {
         expect(() => schema.parse({ id: 1, name: 'Al' })).toThrow();
         expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
       });
+
+      it('preserves refinements', () => {
+        const refined = User.refine((d) => d.name !== 'admin', 'Reserved name');
+        expect(() => refined.extend({ role: v.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
+          'Reserved name',
+        );
+      });
     });
 
     describe('pick() / omit()', () => {
@@ -356,7 +498,7 @@ describe('validit', () => {
 
       it('pick() selects specified keys', () => {
         const schema = Full.pick('name', 'email');
-        expect(schema.parse({ name: 'Alice', email: 'alice@example.com' })).toEqual({
+        expect(schema.parse({ email: 'alice@example.com', name: 'Alice' })).toEqual({
           email: 'alice@example.com',
           name: 'Alice',
         });
@@ -364,10 +506,16 @@ describe('validit', () => {
 
       it('omit() removes specified keys', () => {
         const schema = Full.omit('id');
-        expect(schema.parse({ name: 'Alice', email: 'alice@example.com' })).toEqual({
+        expect(schema.parse({ email: 'alice@example.com', name: 'Alice' })).toEqual({
           email: 'alice@example.com',
           name: 'Alice',
         });
+      });
+
+      it('pick() and omit() preserve refinements', () => {
+        const refined = Full.refine((d) => d.email.includes('@'), 'Invalid email format');
+        expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
+        expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
       });
     });
 
@@ -389,35 +537,37 @@ describe('validit', () => {
   });
 
   /* ============================================
-     v.oneOf() — replaces union
+     v.union() — first-match
      ============================================ */
 
-  describe('v.oneOf()', () => {
-    it('passes when exactly one branch matches', () => {
-      const schema = v.oneOf(v.string(), v.number());
+  describe('v.union()', () => {
+    it('passes when first matching branch wins', () => {
+      const schema = v.union(v.string(), v.number());
       expect(schema.parse('hello')).toBe('hello');
       expect(schema.parse(42)).toBe(42);
     });
 
+    it('passes when multiple branches match (first-match, no XOR)', () => {
+      // both string branches match 'hello' — first one wins, no error
+      const schema = v.union(v.string(), v.string().min(1));
+      expect(schema.parse('hello')).toBe('hello');
+    });
+
     it('fails when no branch matches', () => {
-      const result = v.oneOf(v.string(), v.number()).safeParse(true);
+      const result = v.union(v.string(), v.number()).safeParse(true);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_one_of');
-        expect(result.error.issues[0].message).toContain('Does not match');
+        expect(result.error.issues[0].code).toBe('invalid_union');
+        expect(result.error.issues[0].message).toContain('match');
+        // branch errors are attached as params
+        const errors = result.error.issues[0].params?.errors as unknown[][];
+        expect(Array.isArray(errors)).toBe(true);
+        expect(errors.length).toBe(2);
       }
     });
 
-    it('fails when more than one branch matches (mutual exclusion)', () => {
-      const result = v.oneOf(v.string(), v.string().min(1)).safeParse('hello');
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('more than one');
-      }
-    });
-
-    it('works with discriminated unions', () => {
-      const schema = v.oneOf(
+    it('works with object schemas', () => {
+      const schema = v.union(
         v.object({ data: v.string(), type: v.literal('ok') }),
         v.object({ message: v.string(), type: v.literal('error') }),
       );
@@ -427,7 +577,7 @@ describe('validit', () => {
     });
 
     it('infers the union type', () => {
-      const schema = v.oneOf(v.string(), v.number());
+      const schema = v.union(v.string(), v.number());
       type T = Infer<typeof schema>;
       const a: T = 'hello';
       const b: T = 42;
@@ -436,21 +586,21 @@ describe('validit', () => {
     });
 
     it('accepts raw literal values as shorthand for v.literal()', () => {
-      const schema = v.oneOf('a', 'b', 'c');
+      const schema = v.union('a', 'b', 'c');
       expect(schema.parse('a')).toBe('a');
       expect(schema.parse('b')).toBe('b');
       expect(() => schema.parse('d')).toThrow();
     });
 
     it('mixes raw values and schemas', () => {
-      const schema = v.oneOf('yes', 'no', v.number());
+      const schema = v.union('yes', 'no', v.number());
       expect(schema.parse('yes')).toBe('yes');
       expect(schema.parse(42)).toBe(42);
       expect(() => schema.parse(true)).toThrow();
     });
 
     it('infers correct type for raw value shorthand', () => {
-      const schema = v.oneOf('light', 'dark');
+      const schema = v.union('light', 'dark');
       type T = Infer<typeof schema>;
       const t: T = 'light';
       expect(schema.parse(t)).toBe('light');
@@ -458,17 +608,17 @@ describe('validit', () => {
   });
 
   /* ============================================
-     v.allOf()
+     v.intersect()
      ============================================ */
 
-  describe('v.allOf()', () => {
+  describe('v.intersect()', () => {
     it('passes when all schemas match', () => {
-      const schema = v.allOf(v.string(), v.string().min(5));
+      const schema = v.intersect(v.string(), v.string().min(5));
       expect(schema.parse('hello')).toBe('hello');
     });
 
     it('collects issues from failing branches', () => {
-      const schema = v.allOf(v.string().min(3), v.string().max(5));
+      const schema = v.intersect(v.string().min(3), v.string().max(5));
       const result = schema.safeParse('toolongstring');
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -477,76 +627,152 @@ describe('validit', () => {
     });
 
     it('fails if any branch fails', () => {
-      const result = v.allOf(v.string(), v.number()).safeParse('hello');
+      const result = v.intersect(v.string(), v.number()).safeParse('hello');
       expect(result.success).toBe(false);
     });
 
     it('works for object-level combined validation', () => {
       const A = v.object({ id: v.number() });
       const B = v.object({ name: v.string() });
-      const schema = v.allOf(A, B);
+      const schema = v.intersect(A, B);
       expect(schema.safeParse({ id: 1, name: 'Alice' }).success).toBe(true);
       expect(schema.safeParse({ id: 1 }).success).toBe(false);
     });
 
     it('accepts raw literal values as shorthand for v.literal()', () => {
-      // allOf with raw values — every item must pass, so only matches the exact value
-      const schema = v.allOf('hello', 'hello');
+      const schema = v.intersect('hello', 'hello');
       expect(schema.parse('hello')).toBe('hello');
       expect(() => schema.parse('world')).toThrow();
     });
   });
 
   /* ============================================
-     v.noneOf() — blocklist / exclusion schema
+     v.variant() — discriminated union
      ============================================ */
 
-  describe('v.noneOf()', () => {
-    it('passes when value matches none of the schemas', () => {
-      expect(v.noneOf(v.string(), v.number()).parse(true)).toBe(true);
-      expect(v.noneOf(v.string(), v.number()).parse(null)).toBeNull();
+  describe('v.variant()', () => {
+    const schema = v.variant('type', {
+      error: v.object({ message: v.string() }),
+      ok: v.object({ data: v.string() }),
     });
 
-    it('fails when value matches any schema', () => {
-      expect(() => v.noneOf(v.string(), v.number()).parse('hello')).toThrow();
-      expect(() => v.noneOf(v.string(), v.number()).parse(42)).toThrow();
+    it('routes to the correct branch by discriminator', () => {
+      expect(schema.parse({ data: 'yes', type: 'ok' })).toEqual({ data: 'yes', type: 'ok' });
+      expect(schema.parse({ message: 'oops', type: 'error' })).toEqual({ message: 'oops', type: 'error' });
     });
 
-    it('uses code invalid_none_of', () => {
-      const result = v.noneOf(v.string(), v.number()).safeParse('x');
+    it('fails when discriminator value not found', () => {
+      const result = schema.safeParse({ type: 'unknown' });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_none_of');
+        expect(result.error.issues[0].code).toBe('invalid_variant');
       }
     });
 
-    it('works as a blocklist of literals', () => {
-      const schema = v.noneOf(v.literal('admin'), v.literal('system'));
-      expect(schema.parse('user')).toBe('user');
-      expect(() => schema.parse('admin')).toThrow('Matches a disallowed schema');
-      expect(() => schema.parse('system')).toThrow('Matches a disallowed schema');
+    it('fails when discriminator key is missing', () => {
+      const result = schema.safeParse({ data: 'yes' });
+      expect(result.success).toBe(false);
     });
 
-    it('runs full validators, not just type checks', () => {
-      // 'hi' does NOT pass v.string().min(3) → so noneOf passes
-      const schema = v.noneOf(v.string().min(3));
-      expect(schema.parse('hi')).toBe('hi');
-      // 'hello' DOES pass v.string().min(3) → so noneOf fails
-      expect(() => schema.parse('hello')).toThrow('Matches a disallowed schema');
+    it('infers the union type', () => {
+      type T = Infer<typeof schema>;
+      const ok: T = { data: 'yes', type: 'ok' };
+      expect(schema.parse(ok)).toEqual(ok);
+    });
+  });
+
+  /* ============================================
+     v.enum()
+     ============================================ */
+
+  describe('v.enum()', () => {
+    const Status = v.enum(['active', 'inactive', 'pending'] as const);
+
+    it('accepts values in the enum', () => {
+      expect(Status.parse('active')).toBe('active');
+      expect(Status.parse('inactive')).toBe('inactive');
     });
 
-    it('accepts raw literal values as shorthand for v.literal()', () => {
-      const schema = v.noneOf('admin', 'system');
-      expect(schema.parse('user')).toBe('user');
-      expect(() => schema.parse('admin')).toThrow('Matches a disallowed schema');
-      expect(() => schema.parse('system')).toThrow('Matches a disallowed schema');
+    it('rejects values not in the enum', () => {
+      const result = Status.safeParse('deleted');
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].code).toBe('invalid_enum');
+      }
     });
 
-    it('mixes raw values and schemas', () => {
-      const schema = v.noneOf('admin', v.number());
-      expect(schema.parse('user')).toBe('user');
-      expect(() => schema.parse('admin')).toThrow();
-      expect(() => schema.parse(42)).toThrow();
+    it('infers the union literal type', () => {
+      type T = Infer<typeof Status>;
+      const val: T = 'active';
+      expect(Status.parse(val)).toBe('active');
+    });
+
+    it('works with different string values', () => {
+      const schema = v.enum(['low', 'medium', 'high'] as const);
+      expect(schema.parse('low')).toBe('low');
+      expect(() => schema.parse('extreme')).toThrow();
+    });
+  });
+
+  /* ============================================
+     v.tuple()
+     ============================================ */
+
+  describe('v.tuple()', () => {
+    const schema = v.tuple([v.string(), v.number(), v.boolean()] as const);
+
+    it('accepts a matching tuple', () => {
+      expect(schema.parse(['hello', 42, true])).toEqual(['hello', 42, true]);
+    });
+
+    it('rejects wrong length', () => {
+      expect(() => schema.parse(['hello', 42])).toThrow();
+      expect(() => schema.parse(['hello', 42, true, 'extra'])).toThrow();
+    });
+
+    it('rejects wrong element types', () => {
+      const result = schema.safeParse(['hello', 'notanumber', true]);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path[0]).toBe(1);
+      }
+    });
+
+    it('infers the tuple type', () => {
+      type T = Infer<typeof schema>;
+      const val: T = ['hello', 42, true];
+      expect(schema.parse(val)).toEqual(val);
+    });
+  });
+
+  /* ============================================
+     v.record()
+     ============================================ */
+
+  describe('v.record()', () => {
+    it('accepts a record with string keys and typed values', () => {
+      const schema = v.record(v.string(), v.number());
+      expect(schema.parse({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
+      expect(schema.parse({})).toEqual({});
+    });
+
+    it('rejects non-object inputs', () => {
+      expect(() => v.record(v.string(), v.number()).parse('str')).toThrow('Expected object');
+    });
+
+    it('validates all values and reports paths', () => {
+      const result = v.record(v.string(), v.number()).safeParse({ a: 1, b: 'bad' });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path[0]).toBe('b');
+      }
+    });
+
+    it('infers the record type', () => {
+      const schema = v.record(v.string(), v.boolean());
+      type T = Infer<typeof schema>;
+      const val: T = { x: true, y: false };
+      expect(schema.parse(val)).toEqual(val);
     });
   });
 
@@ -612,6 +838,25 @@ describe('validit', () => {
     });
   });
 
+  describe('nullish()', () => {
+    it('allows both null and undefined', () => {
+      const schema = v.string().nullish();
+      expect(schema.parse(null)).toBe(null);
+      expect(schema.parse(undefined)).toBe(undefined);
+      expect(schema.parse('hello')).toBe('hello');
+      expect(() => schema.parse(123)).toThrow(ValidationError);
+    });
+
+    it('infers Output | null | undefined', () => {
+      const schema = v.number().nullish();
+      type T = Infer<typeof schema>;
+      const n: T = null;
+      const u: T = undefined;
+      expect(schema.parse(n)).toBeNull();
+      expect(schema.parse(u)).toBeUndefined();
+    });
+  });
+
   describe('default()', () => {
     it('substitutes a default for undefined', () => {
       expect(v.string().default('x').parse(undefined)).toBe('x');
@@ -626,7 +871,8 @@ describe('validit', () => {
   });
 
   /* ============================================
-     refine() — unified sync + async (Change 4)
+     refine() — sync only (Change 4)
+     refineAsync() — async explicit
      ============================================ */
 
   describe('refine()', () => {
@@ -653,8 +899,24 @@ describe('validit', () => {
       expect(() => schema.parse({ confirm: 'xyz', password: 'abc' })).toThrow('Passwords must match');
     });
 
-    it('accepts an async function and defers to parseAsync', async () => {
-      const schema = v.string().refine(async (s) => {
+    it('message function receives the failing value', () => {
+      const schema = v.number().refine(
+        (n) => n > 0,
+        ({ value }) => `${value} is not positive`,
+      );
+      expect(() => schema.parse(-5)).toThrow('-5 is not positive');
+    });
+
+    it('throws at first parse when given an async function', () => {
+      const asyncFn = async (_v: string): Promise<boolean> => true;
+      const schema = v.string().refine(asyncFn as unknown as (v: string) => boolean);
+      expect(() => schema.parse('hello')).toThrow('refine() only accepts sync functions');
+    });
+  });
+
+  describe('refineAsync()', () => {
+    it('defers to parseAsync and resolves correctly', async () => {
+      const schema = v.string().refineAsync(async (s) => {
         await new Promise((r) => setTimeout(r, 1));
         return s.length >= 3;
       }, 'Too short');
@@ -663,9 +925,39 @@ describe('validit', () => {
       await expect(schema.parseAsync('hi')).rejects.toThrow('Too short');
     });
 
-    it('throws when an async refinement is used with sync parse()', () => {
-      const schema = v.string().refine(async () => true);
+    it('throws when used with sync parse()', async () => {
+      const schema = v.string().refineAsync(async () => true);
       expect(() => schema.parse('x')).toThrow('async validators');
+    });
+
+    it('cross-field async refinement on object', async () => {
+      const schema = v
+        .object({ confirm: v.string(), password: v.string() })
+        .refineAsync(async (d) => d.password === d.confirm, 'Passwords must match');
+      expect(await schema.parseAsync({ confirm: 'abc', password: 'abc' })).toEqual({
+        confirm: 'abc',
+        password: 'abc',
+      });
+      await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
+    });
+
+    it('parseAsync also runs sync refine validators', async () => {
+      // Regression: sync refine() validators on object/tuple/record were silently
+      // skipped when using parseAsync — only asyncValidators were executed.
+      const schema = v
+        .object({ confirm: v.string(), password: v.string() })
+        .refine((d) => d.password === d.confirm, 'Passwords must match');
+      const ok = await schema.parseAsync({ confirm: 'abc', password: 'abc' });
+      expect(ok).toEqual({ confirm: 'abc', password: 'abc' });
+      await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
+    });
+
+    it('message function receives the failing value', async () => {
+      const schema = v.string().refineAsync(
+        async (s) => s.length >= 3,
+        ({ value }) => `"${value}" is too short`,
+      );
+      await expect(schema.parseAsync('hi')).rejects.toThrow('"hi" is too short');
     });
   });
 
@@ -746,27 +1038,6 @@ describe('validit', () => {
   });
 
   /* ============================================
-     pipe() (Change 9)
-     ============================================ */
-
-  describe('pipe()', () => {
-    it('threads through a sequence of schemas', () => {
-      const schema = pipe(v.string(), v.coerce.number(), v.number().int().min(0));
-      expect(schema.parse('42')).toBe(42);
-    });
-
-    it('fails at the first failing step', () => {
-      const schema = pipe(v.string(), v.coerce.number(), v.number().int());
-      expect(() => schema.parse(true)).toThrow(ValidationError);
-    });
-
-    it('single-schema pipe is a pass-through', () => {
-      const schema = pipe(v.string().min(3));
-      expect(schema.parse('hello')).toBe('hello');
-    });
-  });
-
-  /* ============================================
      safeParse / parseAsync / safeParseAsync
      ============================================ */
 
@@ -798,8 +1069,8 @@ describe('validit', () => {
       expect(await v.string().min(2).parseAsync('hi')).toBe('hi');
     });
 
-    it('runs async refine', async () => {
-      const schema = v.number().refine(async (n) => n > 0, 'Must be positive');
+    it('runs async refine with refineAsync', async () => {
+      const schema = v.number().refineAsync(async (n) => n > 0, 'Must be positive');
       expect(await schema.parseAsync(1)).toBe(1);
       await expect(schema.parseAsync(-1)).rejects.toThrow('Must be positive');
     });
@@ -893,6 +1164,106 @@ describe('validit', () => {
   });
 
   /* ============================================
+     .catch() — fallback value
+     ============================================ */
+
+  describe('catch()', () => {
+    it('returns fallback for invalid input instead of throwing', () => {
+      const schema = v.string().catch('fallback');
+      expect(schema.parse('hello')).toBe('hello');
+      expect(schema.parse(42 as any)).toBe('fallback');
+    });
+
+    it('works on number schema', () => {
+      const schema = v.number().catch(0);
+      expect(schema.parse(5)).toBe(5);
+      expect(schema.parse('bad' as any)).toBe(0);
+    });
+
+    it('works on object schema', () => {
+      const schema = v.object({ name: v.string() }).catch({ name: 'unknown' });
+      expect(schema.parse('bad' as any)).toEqual({ name: 'unknown' });
+    });
+
+    it('retains subclass instance and methods', () => {
+      const schema = v.object({ name: v.string() }).catch({ name: 'default' });
+      expect(schema.shape).toBeDefined();
+      expect(schema.parse({ name: 'Alice' })).toEqual({ name: 'Alice' });
+      expect(schema.parse('bad' as any)).toEqual({ name: 'default' });
+    });
+
+    it('validators added after catch() are respected', () => {
+      // catch() must not swallow constraints chained after it
+      const schema = v.string().catch('fallback').min(3);
+      expect(schema.parse('hello')).toBe('hello');
+      expect(schema.parse(42 as any)).toBe('fallback'); // non-string → fallback
+      expect(schema.parse('hi')).toBe('fallback'); // too short → fallback (catch absorbs)
+    });
+  });
+
+  /* ============================================
+     .describe() — attach description
+     ============================================ */
+
+  describe('describe()', () => {
+    it('stores a description accessible on the schema', () => {
+      const schema = v.string().describe('A human readable name');
+      expect(schema.description).toBe('A human readable name');
+    });
+
+    it('description does not affect parsing', () => {
+      const schema = v.number().min(0).describe('A non-negative number');
+      expect(schema.parse(5)).toBe(5);
+      expect(() => schema.parse(-1)).toThrow();
+    });
+
+    it('transform() preserves the description', () => {
+      const schema = v
+        .string()
+        .describe('raw input')
+        .transform((s) => s.toUpperCase());
+      expect((schema as any)._description).toBe('raw input');
+    });
+
+    it('description getter returns undefined when not set', () => {
+      expect(v.number().description).toBeUndefined();
+    });
+  });
+
+  /* ============================================
+     .brand() — branded types
+     ============================================ */
+
+  describe('brand()', () => {
+    it('parse returns a branded value', () => {
+      const UserId = v.string().brand<'UserId'>();
+      type UserId = Infer<typeof UserId>;
+      const id: UserId = UserId.parse('abc');
+      // TypeScript: id is now UserId (branded), but at runtime it's just a string
+      expect(id).toBe('abc');
+    });
+
+    it('branded schema still validates', () => {
+      const schema = v.number().min(0).brand<'PositiveInt'>();
+      expect(schema.parse(5)).toBe(5);
+      expect(() => schema.parse(-1)).toThrow();
+    });
+  });
+
+  /* ============================================
+     InferInput / InferOutput (dual generics)
+     ============================================ */
+
+  describe('InferInput / InferOutput', () => {
+    it('InferOutput<T> is same as Infer<T> for plain schemas', () => {
+      const schema = v.string();
+      type Out = InferOutput<typeof schema>;
+      const val: Out = 'hello';
+      expect(schema.parse(val)).toBe('hello');
+    });
+  });
+
+  /* ============================================
      Complex integration
      ============================================ */
 
@@ -913,7 +1284,7 @@ describe('validit', () => {
             .string()
             .min(3)
             .max(20)
-            .pattern(/^[a-zA-Z0-9_]+$/),
+            .regex(/^[a-zA-Z0-9_]+$/),
         })
         .refine((d) => d.password === d.confirmPassword, 'Passwords must match');
 
@@ -947,12 +1318,12 @@ describe('validit', () => {
         email: v.string().email(),
         id: v.number().int().positive(),
         profile: v.object({
-          address: v.object({ city: v.string(), zip: v.string().pattern(/^\d{5}$/) }).optional(),
+          address: v.object({ city: v.string(), zip: v.string().regex(/^\d{5}$/) }).optional(),
           firstName: v.string(),
         }),
-        roles: v.array(v.oneOf(v.literal('admin'), v.literal('user'), v.literal('guest'))).min(1),
+        roles: v.array(v.union(v.literal('admin'), v.literal('user'), v.literal('guest'))).min(1),
         settings: v.object({
-          theme: v.oneOf(v.literal('light'), v.literal('dark')).default('light' as 'light' | 'dark'),
+          theme: v.union(v.literal('light'), v.literal('dark')).default('light' as 'light' | 'dark'),
         }),
       });
 
@@ -965,6 +1336,43 @@ describe('validit', () => {
       };
 
       expect(schema.parse(data)).toEqual(data);
+    });
+  });
+
+  /* ============================================
+     v.nativeEnum()
+     ============================================ */
+
+  describe('v.nativeEnum()', () => {
+    const Direction = { Down: 'DOWN', Up: 'UP' } as const;
+    const schema = v.nativeEnum(Direction);
+
+    it('accepts values in the enum', () => {
+      expect(schema.parse('UP')).toBe('UP');
+      expect(schema.parse('DOWN')).toBe('DOWN');
+    });
+
+    it('rejects values not in the enum', () => {
+      const result = schema.safeParse('LEFT');
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0].code).toBe('invalid_enum');
+    });
+
+    it('infers the value union type', () => {
+      type T = Infer<typeof schema>;
+      const val: T = 'UP';
+      expect(schema.parse(val)).toBe('UP');
+    });
+
+    it('exposes the original enum object as .enum', () => {
+      expect(schema.enum).toBe(Direction);
+    });
+
+    it('works with numeric enums (reverse-mapping keys are excluded)', () => {
+      const Prio = { High: 2, Low: 0, Medium: 1 } as const;
+      const s = v.nativeEnum(Prio);
+      expect(s.parse(1)).toBe(1);
+      expect(() => s.parse(3)).toThrow();
     });
   });
 });

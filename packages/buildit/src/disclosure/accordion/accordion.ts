@@ -1,5 +1,26 @@
-import { css, define, defineEmits, defineProps, handle, html, onCleanup, onMount, ref, watch } from '@vielzeug/craftit';
-import type { ComponentSize, VisualVariant } from '../../types';
+import {
+  computed,
+  createContext,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  html,
+  onCleanup,
+  provide,
+  type ReadonlySignal,
+} from '@vielzeug/craftit';
+import type { AddEventListeners, BitAccordionEvents, ComponentSize, VisualVariant } from '../../types';
+
+/** Context provided by bit-accordion to its bit-accordion-item children. */
+export type AccordionContext = {
+  selectionMode: ReadonlySignal<'single' | 'multiple' | undefined>;
+  size: ReadonlySignal<ComponentSize | undefined>;
+  variant: ReadonlySignal<VisualVariant | undefined>;
+  notifyExpand: (expandedItem: HTMLElement) => void;
+};
+/** Injection key for the accordion context. */
+export const ACCORDION_CTX = createContext<AccordionContext>();
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -97,10 +118,10 @@ const styles = /* css */ css`
 /** Accordion component properties */
 export type AccordionProps = {
   /** Selection mode (single = only one opens, multiple = multiple can be open) */
-  'selection-mode'?: 'single' | 'multiple';
-  /** Size for all items (propagated to children) */
+  selectionMode?: 'single' | 'multiple';
+  /** Size for all items (propagated via context) */
   size?: ComponentSize;
-  /** Visual variant for all items (propagated to children) */
+  /** Visual variant for all items (propagated via context) */
   variant?: VisualVariant;
 };
 
@@ -125,30 +146,17 @@ export type AccordionProps = {
  * ```
  */
 
-define('bit-accordion', ({ host }) => {
-  const props = defineProps({
-    size: { default: undefined as ComponentSize | undefined },
-    variant: { default: undefined as VisualVariant | undefined },
+export const TAG = define('bit-accordion', ({ host }) => {
+  const props = defineProps<AccordionProps>({
+    selectionMode: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
   });
 
-  const slotRef = ref<HTMLSlotElement>();
   const emit = defineEmits<{ change: { expandedItem: HTMLElement } }>();
 
-  const syncItems = () => {
-    const variant = props.variant.value;
-    const size = props.size.value;
-    host.querySelectorAll('bit-accordion-item').forEach((item) => {
-      if (variant) item.setAttribute('variant', variant);
-      if (size) item.setAttribute('size', size);
-    });
-  };
-
-  watch([props.variant, props.size], () => syncItems(), { immediate: true });
-
-  const handleExpand = (e: Event) => {
-    const selectionMode = host.getAttribute('selection-mode');
-    if (selectionMode === 'single') {
-      const expandedItem = e.target as HTMLElement;
+  const notifyExpand = (expandedItem: HTMLElement) => {
+    if (props.selectionMode.value === 'single') {
       host.querySelectorAll('bit-accordion-item').forEach((item) => {
         if (item !== expandedItem && item.hasAttribute('expanded')) {
           item.removeAttribute('expanded');
@@ -158,19 +166,53 @@ define('bit-accordion', ({ host }) => {
     }
   };
 
-  host.addEventListener('expand', handleExpand);
-  onCleanup(() => host.removeEventListener('expand', handleExpand));
+  provide(ACCORDION_CTX, {
+    notifyExpand,
+    selectionMode: computed(() => props.selectionMode.value),
+    size: props.size,
+    variant: props.variant,
+  });
 
-  onMount(() => {
-    // slotRef.value is only available after template render
-    const slot = slotRef.value;
-    if (slot) handle(slot, 'slotchange', syncItems);
+  // Listen for expand events bubbling up from child accordion-items.
+  // This allows single-selection management without tight coupling via context calls.
+  const handleExpand = (e: Event) => notifyExpand(e.target as HTMLElement);
+  host.addEventListener('expand', handleExpand);
+
+  // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+    const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
+    const summaries = items
+      .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
+      .filter(Boolean) as HTMLElement[];
+    if (!summaries.length) return;
+    const focused = summaries.indexOf(document.activeElement as HTMLElement);
+    if (focused === -1) return; // focus is not on a summary — let native handling proceed
+
+    let next = focused;
+    if (e.key === 'ArrowDown') next = (focused + 1) % summaries.length;
+    else if (e.key === 'ArrowUp') next = (focused - 1 + summaries.length) % summaries.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = summaries.length - 1;
+
+    e.preventDefault();
+    summaries[next]?.focus();
+  };
+
+  host.addEventListener('keydown', handleKeydown);
+  onCleanup(() => {
+    host.removeEventListener('expand', handleExpand);
+    host.removeEventListener('keydown', handleKeydown);
   });
 
   return {
     styles: [styles],
-    template: html`<slot ref=${slotRef}></slot>`,
+    template: html`<slot></slot>`,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-accordion': HTMLElement & AccordionProps & AddEventListeners<BitAccordionEvents>;
+  }
+}

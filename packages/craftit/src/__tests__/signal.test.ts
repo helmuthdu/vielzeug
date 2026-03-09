@@ -82,19 +82,25 @@ describe('Core: Signal System', () => {
   });
 
   describe('readonly()', () => {
-    it('should create readonly signal', () => {
+    it('should expose a ReadonlySignal view of the same signal', () => {
       const count = signal(5);
       const readCount = readonly(count);
       expect(readCount.value).toBe(5);
+      count.value = 10;
+      expect(readCount.value).toBe(10); // same underlying signal — stays in sync
     });
 
-    it('should throw on write', () => {
+    it('should track changes reactively when read inside an effect', () => {
       const count = signal(5);
       const readCount = readonly(count);
-      expect(() => {
-        // Type assertion to bypass readonly for testing error case
-        (readCount as { value: number }).value = 10;
-      }).toThrow();
+      let last = -1;
+      const stop = effect(() => {
+        last = readCount.value;
+      });
+      expect(last).toBe(5);
+      count.value = 99;
+      expect(last).toBe(99);
+      stop();
     });
   });
 
@@ -178,6 +184,42 @@ describe('Core: Signal System', () => {
       a.value = 1;
       b.value = 1;
       a.value = 2;
+      expect(fires).toBe(1);
+    });
+
+    it('selector form: fires only when the selected slice changes', () => {
+      const s = signal({ count: 0, name: 'Alice' });
+      const pairs: [number, number][] = [];
+      watch(
+        s,
+        (v) => v.count,
+        (next, prev) => pairs.push([next, prev]),
+      );
+      s.value = { count: 5, name: 'Alice' };
+      expect(pairs).toEqual([[5, 0]]);
+      s.value = { count: 5, name: 'Bob' }; // count unchanged — suppressed
+      expect(pairs).toHaveLength(1);
+    });
+
+    it('selector form: { immediate } fires with current selected value', () => {
+      const s = signal({ count: 3, name: 'Alice' });
+      const values: number[] = [];
+      watch(
+        s,
+        (v) => v.count,
+        (val) => values.push(val),
+        { immediate: true },
+      );
+      expect(values).toEqual([3]);
+    });
+
+    it('{ equals } suppresses notification for semantically equal values', () => {
+      const s = signal([1, 2, 3]);
+      let fires = 0;
+      watch(s, () => fires++, { equals: (a, b) => a.length === b.length });
+      s.value = [4, 5, 6]; // same length — suppressed
+      expect(fires).toBe(0);
+      s.value = [1, 2, 3, 4]; // different length — fires
       expect(fires).toBe(1);
     });
   });

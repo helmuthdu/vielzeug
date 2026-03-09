@@ -358,6 +358,27 @@ Show file information with truncation using width constraints.
 
 </ComponentPreview>
 
+## Guideline Recipe: Distill Status at a Glance
+
+**Guideline: distill** — consistent use of semantic `color` and `variant` attributes lets a page communicate status without icons or extra markup.
+
+```html
+<div style="display:flex;flex-direction:column;gap:var(--size-1)">
+  <bit-text variant="overline" color="subtle">System status</bit-text>
+  <bit-text variant="heading" size="sm" weight="bold">All systems operational</bit-text>
+  <bit-text variant="caption" color="success">Checked 2 minutes ago</bit-text>
+</div>
+
+<!-- Incident variant -->
+<div style="display:flex;flex-direction:column;gap:var(--size-1);margin-top:var(--size-4)">
+  <bit-text variant="overline" color="subtle">Incident</bit-text>
+  <bit-text variant="heading" size="sm" weight="bold" color="danger">Elevated error rate</bit-text>
+  <bit-text variant="caption" color="subtle">Started 14 minutes ago · investigating</bit-text>
+</div>
+```
+
+**Tip:** Use `variant="overline"` + `variant="heading"` + `variant="caption"` as a three-tier hierarchy to communicate label, title, and metadata without any extra container components.
+
 ## API Reference
 
 ### Attributes
@@ -391,21 +412,35 @@ Show file information with truncation using width constraints.
 
 ## Accessibility
 
-- **Semantic HTML**: Use the `as` attribute to render proper HTML elements (h1-h6, p, label, etc.)
-- **Font Scaling**: Uses rem units to respect user's browser font size preferences
-- **Line Height**: Maintains WCAG-compliant line height (1.5 default for body text)
-- **Color Contrast**: Text colors maintain accessible contrast ratios with backgrounds
+The text component follows WAI-ARIA best practices.
+
+### `bit-text`
+
+✅ **Semantic Structure**
+
+- Use the `as` attribute to render proper HTML elements (`h1`–`h6`, `p`, `label`, etc.).
+
+✅ **Screen Readers**
+
+- Uses `rem` units to respect user's browser font size preferences.
+- Maintains WCAG-compliant line height (1.5 default for body text).
+- Text colors maintain accessible contrast ratios with backgrounds.
 
 ::: tip Best Practice
 Always use semantic HTML tags (`as` attribute) for headings, paragraphs, and labels to maintain proper document structure and accessibility.
 :::
 
-## Design System Integration
+## Best Practices
 
-The text component fully integrates with the Buildit design system:
+**Do:**
 
-- Uses design tokens exclusively (no hardcoded values)
-- Automatically adapts to light/dark mode
-- Follows internal variable pattern (`--_*`) for implementation
-- Exposes public CSS custom properties for customization
-- Supports all theme typography scales
+- Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`) — especially inside forms, articles, and page headers.
+- Use `variant="caption"` with `color="muted"` for helper text, timestamps, and metadata.
+- Pair `variant="overline"` with `size="xs"` for category labels and eyebrow headings.
+- Use `truncate` with a width constraint on the element or its container.
+
+**Don't:**
+
+- Use heading sizes (`3xl` and above) without also setting `variant="heading"` — the variant controls line height and weight defaults.
+- Rely on `color` alone to convey meaning — always pair with a descriptive text label.
+- Use `bit-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.

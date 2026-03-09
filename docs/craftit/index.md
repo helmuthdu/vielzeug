@@ -1,6 +1,6 @@
 ---
 title: Craftit — Web component framework for TypeScript
-description: Signals-based, functional web component library with fine-grained reactivity, template literals, lifecycle hooks, and zero dependencies.
+description: Signals-based, functional web component library with fine-grained reactivity, template literals, lifecycle hooks. Built on @vielzeug/stateit for reactive primitives.
 ---
 
 <PackageBadges package="craftit" />
@@ -9,7 +9,7 @@ description: Signals-based, functional web component library with fine-grained r
 
 # Craftit
 
-**Craftit** is a signals-based, functional framework for building web components with fine-grained reactivity, template literals, and lifecycle hooks. Zero dependencies.
+**Craftit** is a signals-based, functional framework for building web components with fine-grained reactivity, template literals, and lifecycle hooks. Built on top of [@vielzeug/stateit](/stateit/) for reactive primitives.
 
 ## Installation
 
@@ -36,14 +36,15 @@ import { define, signal, html, css } from '@vielzeug/craftit';
 
 define('my-counter', () => {
   const count = signal(0);
-  const styles = css`button { padding: 8px 16px; font-size: 1rem; }`;
+  const styles = css`
+    button {
+      padding: 8px 16px;
+      font-size: 1rem;
+    }
+  `;
 
   return {
-    template: html`
-      <button @click=${() => count.value++}>
-        Count: ${count}
-      </button>
-    `,
+    template: html` <button @click=${() => count.value++}>Count: ${count}</button> `,
     styles: [styles],
   };
 });
@@ -56,19 +57,22 @@ define('my-counter', () => {
 
 ## Features
 
-- **Fine-grained reactivity** — `signal()`, `computed()`, `effect()`, `watch()` with automatic dependency tracking
-- **Template literals** — `html\`...\`` tagged template for declarative DOM updates
-- **CSS-in-JS** — `css\`...\`` with automatic shadow DOM scoping
-- **Lifecycle hooks** — `onMount`, `onUnmount`, `onUpdated`, `onCleanup`
-- **Props** — `prop()` and `defineProps()` for reactive attribute bindings
-- **Slots & Emits** — `defineSlots()` and `defineEmits()` for component APIs
-- **Form-associated** — `field()` for custom form elements with native validation
-- **Zero dependencies** — <PackageInfo package="craftit" type="size" /> gzipped
+- **Fine-grained reactivity** — Re-exports all signals from [@vielzeug/stateit](/stateit/): `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
+- **Template literals** — `html\`...\`` tagged template for declarative, reactive DOM updates
+- **CSS-in-JS** — `css\`...\`` with automatic shadow DOM scoping and style encapsulation
+- **Lifecycle hooks** — `onMount()`, `onUnmount()`, `onUpdated()`, `onCleanup()` for component lifecycle management
+- **Props** — `prop()` and `defineProps()` for reactive attribute bindings with type safety
+- **Slots & Emits** — `defineSlots()` and `defineEmits()` for composable component APIs
+- **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
+- **Form-associated** — `field()` for custom form elements with native validation support
+- **Context/DI** — `provide()` and `inject()` for dependency injection across component trees
+- **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
+- **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
 
 ## Next Steps
 
-| | |
-|---|---|
+|                           |                                                    |
+| ------------------------- | -------------------------------------------------- |
 | [Usage Guide](./usage.md) | Signals, templates, lifecycle, props, and patterns |
-| [API Reference](./api.md) | Complete type signatures and API documentation |
-| [Examples](./examples.md) | Real-world component recipes |
+| [API Reference](./api.md) | Complete type signatures and API documentation     |
+| [Examples](./examples.md) | Real-world component recipes                       |

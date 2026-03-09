@@ -1,25 +1,28 @@
 import {
+  aria,
   computed,
-  createId,
   css,
   define,
   defineEmits,
   defineProps,
   effect,
-  field,
+  handle,
   html,
-  onFormReset,
   onMount,
   ref,
-  signal,
 } from '@vielzeug/craftit';
-import {
-  colorThemeMixin,
-  disabledLoadingMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import type {
+  AddEventListeners,
+  BitTextareaEvents,
+  DisablableProps,
+  FormValidityMethods,
+  RoundedSize,
+  SizableProps,
+  ThemableProps,
+  VisualVariant,
+} from '../../types';
+import { useTextField } from '../_common/use-text-field';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -268,15 +271,11 @@ const componentStyles = /* css */ css`
 `;
 
 /** Textarea component properties */
-export interface TextareaProps {
+export interface TextareaProps extends ThemableProps, SizableProps, DisablableProps {
   /** Label text */
   label?: string;
   /** Label placement */
   'label-placement'?: 'inset' | 'outside';
-  /** Theme color */
-  color?: ThemeColor;
-  /** Disable interaction */
-  disabled?: boolean;
   /** Helper text displayed below the textarea */
   helper?: string;
   /** Error message (marks field as invalid) */
@@ -291,8 +290,6 @@ export interface TextareaProps {
   required?: boolean;
   /** Border radius size */
   rounded?: RoundedSize | '';
-  /** Textarea size */
-  size?: ComponentSize;
   /** Current value */
   value?: string;
   /** Visual style variant */
@@ -358,76 +355,57 @@ export interface TextareaProps {
  * <bit-textarea label="Notes" variant="flat" color="primary" rows="6" />
  * ```
  */
-define(
+export const TAG = define(
   'bit-textarea',
-  () => {
+  ({ host }) => {
     const emit = defineEmits<{
       change: { originalEvent: Event; value: string };
       input: { originalEvent: Event; value: string };
     }>();
 
-    const props = defineProps({
+    const props = defineProps<TextareaProps>({
       'auto-resize': { default: false },
-      color: { default: undefined as ThemeColor | undefined },
+      color: { default: undefined },
       disabled: { default: false },
-      error: { default: '' },
+      error: { default: '', omit: true },
       fullwidth: { default: false },
       helper: { default: '' },
       label: { default: '' },
       'label-placement': { default: 'inset' },
-      maxlength: { default: undefined as number | undefined },
+      maxlength: { default: undefined },
       name: { default: '' },
       'no-resize': { default: false },
       placeholder: { default: '' },
       readonly: { default: false },
       required: { default: false },
-      resize: { default: undefined as TextareaProps['resize'] },
-      rounded: { default: undefined as RoundedSize | undefined },
-      rows: { default: undefined as number | undefined },
-      size: { default: undefined as ComponentSize | undefined },
+      resize: { default: undefined },
+      rounded: { default: undefined },
+      rows: { default: undefined },
+      size: { default: undefined },
       value: { default: '' },
-      variant: { default: undefined as Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined },
+      variant: { default: undefined },
     });
 
-    const valueSignal = signal('');
+    // Shared text-field setup: value signal, form registration, IDs, label refs
+    const tf = useTextField(props, 'textarea');
+    const {
+      valueSignal,
+      fieldId: textareaId,
+      labelInsetId,
+      labelOutsideId,
+      helperId,
+      errorId,
+      labelInsetRef,
+      labelOutsideRef,
+    } = tf;
 
-    field({
-      disabled: computed(() => Boolean(props.disabled.value)),
-      value: valueSignal,
-    });
-
-    onFormReset(() => {
-      valueSignal.value = '';
-    });
-
-    const textareaId = props.name.value ? `textarea-${props.name.value}` : createId('textarea');
-    const labelId = `label-${textareaId}`;
-    const helperId = `helper-${textareaId}`;
-    const errorId = `error-${textareaId}`;
-
+    // Textarea-specific refs
     const textareaRef = ref<HTMLTextAreaElement>();
-    const labelInsetRef = ref<HTMLLabelElement>();
-    const labelOutsideRef = ref<HTMLLabelElement>();
     const helperRef = ref<HTMLDivElement>();
     const counterRef = ref<HTMLSpanElement>();
 
     const charCount = computed(() => valueSignal.value.length);
     const maxLen = computed(() => props.maxlength.value);
-
-    const counterClass = computed(() => {
-      const count = charCount.value;
-      const max = maxLen.value;
-      if (max === undefined || max === null) return 'counter';
-      const ratio = count / Number(max);
-      if (ratio >= 1) return 'counter at-limit';
-      if (ratio >= 0.9) return 'counter near-limit';
-      return 'counter';
-    });
-
-    // Initialize valueSignal from prop value on mount
-    if (props.value.value) {
-      valueSignal.value = String(props.value.value);
-    }
 
     onMount(() => {
       const ta = textareaRef.value;
@@ -440,23 +418,27 @@ define(
         ta.style.height = `${ta.scrollHeight}px`;
       };
 
-      const stopEffects = effect(() => {
-        if (!ta) return;
+      // Effect 1: label visibility (via shared composable)
+      tf.mountLabelSync();
 
+      // Effect 2: sync textarea element attributes to props
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many optional attributes requires branching
+      effect(() => {
         ta.placeholder = props.placeholder.value;
         ta.disabled = props.disabled.value;
+        ta.name = props.name.value || '';
         ta.readOnly = props.readonly.value;
         ta.required = props.required.value;
-        ta.setAttribute('aria-invalid', props.error.value ? 'true' : 'false');
-        ta.setAttribute('aria-describedby', props.error.value ? errorId : helperId);
+        ta.value = valueSignal.value;
+
         if (props.rows.value) {
           ta.rows = props.rows.value;
         }
-        if (maxLen.value) {
-          ta.maxLength = maxLen.value;
+        const maxLenVal = maxLen.value;
+        if (maxLenVal) {
+          ta.maxLength = maxLenVal;
         }
 
-        // Handle resize property
         if (props['auto-resize'].value) {
           ta.style.resize = 'none';
         } else if (props['no-resize'].value) {
@@ -464,38 +446,38 @@ define(
         } else if (props.resize.value) {
           ta.style.resize = props.resize.value;
         } else {
-          ta.style.resize = 'vertical'; // Default
+          ta.style.resize = 'vertical';
         }
+      });
 
-        // Label visibility
-        const placement = props['label-placement'].value;
-        const labelText = props.label.value;
-        if (labelInsetRef.value) {
-          labelInsetRef.value.textContent = labelText;
-          labelInsetRef.value.hidden = !labelText || placement !== 'inset';
-        }
-        if (labelOutsideRef.value) {
-          labelOutsideRef.value.textContent = labelText;
-          labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
-        }
-
-        // Helper / error
+      // Effect 3: sync helper / error text (textarea uses single div for both)
+      effect(() => {
         if (helperRef.value) {
-          helperRef.value.textContent = props.error.value || props.helper.value;
+          helperRef.value.textContent = props.error.value || props.helper.value || '';
           helperRef.value.hidden = !props.error.value && !props.helper.value;
         }
+      });
 
-        // Counter
-        if (counterRef.value) {
-          const max = maxLen.value;
-          if (max !== undefined && max !== null) {
-            counterRef.value.textContent = `${charCount.value}/${max}`;
-            counterRef.value.className = counterClass.value;
-            counterRef.value.hidden = false;
-          } else {
-            counterRef.value.hidden = true;
-          }
+      // Effect 4: sync character counter
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Counter state has several threshold conditions
+      effect(() => {
+        if (!counterRef.value) return;
+        const max = maxLen.value;
+        if (max !== undefined && max !== null) {
+          const count = charCount.value;
+          const ratio = count / Number(max);
+          counterRef.value.textContent = `${count}/${max}`;
+          counterRef.value.className =
+            ratio >= 1 ? 'counter at-limit' : ratio >= 0.9 ? 'counter near-limit' : 'counter';
+          counterRef.value.hidden = false;
+        } else {
+          counterRef.value.hidden = true;
         }
+      });
+
+      aria(ta, {
+        describedby: () => (props.error.value ? errorId : helperId),
+        invalid: () => !!props.error.value,
       });
 
       const handleInput = (e: Event) => {
@@ -508,10 +490,14 @@ define(
       const handleChange = (e: Event) => {
         if (e.target !== ta) return;
         emit('change', { originalEvent: e, value: ta.value });
+        tf.triggerValidation('change');
       };
 
-      ta.addEventListener('input', handleInput);
-      ta.addEventListener('change', handleChange);
+      const handleBlur = () => tf.triggerValidation('blur');
+
+      handle(ta, 'input', handleInput);
+      handle(ta, 'change', handleChange);
+      handle(ta, 'blur', handleBlur);
 
       // Set initial value from props
       if (valueSignal.value) {
@@ -523,42 +509,57 @@ define(
         requestAnimationFrame(autoGrow);
       }
 
-      return () => {
-        stopEffects();
-        ta.removeEventListener('input', handleInput);
-        ta.removeEventListener('change', handleChange);
-      };
+      // Effect 5: propagate form context size/variant/disabled to host when not explicitly set
+      let ctxDisabledActive = false;
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
+      effect(() => {
+        const fCtx = tf.formCtx;
+        if (!fCtx) return;
+        const ctxDisabled = fCtx.disabled.value;
+        if (ctxDisabled && !ctxDisabledActive) {
+          host.setAttribute('disabled', '');
+          ctxDisabledActive = true;
+        } else if (!ctxDisabled && ctxDisabledActive) {
+          host.removeAttribute('disabled');
+          ctxDisabledActive = false;
+        }
+        if (!props.size.value && fCtx.size.value) host.setAttribute('size', fCtx.size.value);
+        if (!props.variant.value && fCtx.variant.value) host.setAttribute('variant', fCtx.variant.value);
+      });
     });
 
     return {
       styles: [
+        ...formFieldMixins,
         sizeVariantMixin({
           lg: { '--_padding': 'var(--size-2-5) var(--size-3-5)', fontSize: 'var(--text-base)', gap: 'var(--size-2-5)' },
           sm: { '--_padding': 'var(--size-1) var(--size-2)', fontSize: 'var(--text-xs)', gap: 'var(--size-1-5)' },
         }),
-        roundedVariantMixin,
-        colorThemeMixin,
         disabledLoadingMixin(),
+        forcedColorsFocusMixin('textarea'),
         componentStyles,
       ],
       template: html`
         <div class="textarea-wrapper">
-          <label class="label-outside" for="${textareaId}" id="${labelId}" ref=${labelOutsideRef} hidden></label>
+          <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ref=${labelOutsideRef} hidden></label>
           <div class="field">
-            <label class="label-inset" for="${textareaId}" id="${labelId}" ref=${labelInsetRef} hidden></label>
+            <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref=${labelInsetRef} hidden></label>
             <textarea
               ref=${textareaRef}
               id="${textareaId}"
-              aria-labelledby="${labelId}"
+              :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
               aria-describedby="${helperId}"></textarea>
           </div>
           <span class="counter" aria-live="polite" ref=${counterRef} hidden></span>
-          <div id="${helperId}" class="helper-text" ref=${helperRef} hidden></div>
+          <div id="${helperId}" class="helper-text" aria-live="polite" ref=${helperRef} hidden></div>
         </div>
       `,
     };
   },
-  { formAssociated: true },
+  { formAssociated: true, shadow: { delegatesFocus: true } },
 );
-
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-textarea': HTMLElement & TextareaProps & FormValidityMethods & AddEventListeners<BitTextareaEvents>;
+  }
+}

@@ -1,5 +1,20 @@
-import { computed, css, define, defineEmits, defineProps, handle, html, onMount, ref, watch } from '@vielzeug/craftit';
-import type { ComponentSize, VisualVariant } from '../../types';
+import {
+  computed,
+  css,
+  define,
+  defineEmits,
+  defineProps,
+  handle,
+  html,
+  inject,
+  onMount,
+  ref,
+  syncContextProps,
+  watch,
+} from '@vielzeug/craftit';
+import { coarsePointerMixin } from '../../styles';
+import type { AddEventListeners, BitAccordionItemEvents, ComponentSize, VisualVariant } from '../../types';
+import { ACCORDION_CTX } from '../accordion/accordion';
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -36,6 +51,7 @@ const styles = /* css */ css`
       position: relative;
       background: var(--accordion-item-bg);
       border: var(--border) solid var(--accordion-item-border-color);
+      min-height: var(--_touch-target);
     }
 
     summary::-webkit-details-marker {
@@ -68,16 +84,29 @@ const styles = /* css */ css`
     .title {
       font-weight: var(--font-medium);
       color: var(--accordion-item-title-color, var(--text-color-heading));
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .content-wrapper {
       font-size: var(--accordion-item-body);
-      padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows var(--accordion-item-transition);
       background: var(--accordion-item-bg);
-      border-left: 1px solid var(--accordion-item-border-color);
-      border-right: 1px solid var(--accordion-item-border-color);
+      border-inline: 1px solid var(--accordion-item-border-color);
       border-bottom: 1px solid var(--accordion-item-border-color);
       border-radius: var(--accordion-summary-radius);
+    }
+
+    details[open] .content-wrapper {
+      grid-template-rows: 1fr;
+    }
+
+    .content-inner {
+      overflow: hidden;
+      padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
     }
   }
 
@@ -242,7 +271,7 @@ const styles = /* css */ css`
       width: var(--size-5);
       height: var(--size-5);
       transition: transform var(--accordion-item-transition);
-      margin-left: auto;
+      margin-inline-start: auto;
     }
 
     details[open] .chevron {
@@ -253,6 +282,14 @@ const styles = /* css */ css`
     :host([expanded]) {
       --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
       --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
+    }
+
+    @media (forced-colors: active) {
+      /* Default variant uses a transparent border — ensure a visible border
+         renders in HCM so the summary is distinguishable from the body */
+      summary {
+        border-color: ButtonText;
+      }
     }
   }
 `;
@@ -308,13 +345,17 @@ export interface AccordionItemProps {
  * ```
  */
 
-define('bit-accordion-item', ({ host }) => {
-  const props = defineProps({
+export const TAG = define('bit-accordion-item', ({ host }) => {
+  const props = defineProps<AccordionItemProps>({
     disabled: { default: false },
     expanded: { default: false },
-    size: { default: undefined as ComponentSize | undefined },
-    variant: { default: undefined as VisualVariant | undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
   });
+
+  // Inherit size/variant from a parent bit-accordion when present.
+  const accordionCtx = inject(ACCORDION_CTX, undefined);
+  syncContextProps(accordionCtx, props, ['size', 'variant']);
 
   const titleId = 'accordion-item-title';
   const detailsRef = ref<HTMLDetailsElement>();
@@ -326,6 +367,7 @@ define('bit-accordion-item', ({ host }) => {
 
   const handleToggle = () => {
     const isOpen = detailsRef.value?.open ?? false;
+    // Notify accordion parent for single-selection management
     if (isOpen && !host.hasAttribute('expanded')) {
       host.setAttribute('expanded', '');
       emit('expand', { expanded: true, item: host });
@@ -357,7 +399,7 @@ define('bit-accordion-item', ({ host }) => {
   const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
 
   return {
-    styles: [styles],
+    styles: [coarsePointerMixin, styles],
     template: html` <details part="item" ?open=${props.expanded} ref=${detailsRef}>
       <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
         <slot name="prefix"></slot>
@@ -384,10 +426,16 @@ define('bit-accordion-item', ({ host }) => {
         </svg>
       </summary>
       <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-        <slot></slot>
+        <div class="content-inner">
+          <slot></slot>
+        </div>
       </div>
     </details>`,
   };
 });
 
-export default {};
+declare global {
+  interface HTMLElementTagNameMap {
+    'bit-accordion-item': HTMLElement & AccordionItemProps & AddEventListeners<BitAccordionItemEvents>;
+  }
+}

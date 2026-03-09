@@ -1,6 +1,6 @@
 ---
-title: Deposit — Typed storage for TypeScript
-description: Schema-driven storage abstraction with a rich query builder, LocalStorage and IndexedDB adapters, and zero dependencies.
+title: Deposit — Schema-driven browser storage for TypeScript
+description: Persist typed records to IndexedDB or LocalStorage with a fluent query builder, TTL, batch operations, and atomic transactions. Zero dependencies.
 ---
 
 <PackageBadges package="deposit" />
@@ -9,7 +9,7 @@ description: Schema-driven storage abstraction with a rich query builder, LocalS
 
 # Deposit
 
-**Deposit** is a schema-driven storage library with a rich query builder, `LocalStorageAdapter` and `IndexedDBAdapter`, and full TypeScript inference.
+**Deposit** is a schema-driven storage library for the browser: define typed tables, persist records to IndexedDB or LocalStorage via dedicated factory functions, and query results with a fluent builder — without writing a single raw database call.
 
 ## Installation
 
@@ -32,40 +32,42 @@ yarn add @vielzeug/deposit
 ## Quick Start
 
 ```ts
-import { createDeposit, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
 
-type User = { id: string; name: string; age: number };
+interface User { id: number; name: string; age: number }
 
-const schema = defineSchema<{ users: User }>({
-  users: { key: 'id', indexes: ['age'] },
-});
+const schema = defineSchema<{ users: User }>({ users: { key: 'id' } });
+const db = createLocalStorage({ dbName: 'my-app', schema });
 
-const db = createDeposit({ type: 'localStorage', dbName: 'my-app', schema });
+await db.put('users', { id: 1, name: 'Alice', age: 30 });
+await db.put('users', { id: 2, name: 'Bob', age: 25 });
 
-// Upsert records
-await db.put('users', { id: '1', name: 'Alice', age: 30 });
-await db.put('users', { id: '2', name: 'Bob', age: 25 });
+const adults  = await db.from('users').between('age', 18, 99).orderBy('name').toArray();
+const alice   = await db.get('users', 1);
+const patched = await db.patch('users', 1, { age: 31 }); // returns merged User
 
-// Query
-const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
-
-// Fast lookup
-const alice = await db.get('users', '1');
+for await (const user of db.from('users').orderBy('name')) {
+  console.log(user.name);
+}
 ```
 
 ## Features
 
-- **Schema-driven** — `defineSchema()` types every table and query result
-- **Discriminated config** — `{ type: 'localStorage' | 'indexedDB', ... }` — no separate adapter setup
-- **Rich query builder** — `equals`, `between`, `startsWith`, `filter`, `orderBy`, `limit`, `offset`, `page`, `reverse`, `map`, `search`
-- **TTL support** — per-record expiry via optional `ttl` milliseconds on `put` / `bulkPut`
-- **Transactions** — atomic multi-table writes (IndexedDB only)
-- **Zero dependencies** — <PackageInfo package="deposit" type="size" /> gzipped
+- **Two adapters** — `createLocalStorage()` and `createIndexedDB()` share an identical `Adapter` interface
+- **Schema-driven** — `defineSchema()` types every table, key, and query result; or pass inline with a type parameter
+- **Fluent query builder** — `equals`, `between`, `startsWith`, `filter`, `and`, `or`, `search`, `contains`, `orderBy`, `limit`, `offset`, `page`, `map`, and more
+- **`for await...of`** — `QueryBuilder` implements `AsyncIterator` for streamed processing
+- **TTL** — per-record expiry via optional `ttl` (milliseconds) on `put` and `getOrPut`; expired entries evicted on read
+- **`patch` returns merged record** — no follow-up `get` needed after a partial update
+- **`getMany`** — batch fetch by a list of keys in a single operation
+- **Transactions** — atomic multi-table writes with `get`, `getAll`, `put`, `patch`, and `delete` (IndexedDB only)
+- **Bulk operations** — `put` and `delete` accept a single value or an array
+- **Lightweight** — <PackageInfo package="deposit" type="size" /> gzipped, zero external dependencies
 
 ## Next Steps
 
 | | |
-|---|---|
-| [Usage Guide](./usage.md) | Schema definition, adapters, query builder, and testing |
+| --- | --- |
+| [Usage Guide](./usage.md) | Schema, CRUD, queries, TTL, transactions, and migrations |
 | [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world storage patterns and framework integrations |
+| [Examples](./examples.md) | Real-world storage patterns |

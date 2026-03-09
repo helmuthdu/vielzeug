@@ -1,23 +1,34 @@
-# Radio Component
+# Radio
 
-A customizable radio button component with multiple colors, sizes, and states. Built with accessibility in mind and fully customizable through CSS custom properties.
+A radio button and a group wrapper for mutually exclusive selections.
+
+- **`bit-radio`** — standalone radio button for a single boolean choice within a named group.
+- **`bit-radio-group`** — `<fieldset>` wrapper that manages a set of radios, propagates `color`, `size`, `name`, and `disabled` to all children, and handles roving keyboard navigation.
 
 ## Features
 
-- 🌈 **5 Semantic Colors**: primary, secondary, success, warning, error
-- 📏 **3 Sizes**: sm, md, lg
-- ♿ **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly, arrow key navigation
-- 🎭 **States**: checked, unchecked, disabled
-- 🔧 **Customizable**: CSS custom properties for styling
-- 🎯 **Radio Group**: Mutually exclusive selection within groups
+- ↕️ **2 Orientations** (group) — vertical & horizontal
+- ♿ **Accessible** — ARIA roles, roving tabindex, arrow key nav
+- 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
+- 🎭 **States** — checked, unchecked, disabled
+- 📏 **3 Sizes** — sm, md, lg
+- 📝 **Helper & Error Text** (group) — inline validation feedback
 
 ## Source Code
 
-::: details View Source Code
+::: details View Radio Source
 <<< @/../packages/buildit/src/form/radio/radio.ts
 :::
 
-## Basic Usage
+::: details View Radio Group Source
+<<< @/../packages/buildit/src/form/radio-group/radio-group.ts
+:::
+
+---
+
+## Standalone Radio
+
+### Basic Usage
 
 ```html
 <bit-radio name="choice" value="option1" checked>Option 1</bit-radio>
@@ -31,8 +42,6 @@ A customizable radio button component with multiple colors, sizes, and states. B
 ::: tip Radio Groups
 Radio buttons with the same `name` attribute form a group where only one can be selected at a time. The `name` attribute is required for proper radio button behavior.
 :::
-
-## Visual Options
 
 ### Colors
 
@@ -66,8 +75,6 @@ Three sizes for different contexts.
 
 </ComponentPreview>
 
-## States
-
 ### Disabled
 
 Prevent interaction and reduce opacity for unavailable options.
@@ -81,32 +88,172 @@ Prevent interaction and reduce opacity for unavailable options.
 
 </ComponentPreview>
 
+---
+
+## Radio Group
+
+`bit-radio-group` wraps `bit-radio` elements in a semantic `<fieldset>`. Set `value` to the default selected option and `name` to share the field name across all children.
+
+### Basic Usage
+
+```html
+<bit-radio-group name="size" label="T-shirt size" value="medium">
+  <bit-radio value="small">Small</bit-radio>
+  <bit-radio value="medium">Medium</bit-radio>
+  <bit-radio value="large">Large</bit-radio>
+</bit-radio-group>
+
+<script type="module">
+  import '@vielzeug/buildit/radio-group';
+  import '@vielzeug/buildit/radio';
+</script>
+```
+
+### Orientation
+
+<ComponentPreview vertical>
+
+```html
+<bit-radio-group label="Notifications" name="notif">
+  <bit-radio value="email">Email</bit-radio>
+  <bit-radio value="push">Push</bit-radio>
+  <bit-radio value="sms">SMS</bit-radio>
+</bit-radio-group>
+
+<bit-radio-group label="Priority" name="priority" orientation="horizontal">
+  <bit-radio value="low">Low</bit-radio>
+  <bit-radio value="medium">Medium</bit-radio>
+  <bit-radio value="high">High</bit-radio>
+</bit-radio-group>
+```
+
+</ComponentPreview>
+
+### Colors & Sizes
+
+Color and size set on the group are automatically propagated to all child radios.
+
+<ComponentPreview vertical>
+
+```html
+<bit-radio-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" name="c1" value="a">
+  <bit-radio value="a">Option A</bit-radio>
+  <bit-radio value="b">Option B</bit-radio>
+</bit-radio-group>
+<bit-radio-group label="Medium · Success" size="md" color="success" orientation="horizontal" name="c2" value="a">
+  <bit-radio value="a">Option A</bit-radio>
+  <bit-radio value="b">Option B</bit-radio>
+</bit-radio-group>
+<bit-radio-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" name="c3" value="a">
+  <bit-radio value="a">Option A</bit-radio>
+  <bit-radio value="b">Option B</bit-radio>
+</bit-radio-group>
+```
+
+</ComponentPreview>
+
+### Helper & Error Text
+
+<ComponentPreview vertical>
+
+```html
+<bit-radio-group label="Preferred contact" name="contact" helper="We'll only contact you for important updates.">
+  <bit-radio value="email">Email</bit-radio>
+  <bit-radio value="phone">Phone</bit-radio>
+</bit-radio-group>
+
+<bit-radio-group label="Agreement" name="agree" error="You must select an option." color="error">
+  <bit-radio value="yes">Yes, I agree</bit-radio>
+  <bit-radio value="no">No</bit-radio>
+</bit-radio-group>
+```
+
+</ComponentPreview>
+
+### Disabled
+
+<ComponentPreview>
+
+```html
+<bit-radio-group label="Disabled group" name="disabled" disabled value="b">
+  <bit-radio value="a">Option A</bit-radio>
+  <bit-radio value="b">Option B</bit-radio>
+  <bit-radio value="c">Option C</bit-radio>
+</bit-radio-group>
+```
+
+</ComponentPreview>
+
+### In a Form
+
+The selected `value` attribute is submitted with the form under the `name` field name.
+
+```html
+<form id="survey">
+  <bit-radio-group name="experience" label="How would you rate your experience?" required>
+    <bit-radio value="1">Poor</bit-radio>
+    <bit-radio value="2">Fair</bit-radio>
+    <bit-radio value="3">Good</bit-radio>
+    <bit-radio value="4">Excellent</bit-radio>
+  </bit-radio-group>
+  <bit-button type="submit">Submit</bit-button>
+</form>
+
+<script type="module">
+  import '@vielzeug/buildit/radio-group';
+  import '@vielzeug/buildit/radio';
+  import '@vielzeug/buildit/button';
+
+  document.getElementById('survey').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    console.log('Experience rating:', data.get('experience'));
+  });
+</script>
+```
+
+---
+
+## Guideline Recipe: Onboard with Explicit Plan Selection
+
+**Guideline: onboard** — a radio group with descriptive labels makes a mutually exclusive choice obvious during first-time account setup.
+
+```html
+<bit-radio-group label="Choose your plan" name="plan" value="pro" orientation="vertical">
+  <bit-radio value="free">Free — up to 3 projects, community support</bit-radio>
+  <bit-radio value="pro">Pro — unlimited projects, priority support · $12/mo</bit-radio>
+  <bit-radio value="team">Team — everything in Pro plus SSO · $29/mo</bit-radio>
+</bit-radio-group>
+```
+
+**Tip:** Pre-select the recommended plan with `value` on the group so users see a sensible default; include pricing inline in the label for transparency.
+
 ## API Reference
 
-### Attributes
+### `bit-radio` Attributes
 
-| Attribute  | Type                                                            | Default     | Description                             |
-| ---------- | --------------------------------------------------------------- | ----------- | --------------------------------------- |
-| `checked`  | `boolean`                                                       | `false`     | Radio button checked state              |
-| `disabled` | `boolean`                                                       | `false`     | Disable the radio button                |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                          |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Radio button size                       |
-| `name`     | `string`                                                        | -           | Form field name (required for grouping) |
-| `value`    | `string`                                                        | -           | Form field value when checked           |
+| Attribute  | Type                                                                      | Default     | Description                             |
+| ---------- | ------------------------------------------------------------------------- | ----------- | --------------------------------------- |
+| `checked`  | `boolean`                                                                 | `false`     | Radio button checked state              |
+| `disabled` | `boolean`                                                                 | `false`     | Disable the radio button                |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                          |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Radio button size                       |
+| `name`     | `string`                                                                  | —           | Form field name (required for grouping) |
+| `value`    | `string`                                                                  | —           | Form field value when checked           |
 
-### Slots
+### `bit-radio` Slots
 
 | Slot      | Description                |
 | --------- | -------------------------- |
 | (default) | Radio button label content |
 
-### Events
+### `bit-radio` Events
 
 | Event    | Detail                                                      | Description                                                     |
 | -------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
 | `change` | `{ checked: boolean, value: string, originalEvent: Event }` | Emitted when checked state changes (only when becoming checked) |
 
-## CSS Custom Properties
+### `bit-radio` CSS Custom Properties
 
 | Property             | Description             | Default         |
 | -------------------- | ----------------------- | --------------- |
@@ -114,29 +261,71 @@ Prevent interaction and reduce opacity for unavailable options.
 | `--radio-checked-bg` | Background when checked | Color-dependent |
 | `--radio-color`      | Inner dot color         | `white`         |
 
+### `bit-radio-group` Attributes
+
+| Attribute     | Type                                                                      | Default      | Description                                      |
+| ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
+| `label`       | `string`                                                                  | `''`         | Legend text — required for accessibility         |
+| `value`       | `string`                                                                  | `''`         | Currently selected value                         |
+| `name`        | `string`                                                                  | `''`         | Form field name — propagated to all child radios |
+| `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction                                 |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —            | Color theme — propagated to all child radios     |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | —            | Size — propagated to all child radios            |
+| `disabled`    | `boolean`                                                                 | `false`      | Disable all radios in the group                  |
+| `error`       | `string`                                                                  | `''`         | Error message shown below the group              |
+| `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)         |
+| `required`    | `boolean`                                                                 | `false`      | Mark the group as required                       |
+
+### `bit-radio-group` Slots
+
+| Slot      | Description                     |
+| --------- | ------------------------------- |
+| (default) | Place `bit-radio` elements here |
+
+### `bit-radio-group` Events
+
+| Event    | Detail              | Description                      |
+| -------- | ------------------- | -------------------------------- |
+| `change` | `{ value: string }` | Emitted when a radio is selected |
+
+### `bit-radio-group` CSS Custom Properties
+
+| Property                  | Description                     | Default         |
+| ------------------------- | ------------------------------- | --------------- |
+| `--radio-group-gap`       | Spacing between options         | `var(--size-2)` |
+| `--radio-group-direction` | Flex direction (`column`/`row`) | `column`        |
+
+---
+
 ## Accessibility
 
-The radio button component follows WAI-ARIA best practices.
+The radio components follow WCAG 2.1 Level AA standards.
+
+### `bit-radio`
 
 ✅ **Keyboard Navigation**
 
-- `Space` and `Enter` select the radio button.
-- `Tab` moves focus to/from the radio group.
-- `Arrow Keys` navigate and select between items in a group.
+- `Space` / `Enter` select a radio; `Tab` moves focus in and out of the group.
+- Arrow keys navigate between radios within a group using a roving tabindex.
 
 ✅ **Screen Readers**
 
-- Announces radio role and label.
-- `aria-checked` reflects current state.
+- Uses `role="radio"` with `aria-checked` reflecting the current state.
+- `aria-disabled` reflects the disabled state.
+
+### `bit-radio-group`
+
+✅ **Semantic Structure**
+
+- Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
+
+✅ **Screen Readers**
+
+- `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
 
 ## Best Practices
 
-**Do:**
-
-- Always use the `name` attribute to group related radios.
-- Provide a default selection when appropriate.
-
-**Don't:**
-
-- Use radio buttons for non-mutually exclusive options (use checkboxes).
-- Have only one radio button in a group.
+- Always provide a meaningful `label` on the group — it is read before each option by screen readers.
+- Always use the `name` attribute (or set it once on the group) so radios are mutually exclusive.
+- Provide a default `value` when a sensible default exists.
+- For non-mutually exclusive choices, use [`bit-checkbox-group`](./checkbox) instead.

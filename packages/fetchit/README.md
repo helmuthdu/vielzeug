@@ -1,10 +1,10 @@
 # @vielzeug/fetchit
 
-> Lightweight HTTP client with smart caching, request deduplication, and query management
+> Lightweight, type-safe HTTP client with query caching, request deduplication, and standalone mutations
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/fetchit)](https://www.npmjs.com/package/@vielzeug/fetchit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Fetchit** is a type-safe HTTP client pair: a simple `HttpClient` for everyday requests and a `QueryClient` for cache-backed data fetching with stale-while-revalidate semantics.
+**Fetchit** provides three independent primitives built on the native `fetch` API: an HTTP client (`createApi`), a query cache (`createQuery`), and standalone mutations (`createMutation`). Use them together or independently.
 
 ## Installation
 
@@ -17,97 +17,125 @@ pnpm add @vielzeug/fetchit
 ## Quick Start
 
 ```typescript
-import { createHttpClient, createQueryClient } from '@vielzeug/fetchit';
+import { createApi, createQuery, createMutation } from '@vielzeug/fetchit';
 
-const http = createHttpClient({ baseUrl: 'https://api.example.com' });
+const api = createApi({ baseUrl: 'https://api.example.com' });
 
 // Simple request
-const users = await http.get<User[]>('/users');
+const users = await api.get<User[]>('/users');
 
-// Cached query — second call returns from cache
-const queryClient = createQueryClient({ staleTime: 5000 });
+// Cached query — second call within staleTime returns from cache
+const qc = createQuery({ staleTime: 5_000 });
 
-const user = await queryClient.query({
+const user = await qc.query({
   key: ['users', 1],
-  fn: () => http.get<User>('/users/1'),
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
 });
 
-// Mutation with cache invalidation
-const createUser = queryClient.mutation(
-  (data: NewUser) => http.post<User>('/users', { body: data }),
+// Standalone mutation with lifecycle callbacks
+const createUser = createMutation(
+  (data: NewUser) => api.post<User>('/users', { body: data }),
+  { onSuccess: () => qc.invalidate(['users']) },
 );
 await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
-queryClient.invalidate(['users']);
 ```
 
 ## Features
 
+- ✅ **Type-safe path params** — `{param}` placeholders inferred at compile time
 - ✅ **Smart caching** — stale-while-revalidate with configurable `staleTime` and `gcTime`
 - ✅ **Request deduplication** — GET/HEAD/OPTIONS always deduplicate; other methods opt-in
 - ✅ **Interceptors** — `use()` middleware for auth, logging, and transforms
-- ✅ **Retry with backoff** — configurable retry count and delay strategy
-- ✅ **Abort support** — pass an `AbortSignal` to cancel in-flight requests
-- ✅ **Mutations** — factory pattern with `subscribe()`, `getState()`, and `reset()`
-- ✅ **Subscriptions** — reactive `subscribe()` for query state changes
-- ✅ **Type-safe** — full TypeScript inference throughout
+- ✅ **Retry with backoff** — configurable retry count and exponential delay strategy
+- ✅ **Abort support** — `QueryFnContext` carries an `AbortSignal` to cancel in-flight requests
+- ✅ **Standalone mutations** — `createMutation()` with `subscribe()`, `getState()`, and `reset()`
+- ✅ **Reactive subscriptions** — `subscribe(key, listener)` for live query state updates
+- ✅ **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
+- ✅ **Zero dependencies** — built on the native `fetch` API
 
 ## Usage
 
 ### HTTP Client
 
 ```typescript
-import { createHttpClient } from '@vielzeug/fetchit';
+import { createApi } from '@vielzeug/fetchit';
 
-const http = createHttpClient({
+const api = createApi({
   baseUrl: 'https://api.example.com',
   timeout: 10_000,
   headers: { Authorization: 'Bearer token' },
+  logger: (level, msg) => console.log(`[${level}] ${msg}`),
 });
 
-// Path parameters
-const user = await http.get<User>('/users/:id', { params: { id: '123' } });
+// Type-safe path parameters — TypeScript errors if params are missing or wrong
+const user = await api.get<User>('/users/{id}', { params: { id: 123 } });
 
 // Query string
-const page = await http.get<User[]>('/users', { search: { page: 1, limit: 20 } });
+const page = await api.get<User[]>('/users', { query: { page: 1, limit: 20 } });
 
-// Body
-const created = await http.post<User>('/users', { body: { name: 'Alice' } });
+// Body (serialized to JSON automatically)
+const created = await api.post<User>('/users', { body: { name: 'Alice' } });
 
 // Update headers at runtime
-http.setHeaders({ Authorization: 'Bearer new-token' });
+api.headers({ Authorization: 'Bearer new-token' });
+
+// Interceptors
+const dispose = api.use(async (ctx, next) => {
+  ctx.init.headers = { ...(ctx.init.headers as object), 'X-Request-Id': crypto.randomUUID() };
+  return next(ctx);
+});
+dispose(); // remove interceptor
 ```
 
 ### Query Client
 
 ```typescript
-import { createQueryClient } from '@vielzeug/fetchit';
+import { createQuery } from '@vielzeug/fetchit';
 
-const queryClient = createQueryClient({ staleTime: 5_000, gcTime: 300_000 });
+const qc = createQuery({ staleTime: 5_000, gcTime: 300_000 });
 
-// Fetch with retry
-const data = await queryClient.query({
+// fn receives a QueryFnContext with an AbortSignal
+const data = await qc.query({
   key: ['users', userId],
-  fn: () => http.get(`/users/${userId}`),
+  fn: ({ signal }) => api.get<User[]>('/users', { signal }),
   retry: 3,
 });
 
-// Seed / read cache manually
-queryClient.setData(['users', 1], updatedUser);
-const cached = queryClient.getData<User>(['users', 1]);
+// Read / seed cache manually
+qc.set(['users', 1], updatedUser);
+const cached = qc.get<User>(['users', 1]);
 
-// Prefix invalidation
-queryClient.invalidate(['users']);
+// Prefix invalidation — invalidates ['users', 1], ['users', 2], etc.
+qc.invalidate(['users']);
 
-// Subscribe to state changes
-const unsub = queryClient.subscribe(['users', 1], (state) => {
+// Subscribe to live state changes
+const unsub = qc.subscribe<User>(['users', 1], (state) => {
   console.log(state.status, state.data, state.error);
 });
+unsub(); // stop listening
+```
 
-// Create a mutation factory
-const updateUser = queryClient.mutation(
-  (data: Partial<User>) => http.put<User>(`/users/${userId}`, { body: data }),
+### Standalone Mutation
+
+```typescript
+import { createMutation } from '@vielzeug/fetchit';
+
+const updateUser = createMutation(
+  (patch: Partial<User>) => api.put<User>(`/users/${userId}`, { body: patch }),
+  {
+    onSuccess: (data, variables) => qc.set(['users', userId], data),
+    onError: (error) => console.error(error),
+    onSettled: () => qc.invalidate(['users']),
+  },
 );
+
 await updateUser.mutate({ name: 'Alice' });
+
+// Reactive state
+const unsub = updateUser.subscribe((state) => {
+  console.log(state.isPending, state.isSuccess, state.isError);
+});
+updateUser.reset(); // back to idle
 ```
 
 ### Error Handling
@@ -116,35 +144,52 @@ await updateUser.mutate({ name: 'Alice' });
 import { HttpError } from '@vielzeug/fetchit';
 
 try {
-  await http.get('/not-found');
+  await api.get('/not-found');
 } catch (err) {
-  if (err instanceof HttpError) {
-    console.log(err.status, err.method, err.url);
+  if (HttpError.is(err, 404)) {
+    console.log('Not found:', err.url);
+  } else if (HttpError.is(err)) {
+    console.log(err.status, err.method, err.url, err.data);
   }
 }
 ```
 
 ## API
 
-### `createHttpClient(options?)`
+### `createApi(options?)`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `baseUrl` | `string` | `''` | Base URL prepended to every request |
-| `headers` | `Record<string, string>` | `{}` | Default headers |
+| `headers` | `Record<string, string>` | `{}` | Default headers for all requests |
 | `timeout` | `number` | `30000` | Request timeout in ms |
-| `dedupe` | `boolean` | `false` | Force-dedupe non-idempotent methods (GET/HEAD/OPTIONS always dedupe) |
+| `dedupe` | `boolean` | `false` | Deduplicate non-idempotent methods (GET/HEAD/OPTIONS always dedupe) |
+| `logger` | `(level, msg, meta?) => void` | — | Optional request logger (`'info'`, `'warn'`, `'error'`) |
 
-Returns: `{ get, post, put, patch, delete, request, setHeaders, use }`
+Returns: `{ get, post, put, patch, delete, request, headers, use, dispose, disposed }`
 
-### `createQueryClient(options?)`
+### `createQuery(options?)`
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `staleTime` | `number` | `0` | ms before cached data is stale |
-| `gcTime` | `number` | `300000` | ms before unused cache is collected |
+| `staleTime` | `number` | `0` | ms before cached data is considered stale |
+| `gcTime` | `number` | `300000` | ms before unused cache entries are collected |
+| `retry` | `number \| false` | `1` | Default retry attempts for failed queries |
+| `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries |
 
-Returns: `{ query, mutation, prefetch, invalidate, setData, getData, getState, subscribe, clear }`
+Returns: `{ query, prefetch, get, set, getState, subscribe, invalidate, cancel, clear, dispose, disposed }`
+
+### `createMutation(fn, options?)`
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `retry` | `number \| false` | `false` | Retry attempts on failure |
+| `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries |
+| `onSuccess` | `(data, variables) => void` | — | Called on successful mutation |
+| `onError` | `(error, variables) => void` | — | Called on failed mutation |
+| `onSettled` | `(data, error, variables) => void` | — | Always called after mutation |
+
+Returns: `{ mutate, getState, subscribe, reset }`
 
 ## Documentation
 
@@ -152,7 +197,7 @@ Full docs at **[vielzeug.dev/fetchit](https://vielzeug.dev/fetchit)**
 
 | | |
 |---|---|
-| [Usage Guide](https://vielzeug.dev/fetchit/usage) | HTTP client, query client, caching patterns |
+| [Usage Guide](https://vielzeug.dev/fetchit/usage) | HTTP client, query client, mutations, interceptors |
 | [API Reference](https://vielzeug.dev/fetchit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/fetchit/examples) | Real-world data-fetching patterns |
 

@@ -17,26 +17,28 @@ Lodash ships ~70 kB even tree-shaken. Toolkit provides modern, tree-shakeable ut
 
 ```ts
 // Before — verbose native JS
-const groups = items.reduce((acc, item) => {
-  const key = item.category;
-  (acc[key] = acc[key] || []).push(item);
-  return acc;
-}, {} as Record<string, typeof items>);
+const groups = items.reduce(
+  (acc, item) => {
+    const key = item.category;
+    (acc[key] = acc[key] || []).push(item);
+    return acc;
+  },
+  {} as Record<string, typeof items>,
+);
 
 // After — Toolkit
 import { group } from '@vielzeug/toolkit';
-const groups = group(items, item => item.category);
+const groups = group(items, (item) => item.category);
 ```
 
-| Feature | Toolkit | Lodash | Radash |
-|---|---|---|---|
-| Tree-shakeable | ✅ Always | ✅ lodash-es | ✅ |
-| TypeScript | ✅ First-class | ⚠️ Via @types | ✅ |
-| Async utilities | ✅ | ⚠️ Limited | ✅ |
-| Zero dependencies | ✅ | ✅ | ✅ |
+| Feature           | Toolkit        | Lodash        | Radash |
+| ----------------- | -------------- | ------------- | ------ |
+| Tree-shakeable    | ✅ Always      | ✅ lodash-es  | ✅     |
+| TypeScript        | ✅ First-class | ⚠️ Via @types | ✅     |
+| Async utilities   | ✅             | ⚠️ Limited    | ✅     |
+| Zero dependencies | ✅             | ✅            | ✅     |
 
 **Use Toolkit when** you want utility functions with strong TypeScript types and minimal bundle impact.
-
 
 ## Import
 
@@ -86,7 +88,7 @@ import { select, group, chunk, toggle, uniq, keyBy } from '@vielzeug/toolkit';
 const numbers = [1, 2, 3, 4, 5, 6];
 
 // Map + filter in one step
-const evenDoubled = select(numbers, (n) => n % 2 === 0 ? n * 2 : null); // [4, 8, 12]
+const evenDoubled = select(numbers, (n) => (n % 2 === 0 ? n * 2 : null)); // [4, 8, 12]
 
 // Group
 const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
@@ -162,11 +164,11 @@ function processInput(input: unknown) {
 }
 
 // Deep equality, pattern matching, numeric checks
-is.equal([1,2], [1,2]);           // true
+is.equal([1, 2], [1, 2]); // true
 is.match(user, { role: 'admin' }); // true
-is.positive(5);                    // true
-is.within(3, 1, 5);                // true
-is.ge(5, 5);                       // true  (a >= b)
+is.positive(5); // true
+is.within(3, 1, 5); // true
+is.ge(5, 5); // true  (a >= b)
 ```
 
 ## Advanced Usage
@@ -198,7 +200,7 @@ import { select, group } from '@vielzeug/toolkit';
 
 // Filter in-stock products and group by category
 const result = group(
-  select(products, (p) => p.inStock ? p : null),
+  select(products, (p) => (p.inStock ? p : null)),
   (p) => p.category,
 );
 ```
