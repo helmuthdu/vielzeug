@@ -32,7 +32,9 @@ describe('bit-menu', () => {
           <bit-menu-item value="edit">Edit</bit-menu-item>
         `,
       });
+
       const onSelect = vi.fn();
+
       fixture.element.addEventListener('bit-select', onSelect);
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
@@ -52,7 +54,9 @@ describe('bit-menu', () => {
       });
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+
       const item = fixture.element.querySelector<HTMLElement>('bit-menu-item')!;
+
       await user.click(item);
 
       expect(item.hasAttribute('checked')).toBe(true);
@@ -70,6 +74,7 @@ describe('bit-menu', () => {
       });
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
       expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
       expect(trigger.getAttribute('aria-expanded')).toBe('false');
 
@@ -105,6 +110,7 @@ describe('bit-menu', () => {
       });
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
       await user.press(trigger, 'ArrowDown');
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);

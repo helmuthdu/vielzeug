@@ -28,6 +28,7 @@ export const once = <T extends Fn>(fn: T): T & { reset: () => void } => {
       result = fn(...args);
       called = true;
     }
+
     return result as ReturnType<T>;
   }) as T & { reset: () => void };
 

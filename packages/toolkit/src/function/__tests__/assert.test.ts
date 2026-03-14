@@ -25,6 +25,7 @@ describe('assert', () => {
 
   it('should include context in the error message', () => {
     const context = { value: 42 };
+
     expect(() => assert(false, 'Test error', { args: context })).toThrowError(
       'Test error\nArguments: {\n  "value": 42\n}',
     );
@@ -32,8 +33,8 @@ describe('assert', () => {
 
   it('should use the provided ErrorType', () => {
     class CustomError extends Error {}
-    // @ts-expect-error
-    expect(() => assert(false, 'Custom error', { type: CustomError })).toThrowError(CustomError);
+
+    expect(() => assert(false, 'Custom error', { type: CustomError as any })).toThrowError(CustomError);
   });
 
   it('should handle multiple conditions', () => {

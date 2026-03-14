@@ -11,8 +11,10 @@ import {
   ref,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin, elevationMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
+
 import type { AddEventListeners, BitDialogEvents, PaddingSize, RoundedSize } from '../../types';
+
+import { coarsePointerMixin, elevationMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
 import { closeIcon } from '../icons';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -68,10 +70,12 @@ const componentStyles = /* css */ css`
       background: var(--_backdrop);
       backdrop-filter: var(--_backdrop-filter);
       opacity: 1;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--transition-normal) ease,
         overlay var(--transition-normal) ease allow-discrete,
-        display var(--transition-normal) ease allow-discrete);
+        display var(--transition-normal) ease allow-discrete
+      );
 
       @starting-style {
         opacity: 0;
@@ -101,9 +105,11 @@ const componentStyles = /* css */ css`
       box-sizing: border-box;
       opacity: 1;
       transform: scale(1) translateY(0);
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1),
-        transform var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1));
+        transform var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1)
+      );
 
       @starting-style {
         opacity: 0;
@@ -183,9 +189,7 @@ const componentStyles = /* css */ css`
       color: var(--color-contrast-500);
       cursor: pointer;
       padding: 0;
-      transition: var(--_motion-transition,
-        background var(--transition-fast),
-        color var(--transition-fast));
+      transition: var(--_motion-transition, background var(--transition-fast), color var(--transition-fast));
     }
 
     .close:hover {
@@ -265,7 +269,6 @@ const componentStyles = /* css */ css`
         padding-inline: var(--size-3);
       }
     }
-
   }
 
   @layer buildit.config {
@@ -437,9 +440,11 @@ export const TAG = define('bit-dialog', ({ host }) => {
   const getBackgroundEls = (): Element[] => {
     // Walk up from host to find the direct child of <body>
     let ancestor: Element = host;
+
     while (ancestor.parentElement && ancestor.parentElement !== document.body) {
       ancestor = ancestor.parentElement;
     }
+
     return Array.from(document.body.children).filter((el) => el !== ancestor);
   };
 
@@ -458,6 +463,7 @@ export const TAG = define('bit-dialog', ({ host }) => {
 
   onMount(() => {
     const dialog = dialogRef.value;
+
     if (!dialog) return;
 
     let isClosing = false;
@@ -466,11 +472,14 @@ export const TAG = define('bit-dialog', ({ host }) => {
 
     const applyInitialFocus = () => {
       const selector = props['initial-focus'].value;
+
       if (selector) {
         // Search inside the host's light DOM children (slotted content)
         const target = host.querySelector<HTMLElement>(selector);
+
         if (target) {
           requestAnimationFrame(() => target.focus());
+
           return;
         }
       }
@@ -479,14 +488,17 @@ export const TAG = define('bit-dialog', ({ host }) => {
 
     const closeWithAnimation = () => {
       if (isClosing || !dialog.open) return;
+
       isClosing = true;
       dialog.classList.add('closing');
+
       const panel = getPanelEl();
       const finish = () => {
         dialog.classList.remove('closing');
         isClosing = false;
         dialog.close();
       };
+
       if (panel && Number.parseFloat(getComputedStyle(panel).transitionDuration) > 0) {
         panel.addEventListener('transitionend', finish, { once: true });
       } else {
@@ -523,11 +535,13 @@ export const TAG = define('bit-dialog', ({ host }) => {
       unlockBackground();
       // Sync the open prop back to the host attribute if closed externally
       host.removeAttribute('open');
+
       // Return focus to the triggering element unless opted out
       if (props['return-focus'].value !== false && returnFocusEl) {
         returnFocusEl.focus();
         returnFocusEl = null;
       }
+
       emit('close');
     };
 
@@ -535,6 +549,7 @@ export const TAG = define('bit-dialog', ({ host }) => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+
         if (!props.persistent.value) {
           closeWithAnimation();
         }
@@ -544,6 +559,7 @@ export const TAG = define('bit-dialog', ({ host }) => {
     // Backdrop click: the click target is the <dialog> element itself (not the panel)
     const handleBackdropClick = (e: MouseEvent) => {
       if (props.persistent.value) return;
+
       // When clicking the backdrop, the event target is the <dialog> element itself.
       // Clicks inside the panel bubble up with a more specific target.
       if (e.target === dialog) {
@@ -558,21 +574,27 @@ export const TAG = define('bit-dialog', ({ host }) => {
     return () => {
       // Ensure the native dialog is closed on unmount to release top-layer
       if (dialog.open) dialog.close();
+
       unlockBackground();
     };
   });
 
   const handleDismiss = () => {
     const dialog = dialogRef.value;
+
     if (!dialog) return;
+
     const event = new Event('close-request');
+
     dialog.dispatchEvent(event);
     dialog.classList.add('closing');
+
     const panel = dialog.querySelector<HTMLElement>('.panel');
     const finish = () => {
       dialog.classList.remove('closing');
       dialog.close();
     };
+
     if (panel && Number.parseFloat(getComputedStyle(panel).transitionDuration) > 0) {
       panel.addEventListener('transitionend', finish, { once: true });
     } else {
@@ -588,19 +610,10 @@ export const TAG = define('bit-dialog', ({ host }) => {
         class="dialog"
         part="dialog"
         :aria-label="${() => props.label.value || null}"
-        aria-modal="true"
-      >
+        aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div
-          class="panel"
-          part="panel"
-          :data-size="${props.size}"
-        >
-          <div
-            class="header"
-            part="header"
-            ?hidden=${() => !hasHeader.value}
-          >
+        <div class="panel" part="panel" :data-size="${props.size}">
+          <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
             <slot name="header">
               <span class="title" part="title">${() => props.label.value}</span>
             </slot>
@@ -610,17 +623,14 @@ export const TAG = define('bit-dialog', ({ host }) => {
               type="button"
               aria-label="Close dialog"
               ?hidden=${() => !props.dismissable.value}
-              @click=${handleDismiss}
-            >${closeIcon}</button>
+              @click=${handleDismiss}>
+              ${closeIcon}
+            </button>
           </div>
           <div class="body" part="body">
             <slot></slot>
           </div>
-          <div
-            class="footer"
-            part="footer"
-            ?hidden=${() => !hasFooter.value}
-          >
+          <div class="footer" part="footer" ?hidden=${() => !hasFooter.value}>
             <slot name="footer"></slot>
           </div>
         </div>

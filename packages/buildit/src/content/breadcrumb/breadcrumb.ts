@@ -105,7 +105,9 @@ export const ITEM_TAG = define('bit-breadcrumb-item', () => {
   });
 
   return html`
-    <style>${itemStyles}</style>
+    <style>
+      ${itemStyles}
+    </style>
     <li class="item" role="listitem">
       <span class="separator" part="separator" aria-hidden="true">${() => props.separator.value || '/'}</span>
       <a
@@ -113,8 +115,7 @@ export const ITEM_TAG = define('bit-breadcrumb-item', () => {
         href="${() => props.href.value || undefined}"
         aria-current="${() => (props.active.value ? 'page' : null)}"
         tabindex="${() => (props.active.value ? '-1' : null)}"
-        part="link"
-      >
+        part="link">
         <span class="icon"><slot name="icon"></slot></span>
         <span class="label"><slot></slot></span>
       </a>
@@ -145,7 +146,6 @@ const componentStyles = /* css */ css`
       margin: 0;
       padding: 0;
     }
-
   }
 `;
 
@@ -172,7 +172,9 @@ export const TAG = define('bit-breadcrumb', ({ host }) => {
 
   const getItems = () => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
     if (!slot) return [];
+
     return slot
       .assignedElements({ flatten: true })
       .filter((el) => el.tagName.toLowerCase() === 'bit-breadcrumb-item') as HTMLElement[];
@@ -180,6 +182,7 @@ export const TAG = define('bit-breadcrumb', ({ host }) => {
 
   const syncSeparatorVar = () => {
     const sep = props.separator.value;
+
     if (sep) {
       host.style.setProperty('--breadcrumb-separator', `'${sep}'`);
     } else {
@@ -193,6 +196,7 @@ export const TAG = define('bit-breadcrumb', ({ host }) => {
 
     for (let i = 0; i < items.length; i += 1) {
       items[i].setAttribute('separator', sep);
+
       if (i === 0) {
         items[i].removeAttribute('data-show-separator');
       } else {
@@ -209,7 +213,9 @@ export const TAG = define('bit-breadcrumb', ({ host }) => {
   effect(syncItems);
 
   return html`
-    <style>${componentStyles}</style>
+    <style>
+      ${componentStyles}
+    </style>
     <nav aria-label="${() => props.label.value}" part="nav">
       <ol role="list" part="list">
         <slot></slot>

@@ -8,15 +8,31 @@ const styles = /* css */ css`
   }
 
   @layer buildit.utilities {
-    :host([align='start'])   { align-self: start; }
-    :host([align='center'])  { align-self: center; }
-    :host([align='end'])     { align-self: end; }
-    :host([align='stretch']) { align-self: stretch; }
+    :host([align='start']) {
+      align-self: start;
+    }
+    :host([align='center']) {
+      align-self: center;
+    }
+    :host([align='end']) {
+      align-self: end;
+    }
+    :host([align='stretch']) {
+      align-self: stretch;
+    }
 
-    :host([justify='start'])   { justify-self: start; }
-    :host([justify='center'])  { justify-self: center; }
-    :host([justify='end'])     { justify-self: end; }
-    :host([justify='stretch']) { justify-self: stretch; }
+    :host([justify='start']) {
+      justify-self: start;
+    }
+    :host([justify='center']) {
+      justify-self: center;
+    }
+    :host([justify='end']) {
+      justify-self: end;
+    }
+    :host([justify='stretch']) {
+      justify-self: stretch;
+    }
   }
 `;
 
@@ -79,6 +95,7 @@ export const TAG = define('bit-grid-item', ({ host }) => {
   effect(() => {
     const col = props.col.value;
     const span = props.colSpan.value;
+
     if (col) {
       host.style.setProperty('grid-column', col);
     } else if (span === 'full') {
@@ -93,6 +110,7 @@ export const TAG = define('bit-grid-item', ({ host }) => {
   effect(() => {
     const row = props.row.value;
     const span = props.rowSpan.value;
+
     if (row) {
       host.style.setProperty('grid-row', row);
     } else if (span === 'full') {

@@ -32,13 +32,14 @@ export function queue(options: { concurrency?: number } = {}) {
 
   const tasks: Array<{
     fn: () => Promise<unknown>;
-    resolve: (value: unknown) => void;
     reject: (error: unknown) => void;
+    resolve: (value: unknown) => void;
   }> = [];
 
   const next = (): void => {
     if (activeCount < concurrency && tasks.length > 0) {
       const task = tasks.shift()!;
+
       activeCount++;
 
       task

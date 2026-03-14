@@ -5,7 +5,6 @@ type MergeStrategy =
   | 'lastWins'
   | 'arrayConcat'
   | 'arrayReplace'
-  // biome-ignore lint/suspicious/noExplicitAny: -
   | ((target: any, source: any) => any);
 
 type Obj = Record<string, any>;

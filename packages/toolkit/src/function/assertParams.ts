@@ -23,7 +23,7 @@ export function assertParams<T extends object, K extends keyof T>(
   params: T,
   keys: K[],
   name?: string,
-  options: { type?: ErrorConstructor; bypass?: boolean } = {},
+  options: { bypass?: boolean; type?: ErrorConstructor } = {},
 ): asserts params is T & Required<Pick<T, K>> {
   assert(!!params, 'Missing parameters object', options);
 

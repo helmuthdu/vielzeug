@@ -11,14 +11,15 @@ import {
   provide,
   type ReadonlySignal,
 } from '@vielzeug/craftit';
+
 import type { AddEventListeners, BitAccordionEvents, ComponentSize, VisualVariant } from '../../types';
 
 /** Context provided by bit-accordion to its bit-accordion-item children. */
 export type AccordionContext = {
+  notifyExpand: (expandedItem: HTMLElement) => void;
   selectionMode: ReadonlySignal<'single' | 'multiple' | undefined>;
   size: ReadonlySignal<ComponentSize | undefined>;
   variant: ReadonlySignal<VisualVariant | undefined>;
-  notifyExpand: (expandedItem: HTMLElement) => void;
 };
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>();
@@ -177,20 +178,26 @@ export const TAG = define('bit-accordion', ({ host }) => {
   // Listen for expand events bubbling up from child accordion-items.
   // This allows single-selection management without tight coupling via context calls.
   const handleExpand = (e: Event) => notifyExpand(e.target as HTMLElement);
+
   host.addEventListener('expand', handleExpand);
 
   // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
   handle(host, 'keydown', (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+
     const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
     const summaries = items
       .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
       .filter(Boolean) as HTMLElement[];
+
     if (!summaries.length) return;
+
     const focused = summaries.indexOf(document.activeElement as HTMLElement);
+
     if (focused === -1) return; // focus is not on a summary — let native handling proceed
 
     let next = focused;
+
     if (e.key === 'ArrowDown') next = (focused + 1) % summaries.length;
     else if (e.key === 'ArrowUp') next = (focused - 1 + summaries.length) % summaries.length;
     else if (e.key === 'Home') next = 0;

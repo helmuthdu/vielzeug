@@ -34,6 +34,7 @@ describe('bit-chip', () => {
       fixture = await mount('bit-chip', { attrs: { mode: 'selectable' } });
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn');
+
       expect(toggle).toBeTruthy();
       expect(toggle?.getAttribute('role')).toBe('checkbox');
       expect(toggle?.getAttribute('aria-checked')).toBe('false');
@@ -77,7 +78,9 @@ describe('bit-chip', () => {
   describe('Removable Mode', () => {
     it('fires remove event when remove button clicked', async () => {
       fixture = await mount('bit-chip', { attrs: { mode: 'removable', value: 'chip-1' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('remove', handler);
 
       fire.click(fixture.query<HTMLElement>('.remove-btn')!);
@@ -87,7 +90,9 @@ describe('bit-chip', () => {
 
     it('remove event carries value', async () => {
       fixture = await mount('bit-chip', { attrs: { mode: 'removable', value: 'chip-x' } });
-      let detail: { value?: string; originalEvent?: Event } | undefined;
+
+      let detail: { originalEvent?: Event; value?: string } | undefined;
+
       fixture.element.addEventListener('remove', (e: Event) => {
         detail = (e as CustomEvent).detail;
       });
@@ -100,7 +105,9 @@ describe('bit-chip', () => {
 
     it('does not emit remove when disabled', async () => {
       fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'removable', value: 'chip-x' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('remove', handler);
 
       fire.click(fixture.query<HTMLElement>('.remove-btn')!);
@@ -113,19 +120,24 @@ describe('bit-chip', () => {
   describe('Selectable Mode', () => {
     it('toggles unchecked to checked in uncontrolled mode', async () => {
       fixture = await mount('bit-chip', { attrs: { mode: 'selectable', value: 'chip-a' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('change', handler);
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
+
       fire.click(toggle);
       await fixture.flush();
 
       expect(handler).toHaveBeenCalledTimes(1);
+
       const ev = handler.mock.calls[0][0] as CustomEvent<{
         checked: boolean;
-        value: string | undefined;
         originalEvent: Event;
+        value: string | undefined;
       }>;
+
       expect(ev.detail.checked).toBe(true);
       expect(ev.detail.value).toBe('chip-a');
       expect(ev.detail.originalEvent).toBeInstanceOf(MouseEvent);
@@ -136,28 +148,36 @@ describe('bit-chip', () => {
       fixture = await mount('bit-chip', { attrs: { 'default-checked': '', mode: 'selectable' } });
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
+
       expect(toggle.getAttribute('aria-checked')).toBe('true');
     });
 
     it('emits change in controlled mode without mutating aria-checked', async () => {
       fixture = await mount('bit-chip', { attrs: { checked: '', mode: 'selectable' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('change', handler);
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
+
       expect(toggle.getAttribute('aria-checked')).toBe('true');
 
       fire.click(toggle);
 
       expect(handler).toHaveBeenCalledTimes(1);
+
       const ev = handler.mock.calls[0][0] as CustomEvent<{ checked: boolean }>;
+
       expect(ev.detail.checked).toBe(false);
       expect(toggle.getAttribute('aria-checked')).toBe('true');
     });
 
     it('does not emit change when disabled', async () => {
       fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'selectable' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('change', handler);
 
       fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
@@ -178,6 +198,7 @@ describe('bit-chip', () => {
   describe('Disabled State', () => {
     it('remove button is disabled when chip is disabled in removable mode', async () => {
       fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'removable' } });
+
       const btn = fixture.query<HTMLButtonElement>('.remove-btn');
 
       if (btn) {
@@ -221,6 +242,7 @@ describe('bit-chip accessibility', () => {
       fixture = await mount('bit-chip', { attrs: { mode: 'removable' } });
 
       const btn = fixture.query<HTMLButtonElement>('.remove-btn');
+
       expect(btn?.tagName.toLowerCase()).toBe('button');
     });
   });

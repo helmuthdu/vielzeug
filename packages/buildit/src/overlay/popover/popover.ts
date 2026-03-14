@@ -1,3 +1,5 @@
+import type { Placement } from '@vielzeug/floatit';
+
 import {
   computed,
   createId,
@@ -11,10 +13,11 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import type { Placement } from '@vielzeug/floatit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-import { reducedMotionMixin } from '../../styles';
+
 import type { AddEventListeners } from '../../types';
+
+import { reducedMotionMixin } from '../../styles';
 
 export type PopoverTrigger = 'click' | 'hover' | 'focus';
 
@@ -57,10 +60,12 @@ const styles = /* css */ css`
       box-sizing: border-box;
       /* Hidden by default */
       opacity: 0;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--transition-fast),
         display var(--transition-fast) allow-discrete,
-        overlay var(--transition-fast) allow-discrete);
+        overlay var(--transition-fast) allow-discrete
+      );
     }
 
     .panel:popover-open {
@@ -70,7 +75,6 @@ const styles = /* css */ css`
         opacity: 0;
       }
     }
-
   }
 `;
 
@@ -140,8 +144,8 @@ export const TAG = define('bit-popover', ({ host }) => {
   });
 
   const emit = defineEmits<{
-    open: undefined;
     close: undefined;
+    open: undefined;
   }>();
 
   const visible = signal(false);
@@ -154,6 +158,7 @@ export const TAG = define('bit-popover', ({ host }) => {
 
   function updatePosition() {
     if (!panelEl || !currentTrigger) return;
+
     positionFloat(currentTrigger, panelEl, {
       middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
       placement: props.placement.value,
@@ -166,11 +171,14 @@ export const TAG = define('bit-popover', ({ host }) => {
   function showFloat() {
     visible.value = true;
     currentTrigger?.setAttribute('aria-expanded', 'true');
+
     if (panelEl && !panelEl.matches(':popover-open')) panelEl.showPopover();
+
     if (currentTrigger && panelEl) {
       autoUpdateCleanup?.();
       autoUpdateCleanup = autoUpdate(currentTrigger, panelEl, updatePosition);
     }
+
     updatePosition();
   }
 
@@ -180,20 +188,26 @@ export const TAG = define('bit-popover', ({ host }) => {
     autoUpdateCleanup = null;
     currentTrigger?.setAttribute('aria-expanded', 'false');
     visible.value = false;
+
     if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
   }
 
   function open() {
     if (props.open.value !== undefined) return;
+
     if (props.disabled.value) return;
+
     if (visible.value) return;
+
     showFloat();
     emit('open');
   }
 
   function close() {
     if (props.open.value !== undefined) return;
+
     if (!visible.value) return;
+
     hideFloat();
     emit('close');
   }
@@ -209,29 +223,41 @@ export const TAG = define('bit-popover', ({ host }) => {
 
   function handleClickOutside(e: MouseEvent) {
     if (!visible.value) return;
+
     const path = e.composedPath();
+
     if (path.includes(host)) return;
+
     if (panelEl && path.includes(panelEl)) return;
+
     if (currentTrigger && path.includes(currentTrigger)) return;
+
     close();
   }
 
   // Don't close when focus moves from the trigger into the panel content.
   function handleFocusOut(e: FocusEvent) {
     const next = e.relatedTarget as Element | null;
+
     if (next && panelEl?.contains(next)) return;
+
     if (next && currentTrigger?.contains(next)) return;
+
     close();
   }
 
   onMount(() => {
     const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+
     if (!triggerSlot) return;
 
     const bindEvents = () => {
       unbindEvents();
+
       const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+
       if (!el) return;
+
       currentTrigger = el;
       el.setAttribute('aria-controls', panelId);
       el.setAttribute('aria-haspopup', 'dialog');
@@ -239,26 +265,31 @@ export const TAG = define('bit-popover', ({ host }) => {
       el.setAttribute('aria-disabled', String(Boolean(props.disabled.value)));
 
       const t = triggers.value;
+
       if (t.includes('click')) {
         el.addEventListener('click', toggle);
         document.addEventListener('click', handleClickOutside, { capture: true });
       }
+
       if (t.includes('hover')) {
         el.addEventListener('mouseenter', open);
         el.addEventListener('mouseleave', close);
         panelEl?.addEventListener('mouseenter', open);
         panelEl?.addEventListener('mouseleave', close);
       }
+
       if (t.includes('focus')) {
         el.addEventListener('focusin', open);
         el.addEventListener('focusout', handleFocusOut);
         panelEl?.addEventListener('focusout', handleFocusOut);
       }
+
       document.addEventListener('keydown', handleKeydown);
     };
 
     const unbindEvents = () => {
       if (!currentTrigger) return;
+
       currentTrigger.removeAttribute('aria-controls');
       currentTrigger.removeAttribute('aria-haspopup');
       currentTrigger.removeAttribute('aria-expanded');
@@ -281,6 +312,7 @@ export const TAG = define('bit-popover', ({ host }) => {
     // Controlled mode
     watch(props.open, (openVal) => {
       if (openVal === undefined || openVal === null) return;
+
       if (openVal) {
         showFloat();
         emit('open');
@@ -293,6 +325,7 @@ export const TAG = define('bit-popover', ({ host }) => {
     watch(props.trigger, bindEvents);
     watch(props.disabled, (isDisabled) => {
       currentTrigger?.setAttribute('aria-disabled', String(Boolean(isDisabled)));
+
       if (isDisabled) {
         close();
       }
@@ -302,6 +335,7 @@ export const TAG = define('bit-popover', ({ host }) => {
       unbindEvents();
       autoUpdateCleanup?.();
       autoUpdateCleanup = null;
+
       if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
     };
   });
@@ -321,8 +355,7 @@ export const TAG = define('bit-popover', ({ host }) => {
         :aria-hidden="${() => String(!visible.value)}"
         ref=${(el: HTMLElement) => {
           panelEl = el;
-        }}
-      >
+        }}>
         <slot name="content"></slot>
       </div>
     `,

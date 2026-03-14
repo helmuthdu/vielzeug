@@ -24,12 +24,10 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  *
  * @throws {TypeError} If the first argument is not an array.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Selector function can return any comparable type (string, number, Date, etc.)
 export function sort<T>(array: T[], selector: (item: T) => any, direction?: 'asc' | 'desc'): T[];
 export function sort<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
 export function sort<T>(
   array: T[],
-  // biome-ignore lint/suspicious/noExplicitAny: implementation overload must accept the union of both overload signatures
   selectorOrSelectors: ((item: T) => any) | Partial<Record<keyof T, 'asc' | 'desc'>>,
   direction: 'asc' | 'desc' = 'asc',
 ): T[] {
@@ -37,6 +35,7 @@ export function sort<T>(
 
   if (typeof selectorOrSelectors === 'function') {
     const multiplier = direction === 'desc' ? -1 : 1;
+
     return [...array].sort((a, b) => compare(selectorOrSelectors(a), selectorOrSelectors(b)) * multiplier);
   }
 

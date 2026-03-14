@@ -9,6 +9,7 @@ let rainbowRegistered = false;
 
 export function registerRainbowProperty() {
   if (rainbowRegistered) return;
+
   if (typeof CSS !== 'undefined' && CSS.registerProperty) {
     try {
       CSS.registerProperty({
@@ -21,6 +22,7 @@ export function registerRainbowProperty() {
       // Already registered — safe to ignore
     }
   }
+
   rainbowRegistered = true;
 }
 
@@ -111,8 +113,7 @@ export const rainbowEffectMixin = (selector: string) => {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      :host([rainbow]) ${selector}::before,
-      :host([rainbow]) ${selector}::after {
+      :host([rainbow]) ${selector}::before, :host([rainbow]) ${selector}::after {
         animation: none;
       }
     }

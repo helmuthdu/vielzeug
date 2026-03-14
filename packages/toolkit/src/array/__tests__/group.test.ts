@@ -7,6 +7,7 @@ describe('group', () => {
       { type: 'b', value: 2 },
       { type: 'a', value: 3 },
     ];
+
     expect(group(arr, 'type')).toEqual({
       a: [
         { type: 'a', value: 1 },
@@ -19,6 +20,7 @@ describe('group', () => {
   it('should group objects by a selector function', () => {
     const arr = [{ score: 10 }, { score: 20 }, { score: 10 }];
     const selector = (item: { score: number }) => String(item.score);
+
     expect(group(arr, selector)).toEqual({
       '10': [{ score: 10 }, { score: 10 }],
       '20': [{ score: 20 }],
@@ -31,6 +33,7 @@ describe('group', () => {
 
   it('should handle grouping by a property with undefined or null values', () => {
     const arr = [{ a: undefined }, { a: 'x' }, { a: null }];
+
     expect(group(arr, 'a')).toEqual({
       _: [{ a: undefined }, { a: null }],
       x: [{ a: 'x' }],
@@ -38,11 +41,8 @@ describe('group', () => {
   });
 
   it('should throw TypeError if input is not an array', () => {
-    // @ts-expect-error
-    expect(() => group(null, 'a')).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => group(undefined, 'a')).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => group({}, 'a')).toThrow(TypeError);
+    expect(() => group(null as any, 'a')).toThrow(TypeError);
+    expect(() => group(undefined as any, 'a')).toThrow(TypeError);
+    expect(() => group({} as any, 'a')).toThrow(TypeError);
   });
 });

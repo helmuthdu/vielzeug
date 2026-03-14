@@ -51,10 +51,14 @@ export interface DropZone {
 
 function matchesAccept(file: File, accept: string[]): boolean {
   if (!accept.length) return true;
+
   return accept.some((pattern) => {
     const p = pattern.trim();
+
     if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p.toLowerCase());
+
     if (p.endsWith('/*')) return file.type.startsWith(p.slice(0, -1));
+
     return file.type === p;
   });
 }
@@ -82,7 +86,7 @@ function matchesAccept(file: File, accept: string[]): boolean {
  * ```
  */
 export function createDropZone(options: DropZoneOptions): DropZone {
-  const { element, accept = [], disabled, onDragEnter, onDragLeave, onDragOver, onDrop, onHoverChange } = options;
+  const { accept = [], disabled, element, onDragEnter, onDragLeave, onDragOver, onDrop, onHoverChange } = options;
 
   let dragCounter = 0;
   let hovered = false;
@@ -91,13 +95,16 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
   const setHover = (next: boolean): void => {
     if (hovered === next) return;
+
     hovered = next;
     onHoverChange?.(hovered);
   };
 
   const handleDragEnter = (e: DragEvent): void => {
     e.preventDefault();
+
     if (isDisabled()) return;
+
     dragCounter++;
     setHover(true);
     onDragEnter?.(e);
@@ -105,15 +112,20 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
   const handleDragOver = (e: DragEvent): void => {
     e.preventDefault();
+
     if (isDisabled()) return;
+
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+
     setHover(true);
     onDragOver?.(e);
   };
 
   const handleDragLeave = (e: DragEvent): void => {
     if (isDisabled()) return;
+
     dragCounter--;
+
     if (dragCounter <= 0) {
       dragCounter = 0;
       setHover(false);
@@ -125,10 +137,15 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     e.preventDefault();
     dragCounter = 0;
     setHover(false);
+
     if (isDisabled()) return;
+
     const raw = e.dataTransfer?.files;
+
     if (!raw) return;
+
     const files = Array.from(raw).filter((f) => matchesAccept(f, accept));
+
     onDrop?.(files, e);
   };
 
@@ -196,7 +213,7 @@ export interface Sortable {
  * ```
  */
 export function createSortable(options: SortableOptions): Sortable {
-  const { container, handle, onReorder, disabled } = options;
+  const { container, disabled, handle, onReorder } = options;
 
   const isDisabled = (): boolean => (disabled ? disabled() : false);
 
@@ -210,6 +227,7 @@ export function createSortable(options: SortableOptions): Sortable {
 
   const createPlaceholder = (source: HTMLElement): HTMLElement => {
     const p = document.createElement('div');
+
     p.className = 'dragit-placeholder';
     p.setAttribute('aria-hidden', 'true');
     p.style.cssText = `
@@ -219,14 +237,18 @@ export function createSortable(options: SortableOptions): Sortable {
       border-radius: 4px;
       box-sizing: border-box;
     `;
+
     return p;
   };
 
   const handleDragStart = (e: DragEvent): void => {
     if (isDisabled()) return;
+
     const target = e.target as HTMLElement;
     const item = handle ? target.closest<HTMLElement>('[data-sort-id]') : target.closest<HTMLElement>('[data-sort-id]');
+
     if (!item) return;
+
     if (handle && !target.closest(handle)) return;
 
     draggedEl = item;
@@ -243,9 +265,11 @@ export function createSortable(options: SortableOptions): Sortable {
 
   const handleDragOver = (e: DragEvent): void => {
     e.preventDefault();
+
     if (!draggedEl || !placeholder) return;
 
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-sort-id]');
+
     if (!target || target === draggedEl) return;
 
     const rect = target.getBoundingClientRect();
@@ -260,6 +284,7 @@ export function createSortable(options: SortableOptions): Sortable {
 
   const handleDragEnd = (): void => {
     if (!draggedEl) return;
+
     draggedEl.removeAttribute('data-dragging');
 
     if (placeholder?.parentElement) {

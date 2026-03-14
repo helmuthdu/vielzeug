@@ -18,8 +18,7 @@ import {
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
 import { createVirtualizer } from '@vielzeug/virtualit';
-import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitComboboxEvents,
@@ -31,7 +30,10 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
+
 import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
+import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
@@ -137,11 +139,13 @@ const componentStyles = /* css */ css`
       padding: var(--_padding);
       padding-inline-end: var(--size-8);
       position: relative;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         background var(--transition-fast),
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
-        transform var(--transition-fast));
+        transform var(--transition-fast)
+      );
     }
 
     /* Expand height for multi-select chips or inset label */
@@ -224,7 +228,9 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes bit-combobox-spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .clear-btn {
@@ -269,10 +275,12 @@ const componentStyles = /* css */ css`
       scrollbar-width: thin;
       top: 0;
       transform: translateY(-4px);
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--transition-fast),
         transform var(--transition-fast),
-        visibility var(--transition-fast));
+        visibility var(--transition-fast)
+      );
       visibility: hidden;
       z-index: calc(var(--z-popover, 1000) + 1);
     }
@@ -420,17 +428,17 @@ const componentStyles = /* css */ css`
       color: var(--_theme-focus);
     }
 
-    :host([error]:not([error=""])) .field {
+    :host([error]:not([error=''])) .field {
       border-color: var(--color-error);
     }
 
-    :host([error]:not([error=""])) .field:focus-within {
+    :host([error]:not([error=''])) .field:focus-within {
       border-color: var(--color-error);
       box-shadow: var(--color-error-focus-shadow);
     }
 
-    :host([error]:not([error=""])) .label-inset,
-    :host([error]:not([error=""])) .label-outside {
+    :host([error]:not([error=''])) .label-inset,
+    :host([error]:not([error=''])) .label-outside {
       color: var(--color-error);
     }
   }
@@ -543,7 +551,10 @@ export const OPTION_TAG = define('bit-combobox-option', () => {
       }
     }
   `;
-  return html`<style>${optionStyles}</style>`;
+
+  return html`<style>
+    ${optionStyles}
+  </style>`;
 });
 
 // ============================================
@@ -594,7 +605,7 @@ export const TAG = define(
       search: { query: string };
     }>();
 
-    const { labelId, fieldId: comboId, helperId } = createFormIds('combobox', props.name);
+    const { fieldId: comboId, helperId, labelId } = createFormIds('combobox', props.name);
 
     // Label refs
     const labelOutsideRef = ref<HTMLLabelElement>();
@@ -624,7 +635,7 @@ export const TAG = define(
     const isOpen = signal(false);
     const query = signal('');
     // Multi-value state: always an array; single mode uses at most one entry
-    const selectedValues = signal<{ value: string; label: string }[]>(
+    const selectedValues = signal<{ label: string; value: string }[]>(
       props.value.value ? [{ label: '', value: props.value.value }] : [],
     );
     const focusedIndex = signal(-1);
@@ -643,6 +654,7 @@ export const TAG = define(
             .split(',')
             .map((v) => v.trim())
             .filter(Boolean);
+
           selectedValues.value = values.map((v) => ({ label: '', value: v }));
           formValue.value = newValue;
         } else {
@@ -670,10 +682,10 @@ export const TAG = define(
     // ── Internal option data ──────────────────────────────────────────────────
 
     type ComboboxOptionItem = {
-      value: string;
-      label: string;
       disabled: boolean;
       iconEl: Element | null;
+      label: string;
+      value: string;
     };
 
     const slottedOptions = signal<ComboboxOptionItem[]>([]);
@@ -683,6 +695,7 @@ export const TAG = define(
     // Merged options: JS property overrides slotted options
     const allOptions = computed<ComboboxOptionItem[]>(() => {
       const jsProp = jsPropOptions.value;
+
       return jsProp && jsProp.length > 0 ? jsProp : slottedOptions.value;
     });
 
@@ -717,9 +730,12 @@ export const TAG = define(
       if (selectedValues.value.length > 0) {
         selectedValues.value = selectedValues.value.map((sel) => {
           if (sel.label) return sel;
+
           const match = allOptions.value.find((o) => o.value === sel.value);
+
           return match ? { label: match.label, value: sel.value } : sel;
         });
+
         // Also sync the query in single mode
         if (!props.multiple.value && selectedValues.value.length === 1) {
           query.value = selectedValues.value[0]?.label ?? '';
@@ -729,16 +745,22 @@ export const TAG = define(
 
     const filteredOptions = computed<ComboboxOptionItem[]>(() => {
       if (props['no-filter'].value || !query.value) return allOptions.value;
+
       const q = query.value.toLowerCase();
+
       return allOptions.value.filter((o) => o.label.toLowerCase().includes(q));
     });
 
     // "Create" option shown when creatable + query doesn't match any existing option
     const creatableLabel = computed(() => {
       if (!props.creatable.value || !query.value) return '';
+
       const q = query.value.trim();
+
       if (!q) return '';
+
       const exact = filteredOptions.value.find((o) => o.label.toLowerCase() === q.toLowerCase());
+
       return exact ? '' : q;
     });
 
@@ -751,7 +773,9 @@ export const TAG = define(
 
     function updateDropdownPosition() {
       if (!dropdownEl || !inputEl) return;
+
       const referenceWidth = (inputEl.closest('.field') as HTMLElement | null)?.getBoundingClientRect().width ?? 0;
+
       positionFloat(inputEl.closest('.field') as HTMLElement, dropdownEl, {
         middleware: [
           flip({ padding: 6 }),
@@ -771,14 +795,19 @@ export const TAG = define(
 
     function open(clearFilter = true) {
       if (props.disabled.value) return;
+
       if (clearFilter) query.value = '';
+
       isOpen.value = true;
       host.setAttribute('open', '');
+
       const fieldEl = inputEl?.closest('.field') as HTMLElement | null;
+
       if (fieldEl && dropdownEl) {
         autoUpdateCleanup?.();
         autoUpdateCleanup = autoUpdate(fieldEl, dropdownEl, updateDropdownPosition);
       }
+
       requestAnimationFrame(() => updateDropdownPosition());
     }
 
@@ -788,13 +817,16 @@ export const TAG = define(
       autoUpdateCleanup?.();
       autoUpdateCleanup = null;
       focusedIndex.value = -1;
+
       // In single mode restore the query to the selected label (or clear)
       if (!props.multiple.value) {
         const match = allOptions.value.find((o) => o.value === selectedValue.value);
+
         query.value = match?.label ?? '';
       } else {
         query.value = '';
       }
+
       triggerValidation('blur');
     }
 
@@ -802,13 +834,16 @@ export const TAG = define(
 
     function selectOption(opt: ComboboxOptionItem, originalEvent?: Event) {
       if (opt.disabled) return;
+
       if (props.multiple.value) {
         const already = selectedValues.value.find((s) => s.value === opt.value);
+
         if (already) {
           selectedValues.value = selectedValues.value.filter((s) => s.value !== opt.value);
         } else {
           selectedValues.value = [...selectedValues.value, { label: opt.label, value: opt.value }];
         }
+
         formValue.value = selectedValues.value.map((s) => s.value).join(',');
         query.value = '';
         emit('change', {
@@ -843,67 +878,45 @@ export const TAG = define(
 
     // ── Keyboard Navigation ──────────────────────────────────────────────────
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: keyboard nav requires multi-key handling
     function handleKeydown(e: KeyboardEvent) {
       if (props.disabled.value) return;
+
       const opts = filteredOptions.value;
+
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
+
           if (!isOpen.value) {
             open();
           } else {
             let next = focusedIndex.value + 1;
+
             while (next < opts.length && opts[next].disabled) next++;
+
             if (next < opts.length) {
               focusedIndex.value = next;
               scrollFocusedIntoView();
             }
           }
+
           break;
         case 'ArrowUp':
           e.preventDefault();
+
           if (!isOpen.value) {
             open();
           } else {
             let prev = focusedIndex.value - 1;
+
             while (prev >= 0 && opts[prev].disabled) prev--;
+
             if (prev >= 0) {
               focusedIndex.value = prev;
               scrollFocusedIntoView();
             }
           }
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (isOpen.value && focusedIndex.value >= 0 && focusedIndex.value < opts.length) {
-            selectOption(opts[focusedIndex.value], e);
-          } else if (isOpen.value && focusedIndex.value === -1 && creatableLabel.value) {
-            // Focused on the "create" item
-            createOption(creatableLabel.value, e);
-          } else if (!isOpen.value) {
-            open();
-          }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          if (isOpen.value) {
-            close();
-          }
-          break;
-        case 'Home':
-          if (isOpen.value) {
-            e.preventDefault();
-            focusedIndex.value = 0;
-            scrollFocusedIntoView();
-          }
-          break;
-        case 'End':
-          if (isOpen.value) {
-            e.preventDefault();
-            focusedIndex.value = opts.length - 1;
-            scrollFocusedIntoView();
-          }
+
           break;
         case 'Backspace':
           // In multiple mode, remove the last chip when the input is empty
@@ -913,6 +926,44 @@ export const TAG = define(
             emit('change', { label: '', value: formValue.value, values: selectedValues.value.map((s) => s.value) });
             triggerValidation('change');
           }
+
+          break;
+        case 'End':
+          if (isOpen.value) {
+            e.preventDefault();
+            focusedIndex.value = opts.length - 1;
+            scrollFocusedIntoView();
+          }
+
+          break;
+        case 'Enter':
+          e.preventDefault();
+
+          if (isOpen.value && focusedIndex.value >= 0 && focusedIndex.value < opts.length) {
+            selectOption(opts[focusedIndex.value], e);
+          } else if (isOpen.value && focusedIndex.value === -1 && creatableLabel.value) {
+            // Focused on the "create" item
+            createOption(creatableLabel.value, e);
+          } else if (!isOpen.value) {
+            open();
+          }
+
+          break;
+        case 'Escape':
+          e.preventDefault();
+
+          if (isOpen.value) {
+            close();
+          }
+
+          break;
+        case 'Home':
+          if (isOpen.value) {
+            e.preventDefault();
+            focusedIndex.value = 0;
+            scrollFocusedIntoView();
+          }
+
           break;
         case 'Tab':
           close();
@@ -923,10 +974,14 @@ export const TAG = define(
     function scrollFocusedIntoView() {
       if (virtualizer && focusedIndex.value >= 0) {
         virtualizer.scrollToIndex(focusedIndex.value, { align: 'auto' });
+
         return;
       }
+
       if (!listboxEl) return;
+
       const focusedEl = listboxEl.querySelector<HTMLElement>('[data-focused]');
+
       focusedEl?.scrollIntoView({ block: 'nearest' });
     }
 
@@ -936,19 +991,24 @@ export const TAG = define(
 
     function setupVirtualizer() {
       virtualizer?.destroy();
+
       if (!listboxEl) return;
+
       const opts = filteredOptions.value;
+
       if (opts.length === 0) {
         virtualizer = null;
+
         return;
       }
+
       virtualizer = createVirtualizer({
         count: opts.length,
         estimateSize: () => 36,
         getScrollElement: () => dropdownEl,
-        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Virtualizer onChange renders option rows including selected, focused, group, and create states
         onChange: (virtualItems, totalSize) => {
           if (!listboxEl) return;
+
           listboxEl.style.height = `${totalSize}px`;
           listboxEl.style.position = 'relative';
 
@@ -957,38 +1017,49 @@ export const TAG = define(
 
           for (const item of virtualItems) {
             const opt = opts[item.index];
+
             if (!opt) continue;
+
             const isFocused = item.index === focusedIndex.value;
             const isSelected = props.multiple.value
               ? selectedValues.value.some((s) => s.value === opt.value)
               : opt.value === selectedValue.value;
 
             const optionEl = document.createElement('div');
+
             optionEl.className = 'option';
             optionEl.setAttribute('role', 'option');
             optionEl.id = `${comboId}-opt-${item.index}`;
             optionEl.setAttribute('aria-selected', String(isSelected));
             optionEl.setAttribute('aria-disabled', String(!!opt.disabled));
             optionEl.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+
             if (isFocused) optionEl.setAttribute('data-focused', '');
+
             if (isSelected) optionEl.setAttribute('data-selected', '');
+
             if (opt.disabled) optionEl.setAttribute('data-disabled', '');
 
             if (opt.iconEl) {
               const iconWrapper = document.createElement('span');
+
               iconWrapper.className = 'option-icon';
               iconWrapper.setAttribute('aria-hidden', 'true');
+
               const iconClone = opt.iconEl.cloneNode(true) as Element;
+
               iconClone.removeAttribute('slot');
               iconWrapper.appendChild(iconClone);
               optionEl.appendChild(iconWrapper);
             }
 
             const labelSpan = document.createElement('span');
+
             labelSpan.textContent = opt.label;
             optionEl.appendChild(labelSpan);
 
             const check = document.createElement('span');
+
             check.className = 'option-check';
             check.setAttribute('aria-hidden', 'true');
             check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
@@ -1013,6 +1084,7 @@ export const TAG = define(
     function createOption(label: string, originalEvent?: Event) {
       const value = label.toLowerCase().replace(/\s+/g, '-');
       const newOpt: ComboboxOptionItem = { disabled: false, iconEl: null, label, value };
+
       // Add to JS options so it persists — use the reactive signal so allOptions recomputes
       jsPropOptions.value = [...allOptions.value, newOpt];
       selectOption(newOpt, originalEvent);
@@ -1043,8 +1115,10 @@ export const TAG = define(
       // Close on outside click
       const handleDocClick = (e: MouseEvent) => {
         if (!isOpen.value) return;
+
         if (!host.contains(e.target as Node) && !dropdownEl?.contains(e.target as Node)) close();
       };
+
       document.addEventListener('click', handleDocClick, true);
       onSlotChange('default', readOptions);
 
@@ -1052,6 +1126,7 @@ export const TAG = define(
       effect(() => {
         const opts = filteredOptions.value;
         const open = isOpen.value;
+
         if (open && opts.length > 0) {
           requestAnimationFrame(() => setupVirtualizer());
         } else {
@@ -1062,6 +1137,7 @@ export const TAG = define(
             listboxEl.style.height = '';
             listboxEl.style.position = '';
           }
+
           virtualizer?.destroy();
           virtualizer = null;
         }
@@ -1069,7 +1145,6 @@ export const TAG = define(
 
       mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
 
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: effect handles all reactive DOM updates for the combobox in one place
       effect(() => {
         // Sync input value
         if (inputEl && document.activeElement !== inputEl) {
@@ -1082,18 +1157,24 @@ export const TAG = define(
         if (chipsRowEl && inputEl) {
           // Remove old chips without touching the input element
           for (const old of Array.from(chipsRowEl.querySelectorAll(CHIP_TAG))) old.remove();
+
           if (props.multiple.value) {
             for (const sel of selectedValues.value) {
-              const chip = document.createElement(CHIP_TAG) as HTMLElement & { value?: string; mode?: string };
+              const chip = document.createElement(CHIP_TAG) as HTMLElement & { mode?: string; value?: string };
+
               chip.setAttribute('value', sel.value);
               chip.setAttribute('mode', 'removable');
               chip.setAttribute('variant', 'flat');
               chip.setAttribute('size', 'sm');
+
               if (props.color.value) chip.setAttribute('color', props.color.value);
+
               chip.textContent = sel.label;
               chip.addEventListener('remove', (e: Event) => {
                 e.stopPropagation();
+
                 const detail = (e as CustomEvent<{ value: string | undefined }>).detail;
+
                 if (detail.value !== undefined) {
                   selectedValues.value = selectedValues.value.filter((s) => s.value !== detail.value);
                   formValue.value = selectedValues.value.map((s) => s.value).join(',');
@@ -1112,6 +1193,7 @@ export const TAG = define(
 
         // Update helper / error text
         const helperEl = host.shadowRoot?.querySelector<HTMLElement>('.helper-text');
+
         if (helperEl) {
           helperEl.textContent = props.error.value || props.helper.value;
           helperEl.hidden = !props.error.value && !props.helper.value;
@@ -1121,6 +1203,7 @@ export const TAG = define(
 
         // Clear button visibility
         const clearBtn = host.shadowRoot?.querySelector<HTMLElement>('.clear-btn');
+
         if (clearBtn) {
           clearBtn.hidden = !hasValue.value;
         }
@@ -1142,17 +1225,21 @@ export const TAG = define(
 
           if (isLoading.value) {
             const loadingEl = document.createElement('div');
+
             loadingEl.className = 'dropdown-loading';
             loadingEl.textContent = 'Loading\u2026';
             listboxEl.prepend(loadingEl);
           } else if (filteredOptions.value.length === 0) {
             if (creatableLabel.value) {
               const createEl = document.createElement('button');
+
               createEl.type = 'button';
               createEl.className = 'no-results-create';
               createEl.textContent = `Create "${creatableLabel.value}"`;
+
               // Apply focused state when keyboard nav lands here (focusedIndex === -1 means create row)
               if (focusedIndex.value === -1) createEl.setAttribute('data-focused', '');
+
               createEl.addEventListener('click', (e) => {
                 e.stopPropagation();
                 createOption(creatableLabel.value, e);
@@ -1160,6 +1247,7 @@ export const TAG = define(
               listboxEl.appendChild(createEl);
             } else {
               const noResults = document.createElement('div');
+
               noResults.className = 'no-results';
               noResults.setAttribute('role', 'presentation');
               noResults.textContent = 'No results found';
@@ -1206,80 +1294,108 @@ export const TAG = define(
         componentStyles,
       ],
       template: html`
-      <slot></slot>
-      <div class="combobox-wrapper" part="wrapper">
-        <label class="label-outside" for="${comboId}" id="${labelId}" ref=${labelOutsideRef} hidden part="label"></label>
-        <div
-          class="field"
-          part="field"
-          @click="${() => {
-            if (!isOpen.value) open();
-          }}"
-        >
-          <label class="label-inset" for="${comboId}" id="${labelId}" ref=${labelInsetRef} hidden part="label"></label>
-          <div class="field-row">
-            <div class="chips-row">
-              <input
-                class="input"
-                part="input"
-                type="text"
-                role="combobox"
-                autocomplete="off"
-                spellcheck="false"
-                id="${comboId}"
-                name="${() => props.name.value}"
-                :disabled="${() => props.disabled.value}"
-                .value="${() => query.value}"
-                @input="${(e: Event) => {
-                  const target = e.target as HTMLInputElement;
-                  query.value = target.value;
-                  if (!props.multiple.value) selectedValues.value = [];
-                  focusedIndex.value = -1;
-                  if (!isOpen.value) open(false);
-                  emit('search', { query: target.value } as { query: string });
-                }}"
-                @keydown="${handleKeydown}"
-                @focus="${() => {
-                  if (!isOpen.value) open();
-                }}"
-              />
-            </div>
-            <button
-              class="clear-btn"
-              part="clear-btn"
-              type="button"
-              aria-label="Clear"
-              tabindex="-1"
-              @click="${clearValue}"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12"/>
-              </svg>
-            </button>
-            <span class="chevron" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m6 9 6 6 6-6"/>
-              </svg>
-              <span class="loader" aria-label="Loading"></span>
-            </span>
-          </div>
-        </div>
-
-        <div
-          class="dropdown"
-          part="dropdown"
-          id="${() => `${comboId}-dropdown`}"
-        >
+        <slot></slot>
+        <div class="combobox-wrapper" part="wrapper">
+          <label
+            class="label-outside"
+            for="${comboId}"
+            id="${labelId}"
+            ref=${labelOutsideRef}
+            hidden
+            part="label"></label>
           <div
-            role="listbox"
-            id="${() => `${comboId}-listbox`}"
-            aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"
-          ></div>
-        </div>
+            class="field"
+            part="field"
+            @click="${() => {
+              if (!isOpen.value) open();
+            }}">
+            <label
+              class="label-inset"
+              for="${comboId}"
+              id="${labelId}"
+              ref=${labelInsetRef}
+              hidden
+              part="label"></label>
+            <div class="field-row">
+              <div class="chips-row">
+                <input
+                  class="input"
+                  part="input"
+                  type="text"
+                  role="combobox"
+                  autocomplete="off"
+                  spellcheck="false"
+                  id="${comboId}"
+                  name="${() => props.name.value}"
+                  :disabled="${() => props.disabled.value}"
+                  .value="${() => query.value}"
+                  @input="${(e: Event) => {
+                    const target = e.target as HTMLInputElement;
 
-        <span class="helper-text" part="helper-text" aria-live="polite" hidden></span>
-      </div>
-    `,
+                    query.value = target.value;
+
+                    if (!props.multiple.value) selectedValues.value = [];
+
+                    focusedIndex.value = -1;
+
+                    if (!isOpen.value) open(false);
+
+                    emit('search', { query: target.value } as { query: string });
+                  }}"
+                  @keydown="${handleKeydown}"
+                  @focus="${() => {
+                    if (!isOpen.value) open();
+                  }}" />
+              </div>
+              <button
+                class="clear-btn"
+                part="clear-btn"
+                type="button"
+                aria-label="Clear"
+                tabindex="-1"
+                @click="${clearValue}">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <span class="chevron" aria-hidden="true">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+                <span class="loader" aria-label="Loading"></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="dropdown" part="dropdown" id="${() => `${comboId}-dropdown`}">
+            <div
+              role="listbox"
+              id="${() => `${comboId}-listbox`}"
+              aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"></div>
+          </div>
+
+          <span class="helper-text" part="helper-text" aria-live="polite" hidden></span>
+        </div>
+      `,
     };
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },

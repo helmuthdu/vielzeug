@@ -3,7 +3,6 @@ import { isFunction } from '../isFunction';
 describe('isFunction', () => {
   it('should return true for functions', () => {
     expect(isFunction(() => {})).toBe(true);
-    // biome-ignore lint/complexity/useArrowFunction: -
     expect(isFunction(function () {})).toBe(true);
     expect(isFunction(async () => {})).toBe(true);
   });

@@ -7,6 +7,7 @@ describe('compose', () => {
     const subtract = (x: number) => x - 4;
 
     const composedFn = compose(subtract, multiply, add);
+
     expect(composedFn(5)).toBe(17); // ((5 + 2) * 3) - 4 = 17
   });
 
@@ -14,6 +15,7 @@ describe('compose', () => {
     const add = (x: number) => x + 2;
 
     const composedFn = compose(add);
+
     expect(composedFn(5)).toBe(7); // 5 + 2 = 7
   });
 
@@ -26,6 +28,7 @@ describe('compose', () => {
     const appendExclamation = (str: string) => `${str}!`;
 
     const composedFn = compose(appendExclamation, toUpperCase);
+
     expect(composedFn('hello')).toBe('HELLO!');
   });
 
@@ -34,6 +37,7 @@ describe('compose', () => {
     const add = (x: number) => x + 2;
 
     const composedFn = compose(returnUndefined, add);
+
     expect(composedFn(1)).toBeUndefined();
   });
 
@@ -41,6 +45,7 @@ describe('compose', () => {
     const identity = <T>(x: T) => x;
 
     const composedFn = compose(identity);
+
     expect(composedFn(42)).toBe(42);
   });
 });

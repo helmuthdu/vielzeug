@@ -1,5 +1,5 @@
 import { computed, css, define, defineEmits, defineField, defineProps, html, signal, watch } from '@vielzeug/craftit';
-import { disabledStateMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   DisablableProps,
@@ -9,6 +9,7 @@ import type {
   VisualVariant,
 } from '../../types';
 
+import { disabledStateMixin } from '../../styles';
 // Ensure child components are registered
 import '../../actions/button/button';
 import '../input/input';
@@ -157,70 +158,86 @@ export const TAG = define(
 
     watch(props.value, (v) => {
       const newVal = v != null ? String(v) : '';
+
       if (inputValue.value !== newVal) inputValue.value = newVal;
     });
 
     function clamp(n: number): number {
       const min = props.min.value;
       const max = props.max.value;
+
       if (min != null && n < Number(min)) return Number(min);
+
       if (max != null && n > Number(max)) return Number(max);
+
       return n;
     }
 
     function parseValue(): number | null {
       const v = inputValue.value.trim();
+
       if (!v) return null;
+
       const n = Number.parseFloat(v);
+
       return Number.isNaN(n) ? null : n;
     }
 
     function commit(val: number | null) {
       const clamped = val != null ? clamp(val) : null;
+
       inputValue.value = clamped != null ? String(clamped) : '';
+
       if (clamped != null) host.setAttribute('value', String(clamped));
       else host.removeAttribute('value');
+
       emit('change', { value: clamped });
     }
 
     function increment(delta: number) {
       if (props.disabled.value || props.readonly.value) return;
+
       const current = parseValue() ?? (props.min.value != null ? Number(props.min.value) : 0);
+
       commit(current + delta);
     }
 
     function handleKeydown(e: KeyboardEvent) {
       if (props.disabled.value || props.readonly.value) return;
+
       const step = Number(props.step.value) || 1;
       const largeStep = Number(props['large-step'].value) || step * 10;
+
       switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          increment(step);
-          break;
         case 'ArrowDown':
           e.preventDefault();
           increment(-step);
           break;
-        case 'PageUp':
+        case 'ArrowUp':
           e.preventDefault();
-          increment(largeStep);
-          break;
-        case 'PageDown':
-          e.preventDefault();
-          increment(-largeStep);
-          break;
-        case 'Home':
-          if (props.min.value != null) {
-            e.preventDefault();
-            commit(Number(props.min.value));
-          }
+          increment(step);
           break;
         case 'End':
           if (props.max.value != null) {
             e.preventDefault();
             commit(Number(props.max.value));
           }
+
+          break;
+        case 'Home':
+          if (props.min.value != null) {
+            e.preventDefault();
+            commit(Number(props.min.value));
+          }
+
+          break;
+        case 'PageDown':
+          e.preventDefault();
+          increment(-largeStep);
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          increment(largeStep);
           break;
       }
     }
@@ -235,69 +252,94 @@ export const TAG = define(
     return {
       styles: [disabledStateMixin(), styles],
       template: html`
-      <div
-        class="wrapper"
-        role="spinbutton"
-        part="control"
-        :aria-valuenow="${() => parseValue() ?? null}"
-        :aria-valuemin="${() => props.min.value ?? null}"
-        :aria-valuemax="${() => props.max.value ?? null}"
-        :aria-label="${() => props.label.value || null}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-        :aria-readonly="${() => (props.readonly.value ? 'true' : null)}"
-        @keydown="${handleKeydown}"
-      >
-        <bit-button
-          icon-only
-          type="button"
-          part="decrement-btn"
-          aria-label="Decrease"
-          variant="ghost"
-          :size="${() => props.size.value || null}"
-          :color="${() => props.color.value || null}"
-          ?disabled="${() => props.disabled.value || props.readonly.value || atMin.value}"
-          @click="${() => increment(-(Number(props.step.value) || 1))}"
-        ><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg></bit-button>
-        <bit-input
-          part="input"
-          type="text"
-          inputmode="decimal"
-          aria-hidden="true"
-          :value="${() => inputValue.value}"
-          :label="${() => props.label.value || null}"
-          :label-placement="${() => props['label-placement'].value}"
-          :placeholder="${() => props.placeholder.value || null}"
-          :color="${() => props.color.value || null}"
-          :size="${() => props.size.value || null}"
-          :variant="${() => props.variant.value || null}"
-          ?disabled="${() => props.disabled.value}"
-          ?readonly="${() => props.readonly.value}"
-          @input="${(e: Event) => {
-            const v = (e as CustomEvent<{ value?: string }>).detail?.value;
-            if (typeof v !== 'string') return;
-            inputValue.value = v;
-            emit('input', { value: parseValue() });
-          }}"
-          @change="${(e: Event) => {
-            const v = (e as CustomEvent<{ value?: string }>).detail?.value;
-            if (typeof v !== 'string') return;
-            inputValue.value = v;
-            commit(parseValue());
-          }}"
-        ></bit-input>
-        <bit-button
-          icon-only
-          type="button"
-          part="increment-btn"
-          aria-label="Increase"
-          variant="ghost"
-          :size="${() => props.size.value || null}"
-          :color="${() => props.color.value || null}"
-          ?disabled="${() => props.disabled.value || props.readonly.value || atMax.value}"
-          @click="${() => increment(Number(props.step.value) || 1)}"
-        ><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></bit-button>
-      </div>
-    `,
+        <div
+          class="wrapper"
+          role="spinbutton"
+          part="control"
+          :aria-valuenow="${() => parseValue() ?? null}"
+          :aria-valuemin="${() => props.min.value ?? null}"
+          :aria-valuemax="${() => props.max.value ?? null}"
+          :aria-label="${() => props.label.value || null}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
+          :aria-readonly="${() => (props.readonly.value ? 'true' : null)}"
+          @keydown="${handleKeydown}">
+          <bit-button
+            icon-only
+            type="button"
+            part="decrement-btn"
+            aria-label="Decrease"
+            variant="ghost"
+            :size="${() => props.size.value || null}"
+            :color="${() => props.color.value || null}"
+            ?disabled="${() => props.disabled.value || props.readonly.value || atMin.value}"
+            @click="${() => increment(-(Number(props.step.value) || 1))}"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" /></svg
+          ></bit-button>
+          <bit-input
+            part="input"
+            type="text"
+            inputmode="decimal"
+            aria-hidden="true"
+            :value="${() => inputValue.value}"
+            :label="${() => props.label.value || null}"
+            :label-placement="${() => props['label-placement'].value}"
+            :placeholder="${() => props.placeholder.value || null}"
+            :color="${() => props.color.value || null}"
+            :size="${() => props.size.value || null}"
+            :variant="${() => props.variant.value || null}"
+            ?disabled="${() => props.disabled.value}"
+            ?readonly="${() => props.readonly.value}"
+            @input="${(e: Event) => {
+              const v = (e as CustomEvent<{ value?: string }>).detail?.value;
+
+              if (typeof v !== 'string') return;
+
+              inputValue.value = v;
+              emit('input', { value: parseValue() });
+            }}"
+            @change="${(e: Event) => {
+              const v = (e as CustomEvent<{ value?: string }>).detail?.value;
+
+              if (typeof v !== 'string') return;
+
+              inputValue.value = v;
+              commit(parseValue());
+            }}"></bit-input>
+          <bit-button
+            icon-only
+            type="button"
+            part="increment-btn"
+            aria-label="Increase"
+            variant="ghost"
+            :size="${() => props.size.value || null}"
+            :color="${() => props.color.value || null}"
+            ?disabled="${() => props.disabled.value || props.readonly.value || atMax.value}"
+            @click="${() => increment(Number(props.step.value) || 1)}"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" /></svg
+          ></bit-button>
+        </div>
+      `,
     };
   },
   { formAssociated: true },

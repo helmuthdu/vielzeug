@@ -1,4 +1,5 @@
 import type { Bus, BusOptions, EventKey, EventMap } from '../eventit';
+
 import { createBus } from '../eventit';
 
 /** A test bus is a regular bus with typed emission recording on top. */
@@ -16,10 +17,12 @@ export function createTestBus<T extends EventMap>(options?: Omit<BusOptions<T>, 
     ...options,
     onEmit(event, payload) {
       let list = records.get(event);
+
       if (!list) {
         list = [];
         records.set(event, list);
       }
+
       list.push(payload);
     },
   });
@@ -36,11 +39,11 @@ export function createTestBus<T extends EventMap>(options?: Omit<BusOptions<T>, 
   return {
     ...bus,
     dispose,
-    [Symbol.dispose]: dispose,
     get disposed() {
       return bus.disposed;
     },
     emitted,
     reset: () => records.clear(),
+    [Symbol.dispose]: dispose,
   };
 }

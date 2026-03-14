@@ -47,7 +47,9 @@ export type ArgType =
  */
 export function typeOf(arg: unknown): ArgType {
   if (arg === null) return 'null';
+
   if (arg === undefined) return 'undefined';
+
   if (typeof arg === 'number' && Number.isNaN(arg)) return 'nan';
 
   const type = Object.prototype.toString.call(arg).slice(8, -1);

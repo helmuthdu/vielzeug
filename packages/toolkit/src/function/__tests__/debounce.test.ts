@@ -84,6 +84,7 @@ describe('debounce', () => {
     expect(fn).not.toBeCalled();
 
     const result = debounced.flush();
+
     expect(fn).toBeCalledTimes(1);
     expect(fn).toBeCalledWith('test');
     expect(result).toBe('result');
@@ -98,6 +99,7 @@ describe('debounce', () => {
     const debounced = debounce(fn, 100);
 
     const result = debounced.flush();
+
     expect(fn).not.toBeCalled();
     expect(result).toBe(undefined);
   });

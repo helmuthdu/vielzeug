@@ -22,6 +22,7 @@ describe('bit-skeleton', () => {
       fixture = await mount('bit-skeleton', { attrs: { lines: '3', variant: 'text' } });
 
       const bones = fixture.element.shadowRoot?.querySelectorAll('.bone');
+
       expect(bones?.length).toBe(3);
       expect(bones?.[2].getAttribute('data-last')).toBe('true');
     });

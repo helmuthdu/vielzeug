@@ -51,6 +51,7 @@ describe('bit-input', () => {
       fixture = await mount('bit-input', { attrs: { helper: 'Enter your email' } });
 
       const helperEl = fixture.query('.helper-text');
+
       expect(helperEl).toBeTruthy();
     });
 
@@ -58,6 +59,7 @@ describe('bit-input', () => {
       fixture = await mount('bit-input', { attrs: { error: 'This field is required' } });
 
       const errorEl = fixture.query('.helper-text[role="alert"]');
+
       expect(errorEl).toBeTruthy();
     });
   });
@@ -210,6 +212,7 @@ describe('bit-input', () => {
       fixture = await mount('bit-input', { attrs: { error: 'Required' } });
 
       const errorEl = fixture.query('.helper-text[role="alert"]');
+
       expect(errorEl).toBeTruthy();
       expect(errorEl?.textContent?.trim()).toBe('Required');
     });
@@ -233,28 +236,37 @@ describe('bit-input', () => {
   describe('Events', () => {
     it('emits custom input event with value and originalEvent', async () => {
       fixture = await mount('bit-input');
+
       const inputHandler = vi.fn();
+
       fixture.element.addEventListener('input', inputHandler);
 
       await user.type(fixture.query<HTMLInputElement>('input')!, 'a');
 
       expect(inputHandler).toHaveBeenCalledTimes(1);
+
       const detail = (inputHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBe('a');
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('emits custom change event with value and originalEvent', async () => {
       fixture = await mount('bit-input');
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       const input = fixture.query<HTMLInputElement>('input')!;
+
       input.value = 'changed';
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
+
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBe('changed');
       expect(detail.originalEvent).toBeDefined();
     });
@@ -335,6 +347,7 @@ describe('bit-input', () => {
       await fixture.attrs({ placeholder: 'Enter email', required: true, size: 'lg', type: 'email' });
 
       const input = fixture.query<HTMLInputElement>('input');
+
       expect(input?.type).toBe('email');
       expect(input?.placeholder).toBe('Enter email');
       expect(input?.required).toBe(true);
@@ -385,6 +398,7 @@ describe('bit-input accessibility', () => {
       fixture = await mount('bit-input', { attrs: { error: 'Required field' } });
 
       const errorEl = fixture.query('[role="alert"]');
+
       expect(errorEl).toBeTruthy();
       expect(errorEl?.textContent?.trim()).toBe('Required field');
     });
@@ -425,9 +439,11 @@ describe('bit-input accessibility', () => {
       fixture = await mount('bit-input', { attrs: { label: 'Username', 'label-placement': 'outside' } });
 
       const labelledByVal = fixture.query('input')?.getAttribute('aria-labelledby');
+
       expect(labelledByVal).toBeTruthy();
 
       const labelEl = fixture.query(`[id="${labelledByVal}"]`);
+
       expect(labelEl).toBeTruthy();
     });
 
@@ -437,6 +453,7 @@ describe('bit-input accessibility', () => {
       });
 
       const describedByVal = fixture.query('input')?.getAttribute('aria-describedby');
+
       expect(describedByVal).toBeTruthy();
     });
 
@@ -460,6 +477,7 @@ describe('bit-input accessibility', () => {
       fixture = await mount('bit-input', { attrs: { readonly: true, value: 'Read only' } });
 
       const input = fixture.query<HTMLInputElement>('input')!;
+
       expect(input.readOnly).toBe(true);
       expect(input.tabIndex).not.toBe(-1);
     });
@@ -486,6 +504,7 @@ describe('bit-input accessibility', () => {
       fixture = await mount('bit-input');
 
       const inputEl = fixture.query<HTMLInputElement>('input')!;
+
       await user.type(inputEl, 'hello');
 
       expect(inputEl.value).toBe('hello');
@@ -496,6 +515,7 @@ describe('bit-input accessibility', () => {
       await fixture.flush();
 
       const clearBtn = fixture.query('.clear-btn');
+
       if (clearBtn) {
         expect(clearBtn.getAttribute('aria-label')).toBe('Clear');
       }

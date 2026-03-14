@@ -1,6 +1,8 @@
 import { css, define, defineEmits, defineProps, guard, html, onMount, onSlotChange, signal } from '@vielzeug/craftit';
-import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+
 import type { AddEventListeners, BitAlertEvents, ComponentSize, RoundedSize, ThemeColor } from '../../types';
+
+import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -28,9 +30,24 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes bit-alert-exit {
-      0% { opacity: 1; transform: scaleY(1); max-height: 200px; margin-bottom: var(--size-3); }
-      60% { opacity: 0; transform: scaleY(0.8); }
-      100% { opacity: 0; transform: scaleY(0); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+      0% {
+        opacity: 1;
+        transform: scaleY(1);
+        max-height: 200px;
+        margin-bottom: var(--size-3);
+      }
+      60% {
+        opacity: 0;
+        transform: scaleY(0.8);
+      }
+      100% {
+        opacity: 0;
+        transform: scaleY(0);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
     }
 
     .alert {
@@ -195,9 +212,7 @@ const componentStyles = /* css */ css`
       color: inherit;
       cursor: pointer;
       opacity: 0.7;
-      transition: var(--_motion-transition,
-        opacity var(--transition-fast),
-        background var(--transition-fast));
+      transition: var(--_motion-transition, opacity var(--transition-fast), background var(--transition-fast));
     }
 
     :host(:not([dismissible])) .close {
@@ -334,6 +349,7 @@ export const TAG = define('bit-alert', ({ host }) => {
 
       const finalizeDismiss = () => {
         if (finished) return;
+
         finished = true;
 
         if (fallbackTimer) {
@@ -362,7 +378,9 @@ export const TAG = define('bit-alert', ({ host }) => {
           .map((v) => v.trim())
           .map((duration) => {
             if (duration.endsWith('ms')) return Number.parseFloat(duration);
+
             if (duration.endsWith('s')) return Number.parseFloat(duration) * 1000;
+
             return 0;
           });
 
@@ -371,6 +389,7 @@ export const TAG = define('bit-alert', ({ host }) => {
 
         if (!hasAnimation || maxDuration <= 0) {
           finalizeDismiss();
+
           return;
         }
 
@@ -408,8 +427,7 @@ export const TAG = define('bit-alert', ({ host }) => {
         class="alert"
         role="alert"
         part="alert"
-        aria-live=${() => (props.color.value === 'error' ? 'assertive' : 'polite')}
-      >
+        aria-live=${() => (props.color.value === 'error' ? 'assertive' : 'polite')}>
         <span class="icon" part="icon" aria-hidden="true" ?hidden=${() => !hasIcon.value}>
           <slot name="icon"></slot>
         </span>
@@ -427,13 +445,7 @@ export const TAG = define('bit-alert', ({ host }) => {
         <div class="actions" part="actions" ?hidden=${() => !hasActions.value}>
           <slot name="actions"></slot>
         </div>
-        <button
-          class="close"
-          part="close"
-          type="button"
-          aria-label="Dismiss alert"
-          @click=${handleDismiss}
-        >
+        <button class="close" part="close" type="button" aria-label="Dismiss alert" @click=${handleDismiss}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
@@ -444,8 +456,7 @@ export const TAG = define('bit-alert', ({ host }) => {
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
-            aria-hidden="true"
-          >
+            aria-hidden="true">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
         </button>

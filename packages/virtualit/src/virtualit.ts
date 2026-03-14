@@ -74,7 +74,9 @@ export class Virtualizer {
 
   constructor(options: VirtualizerOptions) {
     this.count = options.count;
+
     const est = options.estimateSize ?? 36;
+
     this.estimateSize = typeof est === 'number' ? () => est : est;
     this.overscan = options.overscan ?? 3;
     this.getScrollElement = options.getScrollElement;
@@ -88,7 +90,9 @@ export class Virtualizer {
   /** Start observing the scroll container. Call after the element is mounted. */
   attach(): void {
     this.detach();
+
     const el = this.getScrollElement();
+
     if (!el) return;
 
     this.scrollHandler = () => {
@@ -112,10 +116,12 @@ export class Virtualizer {
   /** Stop observing and remove all listeners. */
   detach(): void {
     const el = this.getScrollElement();
+
     if (this.scrollHandler && el) {
       el.removeEventListener('scroll', this.scrollHandler);
       this.scrollHandler = null;
     }
+
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
   }
@@ -151,7 +157,9 @@ export class Virtualizer {
    */
   measureElement(index: number, height: number): void {
     const prev = this.measuredHeights.get(index);
+
     if (prev === height) return;
+
     this.measuredHeights.set(index, height);
     this._buildOffsets();
     this._computeVisible();
@@ -162,12 +170,15 @@ export class Virtualizer {
    */
   scrollToIndex(index: number, options: ScrollToIndexOptions = {}): void {
     const el = this.getScrollElement();
+
     if (!el) return;
+
     const align = options.align ?? 'auto';
     const itemTop = this._offsetAt(index);
     const itemHeight = this._heightAt(index);
 
     let targetScrollTop: number;
+
     if (align === 'start') {
       targetScrollTop = itemTop;
     } else if (align === 'end') {
@@ -178,7 +189,9 @@ export class Virtualizer {
       // auto: scroll only if not already visible
       const visibleStart = el.scrollTop;
       const visibleEnd = visibleStart + this.containerHeight;
+
       if (itemTop >= visibleStart && itemTop + itemHeight <= visibleEnd) return;
+
       targetScrollTop = itemTop < visibleStart ? itemTop : itemTop + itemHeight - this.containerHeight;
     }
 
@@ -206,6 +219,7 @@ export class Virtualizer {
 
   private _buildOffsets(): void {
     const offsets: number[] = new Array(this.count + 1);
+
     offsets[0] = 0;
     for (let i = 0; i < this.count; i++) {
       offsets[i + 1] = offsets[i] + this._heightAt(i);
@@ -221,8 +235,10 @@ export class Virtualizer {
     // Binary search for the first visible index
     let lo = 0;
     let hi = this.count - 1;
+
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
+
       if (this.scrollOffsets[mid + 1] <= start) lo = mid + 1;
       else hi = mid;
     }
@@ -230,6 +246,7 @@ export class Virtualizer {
     const firstVisible = lo;
     // Linear scan to find last visible
     let lastVisible = firstVisible;
+
     while (lastVisible < this.count - 1 && this.scrollOffsets[lastVisible + 1] < end) {
       lastVisible++;
     }
@@ -238,6 +255,7 @@ export class Virtualizer {
     const renderEnd = Math.min(this.count - 1, lastVisible + this.overscan);
 
     const items: VirtualItem[] = [];
+
     for (let i = renderStart; i <= renderEnd; i++) {
       items.push({ height: this._heightAt(i), index: i, top: this.scrollOffsets[i] });
     }
@@ -271,6 +289,8 @@ export class Virtualizer {
  */
 export function createVirtualizer(options: VirtualizerOptions): Virtualizer {
   const v = new Virtualizer(options);
+
   v.attach();
+
   return v;
 }

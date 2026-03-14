@@ -62,19 +62,24 @@ export function watch(
     const cb = cbOrSelector as () => void;
     const opts = cbOrOptions as WatchOptions<unknown> | undefined;
     let initialized = false;
-    let dispose!: CleanupFn;
-    dispose = effect(() => {
+    const dispose = effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       for (const s of source) s.value; // register all listed deps
+
       if (!initialized) {
         initialized = true;
+
         if (opts?.immediate) untrack(cb);
       } else {
         untrack(cb);
+
         if (opts?.once) dispose();
       }
     });
+
     return dispose;
   }
+
   const stop =
     typeof cbOrOptions === 'function'
       ? _signalWatch(source as ReadonlySignal<unknown>, cbOrOptions as (value: unknown, prev: unknown) => void, {
@@ -86,12 +91,15 @@ export function watch(
           cbOrSelector as (value: unknown, prev: unknown) => void,
           cbOrOptions,
         );
+
   autoCleanup(stop);
+
   return stop;
 }
 
 /* ========== Utilities ========== */
 let _idCounter = 0;
+
 /**
  * Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`,
  * and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
@@ -108,6 +116,7 @@ export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 
 export const createFormIds = (prefix: string, name: string | ReadonlySignal<string>) => {
   const nameVal = typeof name === 'string' ? name : name.value;
   const fieldId = nameVal ? `${prefix}-${nameVal}` : createId(prefix);
+
   return {
     errorId: `error-${fieldId}`,
     fieldId,
@@ -147,9 +156,13 @@ export const guard =
 const kebabCache = new Map<string, string>();
 const toKebab = (str: string): string => {
   const cached = kebabCache.get(str);
+
   if (cached !== undefined) return cached;
+
   const result = str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
   kebabCache.set(str, result);
+
   return result;
 };
 // Basic HTML escaping for untrusted text
@@ -160,7 +173,9 @@ const _htmlEscapeMap: Record<string, string> = {
   '<': '&lt;',
   '>': '&gt;',
 };
+
 export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => _htmlEscapeMap[c]!);
+
 const parseHTML = (html: string): DocumentFragment => {
   const tpl = document.createElement('template');
 
@@ -274,10 +289,12 @@ export function refs<T extends Element>(): RefList<T> {
 export type RefCallback<T extends Element> = (el: T | null) => void;
 /* ========== Template Engine — DOM Binding Helpers ========== */
 type RegisterCleanup = (fn: CleanupFn) => void;
+
 const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup) => {
   const update = (v: unknown) => {
     if (binding.mode === 'bool') {
       el.toggleAttribute(binding.name, Boolean(v));
+
       // For checkbox/radio inputs, also update the property
       if (binding.name === 'checked' && el instanceof HTMLInputElement) {
         el.checked = Boolean(v);
@@ -291,6 +308,7 @@ const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   binding.signal ? registerCleanup(effect(() => update(binding.signal!.value))) : update(binding.value!);
 };
 const applyPropBinding = (el: HTMLElement, binding: PropBinding, registerCleanup: RegisterCleanup) => {
@@ -307,6 +325,7 @@ const applyPropBinding = (el: HTMLElement, binding: PropBinding, registerCleanup
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   binding.signal ? registerCleanup(effect(() => setVal(binding.signal!.value))) : setVal(binding.value!);
 };
 const applyEventBinding = (
@@ -336,9 +355,13 @@ const applyEventBinding = (
   };
   const handler = (e: Event) => {
     if (prevent) e.preventDefault();
+
     if (stop) e.stopPropagation();
+
     if (self && e.target !== el) return;
+
     if (expectedKey && (e as KeyboardEvent).key !== expectedKey) return;
+
     binding.handler(e);
   };
 
@@ -373,9 +396,12 @@ const isHtmlBindingMarker = (node: Node): boolean =>
   ((node as Comment).data === 'html-binding' || (node as Comment).data.startsWith('__h_'));
 const htmlBindingClearAfter = (marker: Comment) => {
   let next = marker.nextSibling;
+
   while (next) {
     if (isHtmlBindingMarker(next)) break;
+
     const toRemove = next;
+
     next = next.nextSibling;
     toRemove.remove();
   }
@@ -459,7 +485,6 @@ const applyBindingsInContainer = (
   bindings: Binding[],
   registerCleanup: RegisterCleanup,
   opts?: { eventModifiers?: boolean; onHtml?: (b: HtmlBinding) => void },
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Core binding application logic requires handling many binding types
 ) => {
   for (const b of bindings) {
     if (b.type === 'text') {
@@ -482,6 +507,7 @@ const applyBindingsInContainer = (
 
       if (el) {
         el.removeAttribute(b.marker);
+
         if (b.type === 'attr') applyAttrBinding(el, b, registerCleanup);
         else if (b.type === 'prop') applyPropBinding(el, b, registerCleanup);
         else if (b.type === 'event') applyEventBinding(el, b, registerCleanup, opts?.eventModifiers ?? true);
@@ -504,6 +530,7 @@ const eachHelper = <T>(
   // A plain getter function (() => T[]) must be wrapped so eachHelper can subscribe reactively.
   // isSignal() guard prevents wrapping a ComputedSignal (which has value/peek but is not callable).
   const src = typeof source === 'function' && !isSignal(source) ? computed(source) : source;
+
   if (isSignal<T[]>(src)) {
     const htmlSignal = computed(() => {
       const items = src.value;
@@ -567,21 +594,28 @@ const eachHelper = <T>(
 
   // Static array — render directly to HTMLResult (no reactivity or DOM reconciliation needed)
   const staticSrc = src as T[];
+
   if (staticSrc.length === 0) {
     if (empty) {
       const emptyResult = empty();
-      const { html: eh, bindings: eb } = extractHtml(emptyResult);
+      const { bindings: eb, html: eh } = extractHtml(emptyResult);
+
       return makeHtmlResult(eh, eb);
     }
+
     return EMPTY_RESULT;
   }
+
   const allHtml: string[] = [];
   const allBindings: Binding[] = [];
+
   for (let i = 0; i < staticSrc.length; i++) {
-    const { html: ih, bindings: ib } = extractHtml(template(staticSrc[i], i));
+    const { bindings: ib, html: ih } = extractHtml(template(staticSrc[i], i));
+
     allHtml.push(ih);
     allBindings.push(...ib);
   }
+
   return makeHtmlResult(allHtml.join(''), allBindings);
 };
 
@@ -634,11 +668,9 @@ const RE_REF = /\s+ref\s*=\s*["']?$/;
 const RE_PLAIN_ATTR = /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
 /* Internal template function - handles both escaping and raw modes */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Template processing requires handling many value types and directives
 const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEscape: boolean): HTMLResult => {
   let result = '';
   const bindings: Binding[] = [];
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Directive resolution handles many types including nested HTMLResults
   const resolveDirectiveValue = (value: unknown): string => {
     // Handle raw HTML markers
     if (isRawHtml(value)) return value.__raw;
@@ -720,6 +752,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
       const parts = eventMatch[1].split('.');
       const m = addMarker(str, eventMatch, MARKER_PREFIX.event);
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       typeof value !== 'function'
         ? console.warn(`[craftit] @${eventMatch[1]} expects a function, got`, value)
         : bindings.push({
@@ -754,6 +787,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
       } else {
         console.warn('[craftit] ref= expects a ref() object or callback function');
       }
+
       continue;
     }
 
@@ -868,6 +902,7 @@ const htmlTemplate = (strings: TemplateStringsArray, values: unknown[], shouldEs
               })
             : computed(() => {
                 const val = (value as ReadonlySignal<unknown>).value;
+
                 return isHtmlResult(val)
                   ? { bindings: val.__bindings, html: val.__html }
                   : { bindings: [], html: String(val) };
@@ -958,6 +993,7 @@ const _UNITLESS_CSS_PROPS = new Set([
   'z-index',
   'zoom',
 ]);
+
 export const html = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult => htmlTemplate(strings, values, true),
   {
@@ -977,6 +1013,7 @@ export const html = Object.assign(
     ): string | ReadonlySignal<string> => {
       const entries = Object.entries(classes);
       const hasReactive = entries.some(([, v]) => isSignal(v) || typeof v === 'function');
+
       if (hasReactive) {
         return computed(() =>
           entries
@@ -985,6 +1022,7 @@ export const html = Object.assign(
             .join(' '),
         );
       }
+
       return entries
         .filter(([, v]) => v)
         .map(([k]) => k)
@@ -1003,15 +1041,18 @@ export const html = Object.assign(
     ) => {
       if (args.length === 1) {
         const first = args[0];
+
         // Simple form: html.each(items, item => html`...`)
         return eachHelper(source, (_, i) => i, first);
       }
+
       // Three-argument form: html.each(items, keyFn, templateFn, emptyFn?)
       const [keyFn, templateFn, emptyFn] = args as [
         (item: T, index: number) => string | number,
         (item: T, index: number) => string | HTMLResult,
         (() => string | HTMLResult)?,
       ];
+
       return eachHelper(source, keyFn, templateFn, emptyFn);
     },
     // Conditional visibility — keeps the DOM mounted, only toggles display.
@@ -1025,7 +1066,7 @@ export const html = Object.assign(
       templateFn: () => V,
     ): HTMLResult => {
       const inner = templateFn();
-      const { html: innerHtml, bindings: innerBindings } = extractHtml(inner);
+      const { bindings: innerBindings, html: innerHtml } = extractHtml(inner);
       const condSignal = isSignal(condition)
         ? condition
         : typeof condition === 'function'
@@ -1039,6 +1080,7 @@ export const html = Object.assign(
         const styleSignal = computed(() =>
           resolveCondition(condSignal.value) ? 'display: contents' : 'display: none',
         );
+
         return makeHtmlResult(`<span ${marker}="">${innerHtml}</span>`, [
           { marker, mode: 'attr' as const, name: 'style', signal: styleSignal, type: 'attr' as const },
           ...innerBindings,
@@ -1071,10 +1113,13 @@ export const html = Object.assign(
       if (isSignal(condition)) {
         return { condition, elseBranch: elseFn, thenBranch: thenFn, type: 'when' };
       }
+
       if (typeof condition === 'function') {
         const conditionSignal = computed(() => resolveCondition((condition as () => unknown)()));
+
         return { condition: conditionSignal, elseBranch: elseFn, thenBranch: thenFn, type: 'when' };
       }
+
       return resolveCondition(condition) ? thenFn() : elseFn ? elseFn() : ('' as V);
     },
   },
@@ -1102,7 +1147,9 @@ export function match<V extends string | HTMLResult>(
 ): V | WhenDirective | string {
   const lastArg = args[args.length - 1];
   const hasFallback = !Array.isArray(lastArg) && typeof lastArg === 'function';
+
   type Branch = [unknown | Signal<unknown> | (() => unknown), () => V];
+
   const branches = (hasFallback ? args.slice(0, -1) : args) as Branch[];
   const fallback = hasFallback ? (lastArg as () => V) : undefined;
   const isReactive = branches.some(([cond]) => isSignal(cond) || typeof cond === 'function');
@@ -1111,6 +1158,7 @@ export function match<V extends string | HTMLResult>(
     for (const [cond, fn] of branches) {
       if (resolveCondition(cond as unknown)) return fn();
     }
+
     return fallback ? fallback() : ('' as V);
   }
 
@@ -1119,14 +1167,17 @@ export function match<V extends string | HTMLResult>(
       resolveCondition(isSignal(cond) ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond),
     ),
   );
+
   return {
     condition: conditionSignal,
     elseBranch: fallback,
     thenBranch: () => {
       for (const [cond, fn] of branches) {
         const val = isSignal(cond) ? cond.value : typeof cond === 'function' ? (cond as () => unknown)() : cond;
+
         if (resolveCondition(val)) return fn();
       }
+
       return fallback ? fallback() : ('' as V);
     },
     type: 'when' as const,
@@ -1150,7 +1201,9 @@ export const suspense = <T>(
     // Abort any in-flight request before starting a new one (handles retry and unmount races)
     controller?.abort();
     controller = new AbortController();
+
     const ac = controller;
+
     state.value = { loading: true };
     asyncFn(ac.signal)
       .then((data) => {
@@ -1164,21 +1217,27 @@ export const suspense = <T>(
   if (options.deps) {
     const depsArr = Array.isArray(options.deps) ? options.deps : [options.deps];
     const stop = _rawEffect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       for (const dep of depsArr) dep.value; // register all dep subscriptions
       untrack(run);
     });
+
     autoCleanup(stop);
   } else {
     run();
   }
+
   autoCleanup(() => controller?.abort());
 
   return () => {
     const current = state.value;
+
     if (current.loading) return options.fallback();
+
     if (current.error) {
       return options.error ? options.error(current.error, run) : html`<div>Error loading</div>`;
     }
+
     return options.template(current.data!);
   };
 };
@@ -1191,17 +1250,21 @@ export type CSSResult = {
 type ThemeVars<T extends Record<string, string | number>> = {
   [K in keyof T]: string;
 } & { toString(): string };
+
 const cssResultToString = function (this: CSSResult): string {
   return this.content;
 };
+
 export const css = Object.assign(
   (strings: TemplateStringsArray, ...values: unknown[]): CSSResult => {
     let content = '';
 
     for (let i = 0; i < strings.length; i++) {
       content += strings[i];
+
       if (i < values.length) {
         const v = values[i];
+
         content += v && typeof v === 'object' && 'content' in v ? (v as CSSResult).content : (v ?? '');
       }
     }
@@ -1243,8 +1306,10 @@ export const css = Object.assign(
       ) as ThemeVars<T>;
       // toString / Symbol.toPrimitive for CSS string interpolation: `${theme}`
       const toCss = () => cssRule;
+
       Object.defineProperty(vars, 'toString', { enumerable: false, value: toCss });
       Object.defineProperty(vars, Symbol.toPrimitive, { enumerable: false, value: toCss });
+
       return vars;
     },
   },
@@ -1256,7 +1321,6 @@ type ComponentRuntime = {
   el: HTMLElement;
   /** Scoped error handler set by onError() — catches render & lifecycle errors in this component only */
   errorHandler?: (error: Error, info?: { componentStack?: string }) => void;
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
   onMount: (() => CleanupFn | undefined | void)[];
   onRendered: (() => void)[];
   onUnmount: CleanupFn[];
@@ -1271,7 +1335,6 @@ const currentRuntime = (): ComponentRuntime => {
   return rt;
 };
 
-// biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns
 export const onMount = (fn: () => CleanupFn | undefined | void): void => {
   currentRuntime().onMount.push(fn);
 };
@@ -1297,6 +1360,7 @@ export const onCleanup = (fn: CleanupFn): void => {
     _stateOnCleanup(fn);
   }
 };
+
 /** Registers a cleanup only when currently inside a component setup context. Avoids the repeated inline check pattern. */
 const autoCleanup = (dispose: CleanupFn): void => {
   if (runtimeStack.length > 0) onCleanup(dispose);
@@ -1317,7 +1381,9 @@ const autoCleanup = (dispose: CleanupFn): void => {
  */
 export const effect = (fn: () => void, options?: EffectOptions): CleanupFn => {
   const dispose = _rawEffect(fn, options);
+
   autoCleanup(dispose);
+
   return dispose;
 };
 
@@ -1339,7 +1405,9 @@ export const handle = <K extends keyof HTMLElementEventMap>(
   options?: AddEventListenerOptions,
 ): void => {
   if (!target) return;
+
   const events = Array.isArray(event) ? event : [event];
+
   for (const ev of events) {
     target.addEventListener(ev, listener as EventListener, options);
     onCleanup(() => target.removeEventListener(ev, listener as EventListener, options));
@@ -1359,7 +1427,7 @@ export const handle = <K extends keyof HTMLElementEventMap>(
  *   });
  * });
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export const syncDOMProps = <E extends Element>(
   el: E,
   map: Partial<Record<string, ReadonlySignal<unknown> | (() => unknown)>>,
@@ -1423,6 +1491,7 @@ export function aria(
   const applyAttr = (name: string, val: AriaAttrValue) => {
     const attrName = `aria-${name}`;
     const value = typeof val === 'function' ? (val as () => AriaAttrValue)() : val;
+
     if (value === null || value === undefined) {
       target.removeAttribute(attrName);
     } else {
@@ -1431,10 +1500,12 @@ export function aria(
   };
 
   const hasReactive = Object.values(attrs).some((v) => typeof v === 'function');
+
   if (hasReactive) {
     const stop = effect(() => {
       for (const [name, value] of Object.entries(attrs)) applyAttr(name, value);
     });
+
     cleanups.push(stop);
   } else {
     for (const [name, value] of Object.entries(attrs)) applyAttr(name, value);
@@ -1468,7 +1539,6 @@ const _contextDefaults = new Map<symbol, { value: unknown }>();
 
 export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: context traversal requires DOM + logical parent + shadow root + default handling
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T): T | undefined {
   const rt = currentRuntime();
   let node: Node | null = rt.el;
@@ -1501,6 +1571,7 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, fallback?: T):
   // Check for a default value registered at createContext(defaultValue) call time
   if (typeof key === 'symbol') {
     const ctxDefault = _contextDefaults.get(key);
+
     if (ctxDefault !== undefined) return ctxDefault.value as T;
   }
 
@@ -1532,7 +1603,9 @@ export function createContext<T>(): InjectionKey<T>;
 export function createContext<T>(defaultValue: T): InjectionKey<T>;
 export function createContext<T>(defaultValue?: T): InjectionKey<T> {
   const key = Symbol() as InjectionKey<T>;
+
   if (arguments.length > 0) _contextDefaults.set(key, { value: defaultValue as unknown });
+
   return key;
 }
 
@@ -1554,6 +1627,7 @@ export const syncContextProps = <
   keys: K[],
 ): void => {
   if (!ctx) return;
+
   // Defer to onMount so the effect runs after craftit's own attribute→prop sync
   // (the propsKey loop in connectedCallback). This ensures context values win
   // over HTML attribute values set on the child element.
@@ -1561,6 +1635,7 @@ export const syncContextProps = <
     effect(() => {
       for (const k of keys) {
         const v = ctx[k]?.value;
+
         if (v !== undefined) props[k].value = v;
       }
     }),
@@ -1596,9 +1671,11 @@ export const onSlotChange = (slotName: string, callback: (elements: Element[]) =
   const name = slotName === 'default' ? '' : slotName;
   const selector = name ? `slot[name="${name}"]` : 'slot:not([name])';
   const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(selector);
+
   if (!slot) return;
 
   const handler = () => callback(slot.assignedElements({ flatten: true }));
+
   handler(); // run immediately with current content
   slot.addEventListener('slotchange', handler);
   onCleanup(() => slot.removeEventListener('slotchange', handler));
@@ -1612,9 +1689,12 @@ export const defineSlots = <T extends Record<string, unknown> = Record<string, u
     const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(
       slotName ? `slot[name="${slotName}"]` : 'slot:not([name])',
     );
+
     if (!slot) return;
+
     const update = () => {
       const assigned = slot.assignedNodes();
+
       if (assigned.length > 0) {
         s.value = true;
       } else if (slotName === '') {
@@ -1623,22 +1703,28 @@ export const defineSlots = <T extends Record<string, unknown> = Record<string, u
         // nodes that don't have an explicit slot attribute (those go to named slots).
         s.value = Array.from(el.childNodes).some((n) => {
           if (n.nodeType === Node.TEXT_NODE) return (n.textContent ?? '').trim().length > 0;
+
           if (n.nodeType === Node.ELEMENT_NODE) return !(n as Element).hasAttribute('slot');
+
           return false;
         });
       } else {
         s.value = false;
       }
     };
+
     update();
     slot.addEventListener('slotchange', update);
+
     return () => slot.removeEventListener('slotchange', update);
   };
 
   const get = (slotName: string): Signal<boolean> => {
     if (!sigs.has(slotName)) {
       const s = signal(false);
+
       sigs.set(slotName, s);
+
       // During setup shadow DOM isn't rendered yet — defer to onMount.
       // Post-mount (e.g. test access) shadow DOM is ready, set up immediately.
       if (runtimeStack.length > 0) {
@@ -1647,6 +1733,7 @@ export const defineSlots = <T extends Record<string, unknown> = Record<string, u
         setup(slotName, s);
       }
     }
+
     return sigs.get(slotName)!;
   };
 
@@ -1693,12 +1780,18 @@ export const useFocusTrap = (container: HTMLElement | (() => HTMLElement | null)
   const getContainer = typeof container === 'function' ? container : () => container;
   const onKeydown = (e: KeyboardEvent): void => {
     if (e.key !== 'Tab') return;
+
     const root = getContainer();
+
     if (!root) return;
+
     const focusable = getFocusableElements(root);
+
     if (focusable.length === 0) return;
+
     const first = focusable[0]!;
     const last = focusable[focusable.length - 1]!;
+
     if (e.shiftKey) {
       if (document.activeElement === first) {
         e.preventDefault();
@@ -1711,6 +1804,7 @@ export const useFocusTrap = (container: HTMLElement | (() => HTMLElement | null)
       }
     }
   };
+
   document.addEventListener('keydown', onKeydown);
   onCleanup(() => document.removeEventListener('keydown', onKeydown));
 };
@@ -1728,15 +1822,19 @@ export const useFocusTrap = (container: HTMLElement | (() => HTMLElement | null)
  *   effect(() => console.log(size.value.width, size.value.height));
  * });
  */
-export const observeResize = (el: Element): ReadonlySignal<{ width: number; height: number }> => {
+export const observeResize = (el: Element): ReadonlySignal<{ height: number; width: number }> => {
   const size = signal({ height: 0, width: 0 });
   const ro = new ResizeObserver(([entry]) => {
     if (!entry) return;
+
     const box = entry.contentBoxSize[0];
+
     if (box) size.value = { height: box.blockSize, width: box.inlineSize };
   });
+
   ro.observe(el);
   onCleanup(() => ro.disconnect());
+
   return size;
 };
 
@@ -1759,8 +1857,10 @@ export const observeIntersection = (
   const io = new IntersectionObserver(([e]) => {
     if (e) entry.value = e;
   }, options);
+
   io.observe(el);
   onCleanup(() => io.disconnect());
+
   return entry;
 };
 
@@ -1782,8 +1882,10 @@ export const observeMedia = (query: string): ReadonlySignal<boolean> => {
   const handler = (e: MediaQueryListEvent): void => {
     matches.value = e.matches;
   };
+
   mql.addEventListener('change', handler);
   onCleanup(() => mql.removeEventListener('change', handler));
+
   return matches;
 };
 
@@ -1818,11 +1920,14 @@ interface FormHost extends HTMLElement {
 interface InternalsHost extends HTMLElement {
   [_internalsKey]?: ElementInternals;
 }
+
 const setFormCallback = <K extends keyof FormAssociatedCallbacks>(key: K, fn: FormAssociatedCallbacks[K]): void => {
   const el = currentRuntime().el as FormHost;
+
   el[formCallbacksKey] ??= {};
   (el[formCallbacksKey] as FormAssociatedCallbacks)[key] = fn;
 };
+
 export const onFormAssociated = (fn: (form: HTMLFormElement | null) => void): void =>
   setFormCallback('formAssociated', fn);
 export const onFormDisabled = (fn: (disabled: boolean) => void): void => setFormCallback('formDisabled', fn);
@@ -1847,8 +1952,8 @@ export type FormFieldOptions<T = unknown> = {
   value: Signal<T> | ReadonlySignal<T>;
 };
 export type FormFieldHandle = {
-  readonly internals: ElementInternals;
   checkValidity: () => boolean;
+  readonly internals: ElementInternals;
   reportValidity: () => boolean;
   setCustomValidity: (message: string) => void;
   setValidity: ElementInternals['setValidity'];
@@ -1872,13 +1977,17 @@ export const defineField = <T = unknown>(
 
   if (options.disabled) {
     effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       options.disabled!.value ? internals.states.add('disabled') : internals.states.delete('disabled');
     });
   }
 
   if (callbacks?.onReset) onFormReset(callbacks.onReset);
+
   if (callbacks?.onAssociated) onFormAssociated(callbacks.onAssociated);
+
   if (callbacks?.onDisabled) onFormDisabled(callbacks.onDisabled);
+
   if (callbacks?.onStateRestore) onFormStateRestore(callbacks.onStateRestore);
 
   const checkValidity = () => internals.checkValidity();
@@ -1909,13 +2018,13 @@ type PropType<T> = T extends string
         : ObjectConstructor;
 
 export type PropOptions<T> = {
-  parse?: (value: string | null) => T;
-  reflect?: boolean;
   /** When `true`, removes the host attribute instead of setting it to `""` when the value is an empty string. */
   omit?: boolean;
+  parse?: (value: string | null) => T;
+  reflect?: boolean;
+  required?: boolean;
   type?: PropType<T>;
   validator?: (value: T) => boolean;
-  required?: boolean;
 };
 type PropMeta<T = unknown> = {
   name: string;
@@ -1936,25 +2045,35 @@ const validatedSignal = <T>(defaultValue: T, validator: (v: T) => boolean, propN
   const s = signal<T>(defaultValue);
   // Pre-bind all prototype methods once so the get trap never allocates new closures.
   const boundMethods = new Map<PropertyKey, unknown>();
+
   return new Proxy(s, {
     get(target, prop) {
       if (prop === 'value') return target.value;
+
       const cached = boundMethods.get(prop);
+
       if (cached !== undefined) return cached;
+
       const val = Reflect.get(target, prop, target);
       const result = typeof val === 'function' ? val.bind(target) : val;
+
       boundMethods.set(prop, result);
+
       return result;
     },
     set(_target, prop, value) {
       if (prop === 'value') {
         if (!validator(value as T)) {
           console.warn(`[craftit] Prop "${propName}" validation failed for value:`, value);
+
           return true;
         }
+
         s.value = value as T;
+
         return true;
       }
+
       return Reflect.set(s, prop, value, s);
     },
   }) as Signal<T>;
@@ -1968,15 +2087,18 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
 
   const parse =
     options?.parse ??
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: attribute parsing must handle all HTML scalar types
     ((v: string | null): T => {
       // Explicit Boolean type: string values 'true' / '' → boolean
       if (options?.type === Boolean) return (v === '' || v === 'true') as T;
+
       // Boolean default: HTML attribute-presence semantics (absent = false, present = true)
       if (typeof defaultValue === 'boolean') return (v !== null) as T;
+
       if (v == null) return defaultValue;
+
       // Numeric — inferred from an explicit type option or default value type
       if (options?.type === Number || typeof defaultValue === 'number') return Number(v) as T;
+
       if (options?.type === Array || options?.type === Object) {
         try {
           return JSON.parse(v) as T;
@@ -1984,6 +2106,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
           return defaultValue;
         }
       }
+
       return v as unknown as T;
     });
   const validator = options?.validator;
@@ -2008,11 +2131,13 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
 
   if (options?.reflect ?? true) {
     const omit = options?.omit ?? false;
+
     rt.onMount.push(() => {
       rt.cleanups.push(
         _rawEffect(() => {
           const v = s.value;
 
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           v == null || v === false || (omit && v === '')
             ? el.removeAttribute(name)
             : el.setAttribute(name, v === true ? '' : String(v));
@@ -2031,6 +2156,7 @@ export type PropDef<T> = PropOptions<T> & { default: T };
 export type InferPropsSignals<T extends Record<string, { default: unknown }>> = {
   [K in keyof T]: Signal<T[K]['default']>;
 };
+
 /**
  * Declares multiple props at once, deriving attribute names from object keys.
  * Pass an inline object literal instead of calling a wrapper function:
@@ -2055,6 +2181,7 @@ const _definePropsImpl = <T extends Record<string, { default: unknown }>>(defs: 
     // e.g. defineProps({ myProp: { default: '' } }) registers the "my-prop" attribute
     // but the signal is accessed as props.myProp.
     const propDef: PropOptions<unknown> = { reflect: true, ...(def as PropOptions<unknown>) };
+
     result[name] = prop(toKebab(name), def.default, propDef);
   }
 
@@ -2064,6 +2191,7 @@ const _definePropsImpl = <T extends Record<string, { default: unknown }>>(defs: 
     for (const [attrName, meta] of el[propsKey]) {
       if (el.hasAttribute(attrName)) {
         const attrValue = el.getAttribute(attrName);
+
         meta.signal.value = meta.parse(attrValue) as never;
       }
     }
@@ -2094,8 +2222,7 @@ export function defineProps<D extends Record<string, { default: unknown }>>(defs
 export function defineProps<P>(defs: { [K in keyof Required<P>]: PropDef<P[K]> }): {
   [K in keyof P]-?: Signal<NonNullable<P[K]>>;
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// biome-ignore lint/suspicious/noExplicitAny: implementation overload must accept any for overload resolution
+
 export function defineProps(defs: any): any {
   return _definePropsImpl(defs);
 }
@@ -2148,11 +2275,14 @@ type KeyedNode = {
 const queryWithinNodes = (nodes: Node[], markerAttr: string): HTMLElement | null => {
   for (const node of nodes) {
     if (node instanceof HTMLElement && node.hasAttribute(markerAttr)) return node;
+
     if (node instanceof Element) {
       const found = node.querySelector<HTMLElement>(`[${markerAttr}]`);
+
       if (found) return found;
     }
   }
+
   return null;
 };
 
@@ -2160,12 +2290,13 @@ const queryWithinNodes = (nodes: Node[], markerAttr: string): HTMLElement | null
 const findCommentInNodes = (nodes: Node[], marker: string): Comment | null => {
   for (const node of nodes) {
     const found = findCommentMarker(node, marker);
+
     if (found) return found;
   }
+
   return null;
 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyed item binding requires handling multiple binding types
 const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], container: ParentNode): CleanupFn[] => {
   const itemCleanups: CleanupFn[] = [];
   const itemRegisterCleanup: RegisterCleanup = (fn) => itemCleanups.push(fn);
@@ -2174,8 +2305,10 @@ const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], containe
     // Text bindings use comment markers, not element attributes — handle separately.
     if (binding.type === 'text') {
       const found = findCommentInNodes(nodes, binding.marker);
+
       if (found) {
         const textNode = document.createTextNode('');
+
         found.replaceWith(textNode);
         itemRegisterCleanup(
           _rawEffect(() => {
@@ -2183,10 +2316,12 @@ const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], containe
           }),
         );
       }
+
       continue;
     }
 
     const el = queryWithinNodes(nodes, binding.marker);
+
     if (!el && binding.type !== 'ref') continue;
 
     if (binding.type === 'prop') {
@@ -2199,8 +2334,10 @@ const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], containe
       applyModelBinding(el!, binding, itemRegisterCleanup);
     } else if (binding.type === 'ref') {
       const refEl = el ?? (container as ParentNode).querySelector<HTMLElement>(`[${binding.marker}]`);
+
       if (refEl) {
         const bindingRef = binding.ref;
+
         if (typeof bindingRef !== 'function' && !('values' in bindingRef)) {
           bindingRef.value = refEl as never;
         }
@@ -2210,6 +2347,7 @@ const applyKeyedItemBindings = (nodes: Node[], itemBindings: Binding[], containe
 
   return itemCleanups;
 };
+
 class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, FormHost {
   /** The component's setup function — assigned as a static on each subclass by define() */
   static _setup: (ctx: SetupContext) => SetupResult;
@@ -2225,20 +2363,21 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
   private _attrObserver: MutationObserver | null = null;
   private _keyedStates = new Map<string, Map<string | number, KeyedNode>>();
   private _mounted = false;
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is needed for optional cleanup returns in lifecycle array
   private _onMountFns: (() => CleanupFn | undefined | void)[] = [];
   private _styles?: (string | CSSStyleSheet | CSSResult)[];
   private _template: string | HTMLResult | null = null;
   private appliedHtmlBindings = new Set<string>();
   private runtime: ComponentRuntime;
   private _portalTarget: HTMLElement | null = null;
-  private _originalParent: { parent: Node; nextSibling: Node | null } | null = null;
+  private _originalParent: { nextSibling: Node | null; parent: Node } | null = null;
   private _isPortaling = false;
   /** Guards setup execution — setup runs exactly once even when the element is moved in the DOM */
   private _setupDone = false;
   constructor() {
     super();
+
     const shadowInit = (this.constructor as typeof CraftitBaseElement)._options?.shadow;
+
     this.shadow = this.attachShadow({ mode: 'open', ...shadowInit });
     this.runtime = {
       cleanups: [],
@@ -2256,6 +2395,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
     const options = (this.constructor as typeof CraftitBaseElement)._options;
 
     if (this._initPortal(options)) return;
+
     if (!this._setupDone) this._runSetup();
 
     if (this[propsKey]) {
@@ -2275,6 +2415,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
     if (!options?.target || this._isPortaling || this._portalTarget) return false;
 
     const target = typeof options.target === 'string' ? document.querySelector(options.target) : options.target;
+
     if (target instanceof HTMLElement) {
       this._portalTarget = target;
       this._originalParent = {
@@ -2289,11 +2430,13 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
       const rootNode = this.getRootNode();
       const logicalParent =
         this.parentElement ?? (rootNode instanceof ShadowRoot ? (rootNode.host as HTMLElement) : null);
+
       if (logicalParent) _logicalParents.set(this, logicalParent);
 
       this._isPortaling = true;
       target.appendChild(this);
       this._isPortaling = false;
+
       // appendChild triggers another connectedCallback where initialization will happen
       return true;
     }
@@ -2311,6 +2454,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
           "  • Try: document.body or document.querySelector('...')",
       );
     }
+
     return false;
   }
   private _runSetup(): void {
@@ -2337,7 +2481,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
     if (typeof res === 'string' || (typeof res === 'object' && res !== null && '__html' in res)) {
       this._template = res as string | HTMLResult;
     } else if (typeof res === 'object' && res !== null && 'template' in res) {
-      const r = res as { template: string | HTMLResult; styles?: (string | CSSStyleSheet | CSSResult)[] };
+      const r = res as { styles?: (string | CSSStyleSheet | CSSResult)[]; template: string | HTMLResult };
 
       this._template = r.template;
       this._styles = r.styles;
@@ -2345,6 +2489,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
   }
   private _initAttrObserver(): void {
     if (!this[propsKey]) return;
+
     // Browsers snapshot `observedAttributes` at customElements.define() time — before props are
     // known — so attributeChangedCallback is never triggered in real browsers. MutationObserver
     // is therefore always required to propagate attribute changes to prop signals.
@@ -2387,11 +2532,13 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
     // Restore element to original position if it was portaled
     if (this._originalParent && this._portalTarget && !this._isPortaling) {
       this._isPortaling = true;
+
       if (this._originalParent.nextSibling) {
         this._originalParent.parent.insertBefore(this, this._originalParent.nextSibling);
       } else {
         this._originalParent.parent.appendChild(this);
       }
+
       this._isPortaling = false;
       this._portalTarget = null;
       this._originalParent = null;
@@ -2457,17 +2604,19 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
         runCurrentCleanups();
 
         const { bindings, html, keys } = data;
+
         if (b.keyed && !this._keyedStates.has(b.marker)) this._keyedStates.set(b.marker, new Map());
+
         const keyedState = b.keyed ? this._keyedStates.get(b.marker)! : null;
         const container = (marker.parentElement || root) as ParentNode;
 
         let bindingsAlreadyApplied = false;
 
         untrack(() => {
-          // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Reconciliation logic requires multiple conditional paths
           batch(() => {
             if (keyedState && keys?.length && data.items?.length === keys.length) {
               bindingsAlreadyApplied = true;
+
               if (keyedState.size === 0) clearNodesAfterMarker();
 
               const newKeyedState = new Map<string | number, KeyedNode>();
@@ -2487,8 +2636,11 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
                 if (existing?.html === itemData.html) {
                   // UPDATE: Same HTML - reuse nodes, reapply bindings
                   if (existing.nodes[0]) insertNodesBefore(existing.nodes, insertPoint);
+
                   runAll(existing.cleanups);
+
                   const itemCleanups = applyKeyedItemBindings(existing.nodes, itemData.bindings, container);
+
                   newKeyedState.set(key, {
                     ...existing,
                     bindings: itemData.bindings,
@@ -2497,9 +2649,13 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
                 } else if (existing) {
                   // REPLACE: Different HTML - create new nodes, remove old
                   runAll(existing.cleanups);
+
                   const newNodes = htmlBindingCreateNodes(itemData.html);
+
                   insertNodesBefore(newNodes, insertPoint);
+
                   const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
+
                   newKeyedState.set(key, {
                     bindings: itemData.bindings,
                     cleanups: itemCleanups,
@@ -2511,8 +2667,11 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
                 } else {
                   // CREATE: New item
                   const newNodes = htmlBindingCreateNodes(itemData.html);
+
                   insertNodesBefore(newNodes, insertPoint);
+
                   const itemCleanups = applyKeyedItemBindings(newNodes, itemData.bindings, container);
+
                   newKeyedState.set(key, {
                     bindings: itemData.bindings,
                     cleanups: itemCleanups,
@@ -2540,9 +2699,12 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
               } else {
                 for (const n of lastInsertedNodes) n.parentNode?.removeChild(n);
               }
+
               const parsed = parseHTML(html);
+
               lastInsertedNodes = Array.from(parsed.childNodes);
               marker.after(parsed);
+
               if (b.keyed) this._keyedStates.set(b.marker, new Map());
             }
           });
@@ -2560,6 +2722,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
 
     registerCleanup(stop);
     registerCleanup(runCurrentCleanups);
+
     if (b.keyed) registerCleanup(() => this._keyedStates.delete(b.marker));
   }
   private handleAttributeChange(name: string, oldValue: string | null, newValue: string | null) {
@@ -2592,6 +2755,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
 
       try {
         const fns = this.runtime.onMount;
+
         this._onMountFns = fns.slice(); // save originals for reconnect (#4)
         for (const fn of fns) {
           const cleanup = fn();
@@ -2620,6 +2784,7 @@ class CraftitBaseElement extends HTMLElement implements PropHost, ContextHost, F
 
     this.shadow.replaceChildren(parseHTML(htmlResult.__html));
     this.applyBindings(htmlResult.__bindings);
+
     if (this._mounted) {
       for (const fn of this.runtime.onRendered) fn();
     }
@@ -2642,5 +2807,6 @@ export const define = (name: string, setup: (ctx: SetupContext) => SetupResult, 
   }
 
   customElements.define(name, CraftitElement);
+
   return name;
 };

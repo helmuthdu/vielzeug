@@ -8,23 +8,27 @@ describe('Core: Signal System', () => {
   describe('signal()', () => {
     it('should create signal with initial value', () => {
       const count = signal(0);
+
       expect(count.value).toBe(0);
     });
 
     it('should update value', () => {
       const count = signal(0);
+
       count.value = 5;
       expect(count.value).toBe(5);
     });
 
     it('should support updating via setter', () => {
       const count = signal(0);
+
       count.value = count.peek() + 1;
       expect(count.value).toBe(1);
     });
 
     it('should support peek without tracking', () => {
       const count = signal(0);
+
       expect(count.peek()).toBe(0);
     });
 
@@ -32,6 +36,7 @@ describe('Core: Signal System', () => {
       const count = signal(0);
       const values: number[] = [];
       const stop = watch(count, (val) => values.push(val));
+
       count.value = 1;
       count.value = 2;
       expect(values).toEqual([1, 2]);
@@ -43,6 +48,7 @@ describe('Core: Signal System', () => {
     it('watch() receives current and previous value', () => {
       const count = signal(10);
       const pairs: [number, number][] = [];
+
       watch(count, (next, prev) => pairs.push([next, prev]));
       count.value = 20;
       count.value = 30;
@@ -57,12 +63,14 @@ describe('Core: Signal System', () => {
     it('should compute derived value', () => {
       const count = signal(5);
       const doubled = computed(() => count.value * 2);
+
       expect(doubled.value).toBe(10);
     });
 
     it('should update when dependency changes', () => {
       const count = signal(5);
       const doubled = computed(() => count.value * 2);
+
       count.value = 10;
       expect(doubled.value).toBe(20);
     });
@@ -72,6 +80,7 @@ describe('Core: Signal System', () => {
       const count = signal(5);
       const doubled = computed(() => {
         computeCount++;
+
         return count.value * 2;
       });
 
@@ -85,6 +94,7 @@ describe('Core: Signal System', () => {
     it('should expose a ReadonlySignal view of the same signal', () => {
       const count = signal(5);
       const readCount = readonly(count);
+
       expect(readCount.value).toBe(5);
       count.value = 10;
       expect(readCount.value).toBe(10); // same underlying signal — stays in sync
@@ -97,6 +107,7 @@ describe('Core: Signal System', () => {
       const stop = effect(() => {
         last = readCount.value;
       });
+
       expect(last).toBe(5);
       count.value = 99;
       expect(last).toBe(99);
@@ -107,6 +118,7 @@ describe('Core: Signal System', () => {
   describe('effect()', () => {
     it('should run immediately', () => {
       let ran = false;
+
       effect(() => {
         ran = true;
       });
@@ -116,6 +128,7 @@ describe('Core: Signal System', () => {
     it('should track dependencies', () => {
       const count = signal(0);
       let effectValue = -1;
+
       effect(() => {
         effectValue = count.value;
       });
@@ -131,6 +144,7 @@ describe('Core: Signal System', () => {
           cleanupRan = true;
         };
       });
+
       dispose();
       expect(cleanupRan).toBe(true);
     });
@@ -140,6 +154,7 @@ describe('Core: Signal System', () => {
     it('should watch signal changes', async () => {
       const count = signal(0);
       const values: number[] = [];
+
       watch(count, (val) => values.push(val));
       count.value = 1;
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -149,6 +164,7 @@ describe('Core: Signal System', () => {
     it('should support immediate', () => {
       const count = signal(5);
       const values: number[] = [];
+
       watch(count, (val) => values.push(val), { immediate: true });
       expect(values).toEqual([5]);
     });
@@ -158,6 +174,7 @@ describe('Core: Signal System', () => {
       const b = signal(2);
       let fires = 0;
       const stop = watch([a, b], () => fires++);
+
       a.value = 10;
       b.value = 20;
       stop();
@@ -170,6 +187,7 @@ describe('Core: Signal System', () => {
       const b = signal(2);
       let fires = 0;
       const stop = watch([a, b], () => fires++, { immediate: true });
+
       expect(fires).toBe(1); // immediate
       a.value = 10;
       stop();
@@ -180,6 +198,7 @@ describe('Core: Signal System', () => {
       const a = signal(0);
       const b = signal(0);
       let fires = 0;
+
       watch([a, b], () => fires++, { once: true });
       a.value = 1;
       b.value = 1;
@@ -190,6 +209,7 @@ describe('Core: Signal System', () => {
     it('selector form: fires only when the selected slice changes', () => {
       const s = signal({ count: 0, name: 'Alice' });
       const pairs: [number, number][] = [];
+
       watch(
         s,
         (v) => v.count,
@@ -204,6 +224,7 @@ describe('Core: Signal System', () => {
     it('selector form: { immediate } fires with current selected value', () => {
       const s = signal({ count: 3, name: 'Alice' });
       const values: number[] = [];
+
       watch(
         s,
         (v) => v.count,
@@ -216,6 +237,7 @@ describe('Core: Signal System', () => {
     it('{ equals } suppresses notification for semantically equal values', () => {
       const s = signal([1, 2, 3]);
       let fires = 0;
+
       watch(s, () => fires++, { equals: (a, b) => a.length === b.length });
       s.value = [4, 5, 6]; // same length — suppressed
       expect(fires).toBe(0);
@@ -228,7 +250,9 @@ describe('Core: Signal System', () => {
     it('should batch updates', () => {
       const count = signal(0);
       let runs = 0;
+
       effect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         count.value;
         runs++;
       });
@@ -243,8 +267,10 @@ describe('Core: Signal System', () => {
       const count = signal(0);
       const result = batch(() => {
         count.value = 42;
+
         return count.peek();
       });
+
       expect(result).toBe(42);
     });
   });
@@ -252,6 +278,7 @@ describe('Core: Signal System', () => {
   describe('toValue()', () => {
     it('should unwrap a signal to its current value', () => {
       const count = signal(7);
+
       expect(toValue(count)).toBe(7);
     });
 
@@ -264,6 +291,7 @@ describe('Core: Signal System', () => {
     it('should track reads when called inside an effect', () => {
       const count = signal(1);
       let effectValue = -1;
+
       effect(() => {
         effectValue = toValue(count);
       });
@@ -280,6 +308,7 @@ describe('Core: Signal System', () => {
         () => count.value * 2,
         (v) => (count.value = v / 2),
       );
+
       expect(doubled.value).toBe(8);
       count.value = 10;
       expect(doubled.value).toBe(20);
@@ -291,6 +320,7 @@ describe('Core: Signal System', () => {
         () => count.value * 2,
         (v) => (count.value = v / 2),
       );
+
       doubled.value = 20;
       expect(count.value).toBe(10);
     });
@@ -301,6 +331,7 @@ describe('Core: Signal System', () => {
         () => base.value * 3,
         (v) => (base.value = Math.round(v / 3)),
       );
+
       tripled.value = 30;
       expect(base.value).toBe(10);
       base.value = 5;

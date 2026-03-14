@@ -49,6 +49,7 @@ describe('bit-breadcrumb', () => {
       });
 
       const items = fixture.element.querySelectorAll<HTMLElement>('bit-breadcrumb-item');
+
       expect(items[0].getAttribute('separator')).toBe('>');
       expect(items[0].hasAttribute('data-show-separator')).toBe(false);
       expect(items[1].getAttribute('separator')).toBe('>');

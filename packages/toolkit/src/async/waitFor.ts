@@ -29,12 +29,12 @@
 export async function waitFor(
   condition: () => boolean | Promise<boolean>,
   options: {
-    timeout?: number;
     interval?: number;
     signal?: AbortSignal;
+    timeout?: number;
   } = {},
 ): Promise<void> {
-  const { timeout: timeoutMs = 5000, interval = 100, signal } = options;
+  const { interval = 100, signal, timeout: timeoutMs = 5000 } = options;
 
   if (signal?.aborted) {
     throw new DOMException('Aborted', 'AbortError');
@@ -49,6 +49,7 @@ export async function waitFor(
         clearTimeout(intervalId);
         intervalId = null;
       }
+
       signal?.removeEventListener('abort', onAbort);
     };
 
@@ -62,6 +63,7 @@ export async function waitFor(
         if (signal?.aborted) {
           cleanup();
           reject(new DOMException('Aborted', 'AbortError'));
+
           return;
         }
 
@@ -70,12 +72,14 @@ export async function waitFor(
         if (result) {
           cleanup();
           resolve();
+
           return;
         }
 
         if (Date.now() - startTime >= timeoutMs) {
           cleanup();
           reject(new Error(`waitFor timed out after ${timeoutMs}ms`));
+
           return;
         }
 

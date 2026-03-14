@@ -1,4 +1,5 @@
 import { afterEach, vi } from 'vitest';
+
 import { install } from './src/test';
 
 install(afterEach);
@@ -38,6 +39,7 @@ if (typeof ElementInternals !== 'undefined') {
         if (!this._states) {
           this._states = new Set();
         }
+
         return this._states;
       },
     });

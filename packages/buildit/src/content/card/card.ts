@@ -12,17 +12,22 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
+
 import type { AddEventListeners, BitCardEvents, ElevationLevel, PaddingSize, ThemeColor } from '../../types';
+
+import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], input, select, textarea, summary, [role="button"], [role="link"], [contenteditable=""], [contenteditable="true"]';
 
 function slotHasMeaningfulContent(slot: HTMLSlotElement | null | undefined): boolean {
   if (!slot) return false;
+
   return slot.assignedNodes({ flatten: true }).some((node) => {
     if (node.nodeType === Node.ELEMENT_NODE) return true;
+
     if (node.nodeType === Node.TEXT_NODE) return !!node.textContent?.trim();
+
     return false;
   });
 }
@@ -30,11 +35,14 @@ function slotHasMeaningfulContent(slot: HTMLSlotElement | null | undefined): boo
 function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
   for (const node of event.composedPath()) {
     if (!(node instanceof HTMLElement)) continue;
+
     if (node === host) return false;
+
     if (node.matches(INTERACTIVE_DESCENDANT_SELECTOR) || !!node.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
       return true;
     }
   }
+
   return false;
 }
 
@@ -62,13 +70,15 @@ const componentStyles = /* css */ css`
       border-radius: var(--_radius);
       overflow: hidden;
       position: relative;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         backdrop-filter var(--transition-slow),
         box-shadow var(--transition-normal),
         transform var(--transition-normal),
         background var(--transition-normal),
         border-color var(--transition-normal),
-        opacity var(--transition-normal));
+        opacity var(--transition-normal)
+      );
     }
 
     /* ── Card Structure ───────────────────────── */
@@ -231,9 +241,7 @@ const componentStyles = /* css */ css`
     :host([interactive]:not([disabled]):active) .card {
       transform: translateY(0) scale(0.99);
       box-shadow: var(--_shadow);
-      transition: var(--_motion-transition,
-        box-shadow var(--transition-fast),
-        transform var(--transition-fast));
+      transition: var(--_motion-transition, box-shadow var(--transition-fast), transform var(--transition-fast));
     }
 
     :host([interactive]:focus-visible) .card {
@@ -265,8 +273,12 @@ const componentStyles = /* css */ css`
   }
 
   @keyframes loading-bar {
-    0%   { transform: translateX(-100%); }
-    100% { transform: translateX(200%); }
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
   }
 `;
 
@@ -395,12 +407,15 @@ export const TAG = define('bit-card', ({ host }) => {
 
   const handleClick = (e: MouseEvent) => {
     if (!props.interactive.value || props.disabled.value) return;
+
     if (isNestedInteractiveTarget(host, e)) return;
+
     emit('activate', { originalEvent: e, trigger: 'pointer' });
   };
 
   const handleKeydown = (e: KeyboardEvent) => {
     if (!props.interactive.value || props.disabled.value) return;
+
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       emit('activate', { originalEvent: e, trigger: 'keyboard' });

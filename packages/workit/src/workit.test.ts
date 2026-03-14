@@ -7,18 +7,21 @@ describe('createWorker', () => {
   describe('execution', () => {
     it('runs a synchronous task', async () => {
       const worker = createWorker<number, number>((n) => n * 2);
+
       expect(await worker.run(5)).toBe(10);
       worker.dispose();
     });
 
     it('runs an async task', async () => {
       const worker = createWorker<string, string>(async (s) => `hello ${s}`);
+
       expect(await worker.run('world')).toBe('hello world');
       worker.dispose();
     });
 
     it('handles complex object input and output', async () => {
       const worker = createWorker<{ a: number; b: number }, number>(({ a, b }) => a + b);
+
       expect(await worker.run({ a: 3, b: 4 })).toBe(7);
       worker.dispose();
     });
@@ -26,6 +29,7 @@ describe('createWorker', () => {
     it('accepts transfer option without error', async () => {
       const worker = createWorker<ArrayBuffer, number>((buf) => buf.byteLength);
       const buf = new ArrayBuffer(8);
+
       expect(await worker.run(buf, { transfer: [buf] })).toBe(8);
       worker.dispose();
     });
@@ -34,24 +38,28 @@ describe('createWorker', () => {
   describe('size', () => {
     it('defaults to 1', () => {
       const worker = createWorker<number, number>((n) => n);
+
       expect(worker.size).toBe(1);
       worker.dispose();
     });
 
     it('respects an explicit size', () => {
       const pool = createWorker<number, number>((n) => n, { size: 4 });
+
       expect(pool.size).toBe(4);
       pool.dispose();
     });
 
     it('clamps size 0 to 1', () => {
       const pool = createWorker<number, number>((n) => n, { size: 0 });
+
       expect(pool.size).toBe(1);
       pool.dispose();
     });
 
     it("'auto' creates at least 1 slot", () => {
       const pool = createWorker<number, number>((n) => n, { size: 'auto' });
+
       expect(pool.size).toBeGreaterThanOrEqual(1);
       pool.dispose();
     });
@@ -60,6 +68,7 @@ describe('createWorker', () => {
   describe('status', () => {
     it('is idle after creation', () => {
       const worker = createWorker<number, number>((n) => n);
+
       expect(worker.status).toBe('idle');
       worker.dispose();
     });
@@ -67,6 +76,7 @@ describe('createWorker', () => {
     it('is running while a task is in progress', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}));
       const promise = worker.run();
+
       expect(worker.status).toBe('running');
       worker.dispose();
       await expect(promise).rejects.toThrow(TerminatedError);
@@ -74,6 +84,7 @@ describe('createWorker', () => {
 
     it('is idle after a task completes', async () => {
       const worker = createWorker<number, number>((n) => n);
+
       await worker.run(1);
       expect(worker.status).toBe('idle');
       worker.dispose();
@@ -81,6 +92,7 @@ describe('createWorker', () => {
 
     it('is terminated after dispose()', () => {
       const worker = createWorker<number, number>((n) => n);
+
       worker.dispose();
       expect(worker.status).toBe('terminated');
     });
@@ -90,6 +102,7 @@ describe('createWorker', () => {
     it('dispatches tasks to all slots in a pool', async () => {
       const pool = createWorker<number, number>((n) => n * 2, { size: 3 });
       const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
+
       expect(results).toEqual([2, 4, 6]);
       pool.dispose();
     });
@@ -99,11 +112,13 @@ describe('createWorker', () => {
       const pool = createWorker<number, number>(
         async (n) => {
           order.push(n);
+
           return n;
         },
         { size: 1 },
       );
       const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
+
       expect(results).toEqual([1, 2, 3]);
       expect(order).toEqual([1, 2, 3]);
       pool.dispose();
@@ -112,6 +127,7 @@ describe('createWorker', () => {
     it('processes more tasks than pool slots', async () => {
       const pool = createWorker<number, number>((n) => n + 1, { size: 2 });
       const results = await Promise.all([10, 20, 30, 40, 50].map((n) => pool.run(n)));
+
       expect(results).toEqual([11, 21, 31, 41, 51]);
       pool.dispose();
     });
@@ -120,6 +136,7 @@ describe('createWorker', () => {
   describe('terminate', () => {
     it('rejects new run() calls', async () => {
       const worker = createWorker<number, number>((n) => n);
+
       worker.dispose();
       await expect(worker.run(1)).rejects.toThrow(TerminatedError);
     });
@@ -133,6 +150,7 @@ describe('createWorker', () => {
           }),
       );
       const promise = worker.run(undefined);
+
       worker.dispose();
       await expect(promise).rejects.toThrow(TerminatedError);
       taskResolve(0);
@@ -149,6 +167,7 @@ describe('createWorker', () => {
       );
       const running = pool.run(undefined);
       const queued = pool.run(undefined);
+
       pool.dispose();
       await expect(running).rejects.toThrow(TerminatedError);
       await expect(queued).rejects.toThrow(TerminatedError);
@@ -157,12 +176,14 @@ describe('createWorker', () => {
 
     it('is idempotent', () => {
       const worker = createWorker<number, number>((n) => n);
+
       worker.dispose();
       expect(() => worker.dispose()).not.toThrow();
     });
 
     it('[Symbol.dispose] terminates the worker', () => {
       const worker = createWorker<number, number>((n) => n);
+
       worker[Symbol.dispose]();
       expect(worker.status).toBe('terminated');
     });
@@ -174,6 +195,7 @@ describe('createWorker', () => {
         throw new Error('task failed');
       });
       const err = await worker.run(undefined).catch((e) => e);
+
       expect(err).toBeInstanceOf(TaskError);
       expect((err as TaskError).message).toBe('task failed');
       worker.dispose();
@@ -184,6 +206,7 @@ describe('createWorker', () => {
         throw 'oops';
       });
       const err = await worker.run(undefined).catch((e) => e);
+
       expect(err).toBeInstanceOf(TaskError);
       expect((err as TaskError).message).toBe('oops');
       worker.dispose();
@@ -192,8 +215,10 @@ describe('createWorker', () => {
     it('slot is reused after a task error — next run succeeds', async () => {
       const worker = createWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
+
         return n;
       });
+
       await expect(worker.run(-1)).rejects.toThrow(TaskError);
       await expect(worker.run(5)).resolves.toBe(5);
       worker.dispose();
@@ -216,6 +241,7 @@ describe('createWorker', () => {
   describe('isNative', () => {
     it('is false in jsdom (Workers unavailable)', () => {
       const worker = createWorker<number, number>((n) => n);
+
       expect(worker.isNative).toBe(false);
       worker.dispose();
     });
@@ -224,18 +250,21 @@ describe('createWorker', () => {
   describe('timeout', () => {
     it('rejects with TaskTimeoutError after the timeout expires', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 30 });
+
       await expect(worker.run(undefined)).rejects.toThrow(TaskTimeoutError);
       worker.dispose();
     }, 1000);
 
     it('resolves if the task completes before the timeout', async () => {
       const worker = createWorker<number, number>((n) => n, { timeout: 2000 });
+
       await expect(worker.run(42)).resolves.toBe(42);
       worker.dispose();
     });
 
     it('status is idle after a timeout', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 30 });
+
       await expect(worker.run(undefined)).rejects.toThrow(TaskTimeoutError);
       expect(worker.status).toBe('idle');
       worker.dispose();
@@ -244,6 +273,7 @@ describe('createWorker', () => {
     it('slot is reused after a timeout — next run succeeds', async () => {
       let calls = 0;
       const worker = createWorker<number, number>((n) => (++calls === 1 ? new Promise(() => {}) : n), { timeout: 30 });
+
       await expect(worker.run(0)).rejects.toThrow(TaskTimeoutError);
       await expect(worker.run(42)).resolves.toBe(42);
       worker.dispose();
@@ -254,6 +284,7 @@ describe('createWorker', () => {
     it('rejects immediately when signal is already aborted', async () => {
       const worker = createWorker<number, number>((n) => n);
       const ac = new AbortController();
+
       ac.abort();
       await expect(worker.run(1, { signal: ac.signal })).rejects.toThrow('Aborted');
       worker.dispose();
@@ -271,6 +302,7 @@ describe('createWorker', () => {
       const ac = new AbortController();
       const running = worker.run(undefined);
       const abortable = worker.run(undefined, { signal: ac.signal });
+
       ac.abort();
       await expect(abortable).rejects.toThrow('Aborted');
       unblock();
@@ -293,6 +325,7 @@ describe('createWorker', () => {
       const running = pool.run(-1);
       const normal = pool.run(1);
       const abortable = pool.run(2, { signal: ac.signal });
+
       ac.abort();
       await expect(abortable).rejects.toThrow('Aborted');
       unblock();
@@ -307,6 +340,7 @@ describe('createWorker', () => {
       const worker = createWorker<number, number>((n) => n + 1, {
         scripts: ['https://example.com/lib.js'],
       });
+
       expect(await worker.run(4)).toBe(5);
       worker.dispose();
     });
@@ -319,19 +353,23 @@ describe('createTestWorker', () => {
   describe('run', () => {
     it('executes a synchronous fn', async () => {
       const worker = createTestWorker<number, number>((n) => n * 3);
+
       expect(await worker.run(7)).toBe(21);
     });
 
     it('executes an async fn', async () => {
       const worker = createTestWorker<string, string>(async (s) => `hey ${s}`);
+
       expect(await worker.run('you')).toBe('hey you');
     });
 
     it('propagates task errors directly', async () => {
       const worker = createTestWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
+
         return n;
       });
+
       await expect(worker.run(-1)).rejects.toThrow('negative');
     });
   });
@@ -339,12 +377,14 @@ describe('createTestWorker', () => {
   describe('status', () => {
     it('is idle initially', () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       expect(worker.status).toBe('idle');
     });
 
     it('is running during async execution', async () => {
       const worker = createTestWorker<number, number>(async (n) => n);
       const promise = worker.run(1);
+
       expect(worker.status).toBe('running');
       await promise;
       expect(worker.status).toBe('idle');
@@ -352,12 +392,14 @@ describe('createTestWorker', () => {
 
     it('is idle after task completes', async () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       await worker.run(1);
       expect(worker.status).toBe('idle');
     });
 
     it('is terminated after dispose()', () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       worker.dispose();
       expect(worker.status).toBe('terminated');
     });
@@ -366,6 +408,7 @@ describe('createTestWorker', () => {
   describe('terminate', () => {
     it('rejects run() calls after dispose()', async () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       worker.dispose();
       await expect(worker.run(1)).rejects.toThrow(TerminatedError);
     });
@@ -374,6 +417,7 @@ describe('createTestWorker', () => {
   describe('calls', () => {
     it('records { input, output } for each successful run in order', async () => {
       const worker = createTestWorker<number, number>((n) => n + 1);
+
       await worker.run(1);
       await worker.run(2);
       await worker.run(3);
@@ -387,8 +431,10 @@ describe('createTestWorker', () => {
     it('does not record failed calls', async () => {
       const worker = createTestWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
+
         return n;
       });
+
       await worker.run(1);
       await expect(worker.run(-1)).rejects.toThrow('negative');
       expect(worker.calls).toHaveLength(1);
@@ -397,6 +443,7 @@ describe('createTestWorker', () => {
 
     it('is typed as ReadonlyArray', () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       // @ts-expect-error — ReadonlyArray does not expose push
       void worker.calls.push;
       expect(Array.isArray(worker.calls)).toBe(true);
@@ -406,6 +453,7 @@ describe('createTestWorker', () => {
   describe('shape', () => {
     it('size is always 1', () => {
       const worker = createTestWorker<number, number>((n) => n);
+
       expect(worker.size).toBe(1);
     });
   });

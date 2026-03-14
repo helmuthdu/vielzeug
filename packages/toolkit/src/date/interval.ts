@@ -5,8 +5,8 @@ import { isDate } from '../typed/isDate';
 type IntervalType = 'day' | 'week' | 'month' | 'monthStart' | 'monthEnd' | 'year' | 'yearStart' | 'yearEnd';
 type IntervalOptions = {
   interval?: IntervalType;
-  steps?: number;
   latest?: boolean;
+  steps?: number;
 };
 // #endregion IntervalTypes
 
@@ -29,7 +29,7 @@ type IntervalOptions = {
 export function interval(
   start: Date | string,
   end: Date | string,
-  { interval = 'day', steps = 1, latest = false }: IntervalOptions = {},
+  { interval = 'day', latest = false, steps = 1 }: IntervalOptions = {},
 ): Date[] {
   const startDate = new Date(start);
   const endDate = new Date(end);
@@ -62,19 +62,19 @@ function incrementDate(date: Date, interval: IntervalType, steps: number): Date 
   switch (interval) {
     case 'day':
       return new Date(Date.UTC(year, month, day + steps));
-    case 'week':
-      return new Date(Date.UTC(year, month, day + 7 * steps));
     case 'month':
       return new Date(Date.UTC(year, month + steps, day));
-    case 'monthStart':
-      return new Date(Date.UTC(year, month + steps, 1));
     case 'monthEnd':
       return new Date(Date.UTC(year, month + steps + 1, 0));
+    case 'monthStart':
+      return new Date(Date.UTC(year, month + steps, 1));
+    case 'week':
+      return new Date(Date.UTC(year, month, day + 7 * steps));
     case 'year':
       return new Date(Date.UTC(year + steps, month, day));
-    case 'yearStart':
-      return new Date(Date.UTC(year + steps, 0, 1));
     case 'yearEnd':
       return new Date(Date.UTC(year + steps, 11, 31));
+    case 'yearStart':
+      return new Date(Date.UTC(year + steps, 0, 1));
   }
 }

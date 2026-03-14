@@ -1,6 +1,8 @@
 import { css, define, html } from '@vielzeug/craftit';
-import { frostVariantMixin, rainbowEffectMixin, surfaceMixins } from '../../styles';
+
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
+
+import { frostVariantMixin, rainbowEffectMixin, surfaceMixins } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {

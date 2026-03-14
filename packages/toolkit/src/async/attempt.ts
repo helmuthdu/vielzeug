@@ -1,14 +1,15 @@
 import type { Fn } from '../types';
+
 import { predict } from './predict';
 import { retry } from './retry';
 
 type AttemptOptions = {
-  times?: number;
   onError?: (err: unknown) => void;
   timeout?: number;
+  times?: number;
 };
 
-export type AttemptResult<R> = { ok: true; value: R } | { ok: false; error: unknown };
+export type AttemptResult<R> = { ok: true; value: R } | { error: unknown; ok: false };
 
 /**
  * Attempts to execute a function with retry logic and an optional timeout.
@@ -36,13 +37,15 @@ export type AttemptResult<R> = { ok: true; value: R } | { ok: false; error: unkn
  */
 export async function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
   fn: T,
-  { onError, times = 3, timeout = 7000 }: AttemptOptions = {},
+  { onError, timeout = 7000, times = 3 }: AttemptOptions = {},
 ): Promise<AttemptResult<R>> {
   try {
     const value = await retry(() => predict<R>(() => fn(), { timeout }), { times });
+
     return { ok: true, value };
   } catch (err) {
     onError?.(err);
-    return { ok: false, error: err };
+
+    return { error: err, ok: false };
   }
 }

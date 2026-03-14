@@ -8,6 +8,7 @@ describe('keyBy', () => {
       { a: 'x', v: 3 },
     ];
     const result = keyBy(data, 'a');
+
     expect(result).toEqual({
       x: { a: 'x', v: 3 }, // last with a: 'x'
       y: { a: 'y', v: 2 },
@@ -20,6 +21,7 @@ describe('keyBy', () => {
       { a: 'bar', v: 2 },
     ];
     const result = keyBy(data, (item) => item.a);
+
     expect(result).toEqual({
       bar: { a: 'bar', v: 2 },
       foo: { a: 'foo', v: 1 },
@@ -36,16 +38,14 @@ describe('keyBy', () => {
       { a: 'z', v: 2 },
     ];
     const result = keyBy(data, 'a');
+
     expect(result).toEqual({ z: { a: 'z', v: 2 } });
   });
 
   it('should throw TypeError if input is not an array', () => {
-    // @ts-expect-error
-    expect(() => keyBy(null, 'a')).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => keyBy(undefined, 'a')).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => keyBy({}, 'a')).toThrow(TypeError);
+    expect(() => keyBy(null as any, 'a')).toThrow(TypeError);
+    expect(() => keyBy(undefined as any, 'a')).toThrow(TypeError);
+    expect(() => keyBy({} as any, 'a')).toThrow(TypeError);
   });
 
   it('should work with numeric string keys', () => {
@@ -54,12 +54,14 @@ describe('keyBy', () => {
       { id: '2', v: 2 },
     ];
     const result = keyBy(data, 'id');
+
     expect(result).toEqual({ '1': { id: '1', v: 1 }, '2': { id: '2', v: 2 } });
   });
 
   it('should work with selector function returning a string', () => {
     const data = [{ a: 1 }, { a: 2 }];
     const result = keyBy(data, (item) => String(item.a));
+
     expect(result).toEqual({ '1': { a: 1 }, '2': { a: 2 } });
   });
 });

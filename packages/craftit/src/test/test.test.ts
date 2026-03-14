@@ -3,12 +3,14 @@
  * Tests for the testing utilities themselves
  */
 import { html, signal } from '@vielzeug/craftit';
+
 import { cleanup, fire, mock, mount, user, waitFor } from './';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
     it('should mount component', async () => {
       const { element, shadow } = await mount(() => html`<div>Test</div>`);
+
       expect(element).toBeInstanceOf(HTMLElement);
       expect(shadow).not.toBeNull();
     });
@@ -17,6 +19,7 @@ describe('Testing: Render Utilities', () => {
       const { element } = await mount(() => html`<div>Test</div>`, {
         attrs: { disabled: true, variant: 'primary' },
       });
+
       expect(element.getAttribute('variant')).toBe('primary');
       expect(element.hasAttribute('disabled')).toBe(true);
     });
@@ -25,6 +28,7 @@ describe('Testing: Render Utilities', () => {
       const { element } = await mount(() => html`<slot></slot>`, {
         html: '<span>Content</span>',
       });
+
       expect(element.innerHTML).toContain('Content');
     });
   });
@@ -33,6 +37,7 @@ describe('Testing: Render Utilities', () => {
     it('should fire click events', async () => {
       const spy = vi.fn();
       const { query } = await mount(() => html`<button @click=${spy}>Click</button>`);
+
       fire.click(query('button')!);
       expect(spy).toHaveBeenCalledTimes(1);
     });
@@ -40,6 +45,7 @@ describe('Testing: Render Utilities', () => {
     it('should fire input events', () => {
       const spy = vi.fn();
       const input = document.createElement('input');
+
       input.addEventListener('input', spy);
       fire.input(input);
       expect(spy).toHaveBeenCalledTimes(1);
@@ -48,6 +54,7 @@ describe('Testing: Render Utilities', () => {
     it('should fire custom events', () => {
       const spy = vi.fn();
       const div = document.createElement('div');
+
       div.addEventListener('custom', spy);
       fire.custom(div, 'custom', { value: 123 });
       expect(spy).toHaveBeenCalledTimes(1);
@@ -57,6 +64,7 @@ describe('Testing: Render Utilities', () => {
   describe('user', () => {
     it('should type text', async () => {
       const input = document.createElement('input');
+
       document.body.appendChild(input);
       await user.type(input, 'Hello');
       expect(input.value).toBe('Hello');
@@ -65,6 +73,7 @@ describe('Testing: Render Utilities', () => {
 
     it('should fill input (clear then type)', async () => {
       const input = document.createElement('input');
+
       input.value = 'old';
       document.body.appendChild(input);
       await user.fill(input, 'new');
@@ -74,6 +83,7 @@ describe('Testing: Render Utilities', () => {
 
     it('should clear input', async () => {
       const input = document.createElement('input');
+
       input.value = 'initial';
       document.body.appendChild(input);
       await user.clear(input);
@@ -83,6 +93,7 @@ describe('Testing: Render Utilities', () => {
 
     it('should select option', async () => {
       const select = document.createElement('select');
+
       select.innerHTML = '<option value="1">One</option><option value="2">Two</option>';
       document.body.appendChild(select);
       await user.select(select, '2');
@@ -94,6 +105,7 @@ describe('Testing: Render Utilities', () => {
   describe('waitFor', () => {
     it('should wait for boolean condition', async () => {
       let ready = false;
+
       setTimeout(() => (ready = true), 50);
       await waitFor(() => ready);
       expect(ready).toBe(true);
@@ -101,6 +113,7 @@ describe('Testing: Render Utilities', () => {
 
     it('should wait for expect() assertion', async () => {
       let count = 0;
+
       setTimeout(() => count++, 50);
       await waitFor(() => expect(count).toBeGreaterThan(0));
       expect(count).toBeGreaterThan(0);
@@ -114,9 +127,11 @@ describe('Testing: Render Utilities', () => {
   describe('waitFor (element appearance)', () => {
     it('should wait for element to appear', async () => {
       const container = document.createElement('div');
+
       document.body.appendChild(container);
       setTimeout(() => {
         const el = document.createElement('button');
+
         container.appendChild(el);
       }, 50);
       await waitFor(() => container.querySelector('button'));
@@ -129,6 +144,7 @@ describe('Testing: Render Utilities', () => {
     it('should wait for element removal', async () => {
       const container = document.createElement('div');
       const el = document.createElement('div');
+
       container.appendChild(el);
       document.body.appendChild(container);
       setTimeout(() => el.remove(), 50);
@@ -141,9 +157,12 @@ describe('Testing: Render Utilities', () => {
   describe('mock()', () => {
     it('should register a stub custom element', () => {
       const mockName = 'mock-test-component';
+
       mock(mockName, '<div class="mocked">Mocked</div>');
       expect(customElements.get(mockName)).toBeDefined();
+
       const element = document.createElement(mockName);
+
       document.body.appendChild(element);
       expect(element.innerHTML).toContain('Mocked');
       element.remove();
@@ -162,8 +181,9 @@ describe('Testing: Render Utilities', () => {
 
   describe('Integration', () => {
     it('should work with real component workflow', async () => {
-      const { query, act } = await mount(() => {
+      const { act, query } = await mount(() => {
         const count = signal(0);
+
         return html`
           <div>
             <span class="count">${count}</span>

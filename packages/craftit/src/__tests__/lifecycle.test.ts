@@ -10,8 +10,10 @@ describe('Core: Lifecycle Hooks', () => {
   describe('onMount()', () => {
     it('should run when component mounts', async () => {
       const spy = vi.fn();
+
       await mount(() => {
         onMount(spy);
+
         return html`<div>Test</div>`;
       });
       expect(spy).toHaveBeenCalledTimes(1);
@@ -19,10 +21,12 @@ describe('Core: Lifecycle Hooks', () => {
 
     it('should run after DOM is ready', async () => {
       let hasElement = false;
+
       await mount(() => {
         onMount(() => {
           hasElement = true;
         });
+
         return html`<div>Test</div>`;
       });
       expect(hasElement).toBe(true);
@@ -30,6 +34,7 @@ describe('Core: Lifecycle Hooks', () => {
 
     it('should support multiple onMount callbacks', async () => {
       const calls: number[] = [];
+
       await mount(() => {
         onMount(() => {
           calls.push(1);
@@ -37,6 +42,7 @@ describe('Core: Lifecycle Hooks', () => {
         onMount(() => {
           calls.push(2);
         });
+
         return html`<div>Test</div>`;
       });
       expect(calls).toEqual([1, 2]);
@@ -48,8 +54,10 @@ describe('Core: Lifecycle Hooks', () => {
       const spy = vi.fn();
       const { destroy } = await mount(() => {
         onUnmount(spy);
+
         return html`<div>Test</div>`;
       });
+
       expect(spy).not.toHaveBeenCalled();
       destroy();
       expect(spy).toHaveBeenCalledTimes(1);
@@ -61,8 +69,10 @@ describe('Core: Lifecycle Hooks', () => {
         onUnmount(() => {
           cleaned = true;
         });
+
         return html`<div>Test</div>`;
       });
+
       destroy();
       expect(cleaned).toBe(true);
     });
@@ -72,8 +82,10 @@ describe('Core: Lifecycle Hooks', () => {
       const { destroy } = await mount(() => {
         onUnmount(() => calls.push(1));
         onUnmount(() => calls.push(2));
+
         return html`<div>Test</div>`;
       });
+
       destroy();
       expect(calls).toEqual([1, 2]);
     });
@@ -86,8 +98,10 @@ describe('Core: Lifecycle Hooks', () => {
       const { act } = await mount(() => {
         count = signal(0);
         onRendered(spy);
+
         return html`<div>${count}</div>`;
       });
+
       await act(() => count.value++);
       expect(spy).toHaveBeenCalled();
     });
@@ -102,8 +116,10 @@ describe('Core: Lifecycle Hooks', () => {
           order.push('mount');
         });
         onUnmount(() => order.push('unmount'));
+
         return html`<div>Test</div>`;
       });
+
       destroy();
       expect(order).toEqual(['setup', 'mount', 'unmount']);
     });
@@ -114,12 +130,15 @@ describe('Core: Lifecycle Hooks', () => {
       const values: number[] = [];
       const { flush } = await mount(() => {
         const count = signal(0);
+
         onMount(() => {
           count.value = 5;
         });
         onRendered(() => values.push(count.value));
+
         return html`<div>${count}</div>`;
       });
+
       await flush();
       expect(values).toContain(5);
     });
@@ -128,17 +147,23 @@ describe('Core: Lifecycle Hooks', () => {
       let effectRuns = 0;
       const { destroy } = await mount(() => {
         const count = signal(0);
+
         onMount(() => {
           const interval = setInterval(() => {
             count.value++;
             effectRuns++;
           }, 10);
+
           onUnmount(() => clearInterval(interval));
         });
+
         return html`<div>${count}</div>`;
       });
+
       await new Promise((resolve) => setTimeout(resolve, 50));
+
       const runsBeforeUnmount = effectRuns;
+
       destroy();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(effectRuns).toBe(runsBeforeUnmount);
@@ -157,8 +182,10 @@ describe('Core: Lifecycle Hooks', () => {
           handle(btn, 'click', () => {
             clickCount++;
           });
+
           return () => btn.remove();
         });
+
         return html`<div></div>`;
       });
 
@@ -175,9 +202,11 @@ describe('Core: Lifecycle Hooks', () => {
   describe('onError()', () => {
     it('should register error handler', async () => {
       let handlerRegistered = false;
+
       await mount(() => {
         onError(() => {});
         handlerRegistered = true;
+
         return html`<div>Test</div>`;
       });
       expect(handlerRegistered).toBe(true);

@@ -246,7 +246,7 @@ export interface BitAlertEvents {
  * Select change event
  * @fires bit-select#change
  */
-export interface BitSelectChangeEvent extends CustomEvent<{ value: string; values: string[]; originalEvent?: Event }> {
+export interface BitSelectChangeEvent extends CustomEvent<{ originalEvent?: Event; value: string; values: string[] }> {
   readonly type: 'change';
 }
 

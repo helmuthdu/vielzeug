@@ -1,6 +1,8 @@
 import { computed, css, define, defineProps, effect, html, inject, syncContextProps } from '@vielzeug/craftit';
-import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
+
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 
 const styles = /* css */ css`
@@ -27,7 +29,9 @@ const styles = /* css */ css`
       border-radius: var(--tab-item-radius);
       white-space: nowrap;
       user-select: none;
-      transition: background var(--tab-item-transition), color var(--tab-item-transition),
+      transition:
+        background var(--tab-item-transition),
+        color var(--tab-item-transition),
         box-shadow var(--tab-item-transition);
       position: relative;
       width: 100%;
@@ -217,11 +221,13 @@ export const TAG = define('bit-tab-item', ({ host }) => {
   });
 
   const tabsCtx = inject(TABS_CTX, undefined);
+
   syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
 
   const isActive = tabsCtx
     ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
     : props.active;
+
   effect(() => {
     host.toggleAttribute('active', isActive.value);
   });
@@ -231,6 +237,7 @@ export const TAG = define('bit-tab-item', ({ host }) => {
 
   const handleClick = () => {
     if (props.disabled.value) return;
+
     host.dispatchEvent(
       new CustomEvent('tab-click', {
         bubbles: true,
@@ -252,8 +259,7 @@ export const TAG = define('bit-tab-item', ({ host }) => {
         :tabindex=${tabIndex}
         :aria-disabled=${computed(() => String(props.disabled.value))}
         :aria-controls="${() => `tabpanel-${props.value.value}`}"
-        @click=${handleClick}
-      >
+        @click=${handleClick}>
         <slot name="prefix"></slot>
         <slot></slot>
         <slot name="suffix"></slot>

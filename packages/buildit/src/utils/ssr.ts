@@ -50,6 +50,7 @@ export function generateDeclarativeShadowDOM(
       if (typeof value === 'boolean') {
         return value ? key : '';
       }
+
       return `${key}="${escapeHtml(String(value))}"`;
     })
     .filter(Boolean)
@@ -93,11 +94,11 @@ export function renderToString(
   options: {
     attributes?: Record<string, string | boolean>;
     children?: string;
-    styles?: string;
     shadowContent?: string;
+    styles?: string;
   } = {},
 ): string {
-  const { attributes = {}, children = '', styles = '', shadowContent } = options;
+  const { attributes = {}, children = '', shadowContent, styles = '' } = options;
 
   const content = shadowContent || '<slot></slot>';
 
@@ -125,8 +126,9 @@ export function renderToString(
  * });
  */
 export function generateHydrationScript(config: SSRConfig = {}): string {
-  const { hydration = 'immediate', deferScripts = true, mediaQuery } = config;
+  const { deferScripts = true, hydration = 'immediate', mediaQuery } = config;
 
+  // eslint-disable-next-line no-useless-assignment
   let hydrationCode = '';
 
   switch (hydration) {
@@ -138,6 +140,26 @@ export function generateHydrationScript(config: SSRConfig = {}): string {
           });
         } else {
           setTimeout(hydrateComponents, 1);
+        }
+      `;
+      break;
+
+    case 'media-query':
+      if (!mediaQuery) {
+        throw new Error('mediaQuery option required for media-query hydration strategy');
+      }
+
+      hydrationCode = `
+        const mediaQueryList = window.matchMedia('${mediaQuery}');
+
+        if (mediaQueryList.matches) {
+          hydrateComponents();
+        } else {
+          mediaQueryList.addEventListener('change', (e) => {
+            if (e.matches) {
+              hydrateComponents();
+            }
+          });
         }
       `;
       break;
@@ -159,25 +181,6 @@ export function generateHydrationScript(config: SSRConfig = {}): string {
           });
         } else {
           hydrateComponents();
-        }
-      `;
-      break;
-
-    case 'media-query':
-      if (!mediaQuery) {
-        throw new Error('mediaQuery option required for media-query hydration strategy');
-      }
-      hydrationCode = `
-        const mediaQueryList = window.matchMedia('${mediaQuery}');
-
-        if (mediaQueryList.matches) {
-          hydrateComponents();
-        } else {
-          mediaQueryList.addEventListener('change', (e) => {
-            if (e.matches) {
-              hydrateComponents();
-            }
-          });
         }
       `;
       break;
@@ -384,6 +387,7 @@ export async function collectComponentStyles(_componentNames: string[]): Promise
   // This would need actual component module imports
   // For now, return placeholder
   console.warn('collectComponentStyles needs component module access');
+
   return '/* Component styles would be collected here */';
 }
 

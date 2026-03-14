@@ -21,6 +21,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
+
 import { FORM_CTX, type FormContext } from '../form/form';
 
 export interface TextFieldBaseProps {
@@ -52,7 +53,7 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
     { immediate: true },
   );
 
-  const { fieldId, labelId: labelInsetId, helperId, errorId } = createFormIds(fieldPrefix, props.name);
+  const { errorId, fieldId, helperId, labelId: labelInsetId } = createFormIds(fieldPrefix, props.name);
   const labelOutsideId = `${labelInsetId}-outside`;
 
   const labelInsetRef = ref<HTMLLabelElement>();
@@ -63,10 +64,12 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
     effect(() => {
       const placement = props['label-placement'].value;
       const labelText = props.label.value || '';
+
       if (labelInsetRef.value) {
         labelInsetRef.value.textContent = labelText;
         labelInsetRef.value.hidden = !labelText || placement !== 'inset';
       }
+
       if (labelOutsideRef.value) {
         labelOutsideRef.value.textContent = labelText;
         labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
@@ -112,10 +115,12 @@ export function mountLabelSyncStandalone(
   effect(() => {
     const placement = props['label-placement'].value;
     const labelText = props.label.value || '';
+
     if (labelInsetRef.value) {
       labelInsetRef.value.textContent = labelText;
       labelInsetRef.value.hidden = !labelText || placement !== 'inset';
     }
+
     if (labelOutsideRef.value) {
       labelOutsideRef.value.textContent = labelText;
       labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
@@ -143,9 +148,12 @@ export function mountFormContextSync(
   props: FormContextSyncProps,
 ): void {
   if (!formCtx) return;
+
   let ctxDisabledActive = false;
+
   effect(() => {
     const ctxDisabled = formCtx.disabled.value;
+
     if (ctxDisabled && !ctxDisabledActive) {
       host.setAttribute('disabled', '');
       ctxDisabledActive = true;
@@ -153,10 +161,14 @@ export function mountFormContextSync(
       host.removeAttribute('disabled');
       ctxDisabledActive = false;
     }
+
     const ctxSize = formCtx.size.value;
+
     if (ctxSize && !props.size.value) host.setAttribute('size', ctxSize);
+
     if (props.variant) {
       const ctxVariant = formCtx.variant.value;
+
       if (ctxVariant && !props.variant.value) host.setAttribute('variant', ctxVariant);
     }
   });

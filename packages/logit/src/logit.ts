@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 /* -------------------- Types -------------------- */
 
 export type LogType = 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error';
@@ -34,13 +32,13 @@ export type Logger = {
   assert: (condition: boolean, ...args: unknown[]) => void;
   child: (overrides?: LogitOptions) => Logger;
   readonly config: Readonly<LogitConfig>;
-  setConfig: (opts: LogitOptions) => Logger;
   debug: (...args: unknown[]) => void;
   enabled: (type: LogLevel) => boolean;
   error: (...args: unknown[]) => void;
   group: <T>(label: string, fn: () => T, collapsed?: boolean) => T;
   info: (...args: unknown[]) => void;
   scope: (name: string) => Logger;
+  setConfig: (opts: LogitOptions) => Logger;
   success: (...args: unknown[]) => void;
   table: (data: unknown, properties?: string[]) => void;
   time: <T>(label: string, fn: () => T) => T;
@@ -50,35 +48,33 @@ export type Logger = {
 
 /* -------------------- Priority -------------------- */
 
-// biome-ignore assist/source/useSortedKeys: intentional priority order
 const PRIORITY: Record<LogLevel, number> = {
   debug: 0,
-  trace: 1,
-  info: 2,
-  success: 3,
-  warn: 4,
   error: 5,
+  info: 2,
   off: 6,
+  success: 3,
+  trace: 1,
+  warn: 4,
 };
 
 /* -------------------- Theme -------------------- */
 
-type Theme = { color: string; bg: string; border: string; icon?: string; symbol?: string };
+type Theme = { bg: string; border: string; color: string; icon?: string; symbol?: string };
 
 const isDarkMode = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
 
-// biome-ignore assist/source/useSortedKeys: grouped by concept
 const THEME: Record<LogType | 'group' | 'ns', Theme> = {
   debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '☕', symbol: '🅳' },
-  trace: { bg: '#d81b60', border: '#c2185b', color: '#fff', icon: '⛢', symbol: '🆃' },
-  info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
-  success: { bg: '#689f38', border: '#558b2f', color: '#fff', icon: '✔', symbol: '🆂' },
-  warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
   error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '✘', symbol: '🅴' },
   group: { bg: '#546e7a', border: '#455a64', color: '#fff', icon: '⚭', symbol: '🅶' },
+  info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
   ns: isDarkMode
     ? { bg: '#fafafa', border: '#c7c7c7', color: '#000' }
     : { bg: '#424242', border: '#212121', color: '#fff' },
+  success: { bg: '#689f38', border: '#558b2f', color: '#fff', icon: '✔', symbol: '🆂' },
+  trace: { bg: '#d81b60', border: '#c2185b', color: '#fff', icon: '⛢', symbol: '🆃' },
+  warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
 };
 
 const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
@@ -93,14 +89,13 @@ const IS_PROD = IS_NODE
 
 const ENV_BADGE = IS_PROD ? '🅿' : '🅳';
 
-// biome-ignore assist/source/useSortedKeys: follows LogType union order
 const LOG_METHOD: Record<LogType, 'log' | 'info' | 'warn' | 'error' | 'trace'> = {
   debug: 'log',
-  trace: 'trace',
+  error: 'error',
   info: 'info',
   success: 'log',
+  trace: 'trace',
   warn: 'warn',
-  error: 'error',
 };
 
 /**
@@ -135,18 +130,21 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
   const badge = (type: LogType | 'group'): string => {
     const theme = THEME[type];
+
     if (cfg.variant === 'text' || !theme[cfg.variant]) return type.toUpperCase();
+
     return theme[cfg.variant]!;
   };
 
   const style = (type: LogType | 'group' | 'ns', extra = ''): string => {
-    const { bg, color, border } = THEME[type];
+    const { bg, border, color } = THEME[type];
     const base = `border: 1px solid ${border}; border-radius: 4px`;
+
     switch (cfg.variant) {
-      case 'symbol':
-        return `color: ${bg}; ${base}; padding: 0 1px${extra}`;
       case 'icon':
         return `color: ${bg}; ${base}; padding: 0 3px${extra}`;
+      case 'symbol':
+        return `color: ${bg}; ${base}; padding: 0 1px${extra}`;
       default:
         return `background: ${bg}; color: ${color}; ${base}; font-weight: bold; padding: 0 3px${extra}`;
     }
@@ -154,40 +152,54 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
   const emitNode = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
     const meta = [badge(type)];
+
     if (cfg.environment) meta.push(ENV_BADGE);
+
     if (ns) meta.push(`[${ns}]`);
+
     if (stamp) meta.push(stamp);
+
     const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
+
     method(`${meta.join(' | ')} |`, ...args);
   };
 
   const emitBrowser = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
     let fmt = `%c${badge(type)}%c`;
     const parts: string[] = [style(type), ''];
+
     if (ns) {
       fmt += ` %c${ns}%c`;
       parts.push(style('ns', `; ${NS_STYLE}`), '');
     }
+
     if (cfg.environment) {
       fmt += ` %c${ENV_BADGE}%c`;
       parts.push('color: darkgray', '');
     }
+
     if (stamp) {
       fmt += ` %c${stamp}%c`;
       parts.push('color: gray', '');
     }
+
     const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
+
     method(fmt, ...parts, ...args);
   };
 
   const emit = (type: LogType, args: unknown[]): void => {
     if (!passes(type)) return;
+
     const ns = cfg.namespace;
     const stamp = cfg.timestamp ? ts() : '';
+
     if (IS_NODE) emitNode(type, ns, stamp, args);
     else emitBrowser(type, ns, stamp, args);
+
     /* remote dispatch — snapshot data now, dispatch in microtask to avoid blocking caller */
     const { handler, logLevel } = cfg.remote;
+
     if (handler && PRIORITY[logLevel] <= PRIORITY[type]) {
       const data: RemoteLogData = {
         args,
@@ -195,6 +207,7 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
         namespace: ns || undefined,
         timestamp: cfg.timestamp ? new Date().toISOString() : undefined,
       };
+
       Promise.resolve()
         .then(() => handler(type, data))
         .catch(() => {});
@@ -206,6 +219,7 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
   /* ---- child factory ---- */
   const makeChild = (overrides: LogitOptions = {}): Logger => {
     const { remote: overrideRemote, ...overrideRest } = overrides;
+
     return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } });
   };
 
@@ -214,10 +228,15 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
   const renderGroupNode = (collapsed: boolean, label: string, ns: string, stamp: string): void => {
     const fn = collapsed ? console.groupCollapsed : console.group;
     const meta = [badge('group')];
+
     if (cfg.environment) meta.push(ENV_BADGE);
+
     meta.push(label);
+
     if (ns) meta.push(`[${ns}]`);
+
     if (stamp) meta.push(stamp);
+
     fn(meta.join(' | '));
   };
 
@@ -225,24 +244,29 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
     const fn = collapsed ? console.groupCollapsed : console.group;
     let fmt = `%c${label}%c`;
     const parts: string[] = [style('group', '; margin-right: 6px; padding: 1px 3px 0'), ''];
+
     if (ns) {
       fmt += ` %c${ns}%c`;
       parts.push(style('ns', `; ${NS_STYLE}; margin-right: 6px`), '');
     }
+
     if (cfg.environment) {
       fmt += ` %c${ENV_BADGE}%c`;
       parts.push('color: darkgray; margin-right: 6px', '');
     }
+
     if (stamp) {
       fmt += ` %c${stamp}%c`;
       parts.push('color: gray; font-weight: lighter; margin-right: 6px', '');
     }
+
     fn(fmt, ...parts);
   };
 
   const renderGroup = (collapsed: boolean, label: string): void => {
     const ns = cfg.namespace;
     const stamp = cfg.timestamp ? ts() : '';
+
     if (IS_NODE) renderGroupNode(collapsed, label, ns, stamp);
     else renderGroupBrowser(collapsed, label, ns, stamp);
   };
@@ -267,13 +291,18 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
     group: <T>(label: string, fn: () => T, collapsed = false): T => {
       if (!passes('debug')) return fn();
+
       renderGroup(collapsed, label);
+
       try {
         const result = fn();
+
         if (result instanceof Promise) {
           return result.finally(() => console.groupEnd()) as T;
         }
+
         console.groupEnd();
+
         return result;
       } catch (e) {
         console.groupEnd();
@@ -287,8 +316,11 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
     setConfig: (opts: LogitOptions): Logger => {
       const { remote, ...rest } = opts;
+
       if (remote !== undefined) Object.assign(cfg.remote, remote);
+
       Object.assign(cfg, rest);
+
       return logger;
     },
     success: (...a) => emit('success', a),
@@ -299,14 +331,20 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
     time: <T>(label: string, fn: () => T): T => {
       if (!passes('debug')) return fn();
+
       const tl = timeLabel(label);
+
       console.time(tl);
+
       try {
         const result = fn();
+
         if (result instanceof Promise) {
           return result.finally(() => console.timeEnd(tl)) as T;
         }
+
         console.timeEnd(tl);
+
         return result;
       } catch (e) {
         console.timeEnd(tl);

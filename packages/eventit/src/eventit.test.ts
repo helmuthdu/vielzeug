@@ -2,8 +2,8 @@ import { createBus } from './eventit';
 import { createTestBus } from './test';
 
 type TestEvents = {
-  greet: { name: string };
   count: number;
+  greet: { name: string };
   toggle: undefined;
 };
 
@@ -14,6 +14,7 @@ describe('on', () => {
     const bus = createBus<TestEvents>();
     const a = vi.fn();
     const b = vi.fn();
+
     bus.on('count', a);
     bus.on('count', b);
     bus.emit('count', 42);
@@ -24,6 +25,7 @@ describe('on', () => {
   it('registering the same function twice is idempotent', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     bus.on('count', listener);
     bus.emit('count', 1);
@@ -35,6 +37,7 @@ describe('on', () => {
     const a = vi.fn();
     const b = vi.fn();
     const unsub = bus.on('count', a);
+
     bus.on('count', b);
     unsub();
     unsub(); // safe to call multiple times
@@ -47,6 +50,7 @@ describe('on', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const controller = new AbortController();
+
     bus.on('count', listener, controller.signal);
     bus.emit('count', 1);
     controller.abort();
@@ -59,6 +63,7 @@ describe('on', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const controller = new AbortController();
+
     controller.abort();
     bus.on('count', listener, controller.signal);
     bus.emit('count', 1);
@@ -70,6 +75,7 @@ describe('on', () => {
     const controller = new AbortController();
     const listener = vi.fn();
     const unsub = bus.on('count', listener, controller.signal);
+
     bus.emit('count', 1);
     unsub(); // manual removal — should also detach from signal
     controller.abort(); // firing signal after manual unsub must not call listener
@@ -85,6 +91,7 @@ describe('once', () => {
     const bus = createBus<TestEvents>();
     const once = vi.fn();
     const permanent = vi.fn();
+
     bus.once('count', once);
     bus.on('count', permanent);
     bus.emit('count', 1);
@@ -98,6 +105,7 @@ describe('once', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const unsub = bus.once('count', listener);
+
     unsub();
     bus.emit('count', 1);
     expect(listener).not.toHaveBeenCalled();
@@ -107,6 +115,7 @@ describe('once', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
     const controller = new AbortController();
+
     bus.once('count', listener, controller.signal);
     controller.abort();
     bus.emit('count', 1);
@@ -120,6 +129,7 @@ describe('emit', () => {
   it('is a no-op with no registered listeners; void events require no argument', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('toggle', listener);
     expect(() => bus.emit('count', 1)).not.toThrow(); // no listeners, no throw
     bus.emit('toggle'); // no payload argument needed or allowed
@@ -130,6 +140,7 @@ describe('emit', () => {
     const bus = createBus<TestEvents>();
     const order: number[] = [];
     const onGreet = vi.fn();
+
     bus.on('count', () => order.push(1));
     bus.on('count', () => order.push(2));
     bus.on('count', () => order.push(3));
@@ -142,6 +153,7 @@ describe('emit', () => {
   it('snapshots listeners at call time — additions during emit do not run in the same cycle', () => {
     const bus = createBus<TestEvents>();
     const called: string[] = [];
+
     bus.on('count', () => {
       called.push('a');
       bus.on('count', () => called.push('late'));
@@ -158,12 +170,14 @@ describe('emit', () => {
     const after = vi.fn();
 
     const strict = createBus<TestEvents>();
+
     strict.on('count', () => {
       throw new Error('boom');
     });
     expect(() => strict.emit('count', 1)).toThrow('boom');
 
     const resilient = createBus<TestEvents>({ onError });
+
     resilient.on('count', () => {
       throw new Error('boom');
     });
@@ -181,8 +195,11 @@ describe('wait', () => {
   it('resolves typed payload from the first emit and is one-shot', async () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
+
     const p = bus.wait('count');
+
     bus.emit('count', 1);
     bus.emit('count', 2);
     await expect(p).resolves.toBe(1);
@@ -192,12 +209,14 @@ describe('wait', () => {
   it('resolves with undefined for void events', async () => {
     const bus = createBus<TestEvents>();
     const p = bus.wait('toggle');
+
     bus.emit('toggle');
     await expect(p).resolves.toBeUndefined();
   });
 
   it('rejects immediately when called on an already-disposed bus', async () => {
     const bus = createBus<TestEvents>();
+
     bus.dispose();
     await expect(bus.wait('count')).rejects.toThrow('Bus is disposed');
   });
@@ -205,6 +224,7 @@ describe('wait', () => {
   it('rejects a pending wait when the bus is disposed mid-flight', async () => {
     const bus = createBus<TestEvents>();
     const p = bus.wait('count');
+
     bus.dispose();
     await expect(p).rejects.toThrow('Bus is disposed');
   });
@@ -212,6 +232,7 @@ describe('wait', () => {
   it('rejects immediately when signal is already aborted', async () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
+
     controller.abort(new Error('cancelled'));
     await expect(bus.wait('count', controller.signal)).rejects.toThrow('cancelled');
   });
@@ -220,6 +241,7 @@ describe('wait', () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
     const p = bus.wait('count', controller.signal);
+
     controller.abort(new Error('cancelled'));
     await expect(p).rejects.toThrow('cancelled');
   });
@@ -228,6 +250,7 @@ describe('wait', () => {
     const bus = createBus<TestEvents>();
     const controller = new AbortController();
     const p = bus.wait('count', controller.signal);
+
     bus.emit('count', 7);
     await expect(p).resolves.toBe(7);
     expect(() => controller.abort()).not.toThrow(); // no double-reject
@@ -240,6 +263,7 @@ describe('dispose', () => {
   it('blocks all operations; disposed reflects the state correctly', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     expect(bus.disposed).toBe(false);
 
@@ -256,6 +280,7 @@ describe('dispose', () => {
     const bus = createBus<TestEvents>();
     const p1 = bus.wait('count');
     const p2 = bus.wait('greet');
+
     bus.dispose();
     await expect(p1).rejects.toThrow('Bus is disposed');
     await expect(p2).rejects.toThrow('Bus is disposed');
@@ -263,6 +288,7 @@ describe('dispose', () => {
 
   it('is idempotent — safe to call multiple times', () => {
     const bus = createBus<TestEvents>();
+
     bus.on('count', vi.fn());
     expect(() => {
       bus.dispose();
@@ -275,6 +301,7 @@ describe('dispose', () => {
   it('[Symbol.dispose] is an alias for dispose()', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     bus[Symbol.dispose]();
     expect(bus.disposed).toBe(true);
@@ -292,10 +319,12 @@ describe('events', () => {
 
     // Pull-based: request next value first, then emit
     const p1 = gen.next();
+
     bus.emit('count', 1);
     expect((await p1).value).toBe(1);
 
     const p2 = gen.next();
+
     bus.emit('count', 2);
     expect((await p2).value).toBe(2);
 
@@ -312,6 +341,7 @@ describe('events', () => {
         // dispose rejects the pending wait — iterator terminates
       }
     })();
+
     bus.emit('count', 10);
     await new Promise((r) => setTimeout(r, 0));
     bus.dispose();
@@ -325,6 +355,7 @@ describe('events', () => {
 describe('createTestBus', () => {
   it('records typed payloads per event; returns empty array before any emission', () => {
     const bus = createTestBus<TestEvents>();
+
     expect(bus.emitted('count')).toEqual([]);
     bus.emit('count', 1);
     bus.emit('count', 2);
@@ -336,6 +367,7 @@ describe('createTestBus', () => {
   it('dispatches events to registered listeners as a normal bus', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     bus.emit('count', 42);
     expect(listener).toHaveBeenCalledWith(42);
@@ -343,8 +375,11 @@ describe('createTestBus', () => {
 
   it('emitted() returns a snapshot — mutations to the result do not affect records', () => {
     const bus = createTestBus<TestEvents>();
+
     bus.emit('count', 1);
+
     const snap = bus.emitted('count');
+
     snap.push(99 as never);
     bus.emit('count', 2);
     expect(bus.emitted('count')).toEqual([1, 2]); // 99 not leaked back
@@ -353,6 +388,7 @@ describe('createTestBus', () => {
   it('reset clears records without affecting listeners', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     bus.emit('count', 1);
     bus.reset();
@@ -365,6 +401,7 @@ describe('createTestBus', () => {
   it('dispose clears records and bus; disposed getter reflects the underlying state', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
+
     bus.on('count', listener);
     bus.emit('count', 1);
     expect(bus.disposed).toBe(false);
@@ -377,6 +414,7 @@ describe('createTestBus', () => {
 
   it('[Symbol.dispose] clears records and disposes the bus', () => {
     const bus = createTestBus<TestEvents>();
+
     bus.emit('count', 1);
     bus[Symbol.dispose]();
     expect(bus.disposed).toBe(true);

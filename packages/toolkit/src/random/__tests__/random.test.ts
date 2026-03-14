@@ -8,6 +8,7 @@ describe('random', () => {
     const min = 1;
     const max = 10;
     const result = random(min, max);
+
     expect(result).toBeGreaterThanOrEqual(min);
     expect(result).toBeLessThanOrEqual(max);
   });
@@ -15,6 +16,7 @@ describe('random', () => {
   it('should throw an error if min is greater than max', () => {
     const min = 10;
     const max = 1;
+
     expect(() => random(min, max)).toThrowError('Minimum value must be less than maximum value');
   });
 
@@ -22,6 +24,7 @@ describe('random', () => {
     const min = 5;
     const max = 5;
     const result = random(min, max);
+
     expect(result).toBe(min);
   });
 
@@ -29,6 +32,7 @@ describe('random', () => {
     const min = 1;
     const max = 100;
     const result = random(min, max);
+
     expect(Number.isInteger(result)).toBe(true);
   });
 });

@@ -6,11 +6,9 @@ type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string
 // #region ParseJSONOptions
 type ParseJSONOptions<T> = {
   defaultValue?: T;
-  // biome-ignore lint/suspicious/noExplicitAny: -
-  reviver?: (key: string, value: any) => any;
-  // biome-ignore lint/suspicious/noExplicitAny: -
-  validator?: (value: any) => boolean;
   onError?: (err: unknown) => void;
+  reviver?: (key: string, value: any) => any;
+  validator?: (value: any) => boolean;
 };
 // #endregion ParseJSONOptions
 
@@ -35,7 +33,7 @@ type ParseJSONOptions<T> = {
  * @returns The parsed object if successful, otherwise the default value.
  */
 export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSONOptions<T> = {}): T | undefined {
-  const { defaultValue, reviver, validator, onError } = options;
+  const { defaultValue, onError, reviver, validator } = options;
 
   if (!isString(json)) return isNil(json) ? defaultValue : (json as T);
 
@@ -49,6 +47,7 @@ export function parseJSON<T extends JSONValue>(json: unknown, options: ParseJSON
     return parsed ?? defaultValue;
   } catch (err) {
     onError?.(err);
+
     return defaultValue;
   }
 }

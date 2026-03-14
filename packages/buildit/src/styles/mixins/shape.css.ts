@@ -63,14 +63,31 @@ export const paddingMixin = css`
  * ```
  */
 export const roundedVariantMixin = css`
-  :host([rounded='none']) { --_radius: var(--rounded-none); }
-  :host([rounded='sm']) { --_radius: var(--rounded-sm); }
-  :host([rounded='md']) { --_radius: var(--rounded-md); }
-  :host([rounded='lg']) { --_radius: var(--rounded-lg); }
-  :host([rounded='xl']) { --_radius: var(--rounded-xl); }
-  :host([rounded='2xl']) { --_radius: var(--rounded-2xl); }
-  :host([rounded='3xl']) { --_radius: var(--rounded-3xl); }
-  :host([rounded='full']), :host([rounded='']) { --_radius: var(--rounded-full); }
+  :host([rounded='none']) {
+    --_radius: var(--rounded-none);
+  }
+  :host([rounded='sm']) {
+    --_radius: var(--rounded-sm);
+  }
+  :host([rounded='md']) {
+    --_radius: var(--rounded-md);
+  }
+  :host([rounded='lg']) {
+    --_radius: var(--rounded-lg);
+  }
+  :host([rounded='xl']) {
+    --_radius: var(--rounded-xl);
+  }
+  :host([rounded='2xl']) {
+    --_radius: var(--rounded-2xl);
+  }
+  :host([rounded='3xl']) {
+    --_radius: var(--rounded-3xl);
+  }
+  :host([rounded='full']),
+  :host([rounded='']) {
+    --_radius: var(--rounded-full);
+  }
 `;
 
 // ── Size Variants ─────────────────────────────────────────────────────────────
@@ -107,30 +124,30 @@ export const roundedVariantMixin = css`
  * ```
  */
 export const sizeVariantMixin = (config?: {
+  /** Large size configuration */
+  lg?: {
+    [key: string]: string | undefined;
+    fontSize?: string;
+    gap?: string;
+    size?: string;
+  };
+  /** Medium size configuration (default) */
+  md?: {
+    [key: string]: string | undefined;
+    fontSize?: string;
+    gap?: string;
+    size?: string;
+  };
   /** Small size configuration */
   sm?: {
-    /** Element size (width/height) - maps to --_size */
-    size?: string;
+    /** Custom properties (must start with --) */
+    [key: string]: string | undefined;
     /** Font size - maps to --_font-size */
     fontSize?: string;
     /** Gap between elements - maps to gap property */
     gap?: string;
-    /** Custom properties (must start with --) */
-    [key: string]: string | undefined;
-  };
-  /** Medium size configuration (default) */
-  md?: {
+    /** Element size (width/height) - maps to --_size */
     size?: string;
-    fontSize?: string;
-    gap?: string;
-    [key: string]: string | undefined;
-  };
-  /** Large size configuration */
-  lg?: {
-    size?: string;
-    fontSize?: string;
-    gap?: string;
-    [key: string]: string | undefined;
   };
 }) => {
   const defaults = {
@@ -174,6 +191,7 @@ export const sizeVariantMixin = (config?: {
         // Convert camelCase to --_kebab-case custom property
         // Examples: gap → --_gap, fontSize → --_font-size, lineHeight → --_line-height
         const customProperty = `--_${camelToKebab(key)}`;
+
         return `${customProperty}: ${value};`;
       })
       .filter(Boolean)

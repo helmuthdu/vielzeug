@@ -90,55 +90,121 @@ const styles = /* css */ css`
      Size Variants
      ======================================== */
 
-  :host([size='xs']) { --_size: var(--text-xs); }
-  :host([size='sm']) { --_size: var(--text-sm); }
-  :host([size='md']) { --_size: var(--text-base); }
-  :host([size='lg']) { --_size: var(--text-lg); }
-  :host([size='xl']) { --_size: var(--text-xl); }
-  :host([size='2xl']) { --_size: var(--text-2xl); }
-  :host([size='3xl']) { --_size: var(--text-3xl); }
-  :host([size='4xl']) { --_size: var(--text-4xl); }
-  :host([size='5xl']) { --_size: var(--text-5xl); }
-  :host([size='6xl']) { --_size: var(--text-6xl); }
-  :host([size='7xl']) { --_size: var(--text-7xl); }
-  :host([size='8xl']) { --_size: var(--text-8xl); }
-  :host([size='9xl']) { --_size: var(--text-9xl); }
+  :host([size='xs']) {
+    --_size: var(--text-xs);
+  }
+  :host([size='sm']) {
+    --_size: var(--text-sm);
+  }
+  :host([size='md']) {
+    --_size: var(--text-base);
+  }
+  :host([size='lg']) {
+    --_size: var(--text-lg);
+  }
+  :host([size='xl']) {
+    --_size: var(--text-xl);
+  }
+  :host([size='2xl']) {
+    --_size: var(--text-2xl);
+  }
+  :host([size='3xl']) {
+    --_size: var(--text-3xl);
+  }
+  :host([size='4xl']) {
+    --_size: var(--text-4xl);
+  }
+  :host([size='5xl']) {
+    --_size: var(--text-5xl);
+  }
+  :host([size='6xl']) {
+    --_size: var(--text-6xl);
+  }
+  :host([size='7xl']) {
+    --_size: var(--text-7xl);
+  }
+  :host([size='8xl']) {
+    --_size: var(--text-8xl);
+  }
+  :host([size='9xl']) {
+    --_size: var(--text-9xl);
+  }
 
   /* ========================================
      Weight Variants
      ======================================== */
 
-  :host([weight='normal']) { --_weight: var(--font-normal); }
-  :host([weight='medium']) { --_weight: var(--font-medium); }
-  :host([weight='semibold']) { --_weight: var(--font-semibold); }
-  :host([weight='bold']) { --_weight: var(--font-bold); }
+  :host([weight='normal']) {
+    --_weight: var(--font-normal);
+  }
+  :host([weight='medium']) {
+    --_weight: var(--font-medium);
+  }
+  :host([weight='semibold']) {
+    --_weight: var(--font-semibold);
+  }
+  :host([weight='bold']) {
+    --_weight: var(--font-bold);
+  }
 
   /* ========================================
      Color Variants
      ======================================== */
 
-  :host([color='primary']) { --_color: var(--color-primary); }
-  :host([color='secondary']) { --_color: var(--color-secondary); }
-  :host([color='info']) { --_color: var(--color-info); }
-  :host([color='success']) { --_color: var(--color-success); }
-  :host([color='warning']) { --_color: var(--color-warning); }
-  :host([color='error']) { --_color: var(--color-error); }
-  :host([color='heading']) { --_color: var(--text-color-heading); }
-  :host([color='body']) { --_color: var(--text-color-body); }
-  :host([color='muted']) { --_color: var(--text-color-secondary); }
-  :host([color='disabled']) { --_color: var(--text-color-disabled); }
-  :host([color='contrast']) { --_color: var(--text-color-contrast); }
+  :host([color='primary']) {
+    --_color: var(--color-primary);
+  }
+  :host([color='secondary']) {
+    --_color: var(--color-secondary);
+  }
+  :host([color='info']) {
+    --_color: var(--color-info);
+  }
+  :host([color='success']) {
+    --_color: var(--color-success);
+  }
+  :host([color='warning']) {
+    --_color: var(--color-warning);
+  }
+  :host([color='error']) {
+    --_color: var(--color-error);
+  }
+  :host([color='heading']) {
+    --_color: var(--text-color-heading);
+  }
+  :host([color='body']) {
+    --_color: var(--text-color-body);
+  }
+  :host([color='muted']) {
+    --_color: var(--text-color-secondary);
+  }
+  :host([color='disabled']) {
+    --_color: var(--text-color-disabled);
+  }
+  :host([color='contrast']) {
+    --_color: var(--text-color-contrast);
+  }
 
   @layer buildit.utilities {
     /* ========================================
        Alignment
        ======================================== */
 
-    :host([align]) { display: block; }
-    :host([align='left']) { text-align: start; }
-    :host([align='center']) { text-align: center; }
-    :host([align='right']) { text-align: end; }
-    :host([align='justify']) { text-align: justify; }
+    :host([align]) {
+      display: block;
+    }
+    :host([align='left']) {
+      text-align: start;
+    }
+    :host([align='center']) {
+      text-align: center;
+    }
+    :host([align='right']) {
+      text-align: end;
+    }
+    :host([align='justify']) {
+      text-align: justify;
+    }
 
     /* ========================================
        Truncate (single-line)
@@ -255,6 +321,7 @@ export const TAG = define('bit-text', ({ host }) => {
     props.as,
     (tag) => {
       const match = /^h([1-6])$/.exec(tag ?? '');
+
       if (match) {
         host.setAttribute('role', 'heading');
         host.setAttribute('aria-level', match[1]);

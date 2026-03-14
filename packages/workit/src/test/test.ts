@@ -1,4 +1,5 @@
 import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../workit';
+
 import { TerminatedError } from '../workit';
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
@@ -24,16 +25,21 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
       if (status === 'terminated') {
         return Promise.reject(new TerminatedError());
       }
+
       status = 'running';
+
       return Promise.resolve()
         .then(() => fn(input))
         .then((output) => {
           calls.push({ input, output });
+
           if (status !== 'terminated') status = 'idle';
+
           return output;
         })
         .catch((err: unknown) => {
           if (status !== 'terminated') status = 'idle';
+
           throw err;
         });
     },

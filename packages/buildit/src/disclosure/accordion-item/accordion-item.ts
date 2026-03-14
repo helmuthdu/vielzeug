@@ -12,8 +12,10 @@ import {
   syncContextProps,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin } from '../../styles';
+
 import type { AddEventListeners, BitAccordionItemEvents, ComponentSize, VisualVariant } from '../../types';
+
+import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';
 
 const styles = /* css */ css`
@@ -355,6 +357,7 @@ export const TAG = define('bit-accordion-item', ({ host }) => {
 
   // Inherit size/variant from a parent bit-accordion when present.
   const accordionCtx = inject(ACCORDION_CTX, undefined);
+
   syncContextProps(accordionCtx, props, ['size', 'variant']);
 
   const titleId = 'accordion-item-title';
@@ -367,6 +370,7 @@ export const TAG = define('bit-accordion-item', ({ host }) => {
 
   const handleToggle = () => {
     const isOpen = detailsRef.value?.open ?? false;
+
     // Notify accordion parent for single-selection management
     if (isOpen && !host.hasAttribute('expanded')) {
       host.setAttribute('expanded', '');
@@ -380,6 +384,7 @@ export const TAG = define('bit-accordion-item', ({ host }) => {
   onMount(() => {
     const details = detailsRef.value;
     const summary = summaryRef.value;
+
     if (!details || !summary) return;
 
     // Sync details.open when expanded prop changes (needs live DOM refs)

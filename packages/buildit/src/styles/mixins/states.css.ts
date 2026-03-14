@@ -85,8 +85,7 @@ export const disabledLoadingMixin = (selector = '') => {
   const sel = selector ? ` ${selector}` : '';
 
   return css`
-    :host([disabled])${sel},
-    :host([loading])${sel} {
+    :host([disabled])${sel}, :host([loading])${sel} {
       opacity: 0.5;
       cursor: not-allowed;
       pointer-events: none;

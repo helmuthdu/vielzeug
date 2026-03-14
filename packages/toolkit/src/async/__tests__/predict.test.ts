@@ -5,6 +5,7 @@ describe('predict', () => {
     const mockFn = vi.fn((_signal: AbortSignal) => new Promise((resolve) => setTimeout(() => resolve('success'), 100)));
 
     const result = await predict(mockFn, { timeout: 500 });
+
     expect(result).toBe('success');
     expect(mockFn).toHaveBeenCalled();
   });

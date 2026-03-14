@@ -30,10 +30,13 @@ describe('bit-tabs', () => {
 
     it('emits change when a different tab is clicked', async () => {
       fixture = await mount('bit-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const tabs = fixture.element.querySelectorAll('bit-tab-item');
+
       tabs[1].dispatchEvent(new CustomEvent('tab-click', { bubbles: true, composed: true }));
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -83,9 +86,12 @@ describe('bit-tabs', () => {
       });
 
       const lazyPanel = fixture.element.querySelectorAll('bit-tab-panel')[1];
+
       await fixture.flush();
       await new Promise((r) => setTimeout(r, 20));
+
       const panelAfter = lazyPanel.shadowRoot?.querySelector('[role="tabpanel"]');
+
       expect(panelAfter?.getAttribute('aria-hidden')).toBe('false');
       expect(panelAfter?.querySelector('slot')).toBeTruthy();
     });

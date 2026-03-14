@@ -5,6 +5,7 @@
  */
 
 import type { DefineOptions, SetupContext, SetupResult } from '../';
+
 import { define } from '../';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -92,8 +93,10 @@ export function flush(): Promise<void> {
       Promise.resolve().then(() => {
         if (++ticks < 10) return drain();
       });
+
     return drain();
   };
+
   return drainMicrotasks().then(
     () =>
       new Promise<void>((r) => (typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => r()) : r())),
@@ -138,14 +141,16 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   tagOrSetup: string | ((ctx: SetupContext) => SetupResult),
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
-  const { props = {}, attrs = {}, html, container = document.body, defineOptions } = options;
+  const { attrs = {}, container = document.body, defineOptions, html, props = {} } = options;
 
   const tagName =
     typeof tagOrSetup === 'function' ? define(`trial-${++_tagCounter}`, tagOrSetup, defineOptions) : tagOrSetup;
   const element = document.createElement(tagName) as T;
 
   if (html) element.innerHTML = html;
+
   if (Object.keys(props).length) Object.assign(element, props);
+
   for (const [name, value] of Object.entries(attrs)) applyAttr(element, name, value);
 
   container.appendChild(element);
@@ -170,7 +175,9 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 
     destroy() {
       element.remove();
+
       const i = _mounted.indexOf(element);
+
       if (i !== -1) _mounted.splice(i, 1);
     },
     element,
@@ -217,6 +224,7 @@ function queryByText<E extends Element = Element>(
   for (const el of root.querySelectorAll<E>(selector)) {
     if (el.textContent?.trim() === text) return el;
   }
+
   return null;
 }
 
@@ -343,6 +351,7 @@ export const user = {
 
   async select(el: HTMLSelectElement, value: string | string[]): Promise<void> {
     const values = Array.isArray(value) ? value : [value];
+
     for (const opt of el.options) opt.selected = values.includes(opt.value);
     fire.change(el);
     await tick();
@@ -384,7 +393,7 @@ export const user = {
  */
 export async function waitFor(
   fn: () => unknown,
-  { timeout = 1000, interval = 50, message }: WaitOptions = {},
+  { interval = 50, message, timeout = 1000 }: WaitOptions = {},
 ): Promise<void> {
   const deadline = Date.now() + timeout;
   let lastError: unknown;
@@ -392,25 +401,30 @@ export async function waitFor(
   const attempt = async (): Promise<boolean> => {
     try {
       const result = await fn();
+
       return result === undefined || !!result;
     } catch (e) {
       lastError = e;
+
       return false;
     }
   };
 
   while (Date.now() < deadline) {
     if (await attempt()) return;
+
     await new Promise((r) => setTimeout(r, interval));
   }
 
   if (await attempt()) return;
 
   const base = message ?? `waitFor timed out after ${timeout}ms`;
+
   if (lastError instanceof Error) {
     lastError.message = `${base}\n${lastError.message}`;
     throw lastError;
   }
+
   throw new Error(lastError != null ? `${base}\nCause: ${lastError}` : base);
 }
 
@@ -425,6 +439,7 @@ export async function waitFor(
 export function waitForEvent<T extends Event = Event>(element: Element, name: string, timeout = 1000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`waitForEvent: "${name}" timed out after ${timeout}ms`)), timeout);
+
     element.addEventListener(
       name,
       (e) => {

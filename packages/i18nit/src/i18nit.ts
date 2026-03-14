@@ -55,32 +55,32 @@ export type LocaleChangeReason = 'locale-change' | 'catalog-update';
 export type LocaleChangeEvent = { locale: Locale; reason: LocaleChangeReason };
 
 export type I18nOptions<T extends Messages = Messages> = {
-  locale?: Locale;
   fallback?: Locale | Locale[];
+  loaders?: Record<Locale, Loader>;
+  locale?: Locale;
   /**
    * Static message bundles. Each locale can be a full or partial catalog.
    * For a partial secondary locale, annotate it with `DeepPartialMessages<M>` to get compile-time
    * checks that the subset matches the primary locale's shape.
    */
   messages?: Record<string, T>;
-  loaders?: Record<Locale, Loader>;
-  onMissing?: (key: string, locale: Locale) => string | undefined;
   /** Called for subscriber errors and loader failures. Defaults to `console.error`/`console.warn`. */
   onError?: (err: unknown, context: 'subscriber' | 'loader') => void;
+  onMissing?: (key: string, locale: Locale) => string | undefined;
 };
 
 export type BoundI18n<T extends Messages = Messages> = {
-  readonly locale: Locale;
-  t(key: [TranslationKey<T>] extends [never] ? string : TranslationKey<T> | (string & {}), vars?: Vars): string;
+  currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>): string;
+  date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   has(key: string): boolean;
   /** Like `has()`, but only checks the exact locale without walking the fallback chain. */
   hasOwn(key: string): boolean;
-  number(value: number, options?: Intl.NumberFormatOptions): string;
-  date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   list(items: unknown[], type?: 'and' | 'or'): string;
+  readonly locale: Locale;
+  number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
-  currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>): string;
   scope<K extends keyof T & string>(ns: K): T[K] extends Messages ? BoundI18n<T[K]> : BoundI18n<Messages>;
+  t(key: [TranslationKey<T>] extends [never] ? string : TranslationKey<T> | (string & {}), vars?: Vars): string;
   withLocale(locale: Locale): BoundI18n<T>;
 };
 
@@ -99,6 +99,7 @@ function resolvePath(obj: Record<string, unknown>, path: string): unknown {
 
   for (const part of parts) {
     if (value == null || typeof value !== 'object') return undefined;
+
     value = (value as Record<string, unknown>)[part];
   }
 
@@ -109,10 +110,12 @@ function resolvePath(obj: Record<string, unknown>, path: string): unknown {
 
 function intlFmt<F extends object>(cache: Map<string, F>, key: string, build: () => F): F {
   let fmt = cache.get(key);
+
   if (!fmt) {
     fmt = build();
     cache.set(key, fmt);
   }
+
   return fmt;
 }
 
@@ -126,8 +129,11 @@ const PLURAL_FORMS = new Set<string>(['zero', 'one', 'two', 'few', 'many', 'othe
 
 function isMessageValue(value: unknown): value is MessageValue {
   if (typeof value === 'string') return true;
+
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
   const obj = value as Record<string, unknown>;
+
   return (
     'other' in obj &&
     Object.keys(obj).every((k) => PLURAL_FORMS.has(k)) &&
@@ -137,14 +143,17 @@ function isMessageValue(value: unknown): value is MessageValue {
 
 function deepMerge(target: Messages, source: Messages): Messages {
   const result = { ...target };
+
   for (const [key, val] of Object.entries(source)) {
     const existing = result[key];
+
     if (!isMessageValue(val) && !isMessageValue(existing) && typeof existing === 'object' && existing !== null) {
       result[key] = deepMerge(existing as Messages, val as Messages);
     } else {
       result[key] = val;
     }
   }
+
   return result;
 }
 
@@ -171,17 +180,19 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   readonly #dateFormatCache = new Map<string, Intl.DateTimeFormat>();
   readonly #relativeTimeFormatCache = new Map<string, Intl.RelativeTimeFormat>();
 
-  constructor({ locale = 'en', fallback, messages, loaders, onMissing, onError }: I18nOptions<T> = {}) {
+  constructor({ fallback, loaders, locale = 'en', messages, onError, onMissing }: I18nOptions<T> = {}) {
     this.#locale = locale;
     this.#fallbacks = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
     this.#onMissing = onMissing;
     this.#onError = onError;
+
     if (messages) {
       for (const [l, m] of Object.entries(messages)) {
         // Deep-clone at init so external mutations to the source object can't corrupt the catalog.
         this.#catalogs.set(l, structuredClone(m) as Messages);
       }
     }
+
     if (loaders) for (const [l, fn] of Object.entries(loaders)) this.#loaders.set(l, fn);
   }
 
@@ -193,17 +204,20 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   get locales(): Locale[] {
     this.#localesCache ??= [...this.#catalogs.keys()];
+
     return this.#localesCache;
   }
 
   set locale(value: Locale) {
     if (this.#locale === value) return;
+
     this.#locale = value;
     this.#notify('locale-change');
   }
 
   async setLocale(locale: Locale): Promise<void> {
     if (locale === this.#locale) return;
+
     await this.load(locale);
     this.locale = locale;
   }
@@ -213,8 +227,10 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   /** Deep-merges messages into an existing locale catalog. */
   add(locale: Locale, messages: Messages): void {
     const existing = this.#catalogs.get(locale) ?? {};
+
     this.#catalogs.set(locale, deepMerge(existing, messages));
     this.#localesCache = null;
+
     if (this.#getLocaleChain(this.#locale).includes(locale)) this.#notify('catalog-update');
   }
 
@@ -222,6 +238,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   replace(locale: Locale, messages: Messages): void {
     this.#catalogs.set(locale, structuredClone(messages));
     this.#localesCache = null;
+
     if (this.#getLocaleChain(this.#locale).includes(locale)) this.#notify('catalog-update');
   }
 
@@ -232,8 +249,11 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   /** Like `has()`, but only checks the exact locale without walking the fallback chain. */
   hasOwn(key: string, locale?: Locale): boolean {
     const catalog = this.#catalogs.get(locale ?? this.#locale);
+
     if (!catalog) return false;
+
     const value = resolvePath(catalog, key);
+
     return value !== undefined && isMessageValue(value);
   }
 
@@ -255,6 +275,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   /** Returns the locale keys for which a loader has been registered. */
   get loadableLocales(): Locale[] {
     this.#loadersCache ??= [...this.#loaders.keys()];
+
     return this.#loadersCache;
   }
 
@@ -315,6 +336,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   subscribe(listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe {
     this.#subscribers.add(listener);
+
     if (immediate) {
       try {
         listener({ locale: this.#locale, reason: 'locale-change' });
@@ -322,6 +344,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
         this.#handleError(err, 'subscriber');
       }
     }
+
     return () => this.#subscribers.delete(listener);
   }
 
@@ -345,6 +368,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   #makeBound(locale: Locale | null, prefix?: string): BoundI18n<Messages> {
     const loc = (): Locale => locale ?? this.#locale;
+
     return {
       currency: (value, cur, options) => this.#number(value, { ...options, currency: cur, style: 'currency' }, loc()),
       date: (value, options) => this.#date(value, options, loc()),
@@ -374,6 +398,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   #notify(reason: LocaleChangeReason): void {
     const event: LocaleChangeEvent = { locale: this.#locale, reason };
+
     for (const listener of this.#subscribers) {
       try {
         listener(event);
@@ -386,41 +411,58 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   #findMessage(key: string, locale: Locale): MessageValue | undefined {
     for (const loc of this.#getLocaleChain(locale)) {
       const messages = this.#catalogs.get(loc);
+
       if (!messages) continue;
+
       const value = resolvePath(messages, key);
+
       if (value !== undefined && isMessageValue(value)) return value;
     }
+
     return undefined;
   }
 
   #getLocaleChain(locale: Locale): Locale[] {
     const cached = this.#chainCache.get(locale);
+
     if (cached) return cached;
+
     const seen = new Set<Locale>();
     const push = (l: Locale) => {
       seen.add(l);
+
       const lang = l.split('-')[0];
+
       if (lang !== l) seen.add(lang);
     };
+
     push(locale);
     for (const fallback of this.#fallbacks) push(fallback);
+
     const chain = [...seen];
+
     this.#chainCache.set(locale, chain);
+
     return chain;
   }
 
   #translate(key: string, vars: Vars | undefined, locale: Locale): string {
     const message = this.#findMessage(key, locale);
+
     if (message === undefined) return this.#onMissing?.(key, locale) ?? key;
+
     if (typeof message === 'string') return this.#interpolate(message, vars ?? {}, locale);
+
     const v = vars ?? {};
     const count = Number(v.count ?? 0);
     const form = count === 0 && message.zero !== undefined ? 'zero' : this.#getPluralForm(locale, count);
+
     return this.#interpolate(message[form] ?? message.other, v, locale);
   }
 
   #getPluralForm(locale: Locale, count: number): PluralForm {
     const n = Math.floor(Math.abs(count));
+
     try {
       return intlFmt(this.#pluralRulesCache, locale, () => new Intl.PluralRules(locale)).select(n) as PluralForm;
     } catch {
@@ -430,8 +472,10 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   #formatList(items: unknown[], locale: string, type: 'and' | 'or'): string {
     if (items.length === 0) return '';
+
     const stringItems = items.map(String);
     const intlType = type === 'and' ? 'conjunction' : 'disjunction';
+
     try {
       return intlFmt(
         this.#listFormatCache,
@@ -441,19 +485,26 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     } catch {
       // Fallback for environments without Intl.ListFormat
       if (stringItems.length === 1) return stringItems[0];
+
       if (stringItems.length === 2) return `${stringItems[0]} ${type} ${stringItems[1]}`;
+
       return `${stringItems.slice(0, -1).join(', ')} ${type} ${stringItems.at(-1)}`;
     }
   }
 
   #resolveToken(value: unknown, separator: string | undefined, locale: string): string {
     if (value == null) return '';
+
     if (Array.isArray(value)) {
       if (separator === 'and') return this.#formatList(value, locale, 'and');
+
       if (separator === 'or') return this.#formatList(value, locale, 'or');
+
       if (separator !== undefined) return value.map(String).join(separator);
+
       return value.map(String).join(', ');
     }
+
     if (typeof value === 'number') {
       try {
         return intlFmt(this.#numberFormatCache, locale, () => new Intl.NumberFormat(locale)).format(value);
@@ -461,6 +512,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
         return String(value);
       }
     }
+
     return String(value);
   }
 
@@ -473,6 +525,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
    */
   #interpolate(template: string, vars: Vars, locale: string): string {
     if (!template.includes('{')) return template;
+
     return template.replace(
       /\{([\p{ID_Continue}\-.[\]]+)(?:\|([^}]+))?\}/gu,
       (_match, key: string, separator?: string) => this.#resolveToken(resolvePath(vars, key), separator, locale),
@@ -493,6 +546,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   #date(value: Date | number, options: Intl.DateTimeFormatOptions | undefined, locale: Locale): string {
     const d = typeof value === 'number' ? new Date(value) : value;
+
     try {
       return intlFmt(
         this.#dateFormatCache,
@@ -523,14 +577,17 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   #loadOne(locale: Locale): Promise<void> {
     if (this.#loading.has(locale)) return this.#loading.get(locale)!;
+
     if (this.#catalogs.has(locale)) return Promise.resolve();
 
     const loader = this.#loaders.get(locale);
+
     if (!loader) return Promise.resolve();
 
     const promise = (async () => {
       try {
         const messages = await loader(locale);
+
         this.add(locale, messages);
       } catch (error) {
         this.#handleError(error, 'loader');
@@ -541,6 +598,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     })();
 
     this.#loading.set(locale, promise);
+
     return promise;
   }
 }

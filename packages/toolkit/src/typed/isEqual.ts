@@ -23,7 +23,6 @@ export function isEqual(a: unknown, b: unknown): boolean {
   return safeIsEqual(a, b, new WeakMap());
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
 function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): boolean {
   // Check for strict equality (handles primitives and references)
   if (a === b) return true;
@@ -36,11 +35,13 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
   if (visited.has(a as object)) {
     return visited.get(a as object) === b;
   }
+
   visited.set(a as object, b as object);
 
   // Array comparison
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+
     return a.every((item, idx) => safeIsEqual(item, b[idx], visited));
   }
 
@@ -52,18 +53,22 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
   // Map comparison
   if (a instanceof Map && b instanceof Map) {
     if (a.size !== b.size) return false;
+
     for (const [k, v] of a) {
       if (!b.has(k) || !safeIsEqual(v, b.get(k), visited)) return false;
     }
+
     return true;
   }
 
   // Set comparison
   if (a instanceof Set && b instanceof Set) {
     if (a.size !== b.size) return false;
+
     for (const v of a) {
       if (![...b].some((bv) => safeIsEqual(v, bv, visited))) return false;
     }
+
     return true;
   }
 

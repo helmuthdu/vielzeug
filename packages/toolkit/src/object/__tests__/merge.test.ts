@@ -75,7 +75,6 @@ describe('merge', () => {
     const pollutedObject = JSON.parse('{ "__proto__": { "polluted": "yes" } }');
     const safeObject = merge('deep', {}, pollutedObject);
 
-    // biome-ignore lint/suspicious/noExplicitAny: -
     expect(({} as any).polluted).toBeUndefined();
     expect(safeObject).not.toHaveProperty('__proto__');
   });

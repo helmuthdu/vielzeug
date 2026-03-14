@@ -15,10 +15,11 @@
  * cleanup();
  */
 export function createTestContainer(): {
-  container: HTMLElement;
   cleanup: () => void;
+  container: HTMLElement;
 } {
   const container = document.createElement('div');
+
   container.setAttribute('data-testid', 'test-container');
   document.body.appendChild(container);
 
@@ -41,6 +42,7 @@ export function createTestContainer(): {
 export async function attach<T extends HTMLElement>(element: T, container: HTMLElement = document.body): Promise<T> {
   container.appendChild(element);
   await new Promise((resolve) => requestAnimationFrame(resolve));
+
   return element;
 }
 
@@ -88,6 +90,7 @@ export async function createComponent<T extends HTMLElement = HTMLElement>(
   }
 
   await attach(element, container);
+
   return element;
 }
 
@@ -181,11 +184,13 @@ export async function waitForAttribute(
 
       if (current === value) {
         resolve();
+
         return;
       }
 
       if (Date.now() - startTime > timeout) {
         reject(new Error(`Timeout waiting for attribute ${attribute} to be ${value}`));
+
         return;
       }
 
@@ -215,7 +220,9 @@ export const userEvent = {
   async blur(element: Element): Promise<void> {
     if (element instanceof HTMLElement) {
       element.blur();
+
       const event = new FocusEvent('blur', { bubbles: true });
+
       element.dispatchEvent(event);
       await waitForRender();
     }
@@ -230,7 +237,9 @@ export const userEvent = {
   async clear(element: Element): Promise<void> {
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
       element.value = '';
+
       const inputEvent = new Event('input', { bubbles: true });
+
       element.dispatchEvent(inputEvent);
       await waitForRender();
     }
@@ -249,6 +258,7 @@ export const userEvent = {
       cancelable: true,
       ...options,
     });
+
     element.dispatchEvent(event);
     await waitForRender();
   },
@@ -266,6 +276,7 @@ export const userEvent = {
       cancelable: true,
       ...options,
     });
+
     element.dispatchEvent(event);
     await waitForRender();
   },
@@ -279,7 +290,9 @@ export const userEvent = {
   async focus(element: Element): Promise<void> {
     if (element instanceof HTMLElement) {
       element.focus();
+
       const event = new FocusEvent('focus', { bubbles: true });
+
       element.dispatchEvent(event);
       await waitForRender();
     }
@@ -296,6 +309,7 @@ export const userEvent = {
       bubbles: true,
       cancelable: true,
     });
+
     element.dispatchEvent(event);
     await waitForRender();
   },
@@ -316,6 +330,7 @@ export const userEvent = {
       key,
       ...options,
     });
+
     element.dispatchEvent(event);
     await waitForRender();
   },
@@ -338,6 +353,7 @@ export const userEvent = {
           key: char,
           ...options,
         });
+
         element.dispatchEvent(keydownEvent);
 
         // Update the value
@@ -345,6 +361,7 @@ export const userEvent = {
 
         // Dispatch input event
         const inputEvent = new Event('input', { bubbles: true });
+
         element.dispatchEvent(inputEvent);
 
         await waitForRender();
@@ -363,6 +380,7 @@ export const userEvent = {
       bubbles: true,
       cancelable: true,
     });
+
     element.dispatchEvent(event);
     await waitForRender();
   },
@@ -406,6 +424,7 @@ export function waitForEvent<T extends Event = Event>(element: Element, eventNam
  */
 export function hasShadowClass(host: Element, selector: string, className: string): boolean {
   const element = queryShadow(host, selector);
+
   return element?.classList.contains(className) || false;
 }
 
@@ -419,7 +438,9 @@ export function hasShadowClass(host: Element, selector: string, className: strin
  */
 export function getShadowStyle(host: Element, selector: string, property: string): string {
   const element = queryShadow(host, selector);
+
   if (!element) return '';
+
   return window.getComputedStyle(element).getPropertyValue(property);
 }
 
@@ -476,6 +497,7 @@ export class ComponentFixture<T extends HTMLElement = HTMLElement> {
     } else {
       this.element.setAttribute(name, value);
     }
+
     await this.update();
   }
 
@@ -511,6 +533,7 @@ export async function createFixture<T extends HTMLElement = HTMLElement>(
   attributes: Record<string, string | boolean> = {},
 ): Promise<ComponentFixture<T>> {
   const container = document.createElement('div');
+
   document.body.appendChild(container);
 
   const element = await createComponent<T>(tagName, attributes, container);
@@ -533,6 +556,7 @@ export const formUtils = {
     if ('form' in element && element.form instanceof HTMLFormElement) {
       return element.form;
     }
+
     return element.closest('form');
   },
   /**
@@ -564,6 +588,7 @@ export const formUtils = {
     if ('validationMessage' in element) {
       return (element as unknown as { validationMessage?: string }).validationMessage || '';
     }
+
     return '';
   },
 
@@ -577,8 +602,10 @@ export const formUtils = {
   hasValidityState(element: HTMLElement, state: keyof ValidityState): boolean {
     if ('validity' in element) {
       const validity = (element as unknown as { validity?: ValidityState }).validity;
+
       return validity?.[state] === true;
     }
+
     return false;
   },
 
@@ -602,6 +629,7 @@ export const formUtils = {
     if ('validity' in element) {
       return (element as unknown as { validity?: ValidityState }).validity?.valid === true;
     }
+
     return true;
   },
 
@@ -623,6 +651,7 @@ export const formUtils = {
     }
 
     await waitForRender();
+
     return result;
   },
 
@@ -662,7 +691,9 @@ export const formUtils = {
    */
   async submit(form: HTMLFormElement): Promise<SubmitEvent> {
     const submitPromise = waitForEvent<SubmitEvent>(form, 'submit');
+
     form.requestSubmit();
+
     return submitPromise;
   },
 
@@ -684,6 +715,7 @@ export const formUtils = {
     }
 
     await waitForRender();
+
     return result;
   },
 };
@@ -702,6 +734,7 @@ export const a11yUtils = {
    */
   getAccessibleDescription(element: HTMLElement): string {
     const describedBy = element.getAttribute('aria-describedby');
+
     if (!describedBy) return '';
 
     const ids = describedBy.split(/\s+/);
@@ -721,18 +754,22 @@ export const a11yUtils = {
   getAccessibleName(element: HTMLElement): string {
     // Check aria-label
     const ariaLabel = element.getAttribute('aria-label');
+
     if (ariaLabel) return ariaLabel;
 
     // Check aria-labelledby
     const labelledBy = element.getAttribute('aria-labelledby');
+
     if (labelledBy) {
       const labelElement = document.getElementById(labelledBy);
+
       if (labelElement) return labelElement.textContent?.trim() || '';
     }
 
     // Check for associated label
     if (element.id) {
       const label = document.querySelector(`label[for="${element.id}"]`);
+
       if (label) return label.textContent?.trim() || '';
     }
 
@@ -773,6 +810,7 @@ export const a11yUtils = {
    */
   getKeyboardShortcuts(element: HTMLElement): string[] {
     const accessKey = element.getAttribute('accesskey');
+
     return accessKey ? [accessKey] : [];
   },
 
@@ -786,6 +824,7 @@ export const a11yUtils = {
    */
   hasAriaState(element: HTMLElement, state: string, expectedValue: string): boolean {
     const value = element.getAttribute(`aria-${state}`);
+
     return value === expectedValue;
   },
 
@@ -798,6 +837,7 @@ export const a11yUtils = {
    */
   hasRole(element: HTMLElement, expectedRole: string): boolean {
     const role = element.getAttribute('role') || element.tagName.toLowerCase();
+
     return role === expectedRole || element.getAttribute('role') === expectedRole;
   },
 
@@ -825,12 +865,14 @@ export const a11yUtils = {
 
     // Check tabindex
     const tabindex = element.getAttribute('tabindex');
+
     if (tabindex !== null) {
       return Number.parseInt(tabindex, 10) >= 0;
     }
 
     // Check if natively focusable
     const focusableTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+
     return focusableTags.includes(element.tagName);
   },
 
@@ -844,6 +886,7 @@ export const a11yUtils = {
     if (!this.isFocusable(element)) return false;
 
     const tabindex = element.getAttribute('tabindex');
+
     return tabindex === null || Number.parseInt(tabindex, 10) >= 0;
   },
 

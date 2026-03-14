@@ -29,7 +29,9 @@ describe('bit-checkbox', () => {
     it('renders slot content as label text', async () => {
       fixture = await mount('bit-checkbox');
       fixture.element.textContent = 'Accept terms';
+
       const slot = fixture.query('slot:not([name])');
+
       expect(slot).toBeTruthy();
     });
   });
@@ -107,7 +109,9 @@ describe('bit-checkbox', () => {
 
     it('does not emit change when disabled', async () => {
       fixture = await mount('bit-checkbox', { attrs: { disabled: true } });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).not.toHaveBeenCalled();
@@ -135,7 +139,9 @@ describe('bit-checkbox', () => {
   describe('Events', () => {
     it('emits change with checked=true when checked', async () => {
       fixture = await mount('bit-checkbox');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -144,7 +150,9 @@ describe('bit-checkbox', () => {
 
     it('emits change with checked=false when unchecked', async () => {
       fixture = await mount('bit-checkbox', { attrs: { checked: true } });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(false);
@@ -152,7 +160,9 @@ describe('bit-checkbox', () => {
 
     it('emits change on Space keypress', async () => {
       fixture = await mount('bit-checkbox');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -160,7 +170,9 @@ describe('bit-checkbox', () => {
 
     it('emits change on Enter keypress', async () => {
       fixture = await mount('bit-checkbox');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, 'Enter');
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -261,7 +273,9 @@ describe('bit-checkbox', () => {
 
     it('is operable by keyboard (Space)', async () => {
       fixture = await mount('bit-checkbox');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).toHaveBeenCalled();
@@ -298,18 +312,21 @@ describe('bit-checkbox accessibility', () => {
   describe('Semantic Structure', () => {
     it('has role="checkbox" on the host element', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.element.getAttribute('role')).toBe('checkbox');
       fixture.destroy();
     });
 
     it('renders a visually-checkable .box element', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.query('.box')).toBeTruthy();
       fixture.destroy();
     });
 
     it('renders a .label wrapper for slot content', async () => {
       const fixture = await mount('bit-checkbox');
+
       fixture.element.textContent = 'Accept terms';
       expect(fixture.query('.label')).toBeTruthy();
       fixture.destroy();
@@ -320,18 +337,21 @@ describe('bit-checkbox accessibility', () => {
   describe('WAI-ARIA Attributes', () => {
     it('has aria-checked="false" by default (unchecked state)', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       fixture.destroy();
     });
 
     it('has aria-checked="mixed" when indeterminate (partial selection)', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { indeterminate: true } });
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('mixed');
       fixture.destroy();
     });
 
     it('updates aria-checked dynamically as state changes', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       await user.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
@@ -343,9 +363,12 @@ describe('bit-checkbox accessibility', () => {
     it('sets aria-labelledby pointing to label span when label text provided', async () => {
       const fixture = await mount('bit-checkbox', { html: 'Remember me' });
       const labelledBy = fixture.element.getAttribute('aria-labelledby');
+
       expect(labelledBy).toBeTruthy();
+
       // Verify the referenced element exists
       const labelEl = fixture.element.shadowRoot?.getElementById(labelledBy!);
+
       expect(labelEl).toBeTruthy();
       fixture.destroy();
     });
@@ -355,18 +378,21 @@ describe('bit-checkbox accessibility', () => {
   describe('Keyboard Navigation', () => {
     it('has tabindex="0" when enabled (keyboard-focusable)', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
       fixture.destroy();
     });
 
     it('has no tabindex when disabled (not keyboard-focusable)', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { disabled: true } });
+
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
       fixture.destroy();
     });
 
     it('toggles state on Space (standard checkbox activation key)', async () => {
       const fixture = await mount('bit-checkbox');
+
       await user.press(fixture.element, ' ');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.destroy();
@@ -374,6 +400,7 @@ describe('bit-checkbox accessibility', () => {
 
     it('toggles state on Enter', async () => {
       const fixture = await mount('bit-checkbox');
+
       await user.press(fixture.element, 'Enter');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.destroy();
@@ -382,6 +409,7 @@ describe('bit-checkbox accessibility', () => {
     it('does not toggle on keyboard interaction when disabled', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { disabled: true } });
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).not.toHaveBeenCalled();
@@ -393,6 +421,7 @@ describe('bit-checkbox accessibility', () => {
   describe('Focus Management', () => {
     it('restores tabindex="0" when re-enabled after being disabled', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { disabled: true } });
+
       await fixture.attr('disabled', false);
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
       fixture.destroy();
@@ -403,6 +432,7 @@ describe('bit-checkbox accessibility', () => {
   describe('Dynamic State Announcements', () => {
     it('aria-checked transitions from false → true when checked', async () => {
       const fixture = await mount('bit-checkbox');
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       await fixture.attr('checked', true);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
@@ -411,6 +441,7 @@ describe('bit-checkbox accessibility', () => {
 
     it('aria-checked transitions from true → false when unchecked', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { checked: true } });
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await fixture.attr('checked', false);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
@@ -419,6 +450,7 @@ describe('bit-checkbox accessibility', () => {
 
     it('aria-checked transitions from mixed → false when indeterminate is cleared', async () => {
       const fixture = await mount('bit-checkbox', { attrs: { indeterminate: true } });
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('mixed');
       await fixture.attr('indeterminate', false);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');

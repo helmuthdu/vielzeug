@@ -1,6 +1,6 @@
 import type { Obj } from '../types';
 
-type AssertOptions = { type?: ErrorConstructor; args?: Obj; bypass?: boolean };
+type AssertOptions = { args?: Obj; bypass?: boolean; type?: ErrorConstructor };
 
 /**
  * Asserts that a condition is true. Throws (or warns, with `bypass`) otherwise.
@@ -25,7 +25,7 @@ type AssertOptions = { type?: ErrorConstructor; args?: Obj; bypass?: boolean };
 export function assert(
   condition: boolean,
   message = 'Assertion failed',
-  { type = Error, args, bypass = false }: AssertOptions = {},
+  { args, bypass = false, type = Error }: AssertOptions = {},
 ): void {
   if (condition) return;
 

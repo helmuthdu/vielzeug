@@ -103,6 +103,7 @@ describe('throttle', () => {
     throttled('b'); // queued
 
     const result = throttled.flush();
+
     expect(fn).toHaveBeenCalledTimes(2);
     expect(fn).toHaveBeenLastCalledWith('b');
     expect(result).toBe('result');

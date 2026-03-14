@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { type Infer, type InferOutput, ValidationError, v } from './validit';
 
 describe('validit', () => {
@@ -9,29 +8,36 @@ describe('validit', () => {
   describe('ValidationError', () => {
     it('formats a root-level issue as "value: message [code]"', () => {
       const err = new ValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
+
       expect(err.message).toBe('value: Invalid [custom]');
     });
 
     it('formats nested paths with dots', () => {
       const err = new ValidationError([{ code: 'required', message: 'Required', path: ['user', 'address', 'city'] }]);
+
       expect(err.message).toBe('user.address.city: Required [required]');
     });
 
     it('formats array-index paths', () => {
       const err = new ValidationError([{ code: 'custom', message: 'Invalid', path: ['items', 0, 'name'] }]);
+
       expect(err.message).toBe('items.0.name: Invalid [custom]');
     });
 
     it('includes error code in square brackets', () => {
       const err = new ValidationError([{ code: 'too_small', message: 'Too short', path: ['name'] }]);
+
       expect(err.message).toBe('name: Too short [too_small]');
     });
 
     it('surfaces code and params from schema validators', () => {
       const result = v.string().min(5).safeParse('hi');
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         const issue = result.error.issues[0];
+
         expect(issue.code).toBe('too_small');
         expect(issue.params).toEqual({ minimum: 5 });
       }
@@ -42,9 +48,12 @@ describe('validit', () => {
         .object({ email: v.string().email(), name: v.string().min(2) })
         .refine((d) => d.name !== 'admin', 'Reserved name')
         .safeParse({ email: 'bad', name: 'admin' });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         const { fieldErrors, formErrors } = result.error.flatten();
+
         expect(fieldErrors.email).toEqual(['Invalid email address']);
         expect(formErrors).toEqual(['Reserved name']);
       }
@@ -52,9 +61,12 @@ describe('validit', () => {
 
     it('flatten() collects multiple errors per field', () => {
       const result = v.object({ tag: v.string().min(3).max(1) }).safeParse({ tag: 'ab' });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         const { fieldErrors } = result.error.flatten();
+
         expect(fieldErrors.tag?.length).toBeGreaterThanOrEqual(2);
       }
     });
@@ -63,9 +75,12 @@ describe('validit', () => {
       const result = v
         .object({ address: v.object({ zip: v.string().regex(/^\d{5}$/) }) })
         .safeParse({ address: { zip: 'bad' } });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         const { fieldErrors } = result.error.flatten();
+
         expect(fieldErrors['address.zip']).toEqual(['Invalid format']);
         expect(fieldErrors.address).toBeUndefined();
       }
@@ -79,7 +94,9 @@ describe('validit', () => {
   describe('bail on type mismatch', () => {
     it('returns only one issue when type check fails, not constraint errors too', () => {
       const result = v.string().min(3).max(10).safeParse(42);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues).toHaveLength(1);
         expect(result.error.issues[0].code).toBe('invalid_type');
@@ -88,7 +105,9 @@ describe('validit', () => {
 
     it('runs constraint validators once type is correct', () => {
       const result = v.string().min(10).safeParse('hi');
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('too_small');
       }
@@ -96,7 +115,9 @@ describe('validit', () => {
 
     it('collects all constraint issues when type is correct', () => {
       const result = v.string().min(5).max(3).safeParse('abcd');
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues.length).toBeGreaterThanOrEqual(2);
         expect(result.error.issues.every((i) => i.code !== 'invalid_type')).toBe(true);
@@ -152,9 +173,11 @@ describe('validit', () => {
       expect(() => v.string().url().parse('not-a-url')).toThrow('Invalid URL');
 
       const urlResult = v.string().url().safeParse('not-a-url');
+
       if (!urlResult.success) expect(urlResult.error.issues[0].code).toBe('invalid_url');
 
       const id = '550e8400-e29b-41d4-a716-446655440000';
+
       expect(v.string().uuid().parse(id)).toBe(id);
       expect(() => v.string().uuid().parse('bad-uuid')).toThrow();
     });
@@ -206,6 +229,7 @@ describe('validit', () => {
 
     it('nonempty() message function receives { min, value } context', () => {
       const schema = v.string().nonempty(({ min, value }) => `Need at least ${min}, got "${value}"`);
+
       expect(() => schema.parse('')).toThrow('Need at least 1, got ""');
     });
 
@@ -215,6 +239,7 @@ describe('validit', () => {
         .min(3)
         .max(10)
         .regex(/^[a-z]+$/);
+
       expect(s.parse('hello')).toBe('hello');
       expect(() => s.parse('hi')).toThrow();
       expect(() => s.parse('toolongstring')).toThrow();
@@ -308,6 +333,7 @@ describe('validit', () => {
     it('min / max', () => {
       const min = new Date('2024-01-01');
       const max = new Date('2024-12-31');
+
       expect(v.date().min(min).parse(d)).toBe(d);
       expect(() => v.date().min(max).parse(d)).toThrow();
       expect(v.date().max(max).parse(d)).toBe(d);
@@ -345,7 +371,9 @@ describe('validit', () => {
 
     it('validates each item and puts the index in the path', () => {
       const result = v.array(v.string()).safeParse([1, 2]);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].path).toEqual([0]);
         expect(result.error.issues[1].path).toEqual([1]);
@@ -361,6 +389,7 @@ describe('validit', () => {
 
     it('validates nested arrays', () => {
       const schema = v.array(v.array(v.number()));
+
       expect(schema.parse([[1, 2], [3]])).toEqual([[1, 2], [3]]);
       expect(() => schema.parse([[1, 'x']])).toThrow(ValidationError);
     });
@@ -370,6 +399,7 @@ describe('validit', () => {
       const schema = v
         .array(v.coerce.number())
         .refine((items) => items.every((n) => typeof n === 'number'), 'Items should be numbers');
+
       expect(schema.parse(['1', '2', '3'])).toEqual([1, 2, 3]);
     });
   });
@@ -393,7 +423,9 @@ describe('validit', () => {
 
     it('includes property key in error path', () => {
       const result = User.safeParse({ id: 'bad', name: 123 });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues.some((i) => i.path[0] === 'id')).toBe(true);
         expect(result.error.issues.some((i) => i.path[0] === 'name')).toBe(true);
@@ -403,7 +435,9 @@ describe('validit', () => {
     it('includes nested path in errors', () => {
       const schema = v.object({ user: v.object({ email: v.string().email() }) });
       const result = schema.safeParse({ user: { email: 'bad@' } });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].path).toEqual(['user', 'email']);
       }
@@ -412,18 +446,22 @@ describe('validit', () => {
     describe('unknown key modes (Change 3)', () => {
       it('strip (default) removes unknown keys', () => {
         const parsed = User.parse({ extra: true, id: 1, name: 'Alice' } as any);
+
         expect(parsed).toEqual({ id: 1, name: 'Alice' });
         expect((parsed as any).extra).toBeUndefined();
       });
 
       it('passthrough() keeps unknown keys', () => {
         const parsed = User.passthrough().parse({ extra: true, id: 1, name: 'Alice' } as any);
+
         expect((parsed as any).extra).toBe(true);
       });
 
       it('strict() rejects unknown keys', () => {
         const result = User.strict().safeParse({ extra: true, id: 1, name: 'Alice' } as any);
+
         expect(result.success).toBe(false);
+
         if (!result.success) {
           expect(result.error.issues[0].code).toBe('unrecognized_keys');
         }
@@ -433,6 +471,7 @@ describe('validit', () => {
     describe('partial()', () => {
       it('makes all fields optional', () => {
         const schema = User.partial();
+
         expect(schema.parse({})).toEqual({});
         expect(schema.parse({ name: 'Alice' })).toEqual({ name: 'Alice' });
         expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
@@ -441,6 +480,7 @@ describe('validit', () => {
       it('partial(keys) makes only specified fields optional', () => {
         const schema = v.object({ email: v.string(), id: v.number(), name: v.string() });
         const partial = schema.partial('email', 'name');
+
         expect(partial.parse({ id: 1 })).toEqual({ id: 1 });
         expect(partial.parse({ email: 'a@b.c', id: 1, name: 'Alice' })).toEqual({
           email: 'a@b.c',
@@ -452,6 +492,7 @@ describe('validit', () => {
 
       it('partial() preserves refinements', () => {
         const base = User.refine((d) => d.name !== 'admin', 'Reserved name');
+
         expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
       });
     });
@@ -459,12 +500,14 @@ describe('validit', () => {
     describe('required()', () => {
       it('makes all optional fields required again', () => {
         const schema = User.partial().required();
+
         expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
         expect(() => schema.parse({ name: 'Alice' })).toThrow();
       });
 
       it('required() preserves refinements', () => {
         const base = User.partial().refine((d) => d.name !== 'admin', 'Reserved name');
+
         expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
       });
     });
@@ -472,6 +515,7 @@ describe('validit', () => {
     describe('extend() (Change 3)', () => {
       it('adds new fields', () => {
         const Admin = User.extend({ role: v.string() });
+
         expect(Admin.parse({ id: 1, name: 'Alice', role: 'admin' })).toEqual({
           id: 1,
           name: 'Alice',
@@ -481,12 +525,14 @@ describe('validit', () => {
 
       it('overrides existing fields with the same key', () => {
         const schema = User.extend({ name: v.string().min(5) });
+
         expect(() => schema.parse({ id: 1, name: 'Al' })).toThrow();
         expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
       });
 
       it('preserves refinements', () => {
         const refined = User.refine((d) => d.name !== 'admin', 'Reserved name');
+
         expect(() => refined.extend({ role: v.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
           'Reserved name',
         );
@@ -498,6 +544,7 @@ describe('validit', () => {
 
       it('pick() selects specified keys', () => {
         const schema = Full.pick('name', 'email');
+
         expect(schema.parse({ email: 'alice@example.com', name: 'Alice' })).toEqual({
           email: 'alice@example.com',
           name: 'Alice',
@@ -506,6 +553,7 @@ describe('validit', () => {
 
       it('omit() removes specified keys', () => {
         const schema = Full.omit('id');
+
         expect(schema.parse({ email: 'alice@example.com', name: 'Alice' })).toEqual({
           email: 'alice@example.com',
           name: 'Alice',
@@ -514,6 +562,7 @@ describe('validit', () => {
 
       it('pick() and omit() preserve refinements', () => {
         const refined = Full.refine((d) => d.email.includes('@'), 'Invalid email format');
+
         expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
         expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
       });
@@ -527,6 +576,7 @@ describe('validit', () => {
 
       it('can be spread to compose a new schema', () => {
         const Admin = v.object({ ...User.shape, role: v.string() });
+
         expect(Admin.parse({ id: 1, name: 'Alice', role: 'admin' })).toEqual({
           id: 1,
           name: 'Alice',
@@ -543,6 +593,7 @@ describe('validit', () => {
   describe('v.union()', () => {
     it('passes when first matching branch wins', () => {
       const schema = v.union(v.string(), v.number());
+
       expect(schema.parse('hello')).toBe('hello');
       expect(schema.parse(42)).toBe(42);
     });
@@ -550,17 +601,22 @@ describe('validit', () => {
     it('passes when multiple branches match (first-match, no XOR)', () => {
       // both string branches match 'hello' — first one wins, no error
       const schema = v.union(v.string(), v.string().min(1));
+
       expect(schema.parse('hello')).toBe('hello');
     });
 
     it('fails when no branch matches', () => {
       const result = v.union(v.string(), v.number()).safeParse(true);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('invalid_union');
         expect(result.error.issues[0].message).toContain('match');
+
         // branch errors are attached as params
         const errors = result.error.issues[0].params?.errors as unknown[][];
+
         expect(Array.isArray(errors)).toBe(true);
         expect(errors.length).toBe(2);
       }
@@ -571,6 +627,7 @@ describe('validit', () => {
         v.object({ data: v.string(), type: v.literal('ok') }),
         v.object({ message: v.string(), type: v.literal('error') }),
       );
+
       expect(schema.parse({ data: 'yes', type: 'ok' })).toEqual({ data: 'yes', type: 'ok' });
       expect(schema.parse({ message: 'oops', type: 'error' })).toEqual({ message: 'oops', type: 'error' });
       expect(() => schema.parse({ type: 'unknown' })).toThrow();
@@ -578,15 +635,19 @@ describe('validit', () => {
 
     it('infers the union type', () => {
       const schema = v.union(v.string(), v.number());
+
       type T = Infer<typeof schema>;
+
       const a: T = 'hello';
       const b: T = 42;
+
       expect(schema.parse(a)).toBe('hello');
       expect(schema.parse(b)).toBe(42);
     });
 
     it('accepts raw literal values as shorthand for v.literal()', () => {
       const schema = v.union('a', 'b', 'c');
+
       expect(schema.parse('a')).toBe('a');
       expect(schema.parse('b')).toBe('b');
       expect(() => schema.parse('d')).toThrow();
@@ -594,6 +655,7 @@ describe('validit', () => {
 
     it('mixes raw values and schemas', () => {
       const schema = v.union('yes', 'no', v.number());
+
       expect(schema.parse('yes')).toBe('yes');
       expect(schema.parse(42)).toBe(42);
       expect(() => schema.parse(true)).toThrow();
@@ -601,8 +663,11 @@ describe('validit', () => {
 
     it('infers correct type for raw value shorthand', () => {
       const schema = v.union('light', 'dark');
+
       type T = Infer<typeof schema>;
+
       const t: T = 'light';
+
       expect(schema.parse(t)).toBe('light');
     });
   });
@@ -614,13 +679,16 @@ describe('validit', () => {
   describe('v.intersect()', () => {
     it('passes when all schemas match', () => {
       const schema = v.intersect(v.string(), v.string().min(5));
+
       expect(schema.parse('hello')).toBe('hello');
     });
 
     it('collects issues from failing branches', () => {
       const schema = v.intersect(v.string().min(3), v.string().max(5));
       const result = schema.safeParse('toolongstring');
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues.length).toBeGreaterThan(0);
       }
@@ -628,6 +696,7 @@ describe('validit', () => {
 
     it('fails if any branch fails', () => {
       const result = v.intersect(v.string(), v.number()).safeParse('hello');
+
       expect(result.success).toBe(false);
     });
 
@@ -635,12 +704,14 @@ describe('validit', () => {
       const A = v.object({ id: v.number() });
       const B = v.object({ name: v.string() });
       const schema = v.intersect(A, B);
+
       expect(schema.safeParse({ id: 1, name: 'Alice' }).success).toBe(true);
       expect(schema.safeParse({ id: 1 }).success).toBe(false);
     });
 
     it('accepts raw literal values as shorthand for v.literal()', () => {
       const schema = v.intersect('hello', 'hello');
+
       expect(schema.parse('hello')).toBe('hello');
       expect(() => schema.parse('world')).toThrow();
     });
@@ -663,7 +734,9 @@ describe('validit', () => {
 
     it('fails when discriminator value not found', () => {
       const result = schema.safeParse({ type: 'unknown' });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('invalid_variant');
       }
@@ -671,12 +744,15 @@ describe('validit', () => {
 
     it('fails when discriminator key is missing', () => {
       const result = schema.safeParse({ data: 'yes' });
+
       expect(result.success).toBe(false);
     });
 
     it('infers the union type', () => {
       type T = Infer<typeof schema>;
+
       const ok: T = { data: 'yes', type: 'ok' };
+
       expect(schema.parse(ok)).toEqual(ok);
     });
   });
@@ -695,7 +771,9 @@ describe('validit', () => {
 
     it('rejects values not in the enum', () => {
       const result = Status.safeParse('deleted');
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('invalid_enum');
       }
@@ -703,12 +781,15 @@ describe('validit', () => {
 
     it('infers the union literal type', () => {
       type T = Infer<typeof Status>;
+
       const val: T = 'active';
+
       expect(Status.parse(val)).toBe('active');
     });
 
     it('works with different string values', () => {
       const schema = v.enum(['low', 'medium', 'high'] as const);
+
       expect(schema.parse('low')).toBe('low');
       expect(() => schema.parse('extreme')).toThrow();
     });
@@ -732,7 +813,9 @@ describe('validit', () => {
 
     it('rejects wrong element types', () => {
       const result = schema.safeParse(['hello', 'notanumber', true]);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].path[0]).toBe(1);
       }
@@ -740,7 +823,9 @@ describe('validit', () => {
 
     it('infers the tuple type', () => {
       type T = Infer<typeof schema>;
+
       const val: T = ['hello', 42, true];
+
       expect(schema.parse(val)).toEqual(val);
     });
   });
@@ -752,6 +837,7 @@ describe('validit', () => {
   describe('v.record()', () => {
     it('accepts a record with string keys and typed values', () => {
       const schema = v.record(v.string(), v.number());
+
       expect(schema.parse({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
       expect(schema.parse({})).toEqual({});
     });
@@ -762,7 +848,9 @@ describe('validit', () => {
 
     it('validates all values and reports paths', () => {
       const result = v.record(v.string(), v.number()).safeParse({ a: 1, b: 'bad' });
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].path[0]).toBe('b');
       }
@@ -770,8 +858,11 @@ describe('validit', () => {
 
     it('infers the record type', () => {
       const schema = v.record(v.string(), v.boolean());
+
       type T = Infer<typeof schema>;
+
       const val: T = { x: true, y: false };
+
       expect(schema.parse(val)).toEqual(val);
     });
   });
@@ -795,6 +886,7 @@ describe('validit', () => {
   describe('optional() (Change 2)', () => {
     it('allows undefined, still validates defined values', () => {
       const schema = v.string().optional();
+
       expect(schema.parse(undefined)).toBe(undefined);
       expect(schema.parse('hello')).toBe('hello');
       expect(() => schema.parse(123)).toThrow(ValidationError);
@@ -802,6 +894,7 @@ describe('validit', () => {
 
     it('preserves subclass methods — constraints before optional still enforced', () => {
       const schema = v.string().min(3).optional();
+
       expect(schema.parse(undefined)).toBe(undefined);
       expect(schema.parse('hello')).toBe('hello');
       expect(() => schema.parse('hi')).toThrow();
@@ -809,6 +902,7 @@ describe('validit', () => {
 
     it('optional number with constraint', () => {
       const schema = v.object({ age: v.number().min(0).optional() });
+
       expect(schema.parse({})).toEqual({});
       expect(schema.parse({ age: 30 })).toEqual({ age: 30 });
       expect(() => schema.parse({ age: -1 })).toThrow();
@@ -816,8 +910,11 @@ describe('validit', () => {
 
     it('infers Output | undefined', () => {
       const schema = v.string().optional();
+
       type T = Infer<typeof schema>;
+
       const val: T = undefined;
+
       expect(schema.parse(val)).toBeUndefined();
     });
   });
@@ -825,6 +922,7 @@ describe('validit', () => {
   describe('nullable() (Change 2)', () => {
     it('allows null, still validates non-null values', () => {
       const schema = v.string().nullable();
+
       expect(schema.parse(null)).toBe(null);
       expect(schema.parse('hello')).toBe('hello');
       expect(() => schema.parse(123)).toThrow(ValidationError);
@@ -832,6 +930,7 @@ describe('validit', () => {
 
     it('preserves subclass methods — constraints before nullable still enforced', () => {
       const schema = v.number().min(0).nullable();
+
       expect(schema.parse(null)).toBe(null);
       expect(schema.parse(5)).toBe(5);
       expect(() => schema.parse(-1)).toThrow();
@@ -841,6 +940,7 @@ describe('validit', () => {
   describe('nullish()', () => {
     it('allows both null and undefined', () => {
       const schema = v.string().nullish();
+
       expect(schema.parse(null)).toBe(null);
       expect(schema.parse(undefined)).toBe(undefined);
       expect(schema.parse('hello')).toBe('hello');
@@ -849,9 +949,12 @@ describe('validit', () => {
 
     it('infers Output | null | undefined', () => {
       const schema = v.number().nullish();
+
       type T = Infer<typeof schema>;
+
       const n: T = null;
       const u: T = undefined;
+
       expect(schema.parse(n)).toBeNull();
       expect(schema.parse(u)).toBeUndefined();
     });
@@ -865,6 +968,7 @@ describe('validit', () => {
 
     it('works with objects', () => {
       const schema = v.object({ color: v.string() }).default({ color: 'blue' });
+
       expect(schema.parse(undefined)).toEqual({ color: 'blue' });
       expect(schema.parse({ color: 'red' })).toEqual({ color: 'red' });
     });
@@ -878,6 +982,7 @@ describe('validit', () => {
   describe('refine()', () => {
     it('adds sync custom validation', () => {
       const schema = v.number().refine((n) => n % 2 === 0, 'Must be even');
+
       expect(schema.parse(4)).toBe(4);
       expect(() => schema.parse(3)).toThrow('Must be even');
     });
@@ -887,6 +992,7 @@ describe('validit', () => {
         .string()
         .refine((s) => s.includes('@'), 'Must contain @')
         .refine((s) => s.includes('.'), 'Must contain .');
+
       expect(schema.parse('a@b.c')).toBe('a@b.c');
       expect(() => schema.parse('nope')).toThrow('Must contain @');
     });
@@ -895,6 +1001,7 @@ describe('validit', () => {
       const schema = v
         .object({ confirm: v.string(), password: v.string() })
         .refine((d) => d.password === d.confirm, 'Passwords must match');
+
       expect(schema.parse({ confirm: 'abc', password: 'abc' })).toEqual({ confirm: 'abc', password: 'abc' });
       expect(() => schema.parse({ confirm: 'xyz', password: 'abc' })).toThrow('Passwords must match');
     });
@@ -904,12 +1011,14 @@ describe('validit', () => {
         (n) => n > 0,
         ({ value }) => `${value} is not positive`,
       );
+
       expect(() => schema.parse(-5)).toThrow('-5 is not positive');
     });
 
     it('throws at first parse when given an async function', () => {
       const asyncFn = async (_v: string): Promise<boolean> => true;
       const schema = v.string().refine(asyncFn as unknown as (v: string) => boolean);
+
       expect(() => schema.parse('hello')).toThrow('refine() only accepts sync functions');
     });
   });
@@ -918,6 +1027,7 @@ describe('validit', () => {
     it('defers to parseAsync and resolves correctly', async () => {
       const schema = v.string().refineAsync(async (s) => {
         await new Promise((r) => setTimeout(r, 1));
+
         return s.length >= 3;
       }, 'Too short');
 
@@ -927,6 +1037,7 @@ describe('validit', () => {
 
     it('throws when used with sync parse()', async () => {
       const schema = v.string().refineAsync(async () => true);
+
       expect(() => schema.parse('x')).toThrow('async validators');
     });
 
@@ -934,6 +1045,7 @@ describe('validit', () => {
       const schema = v
         .object({ confirm: v.string(), password: v.string() })
         .refineAsync(async (d) => d.password === d.confirm, 'Passwords must match');
+
       expect(await schema.parseAsync({ confirm: 'abc', password: 'abc' })).toEqual({
         confirm: 'abc',
         password: 'abc',
@@ -948,6 +1060,7 @@ describe('validit', () => {
         .object({ confirm: v.string(), password: v.string() })
         .refine((d) => d.password === d.confirm, 'Passwords must match');
       const ok = await schema.parseAsync({ confirm: 'abc', password: 'abc' });
+
       expect(ok).toEqual({ confirm: 'abc', password: 'abc' });
       await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
     });
@@ -957,6 +1070,7 @@ describe('validit', () => {
         async (s) => s.length >= 3,
         ({ value }) => `"${value}" is too short`,
       );
+
       await expect(schema.parseAsync('hi')).rejects.toThrow('"hi" is too short');
     });
   });
@@ -978,6 +1092,7 @@ describe('validit', () => {
 
     it('narrows the type', () => {
       const val: unknown = 'hi';
+
       if (v.string().is(val)) {
         expect(val.toUpperCase()).toBe('HI');
       }
@@ -1044,13 +1159,17 @@ describe('validit', () => {
   describe('safeParse()', () => {
     it('returns { success: true, data } for valid input', () => {
       const result = v.string().safeParse('hello');
+
       expect(result.success).toBe(true);
+
       if (result.success) expect(result.data).toBe('hello');
     });
 
     it('returns { success: false, error } for invalid input without throwing', () => {
       const result = v.string().safeParse(123);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error).toBeInstanceOf(ValidationError);
         expect(result.error.issues).toHaveLength(1);
@@ -1059,7 +1178,9 @@ describe('validit', () => {
 
     it('collects multiple field errors for objects', () => {
       const result = v.object({ a: v.string(), b: v.number() }).safeParse({ a: 1, b: 'x' });
+
       expect(result.success).toBe(false);
+
       if (!result.success) expect(result.error.issues.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -1071,15 +1192,18 @@ describe('validit', () => {
 
     it('runs async refine with refineAsync', async () => {
       const schema = v.number().refineAsync(async (n) => n > 0, 'Must be positive');
+
       expect(await schema.parseAsync(1)).toBe(1);
       await expect(schema.parseAsync(-1)).rejects.toThrow('Must be positive');
     });
 
     it('safeParseAsync returns success/error without throwing', async () => {
       const ok = await v.string().safeParseAsync('x');
+
       expect(ok.success).toBe(true);
 
       const fail = await v.string().safeParseAsync(42);
+
       expect(fail.success).toBe(false);
     });
   });
@@ -1091,36 +1215,51 @@ describe('validit', () => {
   describe('Infer<>', () => {
     it('infers primitives', () => {
       const s = v.string();
+
       type S = Infer<typeof s>;
+
       const val: S = 'hello';
+
       expect(s.parse(val)).toBe(val);
     });
 
     it('infers object types', () => {
       const schema = v.object({ id: v.number(), name: v.string() });
+
       type T = Infer<typeof schema>;
+
       const obj: T = { id: 1, name: 'Alice' };
+
       expect(schema.parse(obj)).toEqual(obj);
     });
 
     it('infers array types', () => {
       const schema = v.array(v.boolean());
+
       type T = Infer<typeof schema>;
+
       const arr: T = [true, false];
+
       expect(schema.parse(arr)).toEqual(arr);
     });
 
     it('infers optional as T | undefined', () => {
       const schema = v.number().optional();
+
       type T = Infer<typeof schema>;
+
       const undef: T = undefined;
+
       expect(schema.parse(undef)).toBeUndefined();
     });
 
     it('infers nullable as T | null', () => {
       const schema = v.string().nullable();
+
       type T = Infer<typeof schema>;
+
       const nul: T = null;
+
       expect(schema.parse(nul)).toBeNull();
     });
   });
@@ -1133,17 +1272,20 @@ describe('validit', () => {
     describe('object fields', () => {
       it('trim() on a string field preserves the trimmed value in output', () => {
         const schema = v.object({ name: v.string().trim() });
+
         expect(schema.parse({ name: '  alice  ' })).toEqual({ name: 'alice' });
       });
 
       it('default() on an object field fills missing keys', () => {
         const schema = v.object({ role: v.string().default('user') });
+
         expect(schema.parse({})).toEqual({ role: 'user' });
         expect(schema.parse({ role: 'admin' })).toEqual({ role: 'admin' });
       });
 
       it('coerce.number() inside object coerces the field value', () => {
         const schema = v.object({ age: v.coerce.number() });
+
         expect(schema.parse({ age: '42' })).toEqual({ age: 42 });
       });
     });
@@ -1170,23 +1312,27 @@ describe('validit', () => {
   describe('catch()', () => {
     it('returns fallback for invalid input instead of throwing', () => {
       const schema = v.string().catch('fallback');
+
       expect(schema.parse('hello')).toBe('hello');
       expect(schema.parse(42 as any)).toBe('fallback');
     });
 
     it('works on number schema', () => {
       const schema = v.number().catch(0);
+
       expect(schema.parse(5)).toBe(5);
       expect(schema.parse('bad' as any)).toBe(0);
     });
 
     it('works on object schema', () => {
       const schema = v.object({ name: v.string() }).catch({ name: 'unknown' });
+
       expect(schema.parse('bad' as any)).toEqual({ name: 'unknown' });
     });
 
     it('retains subclass instance and methods', () => {
       const schema = v.object({ name: v.string() }).catch({ name: 'default' });
+
       expect(schema.shape).toBeDefined();
       expect(schema.parse({ name: 'Alice' })).toEqual({ name: 'Alice' });
       expect(schema.parse('bad' as any)).toEqual({ name: 'default' });
@@ -1195,6 +1341,7 @@ describe('validit', () => {
     it('validators added after catch() are respected', () => {
       // catch() must not swallow constraints chained after it
       const schema = v.string().catch('fallback').min(3);
+
       expect(schema.parse('hello')).toBe('hello');
       expect(schema.parse(42 as any)).toBe('fallback'); // non-string → fallback
       expect(schema.parse('hi')).toBe('fallback'); // too short → fallback (catch absorbs)
@@ -1208,11 +1355,13 @@ describe('validit', () => {
   describe('describe()', () => {
     it('stores a description accessible on the schema', () => {
       const schema = v.string().describe('A human readable name');
+
       expect(schema.description).toBe('A human readable name');
     });
 
     it('description does not affect parsing', () => {
       const schema = v.number().min(0).describe('A non-negative number');
+
       expect(schema.parse(5)).toBe(5);
       expect(() => schema.parse(-1)).toThrow();
     });
@@ -1222,6 +1371,7 @@ describe('validit', () => {
         .string()
         .describe('raw input')
         .transform((s) => s.toUpperCase());
+
       expect((schema as any)._description).toBe('raw input');
     });
 
@@ -1237,14 +1387,18 @@ describe('validit', () => {
   describe('brand()', () => {
     it('parse returns a branded value', () => {
       const UserId = v.string().brand<'UserId'>();
+
       type UserId = Infer<typeof UserId>;
+
       const id: UserId = UserId.parse('abc');
+
       // TypeScript: id is now UserId (branded), but at runtime it's just a string
       expect(id).toBe('abc');
     });
 
     it('branded schema still validates', () => {
       const schema = v.number().min(0).brand<'PositiveInt'>();
+
       expect(schema.parse(5)).toBe(5);
       expect(() => schema.parse(-1)).toThrow();
     });
@@ -1257,8 +1411,11 @@ describe('validit', () => {
   describe('InferInput / InferOutput', () => {
     it('InferOutput<T> is same as Infer<T> for plain schemas', () => {
       const schema = v.string();
+
       type Out = InferOutput<typeof schema>;
+
       const val: Out = 'hello';
+
       expect(schema.parse(val)).toBe('hello');
     });
   });
@@ -1307,7 +1464,9 @@ describe('validit', () => {
         { id: 1, name: 'A' },
         { id: 'bad', name: 'B' },
       ]);
+
       expect(result.success).toBe(false);
+
       if (!result.success) {
         expect(result.error.issues[0].path).toEqual([1, 'id']);
       }
@@ -1354,13 +1513,17 @@ describe('validit', () => {
 
     it('rejects values not in the enum', () => {
       const result = schema.safeParse('LEFT');
+
       expect(result.success).toBe(false);
+
       if (!result.success) expect(result.error.issues[0].code).toBe('invalid_enum');
     });
 
     it('infers the value union type', () => {
       type T = Infer<typeof schema>;
+
       const val: T = 'UP';
+
       expect(schema.parse(val)).toBe('UP');
     });
 
@@ -1371,6 +1534,7 @@ describe('validit', () => {
     it('works with numeric enums (reverse-mapping keys are excluded)', () => {
       const Prio = { High: 2, Low: 0, Medium: 1 } as const;
       const s = v.nativeEnum(Prio);
+
       expect(s.parse(1)).toBe(1);
       expect(() => s.parse(3)).toThrow();
     });

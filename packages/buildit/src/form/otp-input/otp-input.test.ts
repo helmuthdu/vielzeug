@@ -58,6 +58,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input', { attrs: { disabled: '' } });
 
       const cells = fixture.shadow?.querySelectorAll<HTMLInputElement>('input.cell') ?? [];
+
       cells.forEach((cell) => {
         expect(cell.disabled).toBe(true);
       });
@@ -67,6 +68,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input', { attrs: { masked: '' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       expect(firstCell?.type).toBe('password');
     });
 
@@ -74,6 +76,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input');
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       expect(firstCell?.type).toBe('text');
     });
 
@@ -81,6 +84,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input', { attrs: { type: 'numeric' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       expect(firstCell?.getAttribute('inputmode')).toBe('numeric');
     });
 
@@ -88,6 +92,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input', { attrs: { type: 'alphanumeric' } });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       expect(firstCell?.getAttribute('inputmode')).toBe('text');
     });
 
@@ -95,6 +100,7 @@ describe('bit-otp-input', () => {
       fixture = await mount('bit-otp-input');
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       expect(firstCell?.getAttribute('autocomplete')).toBe('one-time-code');
     });
   });
@@ -104,15 +110,19 @@ describe('bit-otp-input', () => {
   describe('Events', () => {
     it('fires change after paste with complete=true', async () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
-      let detail: { value: string; complete: boolean } | undefined;
+
+      let detail: { complete: boolean; value: string } | undefined;
+
       fixture.element.addEventListener('change', (e: Event) => {
         detail = (e as CustomEvent).detail;
       });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       if (firstCell) {
         const clipboardData = { getData: () => '1234' } as unknown as DataTransfer;
         const pasteEvent = new ClipboardEvent('paste', { bubbles: true, clipboardData });
+
         firstCell.dispatchEvent(pasteEvent);
         await fixture.flush();
       }
@@ -122,13 +132,17 @@ describe('bit-otp-input', () => {
 
     it('fires complete when all cells are filled via paste', async () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('complete', handler);
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
+
       if (firstCell) {
         const clipboardData = { getData: () => '1234' } as unknown as DataTransfer;
         const pasteEvent = new ClipboardEvent('paste', { bubbles: true, clipboardData });
+
         firstCell.dispatchEvent(pasteEvent);
         await fixture.flush();
       }
@@ -162,6 +176,7 @@ describe('bit-otp-input accessibility', () => {
       fixture = await mount('bit-otp-input');
 
       const group = fixture.query('[role="group"]');
+
       expect(group?.getAttribute('aria-label')).toBe('One-time password');
     });
 
@@ -169,6 +184,7 @@ describe('bit-otp-input accessibility', () => {
       fixture = await mount('bit-otp-input', { attrs: { label: 'Security code' } });
 
       const group = fixture.query('[role="group"]');
+
       expect(group?.getAttribute('aria-label')).toBe('Security code');
     });
   });
@@ -178,6 +194,7 @@ describe('bit-otp-input accessibility', () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '3' } });
 
       const cells = fixture.shadow?.querySelectorAll('input.cell') ?? [];
+
       expect(cells[0]?.getAttribute('aria-label')).toBe('Digit 1 of 3');
       expect(cells[1]?.getAttribute('aria-label')).toBe('Digit 2 of 3');
       expect(cells[2]?.getAttribute('aria-label')).toBe('Digit 3 of 3');
@@ -187,6 +204,7 @@ describe('bit-otp-input accessibility', () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '6' } });
 
       const lastCell = fixture.shadow?.querySelectorAll('input.cell')[5];
+
       expect(lastCell?.getAttribute('aria-label')).toBe('Digit 6 of 6');
     });
   });
@@ -196,6 +214,7 @@ describe('bit-otp-input accessibility', () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '6', separator: '-' } });
 
       const sep = fixture.query('.separator');
+
       expect(sep?.getAttribute('aria-hidden')).toBe('true');
     });
   });

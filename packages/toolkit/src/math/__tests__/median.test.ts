@@ -26,8 +26,11 @@ describe('median', () => {
 
   it('works with a callback extracting a number', () => {
     const arr = [{ v: 1 }, { v: 3 }, { v: 2 }];
+
     expect(median(arr, (x) => x.v)).toBe(2);
+
     const arr2 = [{ n: 10 }, { n: 2 }, { n: 8 }, { n: 4 }];
+
     expect(median(arr2, (x) => x.n)).toBe(6);
   });
 
@@ -39,6 +42,7 @@ describe('median', () => {
   it('does not mutate the original array', () => {
     const arr = [3, 1, 2];
     const copy = [...arr];
+
     median(arr);
     expect(arr).toEqual(copy);
   });

@@ -33,7 +33,9 @@ describe('bit-combobox', () => {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
+
       const onInput = vi.fn();
+
       fixture.element.addEventListener('search', onInput);
 
       await user.type(fixture.query<HTMLInputElement>('input')!, 'uni');
@@ -48,21 +50,27 @@ describe('bit-combobox', () => {
         html: optionsHtml,
       });
       await fixture.flush();
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+
       expect(input).toBeTruthy();
       await user.click(input!);
       await fixture.flush();
       await new Promise((r) => setTimeout(r, 20));
 
       const firstOption = fixture.query<HTMLElement>('.option');
+
       expect(firstOption).toBeTruthy();
       await user.click(firstOption!);
 
       expect(onChange).toHaveBeenCalled();
+
       const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+
       expect(Array.isArray(detail.values)).toBe(true);
       expect(detail.value).toBe('us');
     });
@@ -86,6 +94,7 @@ describe('bit-combobox', () => {
       });
 
       const input = fixture.query<HTMLInputElement>('input')!;
+
       expect(input.getAttribute('aria-expanded')).toBe('false');
 
       await user.click(input);
@@ -118,10 +127,13 @@ describe('bit-combobox', () => {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const input = fixture.query<HTMLInputElement>('input')!;
+
       input.focus();
       await user.press(input, 'ArrowDown');
       await user.press(input, 'Enter');
@@ -138,6 +150,7 @@ describe('bit-combobox', () => {
       });
 
       const input = fixture.query<HTMLInputElement>('input')!;
+
       await user.type(input, 'Atlantis');
       await fixture.flush();
       await new Promise((r) => setTimeout(r, 20));

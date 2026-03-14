@@ -1,6 +1,8 @@
 import { computed, css, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
-import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
+
+import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 
 // ============================================
 // Styles
@@ -50,7 +52,9 @@ const componentStyles = /* css */ css`
       width: 100%;
     }
 
-    img[hidden] { display: none; }
+    img[hidden] {
+      display: none;
+    }
 
     .initials {
       align-items: center;
@@ -80,10 +84,18 @@ const componentStyles = /* css */ css`
       width: 0.75em;
     }
 
-    .status[data-status='online']  { background: var(--color-success); }
-    .status[data-status='offline'] { background: var(--color-contrast-400); }
-    .status[data-status='busy']    { background: var(--color-error); }
-    .status[data-status='away']    { background: var(--color-warning); }
+    .status[data-status='online'] {
+      background: var(--color-success);
+    }
+    .status[data-status='offline'] {
+      background: var(--color-contrast-400);
+    }
+    .status[data-status='busy'] {
+      background: var(--color-error);
+    }
+    .status[data-status='away'] {
+      background: var(--color-warning);
+    }
   }
 
   /* forcedColorsMixin targets :host; avatar needs the border on .avatar (different geometry),
@@ -174,6 +186,7 @@ export const TAG = define('bit-avatar', () => {
   });
 
   const imgFailed = signal(false);
+
   // Reset stale error state whenever src changes
   watch(props.src, () => {
     imgFailed.value = false;
@@ -182,6 +195,7 @@ export const TAG = define('bit-avatar', () => {
   // Attach load/error listeners reactively when the img element mounts
   const attachImgListeners = (el: HTMLImageElement | null) => {
     if (!el) return;
+
     el.addEventListener('error', () => {
       imgFailed.value = true;
     });
@@ -192,10 +206,15 @@ export const TAG = define('bit-avatar', () => {
 
   const derivedInitials = computed(() => {
     if (props.initials.value) return props.initials.value.slice(0, 2);
+
     const alt = props.alt.value;
+
     if (!alt) return '';
+
     const parts = alt.trim().split(/\s+/);
+
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+
     return parts[0].slice(0, 2).toUpperCase();
   });
 
@@ -207,9 +226,13 @@ export const TAG = define('bit-avatar', () => {
   const avatarLabel = computed(() => {
     const name = props.alt.value || null;
     const status = props.status.value ? STATUS_LABELS[props.status.value] : null;
+
     if (!name && !status) return null;
+
     if (!name) return `Status: ${status}`;
+
     if (!status) return name;
+
     return `${name}, ${status}`;
   });
 
@@ -225,7 +248,11 @@ export const TAG = define('bit-avatar', () => {
       componentStyles,
     ],
     template: html`
-      <span class="avatar" part="avatar" :aria-label="${() => avatarLabel.value}" :role="${() => (avatarLabel.value ? 'img' : null)}">
+      <span
+        class="avatar"
+        part="avatar"
+        :aria-label="${() => avatarLabel.value}"
+        :role="${() => (avatarLabel.value ? 'img' : null)}">
         ${() =>
           props.src.value
             ? html`<img
@@ -234,8 +261,7 @@ export const TAG = define('bit-avatar', () => {
                 :src="${() => props.src.value}"
                 :alt="${() => props.alt.value || ''}"
                 ?hidden="${() => !showImage.value}"
-                aria-hidden="true"
-              />`
+                aria-hidden="true" />`
             : ''}
         ${() =>
           showInitials.value
@@ -244,15 +270,24 @@ export const TAG = define('bit-avatar', () => {
         ${() =>
           showFallback.value
             ? html`<span class="icon-fallback" part="fallback" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="55%" height="55%">
-                <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4Z"/>
-              </svg>
-            </span>`
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="55%"
+                  height="55%">
+                  <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4Z" />
+                </svg>
+              </span>`
             : ''}
       </span>
       ${() =>
         props.status.value
-          ? html`<span class="status" part="status" :data-status="${() => props.status.value}" aria-hidden="true"></span>`
+          ? html`<span
+              class="status"
+              part="status"
+              :data-status="${() => props.status.value}"
+              aria-hidden="true"></span>`
           : ''}
     `,
   };
@@ -279,7 +314,9 @@ const groupStyles = /* css */ css`
       margin-inline-start: 0;
     }
 
-    ::slotted(bit-avatar[data-avatar-group-hidden]) { display: none; }
+    ::slotted(bit-avatar[data-avatar-group-hidden]) {
+      display: none;
+    }
 
     .overflow-badge {
       --_size: var(--avatar-size, var(--size-10));
@@ -345,6 +382,7 @@ export const GROUP_TAG = define('bit-avatar-group', ({ host }) => {
       const avatars = [...host.querySelectorAll('bit-avatar')];
       const max = Number(props.max.value) || 5;
       const hidden = Math.max(0, avatars.length - max);
+
       overflowCount.value = props.total.value != null ? Number(props.total.value) - max : hidden;
       avatars.forEach((a, i) => {
         if (i >= max) a.setAttribute('data-avatar-group-hidden', '');
@@ -361,7 +399,9 @@ export const GROUP_TAG = define('bit-avatar-group', ({ host }) => {
       <slot></slot>
       ${() =>
         overflowCount.value > 0
-          ? html`<span class="overflow-badge" part="overflow" aria-label="${() => `+${overflowCount.value} more`}">+${() => overflowCount.value}</span>`
+          ? html`<span class="overflow-badge" part="overflow" aria-label="${() => `+${overflowCount.value} more`}">
+              +${() => overflowCount.value}
+            </span>`
           : ''}
     `,
   };

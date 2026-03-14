@@ -5,6 +5,6 @@ export default {
   ignoreFiles: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/lib/**', '**/public/**'],
   plugins: ['stylelint-use-logical-spec'],
   rules: {
-    'at-rule-no-unknown': null
-  }
+    'at-rule-no-unknown': null,
+  },
 };

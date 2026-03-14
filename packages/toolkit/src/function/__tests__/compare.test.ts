@@ -25,12 +25,14 @@ describe('compare', () => {
   it('returns 0 for equal dates', () => {
     const d1 = new Date('2023-01-01');
     const d2 = new Date('2023-01-01');
+
     expect(compare(d1, d2)).toBe(0);
   });
 
   it('returns positive for first date greater, negative for second greater', () => {
     const d1 = new Date('2023-01-02');
     const d2 = new Date('2023-01-01');
+
     expect(compare(d1, d2)).toBeGreaterThan(0);
     expect(compare(d2, d1)).toBeLessThan(0);
   });

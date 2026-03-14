@@ -1,6 +1,7 @@
+import type { Obj } from '../types';
+
 import { isArray } from '../typed/isArray';
 import { isObject } from '../typed/isObject';
-import type { Obj } from '../types';
 
 // #region MergeStrategy
 type MergeStrategy =
@@ -9,7 +10,6 @@ type MergeStrategy =
   | 'lastWins'
   | 'arrayConcat'
   | 'arrayReplace'
-  // biome-ignore lint/suspicious/noExplicitAny: -
   | ((target: any, source: any) => any);
 // #endregion MergeStrategy
 
@@ -107,7 +107,6 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strate
     const sourceValue = source[key];
     const targetValue = result[key];
 
-    // biome-ignore lint/suspicious/noExplicitAny: -
     (result as any)[key] =
       isArray(sourceValue) && isArray(targetValue)
         ? handleArrayMerge(targetValue, sourceValue, strategy)
@@ -128,9 +127,11 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strate
  */
 function handleArrayMerge<T, U>(targetArray: T[] | undefined, sourceArray: U[], strategy: MergeStrategy): (T | U)[] {
   if (!targetArray) return sourceArray;
-  // biome-ignore lint/suspicious/noExplicitAny: -
+
   if (strategy === 'arrayConcat') return targetArray.concat(sourceArray as any);
+
   if (strategy === 'arrayReplace') return sourceArray;
+
   return [...targetArray, ...sourceArray];
 }
 
@@ -142,5 +143,6 @@ function handleArrayMerge<T, U>(targetArray: T[] | undefined, sourceArray: U[], 
  */
 function applyMergeStrategy<T, U>(target: T, source: U, strategy: MergeStrategy): T | U {
   if (typeof strategy === 'function') return strategy(target, source);
+
   return strategy === 'lastWins' || source !== undefined ? source : target;
 }

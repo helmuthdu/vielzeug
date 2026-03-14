@@ -18,8 +18,8 @@ export interface MiddlewareState {
   x: number;
   y: number;
   placement: Placement;
-  rects: { reference: Rect; floating: Rect };
-  elements: { reference: Element; floating: HTMLElement };
+  rects: { floating: Rect; reference: Rect };
+  elements: { floating: HTMLElement; reference: Element };
 }
 
 export interface Middleware {
@@ -51,7 +51,7 @@ function getAlign(p: Placement): Alignment | null {
   return (p.split('-')[1] as Alignment) ?? null;
 }
 
-function toRect({ x, y, width, height }: DOMRect): Rect {
+function toRect({ height, width, x, y }: DOMRect): Rect {
   return { height, width, x, y };
 }
 
@@ -65,8 +65,11 @@ function baseCoords(placement: Placement, ref: Rect, float: Rect): { x: number; 
   const align = getAlign(placement);
 
   if (side === 'top') return { x: crossCoord(align, ref.x, ref.width, float.width), y: ref.y - float.height };
+
   if (side === 'bottom') return { x: crossCoord(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
+
   if (side === 'left') return { x: ref.x - float.width, y: crossCoord(align, ref.y, ref.height, float.height) };
+
   /* right */ return { x: ref.x + ref.width, y: crossCoord(align, ref.y, ref.height, float.height) };
 }
 
@@ -81,7 +84,7 @@ export function computePosition(
   floating: HTMLElement,
   config: ComputePositionConfig = {},
 ): Promise<ComputePositionResult> {
-  const { placement: initial = 'bottom', middleware = [] } = config;
+  const { middleware = [], placement: initial = 'bottom' } = config;
   const mws = middleware.filter(Boolean) as Middleware[];
 
   let activePlacement = initial;
@@ -105,6 +108,7 @@ export function computePosition(
     if (state.placement !== activePlacement && resets < 1) {
       activePlacement = state.placement;
       resets++;
+
       return run();
     }
 
@@ -121,6 +125,7 @@ export function offset(value: number): Middleware {
   return {
     fn(state) {
       const side = getSide(state.placement);
+
       return {
         ...state,
         x: state.x + (side === 'right' ? value : side === 'left' ? -value : 0),
@@ -139,13 +144,14 @@ export interface FlipOptions {
 /** Flips the floating element to the opposite side when it would overflow the viewport. */
 export function flip(options: FlipOptions = {}): Middleware {
   const { padding = 0 } = options;
+
   return {
     fn(state) {
       const {
-        x,
-        y,
         placement,
         rects: { floating },
+        x,
+        y,
       } = state;
       const side = getSide(placement);
       const vw = window.innerWidth;
@@ -161,6 +167,7 @@ export function flip(options: FlipOptions = {}): Middleware {
       const align = getAlign(placement);
       const opp = OPPOSITE[side];
       const flipped = (align ? `${opp}-${align}` : opp) as Placement;
+
       return { ...state, placement: flipped };
     },
     name: 'flip',
@@ -175,15 +182,17 @@ export interface ShiftOptions {
 /** Shifts the floating element along its axis to keep it within the viewport. */
 export function shift(options: ShiftOptions = {}): Middleware {
   const { padding = 0 } = options;
+
   return {
     fn(state) {
       const {
+        rects: { floating },
         x,
         y,
-        rects: { floating },
       } = state;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
+
       return {
         ...state,
         x: Math.min(Math.max(x, padding), vw - floating.width - padding),
@@ -197,7 +206,7 @@ export function shift(options: ShiftOptions = {}): Middleware {
 export interface SizeApplyArgs {
   availableWidth: number;
   availableHeight: number;
-  elements: { reference: Element; floating: HTMLElement };
+  elements: { floating: HTMLElement; reference: Element };
 }
 
 export interface SizeOptions {
@@ -209,7 +218,8 @@ export interface SizeOptions {
 
 /** Provides available width/height and optionally resizes the floating element. */
 export function size(options: SizeOptions = {}): Middleware {
-  const { padding = 0, apply } = options;
+  const { apply, padding = 0 } = options;
+
   return {
     fn(state) {
       apply?.({
@@ -217,6 +227,7 @@ export function size(options: SizeOptions = {}): Middleware {
         availableWidth: window.innerWidth - padding * 2,
         elements: state.elements,
       });
+
       return state;
     },
     name: 'size',
@@ -235,6 +246,7 @@ export function autoUpdate(reference: Element, floating: HTMLElement, update: ()
   window.addEventListener('resize', update, { passive: true });
 
   const ro = new ResizeObserver(update);
+
   ro.observe(reference);
   ro.observe(floating);
 
@@ -276,9 +288,10 @@ export function positionFloat(
   return computePosition(reference, floating, {
     strategy: 'fixed',
     ...options,
-  }).then(({ x, y, placement }) => {
+  }).then(({ placement, x, y }) => {
     floating.style.left = `${x}px`;
     floating.style.top = `${y}px`;
+
     return placement;
   });
 }

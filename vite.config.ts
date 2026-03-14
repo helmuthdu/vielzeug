@@ -18,7 +18,6 @@ export const getConfig = (
 
   console.log(`|> Building library in ${__dirname}`);
 
-  // biome-ignore lint/suspicious/noExplicitAny: -
   const config: any = {
     build: {
       lib: {
@@ -27,6 +26,7 @@ export const getConfig = (
           if (entryName === 'src/index') {
             return `index.${format === 'es' ? 'js' : 'cjs'}`;
           }
+
           return `${entryName}.${format === 'es' ? 'js' : 'cjs'}`;
         },
         formats: ['es', 'cjs'],

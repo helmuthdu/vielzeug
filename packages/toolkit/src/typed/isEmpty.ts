@@ -23,12 +23,15 @@ import { isObject } from './isObject';
  *
  * @returns `true` if all arguments are `null`, `undefined`, `{}`, `[]`, or empty strings. Otherwise, it returns `false`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
 export function isEmpty(arg: any): boolean {
   if (isNil(arg) || arg === '') return true;
+
   if (isArray(arg)) return arg.length === 0;
+
   if (arg instanceof Map || arg instanceof Set) return arg.size === 0;
+
   if (isObject(arg)) return Object.keys(arg).length === 0;
+
   return false;
 }
 

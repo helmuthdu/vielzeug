@@ -1,31 +1,5 @@
-/* ========================================
-   CSS Cascade Layers
-
-   Define explicit layer order for predictable styling.
-   Layer order > Specificity
-
-   User styles (unlayered or custom layers) automatically
-   have higher priority than all BuildIt layers.
-   ======================================== */
-
 /* Import all external stylesheets first (LightningCSS requirement) */
+@import url('preflight.css');
+@import url('theme.css');
 @import url('animation.css');
-
-@layer buildit.reset,
-  buildit.tokens,
-  buildit.themes,
-  buildit.base,
-  buildit.variants,
-  buildit.states,
-  buildit.utilities,
-  buildit.overrides;
-
-/* Wrap preflight resets in lowest priority layer */
-@layer buildit.reset {
-  @import url('./preflight.css');
-}
-
-/* Wrap design tokens in second layer */
-@layer buildit.tokens {
-  @import url('./theme.css');
-}
+@import url('layer.css');

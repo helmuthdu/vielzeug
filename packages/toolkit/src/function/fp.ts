@@ -1,10 +1,6 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 import type { Fn } from '../types';
 
-// biome-ignore lint/suspicious/noExplicitAny: -
 type RemoveFirstParameter<T extends Fn> = T extends (first: any, ...rest: infer R) => any ? R : never;
-// biome-ignore lint/suspicious/noExplicitAny: -
 type FirstParameter<T extends Fn> = T extends (first: infer A, ...rest: any[]) => any ? A : never;
 
 /**

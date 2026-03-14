@@ -1,7 +1,9 @@
 import { computed, css, define, defineEmits, defineField, defineProps, html, inject, signal } from '@vielzeug/craftit';
-import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+
 import type { AddEventListeners, DisablableProps, FormValidityMethods, SizableProps, ThemableProps } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
+import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 const styles = /* css */ css`
@@ -60,7 +62,9 @@ const styles = /* css */ css`
       min-height: var(--_touch-target);
       min-width: var(--_touch-target);
       color: var(--_color-empty);
-      transition: color var(--transition-fast), transform var(--transition-fast);
+      transition:
+        color var(--transition-fast),
+        transform var(--transition-fast);
       border-radius: var(--rounded-sm);
     }
 
@@ -98,8 +102,12 @@ const styles = /* css */ css`
   }
 
   @layer buildit.utilities {
-    :host([size='sm']) { --_star-size: var(--size-5); }
-    :host([size='lg']) { --_star-size: var(--size-9); }
+    :host([size='sm']) {
+      --_star-size: var(--size-5);
+    }
+    :host([size='lg']) {
+      --_star-size: var(--size-9);
+    }
 
     @media (forced-colors: active) {
       /* Distinguish filled vs unfilled stars with system button colors */
@@ -118,7 +126,9 @@ const styles = /* css */ css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .sparkle { display: none; }
+    .sparkle {
+      display: none;
+    }
   }
 `;
 
@@ -196,6 +206,7 @@ export const TAG = define(
     const emit = defineEmits<{ change: { value: number } }>();
 
     const formCtx = inject(FORM_CTX);
+
     mountFormContextSync(host, formCtx, props);
 
     const fd = defineField(
@@ -216,11 +227,13 @@ export const TAG = define(
 
     const hovered = signal<number | null>(null);
 
+    // eslint-disable-next-line no-constant-binary-expression
     const displayValue = computed(() => hovered.value ?? Number(props.value.value) ?? 0);
 
     function spawnSparkles(star: number) {
       const layer = host.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
       const btn = host.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
+
       if (!layer || !btn) return;
 
       const cx = btn.offsetLeft + btn.offsetWidth / 2;
@@ -253,6 +266,7 @@ export const TAG = define(
 
     function select(star: number) {
       if (props.readonly.value || props.disabled.value) return;
+
       host.setAttribute('value', String(star));
       emit('change', { value: star });
       triggerValidation('change');
@@ -261,61 +275,66 @@ export const TAG = define(
 
     function handleKeydown(e: KeyboardEvent, star: number) {
       const max = Number(props.max.value) || 5;
+
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
         e.preventDefault();
         select(Math.min(max, star + 1));
+
         const nextBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.min(max, star + 1)}"]`);
+
         nextBtn?.focus();
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
         e.preventDefault();
         select(Math.max(1, star - 1));
+
         const prevBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.max(1, star - 1)}"]`);
+
         prevBtn?.focus();
       }
     }
 
     const stars = computed(() => {
       const max = Number(props.max.value) || 5;
+
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
     return {
       styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
       template: html`
-      <div
-        class="stars"
-        part="stars"
-        role="radiogroup"
-        :aria-label="${() => props.label.value}"
-        :aria-required="${() => null}"
-      >
-        ${() =>
-          stars.value.map((star) => {
-            const filled = star <= displayValue.value;
-            return html`<button
-            class="star-btn"
-            part="star"
-            type="button"
-            role="radio"
-            :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-            :aria-checked="${() => String(star === (Number(props.value.value) || 0))}"
-            :data-star="${star}"
-            ?data-filled="${() => filled}"
-            :disabled="${() => (props.disabled.value || props.readonly.value) || null}"
-            @click="${() => select(star)}"
-            @mouseenter="${() => {
-              if (!props.readonly.value && !props.disabled.value) hovered.value = star;
-            }}"
-            @mouseleave="${() => {
-              hovered.value = null;
-            }}"
-            @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}"
-            .innerHTML="${starIcon(star <= displayValue.value)}"
-          ></button>`;
-          })}
-        <div class="sparkle-layer"></div>
-      </div>
-    `,
+        <div
+          class="stars"
+          part="stars"
+          role="radiogroup"
+          :aria-label="${() => props.label.value}"
+          :aria-required="${() => null}">
+          ${() =>
+            stars.value.map((star) => {
+              const filled = star <= displayValue.value;
+
+              return html`<button
+                class="star-btn"
+                part="star"
+                type="button"
+                role="radio"
+                :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
+                :aria-checked="${() => String(star === (Number(props.value.value) || 0))}"
+                :data-star="${star}"
+                ?data-filled="${() => filled}"
+                :disabled="${() => props.disabled.value || props.readonly.value || null}"
+                @click="${() => select(star)}"
+                @mouseenter="${() => {
+                  if (!props.readonly.value && !props.disabled.value) hovered.value = star;
+                }}"
+                @mouseleave="${() => {
+                  hovered.value = null;
+                }}"
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}"
+                .innerHTML="${starIcon(star <= displayValue.value)}"></button>`;
+            })}
+          <div class="sparkle-layer"></div>
+        </div>
+      `,
     };
   },
   { formAssociated: true },

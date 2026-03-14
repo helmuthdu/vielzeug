@@ -135,6 +135,7 @@ describe('bit-badge accessibility', () => {
 
       const badge = fixture.query('.badge');
       const role = badge?.getAttribute('role');
+
       expect(!role || !['button', 'link', 'checkbox', 'menuitem'].includes(role)).toBe(true);
     });
 
@@ -143,6 +144,7 @@ describe('bit-badge accessibility', () => {
 
       const badge = fixture.query('.badge');
       const tabindex = badge?.getAttribute('tabindex');
+
       expect(!tabindex || tabindex === '-1').toBe(true);
     });
   });

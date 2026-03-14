@@ -96,7 +96,9 @@ describe('bit-button', () => {
       fixture = await mount('bit-button', { attrs: { type: 'submit' } });
 
       expect(fixture.element.getAttribute('type')).toBe('submit');
+
       const btn = fixture.query<HTMLButtonElement>('[part="button"]');
+
       expect(btn?.getAttribute('type')).toBe('button');
     });
   });
@@ -106,12 +108,15 @@ describe('bit-button', () => {
       fixture = await mount('bit-button', { attrs: { disabled: '' } });
 
       const btn = fixture.query('[part="button"]');
+
       expect(btn?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('does not fire click event when disabled', async () => {
       fixture = await mount('bit-button', { attrs: { disabled: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       await user.click(fixture.query<HTMLElement>('[part="button"]')!);
@@ -125,12 +130,15 @@ describe('bit-button', () => {
       fixture = await mount('bit-button', { attrs: { loading: '' } });
 
       const btn = fixture.query('[part="button"]');
+
       expect(btn?.getAttribute('aria-busy')).toBe('true');
     });
 
     it('does not fire click event when loading', async () => {
       fixture = await mount('bit-button', { attrs: { loading: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       await user.click(fixture.query<HTMLElement>('[part="button"]')!);
@@ -148,7 +156,9 @@ describe('bit-button', () => {
   describe('Events', () => {
     it('fires click event on click', async () => {
       fixture = await mount('bit-button');
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       await user.click(fixture.query<HTMLElement>('[part="button"]')!);
@@ -205,6 +215,7 @@ describe('bit-button accessibility', () => {
       fixture = await mount('bit-button');
 
       const btn = fixture.query('[part="button"]');
+
       expect(btn?.tagName.toLowerCase()).toBe('button');
     });
 
@@ -220,6 +231,7 @@ describe('bit-button accessibility', () => {
       fixture = await mount('bit-button');
 
       const btn = fixture.query<HTMLButtonElement>('[part="button"]');
+
       expect(btn?.type ?? btn?.getAttribute('type')).toBe('button');
     });
 
@@ -233,6 +245,7 @@ describe('bit-button accessibility', () => {
       fixture = await mount('bit-button');
 
       const val = fixture.query('[part="button"]')?.getAttribute('aria-disabled');
+
       expect(val === null || val === 'false').toBe(true);
     });
 
@@ -258,10 +271,13 @@ describe('bit-button accessibility', () => {
   describe('Keyboard Navigation', () => {
     it('fires click when Enter pressed on inner button', async () => {
       fixture = await mount('bit-button');
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       const btn = fixture.query<HTMLElement>('[part="button"]')!;
+
       btn.focus();
       await user.click(btn);
 
@@ -270,10 +286,13 @@ describe('bit-button accessibility', () => {
 
     it('fires click when Space pressed on inner button', async () => {
       fixture = await mount('bit-button');
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       const btn = fixture.query<HTMLElement>('[part="button"]')!;
+
       btn.focus();
       await user.click(btn);
 
@@ -282,10 +301,13 @@ describe('bit-button accessibility', () => {
 
     it('does not fire click when disabled and Enter pressed', async () => {
       fixture = await mount('bit-button', { attrs: { disabled: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('click', handler);
 
       const btn = fixture.query<HTMLElement>('[part="button"]')!;
+
       btn.focus();
       await user.click(btn);
 

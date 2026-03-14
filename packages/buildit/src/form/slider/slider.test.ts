@@ -83,7 +83,9 @@ describe('bit-slider', () => {
 
     it('does not emit change event when disabled', async () => {
       fixture = await mount('bit-slider', { attrs: { disabled: true, value: '50' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, 'ArrowRight');
@@ -97,20 +99,26 @@ describe('bit-slider', () => {
   describe('Events', () => {
     it('emits change event with value and originalEvent on arrow key', async () => {
       fixture = await mount('bit-slider', { attrs: { value: '50' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, 'ArrowRight');
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
+
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBeDefined();
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('increases value on ArrowRight', async () => {
       fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, 'ArrowRight');
@@ -120,7 +128,9 @@ describe('bit-slider', () => {
 
     it('decreases value on ArrowLeft', async () => {
       fixture = await mount('bit-slider', { attrs: { step: '10', value: '50' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, 'ArrowLeft');

@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: Test mocks require any type for flexibility */
 import { createApi, createMutation, createQuery, HttpError, type MutationState, type QueryState } from './fetchit';
 
 describe('fetchit', () => {
@@ -34,6 +33,7 @@ describe('fetchit', () => {
     describe('URL Construction', () => {
       it('interpolates {param} placeholders — single and multiple', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/users/{id}', { params: { id: 'abc' } });
@@ -45,6 +45,7 @@ describe('fetchit', () => {
 
       it('appends query string and omits undefined values', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse([]));
 
         await http.get('/users', { query: { page: 2, role: 'admin' } });
@@ -59,6 +60,7 @@ describe('fetchit', () => {
 
       it('combines path params and query params', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse([]));
 
         await http.get('/users/{id}/posts', { params: { id: 5 }, query: { limit: 10 } });
@@ -68,6 +70,7 @@ describe('fetchit', () => {
 
       it('does not add a trailing slash when path is empty', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('');
@@ -83,6 +86,7 @@ describe('fetchit', () => {
     describe('Methods & Body', () => {
       it('dispatches correct method for GET, POST, PUT, PATCH, DELETE, and custom methods', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/r');
@@ -106,6 +110,7 @@ describe('fetchit', () => {
 
       it('auto-serializes a plain-object body as JSON with content-type header', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await http.post('/users', { body: { name: 'Alice' } });
@@ -121,27 +126,33 @@ describe('fetchit', () => {
 
       it('passes BodyInit types (FormData, Blob, ArrayBuffer, TypedArray) through without serialization', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
         const formData = new FormData();
+
         await http.post('/upload', { body: formData });
         expect(fetchMock.mock.calls[0][1].body).toBe(formData);
 
         const blob = new Blob(['data'], { type: 'text/plain' });
+
         await http.post('/upload', { body: blob });
         expect(fetchMock.mock.calls[1][1].body).toBe(blob);
 
         const buffer = new ArrayBuffer(8);
+
         await http.post('/binary', { body: buffer });
         expect(fetchMock.mock.calls[2][1].body).toBe(buffer);
 
         const uint8 = new Uint8Array([1, 2, 3]);
+
         await http.post('/binary', { body: uint8 });
         expect(fetchMock.mock.calls[3][1].body).toBe(uint8);
       });
 
       it('returns undefined for 204 No Content responses', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue({ headers: new Headers(), ok: true, status: 204 });
 
         const result = await http.delete('/users/1');
@@ -157,6 +168,7 @@ describe('fetchit', () => {
     describe('Headers', () => {
       it('sends initial client headers on every request', async () => {
         const http = createApi({ headers: { Authorization: 'Bearer token', 'x-app': 'test' } });
+
         fetchMock.mockResolvedValue(jsonResponse({}));
 
         await http.get('/test');
@@ -171,6 +183,7 @@ describe('fetchit', () => {
 
       it('headers() updates existing headers and removes headers when value is undefined', async () => {
         const http = createApi({ headers: { Authorization: 'Bearer old', 'x-trace': 'abc' } });
+
         http.headers({ Authorization: 'Bearer new', 'x-trace': undefined });
         fetchMock.mockResolvedValue(jsonResponse({}));
 
@@ -188,9 +201,10 @@ describe('fetchit', () => {
     describe('Interceptors', () => {
       it('interceptor can modify request context', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
-        http.use(async ({ url, init }, next) =>
+        http.use(async ({ init, url }, next) =>
           next({ init: { ...init, headers: { ...(init.headers as Record<string, string>), 'x-custom': 'yes' } }, url }),
         );
 
@@ -201,19 +215,27 @@ describe('fetchit', () => {
 
       it('chains multiple interceptors in onion order', async () => {
         const http = createApi();
+
         fetchMock.mockResolvedValue(jsonResponse({}));
+
         const log: number[] = [];
 
         http.use(async (ctx, next) => {
           log.push(1);
+
           const r = await next(ctx);
+
           log.push(4);
+
           return r;
         });
         http.use(async (ctx, next) => {
           log.push(2);
+
           const r = await next(ctx);
+
           log.push(3);
+
           return r;
         });
 
@@ -223,11 +245,14 @@ describe('fetchit', () => {
 
       it('use() returns a dispose function that removes the interceptor', async () => {
         const http = createApi();
+
         fetchMock.mockResolvedValue(jsonResponse({}));
+
         let callCount = 0;
 
         const remove = http.use(async (ctx, next) => {
           callCount++;
+
           return next(ctx);
         });
 
@@ -251,6 +276,7 @@ describe('fetchit', () => {
         );
 
         const result = await http.get<{ mocked: boolean }>('/anything');
+
         expect(result).toEqual({ mocked: true });
         expect(fetchMock).not.toHaveBeenCalled();
       });
@@ -263,11 +289,13 @@ describe('fetchit', () => {
     describe('Deduplication', () => {
       it('auto-deduplicates concurrent requests for idempotent methods (GET, DELETE)', async () => {
         const http = createApi();
+
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
 
         const [g1, g2, g3] = await Promise.all([http.get('/users/1'), http.get('/users/1'), http.get('/users/1')]);
+
         expect(g1).toEqual({ id: 1 });
         expect(g2).toEqual({ id: 1 });
         expect(g3).toEqual({ id: 1 });
@@ -279,6 +307,7 @@ describe('fetchit', () => {
         );
 
         const [d1, d2] = await Promise.all([http.delete('/users/1'), http.delete('/users/1')]);
+
         expect(d1).toEqual({ deleted: true });
         expect(d2).toEqual({ deleted: true });
         expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -286,6 +315,7 @@ describe('fetchit', () => {
 
       it('does NOT deduplicate POST requests by default', async () => {
         const http = createApi();
+
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await Promise.all([http.post('/users', { body: { name: 'A' } }), http.post('/users', { body: { name: 'A' } })]);
@@ -295,6 +325,7 @@ describe('fetchit', () => {
 
       it('global dedupe:true deduplicates any method', async () => {
         const http = createApi({ dedupe: true });
+
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
@@ -311,6 +342,7 @@ describe('fetchit', () => {
 
       it('per-request dedupe:false opts out of deduplication', async () => {
         const http = createApi();
+
         fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
         await Promise.all([http.get('/users/1', { dedupe: false }), http.get('/users/1', { dedupe: false })]);
@@ -320,13 +352,17 @@ describe('fetchit', () => {
 
       it('deduplicates FormData requests sharing the same serialized key', async () => {
         const http = createApi({ dedupe: true });
+
         fetchMock.mockImplementation(
           () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
         );
 
         const fd1 = new FormData();
+
         fd1.append('name', 'Alice');
+
         const fd2 = new FormData();
+
         fd2.append('name', 'Alice');
 
         const [r1, r2] = await Promise.all([http.post('/upload', { body: fd1 }), http.post('/upload', { body: fd2 })]);
@@ -338,6 +374,7 @@ describe('fetchit', () => {
 
       it('handles BodyInit binary types (Blob, ArrayBuffer) in dedup key without crashing', async () => {
         const http = createApi({ dedupe: true });
+
         fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
         await expect(http.post('/upload', { body: new Blob(['hi']) })).resolves.toBeDefined();
@@ -348,6 +385,7 @@ describe('fetchit', () => {
         const http = createApi({ dedupe: true });
 
         const circular: any = { a: 1 };
+
         circular.self = circular;
 
         await expect(http.post('/json', { body: circular })).rejects.toThrow(TypeError);
@@ -368,6 +406,7 @@ describe('fetchit', () => {
 
       it('per-request timeout overrides client-level timeout', async () => {
         fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
         const http = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
 
         await http.get('/data', { timeout: 0 });
@@ -383,24 +422,30 @@ describe('fetchit', () => {
     describe('Error Handling', () => {
       it('wraps network errors in HttpError preserving url and method', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockRejectedValue(new Error('Network error'));
 
         const err = await http.get('/users/1').catch((e) => e);
 
         expect(err).toBeInstanceOf(HttpError);
+
         if (!(err instanceof HttpError)) throw err;
+
         expect(err.url).toBe('https://api.example.com/users/1');
         expect(err.method).toBe('GET');
       });
 
       it('wraps non-OK responses in HttpError with status, data, and raw response', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
         const err = await http.get('/users/999').catch((e) => e);
 
         expect(err).toBeInstanceOf(HttpError);
+
         if (!(err instanceof HttpError)) throw err;
+
         expect(err.status).toBe(404);
         expect(err.data).toEqual({ error: 'Not found' });
         expect(err.response).toBeDefined();
@@ -408,6 +453,7 @@ describe('fetchit', () => {
 
       it('HttpError.is() narrows type and optionally matches status code', async () => {
         const http = createApi({ baseUrl: 'https://api.example.com' });
+
         fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
         const err = await http.get('/users/999').catch((e) => e);
@@ -435,6 +481,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return { id: 1 };
         };
 
@@ -446,10 +493,12 @@ describe('fetchit', () => {
 
       it('refetches after staleTime expires', async () => {
         vi.useFakeTimers();
+
         const qc = createQuery();
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return { id: calls };
         };
 
@@ -485,6 +534,7 @@ describe('fetchit', () => {
         await qc.query({
           fn: async ({ signal }) => {
             receivedSignal = signal;
+
             return { id: 1 };
           },
           key: ['signal-test'],
@@ -502,17 +552,21 @@ describe('fetchit', () => {
           enabled: false,
           fn: async () => {
             called = true;
+
             return 1;
           },
           key: ['x'],
         });
+
         expect(r1).toBeUndefined();
         expect(called).toBe(false);
         expect(qc.getState(['x'])).toBeNull();
 
         // With pre-seeded cache — returns existing data without calling fn
         qc.set(['x'], { id: 99 });
+
         const r2 = await qc.query({ enabled: false, fn: async () => ({ id: 0 }), key: ['x'] });
+
         expect(r2).toEqual({ id: 99 });
       });
     });
@@ -558,6 +612,7 @@ describe('fetchit', () => {
         await qc.query({
           fn: async () => {
             if (++attempts < 3) throw new Error('transient');
+
             return { id: 1 };
           },
           key: ['users', 1],
@@ -606,6 +661,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return { id: 1 };
         };
 
@@ -626,6 +682,7 @@ describe('fetchit', () => {
 
       it('clear() removes all cached entries', () => {
         const qc = createQuery();
+
         qc.set(['a'], 1);
         qc.set(['b'], 2);
         qc.clear();
@@ -636,9 +693,11 @@ describe('fetchit', () => {
 
       it('clear() keeps entries with active observers in cache (reset to idle) so subscriptions stay live', async () => {
         const qc = createQuery();
+
         await qc.query({ fn: async () => ({ id: 1 }), key: ['x'], staleTime: 10_000 });
 
         const states: QueryState[] = [];
+
         qc.subscribe(['x'], (s) => states.push(s));
         qc.clear();
 
@@ -677,10 +736,12 @@ describe('fetchit', () => {
         const states: QueryState[] = [];
 
         const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+
         await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
         unsub();
 
         const statuses = states.map((s) => s.status);
+
         expect(statuses[0]).toBe('idle');
         expect(statuses).toContain('pending');
         expect(statuses[statuses.length - 1]).toBe('success');
@@ -703,6 +764,7 @@ describe('fetchit', () => {
           .catch(() => {});
 
         const statuses = states.map((s) => s.status);
+
         expect(statuses[0]).toBe('idle');
         expect(statuses).toContain('pending');
         expect(statuses[statuses.length - 1]).toBe('error');
@@ -722,6 +784,7 @@ describe('fetchit', () => {
 
       it('subscribe() cancels a pending GC timer to keep entry alive', async () => {
         vi.useFakeTimers();
+
         const qc = createQuery({ gcTime: 1_000 });
 
         await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
@@ -736,6 +799,7 @@ describe('fetchit', () => {
 
       it('invalidate() notifies subscribers with idle state and keeps the observed entry in cache', async () => {
         const qc = createQuery();
+
         await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 10_000 });
 
         const states: QueryState[] = [];
@@ -751,20 +815,24 @@ describe('fetchit', () => {
 
       it('clear() notifies active subscribers with idle state before wiping the cache', async () => {
         const qc = createQuery();
+
         await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
 
         const states: QueryState[] = [];
+
         qc.subscribe(['users', 1], (s) => states.push({ ...s }));
 
         qc.clear();
 
         const last = states[states.length - 1];
+
         expect(last?.status).toBe('idle');
         expect(last?.data).toBeUndefined();
       });
 
       it('cancel() transitions pending -> success when data exists and schedules GC', async () => {
         vi.useFakeTimers();
+
         const gcTime = 1_000;
         const qc = createQuery({ gcTime });
 
@@ -772,6 +840,7 @@ describe('fetchit', () => {
         const pending = new Promise((r) => {
           resolve = r;
         });
+
         qc.query({ fn: () => pending as Promise<unknown>, key: ['x'] });
         qc.set(['x'], { id: 42 }); // seed data so cancel transitions to 'success'
         qc.cancel(['x']);
@@ -795,6 +864,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return { id: 1 };
         };
 
@@ -809,6 +879,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return { data: 'ok' };
         };
         const key = ['posts', { filters: { author: 'john', tags: ['a', 'b'] }, page: 1 }];
@@ -824,6 +895,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return {};
         };
 
@@ -838,6 +910,7 @@ describe('fetchit', () => {
         let calls = 0;
         const fn = async () => {
           calls++;
+
           return {};
         };
 
@@ -875,6 +948,7 @@ describe('fetchit', () => {
       );
 
       const result = await addUser.mutate({ name: 'Created' });
+
       expect(result).toEqual({ id: 1, name: 'Created' });
     });
 
@@ -885,6 +959,7 @@ describe('fetchit', () => {
 
       const states: MutationState[] = [];
       const unsub = addUser.subscribe((s) => states.push({ ...s }));
+
       await addUser.mutate(undefined);
       unsub();
 
@@ -900,6 +975,7 @@ describe('fetchit', () => {
       const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
 
       const states: MutationState[] = [];
+
       fail.subscribe((s) => states.push({ ...s }));
 
       await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
@@ -913,6 +989,7 @@ describe('fetchit', () => {
       fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
 
       const mut = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+
       await mut.mutate(undefined);
 
       expect(mut.getState().status).toBe('success');
@@ -930,6 +1007,7 @@ describe('fetchit', () => {
       );
 
       const first = slow.mutate(undefined);
+
       await expect(slow.mutate(undefined)).rejects.toThrow('mutation already in flight');
       resolve();
       await first;
@@ -942,6 +1020,7 @@ describe('fetchit', () => {
         () =>
           new Promise<void>((resolve, reject) => {
             const id = setTimeout(resolve, 10_000);
+
             ac.signal.addEventListener('abort', () => {
               clearTimeout(id);
               reject(new DOMException('Aborted', 'AbortError'));
@@ -950,6 +1029,7 @@ describe('fetchit', () => {
       );
 
       const promise = slow.mutate(undefined, { signal: ac.signal });
+
       ac.abort();
       await expect(promise).rejects.toThrow();
     });

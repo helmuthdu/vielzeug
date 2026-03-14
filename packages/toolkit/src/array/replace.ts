@@ -1,6 +1,7 @@
+import type { Predicate } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import type { Predicate } from '../types';
 
 /**
  * Replaces the first element in an array that satisfies the provided predicate

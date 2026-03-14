@@ -1,6 +1,7 @@
+import type { Selector } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import type { Selector } from '../types';
 
 /**
  * Groups the elements of an array based on the given key.
@@ -31,6 +32,7 @@ export function group<T>(array: T[], selector: Selector<T>): Record<string, T[]>
     if (!result[key]) {
       result[key] = [];
     }
+
     result[key].push(item);
   }
 

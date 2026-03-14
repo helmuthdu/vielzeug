@@ -3,6 +3,7 @@ import { isMatch } from '../isMatch';
 describe('isMatch', () => {
   it('returns true for identical objects', () => {
     const obj = { a: 1, b: 2 };
+
     expect(isMatch(obj, obj)).toBe(true);
   });
 
@@ -18,12 +19,14 @@ describe('isMatch', () => {
 
   it('returns true for deep partial match', () => {
     const obj = { a: 1, b: { c: 2, d: 3 } };
+
     expect(isMatch(obj, { b: { c: 2 } })).toBe(true);
     expect(isMatch(obj, { a: 1, b: { d: 3 } })).toBe(true);
   });
 
   it('returns false for deep mismatch', () => {
     const obj = { a: 1, b: { c: 2, d: 3 } };
+
     expect(isMatch(obj, { b: { c: 3 } })).toBe(false);
     expect(isMatch(obj, { b: { e: 4 } })).toBe(false);
   });
@@ -50,6 +53,7 @@ describe('isMatch', () => {
 
   it('handles nested objects and arrays', () => {
     const obj = { a: { b: [1, 2, { c: 3 }] } };
+
     expect(isMatch(obj, { a: { b: [1, 2, { c: 3 }] } })).toBe(true);
     expect(isMatch(obj, { a: { b: [1, 2, { c: 4 }] } })).toBe(false);
   });

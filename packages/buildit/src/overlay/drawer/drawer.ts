@@ -12,8 +12,10 @@ import {
   ref,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
+
 import type { AddEventListeners } from '../../types';
+
+import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { closeIcon } from '../icons';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
@@ -42,21 +44,31 @@ const styles = /* css */ css`
       box-sizing: border-box;
     }
 
-    dialog:not([open]) { display: none; }
-    dialog[open] { pointer-events: auto; }
+    dialog:not([open]) {
+      display: none;
+    }
+    dialog[open] {
+      pointer-events: auto;
+    }
 
     dialog::backdrop {
       background: var(--_backdrop);
       opacity: 1;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--_transition) ease,
         overlay var(--_transition) ease allow-discrete,
-        display var(--_transition) ease allow-discrete);
+        display var(--_transition) ease allow-discrete
+      );
 
-      @starting-style { opacity: 0; }
+      @starting-style {
+        opacity: 0;
+      }
     }
 
-    dialog.closing::backdrop { opacity: 0; }
+    dialog.closing::backdrop {
+      opacity: 0;
+    }
 
     .panel {
       position: absolute;
@@ -67,13 +79,17 @@ const styles = /* css */ css`
       overflow: hidden;
       box-sizing: border-box;
       /* Default: right drawer */
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         transform var(--_transition) ease,
         overlay var(--_transition) ease allow-discrete,
-        display var(--_transition) ease allow-discrete);
+        display var(--_transition) ease allow-discrete
+      );
     }
 
-    dialog.closing .panel { transform: var(--_panel-exit-transform); }
+    dialog.closing .panel {
+      transform: var(--_panel-exit-transform);
+    }
 
     /* ========================
        Placement variants
@@ -87,7 +103,9 @@ const styles = /* css */ css`
       width: var(--drawer-size, 20rem);
       max-width: calc(100vw - var(--size-4));
 
-      @starting-style { transform: translateX(-100%); }
+      @starting-style {
+        transform: translateX(-100%);
+      }
     }
 
     /* right (default) */
@@ -99,7 +117,9 @@ const styles = /* css */ css`
       width: var(--drawer-size, 20rem);
       max-width: calc(100vw - var(--size-4));
 
-      @starting-style { transform: translateX(100%); }
+      @starting-style {
+        transform: translateX(100%);
+      }
     }
 
     /* top */
@@ -110,7 +130,9 @@ const styles = /* css */ css`
       height: var(--drawer-size, 16rem);
       max-height: calc(100dvh - var(--size-4));
 
-      @starting-style { transform: translateY(-100%); }
+      @starting-style {
+        transform: translateY(-100%);
+      }
     }
 
     /* bottom */
@@ -121,7 +143,9 @@ const styles = /* css */ css`
       height: var(--drawer-size, 16rem);
       max-height: calc(100dvh - var(--size-4));
 
-      @starting-style { transform: translateY(100%); }
+      @starting-style {
+        transform: translateY(100%);
+      }
     }
 
     /*
@@ -133,24 +157,37 @@ const styles = /* css */ css`
     :host(:dir(rtl)[placement='left']) .panel {
       --_panel-exit-transform: translateX(100%);
 
-      @starting-style { transform: translateX(100%); }
+      @starting-style {
+        transform: translateX(100%);
+      }
     }
 
     :host(:dir(rtl)[placement='right']) .panel,
     :host(:dir(rtl):not([placement])) .panel {
       --_panel-exit-transform: translateX(-100%);
 
-      @starting-style { transform: translateX(-100%); }
+      @starting-style {
+        transform: translateX(-100%);
+      }
     }
 
     /* ========================
        Size utilities
        ======================== */
 
-    :host([size='sm'])   { --drawer-size: 14rem; }
-    :host([size='lg'])   { --drawer-size: 32rem; }
-    :host([size='full']) { --drawer-size: 100%; }
-    :host([size='full']) .panel { max-width: 100%; max-height: 100%; }
+    :host([size='sm']) {
+      --drawer-size: 14rem;
+    }
+    :host([size='lg']) {
+      --drawer-size: 32rem;
+    }
+    :host([size='full']) {
+      --drawer-size: 100%;
+    }
+    :host([size='full']) .panel {
+      max-width: 100%;
+      max-height: 100%;
+    }
 
     /* ========================
        Header / Body / Footer slots
@@ -209,8 +246,13 @@ const styles = /* css */ css`
       min-width: var(--_touch-target);
     }
 
-    .close-btn:hover { color: var(--color-contrast-800); background: var(--color-contrast-100); }
-    .close-btn:focus-visible { outline: var(--focus-ring); }
+    .close-btn:hover {
+      color: var(--color-contrast-800);
+      background: var(--color-contrast-100);
+    }
+    .close-btn:focus-visible {
+      outline: var(--focus-ring);
+    }
 
     @media (max-width: 640px) {
       :host([placement='left']) .panel,
@@ -232,7 +274,6 @@ const styles = /* css */ css`
         padding: var(--size-3);
       }
     }
-
   }
 `;
 
@@ -353,8 +394,10 @@ export const TAG = define('bit-drawer', ({ host }) => {
 
   const applyInitialFocus = () => {
     const selector = props['initial-focus'].value;
+
     if (selector) {
       const target = host.querySelector<HTMLElement>(selector);
+
       if (target) requestAnimationFrame(() => target.focus());
     }
   };
@@ -371,12 +414,15 @@ export const TAG = define('bit-drawer', ({ host }) => {
         detail: { placement: props.placement.value ?? 'right', trigger },
       }),
     );
+
     if (allowed) closeWithAnimation();
   };
 
   const openDrawer = () => {
     const dialog = dialogRef.value;
+
     if (!dialog || dialog.open) return;
+
     returnFocusEl = document.activeElement as HTMLElement;
     dialog.showModal();
     applyInitialFocus();
@@ -385,15 +431,19 @@ export const TAG = define('bit-drawer', ({ host }) => {
 
   const closeWithAnimation = () => {
     const dialog = dialogRef.value;
+
     if (!dialog?.open || isClosing) return;
+
     isClosing = true;
     dialog.classList.add('closing');
+
     const panel = panelRef.value;
     const finish = () => {
       dialog.classList.remove('closing');
       isClosing = false;
       dialog.close();
     };
+
     if (panel && Number.parseFloat(getComputedStyle(panel).transitionDuration) > 0) {
       panel.addEventListener('transitionend', finish, { once: true });
     } else {
@@ -403,26 +453,31 @@ export const TAG = define('bit-drawer', ({ host }) => {
 
   onMount(() => {
     const dialog = dialogRef.value;
+
     if (!dialog) return;
 
     // Expose imperative API on the element instance.
     const el = host as DrawerElement;
+
     el.show = openDrawer;
     el.hide = closeWithAnimation;
 
     // Fires after every close (animation or programmatic). Syncs state and returns focus.
     const handleNativeClose = () => {
       host.removeAttribute('open');
+
       if (props['return-focus'].value !== false && returnFocusEl) {
         returnFocusEl.focus();
         returnFocusEl = null;
       }
+
       emit('close', { placement: props.placement.value ?? 'right' });
     };
 
     // Intercept Escape so the exit animation runs before dialog.close().
     const handleCancel = (e: Event) => {
       e.preventDefault();
+
       if (!props.persistent.value) requestClose('escape');
     };
 
@@ -458,8 +513,7 @@ export const TAG = define('bit-drawer', ({ host }) => {
         ref=${dialogRef}
         aria-modal="true"
         :aria-label="${() => props.label.value ?? null}"
-        :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}"
-      >
+        :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>
           <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
             <span class="header-title" id="${drawerLabelId}">
@@ -472,8 +526,9 @@ export const TAG = define('bit-drawer', ({ host }) => {
             type="button"
             aria-label="Close"
             ?hidden=${() => !props.dismissable.value}
-            @click="${() => requestClose('button')}"
-          >${closeIcon}</button>
+            @click="${() => requestClose('button')}">
+            ${closeIcon}
+          </button>
           <div class="body" part="body">
             <slot></slot>
           </div>
@@ -490,8 +545,8 @@ declare global {
   interface HTMLElementTagNameMap {
     'bit-drawer': DrawerElement &
       AddEventListeners<{
-        'close-request': CustomEvent<{ trigger: 'backdrop' | 'button' | 'escape'; placement: DrawerPlacement }>;
         close: CustomEvent<{ placement: DrawerPlacement }>;
+        'close-request': CustomEvent<{ placement: DrawerPlacement; trigger: 'backdrop' | 'button' | 'escape' }>;
         open: CustomEvent<{ placement: DrawerPlacement }>;
       }>;
   }

@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 /**
  * Curries a function, allowing it to be called with partial arguments.
  *
@@ -41,7 +39,9 @@ export function curry(fn: (...args: any[]) => any, arity = fn.length) {
     if (args.length >= arity) {
       return fn(...args);
     }
+
     return (...rest: any[]) => curried(...args, ...rest);
   };
+
   return curried as any;
 }

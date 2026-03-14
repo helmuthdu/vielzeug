@@ -1,6 +1,7 @@
+import type { Selector } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import type { Selector } from '../types';
 
 /**
  * Creates an object keyed by a property or selector function. When multiple
@@ -27,6 +28,7 @@ export function keyBy<T>(array: T[], selector: Selector<T>): Record<string, T> {
 
   for (const item of array) {
     const key = String(getKey(item));
+
     result[key] = item;
   }
 

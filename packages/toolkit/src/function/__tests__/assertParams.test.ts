@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { assertParams } from '../assertParams';
 
 describe('assertParams', () => {
@@ -8,49 +9,53 @@ describe('assertParams', () => {
 
   it('should not throw if all keys are present and not empty', () => {
     const params = { id: '123', name: 'John' };
+
     expect(() => assertParams(params, ['id', 'name'])).not.toThrow();
   });
 
   it('should throw if a key is missing', () => {
     const params = { id: '123' };
-    // @ts-expect-error
-    expect(() => assertParams(params, ['name'])).toThrowError('Missing required parameter: "name"');
+
+    expect(() => assertParams(params, ['name'] as any)).toThrowError('Missing required parameter: "name"');
   });
 
   it('should not throw if a key is an empty string', () => {
     const params = { id: '123', name: '' };
+
     expect(() => assertParams(params, ['name'])).not.toThrow();
   });
 
   it('should throw with multiple missing keys', () => {
     const params = {};
-    // @ts-expect-error
-    expect(() => assertParams(params, ['id', 'name'])).toThrowError('Missing required parameters: "id", "name"');
+
+    expect(() => assertParams(params, ['id', 'name'] as any)).toThrowError('Missing required parameters: "id", "name"');
   });
 
   it('should include context name if provided', () => {
     const params = { id: '123', name: undefined as unknown as string };
+
     expect(() => assertParams(params, ['name'], 'UserUpdate')).toThrowError(
       'Missing required parameter: "name" in "UserUpdate"',
     );
   });
 
   it('should throw if params is null or undefined', () => {
-    // @ts-expect-error
-    expect(() => assertParams(null, ['id'])).toThrowError('Missing parameters object');
-    // @ts-expect-error
-    expect(() => assertParams(undefined, ['id'])).toThrowError('Missing parameters object');
+    expect(() => assertParams(null as any, ['id'])).toThrowError('Missing parameters object');
+    expect(() => assertParams(undefined as any, ['id'])).toThrowError('Missing parameters object');
   });
 
   it('should support bypass mode', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const params = { id: undefined as unknown as string };
+
     assertParams(params, ['id'], 'Context', { bypass: true });
     expect(console.warn).toHaveBeenCalledWith('Missing required parameter: "id" in "Context"');
   });
 
   it('should handle empty keys array', () => {
     const params = { id: '123' };
+
     expect(() => assertParams(params, [])).not.toThrow();
   });
 });

@@ -30,7 +30,8 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, queryAll, flush } = await mount('test-no-duplication');
+        const { flush, query, queryAll } = await mount('test-no-duplication');
+
         query('.add-btn')!.addEventListener('click', addItem);
 
         expect(queryAll('.item').length).toBe(1);
@@ -63,9 +64,10 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-reuse-nodes');
+        const { flush, queryAll } = await mount('test-reuse-nodes');
 
         const initialNodes = queryAll('.item');
+
         expect(initialNodes[0].getAttribute('data-id')).toBe('1');
         expect(initialNodes[1].getAttribute('data-id')).toBe('2');
 
@@ -77,6 +79,7 @@ describe('Regression Tests', () => {
         await flush();
 
         const updatedNodes = queryAll('.item');
+
         expect(updatedNodes.length).toBe(2);
         expect(updatedNodes[0].getAttribute('data-id')).toBe('1');
         expect(updatedNodes[1].getAttribute('data-id')).toBe('2');
@@ -103,13 +106,15 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-remove-nodes');
+        const { flush, queryAll } = await mount('test-remove-nodes');
+
         expect(queryAll('.item').length).toBe(3);
 
         items.value = items.value.filter((item) => item.id !== 2);
         await flush();
 
         const remaining = queryAll('.item');
+
         expect(remaining.length).toBe(2);
         expect(remaining[0].getAttribute('data-id')).toBe('1');
         expect(remaining[1].getAttribute('data-id')).toBe('3');
@@ -137,9 +142,10 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-reorder');
+        const { flush, queryAll } = await mount('test-reorder');
 
         const initial = queryAll('.item');
+
         expect(initial[0].textContent).toBe('First');
         expect(initial[2].textContent).toBe('Third');
 
@@ -148,6 +154,7 @@ describe('Regression Tests', () => {
         await flush();
 
         const reordered = queryAll('.item');
+
         expect(reordered[0].textContent).toBe('Third');
         expect(reordered[2].textContent).toBe('First');
       });
@@ -168,12 +175,13 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-prepend');
+        const { flush, queryAll } = await mount('test-prepend');
 
         items.value = [{ id: 2, text: 'New' }, ...items.value];
         await flush();
 
         const updated = queryAll('.item');
+
         expect(updated.length).toBe(2);
         expect(updated[0].getAttribute('data-id')).toBe('2');
         expect(updated[1].getAttribute('data-id')).toBe('1');
@@ -197,7 +205,8 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-empty-to-populated');
+        const { flush, queryAll } = await mount('test-empty-to-populated');
+
         expect(queryAll('.item').length).toBe(0);
 
         items.value = [
@@ -227,7 +236,8 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-populated-to-empty');
+        const { flush, queryAll } = await mount('test-populated-to-empty');
+
         expect(queryAll('.item').length).toBe(2);
 
         items.value = [];
@@ -251,7 +261,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-single-item');
+        const { flush, queryAll } = await mount('test-single-item');
 
         items.value = [{ id: 1, text: 'Updated' }];
         await flush();
@@ -323,7 +333,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-fallback-toggle');
+        const { flush, query } = await mount('test-fallback-toggle');
 
         expect(query('.empty')).toBeNull();
 
@@ -346,9 +356,10 @@ describe('Regression Tests', () => {
 
         define('test-prop-bindings', () => html` <input type="text" value=${value} disabled=${disabled} /> `);
 
-        const { query, flush } = await mount('test-prop-bindings');
+        const { flush, query } = await mount('test-prop-bindings');
 
         const input = query('input') as HTMLInputElement;
+
         expect(input.value).toBe('initial');
         expect(input.disabled).toBe(false);
 
@@ -367,9 +378,10 @@ describe('Regression Tests', () => {
 
         define('test-boolean-attrs', () => html` <input type="checkbox" checked=${checked} readonly=${readonly} /> `);
 
-        const { query, flush } = await mount('test-boolean-attrs');
+        const { flush, query } = await mount('test-boolean-attrs');
 
         const input = query('input') as HTMLInputElement;
+
         expect(input.checked).toBe(false);
 
         checked.value = true;
@@ -391,9 +403,10 @@ describe('Regression Tests', () => {
           () => html` <input value=${value} placeholder=${placeholder} maxlength=${maxLength} /> `,
         );
 
-        const { query, flush } = await mount('test-multi-props');
+        const { flush, query } = await mount('test-multi-props');
 
         const input = query('input') as HTMLInputElement;
+
         expect(input.placeholder).toBe('Enter text');
         expect(input.maxLength).toBe(10);
 
@@ -417,9 +430,10 @@ describe('Regression Tests', () => {
           () => html` <div class="${() => (completed.value ? 'completed' : '')}">Task</div> `,
         );
 
-        const { query, flush } = await mount('test-class-toggle');
+        const { flush, query } = await mount('test-class-toggle');
 
         const div = query('div')!;
+
         expect(div.classList.contains('completed')).toBe(false);
 
         completed.value = true;
@@ -434,17 +448,21 @@ describe('Regression Tests', () => {
         define('test-multi-classes', () => {
           const classes = computed(() => {
             const cls = ['base'];
+
             if (active.value) cls.push('active');
+
             if (disabled.value) cls.push('disabled');
+
             return cls.join(' ');
           });
 
           return html`<button class=${classes}>Button</button>`;
         });
 
-        const { query, flush } = await mount('test-multi-classes');
+        const { flush, query } = await mount('test-multi-classes');
 
         const btn = query('button')!;
+
         expect(btn.classList.contains('base')).toBe(true);
         expect(btn.classList.contains('active')).toBe(false);
         expect(btn.classList.contains('disabled')).toBe(false);
@@ -474,7 +492,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-event-handler');
+        const { flush, query } = await mount('test-event-handler');
 
         expect(query('.count')!.textContent).toBe('0');
 
@@ -502,7 +520,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-dynamic-handler');
+        const { flush, query } = await mount('test-dynamic-handler');
 
         query('.action')!.dispatchEvent(new Event('click'));
         await flush();
@@ -526,7 +544,7 @@ describe('Regression Tests', () => {
 
         define('test-computed-basic', () => html`<div class="result">${doubled}</div>`);
 
-        const { query, flush } = await mount('test-computed-basic');
+        const { flush, query } = await mount('test-computed-basic');
 
         expect(query('.result')!.textContent).toBe('0');
 
@@ -542,7 +560,7 @@ describe('Regression Tests', () => {
 
         define('test-nested-computed', () => html`<div>${c}</div>`);
 
-        const { query, flush } = await mount('test-nested-computed');
+        const { flush, query } = await mount('test-nested-computed');
 
         expect(query('div')!.textContent).toBe('3'); // (1 * 2) + 1
 
@@ -558,7 +576,7 @@ describe('Regression Tests', () => {
 
         define('test-multi-deps', () => html`<div>${sum}</div>`);
 
-        const { query, flush } = await mount('test-multi-deps');
+        const { flush, query } = await mount('test-multi-deps');
 
         expect(query('div')!.textContent).toBe('5');
 
@@ -583,15 +601,17 @@ describe('Regression Tests', () => {
             if (show.value) {
               return html`<span class="value">${doubled}</span>`;
             }
+
             return html`<span class="hidden">Hidden</span>`;
           });
 
           return html`<div>${content}</div>`;
         });
 
-        const { query, flush } = await mount('test-computed-conditional');
+        const { flush, query } = await mount('test-computed-conditional');
 
         const span = query('.value');
+
         expect(span).not.toBeNull();
         expect(span?.textContent).toBe('0');
 
@@ -611,6 +631,7 @@ describe('Regression Tests', () => {
         const email = signal('');
         const error = computed(() => {
           if (!email.value) return '';
+
           return email.value.includes('@') ? '' : 'Invalid email';
         });
 
@@ -625,7 +646,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-validation');
+        const { flush, query } = await mount('test-validation');
 
         const input = query('input') as HTMLInputElement;
         const errorSpan = query('.error');
@@ -645,9 +666,13 @@ describe('Regression Tests', () => {
         const password = signal('');
         const strength = computed(() => {
           const len = password.value.length;
+
           if (len === 0) return '';
+
           if (len < 4) return 'Weak';
+
           if (len < 8) return 'Medium';
+
           return 'Strong';
         });
 
@@ -662,7 +687,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-password-strength');
+        const { flush, query } = await mount('test-password-strength');
 
         const input = query('input') as HTMLInputElement;
 
@@ -695,7 +720,9 @@ describe('Regression Tests', () => {
 
       const filtered = computed(() => {
         if (filter.value === 'all') return allItems.value;
+
         if (filter.value === 'active') return allItems.value.filter((t) => !t.done);
+
         return allItems.value.filter((t) => t.done);
       });
 
@@ -715,7 +742,7 @@ describe('Regression Tests', () => {
         `,
       );
 
-      const { query, queryAll, flush } = await mount('test-filter');
+      const { flush, query, queryAll } = await mount('test-filter');
 
       expect(queryAll('.item').length).toBe(3);
 
@@ -753,7 +780,7 @@ describe('Regression Tests', () => {
         `,
       );
 
-      const { queryAll, flush } = await mount('test-filter-update');
+      const { flush, queryAll } = await mount('test-filter-update');
 
       expect(queryAll('.item').length).toBe(2);
 
@@ -792,7 +819,7 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { query, flush } = await mount('test-toggle');
+        const { flush, query } = await mount('test-toggle');
 
         let checkbox = query('input') as HTMLInputElement;
         let span = query('span')!;
@@ -834,9 +861,10 @@ describe('Regression Tests', () => {
           `,
         );
 
-        const { queryAll, flush } = await mount('test-multi-toggle');
+        const { flush, queryAll } = await mount('test-multi-toggle');
 
         let checkboxes = queryAll('input') as HTMLInputElement[];
+
         expect(checkboxes[0].checked).toBe(false);
         expect(checkboxes[1].checked).toBe(true);
 
@@ -849,6 +877,7 @@ describe('Regression Tests', () => {
 
         // Query again after the second update
         const updated = queryAll('input') as HTMLInputElement[];
+
         expect(updated[0].checked).toBe(true);
         expect(updated[1].checked).toBe(false);
       });
@@ -863,7 +892,7 @@ describe('Regression Tests', () => {
 
       define('test-batching', () => html`<div>${sum}</div>`);
 
-      const { query, flush } = await mount('test-batching');
+      const { flush, query } = await mount('test-batching');
 
       expect(query('div')!.textContent).toBe('0');
 
@@ -882,18 +911,20 @@ describe('Regression Tests', () => {
       define('test-rapid', () => {
         intervalId = setInterval(() => {
           count.value++;
+
           if (count.value >= 10 && intervalId) clearInterval(intervalId);
         }, 5) as unknown as number;
 
         return html`<div>${count}</div>`;
       });
 
-      const { query, flush } = await mount('test-rapid');
+      const { flush, query } = await mount('test-rapid');
 
       await new Promise((r) => setTimeout(r, 100));
       await flush();
 
       expect(Number.parseInt(query('div')!.textContent || '0', 10)).toBeGreaterThanOrEqual(10);
+
       if (intervalId) clearInterval(intervalId);
     });
   });

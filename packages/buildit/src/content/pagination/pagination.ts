@@ -1,7 +1,9 @@
 import { computed, css, define, defineEmits, defineProps, html } from '@vielzeug/craftit';
+
 import '../../actions/button/button';
-import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import type { AddEventListeners, ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -20,7 +22,9 @@ const styles = /* css */ css`
       padding: 0;
     }
 
-    li { display: contents; }
+    li {
+      display: contents;
+    }
 
     button {
       all: unset;
@@ -76,7 +80,6 @@ const styles = /* css */ css`
       font-size: var(--_font-size, var(--text-sm));
       cursor: default;
     }
-
   }
 
   @layer buildit.utilities {
@@ -138,6 +141,7 @@ function buildPageRange(
   const rightSibling = Math.min(currentPage + siblings, total - BOUNDARY);
 
   pages.push(1);
+
   if (leftSibling > BOUNDARY + 2) pages.push('ellipsis-start');
   else if (leftSibling === BOUNDARY + 2) pages.push(BOUNDARY + 1);
 
@@ -147,6 +151,7 @@ function buildPageRange(
   else if (rightSibling === total - BOUNDARY - 1) pages.push(total - BOUNDARY);
 
   pages.push(total);
+
   return pages;
 }
 
@@ -194,7 +199,9 @@ export const TAG = define('bit-pagination', ({ host }) => {
   function goTo(page: number) {
     const total = Number(props['total-pages'].value) || 1;
     const next = Math.min(Math.max(1, page), total);
+
     if (next === Number(props.page.value)) return;
+
     host.setAttribute('page', String(next));
     emit('change', { page: next });
   }
@@ -203,6 +210,7 @@ export const TAG = define('bit-pagination', ({ host }) => {
     buildPageRange(
       Number(props.page.value) || 1,
       Number(props['total-pages'].value) || 1,
+      // eslint-disable-next-line no-constant-binary-expression
       Number(props.siblings.value) ?? 1,
     ),
   );
@@ -218,78 +226,127 @@ export const TAG = define('bit-pagination', ({ host }) => {
           ${() =>
             props['show-first-last'].value
               ? html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="first-btn"
-                  aria-label="First page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isFirst.value}"
-                  @click="${() => goTo(1)}"
-                ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg></bit-button>
-              </li>`
+                  <bit-button
+                    icon-only
+                    :variant="${() => props.variant.value || 'ghost'}"
+                    part="first-btn"
+                    aria-label="First page"
+                    :size="${() => props.size.value || null}"
+                    :color="${() => props.color.value || null}"
+                    ?disabled="${() => isFirst.value}"
+                    @click="${() => goTo(1)}"
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="11 17 6 12 11 7" />
+                      <polyline points="18 17 13 12 18 7" /></svg
+                  ></bit-button>
+                </li>`
               : ''}
           ${() =>
             props['show-prev-next'].value
               ? html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="prev-btn"
-                  aria-label="Previous page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isFirst.value}"
-                  @click="${() => goTo((Number(props.page.value) || 1) - 1)}"
-                ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></bit-button>
-              </li>`
+                  <bit-button
+                    icon-only
+                    :variant="${() => props.variant.value || 'ghost'}"
+                    part="prev-btn"
+                    aria-label="Previous page"
+                    :size="${() => props.size.value || null}"
+                    :color="${() => props.color.value || null}"
+                    ?disabled="${() => isFirst.value}"
+                    @click="${() => goTo((Number(props.page.value) || 1) - 1)}"
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="15 18 9 12 15 6" /></svg
+                  ></bit-button>
+                </li>`
               : ''}
           ${() =>
             pageItems.value.map((item) => {
               if (item === 'ellipsis-start' || item === 'ellipsis-end') {
                 return html`<li><span class="ellipsis" aria-hidden="true">&hellip;</span></li>`;
               }
+
               const pg = item as number;
               const isCurrent = pg === (Number(props.page.value) || 1);
+
               return html`<li>
-              <button
-                part="page-btn"
-                :aria-label="${() => `Page ${pg}`}"
-                :aria-current="${() => (isCurrent ? 'page' : null)}"
-                @click="${() => goTo(pg)}"
-              >${pg}</button>
-            </li>`;
+                <button
+                  part="page-btn"
+                  :aria-label="${() => `Page ${pg}`}"
+                  :aria-current="${() => (isCurrent ? 'page' : null)}"
+                  @click="${() => goTo(pg)}">
+                  ${pg}
+                </button>
+              </li>`;
             })}
           ${() =>
             props['show-prev-next'].value
               ? html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="next-btn"
-                  aria-label="Next page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isLast.value}"
-                  @click="${() => goTo((Number(props.page.value) || 1) + 1)}"
-                ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></bit-button>
-              </li>`
+                  <bit-button
+                    icon-only
+                    :variant="${() => props.variant.value || 'ghost'}"
+                    part="next-btn"
+                    aria-label="Next page"
+                    :size="${() => props.size.value || null}"
+                    :color="${() => props.color.value || null}"
+                    ?disabled="${() => isLast.value}"
+                    @click="${() => goTo((Number(props.page.value) || 1) + 1)}"
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="9 18 15 12 9 6" /></svg
+                  ></bit-button>
+                </li>`
               : ''}
           ${() =>
             props['show-first-last'].value
               ? html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="last-btn"
-                  aria-label="Last page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isLast.value}"
-                  @click="${() => goTo(Number(props['total-pages'].value) || 1)}"
-                ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></bit-button>
-              </li>`
+                  <bit-button
+                    icon-only
+                    :variant="${() => props.variant.value || 'ghost'}"
+                    part="last-btn"
+                    aria-label="Last page"
+                    :size="${() => props.size.value || null}"
+                    :color="${() => props.color.value || null}"
+                    ?disabled="${() => isLast.value}"
+                    @click="${() => goTo(Number(props['total-pages'].value) || 1)}"
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="13 17 18 12 13 7" />
+                      <polyline points="6 17 11 12 6 7" /></svg
+                  ></bit-button>
+                </li>`
               : ''}
         </ol>
       </nav>

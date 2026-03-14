@@ -42,6 +42,7 @@ describe('bit-radio-group', () => {
       await fixture.flush();
 
       const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+
       expect(radios[1].hasAttribute('checked')).toBe(true);
       expect(radios[1].getAttribute('name')).toBe('letters');
     });
@@ -49,16 +50,21 @@ describe('bit-radio-group', () => {
     it('emits change when slotted radio dispatches change', async () => {
       fixture = await mount('bit-radio-group', { attrs: { name: 'letters' }, html: radioHtml });
       await fixture.flush();
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const second = fixture.element.querySelectorAll<HTMLElement>('bit-radio')[1];
+
       second.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
       expect(onChange).toHaveBeenCalled();
+
       const changeWithDetail = onChange.mock.calls
         .map((call) => call[0] as CustomEvent<{ value?: string }>)
         .find((event) => event?.detail?.value === 'b');
+
       expect(changeWithDetail).toBeTruthy();
     });
   });
@@ -72,6 +78,7 @@ describe('bit-radio-group', () => {
       await fixture.flush();
 
       const fieldset = fixture.query('fieldset[role="radiogroup"]');
+
       expect(fieldset).toBeTruthy();
       expect(fieldset?.getAttribute('aria-required')).toBe('true');
       expect(fixture.query('legend')?.textContent).toContain('Choose one');
@@ -85,10 +92,12 @@ describe('bit-radio-group', () => {
       await fixture.flush();
 
       const helper = fixture.query('.helper-text');
+
       expect(helper?.hasAttribute('hidden')).toBe(false);
       expect(helper?.textContent).toContain('Use arrows to navigate');
 
       const describedBy = fixture.query('fieldset')?.getAttribute('aria-describedby') ?? '';
+
       expect(describedBy.length).toBeGreaterThan(0);
     });
 
@@ -112,6 +121,7 @@ describe('bit-radio-group', () => {
       await fixture.flush();
 
       const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+
       radios[0].focus();
       await user.press(fixture.element, 'ArrowRight');
 

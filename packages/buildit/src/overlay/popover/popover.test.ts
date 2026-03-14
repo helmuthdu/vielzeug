@@ -9,11 +9,13 @@ describe('bit-popover', () => {
         this.setAttribute('popover-open', '');
       };
     }
+
     if (!HTMLElement.prototype.hidePopover) {
       HTMLElement.prototype.hidePopover = function () {
         this.removeAttribute('popover-open');
       };
     }
+
     await import('./popover');
   });
 
@@ -67,6 +69,7 @@ describe('bit-popover', () => {
       });
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-label')).toBe('User options');
     });
 
@@ -76,6 +79,7 @@ describe('bit-popover', () => {
       });
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-label')).toBeNull();
     });
 
@@ -86,10 +90,13 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('false');
     });
   });
@@ -103,6 +110,7 @@ describe('bit-popover', () => {
       });
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('true');
     });
 
@@ -113,6 +121,7 @@ describe('bit-popover', () => {
       await fixture.flush();
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       expect(btn?.getAttribute('aria-expanded')).toBe('false');
     });
 
@@ -122,10 +131,13 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('false');
     });
 
@@ -135,7 +147,9 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(btn?.getAttribute('aria-expanded')).toBe('true');
@@ -147,12 +161,17 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('true');
     });
 
@@ -163,10 +182,13 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('true');
     });
 
@@ -176,11 +198,15 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]') as HTMLElement | null;
+
       if (panel) fire.click(panel);
+
       await fixture.flush();
 
       expect(panel?.getAttribute('aria-hidden')).toBe('false');
@@ -192,13 +218,16 @@ describe('bit-popover', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       fixture.element.setAttribute('disabled', '');
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]');
+
       expect(panel?.getAttribute('aria-hidden')).toBe('true');
       expect(btn?.getAttribute('aria-disabled')).toBe('true');
     });
@@ -211,11 +240,15 @@ describe('bit-popover', () => {
       fixture = await mount('bit-popover', {
         html: '<button>Open</button>',
       });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('open', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
@@ -225,13 +258,19 @@ describe('bit-popover', () => {
       fixture = await mount('bit-popover', {
         html: '<button>Open</button>',
       });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('close', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
@@ -242,11 +281,15 @@ describe('bit-popover', () => {
         attrs: { disabled: '' },
         html: '<button>Open</button>',
       });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('open', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(handler).not.toHaveBeenCalled();
@@ -290,7 +333,9 @@ describe('bit-popover accessibility', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(fixture.query('[role="dialog"]')?.getAttribute('aria-hidden')).toBe('false');
@@ -306,6 +351,7 @@ describe('bit-popover accessibility', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
       const panelId = fixture.query('[role="dialog"]')?.id;
+
       expect(btn?.getAttribute('aria-controls')).toBe(panelId);
     });
 
@@ -316,6 +362,7 @@ describe('bit-popover accessibility', () => {
       await fixture.flush();
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       expect(btn?.getAttribute('aria-haspopup')).toBe('dialog');
     });
   });
@@ -328,6 +375,7 @@ describe('bit-popover accessibility', () => {
       await fixture.flush();
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       expect(btn?.getAttribute('aria-expanded')).toBe('false');
     });
 
@@ -337,7 +385,9 @@ describe('bit-popover accessibility', () => {
       });
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
       if (btn) fire.click(btn);
+
       await fixture.flush();
 
       expect(btn?.getAttribute('aria-expanded')).toBe('true');

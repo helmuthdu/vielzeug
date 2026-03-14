@@ -21,5 +21,6 @@ export function round(value: number, precision = 0, parser: (value: number) => n
   if (precision === 0) return parser(value);
 
   const factor = 10 ** Math.max(-323, Math.min(precision, 292));
+
   return parser(value * factor) / factor;
 }

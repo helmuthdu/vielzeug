@@ -1,6 +1,8 @@
 import { computed, css, define, defineProps, html, watch } from '@vielzeug/craftit';
-import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
+
 import type { ComponentSize, ThemeColor } from '../../types';
+
+import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -45,9 +47,15 @@ const componentStyles = /* css */ css`
 
     /* Indeterminate: sliding bar */
     @keyframes bit-progress-slide {
-      0%   { transform: translateX(-150%) scaleX(0.6); }
-      50%  { transform: translateX(50%)   scaleX(1); }
-      100% { transform: translateX(300%)  scaleX(0.6); }
+      0% {
+        transform: translateX(-150%) scaleX(0.6);
+      }
+      50% {
+        transform: translateX(50%) scaleX(1);
+      }
+      100% {
+        transform: translateX(300%) scaleX(0.6);
+      }
     }
 
     :host([indeterminate]) .fill {
@@ -94,15 +102,31 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes bit-progress-spin {
-      from { transform: rotate(-90deg); }
-      to   { transform: rotate(270deg); }
+      from {
+        transform: rotate(-90deg);
+      }
+      to {
+        transform: rotate(270deg);
+      }
     }
 
     @keyframes bit-progress-dash {
-      0%   { stroke-dashoffset: var(--_circ);                       stroke-dasharray: 1px var(--_circ); }
-      40%  { stroke-dashoffset: calc(var(--_circ) * -0.1);          stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ); }
-      60%  { stroke-dashoffset: calc(var(--_circ) * -0.1);          stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ); }
-      100% { stroke-dashoffset: calc(var(--_circ) * -0.9);          stroke-dasharray: 1px var(--_circ); }
+      0% {
+        stroke-dashoffset: var(--_circ);
+        stroke-dasharray: 1px var(--_circ);
+      }
+      40% {
+        stroke-dashoffset: calc(var(--_circ) * -0.1);
+        stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ);
+      }
+      60% {
+        stroke-dashoffset: calc(var(--_circ) * -0.1);
+        stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ);
+      }
+      100% {
+        stroke-dashoffset: calc(var(--_circ) * -0.9);
+        stroke-dasharray: 1px var(--_circ);
+      }
     }
 
     :host([indeterminate]) .circular-track svg {
@@ -115,15 +139,29 @@ const componentStyles = /* css */ css`
   }
 
   @layer buildit.utilities {
-    :host([size='sm']) { --_height: var(--size-1, 0.25rem);    --_circle-size: 1.5rem; }
-    :host([size='md']) { --_height: var(--size-2, 0.5rem);     --_circle-size: 2rem; }
-    :host([size='lg']) { --_height: var(--size-3-5, 0.875rem); --_circle-size: 2.5rem; }
+    :host([size='sm']) {
+      --_height: var(--size-1, 0.25rem);
+      --_circle-size: 1.5rem;
+    }
+    :host([size='md']) {
+      --_height: var(--size-2, 0.5rem);
+      --_circle-size: 2rem;
+    }
+    :host([size='lg']) {
+      --_height: var(--size-3-5, 0.875rem);
+      --_circle-size: 2.5rem;
+    }
   }
 
   /* Extra indeterminate state overrides — cannot be expressed via CSS variables alone */
   @media (prefers-reduced-motion: reduce) {
-    :host([indeterminate]) .fill { width: 100%; opacity: 0.6; }
-    :host([indeterminate]) .circle-fill { stroke-dasharray: none; }
+    :host([indeterminate]) .fill {
+      width: 100%;
+      opacity: 0.6;
+    }
+    :host([indeterminate]) .circle-fill {
+      stroke-dasharray: none;
+    }
   }
 `;
 
@@ -191,12 +229,14 @@ export const TAG = define('bit-progress', ({ host }) => {
   const percent = computed(() => {
     const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
     const m = Math.max(1, Number(props.max.value));
+
     return `${(v / m) * 100}%`;
   });
 
   const dashoffset = computed(() => {
     const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
     const m = Math.max(1, Number(props.max.value));
+
     return CIRC - (v / m) * CIRC;
   });
 
@@ -218,46 +258,40 @@ export const TAG = define('bit-progress', ({ host }) => {
     template: html`
       ${() =>
         isCircular.value
-          ? html`
-          <div
-            class="circular-track"
-            role="progressbar"
-            :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
-            aria-valuemin="0"
-            :aria-valuemax="${() => String(props.max.value)}"
-            :aria-label="${() => props.label.value}"
-            :aria-valuetext="${() => props['value-text'].value ?? null}"
-            :style="${() => `--_circ:${CIRC}px`}"
-          >
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle
-                class="circle-bg"
-                cx="50" cy="50" r="${RADIUS}"
-              ></circle>
-              <circle
-                class="circle-fill"
-                cx="50" cy="50" r="${RADIUS}"
-                :stroke-dasharray="${() => (props.indeterminate.value ? undefined : `${CIRC}px`)}"
-                :stroke-dashoffset="${() => (props.indeterminate.value ? undefined : `${dashoffset.value}px`)}"
-              ></circle>
-            </svg>
-          </div>`
-          : html`
-          <div
-            class="track"
-            role="progressbar"
-            :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
-            aria-valuemin="0"
-            :aria-valuemax="${() => String(props.max.value)}"
-            :aria-label="${() => props.label.value}"
-            :aria-valuetext="${() => props['value-text'].value ?? null}"
-          >
-            <div
-              class="fill"
-              part="fill"
-              :style="${() => (!props.indeterminate.value ? `width:${percent.value}` : null)}"
-            ></div>
-          </div>`}
+          ? html` <div
+              class="circular-track"
+              role="progressbar"
+              :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
+              aria-valuemin="0"
+              :aria-valuemax="${() => String(props.max.value)}"
+              :aria-label="${() => props.label.value}"
+              :aria-valuetext="${() => props['value-text'].value ?? null}"
+              :style="${() => `--_circ:${CIRC}px`}">
+              <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
+                <circle
+                  class="circle-fill"
+                  cx="50"
+                  cy="50"
+                  r="${RADIUS}"
+                  :stroke-dasharray="${() => (props.indeterminate.value ? undefined : `${CIRC}px`)}"
+                  :stroke-dashoffset="${() =>
+                    props.indeterminate.value ? undefined : `${dashoffset.value}px`}"></circle>
+              </svg>
+            </div>`
+          : html` <div
+              class="track"
+              role="progressbar"
+              :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
+              aria-valuemin="0"
+              :aria-valuemax="${() => String(props.max.value)}"
+              :aria-label="${() => props.label.value}"
+              :aria-valuetext="${() => props['value-text'].value ?? null}">
+              <div
+                class="fill"
+                part="fill"
+                :style="${() => (!props.indeterminate.value ? `width:${percent.value}` : null)}"></div>
+            </div>`}
     `,
   };
 });

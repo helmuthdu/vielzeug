@@ -16,20 +16,22 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+
 import type { ComponentSize, ThemeColor } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 export type RadioGroupContext = {
-  name: ReadonlySignal<string>;
-  value: ReadonlySignal<string>;
-  disabled: ReadonlySignal<boolean>;
   color: ReadonlySignal<ThemeColor | undefined>;
-  size: ReadonlySignal<ComponentSize | undefined>;
+  disabled: ReadonlySignal<boolean>;
+  name: ReadonlySignal<string>;
   select: (value: string) => void;
+  size: ReadonlySignal<ComponentSize | undefined>;
+  value: ReadonlySignal<string>;
 };
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext>();
@@ -178,6 +180,7 @@ export const TAG = define('bit-radio-group', ({ host }) => {
   };
 
   const formCtx = inject(FORM_CTX);
+
   mountFormContextSync(host, formCtx, props);
 
   // Provide context to child bit-radio elements
@@ -191,25 +194,32 @@ export const TAG = define('bit-radio-group', ({ host }) => {
   });
 
   // Sync checked state + name/color/size/disabled onto slotted bit-radio children
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many radio attributes requires branching on multiple props
   const syncChildren = () => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
     if (!slot) return;
+
     const radios = slot
       .assignedElements({ flatten: true })
       .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
+
     for (const radio of radios) {
       const val = radio.getAttribute('value') ?? '';
+
       if (val === selectedValue.value) {
         radio.setAttribute('checked', '');
       } else {
         radio.removeAttribute('checked');
       }
+
       if (props.name.value) radio.setAttribute('name', props.name.value);
+
       if (props.color.value) radio.setAttribute('color', props.color.value);
       else radio.removeAttribute('color');
+
       if (props.size.value) radio.setAttribute('size', props.size.value);
       else radio.removeAttribute('size');
+
       if (props.disabled.value) radio.setAttribute('disabled', '');
       else radio.removeAttribute('disabled');
     }
@@ -220,16 +230,19 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     effect(syncChildren);
 
     // Roving tabindex: only the selected (or first) radio is tabbable
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Roving tabindex requires iterating all radios and handling fallback to first non-disabled
     const updateTabindex = () => {
       const slot2 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
       if (!slot2) return;
+
       const radios = slot2
         .assignedElements({ flatten: true })
         .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
       let hasFocusable = false;
+
       for (const radio of radios) {
         const isSelected = radio.getAttribute('value') === selectedValue.value;
+
         if (isSelected && !props.disabled.value) {
           radio.setAttribute('tabindex', '0');
           hasFocusable = true;
@@ -237,33 +250,46 @@ export const TAG = define('bit-radio-group', ({ host }) => {
           radio.setAttribute('tabindex', '-1');
         }
       }
+
       // If nothing is selected, make the first non-disabled radio tabbable
       if (!hasFocusable && radios.length > 0) {
         const first = radios.find((r) => !r.hasAttribute('disabled'));
+
         if (first) first.setAttribute('tabindex', '0');
       }
     };
+
     effect(updateTabindex);
 
     // Arrow-key navigation within the group
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation cycles through radios and handles disabled items
     const handleKeydown = (e: KeyboardEvent) => {
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+
       const slot3 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
       if (!slot3) return;
+
       const radios = slot3
         .assignedElements({ flatten: true })
         .filter((el) => el.tagName.toLowerCase() === 'bit-radio' && !el.hasAttribute('disabled')) as HTMLElement[];
+
       if (!radios.length) return;
+
       const focused = radios.indexOf(document.activeElement as HTMLElement);
+
       if (focused === -1) return;
+
       e.preventDefault();
+
       const next =
         e.key === 'ArrowDown' || e.key === 'ArrowRight'
           ? (focused + 1) % radios.length
           : (focused - 1 + radios.length) % radios.length;
+
       radios[next].focus();
+
       const val = radios[next].getAttribute('value') ?? '';
+
       selectRadio(val);
     };
 
@@ -271,9 +297,12 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     // Listen for change events bubbled from child bit-radio elements
     handle(host, 'change', (e: Event) => {
       if (e.target === host) return; // our own re-dispatch
+
       e.stopPropagation();
+
       const target = e.target as HTMLElement;
       const val = target.getAttribute('value') ?? '';
+
       selectRadio(val);
     });
   });
@@ -293,8 +322,7 @@ export const TAG = define('bit-radio-group', ({ host }) => {
         aria-required="${() => String(Boolean(props.required.value))}"
         aria-invalid="${() => String(hasError.value)}"
         aria-errormessage="${() => (hasError.value ? errorId : null)}"
-        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}"
-      >
+        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${() => props.label.value}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
         </legend>
@@ -304,9 +332,7 @@ export const TAG = define('bit-radio-group', ({ host }) => {
         <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError.value}>
           ${() => props.error.value}
         </div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>
-          ${() => props.helper.value}
-        </div>
+        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>${() => props.helper.value}</div>
       </fieldset>
     `,
   };

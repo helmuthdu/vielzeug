@@ -21,6 +21,7 @@ export function isWithin(arg: unknown, min: unknown, max: unknown, inclusive = t
   if (!isNumber(arg) || !isNumber(min) || !isNumber(max)) {
     return false;
   }
+
   return inclusive ? arg >= min && arg <= max : arg > min && arg < max;
 }
 

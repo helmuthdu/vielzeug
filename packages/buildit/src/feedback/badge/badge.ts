@@ -1,6 +1,8 @@
 import { computed, css, define, html, prop } from '@vielzeug/craftit';
-import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+
+import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -88,7 +90,6 @@ const componentStyles = /* css */ css`
     }
   }
 
-
   @layer buildit.overrides {
     /* Dot — always force badge background and border regardless of variant */
     :host([dot]) {
@@ -110,8 +111,12 @@ const componentStyles = /* css */ css`
      * Used to flip the translateX offset so the badge always overflows
      * the correct physical edge that corresponds to its logical corner.
      */
-    :host { --_dir: 1; }
-    :host(:dir(rtl)) { --_dir: -1; }
+    :host {
+      --_dir: 1;
+    }
+    :host(:dir(rtl)) {
+      --_dir: -1;
+    }
 
     /* Default position: top-end */
     :host([anchor]) .badge {
@@ -217,8 +222,11 @@ export const TAG = define('bit-badge', () => {
   const label = computed(() => {
     const count = countProp.value != null ? Number(countProp.value) : undefined;
     const max = maxProp.value != null ? Number(maxProp.value) : undefined;
+
     if (count === undefined || Number.isNaN(count)) return undefined;
+
     if (max !== undefined && !Number.isNaN(max) && count > max) return `${max}+`;
+
     return String(count);
   });
 
@@ -235,11 +243,11 @@ export const TAG = define('bit-badge', () => {
       componentStyles,
     ],
     template: html`<span class="badge" part="badge" aria-label=${() => ariaLabelProp.value}>
-      <slot name="icon"></slot>
-      <span ?hidden=${() => label.value == null}>${() => label.value}</span>
-      <slot ?hidden=${() => label.value != null}></slot>
-    </span>
-    <slot name="target"></slot>`,
+        <slot name="icon"></slot>
+        <span ?hidden=${() => label.value == null}>${() => label.value}</span>
+        <slot ?hidden=${() => label.value != null}></slot>
+      </span>
+      <slot name="target"></slot>`,
   };
 });
 

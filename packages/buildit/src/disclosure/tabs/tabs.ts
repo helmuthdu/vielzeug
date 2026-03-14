@@ -13,8 +13,10 @@ import {
   ref,
   watch,
 } from '@vielzeug/craftit';
-import { colorThemeMixin } from '../../styles';
+
 import type { AddEventListeners, BitTabsEvents, ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { colorThemeMixin } from '../../styles';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
 export type TabsContext = {
@@ -62,7 +64,9 @@ const styles = /* css */ css`
       height: 2px;
       border-radius: var(--rounded-full);
       background: var(--tabs-indicator-color, var(--_theme-base));
-      transition: left var(--tabs-transition), width var(--tabs-transition);
+      transition:
+        left var(--tabs-transition),
+        width var(--tabs-transition);
       pointer-events: none;
     }
 
@@ -99,7 +103,9 @@ const styles = /* css */ css`
       inset-inline-start: 0;
       width: 2px;
       height: unset;
-      transition: top var(--tabs-transition), height var(--tabs-transition);
+      transition:
+        top var(--tabs-transition),
+        height var(--tabs-transition);
     }
   }
 
@@ -298,10 +304,13 @@ export const TAG = define('bit-tabs', ({ host }) => {
   const moveIndicator = (activeTab: HTMLElement | undefined) => {
     const indicator = indicatorRef.value;
     const tablist = tablistRef.value;
+
     if (!indicator || !tablist || !activeTab) return;
+
     if (props.orientation.value === 'vertical') {
       const tabRect = activeTab.getBoundingClientRect();
       const listRect = tablist.getBoundingClientRect();
+
       indicator.style.top = `${tabRect.top - listRect.top + tablist.scrollTop}px`;
       indicator.style.height = `${tabRect.height}px`;
       indicator.style.left = '0';
@@ -309,6 +318,7 @@ export const TAG = define('bit-tabs', ({ host }) => {
     } else {
       const tabRect = activeTab.getBoundingClientRect();
       const listRect = tablist.getBoundingClientRect();
+
       indicator.style.left = `${tabRect.left - listRect.left + tablist.scrollLeft}px`;
       indicator.style.width = `${tabRect.width}px`;
       indicator.style.top = '';
@@ -318,8 +328,11 @@ export const TAG = define('bit-tabs', ({ host }) => {
 
   const triggerIndicator = () => {
     const value = props.value.value;
+
     if (!value) return;
+
     const activeTab = getTabs().find((t) => t.getAttribute('value') === value);
+
     moveIndicator(activeTab);
   };
 
@@ -327,20 +340,25 @@ export const TAG = define('bit-tabs', ({ host }) => {
 
   const handleTabClick = (e: Event) => {
     const tab = (e.target as HTMLElement).closest('bit-tab-item') as HTMLElement | null;
+
     if (!tab || tab.hasAttribute('disabled')) return;
+
     // Guard: only respond to tab-items that belong to THIS tabs instance, not nested ones.
     if (tab.closest('bit-tabs') !== host) return;
+
     const value = tab.getAttribute('value');
+
     if (!value || value === props.value.value) return;
+
     host.setAttribute('value', value);
     emit('change', { value });
   };
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation handles many key combinations, orientations, and Home/End/Focus actions
   const handleKeydown = (e: KeyboardEvent) => {
     const tabs = getTabs().filter((t) => !t.hasAttribute('disabled'));
     const current = tabs.findIndex((t) => t.getAttribute('value') === props.value.value);
     const isVertical = props.orientation.value === 'vertical';
+    // eslint-disable-next-line no-useless-assignment
     let next = current;
 
     if (e.key === (isVertical ? 'ArrowDown' : 'ArrowRight')) next = (current + 1) % tabs.length;
@@ -355,17 +373,22 @@ export const TAG = define('bit-tabs', ({ host }) => {
         (t) => t === document.activeElement || t.shadowRoot?.activeElement === document.activeElement,
       );
       const focusedValue = focused?.getAttribute('value');
+
       if (focusedValue && focusedValue !== props.value.value) {
         host.setAttribute('value', focusedValue);
         emit('change', { value: focusedValue });
       }
+
       return;
     } else return;
 
     e.preventDefault();
+
     const value = tabs[next]?.getAttribute('value');
+
     if (value) {
       (tabs[next] as HTMLElement)?.focus();
+
       if (props.activation.value !== 'manual') {
         // Auto mode: activate on focus
         host.setAttribute('value', value);
@@ -394,8 +417,7 @@ export const TAG = define('bit-tabs', ({ host }) => {
           ref=${tablistRef}
           part="tablist"
           :aria-orientation="${() => props.orientation.value}"
-          :aria-label="${() => props.label.value ?? null}"
-        >
+          :aria-label="${() => props.label.value ?? null}">
           <slot name="tabs"></slot>
         </div>
         <div class="indicator" ref=${indicatorRef} part="indicator"></div>

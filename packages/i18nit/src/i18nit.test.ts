@@ -14,6 +14,7 @@ describe('i18nit', () => {
   describe('createI18n', () => {
     test('defaults to locale "en" with no config', () => {
       const i18n = createI18n();
+
       expect(i18n.locale).toBe('en');
     });
 
@@ -26,6 +27,7 @@ describe('i18nit', () => {
           fr: { hello: 'Bonjour' },
         },
       });
+
       expect(i18n.locale).toBe('fr');
       expect(i18n.t('hello')).toBe('Bonjour');
     });
@@ -70,6 +72,7 @@ describe('i18nit', () => {
 
     test('treats an empty string value as a valid translation', () => {
       const i18n = createI18n({ messages: { en: { empty: '' } } });
+
       expect(i18n.t('empty')).toBe('');
     });
   });
@@ -105,6 +108,7 @@ describe('i18nit', () => {
 
     test('auto-formats number variables with Intl.NumberFormat (locale-aware grouping)', () => {
       const i18n = createI18n({ locale: 'en', messages: { en: { price: 'Price: {amount}' } } });
+
       expect(i18n.t('price', { amount: 1234.56 })).toContain('1,234');
     });
 
@@ -121,6 +125,7 @@ describe('i18nit', () => {
       });
 
       const items = ['A', 'B', 'C'];
+
       expect(i18n.t('list', { items })).toBe('A, B, C');
       expect(i18n.t('first', { items })).toBe('A');
       expect(i18n.t('count', { items })).toBe('3 items');
@@ -146,6 +151,7 @@ describe('i18nit', () => {
 
     test('supports hyphenated variable keys like {first-name}', () => {
       const i18n = createI18n({ messages: { en: { msg: 'Hello {first-name}!' } } });
+
       expect(i18n.t('msg', { 'first-name': 'Alice' })).toBe('Hello Alice!');
     });
   });
@@ -194,6 +200,7 @@ describe('i18nit', () => {
 
     test('falls back to "other" when the exact plural form key is absent', () => {
       const i18n = createI18n({ messages: { en: { n: { other: '{count} items' } } } });
+
       expect(i18n.t('n', { count: 1 })).toBe('1 items');
     });
 
@@ -201,6 +208,7 @@ describe('i18nit', () => {
       const i18n = createI18n({
         messages: { en: { n: { one: 'one item', other: '{count} items' } } },
       });
+
       // |-1.5| = 1.5 → floor = 1 → selects "one" form, not "other"
       expect(i18n.t('n', { count: -1.5 })).toBe('one item');
     });
@@ -212,6 +220,7 @@ describe('i18nit', () => {
   describe('locale & setLocale()', () => {
     test('locale is gettable and settable', () => {
       const i18n = createI18n({ locale: 'en' });
+
       expect(i18n.locale).toBe('en');
       i18n.locale = 'fr';
       expect(i18n.locale).toBe('fr');
@@ -220,6 +229,7 @@ describe('i18nit', () => {
     test('setting the same locale is a no-op — subscribers are not notified', () => {
       const i18n = createI18n({ locale: 'en' });
       const handler = vi.fn();
+
       i18n.subscribe(handler);
       handler.mockClear();
 
@@ -237,6 +247,7 @@ describe('i18nit', () => {
 
     test('setLocale() with no registered loader still switches the locale without throwing', async () => {
       const i18n = createI18n({ locale: 'en' });
+
       await i18n.setLocale('de');
       expect(i18n.locale).toBe('de');
     });
@@ -304,6 +315,7 @@ describe('i18nit', () => {
     test('replace() stores a shallow copy — mutations after the call have no effect', () => {
       const i18n = createI18n<Messages>();
       const msgs: Messages = { hello: 'Hello' };
+
       i18n.replace('en', msgs);
       msgs.hello = 'Mutated'; // Messages has a string index signature — no cast needed
       expect(i18n.t('hello')).toBe('Hello');
@@ -337,6 +349,7 @@ describe('i18nit', () => {
           es: async () => {
             calls++;
             await new Promise((r) => setTimeout(r, 10));
+
             return { hello: 'Hola' };
           },
         },
@@ -353,10 +366,12 @@ describe('i18nit', () => {
         loaders: {
           de: async () => {
             calls++;
+
             return { hello: 'Hallo' };
           },
           fr: async () => {
             calls++;
+
             return { hello: 'Bonjour' };
           },
         },
@@ -370,6 +385,7 @@ describe('i18nit', () => {
 
     test('registerLoader() registers a loader dynamically after construction', async () => {
       const i18n = createI18n();
+
       i18n.registerLoader('de', async () => ({ hello: 'Hallo' }));
       await i18n.load('de');
       expect(i18n.withLocale('de').t('hello')).toBe('Hallo');
@@ -381,6 +397,7 @@ describe('i18nit', () => {
         loaders: {
           es: async () => {
             calls++;
+
             return { hello: 'Overwritten' };
           },
         },
@@ -394,6 +411,7 @@ describe('i18nit', () => {
 
     test('load() with no registered loader silently resolves without error', async () => {
       const i18n = createI18n();
+
       await expect(i18n.load('xx')).resolves.toBeUndefined();
     });
 
@@ -431,6 +449,7 @@ describe('i18nit', () => {
       });
 
       const app = i18n.scope('app');
+
       expect(app.t('welcome', { name: 'Alice' })).toBe('Welcome, Alice!');
       expect(app.t('nav.home')).toBe('Home');
       expect(app.t('nav.about')).toBe('About');
@@ -455,6 +474,7 @@ describe('i18nit', () => {
       });
 
       const nav = i18n.scope('nav');
+
       expect(nav.t('home')).toBe('Home');
       i18n.locale = 'fr';
       expect(nav.t('home')).toBe('Accueil');
@@ -466,6 +486,7 @@ describe('i18nit', () => {
       });
 
       const btn = i18n.scope('app').scope('ui').scope('btn');
+
       expect(btn.t('save')).toBe('Save');
       expect(btn.t('cancel')).toBe('Cancel');
     });
@@ -559,6 +580,7 @@ describe('i18nit', () => {
 
     test('BoundI18n.withLocale().locale returns the bound locale', () => {
       const i18n = createI18n({ locale: 'en' });
+
       expect(i18n.withLocale('fr').locale).toBe('fr');
       expect(i18n.scope('nav').withLocale('de').locale).toBe('de');
     });
@@ -595,6 +617,7 @@ describe('i18nit', () => {
     test('add() to the active locale notifies subscribers; adding to an inactive locale is silent', () => {
       const i18n = createI18n({ locale: 'en' });
       const handler = vi.fn<(event: LocaleChangeEvent) => void>();
+
       i18n.subscribe(handler);
       handler.mockClear();
 
@@ -610,6 +633,7 @@ describe('i18nit', () => {
       const i18n = createI18n();
       const handler = vi.fn();
       const unsub = i18n.subscribe(handler);
+
       handler.mockClear();
 
       unsub();
@@ -635,6 +659,7 @@ describe('i18nit', () => {
     test('dispose() releases all resources — subscribers are cleared and catalogs are wiped', () => {
       const i18n = createI18n({ locale: 'en', messages: { en: { hello: 'Hello' } } });
       const handler = vi.fn();
+
       i18n.subscribe(handler);
 
       i18n.dispose();
@@ -653,12 +678,14 @@ describe('i18nit', () => {
       const i18n = createI18n({
         messages: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
       });
+
       expect(i18n.locales).toEqual(expect.arrayContaining(['en', 'fr']));
       expect(i18n.locales).toHaveLength(2);
     });
 
     test('updates when a new locale catalog is added', () => {
       const i18n = createI18n({ messages: { en: { hello: 'Hello' } } });
+
       expect(i18n.locales).toEqual(['en']);
       i18n.add('de', { hello: 'Hallo' });
       expect(i18n.locales).toContain('de');
@@ -687,6 +714,7 @@ describe('i18nit', () => {
 
     test('number() and date() return a plain string fallback on Intl errors', () => {
       const i18n = createI18n({ locale: 'en' });
+
       expect(i18n.number(1234.56, { style: 'currency' })).toBe('1234.56'); // valid string, but Intl throws at runtime without 'currency' code
     });
 
@@ -769,6 +797,7 @@ describe('i18nit', () => {
 
     test('updates after registerLoader() is called', () => {
       const i18n = createI18n();
+
       expect(i18n.loadableLocales).toHaveLength(0);
 
       i18n.registerLoader('de', () => Promise.resolve({ hello: 'Hallo' }));
@@ -878,23 +907,28 @@ describe('i18nit', () => {
   describe('I18n implements BoundI18n', () => {
     test('I18n instance is assignable to BoundI18n<T>', () => {
       type M = { greeting: string; nav: { home: string } };
+
       const i18n = createI18n<M>({
         messages: { en: { greeting: 'Hello', nav: { home: 'Home' } } },
       });
 
       // Type-level: verify I18n<M> satisfies BoundI18n<M>
       const bound: BoundI18n<M> = i18n;
+
       expect(bound.t('greeting')).toBe('Hello');
     });
 
     test('scope() result is assignable to BoundI18n of the subtree type', () => {
-      type M = { nav: { home: string; about: string } };
+      type M = { nav: { about: string; home: string } };
+
       const i18n = createI18n<M>({
         messages: { en: { nav: { about: 'About', home: 'Home' } } },
       });
 
       type NavMessages = M['nav'];
+
       const nav: BoundI18n<NavMessages> = i18n.scope('nav');
+
       expect(nav.t('home')).toBe('Home');
       expect(nav.t('about')).toBe('About');
     });
@@ -905,7 +939,7 @@ describe('i18nit', () => {
   // ----------------------------------------------------------------
   describe('DeepPartialMessages utility type', () => {
     test('accepts partial locale catalogs with only a subset of keys', () => {
-      type M = { greeting: string; nav: { home: string; about: string } };
+      type M = { greeting: string; nav: { about: string; home: string } };
       type PartialM = DeepPartialMessages<M>;
 
       // This is a compile-time check — runtime just confirms the translation works with fallback
@@ -930,6 +964,7 @@ describe('i18nit', () => {
   describe('[Symbol.dispose]', () => {
     test('using statement disposes the instance, clearing all resources', () => {
       let capturedI18n: I18n<Messages>;
+
       {
         using i18n = createI18n({ locale: 'en', messages: { en: { hello: 'Hello' } } });
         capturedI18n = i18n;
@@ -963,6 +998,7 @@ describe('i18nit', () => {
     test('fires with reason "locale-change" when the active locale is switched', () => {
       const i18n = createI18n({ locale: 'en' });
       const handler = vi.fn<(event: LocaleChangeEvent) => void>();
+
       i18n.subscribe(handler);
 
       i18n.locale = 'fr';
@@ -972,6 +1008,7 @@ describe('i18nit', () => {
     test('fires with reason "catalog-update" when add() updates the active locale catalog', () => {
       const i18n = createI18n({ locale: 'en' });
       const handler = vi.fn<(event: LocaleChangeEvent) => void>();
+
       i18n.subscribe(handler);
 
       i18n.add('en', { hello: 'Hello' });
@@ -998,6 +1035,7 @@ describe('i18nit', () => {
 
       const first = i18n.loadableLocales;
       const second = i18n.loadableLocales;
+
       expect(first).toBe(second); // same cached reference
     });
 
@@ -1006,6 +1044,7 @@ describe('i18nit', () => {
       const before = i18n.loadableLocales;
 
       i18n.registerLoader('de', () => Promise.resolve({}));
+
       const after = i18n.loadableLocales;
 
       expect(before).not.toBe(after);

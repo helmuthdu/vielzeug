@@ -49,7 +49,9 @@ describe('bit-card', () => {
 
   it('emits activate with pointer trigger on click', async () => {
     fixture = await mount('bit-card', { attrs: { interactive: '' } });
+
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
 
     await user.click(fixture.element);
@@ -61,7 +63,9 @@ describe('bit-card', () => {
 
   it('emits activate with keyboard trigger on Enter', async () => {
     fixture = await mount('bit-card', { attrs: { interactive: '' } });
+
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
 
     fixture.element.focus();
@@ -74,7 +78,9 @@ describe('bit-card', () => {
 
   it('emits activate with keyboard trigger on Space', async () => {
     fixture = await mount('bit-card', { attrs: { interactive: '' } });
+
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
 
     fixture.element.focus();
@@ -86,7 +92,9 @@ describe('bit-card', () => {
 
   it('does not emit activate when disabled', async () => {
     fixture = await mount('bit-card', { attrs: { disabled: '', interactive: '' } });
+
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
 
     await user.click(fixture.element);
@@ -101,10 +109,13 @@ describe('bit-card', () => {
       attrs: { interactive: '' },
       html: '<button slot="actions" id="inner-action">Inner action</button>',
     });
+
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
 
     const button = fixture.element.querySelector('#inner-action') as HTMLButtonElement;
+
     await user.click(button);
 
     expect(handler).not.toHaveBeenCalled();
@@ -142,6 +153,7 @@ describe('bit-card', () => {
     });
 
     const handler = vi.fn();
+
     fixture.element.addEventListener('activate', handler);
     await user.click(fixture.element);
 

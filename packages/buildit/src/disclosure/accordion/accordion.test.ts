@@ -112,6 +112,7 @@ describe('bit-accordion accessibility', () => {
       });
 
       const item = fixture.element.querySelector('bit-accordion-item')!;
+
       expect(item).toBeTruthy();
     });
   });
@@ -124,6 +125,7 @@ describe('bit-accordion accessibility', () => {
 
       const item = fixture.element.querySelector('bit-accordion-item')!;
       const summary = item.shadowRoot?.querySelector('summary');
+
       expect(summary?.getAttribute('aria-expanded')).toBe('false');
     });
 
@@ -134,6 +136,7 @@ describe('bit-accordion accessibility', () => {
 
       const item = fixture.element.querySelector('bit-accordion-item')!;
       const summary = item.shadowRoot?.querySelector('summary');
+
       expect(summary?.getAttribute('aria-expanded')).toBe('true');
     });
   });
@@ -146,6 +149,7 @@ describe('bit-accordion accessibility', () => {
 
       const item = fixture.element.querySelector('bit-accordion-item')!;
       const summary = item.shadowRoot?.querySelector<HTMLElement>('summary');
+
       // summary should be keyboard-navigable (native behavior)
       expect(summary).toBeTruthy();
     });
@@ -157,13 +161,17 @@ describe('bit-accordion accessibility', () => {
 
       const item = fixture.element.querySelector('bit-accordion-item')!;
       const summary = item.shadowRoot?.querySelector<HTMLElement>('summary');
+
       expect(summary).toBeTruthy();
+
       if (!summary) return;
+
       summary.focus();
       await user.click(summary);
 
       // After click, details should be open
       const details = item.shadowRoot?.querySelector('details');
+
       expect(details?.open).toBe(true);
     });
   });
@@ -186,6 +194,7 @@ describe('bit-accordion accessibility', () => {
       await new Promise((r) => setTimeout(r, 20));
 
       const firstSummary = items[0].shadowRoot?.querySelector('summary');
+
       expect(firstSummary?.getAttribute('aria-expanded')).toBe('false');
     });
   });

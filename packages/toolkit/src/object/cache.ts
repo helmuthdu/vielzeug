@@ -30,8 +30,10 @@ export function cache<T>() {
 
   function del(key: readonly unknown[]): boolean {
     const h = hash(key);
+
     clearGc(h);
     metadata.delete(h);
+
     return store.delete(h);
   }
 
@@ -48,6 +50,7 @@ export function cache<T>() {
 
   function scheduleGc(key: readonly unknown[], delayMs: number): void {
     const h = hash(key);
+
     clearGc(h);
     gcTimers.set(
       h,

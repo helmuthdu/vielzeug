@@ -12,12 +12,14 @@ describe('toggle', () => {
   it('should add an object if it does not exist (with selector)', () => {
     const arr = [{ id: 1 }, { id: 2 }];
     const item = { id: 3 };
+
     expect(toggle(arr, item, (obj) => obj.id)).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
 
   it('should remove an object if it exists (with selector)', () => {
     const arr = [{ id: 1 }, { id: 2 }];
     const item = { id: 2 };
+
     expect(toggle(arr, item, (obj) => obj.id)).toEqual([{ id: 1 }]);
   });
 
@@ -35,6 +37,7 @@ describe('toggle', () => {
 
   it('should not mutate the original array', () => {
     const arr = [1, 2, 3];
+
     toggle(arr, 4);
     expect(arr).toEqual([1, 2, 3]);
   });
@@ -53,12 +56,14 @@ describe('toggle', () => {
       { id: 2, name: 'b' },
     ];
     const item = { id: 2, name: 'c' };
+
     expect(toggle(arr, item, (obj) => obj.id)).toEqual([{ id: 1, name: 'a' }]);
   });
 
   it('should add item if selector returns different value', () => {
     const arr = [{ id: 1 }, { id: 2 }];
     const item = { id: 3 };
+
     expect(toggle(arr, item, (obj) => obj.id)).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
 });

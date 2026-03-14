@@ -58,6 +58,7 @@ describe('bit-separator', () => {
       fixture = await mount('bit-separator');
 
       const orientation = fixture.element.getAttribute('orientation') ?? 'horizontal';
+
       expect(orientation).toBe('horizontal');
     });
   });

@@ -28,6 +28,7 @@ describe('signal', () => {
 
   it('updates and reflects the new value on write', () => {
     const n = signal(0);
+
     n.value = 7;
     expect(n.value).toBe(7);
   });
@@ -38,6 +39,7 @@ describe('signal', () => {
     const stop = effect(() => {
       seen.push(n.peek());
     });
+
     n.value = 2; // n read only via peek — effect does NOT re-run
     expect(seen).toEqual([1]);
     stop();
@@ -46,6 +48,7 @@ describe('signal', () => {
   it('write is a no-op when the new value is the same (Object.is)', () => {
     const n = signal(5);
     const listener = vi.fn();
+
     watch(n, listener);
     n.value = 5;
     expect(listener).not.toHaveBeenCalled();
@@ -54,6 +57,7 @@ describe('signal', () => {
   it('custom equals suppresses writes for semantically equal values', () => {
     const pos = signal({ x: 0, y: 0 }, { equals: (a, b) => a.x === b.x && a.y === b.y });
     const listener = vi.fn();
+
     watch(pos, listener);
     pos.value = { x: 0, y: 0 }; // same coords, different ref — suppressed
     expect(listener).not.toHaveBeenCalled();
@@ -94,6 +98,7 @@ describe('type guards and utilities', () => {
 
   it('isStore() narrows the type so Store methods are accessible', () => {
     const value: unknown = store({ name: 'Alice' });
+
     if (isStore<{ name: string }>(value)) {
       value.set({ name: 'Bob' });
       expect(value.value.name).toBe('Bob');
@@ -102,6 +107,7 @@ describe('type guards and utilities', () => {
 
   it('toValue() unwraps a signal and passes plain values through unchanged', () => {
     const n = signal(10);
+
     expect(toValue(n)).toBe(10);
     expect(toValue(42)).toBe(42);
   });
@@ -109,11 +115,14 @@ describe('type guards and utilities', () => {
   it('readonly() returns a ReadonlySignal view that tracks reactively', () => {
     const n = signal(1);
     const ro = readonly(n);
+
     expect(ro.value).toBe(1);
+
     const seen: number[] = [];
     const stop = effect(() => {
       seen.push(ro.value);
     });
+
     n.value = 2;
     expect(seen).toEqual([1, 2]);
     stop();
@@ -121,6 +130,7 @@ describe('type guards and utilities', () => {
 
   it('readonly() returns the same cached wrapper for repeated calls', () => {
     const n = signal(1);
+
     expect(readonly(n)).toBe(readonly(n));
   });
 });
@@ -134,6 +144,7 @@ describe('effect', () => {
     const stop = effect(() => {
       seen.push(n.value);
     });
+
     n.value = 1;
     n.value = 2;
     expect(seen).toEqual([0, 1, 2]);
@@ -146,9 +157,12 @@ describe('effect', () => {
     const n = signal(0);
     const cleanup = vi.fn();
     const stop = effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       n.value; // track
+
       return cleanup;
     });
+
     n.value = 1; // re-run: cleanup called before fn
     n.value = 2; // re-run: cleanup called again
     expect(cleanup).toHaveBeenCalledTimes(2);
@@ -159,9 +173,13 @@ describe('effect', () => {
   it('cleanup is not double-called when the re-run throws', () => {
     const n = signal(0);
     const cleanup = vi.fn();
+
     effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       n.value;
+
       if (n.value > 0) throw new Error('oops');
+
       return cleanup;
     });
     expect(() => {
@@ -175,11 +193,15 @@ describe('effect', () => {
     const outer: number[] = [];
     const stop = effect(() => {
       outer.push(a.value);
+
       const stopInner = effect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         signal(99).value;
       });
+
       stopInner();
     });
+
     a.value = 1;
     expect(outer).toEqual([0, 1]);
     stop();
@@ -190,16 +212,20 @@ describe('effect', () => {
     const seen: number[] = [];
     const stop = effect(() => {
       seen.push(n.value);
+
       if (n.value < 3) n.value++;
     });
+
     expect(seen).toEqual([0, 1, 2, 3]);
     stop();
   });
 
   it('circuit-breaker throws after 100 iterations to prevent infinite loops', () => {
     const n = signal(0);
+
     expect(() =>
       effect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         n.value;
         n.value = n.peek() + 1;
       }),
@@ -215,6 +241,7 @@ describe('effect', () => {
     const stop2 = effect(() => {
       if (n.value > 0) second();
     });
+
     expect(() => {
       n.value = 1;
     }).toThrow('boom');
@@ -227,9 +254,12 @@ describe('effect', () => {
     const n = signal(0);
     const cleanup = vi.fn();
     const stop = effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       n.value;
+
       return cleanup;
     });
+
     expect(cleanup).toHaveBeenCalledTimes(0);
     stop();
     stop(); // second call — should be a no-op
@@ -248,6 +278,7 @@ describe('untrack', () => {
     const stop = effect(() => {
       seen.push(untrack(() => n.value));
     });
+
     n.value = 1; // n was only read via untrack — effect does NOT re-run
     expect(seen).toEqual([0]);
     stop();
@@ -259,12 +290,14 @@ describe('untrack', () => {
 describe('computed', () => {
   it('returns the initial computed value immediately', () => {
     const n = signal(5);
+
     expect(computed(() => n.value * 2).value).toBe(10);
   });
 
   it('updates when a dep changes', () => {
     const n = signal(1);
     const doubled = computed(() => n.value * 2);
+
     n.value = 4;
     expect(doubled.value).toBe(8);
   });
@@ -273,6 +306,7 @@ describe('computed', () => {
     const s = store({ count: 0, name: 'Alice' });
     const name$ = computed(() => s.value.name);
     const listener = vi.fn();
+
     watch(name$, listener);
     s.set({ count: 99 }); // name unchanged
     expect(listener).not.toHaveBeenCalled();
@@ -282,6 +316,7 @@ describe('computed', () => {
     const a = signal(1);
     const b = signal(2);
     const sum = computed(() => a.value + b.value);
+
     a.value = 10;
     expect(sum.value).toBe(12);
     b.value = 20;
@@ -293,8 +328,10 @@ describe('computed', () => {
     const n = signal(0);
     const doubled = computed(() => {
       computeCount++;
+
       return n.value * 2;
     });
+
     expect(computeCount).toBe(1); // initial seed
     n.value = 5; // dep changed — should NOT recompute yet
     expect(computeCount).toBe(1);
@@ -306,6 +343,7 @@ describe('computed', () => {
     const n = signal(0);
     const doubled = computed(() => n.value * 2);
     const listener = vi.fn();
+
     watch(doubled, listener);
     doubled.dispose();
     n.value = 5;
@@ -317,6 +355,7 @@ describe('computed', () => {
     const s = signal({ items: [1, 2, 3] });
     const len = computed(() => s.value.items.length, { equals: (a, b) => a === b });
     const listener = vi.fn();
+
     watch(len, listener);
     s.value = { items: [4, 5, 6] }; // same length — downstream suppressed
     expect(listener).not.toHaveBeenCalled();
@@ -337,6 +376,7 @@ describe('writable', () => {
         n.value = v / 2;
       },
     );
+
     expect(doubled.value).toBe(4);
     n.value = 5;
     expect(doubled.value).toBe(10);
@@ -350,6 +390,7 @@ describe('writable', () => {
         n.value = v / 2;
       },
     );
+
     doubled.value = 20;
     expect(n.value).toBe(10);
   });
@@ -360,6 +401,7 @@ describe('writable', () => {
       () => n.value + 1,
       () => {},
     );
+
     w.dispose();
     n.value = 99;
     expect(w.value).toBe(1); // stale
@@ -373,6 +415,7 @@ describe('watch', () => {
     const n = signal(0);
     const listener = vi.fn();
     const stop = watch(n, listener);
+
     expect(listener).not.toHaveBeenCalled();
     n.value = 5;
     expect(listener).toHaveBeenCalledWith(5, 0);
@@ -382,6 +425,7 @@ describe('watch', () => {
   it('selector fires only when the selected slice changes', () => {
     const s = signal({ count: 0, name: 'Alice' });
     const listener = vi.fn();
+
     watch(s, listener, { select: (v) => v.count });
     s.value = { count: 5, name: 'Alice' };
     expect(listener).toHaveBeenCalledWith(5, 0);
@@ -392,6 +436,7 @@ describe('watch', () => {
   it('{ immediate: true } fires with the current value on subscribe', () => {
     const n = signal(3);
     const listener = vi.fn();
+
     watch(n, listener, { immediate: true });
     expect(listener).toHaveBeenCalledWith(3, 3);
   });
@@ -399,6 +444,7 @@ describe('watch', () => {
   it('{ once: true } auto-unsubscribes after the first change', () => {
     const n = signal(0);
     const listener = vi.fn();
+
     watch(n, listener, { once: true });
     n.value = 1;
     n.value = 2;
@@ -409,6 +455,7 @@ describe('watch', () => {
   it('{ once: true, immediate: true } fires immediately then once on first change', () => {
     const n = signal(0);
     const listener = vi.fn();
+
     watch(n, listener, { immediate: true, once: true });
     expect(listener).toHaveBeenCalledTimes(1); // immediate
     n.value = 1; // fires then auto-unsubscribes
@@ -420,6 +467,7 @@ describe('watch', () => {
   it('custom equals suppresses notification for semantically equal values', () => {
     const s = signal([1, 2, 3]);
     const listener = vi.fn();
+
     watch(s, listener, { equals: (a, b) => a.length === b.length });
     s.value = [4, 5, 6]; // same length — suppressed
     expect(listener).not.toHaveBeenCalled();
@@ -432,6 +480,7 @@ describe('watch', () => {
     const l1 = vi.fn();
     const l2 = vi.fn();
     const stop = watch(n, l1);
+
     watch(n, l2);
     stop();
     stop(); // idempotent
@@ -447,6 +496,7 @@ describe('batch', () => {
   it('defers all notifications until the batch returns, then flushes once', () => {
     const s = store({ count: 0, name: 'Alice' });
     const listener = vi.fn();
+
     watch(s, listener);
     batch(() => {
       s.set({ count: 1 });
@@ -460,6 +510,7 @@ describe('batch', () => {
   it('nested batches merge into the outermost; a single flush follows', () => {
     const s = store({ count: 0 });
     const listener = vi.fn();
+
     watch(s, listener, { select: (st) => st.count });
     batch(() => {
       s.set({ count: 1 });
@@ -472,6 +523,7 @@ describe('batch', () => {
 
   it('reads inside a batch see the latest in-batch value immediately', () => {
     const s = store({ count: 0 });
+
     batch(() => {
       s.set({ count: 1 });
       expect(s.value.count).toBe(1);
@@ -487,6 +539,7 @@ describe('batch', () => {
   it('flushes pending notifications even when the callback throws', () => {
     const s = store({ count: 0 });
     const listener = vi.fn();
+
     watch(s, listener, { select: (st) => st.count });
     expect(() =>
       batch(() => {
@@ -501,6 +554,7 @@ describe('batch', () => {
   it('a selector-based watcher receives one notification with the final value', () => {
     const s = store({ count: 0, name: 'Alice' });
     const listener = vi.fn();
+
     watch(s, listener, { select: (st) => st.count });
     batch(() => {
       s.set({ count: 1 });
@@ -514,6 +568,7 @@ describe('batch', () => {
   it('all flush subscribers are notified even when one throws', () => {
     const s = store({ count: 0 });
     const second = vi.fn();
+
     watch(
       s,
       () => {
@@ -536,6 +591,7 @@ describe('batch', () => {
 describe('store', () => {
   it('value and peek() return the initial state', () => {
     const s = store({ count: 0, name: 'Alice' });
+
     expect(s.value).toEqual({ count: 0, name: 'Alice' });
     expect(s.peek()).toEqual({ count: 0, name: 'Alice' });
   });
@@ -543,12 +599,14 @@ describe('store', () => {
   describe('set(partial)', () => {
     it('shallow-merges and preserves untouched keys', () => {
       const s = store({ count: 0, name: 'Alice' });
+
       s.set({ count: 5 });
       expect(s.value).toEqual({ count: 5, name: 'Alice' });
     });
 
     it('does not mutate the original state object', () => {
       const initial = { count: 0 };
+
       store(initial).set({ count: 5 });
       expect(initial.count).toBe(0);
     });
@@ -556,6 +614,7 @@ describe('store', () => {
     it('is a no-op when the result is shallowly equal to current state', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+
       watch(s, listener);
       s.set({ count: 0 });
       expect(listener).not.toHaveBeenCalled();
@@ -564,6 +623,7 @@ describe('store', () => {
     it('custom StoreOptions.equals suppresses writes before any watcher fires', () => {
       const s = store({ items: [1, 2, 3] }, { equals: (a, b) => JSON.stringify(a) === JSON.stringify(b) });
       const listener = vi.fn();
+
       watch(s, listener, { select: (st) => st.items });
       s.set({ items: [1, 2, 3] }); // same value, different reference — suppressed
       expect(listener).not.toHaveBeenCalled();
@@ -573,6 +633,7 @@ describe('store', () => {
   describe('update()', () => {
     it('receives current state and applies the result', () => {
       const s = store({ count: 2 });
+
       s.update((st) => ({ ...st, count: st.count * 3 }));
       expect(s.value.count).toBe(6);
     });
@@ -580,6 +641,7 @@ describe('store', () => {
     it('is a no-op when the updater returns a shallowly equal result', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+
       watch(s, listener);
       s.update((st) => ({ ...st })); // same values, different ref — suppressed by shallowEqual
       expect(listener).not.toHaveBeenCalled();
@@ -588,8 +650,10 @@ describe('store', () => {
     it('updater receives a shallow copy — mutations inside the fn are safe', () => {
       const s = store({ count: 0 });
       const original = s.peek();
+
       s.update((draft) => {
         draft.count = 99; // mutate the copy
+
         return draft;
       });
       // original reference is unchanged
@@ -601,6 +665,7 @@ describe('store', () => {
   describe('reset', () => {
     it('restores the original initial state', () => {
       const s = store({ count: 0 });
+
       s.set({ count: 99 });
       s.reset();
       expect(s.value.count).toBe(0);
@@ -611,6 +676,7 @@ describe('store', () => {
     it('fires with (next, prev) on full-state change', () => {
       const s = store({ count: 0, name: 'Alice' });
       const listener = vi.fn();
+
       watch(s, listener);
       s.set({ count: 1 });
       expect(listener).toHaveBeenCalledWith({ count: 1, name: 'Alice' }, { count: 0, name: 'Alice' });
@@ -619,6 +685,7 @@ describe('store', () => {
     it('selector fires on slice change but not on unrelated key change', () => {
       const s = store({ count: 0, name: 'Alice' });
       const listener = vi.fn();
+
       watch(s, listener, { select: (st) => st.count });
       s.set({ name: 'Bob' }); // unrelated — suppressed
       expect(listener).not.toHaveBeenCalled();
@@ -629,6 +696,7 @@ describe('store', () => {
     it('fires once per synchronous set() call', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+
       watch(s, listener, { select: (st) => st.count });
       s.set({ count: 1 });
       s.set({ count: 2 });
@@ -640,6 +708,7 @@ describe('store', () => {
     it('{ immediate: true } fires with the current value on subscribe', () => {
       const s = store({ count: 3 });
       const listener = vi.fn();
+
       watch(s, listener, { immediate: true, select: (st) => st.count });
       expect(listener).toHaveBeenCalledWith(3, 3);
     });
@@ -647,6 +716,7 @@ describe('store', () => {
     it('{ once: true } fires exactly once then auto-unsubscribes', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+
       watch(s, listener, { once: true, select: (st) => st.count });
       s.set({ count: 1 });
       s.set({ count: 2 });
@@ -657,6 +727,7 @@ describe('store', () => {
     it('selector custom equals suppresses semantically equivalent slices', () => {
       const s = store({ items: [1, 2, 3] });
       const listener = vi.fn();
+
       watch(s, listener, { equals: (a: number[], b: number[]) => a.length === b.length, select: (st) => st.items });
       s.set({ items: [4, 5, 6] }); // same length — suppressed
       expect(listener).not.toHaveBeenCalled();
@@ -669,6 +740,7 @@ describe('store', () => {
       const l1 = vi.fn();
       const l2 = vi.fn();
       const unsub = watch(s, l1, { select: (st) => st.count });
+
       watch(s, l2, { select: (st) => st.count });
       unsub();
       unsub(); // idempotent
@@ -681,6 +753,7 @@ describe('store', () => {
       const s = store({ count: 1 });
       const ro: ReadonlySignal<{ count: number }> = s;
       const listener = vi.fn();
+
       watch(ro, listener, { select: (st) => st.count });
       s.set({ count: 2 });
       expect(listener).toHaveBeenCalledWith(2, 1);
@@ -690,6 +763,7 @@ describe('store', () => {
   describe('freeze', () => {
     it('.frozen is false initially and true after freeze()', () => {
       const s = store({ count: 0 });
+
       expect(s.frozen).toBe(false);
       s.freeze();
       expect(s.frozen).toBe(true);
@@ -697,6 +771,7 @@ describe('store', () => {
 
     it('silently ignores writes after freeze; state does not change', () => {
       const s = store({ count: 0 });
+
       s.freeze();
       s.set({ count: 1 });
       expect(s.value.count).toBe(0);
@@ -706,6 +781,7 @@ describe('store', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
       const unsub = watch(s, listener);
+
       s.freeze();
       // writes are no-ops after freeze so listener won't fire regardless
       s.set({ count: 1 });
@@ -715,6 +791,7 @@ describe('store', () => {
 
     it('calling freeze() multiple times does not throw', () => {
       const s = store({ count: 0 });
+
       expect(() => {
         s.freeze();
         s.freeze();
@@ -726,6 +803,7 @@ describe('store', () => {
     it('returns a computed signal derived from a slice of the store', () => {
       const s = store({ count: 0, name: 'Alice' });
       const name$ = s.select((st) => st.name);
+
       expect(name$.value).toBe('Alice');
       s.set({ name: 'Bob' });
       expect(name$.value).toBe('Bob');
@@ -735,6 +813,7 @@ describe('store', () => {
       const s = store({ count: 0, name: 'Alice' });
       const name$ = s.select((st) => st.name);
       const listener = vi.fn();
+
       watch(name$, listener);
       s.set({ count: 99 }); // name unchanged — suppressed
       expect(listener).not.toHaveBeenCalled();
@@ -744,6 +823,7 @@ describe('store', () => {
       const s = store({ items: [1, 2, 3] });
       const len$ = s.select((st) => st.items.length, { equals: (a, b) => a === b });
       const listener = vi.fn();
+
       watch(len$, listener);
       s.set({ items: [4, 5, 6] }); // same length — suppressed
       expect(listener).not.toHaveBeenCalled();
@@ -755,6 +835,7 @@ describe('store', () => {
       const s = store({ count: 0 });
       const count$ = s.select((st) => st.count);
       const listener = vi.fn();
+
       watch(count$, listener);
       count$.dispose();
       s.set({ count: 1 });
@@ -768,6 +849,7 @@ describe('store', () => {
 describe('isStore type narrowing', () => {
   it('isStore<T> narrows so Store<T> methods are accessible without class import', () => {
     const value: unknown = store({ name: 'Alice' });
+
     // Store is exported as interface only — no `instanceof Store` needed
     if (isStore<{ name: string }>(value)) {
       value.set({ name: 'Bob' });
@@ -784,8 +866,10 @@ describe('onCleanup', () => {
     const teardowns: number[] = [];
     const stop = effect(() => {
       const current = n.value;
+
       onCleanup(() => teardowns.push(current));
     });
+
     n.value = 1;
     n.value = 2;
     expect(teardowns).toEqual([0, 1]);
@@ -803,6 +887,7 @@ describe('onCleanup', () => {
 describe('shallowEqual', () => {
   it('returns true for same reference', () => {
     const obj = { a: 1 };
+
     expect(shallowEqual(obj, obj)).toBe(true);
   });
 
@@ -830,7 +915,9 @@ describe('configureStateit', () => {
 
   it('raising maxEffectIterations allows more reactive loops before throwing', () => {
     configureStateit({ maxEffectIterations: 10 });
+
     const n = signal(0);
+
     // loop runs 6 times (n: 0→1→2→3→4→5, then 5<5=false, no dirty) — under 10
     expect(() => {
       effect(() => {
@@ -841,7 +928,9 @@ describe('configureStateit', () => {
 
   it('lowering maxEffectIterations throws sooner', () => {
     configureStateit({ maxEffectIterations: 2 });
+
     const n = signal(0);
+
     expect(() => {
       effect(() => {
         n.value++;
@@ -856,6 +945,7 @@ describe('_resetContextForTesting', () => {
   it('clears batchDepth so pending effects are not stuck', () => {
     const n = signal(0);
     const seen: number[] = [];
+
     effect(() => {
       seen.push(n.value);
     });
@@ -890,10 +980,14 @@ describe('effect({ onError })', () => {
 
   it('without onError the error propagates synchronously', () => {
     const n = signal(0);
+
     effect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       n.value;
     }); // initial run fine
+
     const n2 = signal(0);
+
     expect(() => {
       effect(() => {
         if (n2.value > 0) throw new Error('unhandled');
@@ -912,10 +1006,12 @@ describe('computed({ lazy: true })', () => {
     const c = computed(
       () => {
         runs++;
+
         return n.value * 2;
       },
       { lazy: true },
     );
+
     expect(runs).toBe(0); // not yet computed
     expect(c.value).toBe(0); // triggers first compute
     expect(runs).toBe(1);
@@ -924,6 +1020,7 @@ describe('computed({ lazy: true })', () => {
   it('behaves like a normal computed after first read', () => {
     const n = signal(1);
     const c = computed(() => n.value + 10, { lazy: true });
+
     expect(c.value).toBe(11);
     n.value = 5;
     expect(c.value).toBe(15);
@@ -935,12 +1032,14 @@ describe('computed({ lazy: true })', () => {
 describe('ComputedSignal.stale', () => {
   it('is false after initial computation', () => {
     const c = computed(() => 42);
+
     expect(c.stale).toBe(false);
   });
 
   it('becomes true when a dep changes before re-read', () => {
     const n = signal(0);
     const c = computed(() => n.value);
+
     expect(c.stale).toBe(false);
     n.value = 1;
     expect(c.stale).toBe(true);
@@ -949,6 +1048,7 @@ describe('ComputedSignal.stale', () => {
   it('returns false again after re-reading the value', () => {
     const n = signal(0);
     const c = computed(() => n.value);
+
     n.value = 1;
     expect(c.stale).toBe(true);
     expect(c.value).toBe(1);
@@ -957,6 +1057,7 @@ describe('ComputedSignal.stale', () => {
 
   it('is true after dispose', () => {
     const c = computed(() => 1);
+
     c.dispose();
     expect(c.stale).toBe(true);
   });
@@ -969,6 +1070,7 @@ describe('derived', () => {
     const price = signal(10);
     const qty = signal(3);
     const total = derived([price, qty], (p, q) => p * q);
+
     expect(total.value).toBe(30);
   });
 
@@ -976,6 +1078,7 @@ describe('derived', () => {
     const a = signal(1);
     const b = signal(2);
     const sum = derived([a, b], (x, y) => x + y);
+
     a.value = 10;
     expect(sum.value).toBe(12);
     b.value = 5;
@@ -987,6 +1090,7 @@ describe('derived', () => {
     const listener = vi.fn();
     // Math.sign: only changes when sign flips
     const sign = derived([n], (x) => Math.sign(x), { equals: (p, q) => p === q });
+
     watch(sign, listener);
     n.value = 2; // sign(2) = 1 = same — suppressed
     expect(listener).not.toHaveBeenCalled();
@@ -999,6 +1103,7 @@ describe('derived', () => {
     const n = signal(0);
     const d = derived([n], (x) => x * 2);
     const listener = vi.fn();
+
     watch(d, listener);
     d.dispose();
     n.value = 5;

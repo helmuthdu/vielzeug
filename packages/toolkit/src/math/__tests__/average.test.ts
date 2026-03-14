@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { average } from '../average';
 
 describe('average', () => {
@@ -13,6 +12,7 @@ describe('average', () => {
 
   it('calculates average using a callback', () => {
     const arr = [{ v: 2 }, { v: 4 }, { v: 6 }];
+
     expect(average(arr, (x) => x.v)).toBe(4);
   });
 

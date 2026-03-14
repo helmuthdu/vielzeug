@@ -42,5 +42,6 @@ export function distribute(amount: number | bigint, parts: number): (number | bi
   // Handle number type
   const baseShare = Math.floor(amount / parts);
   const remainder = amount - baseShare * parts;
+
   return Array.from({ length: parts }, (_, i) => (i < remainder ? baseShare + 1 : baseShare));
 }

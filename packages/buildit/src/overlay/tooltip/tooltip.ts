@@ -1,3 +1,5 @@
+import type { Placement } from '@vielzeug/floatit';
+
 import {
   computed,
   createId,
@@ -10,10 +12,11 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import type { Placement } from '@vielzeug/floatit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-import { forcedColorsMixin } from '../../styles';
+
 import type { ComponentSize } from '../../types';
+
+import { forcedColorsMixin } from '../../styles';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';
@@ -233,12 +236,15 @@ export const TAG = define('bit-tooltip', ({ host }) => {
     // First slotted element is the trigger
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
     const assigned = slot?.assignedElements({ flatten: true });
+
     return assigned?.[0] ?? null;
   }
 
   function updatePosition() {
     if (!tooltipEl) return;
+
     const triggerEl = getTriggerEl();
+
     if (!triggerEl) return;
 
     positionFloat(triggerEl, tooltipEl, {
@@ -246,43 +252,58 @@ export const TAG = define('bit-tooltip', ({ host }) => {
       placement: props.placement.value as Placement,
     }).then((placement) => {
       if (!tooltipEl) return;
+
       activePlacement.value = placement.split('-')[0] as TooltipPlacement;
     });
   }
 
   function show() {
     if (props.open.value !== undefined) return; // controlled mode
+
     if (props.disabled.value || !props.content.value) return;
+
     if (hideTimer) {
       clearTimeout(hideTimer);
       hideTimer = null;
     }
+
     if (showTimer) clearTimeout(showTimer);
-    showTimer = setTimeout(() => {
-      visible.value = true;
-      if (tooltipEl && !tooltipEl.matches(':popover-open')) {
-        tooltipEl.showPopover();
-      }
-      // Start autoUpdate: repositions on scroll, resize, and reference size change
-      const triggerEl = getTriggerEl();
-      if (triggerEl && tooltipEl) {
-        autoUpdateCleanup?.();
-        autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
-      } else {
-        requestAnimationFrame(() => updatePosition());
-      }
-    }, Number(props.delay.value) || 0);
+
+    showTimer = setTimeout(
+      () => {
+        visible.value = true;
+
+        if (tooltipEl && !tooltipEl.matches(':popover-open')) {
+          tooltipEl.showPopover();
+        }
+
+        // Start autoUpdate: repositions on scroll, resize, and reference size change
+        const triggerEl = getTriggerEl();
+
+        if (triggerEl && tooltipEl) {
+          autoUpdateCleanup?.();
+          autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
+        } else {
+          requestAnimationFrame(() => updatePosition());
+        }
+      },
+      Number(props.delay.value) || 0,
+    );
   }
 
   function hide() {
     if (props.open.value !== undefined) return; // controlled mode
+
     if (showTimer) {
       clearTimeout(showTimer);
       showTimer = null;
     }
+
     const closeDelay = Number(props['close-delay'].value) || 0;
+
     if (closeDelay > 0) {
       if (hideTimer) clearTimeout(hideTimer);
+
       hideTimer = setTimeout(() => {
         hideTimer = null;
         _doHide();
@@ -296,6 +317,7 @@ export const TAG = define('bit-tooltip', ({ host }) => {
     autoUpdateCleanup?.();
     autoUpdateCleanup = null;
     visible.value = false;
+
     if (tooltipEl?.matches(':popover-open')) {
       tooltipEl.hidePopover();
     }
@@ -308,11 +330,14 @@ export const TAG = define('bit-tooltip', ({ host }) => {
 
   onMount(() => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+
     if (!slot) return;
 
     const bindTriggerEvents = () => {
       unbindTriggerEvents(); // clean up previous bindings
+
       const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+
       if (!triggerEl) return;
 
       triggerEl.setAttribute('aria-describedby', tooltipId);
@@ -323,10 +348,12 @@ export const TAG = define('bit-tooltip', ({ host }) => {
         triggerEl.addEventListener('mouseenter', show);
         triggerEl.addEventListener('mouseleave', hide);
       }
+
       if (t.includes('focus')) {
         triggerEl.addEventListener('focusin', show);
         triggerEl.addEventListener('focusout', hide);
       }
+
       if (t.includes('click')) {
         triggerEl.addEventListener('click', toggleClick);
       }
@@ -337,7 +364,9 @@ export const TAG = define('bit-tooltip', ({ host }) => {
 
     const unbindTriggerEvents = () => {
       const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+
       if (!triggerEl) return;
+
       triggerEl.removeAttribute('aria-describedby');
       triggerEl.removeEventListener('mouseenter', show);
       triggerEl.removeEventListener('mouseleave', hide);
@@ -350,13 +379,16 @@ export const TAG = define('bit-tooltip', ({ host }) => {
     onSlotChange('default', bindTriggerEvents);
 
     // Controlled mode: watch the `open` prop and show/hide accordingly
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Controlled open/close must coordinate positioning, visibility, popover state, and auto-update lifecycle
     watch(props.open, (openVal) => {
       if (openVal === undefined || openVal === null) return;
+
       if (openVal) {
         visible.value = true;
+
         if (tooltipEl && !tooltipEl.matches(':popover-open')) tooltipEl.showPopover();
+
         const triggerEl = getTriggerEl();
+
         if (triggerEl && tooltipEl) {
           autoUpdateCleanup?.();
           autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
@@ -370,10 +402,14 @@ export const TAG = define('bit-tooltip', ({ host }) => {
 
     return () => {
       unbindTriggerEvents();
+
       if (showTimer) clearTimeout(showTimer);
+
       if (hideTimer) clearTimeout(hideTimer);
+
       autoUpdateCleanup?.();
       autoUpdateCleanup = null;
+
       if (tooltipEl?.matches(':popover-open')) {
         tooltipEl.hidePopover();
       }
@@ -398,8 +434,7 @@ export const TAG = define('bit-tooltip', ({ host }) => {
           tooltipEl = el;
         }}
         :data-placement="${activePlacement}"
-        :aria-hidden="${() => String(!visible.value)}"
-      >
+        :aria-hidden="${() => String(!visible.value)}">
         <slot name="content">${() => props.content.value}</slot>
         <span class="arrow" part="arrow" aria-hidden="true"></span>
       </div>

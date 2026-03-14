@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: Schema validation library requires flexible any types for dynamic validation */
-
 /* -------------------- Error Codes -------------------- */
 
 export const ErrorCode = {
@@ -31,16 +29,17 @@ function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>
 }
 
 export type Issue = {
-  path: (string | number)[];
-  message: string;
   code: ErrorCode | (string & {});
+  message: string;
   params?: Record<string, unknown>;
+  path: (string | number)[];
 };
 
 function formatIssues(issues: Issue[]): string {
   return issues
-    .map(({ path, message, code }) => {
+    .map(({ code, message, path }) => {
       const pathStr = path.length ? path.join('.') : 'value';
+
       return `${pathStr}: ${message} [${code}]`;
     })
     .join('\n');
@@ -67,20 +66,24 @@ export class ValidationError extends Error {
   flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] } {
     const fieldErrors: Record<string, string[]> = {};
     const formErrors: string[] = [];
+
     for (const issue of this.issues) {
       if (issue.path.length === 0) {
         formErrors.push(issue.message);
       } else {
         const key = issue.path.join('.');
+
         if (!fieldErrors[key]) fieldErrors[key] = [];
+
         fieldErrors[key].push(issue.message);
       }
     }
+
     return { fieldErrors, formErrors };
   }
 }
 
-export type ParseResult<T> = { success: true; data: T } | { success: false; error: ValidationError };
+export type ParseResult<T> = { data: T; success: true } | { error: ValidationError; success: false };
 
 type ValidateFn = (value: unknown, path: (string | number)[]) => Issue[] | null;
 type AsyncValidateFn = (value: unknown, path: (string | number)[]) => Promise<Issue[] | null>;
@@ -106,10 +109,13 @@ export class Schema<Output = unknown, Input = unknown> {
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
+
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
       const issues = this._runSync(processed, []);
+
       if (issues.length) throw new ValidationError(issues);
+
       return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
     });
   }
@@ -119,6 +125,7 @@ export class Schema<Output = unknown, Input = unknown> {
       return { data: this.parse(value), success: true };
     } catch (error) {
       if (ValidationError.is(error)) return { error, success: false };
+
       throw error;
     }
   }
@@ -126,9 +133,13 @@ export class Schema<Output = unknown, Input = unknown> {
   async parseAsync(value: Input): Promise<Output> {
     const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
     const syncIssues = this._runSync(processed, []);
+
     if (syncIssues.length) throw new ValidationError(syncIssues);
+
     const asyncIssues = await this._runAsync(processed, []);
+
     if (asyncIssues.length) throw new ValidationError(asyncIssues);
+
     return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
   }
 
@@ -137,6 +148,7 @@ export class Schema<Output = unknown, Input = unknown> {
       return { data: await this.parseAsync(value), success: true };
     } catch (error) {
       if (ValidationError.is(error)) return { error, success: false };
+
       throw error;
     }
   }
@@ -144,20 +156,24 @@ export class Schema<Output = unknown, Input = unknown> {
   /** Runs fn(); if it throws ValidationError and _hasCatch is set, returns the fallback. */
   protected _withCatch<T>(fn: () => T): T {
     if (!this._hasCatch) return fn();
+
     try {
       return fn();
     } catch (error) {
       if (ValidationError.is(error)) return this._catchValue as unknown as T;
+
       throw error;
     }
   }
 
   protected async _withCatchAsync<T>(fn: () => Promise<T>): Promise<T> {
     if (!this._hasCatch) return fn();
+
     try {
       return await fn();
     } catch (error) {
       if (ValidationError.is(error)) return this._catchValue as unknown as T;
+
       throw error;
     }
   }
@@ -166,9 +182,11 @@ export class Schema<Output = unknown, Input = unknown> {
   refine(check: (value: Output) => boolean, message: MessageFn<{ value: Output }> = 'Invalid value'): this {
     return this._addValidator((value, path) => {
       const result: unknown = check(value as Output);
+
       if (result instanceof Promise) {
         throw new Error('refine() only accepts sync functions. Use refineAsync() for async validation.');
       }
+
       return result
         ? null
         : [{ code: ErrorCode.custom, message: resolveMessage(message, { value: value as Output }), path }];
@@ -181,69 +199,86 @@ export class Schema<Output = unknown, Input = unknown> {
     message: MessageFn<{ value: Output }> = 'Invalid value',
   ): this {
     const cloned = this._clone();
+
     cloned._asyncValidators = [
       ...this._asyncValidators,
       async (value, path) => {
         const ok = await check(value as Output);
+
         return ok
           ? null
           : [{ code: ErrorCode.custom, message: resolveMessage(message, { value: value as Output }), path }];
       },
     ];
+
     return cloned;
   }
 
   /** Allows undefined. */
   optional(): Schema<Output | undefined, Input | undefined> {
     const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined>;
+
     cloned._isOptional = true;
+
     return cloned;
   }
 
   /** Allows null. */
   nullable(): Schema<Output | null, Input | null> {
     const cloned = this._clone() as unknown as Schema<Output | null, Input | null>;
+
     cloned._isNullable = true;
+
     return cloned;
   }
 
   /** Allows both null and undefined. */
   nullish(): Schema<Output | null | undefined, Input | null | undefined> {
     const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined>;
+
     cloned._isOptional = true;
     cloned._isNullable = true;
+
     return cloned;
   }
 
   default(defaultValue: Output): this {
     const cloned = this._clone();
+
     cloned._preprocessors = [...this._preprocessors, (v) => (v === undefined ? defaultValue : v)];
+
     return cloned;
   }
 
   /** Returns a fallback value on ANY validation failure instead of throwing. */
   catch(fallback: Output): this {
     const cloned = this._clone();
+
     cloned._hasCatch = true;
     cloned._catchValue = fallback;
+
     return cloned;
   }
 
   transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input> {
     const next = new Schema<NewOutput, Input>(this._validators);
+
     next._asyncValidators = [...this._asyncValidators];
     next._preprocessors = [...this._preprocessors];
     next._postprocessors = [...this._postprocessors, fn as (v: any) => any];
     next._isOptional = this._isOptional;
     next._isNullable = this._isNullable;
     next._description = this._description;
+
     return next;
   }
 
   /** Attach a description for documentation or tooling generation. */
   describe(description: string): this {
     const cloned = this._clone();
+
     cloned._description = description;
+
     return cloned;
   }
 
@@ -264,22 +299,31 @@ export class Schema<Output = unknown, Input = unknown> {
 
   protected _runSync(value: unknown, path: (string | number)[]): Issue[] {
     if (this._isOptional && value === undefined) return [];
+
     if (this._isNullable && value === null) return [];
+
     const issues: Issue[] = [];
+
     for (const validate of this._validators) {
       const result = validate(value, path);
+
       if (result) {
         issues.push(...result);
+
         if (result.some((i) => i.code === ErrorCode.invalid_type)) break;
       }
     }
+
     return issues;
   }
 
   protected async _runAsync(value: unknown, path: (string | number)[]): Promise<Issue[]> {
     if (this._isOptional && value === undefined) return [];
+
     if (this._isNullable && value === null) return [];
+
     const results = await Promise.all(this._asyncValidators.map((fn) => fn(value, path)));
+
     return results.flatMap((r) => r ?? []);
   }
 
@@ -289,12 +333,15 @@ export class Schema<Output = unknown, Input = unknown> {
 
   protected _addPreprocessor(fn: (value: unknown) => unknown): this {
     const cloned = this._clone();
+
     cloned._preprocessors = [...this._preprocessors, fn];
+
     return cloned;
   }
 
   protected _clone(validators: ValidateFn[] = this._validators): this {
     const cloned = Object.create(Object.getPrototypeOf(this)) as this;
+
     cloned._validators = [...validators];
     cloned._asyncValidators = [...this._asyncValidators];
     cloned._preprocessors = [...this._preprocessors];
@@ -304,6 +351,7 @@ export class Schema<Output = unknown, Input = unknown> {
     cloned._description = this._description;
     cloned._hasCatch = this._hasCatch;
     cloned._catchValue = this._catchValue;
+
     return cloned;
   }
 }
@@ -438,6 +486,7 @@ export class StringSchema extends Schema<string, unknown> {
   email(message: MessageFn<{ value: string }> = 'Invalid email address'): this {
     return this._addValidator((value, path) => {
       if (typeof value !== 'string') return null;
+
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
         ? null
         : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
@@ -447,8 +496,10 @@ export class StringSchema extends Schema<string, unknown> {
   url(message: MessageFn<{ value: string }> = 'Invalid URL'): this {
     return this._addValidator((value, path) => {
       if (typeof value !== 'string') return null;
+
       try {
         new URL(value);
+
         return null;
       } catch {
         return [{ code: ErrorCode.invalid_url, message: resolveMessage(message, { value }), path }];
@@ -459,6 +510,7 @@ export class StringSchema extends Schema<string, unknown> {
   uuid(message: MessageFn<{ value: string }> = 'Invalid UUID'): this {
     return this._addValidator((value, path) => {
       if (typeof value !== 'string') return null;
+
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
         ? null
         : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
@@ -468,12 +520,15 @@ export class StringSchema extends Schema<string, unknown> {
   date(message: MessageFn<{ value: string }> = 'Invalid date'): this {
     return this._addValidator((value, path) => {
       if (typeof value !== 'string') return null;
+
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
       }
+
       const d = new Date(value);
       // Guard against roll-over dates like 2024-02-30 → 2024-03-01
       const valid = !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
+
       return valid ? null : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
     });
   }
@@ -481,8 +536,10 @@ export class StringSchema extends Schema<string, unknown> {
   datetime(message: MessageFn<{ value: string }> = 'Invalid datetime'): this {
     return this._addValidator((value, path) => {
       if (typeof value !== 'string') return null;
+
       // Require at minimum YYYY-MM-DDTHH:MM structure before trying Date constructor
       const valid = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/.test(value) && !Number.isNaN(new Date(value).getTime());
+
       return valid ? null : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
     });
   }
@@ -641,7 +698,9 @@ export class NumberSchema extends Schema<number, unknown> {
   static coerce(): NumberSchema {
     return new NumberSchema()._addPreprocessor((v) => {
       if (typeof v === 'number') return v;
+
       if (typeof v === 'string') return Number(v);
+
       return v;
     });
   }
@@ -660,8 +719,11 @@ export class BooleanSchema extends Schema<boolean, unknown> {
   static coerce(): BooleanSchema {
     return new BooleanSchema()._addPreprocessor((v) => {
       if (typeof v === 'boolean') return v;
+
       if (v === 'true' || v === 1) return true;
+
       if (v === 'false' || v === 0) return false;
+
       return v;
     });
   }
@@ -704,7 +766,9 @@ export class DateSchema extends Schema<Date, unknown> {
   static coerce(): DateSchema {
     return new DateSchema()._addPreprocessor((v) => {
       if (v instanceof Date) return v;
+
       if (typeof v === 'string' || typeof v === 'number') return new Date(v);
+
       return v;
     });
   }
@@ -736,6 +800,7 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>, unknow
 
   constructor(values: T) {
     const set = new Set<unknown>(values);
+
     super([
       (value, path) =>
         set.has(value)
@@ -770,11 +835,14 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
+
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
       if (!Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
       }
+
       if (processed.length !== this.items.length) {
         throw new ValidationError([
           {
@@ -785,10 +853,13 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
           },
         ]);
       }
+
       const issues: Issue[] = [];
       const output: unknown[] = [];
+
       for (let i = 0; i < this.items.length; i++) {
         const result = this.items[i].safeParse(processed[i]);
+
         if (result.success) {
           output.push(result.data);
         } else {
@@ -798,18 +869,23 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
       }
       for (const validate of this._validators) {
         const extra = validate(output, []);
+
         if (extra) issues.push(...extra);
       }
+
       if (issues.length) throw new ValidationError(issues);
+
       return this._postprocessors.reduce((v, fn) => fn(v), output) as InferTuple<T>;
     });
   }
 
   override async parseAsync(value: unknown): Promise<InferTuple<T>> {
     const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
     if (!Array.isArray(processed)) {
       throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
     }
+
     if (processed.length !== this.items.length) {
       throw new ValidationError([
         {
@@ -820,6 +896,7 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
         },
       ]);
     }
+
     const itemResults = await Promise.all(
       this.items.map((schema, i) =>
         schema.safeParseAsync(processed[i]).then((result) => ({
@@ -830,18 +907,25 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
     );
     const output = itemResults.map((r) => r.data);
     const syncIssues: Issue[] = [];
+
     for (const validate of this._validators) {
       const extra = validate(output, []);
+
       if (extra) syncIssues.push(...extra);
     }
+
     const issues = [...itemResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+
     if (issues.length) throw new ValidationError(issues);
+
     return this._postprocessors.reduce((v, fn) => fn(v), output) as InferTuple<T>;
   }
 
   protected override _clone(validators = this._validators): this {
     const cloned = super._clone(validators);
+
     (cloned as any).items = this.items;
+
     return cloned;
   }
 }
@@ -862,45 +946,59 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>, unkn
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
+
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
       if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
       }
-      const { output, issues } = this._parseRecordEntries(processed as Record<string, unknown>);
+
+      const { issues, output } = this._parseRecordEntries(processed as Record<string, unknown>);
+
       for (const validate of this._validators) {
         const extra = validate(output, []);
+
         if (extra) issues.push(...extra);
       }
+
       if (issues.length) throw new ValidationError(issues);
+
       return this._postprocessors.reduce((v, fn) => fn(v), output) as Record<K, V>;
     });
   }
 
-  private _parseRecordEntries(obj: Record<string, unknown>): { output: Record<string, unknown>; issues: Issue[] } {
+  private _parseRecordEntries(obj: Record<string, unknown>): { issues: Issue[]; output: Record<string, unknown> } {
     const issues: Issue[] = [];
     const output: Record<string, unknown> = {};
+
     for (const key of Object.keys(obj)) {
       const keyResult = this.keySchema.safeParse(key);
+
       if (!keyResult.success) {
         issues.push(...keyResult.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })));
         continue;
       }
+
       const valResult = this.valueSchema.safeParse(obj[key]);
+
       if (valResult.success) {
         output[key] = valResult.data;
       } else {
         issues.push(...valResult.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })));
       }
     }
+
     return { issues, output };
   }
 
   override async parseAsync(value: unknown): Promise<Record<K, V>> {
     const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
     if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
       throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
     }
+
     const obj = processed as Record<string, unknown>;
     const keys = Object.keys(obj);
     const entryResults = await Promise.all(
@@ -918,24 +1016,33 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>, unkn
     );
     const output: Record<string, unknown> = {};
     const issues: Issue[] = [];
+
     for (const r of entryResults) {
       issues.push(...r.keyIssues, ...r.valIssues);
+
       if (r.keyIssues.length === 0 && r.valIssues.length === 0) output[r.parsedKey as string] = r.parsedVal;
     }
+
     const syncIssues: Issue[] = [];
+
     for (const validate of this._validators) {
       const extra = validate(output, []);
+
       if (extra) syncIssues.push(...extra);
     }
     issues.push(...syncIssues, ...(await this._runAsync(output, [])));
+
     if (issues.length) throw new ValidationError(issues);
+
     return this._postprocessors.reduce((v, fn) => fn(v), output) as Record<K, V>;
   }
 
   protected override _clone(validators = this._validators): this {
     const cloned = super._clone(validators);
+
     (cloned as any).keySchema = this.keySchema;
     (cloned as any).valueSchema = this.valueSchema;
+
     return cloned;
   }
 }
@@ -967,15 +1074,20 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
+
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
       if (!Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
       }
+
       const issues: Issue[] = [];
       const items: T[] = [];
+
       for (let i = 0; i < processed.length; i++) {
         const result = this.itemSchema.safeParse(processed[i]);
+
         if (result.success) {
           items.push(result.data);
         } else {
@@ -985,18 +1097,23 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
       }
       for (const validate of this._validators) {
         const extra = validate(items, []);
+
         if (extra) issues.push(...extra);
       }
+
       if (issues.length) throw new ValidationError(issues);
+
       return this._postprocessors.reduce((v, fn) => fn(v), items) as T[];
     });
   }
 
   override async parseAsync(value: unknown): Promise<T[]> {
     const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
     if (!Array.isArray(processed)) {
       throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
     }
+
     const itemResults = await Promise.all(
       processed.map((item, i) =>
         this.itemSchema.safeParseAsync(item).then((result) => ({
@@ -1007,12 +1124,17 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
     );
     const items = itemResults.map((r) => r.data);
     const arrayIssues: Issue[] = [];
+
     for (const validate of this._validators) {
       const extra = validate(items, []);
+
       if (extra) arrayIssues.push(...extra);
     }
+
     const issues = [...itemResults.flatMap((r) => r.issues), ...arrayIssues, ...(await this._runAsync(items, []))];
+
     if (issues.length) throw new ValidationError(issues);
+
     return this._postprocessors.reduce((v, fn) => fn(v), items) as T[];
   }
 
@@ -1063,7 +1185,9 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
 
   protected override _clone(validators = this._validators): this {
     const cloned = super._clone(validators);
+
     (cloned as any).itemSchema = this.itemSchema;
+
     return cloned;
   }
 }
@@ -1088,27 +1212,38 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
     if (this._asyncValidators.length > 0) {
       throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
     }
+
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
       if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
       }
+
       const obj = processed as Record<string, unknown>;
+
       this._checkStrictKeys(obj);
-      const { output, issues } = this._parseObjectFields(obj);
+
+      const { issues, output } = this._parseObjectFields(obj);
+
       for (const validate of this._validators) {
         const extra = validate(output, []);
+
         if (extra) issues.push(...extra);
       }
+
       if (issues.length) throw new ValidationError(issues);
+
       return this._postprocessors.reduce((v, fn) => fn(v), output) as InferObject<T>;
     });
   }
 
   private _checkStrictKeys(obj: Record<string, unknown>): void {
     if (this._mode !== 'strict') return;
+
     const knownKeys = new Set(Object.keys(this.shape));
     const unknownKeys = Object.keys(obj).filter((k) => !knownKeys.has(k));
+
     if (unknownKeys.length > 0) {
       throw new ValidationError([
         { code: ErrorCode.unrecognized_keys, message: `Unrecognized keys: ${unknownKeys.join(', ')}`, path: [] },
@@ -1116,30 +1251,36 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
     }
   }
 
-  private _parseObjectFields(obj: Record<string, unknown>): { output: Record<string, unknown>; issues: Issue[] } {
+  private _parseObjectFields(obj: Record<string, unknown>): { issues: Issue[]; output: Record<string, unknown> } {
     const issues: Issue[] = [];
     const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
+
     for (const key of Object.keys(this.shape)) {
       const result = this.shape[key].safeParse(obj[key]);
+
       if (result.success) {
         output[key] = result.data;
       } else {
         issues.push(...result.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })));
       }
     }
+
     return { issues, output };
   }
 
   override async parseAsync(value: unknown): Promise<InferObject<T>> {
     const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
     if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
       throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
     }
+
     const obj = processed as Record<string, unknown>;
 
     if (this._mode === 'strict') {
       const knownKeys = new Set(Object.keys(this.shape));
       const unknownKeys = Object.keys(obj).filter((k) => !knownKeys.has(k));
+
       if (unknownKeys.length > 0) {
         throw new ValidationError([
           { code: ErrorCode.unrecognized_keys, message: `Unrecognized keys: ${unknownKeys.join(', ')}`, path: [] },
@@ -1158,17 +1299,23 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
     );
 
     const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
+
     for (const r of keyResults) {
       if (r.issues.length === 0) output[r.key] = r.data;
     }
 
     const syncIssues: Issue[] = [];
+
     for (const validate of this._validators) {
       const extra = validate(output, []);
+
       if (extra) syncIssues.push(...extra);
     }
+
     const issues = [...keyResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+
     if (issues.length) throw new ValidationError(issues);
+
     return this._postprocessors.reduce((v, fn) => fn(v), output) as InferObject<T>;
   }
 
@@ -1178,6 +1325,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
   ): ObjectSchema<Omit<T, K> & { [P in K]: Schema<InferOutput<T[P]> | undefined, unknown> }>;
   partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
+
     return new ObjectSchema(
       Object.fromEntries(
         Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
@@ -1191,7 +1339,9 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
       Object.fromEntries(
         Object.entries(this.shape).map(([k, s]) => {
           const cloned = (s as unknown as ObjectSchema<any>)._clone();
+
           cloned._isOptional = false;
+
           return [k, cloned];
         }),
       ) as any,
@@ -1205,6 +1355,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
 
   pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
     const keySet = new Set(keys as string[]);
+
     return new ObjectSchema(
       Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any,
       this._mode,
@@ -1213,6 +1364,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
 
   omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
     const keySet = new Set(keys as string[]);
+
     return new ObjectSchema(
       Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any,
       this._mode,
@@ -1234,13 +1386,16 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
   protected _copyRefinements(source: ObjectSchema<any>): this {
     this._validators = [...source._validators];
     this._asyncValidators = [...source._asyncValidators];
+
     return this;
   }
 
   protected override _clone(validators = this._validators): this {
     const cloned = super._clone(validators);
+
     (cloned as any).shape = this.shape;
     (cloned as any)._mode = this._mode;
+
     return cloned;
   }
 }
@@ -1253,7 +1408,9 @@ export class UnionSchema<T extends readonly Schema<any, any>[]> extends Schema<I
     super([
       (value, path) => {
         const branchResults = schemas.map((s) => s.safeParse(value));
+
         if (branchResults.some((r) => r.success)) return null;
+
         return [
           {
             code: ErrorCode.invalid_union,
@@ -1280,10 +1437,13 @@ export class IntersectSchema<T extends readonly Schema<any, any>[]> extends Sche
     super([
       (value, _path) => {
         const issues: Issue[] = [];
+
         for (const schema of schemas) {
           const result = schema.safeParse(value);
+
           if (!result.success) issues.push(...result.error.issues);
         }
+
         return issues.length ? issues : null;
       },
     ]);
@@ -1302,6 +1462,7 @@ type InferVariantMap<K extends string, M extends VariantMap> = {
 export class VariantSchema<K extends string, M extends VariantMap> extends Schema<InferVariantMap<K, M>, unknown> {
   constructor(discriminator: K, variantMap: M) {
     const map = new Map<string, ObjectSchema<any>>();
+
     for (const [tag, schema] of Object.entries(variantMap)) {
       map.set(tag, schema.extend({ [discriminator]: new LiteralSchema(tag) }));
     }
@@ -1311,11 +1472,14 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
         if (value == null || typeof value !== 'object' || Array.isArray(value)) {
           return [{ code: ErrorCode.invalid_type, message: 'Expected object', path }];
         }
+
         const obj = value as Record<string, unknown>;
         const discValue = obj[discriminator] as string;
         const matched = map.get(discValue);
+
         if (!matched) {
           const expected = [...map.keys()].map((k) => JSON.stringify(k)).join(' | ');
+
           return [
             {
               code: ErrorCode.invalid_variant,
@@ -1324,7 +1488,9 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
             },
           ];
         }
+
         const result = matched.safeParse(value);
+
         return result.success ? null : result.error.issues;
       },
     ]);
@@ -1354,6 +1520,7 @@ export class LazySchema<T> extends Schema<T, unknown> {
     if (this._resolved === null) {
       this._resolved = this.getter();
     }
+
     return this._resolved;
   }
 
@@ -1407,6 +1574,7 @@ export class NativeEnumSchema<T extends NativeEnumObj> extends Schema<InferNativ
       (v) => typeof v !== 'number' || !Object.hasOwn(enumObj, v),
     ) as NativeEnumValue[];
     const set = new Set<unknown>(values);
+
     super([
       (value, path) =>
         set.has(value)

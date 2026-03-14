@@ -48,7 +48,9 @@ describe('bit-select', () => {
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const items = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
+
       expect(items?.length).toBeGreaterThan(0);
     });
 
@@ -57,7 +59,9 @@ describe('bit-select', () => {
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const groups = fixture.query('.dropdown')?.querySelectorAll('.optgroup-label');
+
       expect(groups?.length).toBeGreaterThan(0);
     });
 
@@ -65,6 +69,7 @@ describe('bit-select', () => {
       fixture = await mount('bit-select', { attrs: { placeholder: 'Select item' }, html: OPTIONS });
 
       const trigger = fixture.query('.trigger-value');
+
       expect(trigger?.textContent?.trim()).toBe('Select item');
     });
 
@@ -88,6 +93,7 @@ describe('bit-select', () => {
       fixture = await mount('bit-select', { attrs: { value: 'apple' }, html: OPTIONS });
 
       const trigger = fixture.query('.trigger-value');
+
       expect(trigger?.textContent?.trim()).toBe('Apple');
     });
 
@@ -107,6 +113,7 @@ describe('bit-select', () => {
       expect(fixture.element.hasAttribute('open')).toBe(true);
 
       const option = fixture.query('[role="option"]')!;
+
       await user.click(option);
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
@@ -114,28 +121,38 @@ describe('bit-select', () => {
 
     it('emits change event with value and originalEvent on selection', async () => {
       fixture = await mount('bit-select', { html: OPTIONS });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const firstOption = fixture.query('[role="option"]')!;
+
       await user.click(firstOption);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
+
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBeDefined();
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('skips disabled options when clicked', async () => {
       fixture = await mount('bit-select', { html: OPTIONS_WITH_DISABLED });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const disabledOption = fixture.query('[role="option"][aria-disabled="true"]');
+
       if (disabledOption) {
         await user.click(disabledOption as HTMLElement);
         expect(changeHandler).not.toHaveBeenCalled();
@@ -154,15 +171,20 @@ describe('bit-select', () => {
 
     it('emits change event with values array for multiple select', async () => {
       fixture = await mount('bit-select', { attrs: { multiple: true }, html: OPTIONS });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const firstOption = fixture.query('[role="option"]')!;
+
       await user.click(firstOption);
 
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(Array.isArray(detail.values)).toBe(true);
     });
   });
@@ -200,6 +222,7 @@ describe('bit-select', () => {
       fixture = await mount('bit-select', { attrs: { error: 'Required' }, html: OPTIONS });
 
       const errorEl = fixture.query('.helper-text');
+
       expect(errorEl?.textContent?.trim()).toBe('Required');
     });
   });
@@ -300,6 +323,7 @@ describe('bit-select accessibility', () => {
       await fixture.flush();
 
       const options = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
+
       expect(options?.length).toBeGreaterThan(0);
     });
 
@@ -307,6 +331,7 @@ describe('bit-select accessibility', () => {
       fixture = await mount('bit-select', { attrs: { error: 'Selection required' }, html: OPTIONS });
 
       const errorEl = fixture.query('.helper-text');
+
       expect(errorEl).toBeTruthy();
       expect(errorEl?.textContent?.trim()).toBe('Selection required');
     });
@@ -334,7 +359,9 @@ describe('bit-select accessibility', () => {
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
+
       const firstOption = fixture.query('[role="option"]') as HTMLElement;
+
       await user.click(firstOption);
 
       expect(fixture.query('.field')?.getAttribute('aria-expanded')).toBe('false');
@@ -347,6 +374,7 @@ describe('bit-select accessibility', () => {
       await fixture.flush();
 
       const selectedOption = fixture.query('[role="option"][aria-selected="true"]');
+
       expect(selectedOption).toBeTruthy();
     });
 
@@ -355,6 +383,7 @@ describe('bit-select accessibility', () => {
 
       // The field uses role="combobox" which implies listbox popup semantics
       const field = fixture.query('.field');
+
       expect(field?.getAttribute('role')).toBe('combobox');
     });
   });

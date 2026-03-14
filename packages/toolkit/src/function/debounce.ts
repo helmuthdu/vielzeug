@@ -1,4 +1,5 @@
 import type { Fn } from '../types';
+
 import { assert } from './assert';
 
 export type Debounced<T extends Fn> = ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) & {
@@ -34,17 +35,21 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
 
   const invoke = () => {
     clearTimer();
+
     if (!lastArgs) return undefined; // nothing to invoke
+
     const args = lastArgs;
     const ctx = lastThis as ThisParameterType<T>;
+
     lastArgs = undefined;
     lastThis = undefined;
-    // biome-ignore lint/suspicious/noExplicitAny: -
+
     return fn.apply(ctx as any, args) as ReturnType<T>;
   };
 
   const debounced = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
     lastArgs = args;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     lastThis = this;
     clearTimer();
     timer = setTimeout(invoke, delay);

@@ -114,6 +114,7 @@ describe('bit-textarea', () => {
       fixture = await mount('bit-textarea', { attrs: { error: 'Too short' } });
 
       const errorEl = fixture.query('.helper-text');
+
       expect(errorEl?.textContent?.trim()).toBe('Too short');
     });
 
@@ -161,28 +162,37 @@ describe('bit-textarea', () => {
   describe('Events', () => {
     it('emits custom input event with value and originalEvent', async () => {
       fixture = await mount('bit-textarea');
+
       const inputHandler = vi.fn();
+
       fixture.element.addEventListener('input', inputHandler);
 
       await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, 'h');
 
       expect(inputHandler).toHaveBeenCalled();
+
       const detail = (inputHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBe('h');
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('emits custom change event with value', async () => {
       fixture = await mount('bit-textarea');
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
+
       ta.value = 'some text';
       ta.dispatchEvent(new Event('change', { bubbles: true }));
 
       expect(changeHandler).toHaveBeenCalled();
+
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.value).toBe('some text');
     });
   });
@@ -278,6 +288,7 @@ describe('bit-textarea accessibility', () => {
       fixture = await mount('bit-textarea', { attrs: { error: 'Field is required' } });
 
       const errorEl = fixture.query('.helper-text');
+
       expect(errorEl).toBeTruthy();
       expect(errorEl?.textContent?.trim()).toBe('Field is required');
     });
@@ -307,9 +318,11 @@ describe('bit-textarea accessibility', () => {
       fixture = await mount('bit-textarea', { attrs: { label: 'Comment', 'label-placement': 'outside' } });
 
       const labelledByVal = fixture.query('textarea')?.getAttribute('aria-labelledby');
+
       expect(labelledByVal).toBeTruthy();
 
       const labelEl = fixture.query(`[id="${labelledByVal}"]`);
+
       expect(labelEl).toBeTruthy();
     });
 
@@ -319,6 +332,7 @@ describe('bit-textarea accessibility', () => {
       });
 
       const describedByVal = fixture.query('textarea')?.getAttribute('aria-describedby');
+
       expect(describedByVal).toBeTruthy();
     });
 
@@ -342,6 +356,7 @@ describe('bit-textarea accessibility', () => {
       fixture = await mount('bit-textarea', { attrs: { readonly: true, value: 'Read only' } });
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
+
       expect(ta.readOnly).toBe(true);
       expect(ta.tabIndex).not.toBe(-1);
     });
@@ -354,6 +369,7 @@ describe('bit-textarea accessibility', () => {
       fixture = await mount('bit-textarea');
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
+
       await user.type(ta, 'hello');
 
       expect(ta.value).toBe('hello');

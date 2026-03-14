@@ -237,11 +237,7 @@ export type Optional<T> = T | undefined;
  * Combines common traits for buttons, inputs, etc.
  */
 export interface InteractiveComponentProps
-  extends BaseComponentProps,
-    ThemableProps,
-    VariantProps,
-    SizableProps,
-    DisablableProps {}
+  extends BaseComponentProps, ThemableProps, VariantProps, SizableProps, DisablableProps {}
 
 /**
  * Standard form control props
@@ -254,12 +250,7 @@ export interface FormControlProps extends InteractiveComponentProps, FormElement
  * For box, card, etc.
  */
 export interface ContainerProps
-  extends BaseComponentProps,
-    ThemableProps,
-    VariantProps,
-    RoundableProps,
-    ElevatableProps,
-    PaddableProps {}
+  extends BaseComponentProps, ThemableProps, VariantProps, RoundableProps, ElevatableProps, PaddableProps {}
 
 // ============================================
 // Type Guards

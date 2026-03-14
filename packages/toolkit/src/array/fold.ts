@@ -27,8 +27,10 @@ export function fold<T>(array: readonly T[], callback: (a: T, b: T) => T): T | u
   });
 
   let result = array[0];
+
   for (let i = 1; i < array.length; i++) {
     result = callback(result, array[i]);
   }
+
   return result;
 }

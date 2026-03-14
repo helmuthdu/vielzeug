@@ -15,8 +15,12 @@
  */
 export function median<T>(arr: T[], callback?: (item: T) => number): number | undefined {
   if (arr.length === 0) return undefined;
+
   const values = callback ? arr.map(callback) : [...(arr as unknown as number[])];
+
   values.sort((a, b) => a - b);
+
   const mid = Math.floor(values.length / 2);
+
   return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
 }

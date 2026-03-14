@@ -9,12 +9,14 @@ describe('bit-drawer', () => {
         this.setAttribute('open', '');
       };
     }
+
     if (!HTMLDialogElement.prototype.close) {
       HTMLDialogElement.prototype.close = function () {
         this.removeAttribute('open');
         this.dispatchEvent(new Event('close'));
       };
     }
+
     await import('./drawer');
   });
 
@@ -81,6 +83,7 @@ describe('bit-drawer', () => {
       fixture = await mount('bit-drawer');
 
       const dialog = fixture.query('dialog');
+
       expect(dialog?.hasAttribute('open')).toBe(false);
     });
 
@@ -119,10 +122,13 @@ describe('bit-drawer', () => {
 
       // Use the close button to trigger close
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
+
       if (closeBtn) {
         closeBtn.click();
+
         // Manually dispatch transitionend on the panel since jsdom doesn't run transitions
         const panel = fixture.query('.panel');
+
         panel?.dispatchEvent(new Event('transitionend', { bubbles: true }));
         await fixture.flush();
       }
@@ -136,7 +142,9 @@ describe('bit-drawer', () => {
   describe('Events', () => {
     it('fires open when the drawer opens', async () => {
       fixture = await mount('bit-drawer');
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('open', handler);
 
       await fixture.attr('open', '');
@@ -146,7 +154,9 @@ describe('bit-drawer', () => {
 
     it('open event detail contains placement', async () => {
       fixture = await mount('bit-drawer', { attrs: { placement: 'left' } });
+
       let detail: unknown;
+
       fixture.element.addEventListener('open', (e) => {
         detail = (e as CustomEvent).detail;
       });
@@ -158,12 +168,17 @@ describe('bit-drawer', () => {
 
     it('fires close after the drawer closes', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('close', handler);
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
+
       closeBtn?.click();
+
       const panel = fixture.query('.panel');
+
       panel?.dispatchEvent(new Event('transitionend', { bubbles: true }));
       await fixture.flush();
 
@@ -172,7 +187,9 @@ describe('bit-drawer', () => {
 
     it('fires close-request when close button is clicked', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('close-request', handler);
 
       fixture.query<HTMLButtonElement>('[aria-label="Close"]')?.click();
@@ -182,15 +199,17 @@ describe('bit-drawer', () => {
 
     it('close-request detail contains trigger and placement', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
+
       let detail: unknown;
+
       fixture.element.addEventListener('close-request', (e) => {
         detail = (e as CustomEvent).detail;
       });
 
       fixture.query<HTMLButtonElement>('[aria-label="Close"]')?.click();
 
-      expect((detail as { trigger: string; placement: string })?.trigger).toBe('button');
-      expect((detail as { trigger: string; placement: string })?.placement).toBe('left');
+      expect((detail as { placement: string; trigger: string })?.trigger).toBe('button');
+      expect((detail as { placement: string; trigger: string })?.placement).toBe('left');
     });
 
     it('preventing close-request keeps the drawer open', async () => {
@@ -209,6 +228,7 @@ describe('bit-drawer', () => {
   describe('Methods', () => {
     it('show() opens the drawer', async () => {
       fixture = await mount('bit-drawer');
+
       const el = fixture.element as typeof fixture.element & { show(): void };
 
       el.show();
@@ -219,10 +239,13 @@ describe('bit-drawer', () => {
 
     it('hide() closes the drawer', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
       const el = fixture.element as typeof fixture.element & { hide(): void };
 
       el.hide();
+
       const panel = fixture.query('.panel');
+
       panel?.dispatchEvent(new Event('transitionend', { bubbles: true }));
       await fixture.flush();
 
@@ -242,12 +265,14 @@ describe('bit-drawer accessibility', () => {
         this.setAttribute('open', '');
       };
     }
+
     if (!HTMLDialogElement.prototype.close) {
       HTMLDialogElement.prototype.close = function () {
         this.removeAttribute('open');
         this.dispatchEvent(new Event('close'));
       };
     }
+
     await import('./drawer');
   });
 
@@ -266,6 +291,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer', { attrs: { label: 'Settings panel' } });
 
       const dialog = fixture.query('dialog');
+
       expect(dialog?.getAttribute('aria-label')).toBe('Settings panel');
     });
 
@@ -273,6 +299,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer');
 
       const dialog = fixture.query('dialog');
+
       expect(dialog?.hasAttribute('aria-labelledby')).toBe(true);
     });
 
@@ -280,6 +307,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer', { attrs: { label: 'My drawer' } });
 
       const dialog = fixture.query('dialog');
+
       expect(dialog?.getAttribute('aria-label')).toBe('My drawer');
       expect(dialog?.getAttribute('aria-labelledby')).toBeNull();
     });
@@ -304,6 +332,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer');
 
       const icon = fixture.query('[aria-label="Close"] svg');
+
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
 
@@ -311,6 +340,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer');
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
+
       expect(closeBtn?.hidden).toBe(false);
     });
   });
@@ -320,6 +350,7 @@ describe('bit-drawer accessibility', () => {
       fixture = await mount('bit-drawer', { attrs: { open: '', persistent: '' } });
 
       const dialog = fixture.query<HTMLDialogElement>('dialog');
+
       // Simulate backdrop click: target is the dialog element itself
       dialog?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await fixture.flush();

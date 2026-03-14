@@ -29,19 +29,15 @@ describe('fold', () => {
   it('reduces an array of objects', () => {
     const arr = [{ v: 1 }, { v: 2 }, { v: 3 }];
     const result = fold(arr, (a, b) => ({ v: a.v + b.v }));
+
     expect(result).toEqual({ v: 6 });
   });
 
   it('throws TypeError if the first argument is not an array', () => {
-    // @ts-expect-error
-    expect(() => fold(null, (a, _b) => a)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => fold(undefined, (a, _b) => a)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => fold(123, (a, _b) => a)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => fold({}, (a, _b) => a)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => fold('string', (a, _b) => a)).toThrow(TypeError);
+    expect(() => fold(null as any, (a, _b) => a)).toThrow(TypeError);
+    expect(() => fold(undefined as any, (a, _b) => a)).toThrow(TypeError);
+    expect(() => fold(123 as any, (a, _b) => a)).toThrow(TypeError);
+    expect(() => fold({} as any, (a, _b) => a)).toThrow(TypeError);
+    expect(() => fold('string' as any, (a, _b) => a)).toThrow(TypeError);
   });
 });

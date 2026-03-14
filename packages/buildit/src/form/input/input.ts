@@ -12,7 +12,7 @@ import {
   signal,
   syncDOMProps,
 } from '@vielzeug/craftit';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitInputEvents,
@@ -23,7 +23,9 @@ import type {
   ThemeColor,
   VisualVariant,
 } from '../../types';
+
 import { mountFormContextSync, useTextField } from '../_common/use-text-field';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -67,12 +69,14 @@ const componentStyles = /* css */ css`
       height: var(--_field-height);
       min-height: var(--_field-height);
       padding: var(--_padding);
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         background var(--transition-fast),
         backdrop-filter var(--transition-slow),
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
-        transform var(--transition-fast));
+        transform var(--transition-fast)
+      );
     }
 
     /* Expand height to fit inset label + input row */
@@ -316,7 +320,6 @@ const componentStyles = /* css */ css`
     }
   }
 
-
   @layer buildit.variants {
     /* ========================================
        Visual Variants
@@ -420,24 +423,34 @@ const componentStyles = /* css */ css`
 
 /** Input component properties */
 export type InputProps = {
+  /** Autocomplete hint */
+  autocomplete?: string;
+  /** Show a clear (×) button when the field has a value */
+  clearable?: boolean;
+  /** Theme color */
+  color?: ThemeColor;
+  /** Disable input interaction */
+  disabled?: boolean;
+  /** Error message (marks field as invalid) */
+  error?: string;
+  /** Full width mode (100% of container) */
+  fullwidth?: boolean;
+  /** Helper text displayed below the input */
+  helper?: string;
+  /** Virtual keyboard hint for mobile devices */
+  inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
   /** Label text */
   label?: string;
   /** Label placement */
   'label-placement'?: 'inset' | 'outside';
-  /** Theme color */
-  color?: ThemeColor;
-  /** Show a clear (×) button when the field has a value */
-  clearable?: boolean;
-  /** Disable input interaction */
-  disabled?: boolean;
-  /** Helper text displayed below the input */
-  helper?: string;
-  /** Error message (marks field as invalid) */
-  error?: string;
   /** Maximum character length — shows a counter below the input */
   maxlength?: number;
+  /** Minimum character length */
+  minlength?: number;
   /** Form field name */
   name?: string;
+  /** HTML pattern attribute for client-side validation */
+  pattern?: string;
   /** Placeholder text */
   placeholder?: string;
   /** Make the input read-only */
@@ -454,16 +467,6 @@ export type InputProps = {
   value?: string;
   /** Visual style variant */
   variant?: Exclude<VisualVariant, 'glass' | 'frost'>;
-  /** Full width mode (100% of container) */
-  fullwidth?: boolean;
-  /** HTML pattern attribute for client-side validation */
-  pattern?: string;
-  /** Virtual keyboard hint for mobile devices */
-  inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
-  /** Autocomplete hint */
-  autocomplete?: string;
-  /** Minimum character length */
-  minlength?: number;
 };
 
 const VALID_INPUT_TYPES = [
@@ -573,14 +576,14 @@ export const TAG = define(
     // Shared text-field setup: value signal, form registration, IDs, label refs
     const tf = useTextField(props, 'input');
     const {
-      valueSignal,
-      fieldId: inputId,
-      labelInsetId,
-      labelOutsideId,
-      helperId,
       errorId,
+      fieldId: inputId,
+      helperId,
+      labelInsetId,
       labelInsetRef,
+      labelOutsideId,
       labelOutsideRef,
+      valueSignal,
     } = tf;
 
     function togglePasswordVisibility() {
@@ -597,17 +600,20 @@ export const TAG = define(
 
     onMount(() => {
       const inp = inputRef.value;
+
       if (!inp) return;
 
       // Define event handlers
       const handleInput = (e: Event) => {
         if (e.target !== inp) return;
+
         valueSignal.value = inp.value;
         emit('input', { originalEvent: e, value: inp.value });
       };
 
       const handleChange = (e: Event) => {
         if (e.target !== inp) return;
+
         valueSignal.value = inp.value;
         emit('change', { originalEvent: e, value: inp.value });
         tf.triggerValidation('change');
@@ -635,18 +641,21 @@ export const TAG = define(
         value: valueSignal,
       });
       // Sync optional input attributes that require conditional attribute removal
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Each optional attribute independently requires null-checking and removeAttribute fallback
       effect(() => {
         const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+
         if (maxLen > 0) inp.maxLength = maxLen;
 
         const minLen = props.minlength.value != null ? Number(props.minlength.value) : -1;
+
         if (minLen > 0) inp.minLength = minLen;
 
         if (props.pattern.value != null) inp.pattern = props.pattern.value;
         else inp.removeAttribute('pattern');
+
         if (props.inputmode.value != null) inp.inputMode = props.inputmode.value;
         else inp.removeAttribute('inputmode');
+
         if (props.autocomplete.value != null) inp.autocomplete = props.autocomplete.value as AutoFill;
         else inp.removeAttribute('autocomplete');
       });
@@ -657,6 +666,7 @@ export const TAG = define(
           helperRef.value.textContent = props.helper.value;
           helperRef.value.hidden = !!props.error.value || !props.helper.value;
         }
+
         if (errorRef.value) {
           errorRef.value.textContent = props.error.value;
           errorRef.value.hidden = !props.error.value;
@@ -664,16 +674,19 @@ export const TAG = define(
       });
 
       // Effect 4: sync character counter
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Counter state has several threshold conditions
       effect(() => {
         if (!charCounterRef.value) return;
+
         const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+
         if (maxLen > 0) {
           const len = valueSignal.value.length;
+
           charCounterRef.value.textContent = `${len} / ${maxLen}`;
           charCounterRef.value.hidden = false;
           charCounterRef.value.removeAttribute('data-near-limit');
           charCounterRef.value.removeAttribute('data-at-limit');
+
           if (len >= maxLen) charCounterRef.value.setAttribute('data-at-limit', '');
           else if (len >= maxLen * 0.9) charCounterRef.value.setAttribute('data-near-limit', '');
         } else {
@@ -739,7 +752,13 @@ export const TAG = define(
           ref=${labelOutsideRef}
           hidden></label>
         <div class="field" part="field">
-          <label class="label-inset" for="${inputId}" id="${labelInsetId}" part="label" ref=${labelInsetRef} hidden></label>
+          <label
+            class="label-inset"
+            for="${inputId}"
+            id="${labelInsetId}"
+            part="label"
+            ref=${labelInsetRef}
+            hidden></label>
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
@@ -756,33 +775,59 @@ export const TAG = define(
               :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
               :aria-pressed="${() => String(showPassword.value)}"
               tabindex="-1"
-              @click="${togglePasswordVisibility}"
-            >
+              @click="${togglePasswordVisibility}">
               ${() =>
                 showPassword.value
-                  ? html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
-                  : html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`}
+                  ? html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="14"
+                      height="14"
+                      aria-hidden="true">
+                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                      <line x1="2" x2="22" y1="2" y2="22" />
+                    </svg>`
+                  : html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="14"
+                      height="14"
+                      aria-hidden="true">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>`}
             </button>
-            <button
-              class="clear-btn"
-              part="clear"
-              type="button"
-              aria-label="Clear"
-              tabindex="-1"
-              ref=${clearBtnRef}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            <button class="clear-btn" part="clear" type="button" aria-label="Clear" tabindex="-1" ref=${clearBtnRef}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
         <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
-        <div
-          class="helper-text"
-          id="${errorId}"
-          role="alert"
-          part="error"
-          ref=${errorRef}
-          hidden></div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ref=${errorRef} hidden></div>
         <div class="char-counter" part="char-counter" ref=${charCounterRef} hidden></div>
       </div>`,
     };

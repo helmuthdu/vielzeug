@@ -1,6 +1,8 @@
 import { css, define, defineEmits, defineProps, html, onMount, ref, signal } from '@vielzeug/craftit';
-import { reducedMotionMixin } from '../../styles';
+
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+
+import { reducedMotionMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -28,12 +30,44 @@ const componentStyles = /* css */ css`
     }
 
     /* Position variants */
-    :host([position='top-left'])      { --_inset-top: 1rem; --_inset-bottom: auto; --_inset-left: 1rem;  --_inset-right: auto; }
-    :host([position='top-center'])    { --_inset-top: 1rem; --_inset-bottom: auto; --_inset-left: 50%;   --_inset-right: auto; transform: translateX(-50%); }
-    :host([position='top-right'])     { --_inset-top: 1rem; --_inset-bottom: auto; --_inset-right: 1rem; --_inset-left: auto;  }
-    :host([position='bottom-left'])   { --_inset-bottom: 1rem; --_inset-left: 1rem;  --_inset-right: auto; --_inset-top: auto; }
-    :host([position='bottom-center']) { --_inset-bottom: 1rem; --_inset-left: 50%;   --_inset-right: auto; --_inset-top: auto; transform: translateX(-50%); }
-    :host([position='bottom-right'])  { --_inset-bottom: 1rem; --_inset-right: 1rem; --_inset-left: auto;  --_inset-top: auto; }
+    :host([position='top-left']) {
+      --_inset-top: 1rem;
+      --_inset-bottom: auto;
+      --_inset-left: 1rem;
+      --_inset-right: auto;
+    }
+    :host([position='top-center']) {
+      --_inset-top: 1rem;
+      --_inset-bottom: auto;
+      --_inset-left: 50%;
+      --_inset-right: auto;
+      transform: translateX(-50%);
+    }
+    :host([position='top-right']) {
+      --_inset-top: 1rem;
+      --_inset-bottom: auto;
+      --_inset-right: 1rem;
+      --_inset-left: auto;
+    }
+    :host([position='bottom-left']) {
+      --_inset-bottom: 1rem;
+      --_inset-left: 1rem;
+      --_inset-right: auto;
+      --_inset-top: auto;
+    }
+    :host([position='bottom-center']) {
+      --_inset-bottom: 1rem;
+      --_inset-left: 50%;
+      --_inset-right: auto;
+      --_inset-top: auto;
+      transform: translateX(-50%);
+    }
+    :host([position='bottom-right']) {
+      --_inset-bottom: 1rem;
+      --_inset-right: 1rem;
+      --_inset-left: auto;
+      --_inset-top: auto;
+    }
 
     .toast-container {
       display: grid;
@@ -60,16 +94,20 @@ const componentStyles = /* css */ css`
       align-self: end;
     }
 
-    :host([position^='top']:not(.hovered)) .toast-wrapper { align-self: start; }
+    :host([position^='top']:not(.hovered)) .toast-wrapper {
+      align-self: start;
+    }
 
     .toast-wrapper {
       pointer-events: auto;
       position: relative;
       transform-origin: center bottom;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         transform 0.5s cubic-bezier(0.34, 1.1, 0.64, 1),
         opacity 0.5s cubic-bezier(0.34, 1.1, 0.64, 1),
-        filter 0.5s cubic-bezier(0.34, 1.1, 0.64, 1));
+        filter 0.5s cubic-bezier(0.34, 1.1, 0.64, 1)
+      );
       will-change: transform, opacity, filter;
     }
 
@@ -94,7 +132,10 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes toast-exit {
-      to { opacity: 0; transform: scale(0.7); }
+      to {
+        opacity: 0;
+        transform: scale(0.7);
+      }
     }
 
     /* Stacking (collapsed) */
@@ -121,7 +162,7 @@ const componentStyles = /* css */ css`
       pointer-events: none;
     }
 
-    :host(:not(.hovered)) .toast-wrapper:nth-last-child(n+4) {
+    :host(:not(.hovered)) .toast-wrapper:nth-last-child(n + 4) {
       opacity: 0;
       pointer-events: none;
     }
@@ -139,12 +180,20 @@ const componentStyles = /* css */ css`
     }
 
     /* Staggered expand delays */
-    :host(.hovered) .toast-wrapper:nth-last-child(2) { transition-delay: 0.05s; }
-    :host(.hovered) .toast-wrapper:nth-last-child(3) { transition-delay: 0.1s; }
-    :host(.hovered) .toast-wrapper:nth-last-child(n+4) { transition-delay: 0.15s; }
+    :host(.hovered) .toast-wrapper:nth-last-child(2) {
+      transition-delay: 0.05s;
+    }
+    :host(.hovered) .toast-wrapper:nth-last-child(3) {
+      transition-delay: 0.1s;
+    }
+    :host(.hovered) .toast-wrapper:nth-last-child(n + 4) {
+      transition-delay: 0.15s;
+    }
 
     /* Top positions: reverse stacking direction */
-    :host([position^='top']) .toast-wrapper { transform-origin: center top; }
+    :host([position^='top']) .toast-wrapper {
+      transform-origin: center top;
+    }
 
     :host([position^='top']:not(.hovered)) .toast-wrapper:nth-last-child(2) {
       transform: translateY(8px) scale(0.95) rotateX(-3deg);
@@ -160,7 +209,9 @@ const componentStyles = /* css */ css`
       width: 100%;
     }
 
-    .toast-wrapper.exiting ::slotted(bit-alert) { transition: none !important; }
+    .toast-wrapper.exiting ::slotted(bit-alert) {
+      transition: none !important;
+    }
 
     .toast-actions {
       display: flex;
@@ -185,7 +236,6 @@ const componentStyles = /* css */ css`
         inset-inline-start: var(--size-2);
       }
     }
-
   }
 `;
 
@@ -219,10 +269,10 @@ export interface ToastItem {
    */
   urgency?: 'polite' | 'assertive';
   actions?: Array<{
-    label: string;
     color?: ThemeColor;
-    variant?: VisualVariant;
+    label: string;
     onClick?: () => void;
+    variant?: VisualVariant;
   }>;
   /** Called after the toast is fully dismissed and removed */
   onDismiss?: () => void;
@@ -276,6 +326,7 @@ export interface ToastElement extends HTMLElement {
 /** Renders the actions slot for a toast item */
 function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   if (!toast.actions?.length) return '';
+
   return html`
     <div slot="actions" class="toast-actions">
       ${toast.actions.map(
@@ -288,7 +339,8 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
               action.onClick?.();
               onDismiss();
             }}
-          >${action.label}</bit-button>
+            >${action.label}</bit-button
+          >
         `,
       )}
     </div>
@@ -309,7 +361,7 @@ export const TAG = define('bit-toast', ({ host }) => {
   const toasts = signal<NormalizedToast[]>([]);
   const exitingIds = signal<Set<string>>(new Set());
   const containerRef = ref<HTMLDivElement>();
-  const timers = new Map<string, { timeoutId: number; remaining: number; startedAt: number }>();
+  const timers = new Map<string, { remaining: number; startedAt: number; timeoutId: number }>();
 
   // Sequential dismiss queue — only one toast exits at a time so animations never overlap.
   const dismissQueue: string[] = [];
@@ -317,17 +369,22 @@ export const TAG = define('bit-toast', ({ host }) => {
 
   const setExiting = (id: string, value: boolean) => {
     const next = new Set(exitingIds.value);
+
     if (value) next.add(id);
     else next.delete(id);
+
     exitingIds.value = next;
   };
 
   const withExitAnimation = (el: HTMLElement, onDone: () => void) => {
     const animName = getComputedStyle(el).animationName.replace(/none/g, '').trim();
+
     if (!animName) {
       onDone();
+
       return;
     }
+
     let called = false;
     const done = () => {
       if (!called) {
@@ -335,6 +392,7 @@ export const TAG = define('bit-toast', ({ host }) => {
         onDone();
       }
     };
+
     el.addEventListener('animationend', done, { once: true });
     window.setTimeout(done, 350);
   };
@@ -344,6 +402,7 @@ export const TAG = define('bit-toast', ({ host }) => {
       removeToast(id);
       timers.delete(id);
     }, duration);
+
     timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
   };
 
@@ -351,6 +410,7 @@ export const TAG = define('bit-toast', ({ host }) => {
 
   const pauseTimers = () => {
     if (isPaused) return;
+
     isPaused = true;
     for (const [id, t] of timers) {
       clearTimeout(t.timeoutId);
@@ -360,9 +420,11 @@ export const TAG = define('bit-toast', ({ host }) => {
 
   const resumeTimers = () => {
     if (!isPaused) return;
+
     isPaused = false;
     for (const [id, t] of timers) {
       if (t.remaining <= 0) continue;
+
       scheduleRemoval(id, t.remaining);
     }
   };
@@ -370,15 +432,19 @@ export const TAG = define('bit-toast', ({ host }) => {
   const addToast = (toast: ToastItem): string => {
     const id = toast.id || crypto.randomUUID();
     const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
+
     toasts.value = [...toasts.value, item].slice(-props.max.value);
     emit('add', { id });
+
     if (item.duration! > 0) scheduleRemoval(id, item.duration!);
+
     return id;
   };
 
   const removeToast = (id: string) => {
     // Cancel the auto-dismiss timer if one is running.
     const timer = timers.get(id);
+
     if (timer) {
       clearTimeout(timer.timeoutId);
       timers.delete(id);
@@ -389,6 +455,7 @@ export const TAG = define('bit-toast', ({ host }) => {
 
     if (isDismissing) {
       dismissQueue.push(id);
+
       return;
     }
 
@@ -402,6 +469,7 @@ export const TAG = define('bit-toast', ({ host }) => {
     // Guard: could have been removed by clearAll between queue entry and execution.
     if (exitingIds.value.has(id)) {
       processNextInQueue();
+
       return;
     }
 
@@ -427,18 +495,26 @@ export const TAG = define('bit-toast', ({ host }) => {
   const processNextInQueue = () => {
     if (dismissQueue.length === 0) {
       isDismissing = false;
+
       return;
     }
+
     const nextId = dismissQueue.shift()!;
+
     executeRemoval(nextId);
   };
 
   const updateToast = (id: string, updates: Partial<ToastItem>) => {
     toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...updates, id } : t));
+
     if (updates.duration === undefined) return;
+
     const timer = timers.get(id);
+
     if (timer) clearTimeout(timer.timeoutId);
+
     timers.delete(id);
+
     if (updates.duration > 0) scheduleRemoval(id, updates.duration);
   };
 
@@ -451,14 +527,17 @@ export const TAG = define('bit-toast', ({ host }) => {
     dismissQueue.length = 0;
 
     const ids = toasts.value.map((t) => t.id).filter((id) => !exitingIds.value.has(id));
+
     if (!ids.length) return;
 
     dismissQueue.push(...ids);
+
     if (!isDismissing) processNextInQueue();
   };
 
   onMount(() => {
     const el = host as ToastElement;
+
     el.add = addToast;
     el.update = updateToast;
     el.dismiss = removeToast;
@@ -477,6 +556,7 @@ export const TAG = define('bit-toast', ({ host }) => {
   const setHovered = (hovered: boolean) => {
     hoverPaused = hovered;
     host.classList.toggle('hovered', hovered);
+
     if (hovered) maybePause();
     else maybeResume();
   };
@@ -485,8 +565,7 @@ export const TAG = define('bit-toast', ({ host }) => {
     <div
       class=${() => `toast-wrapper${exitingIds.value.has(toast.id) ? ' exiting' : ''}`}
       data-toast-id=${toast.id}
-      part="toast-wrapper"
-    >
+      part="toast-wrapper">
       <bit-alert
         color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
         variant=${toast.variant || 'solid'}
@@ -495,10 +574,8 @@ export const TAG = define('bit-toast', ({ host }) => {
         ?dismissible=${toast.dismissible}
         ?inline=${toast.horizontal}
         heading=${toast.heading || ''}
-        @dismiss=${() => removeToast(toast.id)}
-      >
-        ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''}
-        ${toast.message}
+        @dismiss=${() => removeToast(toast.id)}>
+        ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''} ${toast.message}
         ${renderToastActions(toast, () => removeToast(toast.id))}
       </bit-alert>
     </div>
@@ -520,8 +597,7 @@ export const TAG = define('bit-toast', ({ host }) => {
           focusPaused = false;
           maybeResume();
         }}
-        part="container"
-      >
+        part="container">
         <!-- Polite live region: normal informational toasts -->
         <div
           role="region"
@@ -529,8 +605,7 @@ export const TAG = define('bit-toast', ({ host }) => {
           aria-relevant="additions removals"
           aria-atomic="false"
           aria-label="Notifications"
-          class="toast-live-region"
-        >
+          class="toast-live-region">
           ${() => toasts.value.filter((t) => urgencyOf(t) === 'polite').map(renderToastItem)}
         </div>
         <!-- Assertive live region: critical errors that interrupt immediately -->
@@ -540,8 +615,7 @@ export const TAG = define('bit-toast', ({ host }) => {
           aria-relevant="additions removals"
           aria-atomic="false"
           aria-label="Critical notifications"
-          class="toast-live-region"
-        >
+          class="toast-live-region">
           ${() => toasts.value.filter((t) => urgencyOf(t) === 'assertive').map(renderToastItem)}
         </div>
         <slot></slot>
@@ -554,10 +628,12 @@ export const TAG = define('bit-toast', ({ host }) => {
 
 const getHost = (): ToastElement => {
   let el = document.querySelector<ToastElement>('bit-toast');
+
   if (!el) {
     el = document.createElement('bit-toast') as ToastElement;
     document.body.appendChild(el);
   }
+
   return el;
 };
 
@@ -593,7 +669,9 @@ export const toast = {
   /** Configure the auto-created container. Call before the first `add()` if the defaults need to change. */
   configure(config: ToastProps): void {
     const el = getHost();
+
     if (config.position) el.setAttribute('position', config.position);
+
     if (config.max != null) el.setAttribute('max', String(config.max));
   },
 
@@ -604,20 +682,23 @@ export const toast = {
   async promise<T>(
     promise: Promise<T>,
     messages: {
+      error: string | ((err: unknown) => string);
       loading: string;
       success: string | ((data: T) => string);
-      error: string | ((err: unknown) => string);
     },
   ): Promise<T> {
     const id = toast.add({ color: 'primary', dismissible: false, duration: 0, message: messages.loading });
+
     try {
       const data = await promise;
+
       toast.update(id, {
         color: 'success',
         dismissible: true,
         duration: 5000,
         message: typeof messages.success === 'function' ? messages.success(data) : messages.success,
       });
+
       return data;
     } catch (err) {
       toast.update(id, {

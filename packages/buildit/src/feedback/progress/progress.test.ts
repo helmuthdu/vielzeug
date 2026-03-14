@@ -32,7 +32,9 @@ describe('bit-progress', () => {
       // Both the CSS custom property (for CSS var inheritance) and the inline
       // style binding (direct fallback) should reflect the correct percentage.
       expect(fixture.element.style.getPropertyValue('--_percent')).toBe('40%');
+
       const fill = fixture.query<HTMLElement>('.fill');
+
       expect(fill?.getAttribute('style')).toContain('width:40%');
     });
   });
@@ -42,6 +44,7 @@ describe('bit-progress', () => {
       fixture = await mount('bit-progress', { attrs: { max: '200', value: '40' } });
 
       const el = fixture.query('[role="progressbar"]');
+
       expect(el?.getAttribute('aria-valuemin')).toBe('0');
       expect(el?.getAttribute('aria-valuemax')).toBe('200');
     });

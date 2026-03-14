@@ -21,25 +21,24 @@ import { sleep } from './sleep';
  *
  * @returns The result of the asynchronous function.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: retry logic branches over abort, shouldRetry, retryDelay, and backoff — each is a distinct, necessary code path
 export async function retry<T>(
   fn: () => Promise<T>,
   {
-    times = 3,
-    delay = 250,
     backoff = 1,
+    delay = 250,
     retryDelay,
-    signal,
     shouldRetry,
+    signal,
+    times = 3,
   }: {
-    times?: number;
-    delay?: number;
     backoff?: number | ((attempt: number, currentDelay: number) => number);
+    delay?: number;
     /** Per-attempt delay override. `attempt` is 0-based (0 = before the 2nd try). Supersedes `delay` and `backoff`. */
     retryDelay?: (attempt: number) => number;
-    signal?: AbortSignal;
     /** Return `false` to stop retrying for a specific error. `attempt` is 0-based failure count. */
     shouldRetry?: (error: unknown, attempt: number) => boolean;
+    signal?: AbortSignal;
+    times?: number;
   } = {},
 ): Promise<T> {
   let currentDelay = delay;
@@ -51,9 +50,13 @@ export async function retry<T>(
       return await fn();
     } catch (err) {
       if (attempt === times) throw err;
+
       if (shouldRetry && !shouldRetry(err, attempt - 1)) throw err;
+
       const ms = retryDelay ? retryDelay(attempt - 1) : currentDelay;
+
       if (ms > 0) await sleep(ms);
+
       if (!retryDelay) {
         currentDelay = typeof backoff === 'function' ? backoff(attempt, currentDelay) : currentDelay * backoff;
       }

@@ -1,6 +1,8 @@
 import { css, define, defineProps, html } from '@vielzeug/craftit';
-import { colorThemeMixin } from '../../styles';
+
 import type { ThemeColor } from '../../types';
+
+import { colorThemeMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -111,32 +113,29 @@ export const TAG = define('bit-separator', () => {
       ${() =>
         props.label.value
           ? html`
-            <div class="separator-wrapper" part="wrapper">
-              <hr
-                class="separator"
-                part="separator"
-                :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-                :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
-                :aria-orientation="${() => props.orientation.value}"
-              />
-              <span class="separator-label" part="label">${() => props.label.value}</span>
-              <hr
-                class="separator"
-                part="separator"
-                :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-                :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
-              />
-            </div>
-          `
+              <div class="separator-wrapper" part="wrapper">
+                <hr
+                  class="separator"
+                  part="separator"
+                  :role="${() => (props.decorative.value ? 'none' : 'separator')}"
+                  :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
+                  :aria-orientation="${() => props.orientation.value}" />
+                <span class="separator-label" part="label">${() => props.label.value}</span>
+                <hr
+                  class="separator"
+                  part="separator"
+                  :role="${() => (props.decorative.value ? 'none' : 'separator')}"
+                  :aria-hidden="${() => (props.decorative.value ? 'true' : null)}" />
+              </div>
+            `
           : html`
-            <hr
-              class="separator"
-              part="separator"
-              :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-              :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
-              :aria-orientation="${() => props.orientation.value}"
-            />
-          `}
+              <hr
+                class="separator"
+                part="separator"
+                :role="${() => (props.decorative.value ? 'none' : 'separator')}"
+                :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
+                :aria-orientation="${() => props.orientation.value}" />
+            `}
     `,
   };
 });

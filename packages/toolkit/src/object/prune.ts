@@ -28,22 +28,27 @@ export function prune<T>(value: T): T | undefined {
 
   if (isString(value)) {
     const trimmed = value.trim();
+
     return (trimmed === '' ? undefined : trimmed) as T | undefined;
   }
 
   if (isArray(value)) {
     const cleaned = value.map((item) => prune(item)).filter((item) => !isEmpty(item));
+
     return (cleaned.length === 0 ? undefined : cleaned) as T | undefined;
   }
 
   if (isObject(value)) {
     const cleaned: Record<string, unknown> = {};
+
     for (const [key, val] of Object.entries(value)) {
       const cleanedValue = prune(val);
+
       if (!isEmpty(cleanedValue)) {
         cleaned[key] = cleanedValue;
       }
     }
+
     return (Object.keys(cleaned).length === 0 ? undefined : cleaned) as T | undefined;
   }
 

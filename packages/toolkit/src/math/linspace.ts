@@ -17,7 +17,10 @@
  */
 export function linspace(start: number, end: number, steps = 5): number[] {
   if (steps <= 0) return [];
+
   if (steps === 1) return [start];
+
   const stepSize = (end - start) / (steps - 1);
+
   return Array.from({ length: steps }, (_, i) => start + i * stepSize);
 }

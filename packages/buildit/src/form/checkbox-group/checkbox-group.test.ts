@@ -42,6 +42,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+
       expect(checkboxes[0].hasAttribute('checked')).toBe(true);
       expect(checkboxes[1].hasAttribute('checked')).toBe(false);
       expect(checkboxes[2].hasAttribute('checked')).toBe(true);
@@ -56,6 +57,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+
       for (const checkbox of checkboxes) {
         expect(checkbox.getAttribute('color')).toBe('primary');
       }
@@ -70,6 +72,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+
       for (const checkbox of checkboxes) {
         expect(checkbox.getAttribute('size')).toBe('lg');
       }
@@ -84,6 +87,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+
       for (const checkbox of checkboxes) {
         expect(checkbox.hasAttribute('disabled')).toBe(true);
       }
@@ -94,15 +98,19 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const first = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox')[0];
+
       first.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
       expect(onChange).toHaveBeenCalled();
+
       const evt = onChange.mock.calls
         .map((call) => call[0] as CustomEvent<{ values?: string[] }>)
         .find((event) => Array.isArray(event?.detail?.values));
+
       expect(evt).toBeTruthy();
       expect(evt?.detail.values).toContain('a');
     });
@@ -116,12 +124,15 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
 
       const first = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox')[0];
+
       first.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
       const evt = onChange.mock.calls[0][0] as CustomEvent<{ values: string[] }>;
+
       expect(evt.detail.values).not.toContain('a');
       expect(evt.detail.values).toContain('b');
     });
@@ -136,6 +147,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
 
       const fieldset = fixture.query('fieldset[role="group"]');
+
       expect(fieldset).toBeTruthy();
       expect(fieldset?.getAttribute('aria-required')).toBe('true');
       expect(fixture.query('legend')?.textContent).toContain('Choose options');
@@ -160,6 +172,7 @@ describe('bit-checkbox-group', () => {
 
       const fieldset = fixture.query('fieldset');
       const errorEl = fixture.query('.error-text');
+
       expect(fieldset?.getAttribute('aria-invalid')).toBe('true');
       expect(fieldset?.getAttribute('aria-errormessage')).toBe(errorEl?.id);
     });
@@ -173,6 +186,7 @@ describe('bit-checkbox-group', () => {
 
       const fieldset = fixture.query('fieldset');
       const helperEl = fixture.query('.helper-text');
+
       expect(fieldset?.getAttribute('aria-describedby')).toBe(helperEl?.id);
     });
 

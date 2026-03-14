@@ -37,7 +37,6 @@ describe('chunk', () => {
 
   describe('Invalid inputs', () => {
     it('should throw a TypeError for non-array and non-string inputs', () => {
-      // biome-ignore lint/suspicious/noExplicitAny: -
       expect(() => chunk(123 as any, 2)).toThrow(TypeError);
     });
   });

@@ -12,7 +12,7 @@ import {
   ref,
   syncDOMProps,
 } from '@vielzeug/craftit';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitTextareaEvents,
@@ -23,7 +23,9 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
+
 import { mountFormContextSync, useTextField } from '../_common/use-text-field';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -270,7 +272,6 @@ const componentStyles = /* css */ css`
     }
   }
 
-
   @layer buildit.utilities {
     /* Auto-resize hides overflow */
     :host([auto-resize]) textarea {
@@ -403,14 +404,14 @@ export const TAG = define(
     // Shared text-field setup: value signal, form registration, IDs, label refs
     const tf = useTextField(props, 'textarea');
     const {
-      valueSignal,
-      fieldId: textareaId,
-      labelInsetId,
-      labelOutsideId,
-      helperId,
       errorId,
+      fieldId: textareaId,
+      helperId,
+      labelInsetId,
       labelInsetRef,
+      labelOutsideId,
       labelOutsideRef,
+      valueSignal,
     } = tf;
 
     // Textarea-specific refs
@@ -423,11 +424,13 @@ export const TAG = define(
 
     onMount(() => {
       const ta = textareaRef.value;
+
       if (!ta) return;
 
       // Define autoGrow first so it can be used in the effect
       const autoGrow = () => {
         if (!props['auto-resize'].value || !ta) return;
+
         ta.style.height = 'auto';
         ta.style.height = `${ta.scrollHeight}px`;
       };
@@ -447,7 +450,9 @@ export const TAG = define(
       // Sync conditional/style props that require branching
       effect(() => {
         if (props.rows.value) ta.rows = props.rows.value;
+
         if (maxLen.value) ta.maxLength = Number(maxLen.value);
+
         ta.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
       });
@@ -461,13 +466,15 @@ export const TAG = define(
       });
 
       // Effect 4: sync character counter
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Counter state has several threshold conditions
       effect(() => {
         if (!counterRef.value) return;
+
         const max = maxLen.value;
+
         if (max !== undefined && max !== null) {
           const count = charCount.value;
           const ratio = count / Number(max);
+
           counterRef.value.textContent = `${count}/${max}`;
           counterRef.value.className =
             ratio >= 1 ? 'counter at-limit' : ratio >= 0.9 ? 'counter near-limit' : 'counter';
@@ -484,6 +491,7 @@ export const TAG = define(
 
       const handleInput = (e: Event) => {
         if (e.target !== ta) return;
+
         valueSignal.value = ta.value;
         autoGrow(); // Call autoGrow on input
         emit('input', { originalEvent: e, value: ta.value });
@@ -491,6 +499,7 @@ export const TAG = define(
 
       const handleChange = (e: Event) => {
         if (e.target !== ta) return;
+
         emit('change', { originalEvent: e, value: ta.value });
         tf.triggerValidation('change');
       };

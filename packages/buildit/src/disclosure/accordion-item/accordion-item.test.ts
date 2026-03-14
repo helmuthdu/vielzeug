@@ -42,6 +42,7 @@ describe('bit-accordion-item', () => {
       fixture = await mount('bit-accordion-item');
 
       const details = fixture.query<HTMLDetailsElement>('details');
+
       expect(details?.open ?? false).toBe(false);
     });
 
@@ -49,6 +50,7 @@ describe('bit-accordion-item', () => {
       fixture = await mount('bit-accordion-item', { attrs: { expanded: '' } });
 
       const details = fixture.query<HTMLDetailsElement>('details');
+
       expect(details?.open).toBe(true);
     });
 
@@ -82,10 +84,13 @@ describe('bit-accordion-item', () => {
   describe('Events', () => {
     it('fires expand event when opened', async () => {
       fixture = await mount('bit-accordion-item');
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('expand', handler);
 
       const details = fixture.query<HTMLDetailsElement>('details')!;
+
       details.open = true;
       details.dispatchEvent(new Event('toggle'));
 
@@ -94,10 +99,13 @@ describe('bit-accordion-item', () => {
 
     it('fires collapse event when closed', async () => {
       fixture = await mount('bit-accordion-item', { attrs: { expanded: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('collapse', handler);
 
       const details = fixture.query<HTMLDetailsElement>('details')!;
+
       details.open = false;
       details.dispatchEvent(new Event('toggle'));
 
@@ -144,6 +152,7 @@ describe('bit-accordion-item accessibility', () => {
       fixture = await mount('bit-accordion-item');
 
       const details = fixture.query('details');
+
       expect(details).toBeTruthy();
     });
 
@@ -151,6 +160,7 @@ describe('bit-accordion-item accessibility', () => {
       fixture = await mount('bit-accordion-item');
 
       const summary = fixture.query('summary');
+
       expect(summary).toBeTruthy();
     });
   });

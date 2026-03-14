@@ -1,6 +1,7 @@
+import type { Primitive, Selector } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import type { Primitive, Selector } from '../types';
 
 /**
  * Creates a new array with duplicate values removed.
@@ -36,10 +37,13 @@ export function uniq<T>(array: T[], selector?: Selector<T>): T[] {
 
   return array.filter((item) => {
     const key = getKey(item) as Primitive;
+
     if (seen.has(key)) {
       return false;
     }
+
     seen.add(key);
+
     return true;
   });
 }

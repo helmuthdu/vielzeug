@@ -18,7 +18,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitRadioEvents,
@@ -28,7 +28,9 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
+import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 
@@ -214,6 +216,7 @@ export const TAG = define(
 
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
+
     mountFormContextSync(host, formCtx, props);
 
     defineField(
@@ -243,7 +246,9 @@ export const TAG = define(
 
     const getRadioGroup = (): HTMLElement[] => {
       const radioName = props.name.value;
+
       if (!radioName) return [];
+
       return Array.from(document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`)).filter(
         (r) => !r.hasAttribute('disabled'),
       );
@@ -251,12 +256,14 @@ export const TAG = define(
 
     const selectRadio = (target: HTMLElement, originalEvent: Event) => {
       const radios = getRadioGroup();
+
       if (radios.length === 0) return;
 
       radios.forEach((radio) => {
         if (radio === target) {
           if (!radio.hasAttribute('checked')) {
             radio.setAttribute('checked', '');
+
             // Sync local signal if this is our host
             if (radio === host) {
               checkedSignal.value = true;
@@ -293,16 +300,18 @@ export const TAG = define(
 
     const handleKeydown = guard(
       () => !props.disabled.value,
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling multiple arrow keys and radio group coordination
       (e: KeyboardEvent) => {
         const radios = getRadioGroup();
+
         if (radios.length === 0) return;
 
         const currentIndex = radios.indexOf(host);
+
         if (currentIndex === -1) return;
 
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault();
+
           if (!host.hasAttribute('checked')) {
             if (groupCtx) {
               groupCtx.select(props.value.value ?? '');
@@ -312,9 +321,12 @@ export const TAG = define(
           }
         } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
           e.preventDefault();
+
           const nextIndex = (currentIndex + 1) % radios.length;
           const nextRadio = radios[nextIndex];
+
           nextRadio.focus();
+
           if (groupCtx) {
             groupCtx.select(nextRadio.getAttribute('value') ?? '');
           } else {
@@ -322,9 +334,12 @@ export const TAG = define(
           }
         } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
           e.preventDefault();
+
           const prevIndex = currentIndex === 0 ? radios.length - 1 : currentIndex - 1;
           const prevRadio = radios[prevIndex];
+
           prevRadio.focus();
+
           if (groupCtx) {
             groupCtx.select(prevRadio.getAttribute('value') ?? '');
           } else {
@@ -343,22 +358,28 @@ export const TAG = define(
 
     onMount(() => {
       host.setAttribute('role', 'radio');
+
       if (!props.disabled.value) host.setAttribute('tabindex', checkedSignal.value ? '0' : '-1');
 
       // labelRef.value is only populated after template render
       const label = labelRef.value;
+
       if (slots.has('default').value && label) {
         const labelId = createId('radio-label');
+
         label.id = labelId;
         aria({ labelledby: labelId });
       }
 
       effect(() => {
         const helperEl = helperRef.value;
+
         if (!helperEl) return;
+
         helperEl.id = helperId;
         helperEl.textContent = props.error.value || props.helper.value || '';
         helperEl.hidden = !props.error.value && !props.helper.value;
+
         if (props.error.value) helperEl.setAttribute('role', 'alert');
         else helperEl.removeAttribute('role');
       });

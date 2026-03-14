@@ -18,8 +18,7 @@ import {
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
 import { createVirtualizer } from '@vielzeug/virtualit';
-import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitSelectEvents,
@@ -30,7 +29,10 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
+
 import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
+import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
+import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
@@ -104,12 +106,14 @@ const componentStyles = /* css */ css`
       padding: var(--_padding);
       padding-inline-end: var(--size-8);
       position: relative;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         background var(--transition-fast),
         backdrop-filter var(--transition-slow),
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
-        transform var(--transition-fast));
+        transform var(--transition-fast)
+      );
       user-select: none;
     }
 
@@ -217,7 +221,9 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes bit-select-spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* ========================================
@@ -245,10 +251,12 @@ const componentStyles = /* css */ css`
       pointer-events: none;
       transform: translateY(-4px);
       visibility: hidden;
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         opacity var(--transition-fast),
         transform var(--transition-fast),
-        visibility var(--transition-fast));
+        visibility var(--transition-fast)
+      );
     }
 
     .dropdown[data-open] {
@@ -570,7 +578,7 @@ export const TAG = define(
   'bit-select',
   ({ host }) => {
     const emit = defineEmits<{
-      change: { value: string; values: string[]; originalEvent?: Event };
+      change: { originalEvent?: Event; value: string; values: string[] };
     }>();
 
     const props = defineProps<Omit<SelectProps, 'options'>>({
@@ -606,6 +614,7 @@ export const TAG = define(
     // Merged options: JS prop overrides slotted options
     const options = computed(() => {
       const jsProp = (host as unknown as { _optionsProp?: OptionItem[] })._optionsProp;
+
       return jsProp && jsProp.length > 0 ? jsProp : slottedOptions.value;
     });
 
@@ -655,22 +664,27 @@ export const TAG = define(
     // Option reading from slot
     // ============================================
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parsing slotted options/optgroups requires multiple conditional branches
     function readOptions() {
       const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
       if (!slot) return;
+
       const assigned = slot.assignedElements({ flatten: true });
 
       const items: OptionItem[] = [];
+
       for (const el of assigned) {
         if (el.tagName === 'OPTION') {
           const opt = el as HTMLOptionElement;
+
           items.push({ disabled: opt.disabled, label: opt.text || opt.value, value: opt.value });
         } else if (el.tagName === 'OPTGROUP') {
           const group = el as HTMLOptGroupElement;
           const groupLabel = group.label;
+
           for (const child of Array.from(group.querySelectorAll('option'))) {
             const opt = child as HTMLOptionElement;
+
             items.push({ disabled: opt.disabled, group: groupLabel, label: opt.text || opt.value, value: opt.value });
           }
         }
@@ -710,10 +724,13 @@ export const TAG = define(
 
     const displayLabel = computed(() => {
       if (selectedValues.value.length === 0) return '';
+
       if (props.multiple.value && selectedValues.value.length > 1) {
         return `${selectedValues.value.length} selected`;
       }
+
       const first = selectedValues.value[0];
+
       return options.value.find((o) => o.value === first)?.label ?? first;
     });
 
@@ -725,7 +742,9 @@ export const TAG = define(
 
     function updateDropdownPosition() {
       if (!dropdownEl || !triggerEl) return;
+
       const referenceWidth = triggerEl.getBoundingClientRect().width;
+
       positionFloat(triggerEl, dropdownEl, {
         middleware: [
           flip({ padding: 6 }),
@@ -747,6 +766,7 @@ export const TAG = define(
 
     function open() {
       if (props.disabled.value) return;
+
       isOpen.value = true;
       focusedIndex.value =
         selectedValues.value.length > 0 ? options.value.findIndex((o) => o.value === selectedValues.value[0]) : 0;
@@ -758,6 +778,7 @@ export const TAG = define(
         } else {
           updateDropdownPosition();
         }
+
         scrollFocusedIntoView();
       });
     }
@@ -777,14 +798,17 @@ export const TAG = define(
 
     function selectOption(opt: OptionItem, e?: Event) {
       if (opt.disabled) return;
+
       if (props.multiple.value) {
         const idx = selectedValues.value.indexOf(opt.value);
+
         selectedValues.value =
           idx >= 0 ? selectedValues.value.filter((v) => v !== opt.value) : [...selectedValues.value, opt.value];
       } else {
         selectedValues.value = [opt.value];
         close();
       }
+
       emit('change', { originalEvent: e, value: formValue.value, values: [...selectedValues.value] });
       triggerValidation('change');
     }
@@ -795,70 +819,76 @@ export const TAG = define(
 
     function scrollFocusedIntoView() {
       const idx = focusedIndex.value;
+
       if (virtualizer && idx >= 0) {
         // Use flat-list index (groups shift real indices), but scrollToIndex uses flat list index
         const flatList = buildFlatList(options.value);
         const flatIdx = flatList.findIndex((r) => r.type === 'option' && r.idx === idx);
+
         if (flatIdx >= 0) virtualizer.scrollToIndex(flatIdx, { align: 'auto' });
+
         return;
       }
+
       if (!dropdownEl) return;
+
       const focusedEl = dropdownEl.querySelector<HTMLElement>('[data-focused]');
+
       focusedEl?.scrollIntoView({ block: 'nearest' });
     }
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keyboard navigation requires handling many key combinations and states
     function handleTriggerKeydown(e: KeyboardEvent) {
       if (props.disabled.value) return;
+
       const opts = options.value;
 
       switch (e.key) {
-        case 'Enter':
         case ' ':
+        case 'Enter':
           e.preventDefault();
+
           if (isOpen.value) {
             const idx = focusedIndex.value;
+
             if (idx >= 0 && idx < opts.length) selectOption(opts[idx], e);
           } else {
             open();
           }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          close();
+
           break;
         case 'ArrowDown':
           e.preventDefault();
+
           if (!isOpen.value) {
             open();
           } else {
             let next = focusedIndex.value + 1;
+
             while (next < opts.length && opts[next].disabled) next++;
+
             if (next < opts.length) {
               focusedIndex.value = next;
               scrollFocusedIntoView();
             }
           }
+
           break;
         case 'ArrowUp':
           e.preventDefault();
+
           if (!isOpen.value) {
             open();
           } else {
             let prev = focusedIndex.value - 1;
+
             while (prev >= 0 && opts[prev].disabled) prev--;
+
             if (prev >= 0) {
               focusedIndex.value = prev;
               scrollFocusedIntoView();
             }
           }
-          break;
-        case 'Home':
-          if (isOpen.value) {
-            e.preventDefault();
-            focusedIndex.value = 0;
-            scrollFocusedIntoView();
-          }
+
           break;
         case 'End':
           if (isOpen.value) {
@@ -866,6 +896,19 @@ export const TAG = define(
             focusedIndex.value = opts.length - 1;
             scrollFocusedIntoView();
           }
+
+          break;
+        case 'Escape':
+          e.preventDefault();
+          close();
+          break;
+        case 'Home':
+          if (isOpen.value) {
+            e.preventDefault();
+            focusedIndex.value = 0;
+            scrollFocusedIntoView();
+          }
+
           break;
         case 'Tab':
           close();
@@ -884,19 +927,26 @@ export const TAG = define(
     // Flatten options to a linear renderable list (group headers + options)
     function buildFlatList(
       opts: OptionItem[],
-    ): Array<{ type: 'option'; opt: OptionItem; idx: number } | { type: 'group'; label: string }> {
-      const flat: Array<{ type: 'option'; opt: OptionItem; idx: number } | { type: 'group'; label: string }> = [];
+    ): Array<{ idx: number; opt: OptionItem; type: 'option' } | { label: string; type: 'group' }> {
+      const flat: Array<{ idx: number; opt: OptionItem; type: 'option' } | { label: string; type: 'group' }> = [];
       const groups = new Map<string | undefined, OptionItem[]>();
+
       for (const opt of opts) {
         const key = opt.group;
+
         if (!groups.has(key)) groups.set(key, []);
+
         groups.get(key)!.push(opt);
       }
+
       let globalIdx = 0;
+
       for (const [groupLabel, groupOpts] of groups) {
         if (groupLabel !== undefined) flat.push({ label: groupLabel, type: 'group' });
+
         for (const opt of groupOpts) flat.push({ idx: globalIdx++, opt, type: 'option' });
       }
+
       return flat;
     }
 
@@ -904,18 +954,21 @@ export const TAG = define(
 
     function setupVirtualizer() {
       virtualizer?.destroy();
+
       const scrollEl = dropdownEl;
+
       if (!scrollEl || !dropdownContentRef.value) return;
 
       const flatList = buildFlatList(options.value);
+
       virtualizer = createVirtualizer({
         count: flatList.length,
         estimateSize: (i) => (flatList[i]?.type === 'group' ? 28 : 36),
         getScrollElement: () => scrollEl,
-        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Virtualizer onChange renders option rows including selected, focused, group, and disabled states
         onChange: (virtualItems, totalSize) => {
           const container = dropdownContentRef.value;
           const spacer = dropdownSpacerRef.value;
+
           if (!container || !spacer) return;
 
           spacer.style.height = `${totalSize}px`;
@@ -923,21 +976,24 @@ export const TAG = define(
 
           for (const item of virtualItems) {
             const row = flatList[item.index];
+
             if (!row) continue;
 
             if (row.type === 'group') {
               const groupHeader = document.createElement('div');
+
               groupHeader.className = 'optgroup-label';
               groupHeader.setAttribute('role', 'presentation');
               groupHeader.textContent = row.label;
               groupHeader.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
               container.appendChild(groupHeader);
             } else {
-              const { opt, idx } = row;
+              const { idx, opt } = row;
               const isFocused = idx === focusedIndex.value;
               const isSelected = selectedValues.value.includes(opt.value);
 
               const optionEl = document.createElement('div');
+
               optionEl.className = 'option';
               optionEl.setAttribute('role', 'option');
               optionEl.id = `${selectId}-opt-${idx}`;
@@ -946,14 +1002,18 @@ export const TAG = define(
               optionEl.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
 
               if (isFocused) optionEl.setAttribute('data-focused', '');
+
               if (isSelected) optionEl.setAttribute('data-selected', '');
+
               if (opt.disabled) optionEl.setAttribute('data-disabled', '');
 
               const label = document.createElement('span');
+
               label.textContent = opt.label;
               optionEl.appendChild(label);
 
               const check = document.createElement('span');
+
               check.className = 'option-check';
               check.setAttribute('aria-hidden', 'true');
               check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
@@ -982,6 +1042,7 @@ export const TAG = define(
         // Access options & isOpen to re-create virtualizer when either changes
         const opts = options.value;
         const open = isOpen.value;
+
         if (open && opts.length > 0) {
           requestAnimationFrame(() => setupVirtualizer());
         } else if (!open) {
@@ -993,7 +1054,6 @@ export const TAG = define(
       mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
 
       // Effect to manage dynamic content and visibility
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form component requires synchronizing many props to DOM elements reactively
       effect(() => {
         // Helper / error
         if (helperRef.value) {
@@ -1012,16 +1072,21 @@ export const TAG = define(
             chipsRowRef.value.innerHTML = '';
             for (const val of selectedValues.value) {
               const optLabel = options.value.find((o) => o.value === val)?.label ?? val;
-              const chip = document.createElement(CHIP_TAG) as HTMLElement & { value?: string; mode?: string };
+              const chip = document.createElement(CHIP_TAG) as HTMLElement & { mode?: string; value?: string };
+
               chip.setAttribute('value', val);
               chip.setAttribute('mode', 'removable');
               chip.setAttribute('variant', 'flat');
               chip.setAttribute('size', 'sm');
+
               if (props.color.value) chip.setAttribute('color', props.color.value);
+
               chip.textContent = optLabel;
               chip.addEventListener('remove', (e: Event) => {
                 e.stopPropagation();
+
                 const detail = (e as CustomEvent<{ value: string | undefined }>).detail;
+
                 if (detail.value !== undefined) {
                   selectedValues.value = selectedValues.value.filter((v) => v !== detail.value);
                   emit('change', { value: formValue.value, values: [...selectedValues.value] });
@@ -1034,7 +1099,9 @@ export const TAG = define(
             // Single mode (or multiple with no selection)
             chipsRowRef.value.style.display = '';
             triggerValueRef.value.hidden = false;
+
             const display = displayLabel.value || props.placeholder.value || '';
+
             triggerValueRef.value.textContent = display;
             triggerValueRef.value.className = displayLabel.value
               ? 'trigger-value'
@@ -1042,16 +1109,19 @@ export const TAG = define(
           }
         } else if (triggerValueRef.value) {
           const display = displayLabel.value || props.placeholder.value || '';
+
           triggerValueRef.value.textContent = display;
           triggerValueRef.value.className = displayLabel.value ? 'trigger-value' : 'trigger-value trigger-placeholder';
         }
 
         // Loading / empty states
         if (dropdownLoadingRef.value) dropdownLoadingRef.value.hidden = !isLoading.value;
+
         if (dropdownEmptyRef.value) dropdownEmptyRef.value.hidden = isLoading.value || options.value.length > 0;
 
         // Spacer + virtual container visibility
         if (dropdownContentRef.value) dropdownContentRef.value.hidden = isLoading.value;
+
         if (dropdownSpacerRef.value) dropdownSpacerRef.value.hidden = isLoading.value;
 
         // Re-render virtualizer on focused/selected changes (options handled by separate effect)
@@ -1085,6 +1155,7 @@ export const TAG = define(
       // Close on outside click
       const handleOutsideClick = (e: MouseEvent) => {
         if (!isOpen.value) return;
+
         if (!host.contains(e.target as Node) && !dropdownEl?.contains(e.target as Node)) {
           close();
         }
@@ -1145,12 +1216,15 @@ export const TAG = define(
             aria-labelledby="${labelId}"
             @click=${(e: MouseEvent) => {
               e.stopPropagation();
+
               if (isOpen.value) close();
               else open();
             }}
             @keydown=${handleTriggerKeydown}>
             <label class="label-inset" id="${labelId}" ref=${labelInsetRef} hidden></label>
-            <div class="trigger-row">              <div class="chips-row" ref=${chipsRowRef}></div>              <span class="trigger-value" ref=${triggerValueRef}></span>
+            <div class="trigger-row">
+              <div class="chips-row" ref=${chipsRowRef}></div>
+              <span class="trigger-value" ref=${triggerValueRef}></span>
             </div>
             <span class="trigger-icon" aria-hidden="true">
               <svg

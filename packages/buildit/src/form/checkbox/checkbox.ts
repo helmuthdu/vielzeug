@@ -16,7 +16,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitCheckboxEvents,
@@ -26,8 +26,10 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
 import { useToggleField } from '../_common/use-toggle-field';
+import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
 
 const componentStyles = /* css */ css`
@@ -132,7 +134,6 @@ const componentStyles = /* css */ css`
     }
   }
 
-
   @layer buildit.overrides {
     /* Map theme variables to checkbox-specific variables */
     :host {
@@ -224,7 +225,7 @@ export const TAG = define(
 
     const indeterminateSignal = signal(false);
 
-    const { formCtx, checkedSignal, triggerValidation } = useToggleField(props, () => {
+    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props, () => {
       indeterminateSignal.value = props.indeterminate.value ?? false;
     });
 
@@ -255,10 +256,12 @@ export const TAG = define(
           host.removeAttribute('indeterminate');
           groupCtx.toggle(props.value.value ?? '');
           triggerValidation('change');
+
           return;
         }
 
         const wasIndeterminate = indeterminateSignal.value;
+
         indeterminateSignal.value = false;
 
         if (!wasIndeterminate) {
@@ -266,6 +269,8 @@ export const TAG = define(
         }
 
         const isChecked = checkedSignal.value;
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
         host.removeAttribute('indeterminate');
 
@@ -290,22 +295,28 @@ export const TAG = define(
 
     onMount(() => {
       host.setAttribute('role', 'checkbox');
+
       if (!props.disabled.value) host.setAttribute('tabindex', '0');
 
       // labelRef.value is only populated after template render
       const label = labelRef.value;
+
       if (slots.has('default').value && label) {
         const labelId = createId('checkbox-label');
+
         label.id = labelId;
         aria({ labelledby: labelId });
       }
 
       effect(() => {
         const helperEl = helperRef.value;
+
         if (!helperEl) return;
+
         helperEl.id = helperId;
         helperEl.textContent = props.error.value || props.helper.value || '';
         helperEl.hidden = !props.error.value && !props.helper.value;
+
         if (props.error.value) helperEl.setAttribute('role', 'alert');
         else helperEl.removeAttribute('role');
       });

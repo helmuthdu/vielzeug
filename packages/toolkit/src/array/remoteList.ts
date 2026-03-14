@@ -18,12 +18,22 @@ export type RemoteMeta = Readonly<{
 
 // #region RemoteList
 export type RemoteList<T, F, S> = BaseList<T> & {
+  // Batch updates across properties in one recompute/refetch
+  batch(
+    mutator: (ctx: {
+      goTo(p: number): void; // 1-based
+      setData?(d: readonly T[]): void; // local-only
+      setFilter(f: F): void;
+      setLimit(n: number): void;
+      setQuery(q: string): void;
+      setSort(s?: S): void;
+    }) => void,
+  ): Promise<void>;
   readonly current: readonly T[];
-  readonly meta: RemoteMeta;
-  subscribe(listener: () => void): () => void;
-
   goTo(page: number): Promise<void>;
+
   invalidate?(): void;
+  readonly meta: RemoteMeta;
   next(): Promise<void>;
   prev(): Promise<void>;
   refresh(): Promise<void>;
@@ -32,18 +42,7 @@ export type RemoteList<T, F, S> = BaseList<T> & {
   setFilter(filter: F): Promise<void>;
   setLimit(n: number): Promise<void>;
   setSort(sort?: S): Promise<void>;
-
-  // Batch updates across properties in one recompute/refetch
-  batch(
-    mutator: (ctx: {
-      setLimit(n: number): void;
-      setFilter(f: F): void;
-      setSort(s?: S): void;
-      setQuery(q: string): void;
-      setData?(d: readonly T[]): void; // local-only
-      goTo(p: number): void; // 1-based
-    }) => void,
-  ): Promise<void>;
+  subscribe(listener: () => void): () => void;
 };
 // #endregion RemoteList
 
@@ -68,7 +67,7 @@ type RemoteConfig<T, F, S> = Readonly<{
 }>;
 // #endregion RemoteConfig
 
-export function remoteList<T, F = Record<string, unknown>, S = { key?: string; dir?: 'asc' | 'desc' }>(
+export function remoteList<T, F = Record<string, unknown>, S = { dir?: 'asc' | 'desc'; key?: string }>(
   cfg: RemoteConfig<T, F, S>,
 ): RemoteList<T, F, S> {
   const listeners = new Set<() => void>();
@@ -102,7 +101,9 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
   const assign = (res: RemoteResult<T>) => {
     items = res.items;
     total = res.total ?? 0;
+
     const pages = Math.max(1, Math.ceil(total / limit));
+
     page = Math.min(Math.max(1, page), pages);
   };
 
@@ -116,18 +117,24 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
     const k = keyOf(q);
     const entry = cache.get(k);
     const ttl = cfg.cacheTtl;
+
     if (entry && (!ttl || Date.now() - entry.ts < ttl)) {
       assign(entry.result);
+
       return;
     }
+
     if (inflight.has(k)) {
       await inflight.get(k);
       assign(cache.get(k)!.result);
+
       return;
     }
+
     loading = true;
     error = null;
     notify();
+
     const p = cfg
       .fetch(q)
       .then((res) => {
@@ -144,6 +151,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
         loading = false;
         notify();
       });
+
     inflight.set(k, p);
     await p;
   };
@@ -156,6 +164,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
   let timer: ReturnType<typeof setTimeout> | undefined;
   const debounced = () => {
     if (timer) clearTimeout(timer);
+
     timer = setTimeout(() => {
       timer = undefined;
       void update();
@@ -219,6 +228,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
       const safePage = Math.min(page, pages);
       const start = isEmpty ? 0 : (safePage - 1) * limit + 1;
       const end = isEmpty ? 0 : Math.min(safePage * limit, total);
+
       return {
         end,
         error,
@@ -257,6 +267,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
     async search(q, opts) {
       search = q;
       page = 1;
+
       if (opts?.immediate) await update();
       else debounced();
     },
@@ -277,10 +288,12 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
     },
     subscribe(listener) {
       listeners.add(listener);
+
       // optional: trigger an initial load on the first subscription
       if (listeners.size === 1 && items.length === 0 && !loading) {
         void update();
       }
+
       return () => listeners.delete(listener);
     },
   };

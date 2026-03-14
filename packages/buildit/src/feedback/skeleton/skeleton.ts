@@ -1,6 +1,8 @@
 import { computed, css, define, defineProps, html, watch } from '@vielzeug/craftit';
-import { reducedMotionMixin } from '../../styles';
+
 import type { ComponentSize } from '../../types';
+
+import { reducedMotionMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -40,12 +42,7 @@ const componentStyles = /* css */ css`
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        90deg,
-        var(--_bg) 0%,
-        var(--_highlight) 50%,
-        var(--_bg) 100%
-      );
+      background: linear-gradient(90deg, var(--_bg) 0%, var(--_highlight) 50%, var(--_bg) 100%);
       transform: translateX(-100%);
       animation: var(--_motion-animation, bit-skeleton-shimmer var(--_duration) linear infinite);
     }
@@ -55,7 +52,9 @@ const componentStyles = /* css */ css`
     }
 
     @keyframes bit-skeleton-shimmer {
-      to { transform: translateX(100%); }
+      to {
+        transform: translateX(100%);
+      }
     }
 
     /* In RTL the shimmer should sweep right-to-left */
@@ -94,9 +93,18 @@ const componentStyles = /* css */ css`
   }
 
   @layer buildit.utilities {
-    :host([size='sm']) { --_height: var(--size-3); --_circle-size: var(--size-8); }
-    :host([size='md']) { --_height: var(--size-4); --_circle-size: var(--size-10); }
-    :host([size='lg']) { --_height: var(--size-6); --_circle-size: var(--size-14); }
+    :host([size='sm']) {
+      --_height: var(--size-3);
+      --_circle-size: var(--size-8);
+    }
+    :host([size='md']) {
+      --_height: var(--size-4);
+      --_circle-size: var(--size-10);
+    }
+    :host([size='lg']) {
+      --_height: var(--size-6);
+      --_circle-size: var(--size-14);
+    }
   }
 
   @media (forced-colors: active) {
@@ -179,6 +187,7 @@ export const TAG = define('bit-skeleton', ({ host }) => {
 
   const lineCount = computed(() => {
     const value = Math.floor(Number(props.lines.value));
+
     return Number.isFinite(value) && value > 0 ? value : 1;
   });
 
@@ -198,6 +207,7 @@ export const TAG = define('bit-skeleton', ({ host }) => {
 
       const rawAnimated = host.getAttribute('animated');
       const isAnimated = rawAnimated !== 'false' && props.animated.value !== false;
+
       host.setAttribute('data-animated', isAnimated ? 'true' : 'false');
     },
     { immediate: true },
@@ -211,7 +221,12 @@ export const TAG = define('bit-skeleton', ({ host }) => {
           Array.from({ length: renderLineCount.value }, (_, index) => {
             const isLastLine =
               props.variant.value === 'text' && renderLineCount.value > 1 && index === renderLineCount.value - 1;
-            return html`<div class="bone" part="bone" aria-hidden="true" :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
+
+            return html`<div
+              class="bone"
+              part="bone"
+              aria-hidden="true"
+              :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
           })}
       </div>
     `,

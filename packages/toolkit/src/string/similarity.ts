@@ -21,7 +21,9 @@ export function similarity(str1: string, str2: string): number {
   const b = str2.toLowerCase();
 
   if (a === b) return 1;
+
   if (a.length === 0) return b.length === 0 ? 1 : 0;
+
   if (b.length === 0) return 0;
 
   // Swap to ensure we use the smaller string for columns (O(min(A,B)) space)
@@ -36,6 +38,7 @@ export function similarity(str1: string, str2: string): number {
     currRow[0] = i;
     for (let j = 1; j <= shorterLength; j++) {
       const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+
       currRow[j] = Math.min(
         currRow[j - 1] + 1, // insertion
         prevRow[j] + 1, // deletion

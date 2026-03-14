@@ -20,7 +20,9 @@ describe('bit-tab-item', () => {
 
     it('dispatches tab-click with value on click', async () => {
       fixture = await mount('bit-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('tab-click', handler);
 
       fixture.query('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -47,6 +49,7 @@ describe('bit-tab-item', () => {
       fixture = await mount('bit-tab-item', { attrs: { value: 'settings' }, html: 'Settings' });
 
       const tabindex = fixture.query('button')?.getAttribute('tabindex');
+
       expect(tabindex === '0' || tabindex === '-1').toBe(true);
     });
   });

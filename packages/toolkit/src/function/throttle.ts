@@ -1,4 +1,5 @@
 import type { Fn } from '../types';
+
 import { assert } from './assert';
 
 export type ThrottleOptions = {
@@ -54,13 +55,16 @@ export function throttle<T extends Fn>(
   const invoke = (now: number) => {
     lastInvokeTime = now;
     clearTimer();
+
     if (!lastArgs) return undefined;
+
     const args = lastArgs;
     const ctx = lastThis as ThisParameterType<T>;
+
     lastArgs = undefined;
     lastThis = undefined;
-    // biome-ignore lint/suspicious/noExplicitAny: -
     lastResult = fn.apply(ctx as any, args);
+
     return lastResult;
   };
 
@@ -68,6 +72,7 @@ export function throttle<T extends Fn>(
 
   const timerExpired = () => {
     const now = Date.now();
+
     if (lastArgs && remaining(now) <= 0) {
       // trailing edge invoke
       invoke(now);
@@ -81,12 +86,14 @@ export function throttle<T extends Fn>(
 
   const throttled = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
     const now = Date.now();
+
     if (lastInvokeTime === 0 && !leading) {
       // If leading is false, start the window now but don't invoke immediately
       lastInvokeTime = now;
     }
 
     lastArgs = args;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     lastThis = this;
 
     const rem = remaining(now);
@@ -109,7 +116,9 @@ export function throttle<T extends Fn>(
 
   throttled.flush = () => {
     if (!lastArgs) return undefined;
+
     const now = Date.now();
+
     return invoke(now) as ReturnType<T> | undefined;
   };
 

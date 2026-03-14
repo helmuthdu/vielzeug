@@ -1,4 +1,5 @@
 import DefaultTheme from 'vitepress/theme';
+
 import { Logit } from '../../../packages/logit/src';
 import ComponentPreview from './components/ComponentPreview.vue';
 import PackageBadges from './components/PackageBadges.vue';
@@ -9,6 +10,7 @@ import Repl from './components/REPL.vue';
 import '@vielzeug/buildit/styles/theme.css';
 import '@vielzeug/buildit/styles/animation.css';
 import '@vielzeug/buildit/styles/layer.css';
+
 import './theme.css';
 
 export default {
@@ -17,6 +19,7 @@ export default {
     if (typeof window !== 'undefined') {
       import('@vielzeug/buildit');
     }
+
     app.component('REPL', Repl);
     app.component('PackageBadges', PackageBadges);
     app.component('PackageInfo', PackageInfo);

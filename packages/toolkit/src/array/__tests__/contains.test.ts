@@ -34,7 +34,6 @@ describe('contains', () => {
     const notArray = 'not an array';
     const value = 1;
 
-    // biome-ignore lint/suspicious/noExplicitAny: -
     expect(() => contains(notArray as unknown as any, value)).toThrow(TypeError);
   });
 

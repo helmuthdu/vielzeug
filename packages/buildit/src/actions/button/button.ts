@@ -9,6 +9,9 @@ import {
   inject,
   syncContextProps,
 } from '@vielzeug/craftit';
+
+import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+
 import {
   disabledLoadingMixin,
   forcedColorsMixin,
@@ -17,7 +20,6 @@ import {
   rainbowEffectMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
 
 const componentStyles = /* css */ css`
@@ -74,13 +76,15 @@ const componentStyles = /* css */ css`
       cursor: pointer;
       min-height: var(--_touch-target);
 
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         background var(--transition-normal),
         border-color var(--transition-normal),
         box-shadow var(--transition-normal),
         color var(--transition-normal),
         opacity var(--transition-normal),
-        transform var(--transition-fast));
+        transform var(--transition-fast)
+      );
     }
 
     a {
@@ -108,13 +112,15 @@ const componentStyles = /* css */ css`
       cursor: pointer;
       min-height: var(--_touch-target);
 
-      transition: var(--_motion-transition,
+      transition: var(
+        --_motion-transition,
         background var(--transition-normal),
         border-color var(--transition-normal),
         box-shadow var(--transition-normal),
         color var(--transition-normal),
         opacity var(--transition-normal),
-        transform var(--transition-fast));
+        transform var(--transition-fast)
+      );
     }
 
     button:focus-visible,
@@ -151,7 +157,6 @@ const componentStyles = /* css */ css`
       height: var(--_icon-size, var(--size-5));
       flex-shrink: 0;
     }
-
   }
 
   @layer buildit.overrides {
@@ -304,7 +309,6 @@ const componentStyles = /* css */ css`
     :host([loading]) .content {
       visibility: hidden;
     }
-
   }
 
   /* ========================================
@@ -345,34 +349,34 @@ const componentStyles = /* css */ css`
 
 /** Button component properties */
 export type ButtonProps = {
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass'>;
   /** Theme color */
   color?: ThemeColor;
-  /** Accessible label for the inner button — required for icon-only buttons */
-  label?: string;
-  /** Button size */
-  size?: ComponentSize;
   /** Disable button interaction */
   disabled?: boolean;
+  /** Full width button (100% of container) */
+  fullwidth?: boolean;
+  /** When set, renders an `<a>` instead of `<button>` */
+  href?: string;
+  /** Icon-only mode (square aspect ratio, no padding) */
+  iconOnly?: boolean;
+  /** Accessible label for the inner button — required for icon-only buttons */
+  label?: string;
   /** Show loading state with spinner */
   loading?: boolean;
   /** Enable animated rainbow border effect */
   rainbow?: boolean;
-  /** HTML button type attribute */
-  type?: ButtonType;
-  /** Icon-only mode (square aspect ratio, no padding) */
-  iconOnly?: boolean;
-  /** Full width button (100% of container) */
-  fullwidth?: boolean;
-  /** Border radius size */
-  rounded?: RoundedSize;
-  /** When set, renders an `<a>` instead of `<button>` */
-  href?: string;
-  /** Link target (requires href) */
-  target?: '_blank' | '_self' | '_parent' | '_top';
   /** Link rel attribute (requires href) */
   rel?: string;
+  /** Border radius size */
+  rounded?: RoundedSize;
+  /** Button size */
+  size?: ComponentSize;
+  /** Link target (requires href) */
+  target?: '_blank' | '_self' | '_parent' | '_top';
+  /** HTML button type attribute */
+  type?: ButtonType;
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass'>;
 };
 
 /**
@@ -442,6 +446,7 @@ export const TAG = define(
 
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
     const groupCtx = inject(BUTTON_GROUP_CTX, undefined);
+
     syncContextProps(groupCtx, props, ['color', 'size', 'variant']);
 
     const isDisabled = computed(() => props.disabled.value || props.loading.value);
@@ -460,8 +465,10 @@ export const TAG = define(
       if (isDisabled.value) {
         e.preventDefault();
         e.stopPropagation();
+
         return;
       }
+
       // Relay to host as a proper MouseEvent. stopPropagation prevents double-dispatch in
       // browsers where shadow DOM already retargets the event to the host.
       e.stopPropagation();
@@ -470,6 +477,7 @@ export const TAG = define(
 
     const handleButtonClick = (e: MouseEvent) => {
       if (isDisabled.value) return;
+
       // Relay to host as a proper MouseEvent. stopPropagation prevents double-dispatch in
       // browsers where shadow DOM already retargets the event to the host.
       e.stopPropagation();
@@ -478,8 +486,11 @@ export const TAG = define(
 
     handle(host, 'click', () => {
       if (isDisabled.value || isLink.value) return;
+
       const form = field.internals.form;
+
       if (!form) return;
+
       if (props.type.value === 'submit') form.requestSubmit();
       else if (props.type.value === 'reset') form.reset();
     });
@@ -512,37 +523,37 @@ export const TAG = define(
         componentStyles,
       ],
       template: html`
-      ${() =>
-        isLink.value
-          ? html`<a
-          part="button"
-          :href="${() => props.href.value ?? null}"
-          :target="${() => props.target.value ?? null}"
-          :rel="${() => props.rel.value ?? null}"
-          :aria-label="${() => props.label.value ?? null}"
-          :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-          :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-          role="button"
-          @click="${handleLinkClick}">
-          <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-          <slot name="prefix"></slot>
-          <span class="content" part="content"><slot></slot></span>
-          <slot name="suffix"></slot>
-        </a>`
-          : html`<button
-          part="button"
-          type="button"
-          ?disabled=${isDisabled}
-          :aria-label="${() => props.label.value ?? null}"
-          :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-          :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-          @click="${handleButtonClick}">
-          <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-          <slot name="prefix"></slot>
-          <span class="content" part="content"><slot></slot></span>
-          <slot name="suffix"></slot>
-        </button>`}
-    `,
+        ${() =>
+          isLink.value
+            ? html`<a
+                part="button"
+                :href="${() => props.href.value ?? null}"
+                :target="${() => props.target.value ?? null}"
+                :rel="${() => props.rel.value ?? null}"
+                :aria-label="${() => props.label.value ?? null}"
+                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+                role="button"
+                @click="${handleLinkClick}">
+                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+                <slot name="prefix"></slot>
+                <span class="content" part="content"><slot></slot></span>
+                <slot name="suffix"></slot>
+              </a>`
+            : html`<button
+                part="button"
+                type="button"
+                ?disabled=${isDisabled}
+                :aria-label="${() => props.label.value ?? null}"
+                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+                @click="${handleButtonClick}">
+                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+                <slot name="prefix"></slot>
+                <span class="content" part="content"><slot></slot></span>
+                <slot name="suffix"></slot>
+              </button>`}
+      `,
     };
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },

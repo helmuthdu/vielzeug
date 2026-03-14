@@ -23,10 +23,10 @@ export type PermissionActions<TAction extends string, TUser extends BaseUser = B
 export type PermitGuard<TAction extends string = string> = {
   /** Returns true if the user can perform the action on the resource. */
   can(resource: string, action: TAction, data?: PermissionData): boolean;
-  /** Returns true if the user can perform ANY of the given actions on the resource. */
-  canAny(resource: string, actions: TAction[], data?: PermissionData): boolean;
   /** Returns true if the user can perform ALL of the given actions on the resource. */
   canAll(resource: string, actions: TAction[], data?: PermissionData): boolean;
+  /** Returns true if the user can perform ANY of the given actions on the resource. */
+  canAny(resource: string, actions: TAction[], data?: PermissionData): boolean;
 };
 
 /**
@@ -36,17 +36,17 @@ export type PermitGuard<TAction extends string = string> = {
  */
 export type Permit<TUser extends BaseUser = BaseUser, TAction extends string = string> = {
   check(user: TUser | null | undefined, resource: string, action: TAction, data?: PermissionData): boolean;
-  register(role: string, resource: string, actions: PermissionActions<TAction, TUser>): Permit<TUser, TAction>;
-  /** Shorthand to allow one or more actions for a role on a resource. */
-  grant(role: string, resource: string, ...actions: TAction[]): Permit<TUser, TAction>;
+  clear(): Permit<TUser, TAction>;
   /** Shorthand to deny one or more actions for a role on a resource. */
   deny(role: string, resource: string, ...actions: TAction[]): Permit<TUser, TAction>;
   /** Returns a pre-bound guard for a specific user. */
   for(user: TUser | null | undefined): PermitGuard<TAction>;
+  /** Shorthand to allow one or more actions for a role on a resource. */
+  grant(role: string, resource: string, ...actions: TAction[]): Permit<TUser, TAction>;
+  register(role: string, resource: string, actions: PermissionActions<TAction, TUser>): Permit<TUser, TAction>;
   remove(role: string, resource?: string, action?: TAction): Permit<TUser, TAction>;
-  snapshot(): PermitSnapshot<TUser, TAction>;
   restore(snapshot: PermitSnapshot<TUser, TAction>): Permit<TUser, TAction>;
-  clear(): Permit<TUser, TAction>;
+  snapshot(): PermitSnapshot<TUser, TAction>;
 };
 
 /** A plain-object snapshot of all registered permissions. */
@@ -56,6 +56,8 @@ export type PermitSnapshot<TUser extends BaseUser = BaseUser, TAction extends st
 >;
 
 export type PermitOptions<TUser extends BaseUser = BaseUser, TAction extends string = string> = {
+  /** Pre-load initial permissions at creation time. */
+  initial?: PermitSnapshot<TUser, TAction>;
   /** Called after every check. Useful for audit logging. */
   logger?: (
     result: 'allow' | 'deny',
@@ -64,8 +66,6 @@ export type PermitOptions<TUser extends BaseUser = BaseUser, TAction extends str
     action: string,
     data?: PermissionData,
   ) => void;
-  /** Pre-load initial permissions at creation time. */
-  initial?: PermitSnapshot<TUser, TAction>;
 };
 
 /* -------------------- Constants -------------------- */
@@ -81,6 +81,7 @@ function normalize(value: string): string {
 
 function getUserRoles(user: BaseUser | null | undefined): string[] {
   if (!user?.id || !Array.isArray(user.roles)) return [ANONYMOUS, WILDCARD];
+
   // WILDCARD is appended last so specific roles always take precedence.
   return user.roles.map(normalize).concat(WILDCARD);
 }
@@ -93,6 +94,7 @@ function getUserRoles(user: BaseUser | null | undefined): string[] {
  */
 export function hasRole(user: BaseUser | null | undefined, role: string): boolean {
   if (!user?.id || !Array.isArray(user.roles)) return normalize(role) === ANONYMOUS;
+
   return user.roles.some((r) => normalize(r) === normalize(role));
 }
 
@@ -110,33 +112,39 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
   const permissions = new Map<string, Map<string, PermissionActions<TAction, TUser>>>();
 
   // Forward-declared so fluent register() can return the instance.
+  // eslint-disable-next-line prefer-const
   let permit!: Permit<TUser, TAction>;
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: role iteration with rule precedence logic is inherently multi-branch
   function check(user: TUser | null | undefined, resource: string, action: TAction, data?: PermissionData): boolean {
     const normalizedResource = normalize(resource);
     const normalizedAction = normalize(action) as TAction;
 
     for (const role of getUserRoles(user)) {
       const rolePerms = permissions.get(role);
+
       if (!rolePerms) continue;
 
       const specific = rolePerms.get(normalizedResource);
       const resourcePerms = specific?.[normalizedAction] !== undefined ? specific : rolePerms.get(WILDCARD);
+
       if (!resourcePerms) continue;
 
       const permission = resourcePerms[normalizedAction];
+
       if (permission === undefined) continue;
 
       // The first role that has any opinion (true OR false) wins — stops here.
       // Null/undefined users cannot satisfy dynamic ownership checks — always false.
       const result =
         typeof permission === 'function' ? (user != null ? permission(user, data) : false) : Boolean(permission);
+
       logger?.(result ? 'allow' : 'deny', user, normalizedResource, normalizedAction, data);
+
       return result;
     }
 
     logger?.('deny', user, normalizedResource, normalizedAction, data);
+
     return false;
   }
 
@@ -146,6 +154,7 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
     actions: PermissionActions<TAction, TUser>,
   ): Permit<TUser, TAction> {
     if (!role) throw new Error('Role is required');
+
     if (!resource) throw new Error('Resource is required');
 
     const normalizedRole = normalize(role);
@@ -183,10 +192,12 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
   function remove(role: string, resource?: string, action?: TAction): Permit<TUser, TAction> {
     const normalizedRole = normalize(role);
     const rolePerms = permissions.get(normalizedRole);
+
     if (!rolePerms) return permit;
 
     if (!resource) {
       permissions.delete(normalizedRole);
+
       return permit;
     }
 
@@ -194,8 +205,10 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
 
     if (action) {
       const resourcePerms = rolePerms.get(normalizedResource);
+
       if (resourcePerms) {
         delete resourcePerms[normalize(action) as TAction];
+
         if (Object.keys(resourcePerms).length === 0) rolePerms.delete(normalizedResource);
       }
     } else {
@@ -203,6 +216,7 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
     }
 
     if (rolePerms.size === 0) permissions.delete(normalizedRole);
+
     return permit;
   }
 
@@ -230,12 +244,14 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
   /** Returns a plain-object snapshot of all registered permissions. */
   function snapshot(): PermitSnapshot<TUser, TAction> {
     const result: PermitSnapshot<TUser, TAction> = {};
+
     for (const [role, resourceMap] of permissions) {
       result[role] = {};
       for (const [resource, actions] of resourceMap) {
         result[role][resource] = { ...actions };
       }
     }
+
     return result;
   }
 
@@ -247,11 +263,13 @@ export function createPermit<TUser extends BaseUser = BaseUser, TAction extends 
         register(role, resource, actions);
       }
     }
+
     return permit;
   }
 
   function clear(): Permit<TUser, TAction> {
     permissions.clear();
+
     return permit;
   }
 

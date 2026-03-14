@@ -1,4 +1,5 @@
 import { type Fixture, mount, waitFor } from '@vielzeug/craftit/test';
+
 import type { ToastItem } from './toast';
 
 describe('bit-toast', () => {
@@ -49,6 +50,7 @@ describe('bit-toast', () => {
   describe('Push Method', () => {
     it('shows toast item after push', async () => {
       fixture = (await mount('bit-toast')) as typeof fixture;
+
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
       el.add({ message: 'Test notification' });
@@ -61,6 +63,7 @@ describe('bit-toast', () => {
 
     it('shows body text of toast', async () => {
       fixture = (await mount('bit-toast')) as typeof fixture;
+
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
       el.add({ message: 'Something happened' });
@@ -73,22 +76,28 @@ describe('bit-toast', () => {
 
     it('does not leave active toasts stuck in exiting state on rapid remove + add', async () => {
       fixture = (await mount('bit-toast')) as typeof fixture;
+
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): string; dismiss(id: string): void };
 
       const id1 = el.add({ duration: 0, message: 'First' });
       const id2 = el.add({ duration: 0, message: 'Second' });
+
       await fixture.flush();
 
       el.dismiss(id1);
+
       const id3 = el.add({ duration: 0, message: 'Third' });
+
       await fixture.flush();
 
       const exiting = fixture.query<HTMLElement>(`[data-toast-id="${id1}"]`);
+
       exiting?.dispatchEvent(new Event('animationend'));
       await fixture.flush();
 
       const second = fixture.query<HTMLElement>(`[data-toast-id="${id2}"]`);
       const third = fixture.query<HTMLElement>(`[data-toast-id="${id3}"]`);
+
       expect(second?.classList.contains('exiting')).toBe(false);
       expect(third?.classList.contains('exiting')).toBe(false);
     });
@@ -132,6 +141,7 @@ describe('bit-toast accessibility', () => {
 
     it('has aria-relevant additions removals', async () => {
       fixture = await mount('bit-toast');
+
       const region = fixture.query('[aria-live]');
 
       expect(region?.getAttribute('aria-relevant')).toBe('additions removals');
@@ -139,6 +149,7 @@ describe('bit-toast accessibility', () => {
 
     it('has aria-atomic false for individual updates', async () => {
       fixture = await mount('bit-toast');
+
       const region = fixture.query('[aria-live]');
 
       expect(region?.getAttribute('aria-atomic')).toBe('false');
@@ -154,6 +165,7 @@ describe('bit-toast accessibility', () => {
   describe('Toast Items', () => {
     it('pushed toast is announced in live region', async () => {
       fixture = await mount('bit-toast');
+
       const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
 
       el.add({ message: 'Success!' });

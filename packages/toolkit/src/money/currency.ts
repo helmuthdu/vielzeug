@@ -5,9 +5,9 @@ import type { Money } from './types';
  */
 export type CurrencyFormatOptions = {
   locale?: string; // BCP 47 language tag (e.g., 'en-US', 'de-DE')
-  style?: 'symbol' | 'code' | 'name'; // Display style
-  minimumFractionDigits?: number; // Minimum decimal places
   maximumFractionDigits?: number; // Maximum decimal places
+  minimumFractionDigits?: number; // Minimum decimal places
+  style?: 'symbol' | 'code' | 'name'; // Display style
 };
 
 /**
@@ -29,7 +29,7 @@ export type CurrencyFormatOptions = {
  * @returns Formatted currency string
  */
 export function currency(money: Money, options: CurrencyFormatOptions = {}): string {
-  const { locale = 'en-US', style = 'symbol', minimumFractionDigits, maximumFractionDigits } = options;
+  const { locale = 'en-US', maximumFractionDigits, minimumFractionDigits, style = 'symbol' } = options;
 
   // Get decimal places for currency (default to 2 for most currencies)
   const decimalPlaces = getCurrencyDecimals(money.currency);

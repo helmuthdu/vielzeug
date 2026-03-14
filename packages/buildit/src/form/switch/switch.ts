@@ -14,7 +14,7 @@ import {
   ref,
   watch,
 } from '@vielzeug/craftit';
-import { formControlMixins, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitSwitchEvents,
@@ -24,8 +24,10 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
 import { useToggleField } from '../_common/use-toggle-field';
+import { formControlMixins, sizeVariantMixin } from '../../styles';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -215,7 +217,7 @@ export const TAG = define(
       value: { default: 'on' },
     });
 
-    const { formCtx, checkedSignal, triggerValidation } = useToggleField(props);
+    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
     // Propagate form context size/disabled to host when not explicitly set
     mountFormContextSync(host, formCtx, props);
@@ -229,7 +231,10 @@ export const TAG = define(
       (e: Event) => {
         e.preventDefault();
         checkedSignal.value = !checkedSignal.value;
+
         const isChecked = checkedSignal.value;
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
         emit('change', { checked: isChecked });
         triggerValidation('change');
@@ -252,22 +257,28 @@ export const TAG = define(
 
     onMount(() => {
       host.setAttribute('role', 'switch');
+
       if (!props.disabled.value) host.setAttribute('tabindex', '0');
 
       // labelRef.value is only available after the template has been rendered
       const label = labelRef.value;
+
       if (slots.has('default').value && label) {
         const labelId = createId('switch-label');
+
         label.id = labelId;
         aria({ labelledby: labelId });
       }
 
       effect(() => {
         const helperEl = helperRef.value;
+
         if (!helperEl) return;
+
         helperEl.id = helperId;
         helperEl.textContent = props.error.value || props.helper.value || '';
         helperEl.hidden = !props.error.value && !props.helper.value;
+
         if (props.error.value) helperEl.setAttribute('role', 'alert');
         else helperEl.removeAttribute('role');
       });

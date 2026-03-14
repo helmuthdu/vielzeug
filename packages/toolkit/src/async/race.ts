@@ -16,6 +16,7 @@ export async function race<T>(promise: Promise<T>, minDelay: number): Promise<T>
   const minDelayPromise = new Promise<void>((resolve) => setTimeout(resolve, minDelay));
 
   const result = await promise;
+
   await minDelayPromise;
 
   return result;

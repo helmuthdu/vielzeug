@@ -24,6 +24,7 @@ describe('bit-avatar', () => {
       fixture = await mount('bit-avatar', { attrs: { alt: 'Jane Doe', src: '/photo.jpg' } });
 
       const img = fixture.query<HTMLImageElement>('img');
+
       expect(img?.getAttribute('src')).toBe('/photo.jpg');
     });
 

@@ -54,6 +54,7 @@ describe('bit-tooltip', () => {
 
     it('arrow has aria-hidden true', async () => {
       fixture = await mount('bit-tooltip', { attrs: { content: 'tip' } });
+
       const arrow = fixture.query('.arrow');
 
       if (arrow) {
@@ -83,11 +84,13 @@ describe('bit-tooltip accessibility', () => {
         this.setAttribute('popover-open', '');
       };
     }
+
     if (!HTMLElement.prototype.hidePopover) {
       HTMLElement.prototype.hidePopover = function () {
         this.removeAttribute('popover-open');
       };
     }
+
     await import('./tooltip');
   });
 
@@ -103,6 +106,7 @@ describe('bit-tooltip accessibility', () => {
       });
 
       const btn = fixture.element.querySelector('button');
+
       if (btn) {
         btn.focus();
         await fixture.flush();
@@ -114,6 +118,7 @@ describe('bit-tooltip accessibility', () => {
   describe('Tooltip Hidden State', () => {
     it('tooltip is aria-hidden when not visible', async () => {
       fixture = await mount('bit-tooltip', { attrs: { content: 'tip' } });
+
       const tooltip = fixture.query('.tooltip');
 
       if (tooltip) {

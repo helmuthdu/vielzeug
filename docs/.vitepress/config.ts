@@ -3,7 +3,9 @@ import { browserslistToTargets } from 'lightningcss';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'vitepress';
+
 import type { ThemeConfig } from './theme/types';
+
 import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -99,8 +101,6 @@ export default defineConfig({
         {
           items: [
             {
-              link: '/buildit/usage',
-              text: 'Usage Guide',
               collapsed: true,
               items: [
                 { link: '/buildit/usage#import', text: 'Import' },
@@ -108,10 +108,10 @@ export default defineConfig({
                 { link: '/buildit/usage#slots', text: 'Slots' },
                 { link: '/buildit/usage#accessibility', text: 'Accessibility' },
               ],
+              link: '/buildit/usage',
+              text: 'Usage Guide',
             },
             {
-              link: '/buildit/frameworks',
-              text: 'Framework Integration',
               collapsed: true,
               items: [
                 { link: '/buildit/frameworks#react', text: 'React' },
@@ -120,10 +120,10 @@ export default defineConfig({
                 { link: '/buildit/frameworks#angular', text: 'Angular' },
                 { link: '/buildit/frameworks#ssr-considerations', text: 'SSR' },
               ],
+              link: '/buildit/frameworks',
+              text: 'Framework Integration',
             },
             {
-              link: '/buildit/theming',
-              text: 'Theming',
               collapsed: true,
               items: [
                 { link: '/buildit/theming#design-tokens', text: 'Design Tokens' },
@@ -131,6 +131,8 @@ export default defineConfig({
                 { link: '/buildit/theming#global-customization', text: 'Global Customization' },
                 { link: '/buildit/theming#component-customization', text: 'Component Customization' },
               ],
+              link: '/buildit/theming',
+              text: 'Theming',
             },
           ],
           text: 'Getting Started',

@@ -36,6 +36,7 @@ describe('bit-alert', () => {
       // The close button is CSS-hidden when not dismissible (jsdom can't test CSS)
       // Verify functionally: clicking the button does not emit dismiss
       const handler = vi.fn();
+
       fixture.element.addEventListener('dismiss', handler);
       await user.click(fixture.query<HTMLElement>('.close')!);
       expect(handler).not.toHaveBeenCalled();
@@ -103,7 +104,9 @@ describe('bit-alert', () => {
   describe('Dismiss', () => {
     it('fires dismiss event when close button clicked', async () => {
       fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('dismiss', handler);
 
       await user.click(fixture.query<HTMLElement>('.close')!);
@@ -116,7 +119,9 @@ describe('bit-alert', () => {
 
     it('dismisses even when animationend is not fired', async () => {
       fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
+
       const handler = vi.fn();
+
       fixture.element.addEventListener('dismiss', handler);
 
       await user.click(fixture.query<HTMLElement>('.close')!);
@@ -159,6 +164,7 @@ describe('bit-alert accessibility', () => {
 
     it('icon has aria-hidden', async () => {
       fixture = await mount('bit-alert');
+
       const icon = fixture.query('.icon');
 
       if (icon) {
@@ -198,12 +204,14 @@ describe('bit-alert accessibility', () => {
 
     it('close button is keyboard accessible via Enter', async () => {
       const handler = { called: false };
+
       fixture = await mount('bit-alert', { attrs: { dismissible: '' } });
       fixture.element.addEventListener('dismiss', () => {
         handler.called = true;
       });
 
       const btn = fixture.query<HTMLElement>('.close')!;
+
       btn.focus();
       await user.click(btn);
       // jsdom does not run CSS animations; manually fire animationend

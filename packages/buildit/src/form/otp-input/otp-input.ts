@@ -1,6 +1,8 @@
 import { computed, css, define, defineEmits, defineProps, html, onMount } from '@vielzeug/craftit';
-import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+
 import type { AddEventListeners, ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -39,7 +41,9 @@ const styles = /* css */ css`
       border-radius: var(--_cell-radius);
       color: var(--color-contrast-900);
       caret-color: var(--_cell-focus-border);
-      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      transition:
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
       padding: 0;
     }
 
@@ -140,7 +144,7 @@ const styles = /* css */ css`
 
 /** OTP Input events */
 export interface BitOtpInputEvents {
-  change: CustomEvent<{ value: string; complete: boolean }>;
+  change: CustomEvent<{ complete: boolean; value: string }>;
   complete: CustomEvent<{ value: string }>;
 }
 
@@ -217,7 +221,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     variant: { default: undefined },
   });
 
-  const emit = defineEmits<{ change: { value: string; complete: boolean }; complete: { value: string } }>();
+  const emit = defineEmits<{ change: { complete: boolean; value: string }; complete: { value: string } }>();
 
   const cells = computed(() => Array.from({ length: Number(props.length.value) || 6 }, (_, i) => i));
 
@@ -233,6 +237,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
 
   function isAllowed(char: string): boolean {
     if (props.type.value === 'numeric') return /^\d$/.test(char);
+
     return /^[a-z\d]$/i.test(char);
   }
 
@@ -246,6 +251,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     // Validate character
     if (val && !isAllowed(val)) {
       input.value = '';
+
       return;
     }
 
@@ -257,6 +263,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
 
     host.setAttribute('value', full);
     emit('change', { complete, value: full });
+
     if (complete) emit('complete', { value: full });
 
     // Auto-advance
@@ -266,7 +273,6 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     }
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: OTP keyboard navigation requires handling many key cases
   function handleKeydown(e: KeyboardEvent, index: number) {
     const input = e.target as HTMLInputElement;
     const allInputs = getInputs();
@@ -279,7 +285,9 @@ export const TAG = define('bit-otp-input', ({ host }) => {
         allInputs[index - 1].select();
         allInputs[index - 1].value = '';
       }
+
       const full = getValue();
+
       host.setAttribute('value', full);
       emit('change', { complete: false, value: full });
       e.preventDefault();
@@ -300,6 +308,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
 
   function handlePaste(e: ClipboardEvent) {
     e.preventDefault();
+
     const pasted = e.clipboardData?.getData('text') ?? '';
     const chars = pasted
       .split('')
@@ -307,18 +316,22 @@ export const TAG = define('bit-otp-input', ({ host }) => {
       .slice(0, Number(props.length.value) || 6);
 
     const allInputs = getInputs();
+
     chars.forEach((char, i) => {
       if (allInputs[i]) allInputs[i].value = char;
     });
 
     const full = getValue();
     const complete = full.length === allInputs.length && full.split('').every(Boolean);
+
     host.setAttribute('value', full);
     emit('change', { complete, value: full });
+
     if (complete) emit('complete', { value: full });
 
     // Focus the cell after last pasted char
     const focusIdx = Math.min(chars.length, allInputs.length - 1);
+
     allInputs[focusIdx]?.focus();
   }
 
@@ -326,6 +339,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     // Populate cells from value prop on mount
     const initialVal = String(props.value.value || '');
     const allInputs = getInputs();
+
     initialVal.split('').forEach((c, i) => {
       if (allInputs[i]) allInputs[i].value = c;
     });
@@ -333,41 +347,36 @@ export const TAG = define('bit-otp-input', ({ host }) => {
 
   const separatorIdx = computed(() => {
     const len = Number(props.length.value) || 6;
+
     return props.separator.value != null ? Math.floor(len / 2) : -1;
   });
 
   return {
     styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
     template: html`
-      <div
-        class="otp-group"
-        part="group"
-        role="group"
-        :aria-label="${() => props.label.value}"
-      >
+      <div class="otp-group" part="group" role="group" :aria-label="${() => props.label.value}">
         ${() =>
           cells.value.map(
             (i) => html`
-          ${() =>
-            separatorIdx.value > 0 && i === separatorIdx.value
-              ? html`<span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>`
-              : ''}
-          <input
-            class="cell"
-            part="cell"
-            :type="${() => (props.masked.value ? 'password' : 'text')}"
-            inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
-            maxlength="1"
-            autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
-            :aria-label="${() => `Digit ${i + 1} of ${props.length.value}`}"
-            :disabled="${() => props.disabled.value || null}"
-            :name="${() => (props.name.value ? `${props.name.value}[${i}]` : null)}"
-            @input="${(e: Event) => handleInput(e, i)}"
-            @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
-            @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"
-            @focus="${(e: FocusEvent) => (e.target as HTMLInputElement).select()}"
-          />
-        `,
+              ${() =>
+                separatorIdx.value > 0 && i === separatorIdx.value
+                  ? html`<span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>`
+                  : ''}
+              <input
+                class="cell"
+                part="cell"
+                :type="${() => (props.masked.value ? 'password' : 'text')}"
+                inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
+                maxlength="1"
+                autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
+                :aria-label="${() => `Digit ${i + 1} of ${props.length.value}`}"
+                :disabled="${() => props.disabled.value || null}"
+                :name="${() => (props.name.value ? `${props.name.value}[${i}]` : null)}"
+                @input="${(e: Event) => handleInput(e, i)}"
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
+                @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"
+                @focus="${(e: FocusEvent) => (e.target as HTMLInputElement).select()}" />
+            `,
           )}
       </div>
     `,

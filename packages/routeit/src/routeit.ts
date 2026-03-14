@@ -29,35 +29,35 @@ export type Middleware<Params extends RouteParams = RouteParams, Meta = unknown>
 ) => void | Promise<void>;
 
 export type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
-  readonly params: Params;
-  readonly query: QueryParams;
-  readonly pathname: string;
   readonly hash: string;
-  readonly meta?: Meta;
   /** Mutable bag for passing data between middlewares */
   locals: Record<string, unknown>;
+  readonly meta?: Meta;
   navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+  readonly params: Params;
+  readonly pathname: string;
+  readonly query: QueryParams;
 };
 
 /** Options for `on()` route registration. */
 export type RouteOptions<Meta = unknown> = {
-  /** Optional name for programmatic navigation and url()/isActive() lookups */
-  name?: string;
   /** Static metadata passed to the route context */
   meta?: Meta;
   /** Route-specific middleware executed before the handler */
   middleware?: Middleware<RouteParams, Meta> | Middleware<RouteParams, Meta>[];
+  /** Optional name for programmatic navigation and url()/isActive() lookups */
+  name?: string;
 };
 
 export type NavigateOptions = {
+  /** Navigate even if the destination URL matches the current URL */
+  force?: boolean;
   /** Replace the current history entry instead of pushing a new one */
   replace?: boolean;
   /** Additional state stored with the history entry */
   state?: unknown;
   /** Override the router-level `viewTransition` setting for this navigation */
   viewTransition?: boolean;
-  /** Navigate even if the destination URL matches the current URL */
-  force?: boolean;
 };
 
 /**
@@ -66,59 +66,59 @@ export type NavigateOptions = {
  * router.navigate('/users/123')
  * router.navigate({ name: 'userDetail', params: { id: '123' } })
  */
-export type NavigationTarget = string | { name: string; params?: RouteParams; query?: QueryParams; hash?: string };
+export type NavigationTarget = string | { hash?: string; name: string; params?: RouteParams; query?: QueryParams };
 
 export type RouterMode = 'history' | 'hash';
 export type Unsubscribe = () => void;
 
 export type RouterOptions = {
-  /** Router mode — 'history' uses the HTML5 History API, 'hash' uses URL hash (default: 'history') */
-  mode?: RouterMode;
+  /** Start listening and handle the current URL immediately after construction, without a separate start() call (default: false) */
+  autoStart?: boolean;
   /** Base path for all routes (default: '/') */
   base?: string;
-  /** Called when no route matches the current URL */
-  onNotFound?: RouteHandler;
-  /** Called when a route handler or middleware throws an error */
-  onError?: (error: unknown, context: RouteContext) => void;
   /** Global middleware applied to every route */
   middleware?: Middleware | Middleware[];
+  /** Router mode — 'history' uses the HTML5 History API, 'hash' uses URL hash (default: 'history') */
+  mode?: RouterMode;
+  /** Called when a route handler or middleware throws an error */
+  onError?: (error: unknown, context: RouteContext) => void;
+  /** Called when no route matches the current URL */
+  onNotFound?: RouteHandler;
   /**
    * Wrap navigation in the View Transition API when available.
    * Falls back to plain execution in unsupported environments. (default: false)
    */
   viewTransition?: boolean;
-  /** Start listening and handle the current URL immediately after construction, without a separate start() call (default: false) */
-  autoStart?: boolean;
 };
 
 export type RouteState = {
-  readonly pathname: string;
-  readonly params: RouteParams;
-  readonly query: QueryParams;
   readonly hash: string;
-  readonly name?: string;
   readonly meta?: unknown;
+  readonly name?: string;
+  readonly params: RouteParams;
+  readonly pathname: string;
+  readonly query: QueryParams;
 };
 
 export type ResolvedRoute = {
+  readonly meta?: unknown;
   readonly name?: string;
   readonly params: RouteParams;
-  readonly meta?: unknown;
 };
 
 /** Route registration interface provided to group() callbacks */
 export type RouteGroup = {
+  group(
+    prefix: string,
+    definer: (r: RouteGroup) => void,
+    options?: { middleware?: Middleware | Middleware[] },
+  ): RouteGroup;
   on<Path extends string, Meta = unknown>(
     path: Path,
     handler: RouteHandler<PathParams<Path>, Meta>,
     options?: RouteOptions<Meta>,
   ): RouteGroup;
   on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup;
-  group(
-    prefix: string,
-    definer: (r: RouteGroup) => void,
-    options?: { middleware?: Middleware | Middleware[] },
-  ): RouteGroup;
 };
 
 /** -------------------- Internal Types -------------------- **/
@@ -128,49 +128,57 @@ type ViewTransitionDocument = Document & {
 };
 
 type RouteRecord = {
-  name?: string;
-  path: string;
-  meta?: unknown;
   handler?: RouteHandler;
-  regex: RegExp;
-  prefixRegex?: RegExp;
-  paramNames: string[];
+  meta?: unknown;
   middleware: Middleware[];
+  name?: string;
+  paramNames: string[];
+  path: string;
+  prefixRegex?: RegExp;
+  regex: RegExp;
 };
 
 /** -------------------- Path Utilities -------------------- **/
 
 function normalizePath(path: string): string {
   if (!path) return '/';
+
   const normalized = `/${path.trim()}`.replace(/\/+/g, '/');
+
   return normalized !== '/' && normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
-function compilePattern(pattern: string, exact = true): { regex: RegExp; paramNames: string[] } {
+function compilePattern(pattern: string, exact = true): { paramNames: string[]; regex: RegExp } {
   const paramNames: string[] = [];
   const regexStr = pattern
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
     .replace(/\/:([\w]+)\*/g, (_, name) => {
       paramNames.push(name);
+
       return '(?:/(.*)|$)';
     })
     .replace(/:([\w]+)\*/g, (_, name) => {
       paramNames.push(name);
+
       return '(.*)';
     })
     .replace(/\*/g, '.*')
     .replace(/:([\w]+)/g, (_, name) => {
       paramNames.push(name);
+
       return '([^/]+)';
     });
   // Wildcard patterns never need a $ anchor; exact patterns do; prefix patterns use (/.*)?$
   const anchor = pattern.endsWith('*') ? '' : exact ? '$' : '(/.*)?$';
+
   return { paramNames, regex: new RegExp(`^${regexStr}${anchor}`) };
 }
 
 function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
   const match = pathname.match(record.regex);
+
   if (!match) return null;
+
   return Object.fromEntries(record.paramNames.map((name, i) => [name, decodeURIComponent(match[i + 1] ?? '')]));
 }
 
@@ -178,35 +186,43 @@ const E = '[routeit]';
 
 function parseQuery(search: string): QueryParams {
   const params: QueryParams = {};
+
   for (const [key, value] of new URLSearchParams(search)) {
     const existing = params[key];
+
     if (existing === undefined) params[key] = value;
     else if (Array.isArray(existing)) existing.push(value);
     else params[key] = [existing, value];
   }
+
   return params;
 }
 
 function joinPaths(base: string, path: string): string {
   const a = normalizePath(base);
   const b = normalizePath(path);
+
   return a === '/' ? b : b === '/' ? a : `${a}${b}`;
 }
 
 function buildUrl(base: string, path: string, params?: RouteParams, query?: QueryParams): string {
   const url = path.replace(/:(\w+)(\*)?/g, (_, k, star) => {
     const value = params?.[k];
+
     if (value === undefined) throw new Error(`${E} Missing URL param: "${k}"`);
+
     // Wildcard params may contain '/' — don't encode them, and the trailing * is stripped implicitly
     return star ? value : encodeURIComponent(value);
   });
 
   if (query && Object.keys(query).length > 0) {
     const search = new URLSearchParams();
+
     for (const [key, value] of Object.entries(query)) {
       if (Array.isArray(value)) for (const v of value) search.append(key, v);
       else search.set(key, value);
     }
+
     return joinPaths(base, `${url}?${search}`);
   }
 
@@ -230,6 +246,7 @@ export class Router {
   #currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
   readonly #onPopState = (): void => {
     if (this.#mode === 'history') this.#lastHref = window.location.pathname + window.location.search;
+
     void this.#handleRoute();
   };
 
@@ -240,6 +257,7 @@ export class Router {
     this.#onError = options.onError;
     this.#useViewTransition = options.viewTransition ?? false;
     this.#globalMiddleware = [options.middleware ?? []].flat() as Middleware[];
+
     if (options.autoStart) queueMicrotask(() => this.start());
   }
 
@@ -266,28 +284,34 @@ export class Router {
     } else {
       this.#register(path, undefined, (handlerOrOptions ?? options) as RouteOptions);
     }
+
     return this;
   }
 
   /** Adds one or more global middleware after construction. */
   use(...middleware: Middleware[]): this {
     this.#globalMiddleware.push(...middleware);
+
     return this;
   }
 
   /** Registers a group of routes sharing a common path prefix and optional middleware. */
   group(prefix: string, definer: (r: RouteGroup) => void, options?: { middleware?: Middleware | Middleware[] }): this {
     this.#buildGroup(normalizePath(prefix), [options?.middleware ?? []].flat() as Middleware[], definer);
+
     return this;
   }
 
   #buildGroup(prefix: string, inherited: Middleware[], definer: (r: RouteGroup) => void): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     const r: RouteGroup = {
       group(nestedPrefix, nestedDefiner, nestedOptions) {
         const fullPrefix = normalizePath(`${prefix}/${nestedPrefix}`);
         const nestedMiddleware = [...inherited, ...([nestedOptions?.middleware ?? []].flat() as Middleware[])];
+
         self.#buildGroup(fullPrefix, nestedMiddleware, nestedDefiner);
+
         return this;
       },
       on(path, handlerOrOptions?, opts?) {
@@ -306,9 +330,11 @@ export class Router {
             inherited,
           );
         }
+
         return this;
       },
     };
+
     definer(r);
   }
 
@@ -319,7 +345,7 @@ export class Router {
     inherited: Middleware[] = [],
   ): void {
     const fullPath = normalizePath(path);
-    const { regex, paramNames } = compilePattern(fullPath);
+    const { paramNames, regex } = compilePattern(fullPath);
     const routeMiddleware = [options?.middleware ?? []].flat() as Middleware[];
     const record: RouteRecord = {
       handler,
@@ -330,7 +356,9 @@ export class Router {
       path: fullPath,
       regex,
     };
+
     this.#records.push(record);
+
     if (options?.name) this.#routesByName.set(options.name, record);
   }
 
@@ -338,17 +366,21 @@ export class Router {
 
   start(): this {
     if (this.#isStarted) return this;
+
     this.#isStarted = true;
     this.#lastHref = window.location.pathname + window.location.search;
     window.addEventListener(this.#mode === 'history' ? 'popstate' : 'hashchange', this.#onPopState);
     void this.#handleRoute();
+
     return this;
   }
 
   stop(): this {
     if (!this.#isStarted) return this;
+
     this.#isStarted = false;
     window.removeEventListener(this.#mode === 'history' ? 'popstate' : 'hashchange', this.#onPopState);
+
     return this;
   }
 
@@ -371,18 +403,22 @@ export class Router {
    * router.navigate({ name: 'userDetail', params: { id: '123' } })
    * router.navigate('/about', { replace: true })
    */
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: navigation must handle string/named-route, hash/history modes, and guard logic
   async navigate(target: NavigationTarget, options: NavigateOptions = {}): Promise<void> {
     let rawPath: string;
     let hashFragment = '';
+
     if (typeof target === 'string') {
       rawPath = target;
     } else {
       const record = this.#routesByName.get(target.name);
+
       if (!record) throw new Error(`${E} Route "${target.name}" not found`);
+
       rawPath = buildUrl('/', record.path, target.params, target.query);
+
       if (target.hash) hashFragment = `#${target.hash.replace(/^#/, '')}`;
     }
+
     const path = `${rawPath}${hashFragment}`;
 
     const destination = this.#mode === 'history' ? joinPaths(this.#base, path) : normalizePath(path);
@@ -413,11 +449,13 @@ export class Router {
    */
   subscribe(listener: (state: RouteState) => void): Unsubscribe {
     this.#listeners.add(listener);
+
     try {
       listener(this.state);
     } catch (e) {
       console.error(`${E} Listener error:`, e);
     }
+
     return () => this.#listeners.delete(listener);
   }
 
@@ -431,10 +469,13 @@ export class Router {
    */
   url(nameOrPattern: string, params?: RouteParams, query?: QueryParams): string {
     const record = this.#routesByName.get(nameOrPattern);
+
     if (!record && !nameOrPattern.startsWith('/')) {
       throw new Error(`${E} Route "${nameOrPattern}" not found`);
     }
+
     const base = this.#mode === 'history' ? this.#base : '/';
+
     return buildUrl(base, record ? record.path : nameOrPattern, params, query);
   }
 
@@ -446,11 +487,15 @@ export class Router {
     const { pathname } = this.#readLocation();
     const record =
       this.#routesByName.get(nameOrPattern) ?? this.#records.find((r) => r.path === normalizePath(nameOrPattern));
+
     if (record) {
       if (exact) return record.regex.test(pathname);
+
       record.prefixRegex ??= compilePattern(record.path, false).regex;
+
       return record.prefixRegex.test(pathname);
     }
+
     return compilePattern(normalizePath(nameOrPattern), exact).regex.test(pathname);
   }
 
@@ -460,10 +505,13 @@ export class Router {
    */
   resolve(pathname: string): ResolvedRoute | null {
     const path = this.#mode === 'history' ? this.#stripBase(pathname) : normalizePath(pathname);
+
     for (const record of this.#records) {
       const params = matchRecord(path, record);
+
       if (params) return { meta: record.meta, name: record.name, params };
     }
+
     return null;
   }
 
@@ -475,7 +523,7 @@ export class Router {
       : normalizePath(path);
   }
 
-  #readLocation(): { pathname: string; hash: string; query: QueryParams } {
+  #readLocation(): { hash: string; pathname: string; query: QueryParams } {
     if (this.#mode === 'history') {
       return {
         hash: window.location.hash.slice(1),
@@ -483,9 +531,11 @@ export class Router {
         query: parseQuery(window.location.search),
       };
     }
+
     const raw = window.location.hash || '';
     const fragment = raw.startsWith('#') ? raw.slice(1) : raw;
     const qi = fragment.indexOf('?');
+
     return {
       hash: '',
       pathname: normalizePath(qi >= 0 ? fragment.slice(0, qi) : fragment || '/'),
@@ -494,12 +544,14 @@ export class Router {
   }
 
   async #handleRoute(useTransition?: boolean): Promise<void> {
-    const { pathname, hash, query } = this.#readLocation();
+    const { hash, pathname, query } = this.#readLocation();
 
     let matchedRecord: RouteRecord | undefined;
     let matchedParams: RouteParams = {};
+
     for (const record of this.#records) {
       const params = matchRecord(pathname, record);
+
       if (params) {
         matchedRecord = record;
         matchedParams = params;
@@ -529,6 +581,7 @@ export class Router {
 
     try {
       const doc = typeof document !== 'undefined' ? (document as ViewTransitionDocument) : null;
+
       if ((useTransition ?? this.#useViewTransition) && doc?.startViewTransition) {
         await doc.startViewTransition(run).finished;
       } else {
@@ -545,7 +598,7 @@ export class Router {
     }
   }
 
-  #ctx(loc: { pathname: string; params: RouteParams; hash: string; query: QueryParams; meta: unknown }): RouteContext {
+  #ctx(loc: { hash: string; meta: unknown; params: RouteParams; pathname: string; query: QueryParams }): RouteContext {
     return { ...loc, locals: {}, navigate: (t, o) => this.navigate(t, o) };
   }
 
@@ -556,11 +609,13 @@ export class Router {
       if (i < chain.length) await chain[i++](context, next);
       else if (record.handler) await record.handler(context);
     };
+
     await next();
   }
 
   #notifyListeners(): void {
     const s = this.state;
+
     for (const listener of this.#listeners) {
       try {
         listener(s);

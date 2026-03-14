@@ -18,9 +18,11 @@ export function sum<T>(array: T[], callback?: (item: T) => number): number {
 
   return array.reduce<number>((acc, item) => {
     const val = callback ? callback(item) : (item as unknown as number);
+
     if (Number.isNaN(val)) {
       throw new TypeError('Cannot sum NaN values');
     }
+
     return acc + val;
   }, 0);
 }

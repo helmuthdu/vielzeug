@@ -17,7 +17,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+
 import type {
   AddEventListeners,
   BitSliderEvents,
@@ -26,7 +26,9 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
+import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 const componentStyles = /* css */ css`
@@ -86,7 +88,9 @@ const componentStyles = /* css */ css`
     left: var(--_fill-start, 0%);
     position: absolute;
     top: 0;
-    transition: left var(--transition-normal), width var(--transition-normal);
+    transition:
+      left var(--transition-normal),
+      width var(--transition-normal);
     width: var(--_fill-width, 0%);
   }
 
@@ -268,7 +272,7 @@ export const TAG = define(
   'bit-slider',
   ({ host }) => {
     const slots = defineSlots();
-    const emit = defineEmits<{ change: { value?: number; from?: number; to?: number; originalEvent?: Event } }>();
+    const emit = defineEmits<{ change: { from?: number; originalEvent?: Event; to?: number; value?: number } }>();
     const props = defineProps<SliderProps>({
       color: { default: undefined },
       disabled: { default: false },
@@ -293,6 +297,7 @@ export const TAG = define(
 
     const getNum = (v: string | number | undefined, fallback: number) => {
       const n = Number(v);
+
       return Number.isFinite(n) ? n : fallback;
     };
 
@@ -300,19 +305,23 @@ export const TAG = define(
       const min = getNum(props.min.value, 0);
       const max = getNum(props.max.value, 100);
       const step = getNum(props.step.value, 1);
+
       return Math.max(min, Math.min(max, Math.round(value / step) * step));
     };
 
     const toPercent = (value: number) => {
       const min = getNum(props.min.value, 0);
       const max = getNum(props.max.value, 100);
+
       return ((value - min) / (max - min)) * 100;
     };
 
     // ── Single-value state ────────────────────────────────────────
 
     const formCtx = inject(FORM_CTX);
+
     mountFormContextSync(host, formCtx, props);
+
     let sliderFd: { reportValidity: () => boolean } | undefined;
 
     const valueSignal = signal('0');
@@ -353,10 +362,14 @@ export const TAG = define(
           disabled: computed(() => Boolean(props.disabled.value)),
           toFormValue: ({ from, to }) => {
             const name = props.name.value;
+
             if (!name) return null;
+
             const fd = new FormData();
+
             fd.append(`${name}[from]`, String(from));
             fd.append(`${name}[to]`, String(to));
+
             return fd;
           },
           value: computed(() => ({ from: startVal.value, to: endVal.value })),
@@ -397,6 +410,7 @@ export const TAG = define(
 
     const updateSingleCSS = (value: number) => {
       const pct = toPercent(value);
+
       host.style.setProperty('--_thumb-pos', `${pct}%`);
       host.style.setProperty('--_fill-start', '0%');
       host.style.setProperty('--_fill-width', `${pct}%`);
@@ -405,6 +419,7 @@ export const TAG = define(
     const updateRangeCSS = () => {
       const s = toPercent(startVal.value);
       const e = toPercent(endVal.value);
+
       host.style.setProperty('--_thumb-start', `${s}%`);
       host.style.setProperty('--_thumb-end', `${e}%`);
       host.style.setProperty('--_fill-start', `${s}%`);
@@ -415,9 +430,13 @@ export const TAG = define(
 
     const keyDelta = (key: string, step: number, min: number, max: number, current: number): number | null => {
       if (key === 'ArrowRight' || key === 'ArrowUp') return current + step;
+
       if (key === 'ArrowLeft' || key === 'ArrowDown') return current - step;
+
       if (key === 'Home') return min;
+
       if (key === 'End') return max;
+
       return null;
     };
 
@@ -435,6 +454,7 @@ export const TAG = define(
         const min = getNum(props.min.value, 0);
         const max = getNum(props.max.value, 100);
         const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+
         return snapVal(min + pct * (max - min));
       };
 
@@ -443,8 +463,10 @@ export const TAG = define(
       const applyDrag = (val: number) => {
         const min = getNum(props.min.value, 0);
         const max = getNum(props.max.value, 100);
+
         if (dragging === 'start') startVal.value = Math.min(snapVal(val), endVal.value);
         else if (dragging === 'end') endVal.value = Math.max(snapVal(val), startVal.value);
+
         startVal.value = Math.max(min, Math.min(startVal.value, max));
         endVal.value = Math.max(min, Math.min(endVal.value, max));
         updateRangeCSS();
@@ -459,7 +481,9 @@ export const TAG = define(
           () => !props.disabled.value,
           (e: PointerEvent) => {
             e.preventDefault();
+
             const val = clientToValue(e.clientX);
+
             dragging = Math.abs(val - startVal.value) <= Math.abs(val - endVal.value) ? 'start' : 'end';
             host.setAttribute('data-dragging', '');
             (e.target as Element).setPointerCapture(e.pointerId);
@@ -494,11 +518,14 @@ export const TAG = define(
 
       const makeThumbKeydown = (getVal: () => number, setVal: (v: number) => void) => (e: KeyboardEvent) => {
         if (props.disabled.value) return;
+
         const step = getNum(props.step.value, 1);
         const min = getNum(props.min.value, 0);
         const max = getNum(props.max.value, 100);
         const next = keyDelta(e.key, step, min, max, getVal());
+
         if (next === null) return;
+
         e.preventDefault();
         setVal(snapVal(Math.max(min, Math.min(max, next))));
         updateRangeCSS();
@@ -527,6 +554,7 @@ export const TAG = define(
           valuetext: () => props['from-value-text'].value ?? null,
         });
       }
+
       if (thumbEndEl) {
         thumbEndEl.addEventListener(
           'keydown',
@@ -551,17 +579,21 @@ export const TAG = define(
 
     const setupSingleMode = (container: HTMLDivElement) => {
       host.setAttribute('role', 'slider');
+
       if (!props.disabled.value) host.setAttribute('tabindex', '0');
+
       updateSingleCSS(Number(valueSignal.value));
 
       const updateValue = (clientX: number) => {
         if (props.disabled.value) return;
+
         const rect = container.getBoundingClientRect();
         const min = getNum(props.min.value, 0);
         const max = getNum(props.max.value, 100);
         const step = getNum(props.step.value, 1);
         const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         const newValue = Math.max(min, Math.min(max, Math.round((min + pct * (max - min)) / step) * step));
+
         if (Number(valueSignal.value) !== newValue) {
           valueSignal.value = newValue.toString();
           updateSingleCSS(newValue);
@@ -592,7 +624,9 @@ export const TAG = define(
           () => isDragging,
           (e: PointerEvent) => {
             e.preventDefault();
+
             if (!host.hasAttribute('data-dragging')) host.setAttribute('data-dragging', '');
+
             updateValue(e.clientX);
           },
         ),
@@ -621,9 +655,13 @@ export const TAG = define(
             const step = getNum(props.step.value, 1);
             const val = Number(valueSignal.value || 0);
             const next = keyDelta(e.key, step, min, max, val);
+
             if (next === null) return;
+
             e.preventDefault();
+
             const newValue = Math.max(min, Math.min(max, next));
+
             if (newValue !== val) {
               valueSignal.value = newValue.toString();
               updateSingleCSS(newValue);
@@ -637,11 +675,14 @@ export const TAG = define(
 
     onMount(() => {
       const container = containerRef.value;
+
       if (!container) return;
 
       if (slots.has('default').value && labelRef.value) {
         const labelId = createId('slider-label');
+
         labelRef.value.id = labelId;
+
         if (!isRange) aria({ labelledby: labelId });
       }
 
@@ -684,16 +725,14 @@ export const TAG = define(
               ref=${thumbStartRef}
               role="slider"
               tabindex="${() => (props.disabled.value ? '-1' : '0')}"
-              id="${startId}"
-            ></div>
+              id="${startId}"></div>
             <div
               class="slider-thumb slider-thumb-end"
               part="thumb-end"
               ref=${thumbEndRef}
               role="slider"
               tabindex="${() => (props.disabled.value ? '-1' : '0')}"
-              id="${endId}"
-            ></div>
+              id="${endId}"></div>
           </div>
         </div>
         <span class="label" part="label" ref=${labelRef}><slot></slot></span>

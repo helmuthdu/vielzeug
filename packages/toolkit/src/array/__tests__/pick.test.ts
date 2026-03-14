@@ -8,12 +8,14 @@ describe('pick', () => {
       (x) => x * x,
       (x) => x > 2,
     );
+
     expect(result).toBe(9);
   });
 
   it('should use the default predicate (not nil) if none is provided', () => {
     const arr = [null, undefined, 5, 0];
     const result = pick(arr, (x) => x, undefined);
+
     expect(result).toBe(5);
   });
 
@@ -24,6 +26,7 @@ describe('pick', () => {
       (x) => x,
       (x) => x > 10,
     );
+
     expect(result).toBeUndefined();
   });
 
@@ -34,23 +37,27 @@ describe('pick', () => {
       (obj) => obj.a,
       (obj) => obj.a === 2,
     );
+
     expect(result).toBe(2);
   });
 
   it('should pass index and array to the predicate and callback', () => {
     const arr = [10, 20, 30];
     let called = false;
+
     pick(
       arr,
       (value, index, array) => {
         called = true;
         expect(array).toBe(arr);
         expect(typeof index).toBe('number');
+
         return value;
       },
       (value, index, array) => {
         expect(array).toBe(arr);
         expect(typeof index).toBe('number');
+
         return value === 20;
       },
     );
@@ -64,15 +71,13 @@ describe('pick', () => {
       (x) => x,
       (x) => x > 0,
     );
+
     expect(result).toBeUndefined();
   });
 
   it('should throw TypeError if input is not an array', () => {
-    // @ts-expect-error
-    expect(() => pick(null, (x) => x)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => pick(undefined, (x) => x)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => pick({}, (x) => x)).toThrow(TypeError);
+    expect(() => pick(null as any, (x) => x)).toThrow(TypeError);
+    expect(() => pick(undefined as any, (x) => x)).toThrow(TypeError);
+    expect(() => pick({} as any, (x) => x)).toThrow(TypeError);
   });
 });

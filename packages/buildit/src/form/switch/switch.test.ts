@@ -75,7 +75,9 @@ describe('bit-switch', () => {
 
     it('does not emit change when disabled', async () => {
       fixture = await mount('bit-switch', { attrs: { disabled: true } });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).not.toHaveBeenCalled();
@@ -98,7 +100,9 @@ describe('bit-switch', () => {
   describe('Events', () => {
     it('emits change with checked=true on switch-on', async () => {
       fixture = await mount('bit-switch');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -107,7 +111,9 @@ describe('bit-switch', () => {
 
     it('emits change with checked=false on switch-off', async () => {
       fixture = await mount('bit-switch', { attrs: { checked: true } });
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(false);
@@ -115,7 +121,9 @@ describe('bit-switch', () => {
 
     it('emits change on Space keypress', async () => {
       fixture = await mount('bit-switch');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -123,7 +131,9 @@ describe('bit-switch', () => {
 
     it('emits change on Enter keypress', async () => {
       fixture = await mount('bit-switch');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, 'Enter');
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -208,7 +218,9 @@ describe('bit-switch', () => {
 
     it('is operable by keyboard (Space)', async () => {
       fixture = await mount('bit-switch');
+
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).toHaveBeenCalled();
@@ -240,12 +252,14 @@ describe('bit-switch accessibility', () => {
   describe('Semantic Structure', () => {
     it('has role="switch" on the host (toggle button pattern)', async () => {
       const fixture = await mount('bit-switch');
+
       expect(fixture.element.getAttribute('role')).toBe('switch');
       fixture.destroy();
     });
 
     it('renders visual track and thumb accessible indicator elements', async () => {
       const fixture = await mount('bit-switch');
+
       expect(fixture.query('.switch-track')).toBeTruthy();
       expect(fixture.query('.switch-thumb')).toBeTruthy();
       fixture.destroy();
@@ -256,18 +270,21 @@ describe('bit-switch accessibility', () => {
   describe('WAI-ARIA Attributes', () => {
     it('has aria-checked="false" by default (off state)', async () => {
       const fixture = await mount('bit-switch');
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       fixture.destroy();
     });
 
     it('has aria-checked="true" when checked (on state)', async () => {
       const fixture = await mount('bit-switch', { attrs: { checked: true } });
+
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.destroy();
     });
 
     it('updates aria-checked dynamically as the switch is toggled', async () => {
       const fixture = await mount('bit-switch');
+
       await user.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await user.click(fixture.element);
@@ -277,6 +294,7 @@ describe('bit-switch accessibility', () => {
 
     it('sets aria-labelledby when label text is slotted', async () => {
       const fixture = await mount('bit-switch', { html: 'Enable dark mode' });
+
       expect(fixture.element.hasAttribute('aria-labelledby')).toBe(true);
       fixture.destroy();
     });
@@ -286,18 +304,21 @@ describe('bit-switch accessibility', () => {
   describe('Keyboard Navigation', () => {
     it('has tabindex="0" when enabled (reachable via Tab)', async () => {
       const fixture = await mount('bit-switch');
+
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
       fixture.destroy();
     });
 
     it('has no tabindex when disabled (excluded from tab order)', async () => {
       const fixture = await mount('bit-switch', { attrs: { disabled: true } });
+
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
       fixture.destroy();
     });
 
     it('toggles on Space keypress', async () => {
       const fixture = await mount('bit-switch');
+
       await user.press(fixture.element, ' ');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.destroy();
@@ -305,6 +326,7 @@ describe('bit-switch accessibility', () => {
 
     it('toggles on Enter keypress', async () => {
       const fixture = await mount('bit-switch');
+
       await user.press(fixture.element, 'Enter');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.destroy();
@@ -313,6 +335,7 @@ describe('bit-switch accessibility', () => {
     it('ignores keyboard interaction when disabled', async () => {
       const fixture = await mount('bit-switch', { attrs: { disabled: true } });
       const onChange = vi.fn();
+
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).not.toHaveBeenCalled();
@@ -324,6 +347,7 @@ describe('bit-switch accessibility', () => {
   describe('Focus Management', () => {
     it('restores tabindex="0" when re-enabled', async () => {
       const fixture = await mount('bit-switch', { attrs: { disabled: true } });
+
       await fixture.attr('disabled', false);
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
       fixture.destroy();
@@ -334,6 +358,7 @@ describe('bit-switch accessibility', () => {
   describe('Dynamic State Announcements', () => {
     it('aria-checked updates when prop changes programmatically', async () => {
       const fixture = await mount('bit-switch');
+
       await fixture.attr('checked', true);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await fixture.attr('checked', false);

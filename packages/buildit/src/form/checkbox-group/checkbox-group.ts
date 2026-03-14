@@ -15,19 +15,21 @@ import {
   type ReadonlySignal,
   signal,
 } from '@vielzeug/craftit';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+
 import type { ComponentSize, ThemeColor } from '../../types';
+
 import { mountFormContextSync } from '../_common/use-text-field';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 export type CheckboxGroupContext = {
-  values: ReadonlySignal<string[]>;
-  disabled: ReadonlySignal<boolean>;
   color: ReadonlySignal<ThemeColor | undefined>;
+  disabled: ReadonlySignal<boolean>;
   size: ReadonlySignal<ComponentSize | undefined>;
   toggle: (value: string) => void;
+  values: ReadonlySignal<string[]>;
 };
 
 export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>();
@@ -174,12 +176,14 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
   const toggleCheckbox = (val: string) => {
     const current = checkedValues.value;
     const next = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
+
     checkedValues.value = next;
     host.setAttribute('value', next.join(','));
     host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { values: next } }));
   };
 
   const formCtx = inject(FORM_CTX);
+
   mountFormContextSync(host, formCtx, props);
 
   // Provide context to child bit-checkbox elements
@@ -192,24 +196,30 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
   });
 
   // Sync checked state + color/size/disabled onto slotted bit-checkbox children
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many checkbox attributes requires branching on multiple props
   const syncChildren = () => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
     if (!slot) return;
+
     const checkboxes = slot
       .assignedElements({ flatten: true })
       .filter((el) => el.tagName.toLowerCase() === 'bit-checkbox') as HTMLElement[];
+
     for (const checkbox of checkboxes) {
       const val = checkbox.getAttribute('value') ?? '';
+
       if (checkedValues.value.includes(val)) {
         checkbox.setAttribute('checked', '');
       } else {
         checkbox.removeAttribute('checked');
       }
+
       if (props.color.value) checkbox.setAttribute('color', props.color.value);
       else checkbox.removeAttribute('color');
+
       if (props.size.value) checkbox.setAttribute('size', props.size.value);
       else checkbox.removeAttribute('size');
+
       if (props.disabled.value) checkbox.setAttribute('disabled', '');
       else checkbox.removeAttribute('disabled');
     }
@@ -222,9 +232,12 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     // Listen for change events bubbled from child bit-checkbox elements
     handle(host, 'change', (e: Event) => {
       if (e.target === host) return; // our own re-dispatch
+
       e.stopPropagation();
+
       const target = e.target as HTMLElement;
       const val = target.getAttribute('value') ?? '';
+
       toggleCheckbox(val);
     });
   });
@@ -244,8 +257,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
         aria-required="${() => String(Boolean(props.required.value))}"
         aria-invalid="${() => String(hasError.value)}"
         aria-errormessage="${() => (hasError.value ? errorId : null)}"
-        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}"
-      >
+        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${() => props.label.value}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
         </legend>
@@ -255,9 +267,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
         <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError.value}>
           ${() => props.error.value}
         </div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>
-          ${() => props.helper.value}
-        </div>
+        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>${() => props.helper.value}</div>
       </fieldset>
     `,
   };

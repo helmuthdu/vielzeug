@@ -34,6 +34,7 @@ describe('bit-radio', () => {
       await fixture.flush();
 
       const slot = fixture.query<HTMLSlotElement>('.label slot');
+
       expect(slot?.assignedNodes().length).toBeGreaterThan(0);
     });
   });
@@ -97,7 +98,9 @@ describe('bit-radio', () => {
 
     it('does not toggle checked when disabled', async () => {
       fixture = await mount('bit-radio', { attrs: { disabled: true, name: 'grp3' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);
@@ -127,30 +130,39 @@ describe('bit-radio', () => {
   describe('Events', () => {
     it('emits change with checked=true on click', async () => {
       fixture = await mount('bit-radio', { attrs: { name: 'ev', value: 'yes' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
+
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.checked).toBe(true);
     });
 
     it('includes originalEvent in change detail', async () => {
       fixture = await mount('bit-radio', { attrs: { name: 'ev2', value: 'yes' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);
 
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('does not emit change when disabled', async () => {
       fixture = await mount('bit-radio', { attrs: { disabled: true, name: 'ev3' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);
@@ -160,7 +172,9 @@ describe('bit-radio', () => {
 
     it('emits change via Space key', async () => {
       fixture = await mount('bit-radio', { attrs: { name: 'ev4' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, ' ');
@@ -171,7 +185,9 @@ describe('bit-radio', () => {
 
     it('emits change via Enter key', async () => {
       fixture = await mount('bit-radio', { attrs: { name: 'ev5' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.press(fixture.element, 'Enter');
@@ -281,7 +297,9 @@ describe('bit-radio', () => {
   describe('Edge Cases', () => {
     it('handles missing name attribute (no group behavior)', async () => {
       fixture = await mount('bit-radio', { attrs: { value: 'standalone' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);
@@ -298,7 +316,9 @@ describe('bit-radio', () => {
 
     it('does not emit duplicate events when clicking an already-checked radio', async () => {
       fixture = await mount('bit-radio', { attrs: { checked: true, name: 'grp-dup' } });
+
       const changeHandler = vi.fn();
+
       fixture.element.addEventListener('change', changeHandler);
 
       await user.click(fixture.element);

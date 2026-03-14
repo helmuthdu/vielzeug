@@ -24,9 +24,9 @@ export interface BitStrings {
   /** Strings used by bit-combobox */
   combobox: {
     clearAll: string;
-    noResults: string;
-    loadingText: string;
     createOption: (inputValue: string) => string;
+    loadingText: string;
+    noResults: string;
   };
   /** Strings used by bit-dialog */
   dialog: {
@@ -34,8 +34,8 @@ export interface BitStrings {
   };
   /** Strings used by bit-file-input */
   fileInput: {
-    dropzoneTitle: string;
     dropzoneSubtitle: string;
+    dropzoneTitle: string;
     removeFile: (filename: string) => string;
   };
   /** Strings used by bit-select */
@@ -109,17 +109,18 @@ export function configureStrings(overrides: DeepPartial<BitStrings>): void {
 
 function deepMerge<T extends object>(base: T, override: DeepPartial<T>): T {
   const result = { ...base };
+
   for (const key of Object.keys(override) as (keyof T)[]) {
     const ov = override[key];
+
     if (ov !== undefined) {
       if (typeof ov === 'object' && !Array.isArray(ov) && ov !== null && typeof base[key] === 'object') {
-        // biome-ignore lint/suspicious/noExplicitAny: deep merge requires any
         (result as any)[key] = deepMerge(base[key] as object, ov as object);
       } else {
-        // biome-ignore lint/suspicious/noExplicitAny: deep merge requires any
         (result as any)[key] = ov;
       }
     }
   }
+
   return result;
 }

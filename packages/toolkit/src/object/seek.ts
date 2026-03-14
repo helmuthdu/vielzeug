@@ -53,5 +53,6 @@ function _seek<T>(item: T, query: string, tone: number): boolean {
 
 export function seek<T>(item: T, query: string, tone = 1): boolean {
   assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
+
   return _seek(item, query, tone);
 }

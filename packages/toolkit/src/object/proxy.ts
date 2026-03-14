@@ -1,11 +1,12 @@
-import { isObject } from '../typed/isObject';
 import type { Obj } from '../types';
+
+import { isObject } from '../typed/isObject';
 
 // #region ProxyOptions
 type ProxyOptions<T> = {
-  set?: <K extends PropertyKey>(prop: K, curr: unknown, prev: unknown, target: T) => unknown;
-  get?: <K extends PropertyKey>(prop: K, val: unknown, target: T) => unknown;
   deep?: boolean;
+  get?: <K extends PropertyKey>(prop: K, val: unknown, target: T) => unknown;
+  set?: <K extends PropertyKey>(prop: K, curr: unknown, prev: unknown, target: T) => unknown;
   watch?: (keyof T)[];
 };
 // #endregion ProxyOptions
@@ -31,7 +32,7 @@ type ProxyOptions<T> = {
  * @returns A new Proxy for the given object.
  */
 export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
-  const { set, get, deep = false, watch } = options;
+  const { deep = false, get, set, watch } = options;
   const watchSet = watch ? new Set<PropertyKey>(watch as PropertyKey[]) : null;
 
   const handler: ProxyHandler<T> = {
@@ -43,7 +44,6 @@ export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
       let value = Reflect.get(target, prop, receiver);
 
       if (get) {
-        // biome-ignore lint/suspicious/noExplicitAny: -
         value = get(prop, value, target) as any;
       }
 

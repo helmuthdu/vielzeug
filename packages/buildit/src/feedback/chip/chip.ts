@@ -1,4 +1,8 @@
 import { css, define, defineEmits, defineProps, html, signal, watch } from '@vielzeug/craftit';
+
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { AddEventListeners, BitChipEvents, ChipChangeDetail, ChipRemoveDetail } from '../../types/events';
+
 import {
   colorThemeMixin,
   disabledStateMixin,
@@ -6,8 +10,6 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-import type { AddEventListeners, BitChipEvents, ChipChangeDetail, ChipRemoveDetail } from '../../types/events';
 
 export type { BitChipEvents } from '../../types/events';
 
@@ -311,8 +313,8 @@ export const TAG = define('bit-chip', ({ host }) => {
   });
 
   const emit = defineEmits<{
-    remove: ChipRemoveDetail;
     change: ChipChangeDetail;
+    remove: ChipRemoveDetail;
   }>();
 
   const isSelectableMode = () => props.mode.value === 'selectable';
@@ -323,6 +325,7 @@ export const TAG = define('bit-chip', ({ host }) => {
 
   const currentChecked = () => {
     if (!isSelectableMode()) return false;
+
     return isControlled() ? host.hasAttribute('checked') : internalChecked.value;
   };
 
@@ -332,6 +335,7 @@ export const TAG = define('bit-chip', ({ host }) => {
       if (!isSelectableMode()) return;
 
       controlled.value = host.hasAttribute('checked');
+
       if (!controlled.value) {
         internalChecked.value = host.hasAttribute('default-checked');
       }
@@ -341,8 +345,10 @@ export const TAG = define('bit-chip', ({ host }) => {
 
   const syncCheckedAttr = () => {
     const mode = props.mode.value;
+
     if (mode !== 'selectable') {
       if (host.hasAttribute('checked')) host.removeAttribute('checked');
+
       return;
     }
 
@@ -363,7 +369,9 @@ export const TAG = define('bit-chip', ({ host }) => {
 
   function handleRemove(e: MouseEvent) {
     e.stopPropagation();
+
     if (props.mode.value !== 'removable' || props.disabled.value) return;
+
     emit('remove', { originalEvent: e, value: props.value.value });
   }
 
@@ -371,9 +379,11 @@ export const TAG = define('bit-chip', ({ host }) => {
     if (props.mode.value !== 'selectable' || props.disabled.value) return;
 
     const nextChecked = !currentChecked();
+
     if (!isControlled()) {
       internalChecked.value = nextChecked;
     }
+
     emit('change', { checked: nextChecked, originalEvent: e, value: props.value.value });
   }
 
@@ -410,22 +420,15 @@ export const TAG = define('bit-chip', ({ host }) => {
                 role="checkbox"
                 :aria-checked="${() => String(currentChecked())}"
                 :disabled="${() => props.disabled.value}"
-                @click="${handleSelectableActivate}"
-              >
-                <span
-                  class="chip"
-                  part="chip"
-                >
+                @click="${handleSelectableActivate}">
+                <span class="chip" part="chip">
                   <slot name="icon"></slot>
                   <span class="label"><slot></slot></span>
                 </span>
               </button>
             `
           : html`
-              <span
-                class="chip"
-                part="chip"
-              >
+              <span class="chip" part="chip">
                 <slot name="icon"></slot>
                 <span class="label"><slot></slot></span>
                 <button
@@ -435,8 +438,7 @@ export const TAG = define('bit-chip', ({ host }) => {
                   aria-label="Remove"
                   ?hidden="${() => props.mode.value !== 'removable'}"
                   :disabled="${() => props.disabled.value}"
-                  @click="${handleRemove}"
-                >
+                  @click="${handleRemove}">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -447,8 +449,7 @@ export const TAG = define('bit-chip', ({ host }) => {
                     stroke-linejoin="round"
                     width="0.75em"
                     height="0.75em"
-                    aria-hidden="true"
-                  >
+                    aria-hidden="true">
                     <path d="M18 6 6 18M6 6l12 12" />
                   </svg>
                 </button>

@@ -1,7 +1,8 @@
+import type { Predicate } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 import { isNil } from '../typed/isNil';
-import type { Predicate } from '../types';
 
 /**
  * Selects elements from an array based on a callback function and an optional predicate function.

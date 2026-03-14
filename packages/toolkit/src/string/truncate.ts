@@ -46,8 +46,10 @@ export function truncate(
   }
 
   let end = limit;
+
   if (completeWords) {
     const wordEnd = str.substring(0, limit).lastIndexOf(' ');
+
     if (wordEnd > 0) end = wordEnd;
   }
 

@@ -14,25 +14,30 @@ describe('Core: Component Definition', () => {
       });
 
       const el = document.createElement('test-basic');
+
       expect(el).toBeInstanceOf(HTMLElement);
     });
 
     it('should render template to shadow root', async () => {
       const { query } = await mount(() => html`<div class="content">Content</div>`);
+
       expect(query('.content')?.textContent).toBe('Content');
     });
 
     it('should support reactive templates', async () => {
       const { query } = await mount(() => {
         const count = signal(0);
+
         return html`<div>${count}</div>`;
       });
+
       expect(query('div')?.textContent).toBe('0');
     });
 
     it('should isolate component state', async () => {
       const setup = () => {
         const count = signal(0);
+
         return html`<div>${count}</div>`;
       };
 
@@ -58,6 +63,7 @@ describe('Core: Component Definition', () => {
   describe('Shadow DOM', () => {
     it('should create shadow root', async () => {
       const { shadow } = await mount(() => html`<div>Shadow Content</div>`);
+
       expect(shadow).not.toBeNull();
       expect(shadow?.querySelector('div')?.textContent).toBe('Shadow Content');
     });
@@ -65,6 +71,7 @@ describe('Core: Component Definition', () => {
     it('should encapsulate styles', async () => {
       const { query } = await mount(() => html`<div class="unique-class">Test</div>`);
       const div = query('.unique-class');
+
       expect(div).not.toBeNull();
     });
   });
@@ -102,11 +109,13 @@ describe('Core: Component Definition', () => {
   describe('Error Handling', () => {
     it('should handle empty template', async () => {
       const { shadow } = await mount(() => html``);
+
       expect(shadow).not.toBeNull();
     });
 
     it('should handle undefined return', async () => {
       const { query } = await mount(() => html`<div>Test</div>`);
+
       expect(query('div')).not.toBeNull();
     });
   });
@@ -114,8 +123,9 @@ describe('Core: Component Definition', () => {
   describe('Re-rendering', () => {
     it('should update DOM when signals change', async () => {
       let count!: ReturnType<typeof signal<number>>;
-      const { query, act } = await mount(() => {
+      const { act, query } = await mount(() => {
         count = signal(0);
+
         return html`<div>${count}</div>`;
       });
 

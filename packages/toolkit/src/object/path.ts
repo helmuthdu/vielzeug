@@ -1,7 +1,8 @@
+import type { Obj } from '../types';
+
 import { assert } from '../function/assert';
 import { isNil } from '../typed/isNil';
 import { IS_OBJECT_ERROR_MSG, isObject } from '../typed/isObject';
-import type { Obj } from '../types';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T
@@ -52,12 +53,12 @@ export function get<T extends Obj, P extends string>(
   const { throwOnMissing = false } = options;
 
   const fragments = path.split(/[.[\]]+/).filter(Boolean);
-  // biome-ignore lint/suspicious/noExplicitAny: -
   let current: any = item;
 
   for (const fragment of fragments) {
     if (isNil(current) || typeof current !== 'object') {
       if (throwOnMissing) throw new Error(`Cannot read property '${fragment}' of ${current}`);
+
       return defaultValue as PathValue<T, P>;
     }
 
@@ -65,6 +66,7 @@ export function get<T extends Obj, P extends string>(
 
     if (current === undefined) {
       if (throwOnMissing) throw new Error(`Property '${fragment}' does not exist`);
+
       return defaultValue as PathValue<T, P>;
     }
   }

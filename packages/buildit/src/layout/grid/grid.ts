@@ -19,6 +19,7 @@ const AREAS_BREAKPOINTS: ['areas2xl' | 'areasXl' | 'areasLg' | 'areasMd' | 'area
 const resolveBp = (host: HTMLElement, varName: string, fallback: number): number => {
   const raw = getComputedStyle(host).getPropertyValue(varName).trim();
   const parsed = Number.parseFloat(raw);
+
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
@@ -47,29 +48,76 @@ const styles = /* css */ css`
       grid-auto-flow: row;
     }
 
-    :host([gap='none']) { --_row-gap: 0; --_col-gap: 0; }
-    :host([gap='xs'])   { --_row-gap: var(--size-1); --_col-gap: var(--size-1); }
-    :host([gap='sm'])   { --_row-gap: var(--size-2); --_col-gap: var(--size-2); }
-    :host([gap='md'])   { --_row-gap: var(--size-4); --_col-gap: var(--size-4); }
-    :host([gap='lg'])   { --_row-gap: var(--size-6); --_col-gap: var(--size-6); }
-    :host([gap='xl'])   { --_row-gap: var(--size-8); --_col-gap: var(--size-8); }
-    :host([gap='2xl'])  { --_row-gap: var(--size-12); --_col-gap: var(--size-12); }
+    :host([gap='none']) {
+      --_row-gap: 0;
+      --_col-gap: 0;
+    }
+    :host([gap='xs']) {
+      --_row-gap: var(--size-1);
+      --_col-gap: var(--size-1);
+    }
+    :host([gap='sm']) {
+      --_row-gap: var(--size-2);
+      --_col-gap: var(--size-2);
+    }
+    :host([gap='md']) {
+      --_row-gap: var(--size-4);
+      --_col-gap: var(--size-4);
+    }
+    :host([gap='lg']) {
+      --_row-gap: var(--size-6);
+      --_col-gap: var(--size-6);
+    }
+    :host([gap='xl']) {
+      --_row-gap: var(--size-8);
+      --_col-gap: var(--size-8);
+    }
+    :host([gap='2xl']) {
+      --_row-gap: var(--size-12);
+      --_col-gap: var(--size-12);
+    }
 
-    :host([align='start'])    { align-items: start; }
-    :host([align='center'])   { align-items: center; }
-    :host([align='end'])      { align-items: end; }
-    :host([align='stretch'])  { align-items: stretch; }
-    :host([align='baseline']) { align-items: baseline; }
+    :host([align='start']) {
+      align-items: start;
+    }
+    :host([align='center']) {
+      align-items: center;
+    }
+    :host([align='end']) {
+      align-items: end;
+    }
+    :host([align='stretch']) {
+      align-items: stretch;
+    }
+    :host([align='baseline']) {
+      align-items: baseline;
+    }
 
-    :host([justify='start'])   { justify-items: start; }
-    :host([justify='center'])  { justify-items: center; }
-    :host([justify='end'])     { justify-items: end; }
-    :host([justify='stretch']) { justify-items: stretch; }
+    :host([justify='start']) {
+      justify-items: start;
+    }
+    :host([justify='center']) {
+      justify-items: center;
+    }
+    :host([justify='end']) {
+      justify-items: end;
+    }
+    :host([justify='stretch']) {
+      justify-items: stretch;
+    }
 
-    :host([flow='row'])          { grid-auto-flow: row; }
-    :host([flow='column'])       { grid-auto-flow: column; }
-    :host([flow='row-dense'])    { grid-auto-flow: row dense; }
-    :host([flow='column-dense']) { grid-auto-flow: column dense; }
+    :host([flow='row']) {
+      grid-auto-flow: row;
+    }
+    :host([flow='column']) {
+      grid-auto-flow: column;
+    }
+    :host([flow='row-dense']) {
+      grid-auto-flow: row dense;
+    }
+    :host([flow='column-dense']) {
+      grid-auto-flow: column dense;
+    }
   }
 `;
 
@@ -201,6 +249,7 @@ export const TAG = define('bit-grid', ({ host }) => {
     if (activeCols === 'auto' || (!activeCols && responsive)) {
       return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
     }
+
     return activeCols ? `repeat(${activeCols}, 1fr)` : null;
   };
 
@@ -210,6 +259,7 @@ export const TAG = define('bit-grid', ({ host }) => {
     const minW = props.minColWidth.value;
 
     let activeCols: string | undefined;
+
     for (const [key, cssVar] of BREAKPOINTS) {
       if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
         activeCols = props[key].value!;
@@ -219,6 +269,8 @@ export const TAG = define('bit-grid', ({ host }) => {
     activeCols ||= props.cols.value || undefined;
 
     const colsValue = computeCols(activeCols, responsive, minW);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     colsValue ? host.style.setProperty('--_cols', colsValue) : host.style.removeProperty('--_cols');
   };
 
@@ -240,6 +292,7 @@ export const TAG = define('bit-grid', ({ host }) => {
   const updateAreas = () => {
     const w = host.offsetWidth;
     let active = '';
+
     for (const [key, cssVar] of AREAS_BREAKPOINTS) {
       if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
         active = props[key].value!;
@@ -247,12 +300,14 @@ export const TAG = define('bit-grid', ({ host }) => {
       }
     }
     active ||= props.areas.value || '';
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     active ? host.style.setProperty('grid-template-areas', active) : host.style.removeProperty('grid-template-areas');
   };
 
-  // Also update on element resize (drives breakpoint switching)
+  // Also, update on element resize (drives breakpoint switching)
   onMount(() => {
     const size = observeResize(host);
+
     effect(() => {
       void size.value;
       updateCols();
@@ -263,6 +318,8 @@ export const TAG = define('bit-grid', ({ host }) => {
   // Rows
   effect(() => {
     const rows = props.rows.value;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     rows && rows !== 'auto'
       ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
       : host.style.removeProperty('--_rows');

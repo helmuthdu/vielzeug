@@ -32,10 +32,12 @@ describe('createPermit()', () => {
   it('calls the logger with result, user, resource, action, and data on every check', () => {
     const logger = vi.fn();
     const p = createPermit({ logger });
+
     p.register('admin', 'posts', { read: true });
 
     const user = { id: '1', roles: ['admin'] };
     const data = { authorId: '1' };
+
     p.check(user, 'posts', 'read', data);
     p.check(user, 'posts', 'delete');
 
@@ -55,6 +57,7 @@ describe('register()', () => {
     permit.register('admin', 'posts', { archive: false, read: true });
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'archive')).toBe(false);
   });
@@ -64,6 +67,7 @@ describe('register()', () => {
     permit.register('admin', 'posts', { write: true });
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'write')).toBe(true);
   });
@@ -73,6 +77,7 @@ describe('register()', () => {
     permit.remove('admin', 'posts').register('admin', 'posts', { delete: true });
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'delete')).toBe(true);
     expect(permit.check(user, 'posts', 'read')).toBe(false);
     expect(permit.check(user, 'posts', 'write')).toBe(false);
@@ -89,6 +94,7 @@ describe('register()', () => {
     permit.register('editor', 'articles', { archive: false, publish: true, 'request-review': true });
 
     const user = { id: '1', roles: ['editor'] };
+
     expect(permit.check(user, 'articles', 'publish')).toBe(true);
     expect(permit.check(user, 'articles', 'request-review')).toBe(true);
     expect(permit.check(user, 'articles', 'archive')).toBe(false);
@@ -123,6 +129,7 @@ describe('check()', () => {
       permit.register('admin', 'posts', { archive: false, read: true });
 
       const user = { id: '1', roles: ['admin'] };
+
       expect(permit.check(user, 'posts', 'read')).toBe(true);
       expect(permit.check(user, 'posts', 'archive')).toBe(false);
       expect(permit.check(user, 'posts', 'delete')).toBe(false); // undefined → deny
@@ -137,6 +144,7 @@ describe('check()', () => {
       });
 
       const user = { id: '1', roles: ['editor'] };
+
       expect(permit.check(user, 'posts', 'update', { authorId: '1' })).toBe(true);
       expect(permit.check(user, 'posts', 'update', { authorId: '2' })).toBe(false);
       expect(permit.check(user, 'posts', 'update')).toBe(false); // no data → deny
@@ -149,6 +157,7 @@ describe('check()', () => {
       permit.register('moderator', 'posts', { delete: true });
 
       const user = { id: '1', roles: ['writer', 'moderator'] };
+
       expect(permit.check(user, 'posts', 'write')).toBe(true);
       expect(permit.check(user, 'posts', 'delete')).toBe(true);
     });
@@ -176,6 +185,7 @@ describe('check()', () => {
       permit.register('admin', WILDCARD, { read: true });
 
       const user = { id: '1', roles: ['admin'] };
+
       expect(permit.check(user, 'posts', 'read')).toBe(true);
       expect(permit.check(user, 'comments', 'read')).toBe(true);
     });
@@ -185,6 +195,7 @@ describe('check()', () => {
       permit.register('admin', 'posts', { read: false }); // explicit deny on posts
 
       const user = { id: '1', roles: ['admin'] };
+
       expect(permit.check(user, 'posts', 'read')).toBe(false); // specific wins
       expect(permit.check(user, 'comments', 'read')).toBe(true); // wildcard applies
     });
@@ -194,6 +205,7 @@ describe('check()', () => {
       permit.register('admin', 'posts', { write: true }); // partial override
 
       const user = { id: '1', roles: ['admin'] };
+
       expect(permit.check(user, 'posts', 'write')).toBe(true); // defined on specific
       expect(permit.check(user, 'posts', 'read')).toBe(true); // falls back to wildcard
       expect(permit.check(user, 'posts', 'delete')).toBe(true); // falls back to wildcard
@@ -205,9 +217,7 @@ describe('check()', () => {
       permit.register(ANONYMOUS, 'posts', { read: true });
 
       expect(permit.check(null, 'posts', 'read')).toBe(true);
-      // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
       expect(permit.check({ id: '1' } as any, 'posts', 'read')).toBe(true); // no roles
-      // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
       expect(permit.check({ roles: ['admin'] } as any, 'posts', 'read')).toBe(true); // no id
     });
 
@@ -240,6 +250,7 @@ describe('for()', () => {
     });
 
     const guard = permit.for({ id: '1', roles: ['editor'] });
+
     expect(guard.can('posts', 'read')).toBe(true);
     expect(guard.can('posts', 'update', { authorId: '1' })).toBe(true);
     expect(guard.can('posts', 'update', { authorId: '2' })).toBe(false);
@@ -258,6 +269,7 @@ describe('for()', () => {
     permit.grant('editor', 'posts', 'read');
 
     const guard = permit.for({ id: '1', roles: ['editor'] });
+
     expect(guard.canAny('posts', ['read', 'write'])).toBe(true);
     expect(guard.canAny('posts', ['write', 'delete'])).toBe(false);
   });
@@ -266,12 +278,14 @@ describe('for()', () => {
     permit.grant('editor', 'posts', 'read', 'write');
 
     const guard = permit.for({ id: '1', roles: ['editor'] });
+
     expect(guard.canAll('posts', ['read', 'write'])).toBe(true);
     expect(guard.canAll('posts', ['read', 'write', 'delete'])).toBe(false);
   });
 
   it('can() and canAny() and canAll() exist on the guard', () => {
     const guard: PermitGuard = permit.for({ id: '1', roles: ['editor'] });
+
     expect(typeof guard.can).toBe('function');
     expect(typeof guard.canAny).toBe('function');
     expect(typeof guard.canAll).toBe('function');
@@ -289,6 +303,7 @@ describe('grant() and deny()', () => {
     permit.grant('admin', 'posts', 'read', 'write', 'delete');
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'write')).toBe(true);
     expect(permit.check(user, 'posts', 'delete')).toBe(true);
@@ -299,6 +314,7 @@ describe('grant() and deny()', () => {
     permit.deny('admin', 'posts', 'delete');
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'delete')).toBe(false);
   });
@@ -321,6 +337,7 @@ describe('grant() and deny()', () => {
     permit.grant('editor', 'posts', 'read');
 
     const user = { id: '1', roles: ['editor'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'update', { authorId: '1' })).toBe(true);
   });
@@ -338,6 +355,7 @@ describe('remove()', () => {
     permit.remove('admin', 'posts', 'delete');
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(true);
     expect(permit.check(user, 'posts', 'write')).toBe(true);
     expect(permit.check(user, 'posts', 'delete')).toBe(false);
@@ -347,6 +365,7 @@ describe('remove()', () => {
     permit.remove('admin', 'posts');
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(false);
     expect(permit.check(user, 'posts', 'write')).toBe(false);
   });
@@ -356,6 +375,7 @@ describe('remove()', () => {
     permit.remove('admin');
 
     const user = { id: '1', roles: ['admin'] };
+
     expect(permit.check(user, 'posts', 'read')).toBe(false);
     expect(permit.check(user, 'comments', 'read')).toBe(false);
     expect('admin' in permit.snapshot()).toBe(false);
@@ -394,6 +414,7 @@ describe('snapshot()', () => {
     permit.register('editor', 'comments', { create: true });
 
     const snap = permit.snapshot();
+
     expect(Object.keys(snap)).toEqual(['admin', 'editor']);
     expect(snap.admin.posts.read).toBe(true);
     expect(snap.editor.comments.create).toBe(true);
@@ -403,6 +424,7 @@ describe('snapshot()', () => {
     permit.register('Admin', 'Posts', { read: true });
 
     const snap = permit.snapshot();
+
     expect('admin' in snap).toBe(true);
     expect('Admin' in snap).toBe(false);
     expect('posts' in snap.admin).toBe(true);
@@ -412,6 +434,7 @@ describe('snapshot()', () => {
     permit.register('admin', 'posts', { read: true });
 
     const snap = permit.snapshot();
+
     delete snap.admin;
     snap.admin = { posts: { read: false } };
 
@@ -422,10 +445,13 @@ describe('snapshot()', () => {
 describe('restore()', () => {
   it('replaces current state from a snapshot and returns the permit for chaining', () => {
     const permit = createPermit();
+
     permit.grant('admin', 'posts', 'read', 'write');
+
     const snap = permit.snapshot();
 
     permit.clear();
+
     const result = permit.restore(snap);
 
     expect(result).toBe(permit);
@@ -437,6 +463,7 @@ describe('restore()', () => {
 describe('clear()', () => {
   it('removes all permissions and returns the permit for chaining', () => {
     const permit = createPermit();
+
     permit.grant('admin', 'posts', 'read');
     permit.grant('editor', 'comments', 'create');
 
@@ -454,6 +481,7 @@ describe('clear()', () => {
 describe('hasRole()', () => {
   it('returns true when user has the role (case-insensitive), false otherwise', () => {
     const user = { id: '1', roles: ['Admin', 'Editor'] };
+
     expect(hasRole(user, 'admin')).toBe(true);
     expect(hasRole(user, 'EDITOR')).toBe(true);
     expect(hasRole(user, 'moderator')).toBe(false);
@@ -462,9 +490,7 @@ describe('hasRole()', () => {
   it('treats malformed users (null, no id, no roles) as anonymous', () => {
     expect(hasRole(null, ANONYMOUS)).toBe(true);
     expect(hasRole(null, 'admin')).toBe(false);
-    // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
     expect(hasRole({ id: '1' } as any, ANONYMOUS)).toBe(true);
-    // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
     expect(hasRole({ roles: ['admin'] } as any, ANONYMOUS)).toBe(true);
   });
 });
@@ -472,9 +498,7 @@ describe('hasRole()', () => {
 describe('isAnonymous()', () => {
   it('returns true for null, missing id, or missing roles array', () => {
     expect(isAnonymous(null)).toBe(true);
-    // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
     expect(isAnonymous({ roles: ['admin'] } as any)).toBe(true); // no id
-    // biome-ignore lint/suspicious/noExplicitAny: testing structurally-invalid input
     expect(isAnonymous({ id: '1' } as any)).toBe(true); // no roles array
   });
 

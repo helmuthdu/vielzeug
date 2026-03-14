@@ -9,14 +9,14 @@ import {
 
 /* -------------------- Shared types & fixtures -------------------- */
 
-type User = { id: number; name?: string; age?: number; city?: string };
-type Post = { id: number; userId: number; title: string };
+type User = { age?: number; city?: string; id: number; name?: string };
+type Post = { id: number; title: string; userId: number };
 
 const userSchema = defineSchema<{ users: User }>({
   users: { indexes: ['name', 'age', 'city'], key: 'id' },
 });
 
-const multiSchema = defineSchema<{ users: User; posts: Post }>({
+const multiSchema = defineSchema<{ posts: Post; users: User }>({
   posts: { key: 'id' },
   users: { key: 'id' },
 });
@@ -42,6 +42,7 @@ describe('QueryBuilder', () => {
   describe('Filtering', () => {
     test('filter – custom predicate', async () => {
       const r = await qb.filter((u) => (u.age ?? 0) > 25).toArray();
+
       expect(r).toHaveLength(2);
     });
 
@@ -51,6 +52,7 @@ describe('QueryBuilder', () => {
 
     test('between – inclusive bounds', async () => {
       const ages = (await qb.between('age', 25, 30).toArray()).map((u) => u.age).sort();
+
       expect(ages).toEqual([25, 30]);
     });
 
@@ -70,6 +72,7 @@ describe('QueryBuilder', () => {
           (u) => (u.age ?? 0) > 30,
         )
         .toArray();
+
       expect(r).toEqual([rows[2]]);
     });
 
@@ -80,6 +83,7 @@ describe('QueryBuilder', () => {
           (u) => u.age === 35,
         )
         .toArray();
+
       expect(r).toHaveLength(2);
     });
   });
@@ -96,6 +100,7 @@ describe('QueryBuilder', () => {
 
     test('offset', async () => {
       const r = await qb.offset(2).toArray();
+
       expect(r).toHaveLength(1);
       expect(r[0].id).toBe(3);
     });
@@ -107,6 +112,7 @@ describe('QueryBuilder', () => {
 
     test('reverse', async () => {
       const r = await qb.reverse().toArray();
+
       expect(r[0].id).toBe(3);
       expect(r[2].id).toBe(1);
     });
@@ -115,6 +121,7 @@ describe('QueryBuilder', () => {
   describe('Transformations', () => {
     test('map', async () => {
       const r = await qb.map((u) => ({ ...u, age: (u.age ?? 0) + 1 })).toArray();
+
       expect(r.map((u) => u.age)).toEqual([26, 31, 36]);
     });
 
@@ -146,6 +153,7 @@ describe('QueryBuilder', () => {
 
     test('asyncIterator – yields all matching records', async () => {
       const collected: (typeof rows)[0][] = [];
+
       for await (const row of qb.equals('city', 'Paris')) {
         collected.push(row);
       }
@@ -154,6 +162,7 @@ describe('QueryBuilder', () => {
 
     test('chaining – filter + sort + limit', async () => {
       const r = await qb.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
+
       expect(r).toEqual([rows[2]]);
     });
   });
@@ -194,7 +203,9 @@ describe('LocalStorage adapter', () => {
 
     test('patch – no follow-up get needed', async () => {
       await db.put('users', { age: 25, id: 1, name: 'Alice' });
+
       const updated = await db.patch('users', 1, { age: 26 });
+
       expect(updated).toEqual({ age: 26, id: 1, name: 'Alice' });
     });
 
@@ -230,13 +241,16 @@ describe('LocalStorage adapter', () => {
 
     test('getOrPut – returns cached value; factory not called', async () => {
       await db.put('users', { id: 1, name: 'Alice' });
+
       const factory = vi.fn();
+
       expect(await db.getOrPut('users', 1, factory)).toEqual({ id: 1, name: 'Alice' });
       expect(factory).not.toHaveBeenCalled();
     });
 
     test('getOrPut – stores factory value on miss', async () => {
       const result = await db.getOrPut('users', 5, () => ({ id: 5, name: 'Eve' }));
+
       expect(result).toEqual({ id: 5, name: 'Eve' });
       expect(await db.get('users', 5)).toEqual({ id: 5, name: 'Eve' });
     });
@@ -275,7 +289,9 @@ describe('LocalStorage adapter', () => {
 
     test('update preserves TTL', async () => {
       await db.put('users', { id: 1, name: 'Alice' }, 50);
+
       const updated = await db.patch('users', 1, { name: 'Alicia' });
+
       expect(updated).toEqual({ id: 1, name: 'Alicia' });
       await delay(55);
       expect(await db.get('users', 1)).toBeUndefined();
@@ -291,6 +307,7 @@ describe('LocalStorage adapter', () => {
   describe('Edge Cases', () => {
     test('get returns defaultValue when key absent', async () => {
       const fallback = { id: 0, name: 'Fallback' };
+
       expect(await db.get('users', 0, fallback)).toBe(fallback);
     });
 
@@ -310,6 +327,7 @@ describe('LocalStorage adapter', () => {
 
     test('indexes declaration emits a warning', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
       createLocalStorage({ dbName: 'Warn', schema: userSchema });
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('indexes'));
       warnSpy.mockRestore();
@@ -320,7 +338,9 @@ describe('LocalStorage adapter', () => {
         { age: 25, id: 1, name: 'Alice' },
         { age: 30, id: 2, name: 'Bob' },
       ]);
+
       const r = await db.from('users').equals('age', 30).toArray();
+
       expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
     });
 
@@ -329,6 +349,7 @@ describe('LocalStorage adapter', () => {
         dbName: 'Inline',
         schema: { items: { key: 'id' } },
       });
+
       await inlineDb.put('items', { id: 1, label: 'hello' });
       expect(await inlineDb.get('items', 1)).toEqual({ id: 1, label: 'hello' });
     });
@@ -374,7 +395,9 @@ describe('IndexedDB adapter', () => {
 
     test('patch – no follow-up get needed', async () => {
       await db.put('users', { age: 25, id: 1, name: 'Alice' });
+
       const updated = await db.patch('users', 1, { age: 26 });
+
       expect(updated).toEqual({ age: 26, id: 1, name: 'Alice' });
     });
 
@@ -410,13 +433,16 @@ describe('IndexedDB adapter', () => {
 
     test('getOrPut – returns cached value; factory not called', async () => {
       await db.put('users', { id: 1, name: 'Alice' });
+
       const factory = vi.fn();
+
       expect(await db.getOrPut('users', 1, factory)).toEqual({ id: 1, name: 'Alice' });
       expect(factory).not.toHaveBeenCalled();
     });
 
     test('getOrPut – stores factory value on miss', async () => {
       const result = await db.getOrPut('users', 5, () => ({ id: 5, name: 'Eve' }));
+
       expect(result).toEqual({ id: 5, name: 'Eve' });
       expect(await db.get('users', 5)).toEqual({ id: 5, name: 'Eve' });
     });
@@ -446,7 +472,9 @@ describe('IndexedDB adapter', () => {
       await delay(5);
       expect(await db.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
       await delay(0); // let background eviction settle
+
       const db2 = createIndexedDB({ dbName: 'IDB', schema: userSchema, version: 1 });
+
       expect(await db2.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
       db2.close();
     });
@@ -460,7 +488,9 @@ describe('IndexedDB adapter', () => {
 
     test('update preserves TTL', async () => {
       await db.put('users', { id: 1, name: 'Alice' }, 50);
+
       const updated = await db.patch('users', 1, { name: 'Alicia' });
+
       expect(updated).toEqual({ id: 1, name: 'Alicia' });
       await delay(55);
       expect(await db.get('users', 1)).toBeUndefined();
@@ -470,6 +500,7 @@ describe('IndexedDB adapter', () => {
   describe('Edge Cases', () => {
     test('get returns defaultValue when key absent', async () => {
       const fallback = { id: 0, name: 'Fallback' };
+
       expect(await db.get('users', 0, fallback)).toBe(fallback);
     });
 
@@ -482,7 +513,9 @@ describe('IndexedDB adapter', () => {
         { age: 25, id: 1, name: 'Alice' },
         { age: 30, id: 2, name: 'Bob' },
       ]);
+
       const r = await db.from('users').equals('age', 30).toArray();
+
       expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
     });
   });
@@ -497,7 +530,9 @@ describe('IndexedDB adapter', () => {
         await tx.delete('users', 1);
         await tx.put('users', { id: 3, name: 'Charlie' });
       });
+
       const all = await db.getAll('users');
+
       expect(all).toContainEqual({ id: 2, name: 'Bob' });
       expect(all).toContainEqual({ id: 3, name: 'Charlie' });
       expect(all.find((u) => u.id === 1)).toBeUndefined();
@@ -505,7 +540,9 @@ describe('IndexedDB adapter', () => {
 
     test('get inside transaction sees in-flight writes', async () => {
       await db.put('users', { id: 1, name: 'Alice' });
+
       let seen: User | undefined;
+
       await db.transaction(['users'], async (tx) => {
         await tx.put('users', { id: 2, name: 'Bob' });
         seen = await tx.get('users', 2);
@@ -515,7 +552,9 @@ describe('IndexedDB adapter', () => {
 
     test('patch inside transaction updates atomically', async () => {
       await db.put('users', { age: 25, id: 1, name: 'Alice' });
+
       let patched: User | undefined;
+
       await db.transaction(['users'], async (tx) => {
         patched = await tx.patch('users', 1, { age: 26 });
       });
@@ -528,9 +567,12 @@ describe('IndexedDB adapter', () => {
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
+
       let count = 0;
+
       await db.transaction(['users'], async (tx) => {
         const all = await tx.getAll('users');
+
         count = all.length;
       });
       expect(count).toBe(2);
@@ -538,6 +580,7 @@ describe('IndexedDB adapter', () => {
 
     test('changes across multiple tables commit atomically', async () => {
       const multi = createIndexedDB({ dbName: 'Multi', schema: multiSchema, version: 1 });
+
       await multi.deleteAll('users');
       await multi.deleteAll('posts');
       await multi.put('users', [
@@ -587,11 +630,14 @@ describe('Logger', () => {
       },
       schema: userSchema,
     });
+
     localStorage.setItem('LogTest:users:1', '{bad json');
     await db.get('users', 1);
+
     const scopedCall = warnSpy.mock.calls.find((c) =>
       c.some((a) => typeof a === 'string' && a.includes('deposit-test')),
     );
+
     expect(scopedCall).toBeDefined();
     warnSpy.mockRestore();
   });
@@ -600,6 +646,7 @@ describe('Logger', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const simpleSchema = defineSchema<{ items: { id: number } }>({ items: { key: 'id' } });
     const db = createLocalStorage({ dbName: 'Default', schema: simpleSchema });
+
     localStorage.setItem('Default:items:1', '{bad json');
     await db.get('items', 1);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Removing corrupted entry'), expect.any(Error));

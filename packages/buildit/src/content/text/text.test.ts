@@ -26,21 +26,18 @@ describe('bit-text', () => {
   });
 
   describe('as — ARIA semantics', () => {
-    it.each([
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-    ] as const)('as="%s" sets role="heading" and aria-level on the host', async (tag) => {
-      fixture = await mount('bit-text', { attrs: { as: tag } });
-      const level = Number(tag[1]);
+    it.each(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const)(
+      'as="%s" sets role="heading" and aria-level on the host',
+      async (tag) => {
+        fixture = await mount('bit-text', { attrs: { as: tag } });
 
-      expect(fixture.element.getAttribute('role')).toBe('heading');
-      expect(fixture.element.getAttribute('aria-level')).toBe(String(level));
-      fixture.destroy();
-    });
+        const level = Number(tag[1]);
+
+        expect(fixture.element.getAttribute('role')).toBe('heading');
+        expect(fixture.element.getAttribute('aria-level')).toBe(String(level));
+        fixture.destroy();
+      },
+    );
 
     it('as="p" does not set role="heading"', async () => {
       fixture = await mount('bit-text', { attrs: { as: 'p' } });

@@ -14,7 +14,6 @@
 
 /** A function that tears down a subscription or effect. */
 export type CleanupFn = () => void;
-// biome-ignore lint/suspicious/noConfusingVoidType: void needed for optional cleanup return
 type EffectFn = () => CleanupFn | void;
 
 /** @internal Centralised reactive context. */
@@ -75,6 +74,7 @@ class ReactiveNode {
   protected _track(): void {
     if (ctx.currentDeps !== null && ctx.currentEffect !== null) {
       const fn = ctx.currentEffect;
+
       this.#subscribers.add(fn);
       ctx.currentDeps.add(() => this.#subscribers.delete(fn));
     }
@@ -84,9 +84,12 @@ class ReactiveNode {
   protected _notify(): void {
     if (ctx.batchDepth > 0) {
       for (const fn of this.#subscribers) ctx.pendingEffects.add(fn);
+
       return;
     }
+
     const errors: unknown[] = [];
+
     for (const fn of [...this.#subscribers]) {
       try {
         fn();
@@ -94,6 +97,7 @@ class ReactiveNode {
         errors.push(e);
       }
     }
+
     if (errors.length) {
       throw errors.length === 1 ? errors[0] : new AggregateError(errors, '[stateit] multiple subscriber errors');
     }
@@ -128,11 +132,13 @@ class SignalImpl<T> extends ReactiveNode implements Signal<T> {
 
   get value(): T {
     this._track();
+
     return this.#value;
   }
 
   set value(next: T) {
     if (this.#equals(this.#value, next)) return;
+
     this.#value = next;
     this._notify();
   }
@@ -153,7 +159,9 @@ const _readonlyCache = new WeakMap<object, ReadonlySignal<unknown>>();
  */
 export const readonly = <T>(sig: ReadonlySignal<T>): ReadonlySignal<T> => {
   const cached = _readonlyCache.get(sig as object);
+
   if (cached) return cached as ReadonlySignal<T>;
+
   const wrapper: ReadonlySignal<T> = {
     get [_SIGNAL_BRAND]() {
       return true as const;
@@ -163,7 +171,9 @@ export const readonly = <T>(sig: ReadonlySignal<T>): ReadonlySignal<T> => {
       return sig.value;
     },
   };
+
   _readonlyCache.set(sig as object, wrapper as ReadonlySignal<unknown>);
+
   return wrapper;
 };
 
@@ -186,9 +196,11 @@ const _withCtx = <T>(
   const pe = ctx.currentEffect;
   const pd = ctx.currentDeps;
   const pc = ctx.currentCleanups;
+
   ctx.currentEffect = eff;
   ctx.currentDeps = deps;
   ctx.currentCleanups = cleanups;
+
   try {
     return fn();
   } finally {
@@ -215,29 +227,36 @@ export const effect = (fn: EffectFn, options?: EffectOptions): CleanupFn => {
   let dirty = false;
   let disposed = false;
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Effect runner handles dependency tracking, re-entrancy, dirty state, and error recovery
   const runner: EffectFn = () => {
     if (disposed || running) {
       if (running) dirty = true;
+
       return;
     }
+
     running = true;
+
     try {
       let iterations = 0;
+
       do {
         if (++iterations > _maxEffectIterations)
           throw new Error(`[stateit] effect: possible infinite reactive loop (> ${_maxEffectIterations} iterations)`);
+
         dirty = false;
         cleanup?.();
         cleanup = undefined;
         for (const unsub of deps) unsub();
         deps = new Set();
+
         const cleanups: CleanupFn[] = [];
         let thrownError: unknown;
         let threw = false;
+
         try {
           _withCtx(runner, deps, cleanups, () => {
             const result = fn();
+
             if (typeof result === 'function') cleanups.push(result);
           });
         } catch (e) {
@@ -246,12 +265,14 @@ export const effect = (fn: EffectFn, options?: EffectOptions): CleanupFn => {
             thrownError = e;
           } else throw e;
         }
+
         cleanup =
           cleanups.length > 0
             ? () => {
                 for (const c of cleanups) c();
               }
             : undefined;
+
         if (threw) {
           options!.onError!(thrownError);
           disposed = true;
@@ -269,6 +290,7 @@ export const effect = (fn: EffectFn, options?: EffectOptions): CleanupFn => {
 
   return () => {
     if (disposed) return;
+
     disposed = true;
     cleanup?.();
     cleanup = undefined;
@@ -329,14 +351,18 @@ class ComputedNode<T> extends ReactiveNode {
     super();
     this.#compute = compute;
     this.#equals = options?.equals ?? Object.is;
+
     if (!options?.lazy) this.#recompute(); // seed: ensures peek() is valid immediately
   }
 
   #recompute(): void {
     for (const unsub of this.#deps) unsub();
     this.#deps = new Set();
+
     const result = _withCtx(this.#onDepChange, this.#deps, null, this.#compute);
+
     this.#dirty = false;
+
     if (this.#value === _UNINITIALIZED || !this.#equals(this.#value as T, result)) {
       this.#value = result;
     }
@@ -345,13 +371,16 @@ class ComputedNode<T> extends ReactiveNode {
   get value(): T {
     if (!this.#disposed) {
       if (this.#dirty) this.#recompute();
+
       this._track();
     }
+
     return this.#value as T;
   }
 
   peek(): T {
     if (this.#value === _UNINITIALIZED) this.#recompute();
+
     return this.#value as T;
   }
 
@@ -361,6 +390,7 @@ class ComputedNode<T> extends ReactiveNode {
 
   dispose(): void {
     if (this.#disposed) return;
+
     this.#disposed = true;
     for (const unsub of this.#deps) unsub();
     this.#deps = new Set();
@@ -372,6 +402,7 @@ class ComputedNode<T> extends ReactiveNode {
  * Pass `{ lazy: true }` to defer the initial computation until the first `.value` read. */
 export const computed = <T>(compute: () => T, options?: ReactiveOptions<T> & { lazy?: boolean }): ComputedSignal<T> => {
   const node = new ComputedNode(compute, options);
+
   return {
     get [_SIGNAL_BRAND]() {
       return true as const;
@@ -394,6 +425,7 @@ export interface WritableSignal<T> extends Signal<T>, Disposable {}
  * writes are forwarded to `set`. Call `.dispose()` to stop tracking and free dependencies. */
 export const writable = <T>(get: () => T, set: (value: T) => void, options?: ReactiveOptions<T>): WritableSignal<T> => {
   const node = new ComputedNode(get, options);
+
   return {
     get [_SIGNAL_BRAND]() {
       return true as const;
@@ -426,9 +458,9 @@ export const derived = <const Srcs extends ReadonlyArray<ReadonlySignal<unknown>
 /* ========== batch ========== */
 
 /** Runs fn and defers all Signal notifications until fn returns, then flushes once. */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Batch must handle errors, nested batches, and subscriber notification flushing correctly
 export const batch = <T>(fn: () => T): T => {
   ctx.batchDepth++;
+
   let result!: T;
   let fnError: unknown;
   let fnThrew = false;
@@ -442,8 +474,11 @@ export const batch = <T>(fn: () => T): T => {
 
   if (--ctx.batchDepth === 0) {
     const toFlush = [...ctx.pendingEffects];
+
     ctx.pendingEffects.clear();
+
     const errors: unknown[] = [];
+
     for (const f of toFlush) {
       try {
         f();
@@ -451,27 +486,30 @@ export const batch = <T>(fn: () => T): T => {
         errors.push(e);
       }
     }
+
     if (errors.length) {
       const all = fnThrew ? [fnError, ...errors] : errors;
+
       throw all.length === 1 ? all[0] : new AggregateError(all, '[stateit] batch errors');
     }
   }
 
   if (fnThrew) throw fnError;
+
   return result;
 };
 
 /* ========== watch ========== */
 
 export type WatchOptions<T, U = T> = {
-  /** Derive the watched value from a slice of the signal. Only fires when the slice changes. */
-  select?: (state: T) => U;
+  /** Custom equality; suppresses the callback when old and new values are equal. Default: Object.is */
+  equals?: EqualityFn<U>;
   /** Fire the callback immediately with the current value on subscribe. */
   immediate?: boolean;
   /** Auto-unsubscribe after the first callback invocation. */
   once?: boolean;
-  /** Custom equality; suppresses the callback when old and new values are equal. Default: Object.is */
-  equals?: EqualityFn<U>;
+  /** Derive the watched value from a slice of the signal. Only fires when the slice changes. */
+  select?: (state: T) => U;
 };
 
 /**
@@ -492,20 +530,26 @@ export const watch = <T, U = T>(
   const select = (options?.select ?? ((v: T) => v)) as (s: T) => U;
   const eq: EqualityFn<U> = options?.equals ?? Object.is;
   let prev = select(source.peek());
+
   if (options?.immediate) cb(prev, prev);
+
   let stopped = false;
   const dispose = effect(() => {
     const next = select(source.value);
+
     if (!eq(prev, next)) {
       const old = prev;
+
       prev = next;
       cb(next, old);
+
       if (options?.once && !stopped) {
         stopped = true;
         dispose();
       }
     }
   });
+
   return dispose;
 };
 
@@ -518,11 +562,14 @@ export const watch = <T, U = T>(
  */
 export const shallowEqual: EqualityFn<unknown> = (a, b) => {
   if (a === b) return true;
+
   if (a == null || b == null) return a === b;
+
   if (typeof a !== 'object' || typeof b !== 'object') return false;
 
   const keysA = Object.keys(a as object);
   const keysB = Object.keys(b as object);
+
   if (keysA.length !== keysB.length) return false;
 
   for (const key of keysA) {

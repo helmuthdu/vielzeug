@@ -24,5 +24,6 @@ import { compare } from '../function/compare';
  */
 export function max<T>(array: T[], callback?: (item: T) => string | number | Date): T | undefined {
   const fn = callback ?? ((item: T) => item);
+
   return fold(array, (a, b) => (compare(fn(a), fn(b)) > 0 ? a : b));
 }

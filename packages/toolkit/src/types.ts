@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 /** A function that tears down a subscription or listener registration. */
 export type Unsubscribe = () => void;
 

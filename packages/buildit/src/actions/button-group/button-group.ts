@@ -1,4 +1,5 @@
 import { createContext, css, define, defineProps, html, provide } from '@vielzeug/craftit';
+
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 /** Context provided by bit-button-group to its bit-button children. */
@@ -166,12 +167,7 @@ export const TAG = define('bit-button-group', () => {
   return {
     styles: [styles],
     template: html`
-      <div
-        class="button-group"
-        part="group"
-        role="group"
-        :aria-label="${() => props.label.value ?? null}"
-      >
+      <div class="button-group" part="group" role="group" :aria-label="${() => props.label.value ?? null}">
         <slot></slot>
       </div>
     `,

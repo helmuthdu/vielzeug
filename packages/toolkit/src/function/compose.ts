@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
-
 import type { Fn } from '../types';
+
 import { assert } from './assert';
 
 type LastParameters<T> = T extends [...any, infer Last extends Fn] ? Parameters<Last> : never;

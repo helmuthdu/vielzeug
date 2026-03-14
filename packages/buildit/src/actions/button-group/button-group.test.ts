@@ -131,6 +131,7 @@ describe('bit-button-group accessibility', () => {
       });
 
       const btn = fixture.element.querySelector('bit-button');
+
       expect(btn?.getAttribute('color') ?? fixture.element.getAttribute('color')).toBe('primary');
     });
   });

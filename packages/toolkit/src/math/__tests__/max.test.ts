@@ -15,12 +15,14 @@ describe('max', () => {
   it('returns the maximum value mapped by a callback function', () => {
     const array = [{ value: 1 }, { value: 2 }, { value: 3 }];
     const callback = (item: { value: number }) => item.value;
+
     expect(max(array, callback)).toBe(array[2]);
   });
 
   it('handles arrays with mixed types using a callback', () => {
     const array = [true, false, true];
     const callback = (item: boolean) => (item ? 1 : 0);
+
     expect(max(array, callback)).toBe(true);
   });
 
@@ -31,6 +33,7 @@ describe('max', () => {
   it('handles arrays with a mix of numbers and other types', () => {
     const array = [1, '2', true, null];
     const callback = (item: unknown) => (typeof item === 'number' ? item : 0);
+
     expect(max(array, callback)).toBe(1);
   });
 
@@ -41,6 +44,7 @@ describe('max', () => {
   it('handles arrays with undefined or null values', () => {
     const array = [1, null, undefined, 2];
     const callback = (item: unknown) => (item ? (item as number) : 0);
+
     expect(max(array, callback)).toBe(2);
   });
 
@@ -49,15 +53,10 @@ describe('max', () => {
   });
 
   it('throws TypeError if the first argument is not an array', () => {
-    // @ts-expect-error
-    expect(() => max(null)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => max(undefined)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => max(123)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => max({})).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => max('string')).toThrow(TypeError);
+    expect(() => max(null as any)).toThrow(TypeError);
+    expect(() => max(undefined as any)).toThrow(TypeError);
+    expect(() => max(123 as any)).toThrow(TypeError);
+    expect(() => max({} as any)).toThrow(TypeError);
+    expect(() => max('string' as any)).toThrow(TypeError);
   });
 });

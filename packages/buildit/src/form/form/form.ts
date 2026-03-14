@@ -1,4 +1,5 @@
 import { createContext, css, define, defineEmits, defineProps, effect, html, provide, signal } from '@vielzeug/craftit';
+
 import type { AddEventListeners, ComponentSize, VisualVariant } from '../../types';
 
 // ============================================
@@ -121,8 +122,8 @@ export const TAG = define(
     });
 
     const emit = defineEmits<{
-      submit: { formData: FormData; originalEvent: SubmitEvent };
       reset: { originalEvent: Event };
+      submit: { formData: FormData; originalEvent: SubmitEvent };
     }>();
 
     // Provide context to all child bit-* form fields
@@ -165,8 +166,11 @@ export const TAG = define(
     function handleSubmit(e: Event) {
       const submitEvent = e as SubmitEvent;
       const formEl = host.shadowRoot?.querySelector('form');
+
       if (!formEl) return;
+
       e.preventDefault();
+
       const formData = new FormData(formEl);
 
       emit('submit', { formData, originalEvent: submitEvent });

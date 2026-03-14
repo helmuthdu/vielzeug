@@ -1,129 +1,5 @@
 export const examples = {
   craftit: {
-    'basic-component': {
-      code: `import { define, html, css } from '@vielzeug/craftit'
-
-define('hello-world', () => {
-  const styles = css\`
-    :host {
-      display: block;
-      padding: 1.5rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 8px;
-      font-family: sans-serif;
-    }
-    h2 { margin: 0 0 0.5rem; }
-    p { margin: 0; opacity: 0.9; }
-  \`
-  return {
-    template: html\`
-      <h2>Hello from Craftit!</h2>
-      <p>A lightweight, signals-based web component library.</p>
-    \`,
-    styles: [styles],
-  }
-})
-
-const el = document.createElement('hello-world')
-document.getElementById('output')?.appendChild(el)
-console.log('✓ Component mounted!')`,
-      name: 'Basic Component',
-    },
-    'counter-component': {
-      code: `import { define, signal, html, css } from '@vielzeug/craftit'
-
-define('simple-counter', () => {
-  const count = signal(0)
-
-  const styles = css\`
-    :host { display: block; padding: 1rem; text-align: center; font-family: sans-serif; }
-    h2 { margin: 0 0 1rem; }
-    button {
-      padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer;
-      border: none; border-radius: 4px; background: #667eea; color: white; margin: 0 0.25rem;
-    }
-    button:hover { background: #5a67d8; }
-  \`
-
-  return {
-    template: html\`
-      <h2>Count: \${count}</h2>
-      <button @click=\${() => count.value--}>-</button>
-      <button @click=\${() => (count.value = 0)}>Reset</button>
-      <button @click=\${() => count.value++}>+</button>
-    \`,
-    styles: [styles],
-  }
-})
-
-document.getElementById('output')?.appendChild(document.createElement('simple-counter'))
-console.log('✓ Counter component mounted!')`,
-      name: 'Interactive Counter',
-    },
-    'computed-signals': {
-      code: `import { define, signal, computed, html } from '@vielzeug/craftit'
-
-define('price-calculator', () => {
-  const price = signal(100)
-  const quantity = signal(1)
-  const taxRate = signal(0.1)
-
-  const subtotal = computed(() => price.value * quantity.value)
-  const tax = computed(() => subtotal.value * taxRate.value)
-  const total = computed(() => subtotal.value + tax.value)
-
-  return {
-    template: html\`
-      <div style="padding:1rem;font-family:sans-serif;max-width:300px">
-        <h3 style="margin:0 0 1rem">Price Calculator</h3>
-        <label>Price: <input type="number" .value=\${price} @input=\${(e: Event) => (price.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
-        <label>Qty:   <input type="number" .value=\${quantity} @input=\${(e: Event) => (quantity.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
-        <hr/>
-        <p>Subtotal: $\${subtotal}</p>
-        <p>Tax (10%): $\${tax}</p>
-        <p><strong>Total: $\${total}</strong></p>
-      </div>
-    \`,
-  }
-})
-
-document.getElementById('output')?.appendChild(document.createElement('price-calculator'))`,
-      name: 'Computed Signals',
-    },
-    watchers: {
-      code: `import { define, signal, watch, effect, html } from '@vielzeug/craftit'
-
-define('watcher-demo', () => {
-  const count = signal(0)
-  const log = signal<string[]>([])
-
-  // watch fires whenever count changes
-  watch(count, (next, prev) => {
-    log.update((l) => [...l.slice(-4), \`\${prev} → \${next}\`])
-  })
-
-  // effect re-runs whenever its deps change
-  effect(() => {
-    console.log('count is now:', count.value)
-  })
-
-  return {
-    template: html\`
-      <div style="padding:1rem;font-family:sans-serif">
-        <h3 style="margin:0 0 .5rem">Count: \${count}</h3>
-        <button @click=\${() => count.value++} style="padding:.4rem .9rem;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer">Increment</button>
-        <ul style="margin-top:1rem;padding-left:1.2rem">
-          \${html.each(log, (_, i) => i, (entry) => html\`<li>\${entry}</li>\`)}
-        </ul>
-      </div>
-    \`,
-  }
-})
-
-document.getElementById('output')?.appendChild(document.createElement('watcher-demo'))`,
-      name: 'Watchers & Effects',
-    },
     'async-data': {
       code: `import { define, signal, html } from '@vielzeug/craftit'
 
@@ -172,56 +48,96 @@ define('user-profile', () => {
 document.getElementById('output')?.appendChild(document.createElement('user-profile'))`,
       name: 'Async Data – API Integration',
     },
-    'todo-list': {
-      code: `import { define, signal, html, css } from '@vielzeug/craftit'
+    'basic-component': {
+      code: `import { define, html, css } from '@vielzeug/craftit'
 
-define('todo-list', () => {
-  const todos = signal<string[]>(['Learn Craftit', 'Build components'])
-  const input = signal('')
-
-  function addTodo() {
-    const text = input.value.trim()
-    if (text) {
-      todos.update((list) => [...list, text])
-      input.value = ''
-    }
-  }
-
-  function removeTodo(index: number) {
-    todos.update((list) => list.filter((_, i) => i !== index))
-  }
-
+define('hello-world', () => {
   const styles = css\`
-    :host { display: block; max-width: 400px; padding: 1rem; font-family: sans-serif; }
-    ul { list-style: none; padding: 0; }
-    li { display: flex; justify-content: space-between; align-items: center;
-         padding: .6rem; margin-bottom: .4rem; background: #f7fafc; border-radius: 4px; }
-    .row { display: flex; gap: .5rem; margin-bottom: 1rem; }
-    input { flex: 1; padding: .4rem; border: 1px solid #ddd; border-radius: 4px; }
-    .add { background: #667eea; color: white; border: none; border-radius: 4px; padding: .4rem .9rem; cursor: pointer; }
-    .del { background: #f56565; color: white; border: none; border-radius: 4px; padding: .2rem .5rem; cursor: pointer; }
+    :host {
+      display: block;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      font-family: sans-serif;
+    }
+    h2 { margin: 0 0 0.5rem; }
+    p { margin: 0; opacity: 0.9; }
   \`
-
   return {
     template: html\`
-      <h2 style="margin-top:0">My Todos</h2>
-      <div class="row">
-        <input .value=\${input} @input=\${(e: Event) => (input.value = (e.target as HTMLInputElement).value)}
-               placeholder="New todo…" @keydown=\${(e: KeyboardEvent) => e.key === 'Enter' && addTodo()} />
-        <button class="add" @click=\${addTodo}>Add</button>
-      </div>
-      <ul>
-        \${html.each(todos, (t, i) => i, (todo, idx) => html\`
-          <li><span>\${todo}</span><button class="del" @click=\${() => removeTodo(idx)}>×</button></li>
-        \`)}
-      </ul>
+      <h2>Hello from Craftit!</h2>
+      <p>A lightweight, signals-based web component library.</p>
     \`,
     styles: [styles],
   }
 })
 
-document.getElementById('output')?.appendChild(document.createElement('todo-list'))`,
-      name: 'Todo List',
+const el = document.createElement('hello-world')
+document.getElementById('output')?.appendChild(el)
+console.log('✓ Component mounted!')`,
+      name: 'Basic Component',
+    },
+    'computed-signals': {
+      code: `import { define, signal, computed, html } from '@vielzeug/craftit'
+
+define('price-calculator', () => {
+  const price = signal(100)
+  const quantity = signal(1)
+  const taxRate = signal(0.1)
+
+  const subtotal = computed(() => price.value * quantity.value)
+  const tax = computed(() => subtotal.value * taxRate.value)
+  const total = computed(() => subtotal.value + tax.value)
+
+  return {
+    template: html\`
+      <div style="padding:1rem;font-family:sans-serif;max-width:300px">
+        <h3 style="margin:0 0 1rem">Price Calculator</h3>
+        <label>Price: <input type="number" .value=\${price} @input=\${(e: Event) => (price.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
+        <label>Qty:   <input type="number" .value=\${quantity} @input=\${(e: Event) => (quantity.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
+        <hr/>
+        <p>Subtotal: $\${subtotal}</p>
+        <p>Tax (10%): $\${tax}</p>
+        <p><strong>Total: $\${total}</strong></p>
+      </div>
+    \`,
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('price-calculator'))`,
+      name: 'Computed Signals',
+    },
+    'counter-component': {
+      code: `import { define, signal, html, css } from '@vielzeug/craftit'
+
+define('simple-counter', () => {
+  const count = signal(0)
+
+  const styles = css\`
+    :host { display: block; padding: 1rem; text-align: center; font-family: sans-serif; }
+    h2 { margin: 0 0 1rem; }
+    button {
+      padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer;
+      border: none; border-radius: 4px; background: #667eea; color: white; margin: 0 0.25rem;
+    }
+    button:hover { background: #5a67d8; }
+  \`
+
+  return {
+    template: html\`
+      <h2>Count: \${count}</h2>
+      <button @click=\${() => count.value--}>-</button>
+      <button @click=\${() => (count.value = 0)}>Reset</button>
+      <button @click=\${() => count.value++}>+</button>
+    \`,
+    styles: [styles],
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('simple-counter'))
+console.log('✓ Counter component mounted!')`,
+      name: 'Interactive Counter',
     },
     'css-theming': {
       code: `import { define, signal, html, css } from '@vielzeug/craftit'
@@ -306,6 +222,90 @@ define('custom-input', () => {
 
 document.getElementById('output')?.appendChild(document.createElement('custom-input'))`,
       name: 'Form-Associated Component',
+    },
+    'todo-list': {
+      code: `import { define, signal, html, css } from '@vielzeug/craftit'
+
+define('todo-list', () => {
+  const todos = signal<string[]>(['Learn Craftit', 'Build components'])
+  const input = signal('')
+
+  function addTodo() {
+    const text = input.value.trim()
+    if (text) {
+      todos.update((list) => [...list, text])
+      input.value = ''
+    }
+  }
+
+  function removeTodo(index: number) {
+    todos.update((list) => list.filter((_, i) => i !== index))
+  }
+
+  const styles = css\`
+    :host { display: block; max-width: 400px; padding: 1rem; font-family: sans-serif; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; justify-content: space-between; align-items: center;
+         padding: .6rem; margin-bottom: .4rem; background: #f7fafc; border-radius: 4px; }
+    .row { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    input { flex: 1; padding: .4rem; border: 1px solid #ddd; border-radius: 4px; }
+    .add { background: #667eea; color: white; border: none; border-radius: 4px; padding: .4rem .9rem; cursor: pointer; }
+    .del { background: #f56565; color: white; border: none; border-radius: 4px; padding: .2rem .5rem; cursor: pointer; }
+  \`
+
+  return {
+    template: html\`
+      <h2 style="margin-top:0">My Todos</h2>
+      <div class="row">
+        <input .value=\${input} @input=\${(e: Event) => (input.value = (e.target as HTMLInputElement).value)}
+               placeholder="New todo…" @keydown=\${(e: KeyboardEvent) => e.key === 'Enter' && addTodo()} />
+        <button class="add" @click=\${addTodo}>Add</button>
+      </div>
+      <ul>
+        \${html.each(todos, (t, i) => i, (todo, idx) => html\`
+          <li><span>\${todo}</span><button class="del" @click=\${() => removeTodo(idx)}>×</button></li>
+        \`)}
+      </ul>
+    \`,
+    styles: [styles],
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('todo-list'))`,
+      name: 'Todo List',
+    },
+    watchers: {
+      code: `import { define, signal, watch, effect, html } from '@vielzeug/craftit'
+
+define('watcher-demo', () => {
+  const count = signal(0)
+  const log = signal<string[]>([])
+
+  // watch fires whenever count changes
+  watch(count, (next, prev) => {
+    log.update((l) => [...l.slice(-4), \`\${prev} → \${next}\`])
+  })
+
+  // effect re-runs whenever its deps change
+  effect(() => {
+    console.log('count is now:', count.value)
+  })
+
+  return {
+    template: html\`
+      <div style="padding:1rem;font-family:sans-serif">
+        <h3 style="margin:0 0 .5rem">Count: \${count}</h3>
+        <button @click=\${() => count.value++} style="padding:.4rem .9rem;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer">Increment</button>
+        <ul style="margin-top:1rem;padding-left:1.2rem">
+          \${html.each(log, (_, i) => i, (entry) => html\`<li>\${entry}</li>\`)}
+        </ul>
+      </div>
+    \`,
+  }
+})
+
+document.getElementById('output')?.appendChild(document.createElement('watcher-demo'))`,
+      name: 'Watchers & Effects',
     },
   },
   deposit: {
@@ -1069,6 +1069,63 @@ console.log('ES:', i18n.t('hello'))
 console.log('With variable:', i18n.t('welcome', { name: 'Alice' }))`,
       name: 'Basic Setup - Initialize i18n',
     },
+    'formatting-helpers': {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({ locale: 'en-US' })
+
+// Number formatting
+console.log('Number:', i18n.number(1234567.89))
+console.log('Currency:', i18n.number(1234.56, {
+  style: 'currency',
+  currency: 'USD'
+}))
+console.log('Percent:', i18n.number(0.75, {
+  style: 'percent'
+}))
+
+// Date formatting
+const date = new Date('2024-03-15T10:30:00')
+console.log('\\nDate:', i18n.date(date))
+console.log('Short:', i18n.date(date, { dateStyle: 'short' }))
+console.log('Long:', i18n.date(date, {
+  dateStyle: 'long',
+  timeStyle: 'short'
+}))
+
+// Different locale
+i18n.setLocale('de-DE')
+console.log('\\nGerman number:', i18n.number(1234567.89))
+console.log('German date:', i18n.date(date))`,
+      name: 'Number and Date Formatting',
+    },
+    namespaces: {
+      code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      'common.hello': 'Hello',
+      'common.goodbye': 'Goodbye',
+      'errors.notFound': 'Not found',
+      'errors.unauthorized': 'Unauthorized',
+      'nav.home': 'Home',
+      'nav.about': 'About'
+    }
+  }
+})
+
+// Use namespace helper
+const common = i18n.namespace('common')
+const errors = i18n.namespace('errors')
+const nav = i18n.namespace('nav')
+
+console.log('Common:', common.t('hello'))
+console.log('Errors:', errors.t('notFound'))
+console.log('Nav:', nav.t('home'))`,
+      name: 'Namespaces for Organization',
+    },
     'nested-objects': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
@@ -1141,63 +1198,6 @@ console.log('\\nSpanish:')
 console.log(i18n.t('user.profile.title'))
 console.log(i18n.t('app.navigation.menu.home'))`,
       name: 'Nested Message Objects',
-    },
-    'formatting-helpers': {
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-const i18n = createI18n({ locale: 'en-US' })
-
-// Number formatting
-console.log('Number:', i18n.number(1234567.89))
-console.log('Currency:', i18n.number(1234.56, {
-  style: 'currency',
-  currency: 'USD'
-}))
-console.log('Percent:', i18n.number(0.75, {
-  style: 'percent'
-}))
-
-// Date formatting
-const date = new Date('2024-03-15T10:30:00')
-console.log('\\nDate:', i18n.date(date))
-console.log('Short:', i18n.date(date, { dateStyle: 'short' }))
-console.log('Long:', i18n.date(date, {
-  dateStyle: 'long',
-  timeStyle: 'short'
-}))
-
-// Different locale
-i18n.setLocale('de-DE')
-console.log('\\nGerman number:', i18n.number(1234567.89))
-console.log('German date:', i18n.date(date))`,
-      name: 'Number and Date Formatting',
-    },
-    namespaces: {
-      code: `import { createI18n } from '@vielzeug/i18nit'
-
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      'common.hello': 'Hello',
-      'common.goodbye': 'Goodbye',
-      'errors.notFound': 'Not found',
-      'errors.unauthorized': 'Unauthorized',
-      'nav.home': 'Home',
-      'nav.about': 'About'
-    }
-  }
-})
-
-// Use namespace helper
-const common = i18n.namespace('common')
-const errors = i18n.namespace('errors')
-const nav = i18n.namespace('nav')
-
-console.log('Common:', common.t('hello'))
-console.log('Errors:', errors.t('notFound'))
-console.log('Nav:', nav.t('home'))`,
-      name: 'Namespaces for Organization',
     },
     pluralization: {
       code: `import { createI18n } from '@vielzeug/i18nit'
@@ -1933,95 +1933,6 @@ console.log('User posts URL:', userPostsUrl)`,
     },
   },
   stateit: {
-    'basic-state': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-// Create a simple counter state
-const counter = createSnapshot({ count: 0, name: 'Counter' })
-
-// Subscribe to changes
-counter.subscribe((current, prev) => {
-  console.log(\`Count: \${prev.count} → \${current.count}\`)
-})
-
-// Update state - partial merge
-console.log('Initial:', counter.get())
-counter.set({ count: 1 })
-counter.set({ count: 2 })
-
-// Update with function
-counter.set((state) => ({ count: state.count + 1 }))
-
-// Reset to initial
-counter.reset()
-console.log('After reset:', counter.get())`,
-      name: 'Basic State - Counter',
-    },
-    'selective-subscription': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-const user = createSnapshot({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com'
-})
-
-// Subscribe to specific field only
-user.subscribe(
-  (state) => state.name,
-  (name, prevName) => {
-    console.log(\`Name changed: \${prevName} → \${name}\`)
-  }
-)
-
-// Subscribe to computed value
-user.subscribe(
-  (state) => state.age >= 18,
-  (isAdult) => {
-    console.log('Is adult:', isAdult)
-  }
-)
-
-// Only name changes trigger name subscription
-user.set({ name: 'Bob' }) // Triggers name subscriber
-user.set({ age: 31 }) // Doesn't trigger name subscriber
-user.set({ email: 'bob@example.com' }) // No name change
-user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
-      name: 'Selective Subscriptions',
-    },
-    'get-with-selector': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-const user = createSnapshot({
-  firstName: 'Alice',
-  lastName: 'Johnson',
-  age: 30,
-  address: {
-    city: 'New York',
-    country: 'USA'
-  }
-})
-
-// Get full state
-console.log('Full state:', user.get())
-
-// Get with selector - computed value
-const fullName = user.get((s) => \`\${s.firstName} \${s.lastName}\`)
-console.log('Full name:', fullName)
-
-// Get nested property
-const city = user.get((s) => s.address.city)
-console.log('City:', city)
-
-// Get multiple derived values
-const summary = user.get((s) => ({
-  name: \`\${s.firstName} \${s.lastName}\`,
-  location: \`\${s.address.city}, \${s.address.country}\`,
-  isAdult: s.age >= 18
-}))
-console.log('Summary:', summary)`,
-      name: 'Get with Selector',
-    },
     'async-updates': {
       code: `import { createSnapshot } from '@vielzeug/stateit'
 
@@ -2063,6 +1974,130 @@ async function fetchItems() {
 await fetchItems()`,
       name: 'Async State Updates',
     },
+    'basic-state': {
+      code: `import { createSnapshot } from '@vielzeug/stateit'
+
+// Create a simple counter state
+const counter = createSnapshot({ count: 0, name: 'Counter' })
+
+// Subscribe to changes
+counter.subscribe((current, prev) => {
+  console.log(\`Count: \${prev.count} → \${current.count}\`)
+})
+
+// Update state - partial merge
+console.log('Initial:', counter.get())
+counter.set({ count: 1 })
+counter.set({ count: 2 })
+
+// Update with function
+counter.set((state) => ({ count: state.count + 1 }))
+
+// Reset to initial
+counter.reset()
+console.log('After reset:', counter.get())`,
+      name: 'Basic State - Counter',
+    },
+    'computed-values': {
+      code: `import { createSnapshot } from '@vielzeug/stateit'
+
+const cart = createSnapshot({
+  items: [
+    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
+    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
+  ],
+  taxRate: 0.1
+})
+
+// Create computed values
+const subtotal = cart.computed((state) =>
+  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+)
+
+const tax = cart.computed((state) => subtotal.get() * state.taxRate)
+const total = cart.computed(() => subtotal.get() + tax.get())
+
+console.log('Subtotal:', subtotal.get().toFixed(2))
+console.log('Tax:', tax.get().toFixed(2))
+console.log('Total:', total.get().toFixed(2))
+
+// Subscribe to changes
+total.subscribe((current, prev) => {
+  console.log(\`Total: $\${prev.toFixed(2)} → $\${current.toFixed(2)}\`)
+})
+
+// Add item - auto-updates
+cart.set((state) => ({
+  items: [...state.items, { id: 3, name: 'Orange', price: 1.2, quantity: 4 }]
+}))
+
+console.log('\\nNew Total:', total.get().toFixed(2))`,
+      name: 'Computed Values',
+    },
+    'custom-equality': {
+      code: `import { createSnapshot } from '@vielzeug/stateit'
+
+const state = createSnapshot({
+  items: [1, 2, 3],
+  metadata: { updated: Date.now() }
+})
+
+// Subscribe with custom equality - only notify if length changes
+state.subscribe(
+  (state) => state.items,
+  (items) => {
+    console.log('Items array changed:', items)
+  },
+  {
+    equality: (a, b) => a.length === b.length
+  }
+)
+
+// Won't trigger (same length)
+state.set({ items: [4, 5, 6] })
+console.log('After replacing items (same length) - no log above')
+
+// Will trigger (different length)
+state.set({ items: [1, 2, 3, 4] })
+console.log('After adding item - logged above')
+
+// Won't trigger (metadata change doesn't affect items)
+state.set({ metadata: { updated: Date.now() } })`,
+      name: 'Custom Equality Functions',
+    },
+    'get-with-selector': {
+      code: `import { createSnapshot } from '@vielzeug/stateit'
+
+const user = createSnapshot({
+  firstName: 'Alice',
+  lastName: 'Johnson',
+  age: 30,
+  address: {
+    city: 'New York',
+    country: 'USA'
+  }
+})
+
+// Get full state
+console.log('Full state:', user.get())
+
+// Get with selector - computed value
+const fullName = user.get((s) => \`\${s.firstName} \${s.lastName}\`)
+console.log('Full name:', fullName)
+
+// Get nested property
+const city = user.get((s) => s.address.city)
+console.log('City:', city)
+
+// Get multiple derived values
+const summary = user.get((s) => ({
+  name: \`\${s.firstName} \${s.lastName}\`,
+  location: \`\${s.address.city}, \${s.address.country}\`,
+  isAdult: s.age >= 18
+}))
+console.log('Summary:', summary)`,
+      name: 'Get with Selector',
+    },
     'scoped-states': {
       code: `import { createSnapshot } from '@vielzeug/stateit'
 
@@ -2100,36 +2135,37 @@ console.log('Parent unchanged:', app.get())
 console.log('Result:', result)`,
       name: 'Scoped States',
     },
-    'custom-equality': {
+    'selective-subscription': {
       code: `import { createSnapshot } from '@vielzeug/stateit'
 
-const state = createSnapshot({
-  items: [1, 2, 3],
-  metadata: { updated: Date.now() }
+const user = createSnapshot({
+  name: 'Alice',
+  age: 30,
+  email: 'alice@example.com'
 })
 
-// Subscribe with custom equality - only notify if length changes
-state.subscribe(
-  (state) => state.items,
-  (items) => {
-    console.log('Items array changed:', items)
-  },
-  {
-    equality: (a, b) => a.length === b.length
+// Subscribe to specific field only
+user.subscribe(
+  (state) => state.name,
+  (name, prevName) => {
+    console.log(\`Name changed: \${prevName} → \${name}\`)
   }
 )
 
-// Won't trigger (same length)
-state.set({ items: [4, 5, 6] })
-console.log('After replacing items (same length) - no log above')
+// Subscribe to computed value
+user.subscribe(
+  (state) => state.age >= 18,
+  (isAdult) => {
+    console.log('Is adult:', isAdult)
+  }
+)
 
-// Will trigger (different length)
-state.set({ items: [1, 2, 3, 4] })
-console.log('After adding item - logged above')
-
-// Won't trigger (metadata change doesn't affect items)
-state.set({ metadata: { updated: Date.now() } })`,
-      name: 'Custom Equality Functions',
+// Only name changes trigger name subscription
+user.set({ name: 'Bob' }) // Triggers name subscriber
+user.set({ age: 31 }) // Doesn't trigger name subscriber
+user.set({ email: 'bob@example.com' }) // No name change
+user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
+      name: 'Selective Subscriptions',
     },
     'todo-list': {
       code: `import { createSnapshot } from '@vielzeug/stateit'
@@ -2178,42 +2214,6 @@ todos.set((state) => ({
 // Show completed
 todos.set({ filter: 'completed' })`,
       name: 'Todo List Example',
-    },
-    'computed-values': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-const cart = createSnapshot({
-  items: [
-    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
-    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
-  ],
-  taxRate: 0.1
-})
-
-// Create computed values
-const subtotal = cart.computed((state) =>
-  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-)
-
-const tax = cart.computed((state) => subtotal.get() * state.taxRate)
-const total = cart.computed(() => subtotal.get() + tax.get())
-
-console.log('Subtotal:', subtotal.get().toFixed(2))
-console.log('Tax:', tax.get().toFixed(2))
-console.log('Total:', total.get().toFixed(2))
-
-// Subscribe to changes
-total.subscribe((current, prev) => {
-  console.log(\`Total: $\${prev.toFixed(2)} → $\${current.toFixed(2)}\`)
-})
-
-// Add item - auto-updates
-cart.set((state) => ({
-  items: [...state.items, { id: 3, name: 'Orange', price: 1.2, quantity: 4 }]
-}))
-
-console.log('\\nNew Total:', total.get().toFixed(2))`,
-      name: 'Computed Values',
     },
     transactions: {
       code: `import { createSnapshot } from '@vielzeug/stateit'

@@ -3,11 +3,13 @@ import { isPromise } from '../isPromise';
 describe('isPromise', () => {
   it('should return true for a Promise instance', () => {
     const promise = new Promise((resolve) => resolve(true));
+
     expect(isPromise(promise)).toBe(true);
   });
 
   it('should return true for an async function', () => {
     const asyncFn = async () => {};
+
     expect(isPromise(asyncFn())).toBe(true);
   });
 
@@ -22,6 +24,7 @@ describe('isPromise', () => {
 
   it('should return false for a function that is not async', () => {
     const fn = () => {};
+
     expect(isPromise(fn())).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import { interval } from '../interval';
 describe('interval', () => {
   it('should generate daily dates within the range', () => {
     const result = interval('2022-01-01', '2022-01-05', { interval: 'day', steps: 1 });
+
     expect(result).toEqual([
       new Date('2022-01-01'),
       new Date('2022-01-02'),
@@ -14,6 +15,7 @@ describe('interval', () => {
 
   it('should generate weekly dates within the range', () => {
     const result = interval('2022-01-01', '2022-01-31', { interval: 'week', steps: 1 });
+
     expect(result).toEqual([
       new Date('2022-01-01'),
       new Date('2022-01-08'),
@@ -25,6 +27,7 @@ describe('interval', () => {
 
   it('should generate monthly dates within the range', () => {
     const result = interval('2022-01-01', '2022-06-01', { interval: 'month', steps: 1 });
+
     expect(result).toEqual([
       new Date('2022-01-01'),
       new Date('2022-02-01'),
@@ -37,6 +40,7 @@ describe('interval', () => {
 
   it('should return an empty array if start date is after end date', () => {
     const result = interval('2022-12-01', '2022-01-01');
+
     expect(result).toEqual([]);
   });
 
@@ -55,11 +59,13 @@ describe('interval', () => {
 
   it('should return the latest date when latest flag is true', () => {
     const result = interval('2022-01-01', '2022-01-10', { interval: 'day', latest: true, steps: 100 });
+
     expect(result).toEqual([new Date('2022-01-01'), new Date('2022-01-10')]);
   });
 
   it("should generate start-of-month dates when using 'monthStart' interval", () => {
     const result = interval('2022-01-01', '2022-06-01', { interval: 'monthStart', steps: 1 });
+
     expect(result).toEqual([
       new Date('2022-01-01'),
       new Date('2022-02-01'),
@@ -72,6 +78,7 @@ describe('interval', () => {
 
   it("should generate end-of-month dates when using 'monthEnd' interval", () => {
     const result = interval('2022-01-01', '2022-06-30', { interval: 'monthEnd', steps: 1 });
+
     expect(result).toEqual([
       new Date('2022-01-31'),
       new Date('2022-02-28'),
@@ -84,6 +91,7 @@ describe('interval', () => {
 
   it("should generate start-of-year dates when using 'yearStart' interval", () => {
     const result = interval('2020-01-01', '2025-12-31', { interval: 'yearStart', steps: 1 });
+
     expect(result).toEqual([
       new Date('2020-01-01'),
       new Date('2021-01-01'),
@@ -96,6 +104,7 @@ describe('interval', () => {
 
   it("should generate end-of-year dates when using 'yearEnd' interval", () => {
     const result = interval('2020-01-01', '2025-12-31', { interval: 'yearEnd', steps: 1 });
+
     expect(result).toEqual([
       new Date('2020-12-31'),
       new Date('2021-12-31'),
@@ -108,6 +117,7 @@ describe('interval', () => {
 
   it('should generate dates correctly with a step of 2', () => {
     const result = interval('2022-01-01', '2022-01-10', { interval: 'day', steps: 2 });
+
     expect(result).toEqual([
       new Date('2022-01-01'),
       new Date('2022-01-03'),

@@ -12,7 +12,6 @@
  *
  * @returns `true` if the value is a function, else `false`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
 export function isFunction(arg: unknown): arg is (...args: any[]) => any {
   return typeof arg === 'function';
 }

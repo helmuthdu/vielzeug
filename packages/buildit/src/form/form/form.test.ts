@@ -20,20 +20,26 @@ describe('bit-form', () => {
 
     it('emits submit event with formData payload', async () => {
       fixture = await mount('bit-form');
+
       const onSubmit = vi.fn();
+
       fixture.element.addEventListener('submit', onSubmit);
 
       fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
+
       const detail = (onSubmit.mock.calls[0][0] as CustomEvent).detail;
+
       expect(detail.formData).toBeInstanceOf(FormData);
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('emits reset event', async () => {
       fixture = await mount('bit-form');
+
       const onReset = vi.fn();
+
       fixture.element.addEventListener('reset', onReset);
 
       fixture.query('form')?.dispatchEvent(new Event('reset', { bubbles: true }));

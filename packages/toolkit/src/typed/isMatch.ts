@@ -19,9 +19,9 @@
  *
  * @returns `true` if the object is a match, else `false`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
 export function isMatch(object: any, source: any): boolean {
   if (object === source) return true;
+
   if (object == null || source == null) return false;
 
   const isObjArray = Array.isArray(object);
@@ -31,7 +31,7 @@ export function isMatch(object: any, source: any): boolean {
 
   if (isObjArray && isSrcArray) {
     if (source.length > object.length) return false;
-    // biome-ignore lint/suspicious/noExplicitAny: -
+
     return source.every((item: any, i: number) => isMatch(object[i], item));
   }
 
@@ -41,6 +41,7 @@ export function isMatch(object: any, source: any): boolean {
         return false;
       }
     }
+
     return true;
   }
 

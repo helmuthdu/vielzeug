@@ -16,8 +16,10 @@ import { sum } from './sum';
  */
 export function average<T>(array: T[], callback?: (item: T) => number): number | undefined {
   if (array.length === 0) return undefined;
+
   try {
     const result = sum(array, callback) / array.length;
+
     return Number.isNaN(result) ? undefined : result;
   } catch {
     return undefined;

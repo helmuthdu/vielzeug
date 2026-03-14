@@ -95,6 +95,7 @@ describe('proxy', () => {
     const proxied = proxy(obj, { get, set, watch: ['a'] });
 
     proxied.b = 3;
+
     const value = proxied.b;
 
     expect(set).not.toHaveBeenCalled();

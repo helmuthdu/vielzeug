@@ -1,4 +1,5 @@
 import { computed, css, define, defineProps, effect, html, inject, signal } from '@vielzeug/craftit';
+
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 
@@ -40,7 +41,6 @@ const styles = /* css */ css`
         translate: 0 0;
       }
     }
-
   }
 `;
 
@@ -97,13 +97,16 @@ export const TAG = define('bit-tab-panel', ({ host }) => {
       xl: 'var(--size-8)',
       xs: 'var(--size-1)',
     };
+
     return paddingMap[props.padding.value] || paddingMap.md;
   });
 
   // Track whether the panel has ever been active (for lazy rendering)
   const hasBeenActive = signal(false);
+
   effect(() => {
     host.toggleAttribute('active', isActive.value);
+
     if (isActive.value) hasBeenActive.value = true;
   });
 
@@ -121,8 +124,7 @@ export const TAG = define('bit-tab-panel', ({ host }) => {
         :aria-labelledby="${() => `tab-${props.value.value}`}"
         :aria-hidden=${() => String(!isActive.value)}
         :style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
-        tabindex="0"
-      >
+        tabindex="0">
         ${() => (shouldRender.value ? html`<slot></slot>` : '')}
       </div>
     `,
