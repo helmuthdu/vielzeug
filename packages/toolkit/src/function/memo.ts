@@ -60,6 +60,11 @@ export function memo<T extends Fn>(
     const result = fn(...args);
     cache.set(key, { timestamp: now, value: result });
 
+    if (result instanceof Promise) {
+      // Evict on rejection so subsequent calls retry instead of returning a settled failure
+      (result as Promise<unknown>).catch(() => cache.delete(key));
+    }
+
     if (maxSize && cache.size > maxSize) {
       cache.delete(cache.keys().next().value!); // Remove least recently used
     }

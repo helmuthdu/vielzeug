@@ -184,7 +184,7 @@ const componentStyles = /* css */ css`
       display: none;
       position: absolute;
       top: 0;
-      left: 0;
+      inset-inline-start: 0;
       width: 65%;
       height: 3px;
       background: linear-gradient(
@@ -198,6 +198,11 @@ const componentStyles = /* css */ css`
     :host([loading]) .loading-bar {
       display: block;
       animation: var(--_motion-animation, loading-bar 1.4s ease-in-out infinite);
+    }
+
+    /* In RTL the loading bar sweeps right-to-left */
+    :host(:dir(rtl)[loading]) .loading-bar {
+      animation-direction: reverse;
     }
 
     /* ── Disabled ─────────────────────────────── */

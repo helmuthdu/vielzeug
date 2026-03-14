@@ -1,26 +1,30 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: - */
+
 import type { Fn } from '../types';
 
 // biome-ignore lint/suspicious/noExplicitAny: -
 type RemoveFirstParameter<T extends Fn> = T extends (first: any, ...rest: infer R) => any ? R : never;
+// biome-ignore lint/suspicious/noExplicitAny: -
+type FirstParameter<T extends Fn> = T extends (first: infer A, ...rest: any[]) => any ? A : never;
 
 /**
- * Converts an array-first, multi-arg function into a unary function that takes
- * only the array — useful for pipeline composition.
+ * Partially applies a multi-arg function by pre-filling every argument
+ * except the first — returning a unary function useful for pipeline composition.
  *
  * @example
  * ```ts
  * const double = (num: number) => num * 2;
- * const doubleAll = fp(select, double);
+ * const doubleAll = partial(select, double);
  * doubleAll([1, 2, 3]); // [2, 4, 6]
  *
  * // In a pipe
- * pipe(fp(select, (x: number) => x > 1 ? x * 2 : null))([1, 2, 3]); // [4, 6]
+ * pipe(partial(select, (x: number) => x > 1 ? x * 2 : null))([1, 2, 3]); // [4, 6]
  * ```
  *
- * @param callback - Any function whose first argument is the array.
+ * @param callback - Any function whose first argument is the collection.
  * @param args - The remaining arguments to pre-apply.
- * @returns A unary function `(array: T[]) => ReturnType<F>`.
+ * @returns A unary function `(collection) => ReturnType<F>`.
  */
-export const fp = <T, F extends Fn = Fn>(callback: F, ...args: RemoveFirstParameter<F>) => {
-  return (array: T[]) => callback(array, ...args);
+export const partial = <F extends Fn>(callback: F, ...args: RemoveFirstParameter<F>) => {
+  return (collection: FirstParameter<F>) => callback(collection, ...args);
 };

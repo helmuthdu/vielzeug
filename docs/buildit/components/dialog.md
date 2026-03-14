@@ -1,4 +1,4 @@
-# Dialog Component
+# Dialog
 
 A modal dialog that blocks page interaction, traps focus, and dismisses on `Escape`. Built on the native `<dialog>` element for correct top-layer stacking and browser-managed accessibility semantics — no extra JS focus trapping or `z-index` juggling required.
 

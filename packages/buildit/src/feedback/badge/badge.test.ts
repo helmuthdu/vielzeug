@@ -49,6 +49,12 @@ describe('bit-badge', () => {
 
       expect(fixture.query('.badge')?.textContent).toContain('0');
     });
+
+    it('displays negative count value', async () => {
+      fixture = await mount('bit-badge', { attrs: { count: '-5' } });
+
+      expect(fixture.query('.badge')?.textContent).toContain('-5');
+    });
   });
 
   describe('Dot Mode', () => {
@@ -78,10 +84,10 @@ describe('bit-badge', () => {
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
-    it('applies rounded', async () => {
-      fixture = await mount('bit-badge', { attrs: { rounded: '' } });
+    it('applies rounded variant', async () => {
+      fixture = await mount('bit-badge', { attrs: { rounded: 'none' } });
 
-      expect(fixture.element.hasAttribute('rounded')).toBe(true);
+      expect(fixture.element.getAttribute('rounded')).toBe('none');
     });
 
     it('applies anchor position', async () => {
@@ -97,7 +103,6 @@ describe('bit-badge', () => {
         fixture = await mount('bit-badge', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
       });
     }
   });
@@ -108,7 +113,6 @@ describe('bit-badge', () => {
         fixture = await mount('bit-badge', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
-        fixture.destroy();
       });
     }
   });

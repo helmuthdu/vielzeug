@@ -1,4 +1,4 @@
-# Text Component
+# Text
 
 A versatile typography component with semantic variants for consistent text styling across your application. Provides complete control over typography with design system integration and accessibility built-in.
 
@@ -7,11 +7,12 @@ A versatile typography component with semantic variants for consistent text styl
 - 🎨 **6 Semantic Variants**: body, heading, label, caption, overline, code
 - 📏 **13 Sizes**: xs to 9xl (12px to 128px)
 - ⚖️ **4 Font Weights**: normal, medium, semibold, bold
-- 🌈 **9 Colors**: semantic (primary, secondary, success, warning, error) + text colors (heading, body, muted, disabled)
+- 🌈 **11 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, disabled, contrast)
 - 📐 **4 Alignments**: left, center, right, justify
-- ✂️ **Truncate**: CSS-based single-line text truncation with ellipsis
+- ✂️ **Truncate**: Single-line ellipsis truncation
+- 📋 **Line Clamp**: Multi-line truncation with ellipsis via `lines` prop
 - 🔤 **Semantic HTML**: Render as different HTML tags (span, p, div, h1-h6, label, code)
-- ♿ **Accessible**: Semantic HTML support, respects user font preferences
+- ♿ **Accessible**: `as="h1"–"h6"` sets `role="heading"` + `aria-level` automatically
 - 🎭 **Italic Style**: Font style support
 - 🔧 **Customizable**: CSS custom properties for full control
 
@@ -50,11 +51,12 @@ Normal paragraph text with standard line height. The default variant for general
 
 ### Heading
 
-Emphasized text for headings with tighter line height and semibold weight by default.
+Emphasized text for headings with tighter line height and semibold weight. Defaults to `2xl` size — override with `size` when needed.
 
 <ComponentPreview center vertical>
 
 ```html
+<bit-text variant="heading">Default heading (2xl)</bit-text>
 <bit-text variant="heading" size="3xl">Main Heading</bit-text>
 <bit-text variant="heading" size="2xl">Section Heading</bit-text>
 <bit-text variant="heading" size="xl">Subsection Heading</bit-text>
@@ -154,6 +156,7 @@ Use semantic colors to convey meaning and maintain consistency.
 ```html
 <bit-text color="primary">Primary colored text</bit-text>
 <bit-text color="secondary">Secondary colored text</bit-text>
+<bit-text color="info">Info colored text</bit-text>
 <bit-text color="success">Success colored text</bit-text>
 <bit-text color="warning">Warning colored text</bit-text>
 <bit-text color="error">Error colored text</bit-text>
@@ -172,6 +175,7 @@ Automatic text colors that adapt to your theme.
 <bit-text color="body">Body text color (default)</bit-text>
 <bit-text color="muted">Muted/secondary text</bit-text>
 <bit-text color="disabled">Disabled text</bit-text>
+<bit-text color="contrast">Contrast text (for colored backgrounds)</bit-text>
 ```
 
 </ComponentPreview>
@@ -195,8 +199,8 @@ Four weight options for emphasis control.
 
 Control text alignment for layout purposes.
 
-::: info Display Change
-When using the `align` attribute, the text component automatically changes from `display: inline` to `display: block` to enable text alignment. This is similar to how `truncate` works.
+::: info Display behaviour
+`bit-text` is `display: block` by default. `as="span"`, `as="label"`, and `as="code"` switch it to `display: inline`. The `align` attribute has no effect on these inline variants unless `display: block` is also applied.
 :::
 
 <ComponentPreview center vertical>
@@ -225,7 +229,7 @@ When using the `align` attribute, the text component automatically changes from 
 
 ### Truncate
 
-Enable single-line truncation with ellipsis for overflow text using CSS.
+Enable single-line truncation with ellipsis for overflow text.
 
 <ComponentPreview center vertical>
 
@@ -241,7 +245,28 @@ Enable single-line truncation with ellipsis for overflow text using CSS.
 </ComponentPreview>
 
 ::: tip Usage
-The `truncate` attribute is a boolean flag. The text will be truncated when it overflows the container width. Make sure to set a width constraint on the text element or its parent container for truncation to work properly.
+The `truncate` attribute is a boolean flag. Set a width constraint on the element or its container for truncation to apply.
+:::
+
+### Line Clamp
+
+Clamp text to a fixed number of lines with an ellipsis — ideal for card descriptions and teasers.
+
+<ComponentPreview center vertical>
+
+```html
+<bit-box style="width: 100%; max-width: 400px;">
+  <bit-text lines="2">
+    This long description will be clamped to exactly two lines regardless of how much text is provided. The overflow is
+    hidden with a trailing ellipsis, keeping layouts consistent without JavaScript.
+  </bit-text>
+</bit-box>
+```
+
+</ComponentPreview>
+
+::: tip Usage
+Use `lines` for multi-line truncation and `truncate` for single-line. They are mutually exclusive — `lines` takes precedence if both are present.
 :::
 
 ### Italic Style
@@ -260,21 +285,23 @@ Apply italic styling to text.
 
 ### Semantic HTML Tags
 
-Control the underlying HTML element for proper semantic structure.
+The `as` attribute controls document semantics. For `h1`–`h6`, the component automatically sets `role="heading"` and the correct `aria-level` on the host so screen readers announce the correct heading level — no extra ARIA needed.
+
+Block elements (`p`, `div`, `h1`–`h6`) render as `display: block`. Inline elements (`span`, `label`, `code`) render as `display: inline`.
 
 <ComponentPreview center vertical>
 
 ```html
-<!-- Block-level elements -->
-<bit-text as="h1" variant="heading" size="3xl">H1 Heading Element</bit-text>
-<bit-text as="h2" variant="heading" size="2xl">H2 Heading Element</bit-text>
-<bit-text as="p">Paragraph element with proper semantics</bit-text>
-<bit-text as="div">Div element for containers</bit-text>
+<!-- Block-level — role="heading" + aria-level set automatically -->
+<bit-text as="h1" variant="heading" size="3xl">H1 Heading</bit-text>
+<bit-text as="h2" variant="heading" size="2xl">H2 Heading</bit-text>
+<bit-text as="p">Paragraph with proper semantics</bit-text>
+<bit-text as="div">Div container</bit-text>
 
-<!-- Inline elements -->
-<bit-text as="span">Span element (default)</bit-text>
-<bit-text as="label">Label element for forms</bit-text>
-<bit-text as="code" variant="code">Code element</bit-text>
+<!-- Inline — renders as display: inline -->
+<bit-text as="span">Inline span</bit-text>
+<bit-text as="label">Form label</bit-text>
+<bit-text as="code" variant="code">inline code</bit-text>
 ```
 
 </ComponentPreview>
@@ -383,16 +410,17 @@ Show file information with truncation using width constraints.
 
 ### Attributes
 
-| Attribute  | Type                                                                                                            | Default  | Description                                         |
-| ---------- | --------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
-| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                           | `'body'` | Text variant style                                  |
-| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'`  | —        | Text size (uses variant default if not specified)   |
-| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                  | —        | Font weight (uses variant default if not specified) |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled'` | —        | Text color (uses variant default if not specified)  |
-| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                    | —        | Text alignment                                      |
-| `truncate` | `boolean`                                                                                                       | `false`  | Enable single-line truncation with ellipsis         |
-| `italic`   | `boolean`                                                                                                       | `false`  | Italic font style                                   |
-| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                   | —        | Semantic HTML tag to render                         |
+| Attribute  | Type                                                                                                                                    | Default | Description                                                           |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                   | —       | Text variant style                                                    |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'`                          | —       | Font size (falls back to variant default, then `base`)                |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                          | —       | Font weight (falls back to variant default, then `normal`)            |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled' \| 'contrast'` | —       | Text color (falls back to variant default, then `inherit`)            |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                            | —       | Text alignment (forces `display: block`)                              |
+| `truncate` | `boolean`                                                                                                                               | —       | Single-line truncation with ellipsis                                  |
+| `lines`    | `number`                                                                                                                                | —       | Clamp to N lines with ellipsis (multi-line truncation)                |
+| `italic`   | `boolean`                                                                                                                               | —       | Italic font style                                                     |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                           | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level` |
 
 ### Slots
 
@@ -416,9 +444,15 @@ The text component follows WAI-ARIA best practices.
 
 ### `bit-text`
 
+✅ **Automatic Heading ARIA**
+
+- `as="h1"` through `as="h6"` automatically sets `role="heading"` and the matching `aria-level` (1–6) on the host element. Screen readers announce the correct heading level without any extra markup.
+- Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
+
 ✅ **Semantic Structure**
 
-- Use the `as` attribute to render proper HTML elements (`h1`–`h6`, `p`, `label`, etc.).
+- Use the `as` attribute to give the element correct document semantics (`h1`–`h6`, `p`, `label`, etc.).
+- `as="span"`, `as="label"`, and `as="code"` render as `display: inline` matching their native HTML counterparts.
 
 ✅ **Screen Readers**
 
@@ -427,7 +461,7 @@ The text component follows WAI-ARIA best practices.
 - Text colors maintain accessible contrast ratios with backgrounds.
 
 ::: tip Best Practice
-Always use semantic HTML tags (`as` attribute) for headings, paragraphs, and labels to maintain proper document structure and accessibility.
+Always set `as` for headings and form labels. For page titles, pair `as="h1"` with `variant="heading"` and the appropriate `size` to get correct visual hierarchy and document semantics in one attribute set.
 :::
 
 ## Best Practices
@@ -437,10 +471,12 @@ Always use semantic HTML tags (`as` attribute) for headings, paragraphs, and lab
 - Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`) — especially inside forms, articles, and page headers.
 - Use `variant="caption"` with `color="muted"` for helper text, timestamps, and metadata.
 - Pair `variant="overline"` with `size="xs"` for category labels and eyebrow headings.
-- Use `truncate` with a width constraint on the element or its container.
+- Use `truncate` (single-line) or `lines="N"` (multi-line) with a width constraint on the element or its container.
+- Prefer `lines` over `truncate` for card bodies and article previews where two or three lines are acceptable.
 
 **Don't:**
 
 - Use heading sizes (`3xl` and above) without also setting `variant="heading"` — the variant controls line height and weight defaults.
 - Rely on `color` alone to convey meaning — always pair with a descriptive text label.
 - Use `bit-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.
+- Set both `truncate` and `lines` on the same element; use one or the other.

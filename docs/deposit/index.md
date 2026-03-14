@@ -62,6 +62,7 @@ for await (const user of db.from('users').orderBy('name')) {
 - **`getMany`** — batch fetch by a list of keys in a single operation
 - **Transactions** — atomic multi-table writes with `get`, `getAll`, `put`, `patch`, and `delete` (IndexedDB only)
 - **Bulk operations** — `put` and `delete` accept a single value or an array
+- **`storeField()`** — migration helper that encapsulates deposit's internal key-path convention
 - **Lightweight** — <PackageInfo package="deposit" type="size" /> gzipped, zero external dependencies
 
 ## Next Steps

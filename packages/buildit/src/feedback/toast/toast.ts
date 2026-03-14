@@ -1,6 +1,6 @@
 import { css, define, defineEmits, defineProps, html, onMount, ref, signal } from '@vielzeug/craftit';
 import { reducedMotionMixin } from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -162,34 +162,6 @@ const componentStyles = /* css */ css`
 
     .toast-wrapper.exiting ::slotted(bit-alert) { transition: none !important; }
 
-    /* Progress bar — shrinks left-to-right over the toast duration */
-    .toast-progress {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--toast-progress-color, rgba(0, 0, 0, 0.18));
-      border-radius: 0 0 var(--rounded-md) var(--rounded-md);
-      transform-origin: left;
-      animation: toast-progress var(--_toast-duration, 5000ms) linear forwards;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    :host(.timers-paused) .toast-progress {
-      animation-play-state: paused;
-    }
-
-    @keyframes toast-progress {
-      from { transform: scaleX(1); }
-      to   { transform: scaleX(0); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .toast-progress { display: none; }
-    }
-
     .toast-actions {
       display: flex;
       justify-content: flex-end;
@@ -210,7 +182,7 @@ const componentStyles = /* css */ css`
       :host([position='bottom-center']) {
         --_inset-left: var(--size-2);
         transform: none;
-        left: var(--size-2);
+        inset-inline-start: var(--size-2);
       }
     }
 
@@ -249,6 +221,7 @@ export interface ToastItem {
   actions?: Array<{
     label: string;
     color?: ThemeColor;
+    variant?: VisualVariant;
     onClick?: () => void;
   }>;
   /** Called after the toast is fully dismissed and removed */
@@ -310,7 +283,7 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
           <bit-button
             size="sm"
             color=${action.color || toast.color || 'primary'}
-            variant="solid"
+            variant=${action.variant || 'solid'}
             @click=${() => {
               action.onClick?.();
               onDismiss();
@@ -379,7 +352,6 @@ export const TAG = define('bit-toast', ({ host }) => {
   const pauseTimers = () => {
     if (isPaused) return;
     isPaused = true;
-    host.classList.add('timers-paused');
     for (const [id, t] of timers) {
       clearTimeout(t.timeoutId);
       timers.set(id, { ...t, remaining: Math.max(0, t.remaining - (Date.now() - t.startedAt)) });
@@ -389,7 +361,6 @@ export const TAG = define('bit-toast', ({ host }) => {
   const resumeTimers = () => {
     if (!isPaused) return;
     isPaused = false;
-    host.classList.remove('timers-paused');
     for (const [id, t] of timers) {
       if (t.remaining <= 0) continue;
       scheduleRemoval(id, t.remaining);
@@ -515,7 +486,6 @@ export const TAG = define('bit-toast', ({ host }) => {
       class=${() => `toast-wrapper${exitingIds.value.has(toast.id) ? ' exiting' : ''}`}
       data-toast-id=${toast.id}
       part="toast-wrapper"
-      style=${toast.duration && toast.duration > 0 ? `--_toast-duration: ${toast.duration}ms` : ''}
     >
       <bit-alert
         color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
@@ -531,7 +501,6 @@ export const TAG = define('bit-toast', ({ host }) => {
         ${toast.message}
         ${renderToastActions(toast, () => removeToast(toast.id))}
       </bit-alert>
-      ${toast.duration && toast.duration > 0 ? html`<div class="toast-progress" aria-hidden="true"></div>` : ''}
     </div>
   `;
 

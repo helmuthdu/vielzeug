@@ -1,4 +1,4 @@
-# Menu Component
+# Menu
 
 An action dropdown triggered by any slotted element. Presents a list of `bit-menu-item` actions in a floating panel using viewport-aware positioning. Supports full keyboard navigation and accessibility semantics.
 

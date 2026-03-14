@@ -1,4 +1,4 @@
-# Button Component
+# Button
 
 A versatile button component with multiple variants, colors, sizes, and states. Includes both standalone buttons and button groups for organizing related actions. Built with accessibility in mind and fully customizable through CSS custom properties.
 
@@ -121,13 +121,13 @@ Six semantic colors for different contexts.
 <ComponentPreview center>
 
 ```html
-<bit-button variant="solid">Default</bit-button>
-<bit-button variant="solid" color="primary">Primary</bit-button>
-<bit-button variant="solid" color="secondary">Secondary</bit-button>
-<bit-button variant="solid" color="info">Info</bit-button>
-<bit-button variant="solid" color="success">Success</bit-button>
-<bit-button variant="solid" color="warning">Warning</bit-button>
-<bit-button variant="solid" color="error">Error</bit-button>
+<bit-button variant="bordered">Default</bit-button>
+<bit-button variant="bordered" color="primary">Primary</bit-button>
+<bit-button variant="bordered" color="secondary">Secondary</bit-button>
+<bit-button variant="bordered" color="info">Info</bit-button>
+<bit-button variant="bordered" color="success">Success</bit-button>
+<bit-button variant="bordered" color="warning">Warning</bit-button>
+<bit-button variant="bordered" color="error">Error</bit-button>
 ```
 
 </ComponentPreview>

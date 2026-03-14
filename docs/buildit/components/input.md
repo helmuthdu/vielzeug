@@ -1,4 +1,4 @@
-# Input Component
+# Input
 
 A customizable text input component with multiple types, variants, and validation states. Built with accessibility in mind and fully customizable through CSS custom properties.
 

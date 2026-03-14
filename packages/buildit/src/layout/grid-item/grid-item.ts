@@ -1,4 +1,4 @@
-import { css, define, defineProps, effect, html, onCleanup } from '@vielzeug/craftit';
+import { css, define, defineProps, effect, html } from '@vielzeug/craftit';
 
 const styles = /* css */ css`
   @layer buildit.base {
@@ -76,37 +76,33 @@ export const TAG = define('bit-grid-item', ({ host }) => {
     rowSpan: { default: undefined },
   });
 
-  onCleanup(
-    effect(() => {
-      const col = props.col.value;
-      const span = props.colSpan.value;
-      if (col) {
-        host.style.setProperty('grid-column', col);
-      } else if (span === 'full') {
-        host.style.setProperty('grid-column', '1 / -1');
-      } else if (span) {
-        host.style.setProperty('grid-column', `span ${span}`);
-      } else {
-        host.style.removeProperty('grid-column');
-      }
-    }),
-  );
+  effect(() => {
+    const col = props.col.value;
+    const span = props.colSpan.value;
+    if (col) {
+      host.style.setProperty('grid-column', col);
+    } else if (span === 'full') {
+      host.style.setProperty('grid-column', '1 / -1');
+    } else if (span) {
+      host.style.setProperty('grid-column', `span ${span}`);
+    } else {
+      host.style.removeProperty('grid-column');
+    }
+  });
 
-  onCleanup(
-    effect(() => {
-      const row = props.row.value;
-      const span = props.rowSpan.value;
-      if (row) {
-        host.style.setProperty('grid-row', row);
-      } else if (span === 'full') {
-        host.style.setProperty('grid-row', '1 / -1');
-      } else if (span) {
-        host.style.setProperty('grid-row', `span ${span}`);
-      } else {
-        host.style.removeProperty('grid-row');
-      }
-    }),
-  );
+  effect(() => {
+    const row = props.row.value;
+    const span = props.rowSpan.value;
+    if (row) {
+      host.style.setProperty('grid-row', row);
+    } else if (span === 'full') {
+      host.style.setProperty('grid-row', '1 / -1');
+    } else if (span) {
+      host.style.setProperty('grid-row', `span ${span}`);
+    } else {
+      host.style.removeProperty('grid-row');
+    }
+  });
 
   return {
     styles: [styles],

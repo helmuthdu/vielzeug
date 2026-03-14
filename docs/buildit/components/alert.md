@@ -1,4 +1,4 @@
-# Alert Component
+# Alert
 
 A feedback banner for surface-level status messages — errors, warnings, successes, and informational notices. Supports an optional heading, icon, metadata, action buttons, and a dismiss button.
 

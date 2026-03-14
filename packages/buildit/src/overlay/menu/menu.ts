@@ -60,7 +60,7 @@ const componentStyles = /* css */ css`
       border: var(--border) solid var(--color-contrast-200);
       box-shadow: var(--shadow-lg);
       box-sizing: border-box;
-      left: 0;
+      inset-inline-start: 0;
       margin: 0;
       min-width: 10rem;
       opacity: 0;
@@ -69,7 +69,7 @@ const componentStyles = /* css */ css`
       position: fixed;
       top: 0;
       transform: translateY(-4px) scale(0.97);
-      transform-origin: top left;
+      transform-origin: top;
       transition:
         opacity var(--transition-fast),
         transform var(--transition-fast),
@@ -425,9 +425,15 @@ export const TAG = define('bit-menu', ({ host }) => {
     panelEl = host.shadowRoot?.querySelector<HTMLElement>('.menu-panel') ?? null;
 
     // Resolve trigger element from slot
+    let prevTriggerEl: HTMLElement | null = null;
     function resolveTrigger() {
+      if (prevTriggerEl) {
+        prevTriggerEl.removeEventListener('click', toggleMenu);
+        prevTriggerEl.removeEventListener('keydown', handleKeydown);
+      }
       const assigned = triggerSlot?.assignedElements({ flatten: true });
       triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
+      prevTriggerEl = triggerEl;
       if (triggerEl) {
         aria(triggerEl, {
           controls: () => menuId,
@@ -481,6 +487,10 @@ export const TAG = define('bit-menu', ({ host }) => {
 
     return () => {
       autoUpdateCleanup?.();
+      if (prevTriggerEl) {
+        prevTriggerEl.removeEventListener('click', toggleMenu);
+        prevTriggerEl.removeEventListener('keydown', handleKeydown);
+      }
     };
   });
 

@@ -1,4 +1,4 @@
-# Skeleton Component
+# Skeleton
 
 A loading placeholder component for representing content that has not loaded yet. Use it to reduce layout shift and provide immediate visual structure while data is fetched.
 

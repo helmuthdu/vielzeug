@@ -1,4 +1,4 @@
-# Breadcrumb Component
+# Breadcrumb
 
 A navigational landmark that shows the user's current location in a hierarchy. Renders a semantic `<nav>` with an ordered list of `bit-breadcrumb-item` links, separated by a customizable separator glyph.
 

@@ -1,4 +1,4 @@
-# Avatar Component
+# Avatar
 
 A circular (or shaped) user representation that renders an image, falls back to initials, and falls back again to a generic person icon. Supports online-presence status indicators, theme colors, and size variants.
 

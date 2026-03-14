@@ -1,4 +1,4 @@
-# Tooltip Component
+# Tooltip
 
 A lightweight floating label that appears on hover, focus, or click. Automatically flips placement when near viewport edges, supports a typed arrow pointer, and dismisses on `Escape`.
 

@@ -1,12 +1,6 @@
 import { computed, css, define, html, prop } from '@vielzeug/craftit';
-import {
-  colorThemeMixin,
-  forcedColorsMixin,
-  frostVariantMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
-import type { ComponentSize, ThemeColor } from '../../types';
+import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -22,9 +16,6 @@ const componentStyles = /* css */ css`
       --_gap: var(--badge-gap, var(--size-1));
 
       display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--_gap);
       vertical-align: middle;
     }
 
@@ -57,49 +48,37 @@ const componentStyles = /* css */ css`
       width: 1em;
       height: 1em;
     }
-
-
-    /* Dot indicator — rendered when count < 0 and no slot content */
-    .dot {
-      display: inline-block;
-      width: var(--size-2);
-      height: var(--size-2);
-      border-radius: var(--rounded-full);
-      background: var(--_theme-base);
-      flex-shrink: 0;
-    }
   }
 
   @layer buildit.variants {
     /* Solid (Default) - Full theme color background */
-    :host(:not([variant])) .badge,
-    :host([variant='solid']) .badge {
-      background: var(--_theme-base);
-      color: var(--_theme-contrast);
-      border-color: var(--_theme-base);
+    :host(:not([variant])),
+    :host([variant='solid']) {
+      --_bg: var(--badge-bg, var(--_theme-base));
+      --_color: var(--badge-color, var(--_theme-contrast));
+      --_border-color: var(--badge-border-color, var(--_theme-base));
     }
 
     /* Flat - Subtle background with theme color text */
-    :host([variant='flat']) .badge {
-      background: color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100));
-      color: var(--_theme-base);
-      border-color: color-mix(in srgb, var(--_theme-focus) 20%, transparent);
+    :host([variant='flat']) {
+      --_bg: var(--badge-bg, color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100)));
+      --_color: var(--badge-color, var(--_theme-base));
+      --_border-color: var(--badge-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
     }
 
     /* Bordered - Outlined with filled background */
-    :host([variant='bordered']) .badge {
-      background: var(--_theme-backdrop);
-      color: var(--_theme-base);
-      border-color: var(--_theme-border);
+    :host([variant='bordered']) {
+      --_bg: var(--badge-bg, var(--_theme-backdrop));
+      --_color: var(--badge-color, var(--_theme-base));
+      --_border-color: var(--badge-border-color, var(--_theme-border));
     }
 
     /* Outline - Transparent with colored border */
-    :host([variant='outline']) .badge {
-      background: transparent;
-      color: var(--_theme-base);
-      border-color: var(--_theme-base);
+    :host([variant='outline']) {
+      --_bg: var(--badge-bg, transparent);
+      --_color: var(--badge-color, var(--_theme-base));
+      --_border-color: var(--badge-border-color, var(--_theme-base));
     }
-
 
     /* Dot-only mode */
     :host([dot]) .badge {
@@ -111,21 +90,10 @@ const componentStyles = /* css */ css`
 
 
   @layer buildit.overrides {
-    /* Dot variant in solid mode */
-    :host([dot]:not([variant])) .dot,
-    :host([dot][variant='solid']) .dot {
-      background: var(--_theme-content);
-    }
-
-    :host([dot][variant='flat']) .dot,
-    :host([dot][variant='outline']) .dot {
-      background: var(--_theme-base);
-    }
-
-    /* Empty badge (no text, no count) becomes a circular dot */
-    :host([dot]) .badge {
-      background: var(--_theme-base);
-      border-color: var(--_theme-base);
+    /* Dot — always force badge background and border regardless of variant */
+    :host([dot]) {
+      --_bg: var(--badge-bg, var(--_theme-base));
+      --_border-color: var(--badge-border-color, var(--_theme-base));
     }
 
     /* ========================================
@@ -137,61 +105,71 @@ const componentStyles = /* css */ css`
       position: relative;
     }
 
+    /*
+     * Per-direction multiplier: +1 in LTR, -1 in RTL.
+     * Used to flip the translateX offset so the badge always overflows
+     * the correct physical edge that corresponds to its logical corner.
+     */
+    :host { --_dir: 1; }
+    :host(:dir(rtl)) { --_dir: -1; }
+
+    /* Default position: top-end */
     :host([anchor]) .badge {
       position: absolute;
       z-index: 1;
-      transform: translate(50%, -50%);
-    }
-
-    :host([anchor]:not([anchor='top-start']):not([anchor='bottom-start']):not([anchor='bottom-end'])) .badge,
-    :host([anchor='top-end']) .badge {
       top: 0;
-      right: 0;
-      transform: translate(50%, -50%);
+      inset-inline-end: 0;
+      transform: translate(calc(var(--_dir) * 50%), -50%);
     }
 
     :host([anchor='top-start']) .badge {
-      top: 0;
-      left: 0;
-      transform: translate(-50%, -50%);
+      inset-inline-end: unset;
+      inset-inline-start: 0;
+      transform: translate(calc(var(--_dir) * -50%), -50%);
     }
 
     :host([anchor='bottom-end']) .badge {
+      top: unset;
       bottom: 0;
-      right: 0;
-      transform: translate(50%, 50%);
+      transform: translate(calc(var(--_dir) * 50%), 50%);
     }
 
     :host([anchor='bottom-start']) .badge {
+      inset-inline-end: unset;
+      inset-inline-start: 0;
+      top: unset;
       bottom: 0;
-      left: 0;
-      transform: translate(-50%, 50%);
+      transform: translate(calc(var(--_dir) * -50%), 50%);
     }
   }
 `;
+
+type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;
 
 /** Badge component properties */
 export interface BadgeProps {
   /** Theme color */
   color?: ThemeColor;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'bordered' | 'outline' | 'frost';
+  variant?: BadgeVariant;
   /** Badge size */
   size?: ComponentSize;
-  /** Numeric count to display; omit or set to -1 for dot-only mode */
+  /** Numeric count to display */
   count?: number;
   /** Max count — displays "<max>+" when count exceeds this value */
   max?: number;
   /** Render as a small dot with no label */
   dot?: boolean;
   /** Border radius override */
-  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+  rounded?: RoundedSize;
   /**
    * When set, switches to overlay mode: the host becomes `position:relative`
    * and the badge pins to a corner over the slotted content.
    * Value controls which corner: 'top-end' (default) | 'top-start' | 'bottom-end' | 'bottom-start'
    */
   anchor?: 'top-end' | 'top-start' | 'bottom-end' | 'bottom-start';
+  /** Accessible label for assistive technology. Recommended for count-only and dot mode. */
+  ariaLabel?: string;
 }
 
 /**
@@ -210,6 +188,7 @@ export interface BadgeProps {
  *
  * @slot - Badge label text
  * @slot icon - Icon displayed before the label
+ * @slot target - Element the badge is anchored to (used with the anchor attribute)
  *
  * @cssprop --badge-bg - Badge background color
  * @cssprop --badge-color - Badge text color
@@ -233,21 +212,19 @@ export interface BadgeProps {
 export const TAG = define('bit-badge', () => {
   const countProp = prop('count', undefined as number | undefined);
   const maxProp = prop('max', undefined as number | undefined);
+  const ariaLabelProp = prop('aria-label', undefined as string | undefined);
 
   const label = computed(() => {
     const count = countProp.value != null ? Number(countProp.value) : undefined;
     const max = maxProp.value != null ? Number(maxProp.value) : undefined;
-    if (count === undefined || Number.isNaN(count) || count < 0) return undefined;
+    if (count === undefined || Number.isNaN(count)) return undefined;
     if (max !== undefined && !Number.isNaN(max) && count > max) return `${max}+`;
     return String(count);
   });
 
-  const showLabel = computed(() => label.value !== undefined);
-
   return {
     styles: [
       colorThemeMixin,
-      forcedColorsMixin,
       roundedVariantMixin,
       frostVariantMixin('.badge'),
       sizeVariantMixin({
@@ -257,12 +234,12 @@ export const TAG = define('bit-badge', () => {
       }),
       componentStyles,
     ],
-    template: html`<span class="badge" part="badge">
+    template: html`<span class="badge" part="badge" aria-label=${() => ariaLabelProp.value}>
       <slot name="icon"></slot>
-      <span ?hidden=${() => !showLabel.value}>${() => label.value}</span>
-      <slot ?hidden=${() => showLabel.value}></slot>
+      <span ?hidden=${() => label.value == null}>${() => label.value}</span>
+      <slot ?hidden=${() => label.value != null}></slot>
     </span>
-    <slot name="anchor"></slot>`,
+    <slot name="target"></slot>`,
   };
 });
 

@@ -5,7 +5,7 @@ export type Unsubscribe = () => void;
 
 export type Fn = (...args: any[]) => any;
 
-export type Obj = Record<string, any>;
+export type Obj = Record<string, unknown>;
 
 export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
 

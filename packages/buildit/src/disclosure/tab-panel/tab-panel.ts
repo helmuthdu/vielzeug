@@ -1,4 +1,4 @@
-import { computed, css, define, defineProps, effect, html, inject, onCleanup, signal } from '@vielzeug/craftit';
+import { computed, css, define, defineProps, effect, html, inject, signal } from '@vielzeug/craftit';
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 
@@ -102,12 +102,10 @@ export const TAG = define('bit-tab-panel', ({ host }) => {
 
   // Track whether the panel has ever been active (for lazy rendering)
   const hasBeenActive = signal(false);
-  onCleanup(
-    effect(() => {
-      host.toggleAttribute('active', isActive.value);
-      if (isActive.value) hasBeenActive.value = true;
-    }),
-  );
+  effect(() => {
+    host.toggleAttribute('active', isActive.value);
+    if (isActive.value) hasBeenActive.value = true;
+  });
 
   // shouldRender: true if not lazy OR has been active at least once
   const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);

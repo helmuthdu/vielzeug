@@ -6,6 +6,7 @@ import {
   defineEmits,
   defineProps,
   defineSlots,
+  handle,
   html,
   onMount,
   ref,
@@ -121,6 +122,25 @@ const styles = /* css */ css`
       max-height: calc(100dvh - var(--size-4));
 
       @starting-style { transform: translateY(100%); }
+    }
+
+    /*
+     * RTL overrides for horizontal placements:
+     * 'left' uses inset-inline-start (= physical right in RTL), so the out-of-view
+     * position shifts to the opposite physical side.
+     * 'right' uses inset-inline-end (= physical left in RTL), same logic applies.
+     */
+    :host(:dir(rtl)[placement='left']) .panel {
+      --_panel-exit-transform: translateX(100%);
+
+      @starting-style { transform: translateX(100%); }
+    }
+
+    :host(:dir(rtl)[placement='right']) .panel,
+    :host(:dir(rtl):not([placement])) .panel {
+      --_panel-exit-transform: translateX(-100%);
+
+      @starting-style { transform: translateX(-100%); }
     }
 
     /* ========================
@@ -421,14 +441,11 @@ export const TAG = define('bit-drawer', ({ host }) => {
       { immediate: true },
     );
 
-    dialog.addEventListener('close', handleNativeClose);
-    dialog.addEventListener('cancel', handleCancel);
-    dialog.addEventListener('click', handleBackdropClick);
+    handle(dialog, 'close', handleNativeClose);
+    handle(dialog, 'cancel', handleCancel);
+    handle(dialog, 'click', handleBackdropClick);
 
     return () => {
-      dialog.removeEventListener('close', handleNativeClose);
-      dialog.removeEventListener('cancel', handleCancel);
-      dialog.removeEventListener('click', handleBackdropClick);
       // Release the top-layer slot if the element is removed while open.
       if (dialog.open) dialog.close();
     };

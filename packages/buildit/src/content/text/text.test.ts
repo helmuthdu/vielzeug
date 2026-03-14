@@ -25,59 +25,83 @@ describe('bit-text', () => {
     });
   });
 
-  describe('Props', () => {
-    it('applies variant', async () => {
-      fixture = await mount('bit-text', { attrs: { variant: 'heading' } });
+  describe('as — ARIA semantics', () => {
+    it.each([
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+    ] as const)('as="%s" sets role="heading" and aria-level on the host', async (tag) => {
+      fixture = await mount('bit-text', { attrs: { as: tag } });
+      const level = Number(tag[1]);
 
-      expect(fixture.element.getAttribute('variant')).toBe('heading');
+      expect(fixture.element.getAttribute('role')).toBe('heading');
+      expect(fixture.element.getAttribute('aria-level')).toBe(String(level));
+      fixture.destroy();
     });
 
-    it('applies size', async () => {
-      fixture = await mount('bit-text', { attrs: { size: 'lg' } });
+    it('as="p" does not set role="heading"', async () => {
+      fixture = await mount('bit-text', { attrs: { as: 'p' } });
 
-      expect(fixture.element.getAttribute('size')).toBe('lg');
+      expect(fixture.element.getAttribute('role')).toBeNull();
+      expect(fixture.element.getAttribute('aria-level')).toBeNull();
     });
 
-    it('applies weight', async () => {
-      fixture = await mount('bit-text', { attrs: { weight: 'bold' } });
+    it('as="span" does not set role="heading"', async () => {
+      fixture = await mount('bit-text', { attrs: { as: 'span' } });
 
-      expect(fixture.element.getAttribute('weight')).toBe('bold');
+      expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
-    it('applies color', async () => {
-      fixture = await mount('bit-text', { attrs: { color: 'primary' } });
+    it('without as, no role is set', async () => {
+      fixture = await mount('bit-text', {});
 
-      expect(fixture.element.getAttribute('color')).toBe('primary');
+      expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
-    it('applies align', async () => {
-      fixture = await mount('bit-text', { attrs: { align: 'center' } });
+    it('switching from h2 to p removes role and aria-level', async () => {
+      fixture = await mount('bit-text', { attrs: { as: 'h2' } });
+      expect(fixture.element.getAttribute('role')).toBe('heading');
 
-      expect(fixture.element.getAttribute('align')).toBe('center');
+      await fixture.attr('as', 'p');
+      expect(fixture.element.getAttribute('role')).toBeNull();
+      expect(fixture.element.getAttribute('aria-level')).toBeNull();
+    });
+  });
+
+  describe('lines — multi-line clamp', () => {
+    it('sets --_lines CSS variable on the host when lines is provided', async () => {
+      fixture = await mount('bit-text', { attrs: { lines: '3' } });
+
+      expect(fixture.element.style.getPropertyValue('--_lines')).toBe('3');
     });
 
-    it('applies truncate', async () => {
+    it('does not set --_lines when lines is absent', async () => {
+      fixture = await mount('bit-text', {});
+
+      expect(fixture.element.style.getPropertyValue('--_lines')).toBe('');
+    });
+  });
+
+  describe('truncate', () => {
+    it('applies the truncate attribute to the host', async () => {
       fixture = await mount('bit-text', { attrs: { truncate: '' } });
 
       expect(fixture.element.hasAttribute('truncate')).toBe(true);
     });
 
-    it('applies italic', async () => {
-      fixture = await mount('bit-text', { attrs: { italic: '' } });
+    it('truncate does not remove content', async () => {
+      fixture = await mount('bit-text', { attrs: { truncate: '' }, html: 'Long text' });
 
-      expect(fixture.element.hasAttribute('italic')).toBe(true);
-    });
-
-    it('applies as attribute', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'h2' } });
-
-      expect(fixture.element.getAttribute('as')).toBe('h2');
+      expect(fixture.element.textContent?.trim()).toBe('Long text');
     });
   });
 
   describe('Variants', () => {
-    for (const variant of ['body', 'heading', 'label', 'caption', 'overline', 'code']) {
-      it(`applies ${variant} variant`, async () => {
+    for (const variant of ['body', 'heading', 'label', 'caption', 'overline', 'code'] as const) {
+      it(`reflects ${variant} variant as host attribute`, async () => {
         fixture = await mount('bit-text', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
@@ -87,8 +111,8 @@ describe('bit-text', () => {
   });
 
   describe('Weights', () => {
-    for (const weight of ['normal', 'medium', 'semibold', 'bold']) {
-      it(`applies ${weight} weight`, async () => {
+    for (const weight of ['normal', 'medium', 'semibold', 'bold'] as const) {
+      it(`reflects ${weight} weight as host attribute`, async () => {
         fixture = await mount('bit-text', { attrs: { weight } });
 
         expect(fixture.element.getAttribute('weight')).toBe(weight);
@@ -109,32 +133,6 @@ describe('bit-text accessibility', () => {
     fixture?.destroy();
   });
 
-  describe('Semantic as Attribute', () => {
-    it('applies as="h1" for heading level 1', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'h1' } });
-
-      expect(fixture.element.getAttribute('as')).toBe('h1');
-    });
-
-    it('applies as="p" for paragraph semantics', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'p' } });
-
-      expect(fixture.element.getAttribute('as')).toBe('p');
-    });
-
-    it('applies as="span" for inline semantics', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'span' } });
-
-      expect(fixture.element.getAttribute('as')).toBe('span');
-    });
-
-    it('applies as="label" for form label semantics', async () => {
-      fixture = await mount('bit-text', { attrs: { as: 'label' } });
-
-      expect(fixture.element.getAttribute('as')).toBe('label');
-    });
-  });
-
   describe('Content Accessibility', () => {
     it('exposes text content to accessibility tree', async () => {
       fixture = await mount('bit-text', { html: 'Screen reader text' });
@@ -148,10 +146,10 @@ describe('bit-text accessibility', () => {
       expect(fixture.element.textContent?.trim()).toBe('Visible');
     });
 
-    it('truncate does not remove content', async () => {
-      fixture = await mount('bit-text', { attrs: { truncate: '' }, html: 'Long text' });
+    it('italic does not hide content', async () => {
+      fixture = await mount('bit-text', { attrs: { italic: '' }, html: 'Slanted' });
 
-      expect(fixture.element.textContent?.trim()).toBe('Long text');
+      expect(fixture.element.textContent?.trim()).toBe('Slanted');
     });
   });
 });

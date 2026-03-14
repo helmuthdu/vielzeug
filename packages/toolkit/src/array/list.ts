@@ -1,18 +1,35 @@
 import type { Predicate, Sorter } from '../types';
 import { search as defaultSearch } from './search';
 
-// #region Meta
-export type Meta = Readonly<{
-  end: number; // inclusive
+// #region BaseMeta
+/** Minimal pagination metadata shared by both `list` and `remoteList`. */
+export type BaseMeta = Readonly<{
+  end: number;
   isEmpty: boolean;
   isFirst: boolean;
   isLast: boolean;
   limit: number;
-  page: number; // 1-based
+  page: number;
   pages: number;
-  start: number; // 1-based
+  start: number;
   total: number;
 }>;
+// #endregion BaseMeta
+
+// #region BaseList
+/**
+ * Minimal shared interface satisfied by both `list()` and `remoteList()` results.
+ * Use this type for code that works with either.
+ */
+export type BaseList<T> = {
+  readonly current: readonly T[];
+  readonly meta: BaseMeta;
+  subscribe(listener: () => void): () => void;
+};
+// #endregion BaseList
+
+// #region Meta
+export type Meta = BaseMeta;
 // #endregion Meta
 
 // #region List

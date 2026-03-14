@@ -26,6 +26,7 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 const componentStyles = /* css */ css`
@@ -311,6 +312,7 @@ export const TAG = define(
     // ── Single-value state ────────────────────────────────────────
 
     const formCtx = inject(FORM_CTX);
+    mountFormContextSync(host, formCtx, props);
     let sliderFd: { reportValidity: () => boolean } | undefined;
 
     const valueSignal = signal('0');

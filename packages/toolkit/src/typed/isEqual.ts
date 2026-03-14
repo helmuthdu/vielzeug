@@ -49,6 +49,24 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
     return a.getTime() === b.getTime();
   }
 
+  // Map comparison
+  if (a instanceof Map && b instanceof Map) {
+    if (a.size !== b.size) return false;
+    for (const [k, v] of a) {
+      if (!b.has(k) || !safeIsEqual(v, b.get(k), visited)) return false;
+    }
+    return true;
+  }
+
+  // Set comparison
+  if (a instanceof Set && b instanceof Set) {
+    if (a.size !== b.size) return false;
+    for (const v of a) {
+      if (![...b].some((bv) => safeIsEqual(v, bv, visited))) return false;
+    }
+    return true;
+  }
+
   // Object comparison
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);

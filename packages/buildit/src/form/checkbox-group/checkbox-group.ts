@@ -1,11 +1,14 @@
 import {
   computed,
   createContext,
+  createId,
   css,
   define,
   defineProps,
   effect,
+  handle,
   html,
+  inject,
   onMount,
   onSlotChange,
   provide,
@@ -14,6 +17,8 @@ import {
 } from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
+import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -174,6 +179,9 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { values: next } }));
   };
 
+  const formCtx = inject(FORM_CTX);
+  mountFormContextSync(host, formCtx, props);
+
   // Provide context to child bit-checkbox elements
   provide(CHECKBOX_GROUP_CTX, {
     color: props.color,
@@ -191,7 +199,6 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     const checkboxes = slot
       .assignedElements({ flatten: true })
       .filter((el) => el.tagName.toLowerCase() === 'bit-checkbox') as HTMLElement[];
-
     for (const checkbox of checkboxes) {
       const val = checkbox.getAttribute('value') ?? '';
       if (checkedValues.value.includes(val)) {
@@ -213,7 +220,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     effect(syncChildren);
 
     // Listen for change events bubbled from child bit-checkbox elements
-    host.addEventListener('change', (e: Event) => {
+    handle(host, 'change', (e: Event) => {
       if (e.target === host) return; // our own re-dispatch
       e.stopPropagation();
       const target = e.target as HTMLElement;
@@ -222,7 +229,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     });
   });
 
-  const legendId = `checkbox-group-legend-${Math.random().toString(36).slice(2, 8)}`;
+  const legendId = createId('checkbox-group-legend');
   const errorId = `${legendId}-error`;
   const helperId = `${legendId}-helper`;
 

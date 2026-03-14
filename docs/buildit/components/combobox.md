@@ -193,7 +193,7 @@ Add `multiple` to allow selecting more than one option. Each selected value is s
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Technologies" multiple placeholder="Search…">
+<bit-combobox label="Technologies" multiple placeholder="Search…" style="max-width: 300px;">
   <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
   <bit-combobox-option value="rust">Rust</bit-combobox-option>
   <bit-combobox-option value="go">Go</bit-combobox-option>

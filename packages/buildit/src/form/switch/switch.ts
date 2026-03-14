@@ -1,6 +1,5 @@
 import {
   aria,
-  computed,
   createId,
   css,
   define,
@@ -25,6 +24,7 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
 import { useToggleField } from '../_common/use-toggle-field';
 
 const componentStyles = /* css */ css`
@@ -72,7 +72,7 @@ const componentStyles = /* css */ css`
     .switch-thumb {
       position: absolute;
       top: var(--_padding);
-      left: var(--_padding);
+      inset-inline-start: var(--_padding);
       width: var(--_thumb-size);
       height: var(--_thumb-size);
       background: var(--_thumb-bg);
@@ -119,6 +119,11 @@ const componentStyles = /* css */ css`
 
     :host([checked]) .switch-thumb {
       transform: translateX(calc(var(--_width) - var(--_height)));
+    }
+
+    /* In RTL the thumb starts at the inline-end edge; slide left to reach inline-start */
+    :host(:dir(rtl)[checked]) .switch-thumb {
+      transform: translateX(calc(-1 * (var(--_width) - var(--_height))));
     }
 
     /* ========================================
@@ -213,23 +218,7 @@ export const TAG = define(
     const { formCtx, checkedSignal, triggerValidation } = useToggleField(props);
 
     // Propagate form context size/disabled to host when not explicitly set
-    if (formCtx) {
-      watch(
-        computed(() => formCtx.disabled.value),
-        (ctxDisabled) => {
-          if (ctxDisabled) host.setAttribute('disabled', '');
-          else if (!props.disabled.value) host.removeAttribute('disabled');
-        },
-        { immediate: true },
-      );
-      watch(
-        computed(() => formCtx.size.value),
-        (ctxSize) => {
-          if (ctxSize && !props.size.value) host.setAttribute('size', ctxSize);
-        },
-        { immediate: true },
-      );
-    }
+    mountFormContextSync(host, formCtx, props);
 
     const labelRef = ref<HTMLSpanElement>();
     const helperRef = ref<HTMLDivElement>();

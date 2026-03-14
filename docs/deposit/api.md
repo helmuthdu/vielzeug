@@ -54,6 +54,32 @@ function createLocalStorage<S extends Record<string, Record<string, unknown>>>(
 
 ---
 
+### `storeField(field)`
+
+Returns the IDB key path for a given record field, accounting for deposit's internal envelope format.
+Use this inside `migrationFn` when creating indexes or object stores to stay decoupled from deposit's storage internals.
+
+**Signature:**
+
+```ts
+function storeField(field: string): string
+// storeField('email') === 'v.email'
+```
+
+**Example:**
+
+```ts
+import { storeField } from '@vielzeug/deposit';
+
+const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
+  if (oldVersion < 2) {
+    tx.objectStore('users').createIndex('email', storeField('email'), { unique: true });
+  }
+};
+```
+
+---
+
 ### `createIndexedDB(options)`
 
 Creates an IndexedDB-backed adapter. The database connection is opened lazily on the first operation.
@@ -171,7 +197,9 @@ has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>
 
 ### `count(table)`
 
-Counts live records without allocating the full result set.
+Counts live (non-expired) records in the given table.
+
+> **Note:** Both adapters scan all records to exclude TTL-expired entries — O(n). For very large tables, prefer fetching only the data you need.
 
 ```ts
 count<K extends keyof S>(table: K): Promise<number>
@@ -227,6 +255,8 @@ transaction<K extends keyof S>(
 | `patch(table, key, partial)` | Partial update — returns merged record or `undefined` |
 | `delete(table, key)` | Delete a record |
 
+> **Note:** `getMany`, `count`, `has`, `getOrPut`, and `from` are intentionally absent — they are not supported within an IDB transaction scope.
+
 ---
 
 ### `close()`
@@ -256,10 +286,14 @@ Strict equality filter (`===`).
 #### `between(field, lower, upper)`
 
 ```ts
-between<K extends keyof T>(field: K, lower: number | string, upper: number | string): QueryBuilder<T>
+between<K extends keyof T>(
+  field: K,
+  lower: T[K] extends number | string ? T[K] : never,
+  upper: T[K] extends number | string ? T[K] : never,
+): QueryBuilder<T>
 ```
 
-Inclusive range filter. Works with numbers and strings.
+Inclusive range filter. The bound types are inferred from the field type, so passing a `string` bound for a `number` field is a compile-time error.
 
 ---
 
@@ -360,10 +394,15 @@ Reverses the order of the result.
 #### `map(callback)`
 
 ```ts
-map<U extends Record<string, unknown>>(callback: (record: T) => U): QueryBuilder<U>
+map<U>(callback: (record: T) => U): ProjectedQuery<U>
 ```
 
-Transforms each record to a new type. Returns `QueryBuilder<U>`.
+Transforms each record to a new value. Returns a `ProjectedQuery<U>` rather than `QueryBuilder<U>` — `U` is unconstrained, so primitive projections like `map(u => u.name)` work correctly. `ProjectedQuery<U>` exposes the same terminal methods (`toArray`, `first`, `last`, `count`, `[Symbol.asyncIterator]`) but is not further chainable.
+
+```ts
+const names = await db.from('users').map(u => u.name).toArray();          // string[]
+const dtos  = await db.from('users').map(u => ({ id: u.id })).toArray();  // { id: number }[]
+```
 
 ---
 
@@ -374,6 +413,7 @@ search(query: string, tone?: number): QueryBuilder<T>
 ```
 
 Fuzzy full-text search across all fields, powered by `@vielzeug/toolkit`.
+`tone` controls the match threshold in the range `[0, 1]` — lower values are more permissive. Defaults to `0.25`.
 
 ---
 
@@ -425,7 +465,9 @@ Executes the pipeline and returns the last result.
 count(): Promise<number>
 ```
 
-Executes the pipeline and returns the count.
+Executes the pipeline and returns the count of matching records.
+
+> **Note:** `limit`, `offset`, and `page` are applied before counting. Call `count()` before adding pagination operators if you need the total match count.
 
 ---
 
@@ -444,6 +486,22 @@ for await (const record of db.from('users').orderBy('name')) {
 ```
 
 ## Types
+
+### `ProjectedQuery<U>`
+
+The return type of `QueryBuilder.map()`. Exposes terminal methods only — it is not chainable with further query operators.
+
+```ts
+class ProjectedQuery<U> {
+  toArray(): Promise<U[]>
+  first(): Promise<U | undefined>
+  last(): Promise<U | undefined>
+  count(): Promise<number>
+  [Symbol.asyncIterator](): AsyncGenerator<U>
+}
+```
+
+---
 
 ### `Schema<S>`
 

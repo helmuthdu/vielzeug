@@ -1,4 +1,4 @@
-import { assert } from '../function/assert';
+import { assertAll } from '../function/assert';
 import { isDate } from '../typed/isDate';
 
 // #region IntervalTypes
@@ -34,7 +34,7 @@ export function interval(
   const startDate = new Date(start);
   const endDate = new Date(end);
 
-  assert.all([isDate(startDate), isDate(endDate)], 'Invalid date format. Use a valid Date object or ISO string.', {
+  assertAll([isDate(startDate), isDate(endDate)], 'Invalid date format. Use a valid Date object or ISO string.', {
     args: { end, start },
     type: TypeError,
   });

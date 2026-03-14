@@ -33,7 +33,7 @@ type PathOptions = {
  * @template T - The type of the object to query.
  * @template P - The type of the path string.
  * @param item - The object to query.
- * @param path - The path of the property to get.
+ * @param path - The dot-separated path of the property to get.
  * @param [defaultValue] - The value returned for undefined resolved values.
  * @param [options] - Additional options for value retrieval.
  *
@@ -41,7 +41,7 @@ type PathOptions = {
  *
  * @throws If throwOnMissing is true and the path doesn't exist.
  */
-export function path<T extends Obj, P extends string>(
+export function get<T extends Obj, P extends string>(
   item: T,
   path: P,
   defaultValue?: unknown,

@@ -57,6 +57,11 @@ const componentStyles = /* css */ css`
     @keyframes bit-skeleton-shimmer {
       to { transform: translateX(100%); }
     }
+
+    /* In RTL the shimmer should sweep right-to-left */
+    :host(:dir(rtl)) .bone::after {
+      animation-direction: reverse;
+    }
   }
 
   @layer buildit.variants {

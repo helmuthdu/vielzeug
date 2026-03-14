@@ -1,19 +1,25 @@
 import {
   computed,
   createContext,
+  createId,
   css,
   define,
   defineProps,
   effect,
+  handle,
   html,
+  inject,
   onMount,
   onSlotChange,
   provide,
   type ReadonlySignal,
   signal,
+  watch,
 } from '@vielzeug/craftit';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
+import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -156,17 +162,23 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     value: { default: '' },
   });
 
-  const selectedValue = signal(props.value.value);
+  const selectedValue = signal('');
 
-  // Keep selectedValue in sync when prop changes externally
-  effect(() => {
-    selectedValue.value = props.value.value;
-  });
+  watch(
+    props.value,
+    (v) => {
+      selectedValue.value = v;
+    },
+    { immediate: true },
+  );
 
   const selectRadio = (val: string) => {
     selectedValue.value = val;
     host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { value: val } }));
   };
+
+  const formCtx = inject(FORM_CTX);
+  mountFormContextSync(host, formCtx, props);
 
   // Provide context to child bit-radio elements
   provide(RADIO_GROUP_CTX, {
@@ -178,7 +190,7 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     value: selectedValue,
   });
 
-  // Sync checked state + name/color/size onto slotted bit-radio children
+  // Sync checked state + name/color/size/disabled onto slotted bit-radio children
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many radio attributes requires branching on multiple props
   const syncChildren = () => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
@@ -186,7 +198,6 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     const radios = slot
       .assignedElements({ flatten: true })
       .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
-
     for (const radio of radios) {
       const val = radio.getAttribute('value') ?? '';
       if (val === selectedValue.value) {
@@ -256,9 +267,9 @@ export const TAG = define('bit-radio-group', ({ host }) => {
       selectRadio(val);
     };
 
-    host.addEventListener('keydown', handleKeydown);
+    handle(host, 'keydown', handleKeydown);
     // Listen for change events bubbled from child bit-radio elements
-    host.addEventListener('change', (e: Event) => {
+    handle(host, 'change', (e: Event) => {
       if (e.target === host) return; // our own re-dispatch
       e.stopPropagation();
       const target = e.target as HTMLElement;
@@ -267,7 +278,7 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     });
   });
 
-  const legendId = `radio-group-legend-${Math.random().toString(36).slice(2, 8)}`;
+  const legendId = createId('radio-group-legend');
   const errorId = `${legendId}-error`;
   const helperId = `${legendId}-helper`;
 

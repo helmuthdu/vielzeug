@@ -31,6 +31,7 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
+import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
@@ -171,12 +172,12 @@ const componentStyles = /* css */ css`
       background: transparent;
       border: 0;
       color: var(--_theme-content);
-      flex: 1;
+      flex: 1 1 4rem;
       font-family: inherit;
       font-size: var(--_font-size);
       height: var(--_row-min-height);
       line-height: 1;
-      min-width: 80px;
+      min-width: 4rem;
       outline: none;
       padding: 0;
     }
@@ -207,7 +208,7 @@ const componentStyles = /* css */ css`
       animation: var(--_motion-animation, bit-combobox-spin 0.6s linear infinite);
       border-radius: 50%;
       border: 2px solid currentColor;
-      border-right-color: transparent;
+      border-inline-end-color: transparent;
       display: none;
       flex-shrink: 0;
       height: 1em;
@@ -256,7 +257,7 @@ const componentStyles = /* css */ css`
       border: var(--border) solid var(--color-contrast-200);
       box-shadow: var(--shadow-lg);
       box-sizing: border-box;
-      left: 0;
+      inset-inline-start: 0;
       margin: 0;
       max-height: min(16rem, 50dvh);
       opacity: 0;
@@ -443,6 +444,11 @@ const componentStyles = /* css */ css`
       box-shadow: var(--shadow-2xs);
     }
 
+    :host(:not([variant]):not([disabled])) .field:focus-within,
+    :host([variant='solid']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Flat */
     :host([variant='flat']) .field {
       border-color: var(--_theme-border);
@@ -484,6 +490,10 @@ const componentStyles = /* css */ css`
       box-shadow: none;
     }
 
+    :host([variant='outline']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Ghost */
     :host([variant='ghost']) .field {
       background: transparent;
@@ -493,6 +503,10 @@ const componentStyles = /* css */ css`
 
     :host([variant='ghost']) .field:hover {
       background: var(--color-contrast-100);
+    }
+
+    :host([variant='ghost']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
     }
   }
 
@@ -1053,20 +1067,10 @@ export const TAG = define(
         }
       });
 
+      mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
+
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: effect handles all reactive DOM updates for the combobox in one place
       effect(() => {
-        // Label visibility
-        const placement = props['label-placement'].value;
-        const labelText = props.label.value;
-        if (labelInsetRef.value) {
-          labelInsetRef.value.textContent = labelText;
-          labelInsetRef.value.hidden = !labelText || placement !== 'inset';
-        }
-        if (labelOutsideRef.value) {
-          labelOutsideRef.value.textContent = labelText;
-          labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
-        }
-
         // Sync input value
         if (inputEl && document.activeElement !== inputEl) {
           inputEl.value = query.value;
@@ -1168,22 +1172,8 @@ export const TAG = define(
         }
       });
 
-      // Effect: propagate form context disabled/size/variant to host when not explicitly set
-      let ctxDisabledActive = false;
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
-      effect(() => {
-        if (!formCtx) return;
-        const ctxDisabled = formCtx.disabled.value;
-        if (ctxDisabled && !ctxDisabledActive) {
-          host.setAttribute('disabled', '');
-          ctxDisabledActive = true;
-        } else if (!ctxDisabled && ctxDisabledActive) {
-          host.removeAttribute('disabled');
-          ctxDisabledActive = false;
-        }
-        if (!props.size.value && formCtx.size.value) host.setAttribute('size', formCtx.size.value);
-        if (!props.variant.value && formCtx.variant.value) host.setAttribute('variant', formCtx.variant.value);
-      });
+      // Propagate form context size/variant/disabled to host
+      mountFormContextSync(host, formCtx, props);
 
       return () => {
         virtualizer?.destroy();

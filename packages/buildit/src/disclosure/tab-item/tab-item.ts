@@ -1,14 +1,4 @@
-import {
-  computed,
-  css,
-  define,
-  defineProps,
-  effect,
-  html,
-  inject,
-  onCleanup,
-  syncContextProps,
-} from '@vielzeug/craftit';
+import { computed, css, define, defineProps, effect, html, inject, syncContextProps } from '@vielzeug/craftit';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { TABS_CTX } from '../tabs/tabs';
@@ -232,11 +222,9 @@ export const TAG = define('bit-tab-item', ({ host }) => {
   const isActive = tabsCtx
     ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
     : props.active;
-  onCleanup(
-    effect(() => {
-      host.toggleAttribute('active', isActive.value);
-    }),
-  );
+  effect(() => {
+    host.toggleAttribute('active', isActive.value);
+  });
 
   const ariaSelected = computed(() => String(isActive.value));
   const tabIndex = computed(() => (isActive.value ? '0' : '-1'));

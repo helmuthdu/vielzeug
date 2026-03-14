@@ -16,7 +16,7 @@
 export function cache<T>() {
   const store = new Map<string, T>();
   const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  const metadata = new Map<string, { lastUsedAt: number }>();
+  const metadata = new Map<string, Record<string, unknown>>();
 
   const hash = (key: readonly unknown[]) => JSON.stringify(key);
 
@@ -60,7 +60,7 @@ export function cache<T>() {
   }
 
   function setMeta(key: readonly unknown[], meta: Record<string, unknown>): void {
-    metadata.set(hash(key), { ...meta, lastUsedAt: Date.now() });
+    metadata.set(hash(key), meta);
   }
 
   function getMeta(key: readonly unknown[]): Record<string, unknown> | undefined {

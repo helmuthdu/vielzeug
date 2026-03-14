@@ -1,4 +1,4 @@
-# Progress Component
+# Progress
 
 A progress indicator for conveying operation completion. Supports a classic linear bar and a circular spinner, both with determinate (known value) and indeterminate (unknown duration) modes.
 

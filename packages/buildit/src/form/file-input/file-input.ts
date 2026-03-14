@@ -1,54 +1,71 @@
 import {
-  aria,
-  computed,
-  createId,
-  css,
-  define,
-  defineEmits,
-  defineField,
-  defineProps,
-  effect,
-  handle,
-  html,
-  onCleanup,
-  onMount,
-  ref,
-  signal,
-} from '@vielzeug/craftit';
-import { createDropZone } from '@vielzeug/dragit';
-import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+	computed,
+	createId,
+	css,
+	define,
+	defineEmits,
+	defineField,
+	defineProps,
+	effect,
+	handle,
+	html,
+	onCleanup,
+	onMount,
+	ref,
+	signal,
+} from "@vielzeug/craftit";
+import { createDropZone } from "@vielzeug/dragit";
+import {
+	disabledLoadingMixin,
+	forcedColorsFocusMixin,
+	formFieldMixins,
+	sizeVariantMixin,
+} from "../../styles";
 import type {
-  AddEventListeners,
-  BitFileInputEvents,
-  ComponentSize,
-  FormValidityMethods,
-  RoundedSize,
-  ThemeColor,
-  VisualVariant,
-} from '../../types';
+	AddEventListeners,
+	BitFileInputEvents,
+	ComponentSize,
+	FormValidityMethods,
+	RoundedSize,
+	ThemeColor,
+	VisualVariant,
+} from "../../types";
 
 // ============================================
 // Helpers
 // ============================================
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'] as const;
-  const k = 1024;
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
-  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
+	if (bytes === 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB"] as const;
+	const k = 1024;
+	const i = Math.min(
+		Math.floor(Math.log(bytes) / Math.log(k)),
+		units.length - 1,
+	);
+	return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
 }
 
 function matchesAccept(file: File, accept: string): boolean {
-  if (!accept) return true;
-  return accept
-    .split(',')
-    .map((s) => s.trim())
-    .some((pattern) => {
-      if (pattern.startsWith('.')) return file.name.toLowerCase().endsWith(pattern.toLowerCase());
-      if (pattern.endsWith('/*')) return file.type.startsWith(pattern.slice(0, -1));
-      return file.type === pattern;
-    });
+	if (!accept) return true;
+	return accept
+		.split(",")
+		.map((s) => s.trim())
+		.some((pattern) => {
+			if (pattern.startsWith("."))
+				return file.name.toLowerCase().endsWith(pattern.toLowerCase());
+			if (pattern.endsWith("/*"))
+				return file.type.startsWith(pattern.slice(0, -1));
+			return file.type === pattern;
+		});
+}
+
+function isFileAccepted(file: File, accept: string): boolean {
+	return !accept || matchesAccept(file, accept);
+}
+
+function isFileSizeAllowed(file: File, maxBytes: number): boolean {
+	return maxBytes === 0 || file.size <= maxBytes;
 }
 
 // ============================================
@@ -283,11 +300,19 @@ const componentStyles = /* css */ css`
        Error State
        ======================================== */
 
-    :host([error]) .dropzone {
+    :host([invalid]) .dropzone {
       border-color: var(--color-error);
     }
 
-    :host([error]) .label-outside {
+    :host([invalid]) .label-outside {
+      color: var(--color-error);
+    }
+
+    /* ========================================
+       Error Text
+       ======================================== */
+
+    .helper-text--error {
       color: var(--color-error);
     }
   }
@@ -356,36 +381,36 @@ const componentStyles = /* css */ css`
 
 /** FileInput component properties */
 export type FileInputProps = {
-  /** Accepted file types (MIME types or extensions, comma-separated) */
-  accept?: string;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Disable interaction */
-  disabled?: boolean;
-  /** Error message (marks field as invalid) */
-  error?: string;
-  /** Full width mode */
-  fullwidth?: boolean;
-  /** Helper text */
-  helper?: string;
-  /** Label text */
-  label?: string;
-  /** Maximum number of files (0 = unlimited) */
-  'max-files'?: number;
-  /** Maximum file size in bytes (0 = unlimited) */
-  'max-size'?: number;
-  /** Allow multiple file selection */
-  multiple?: boolean;
-  /** Form field name */
-  name?: string;
-  /** Mark as required */
-  required?: boolean;
-  /** Border radius */
-  rounded?: Exclude<RoundedSize, 'full'>;
-  /** Component size */
-  size?: ComponentSize;
-  /** Visual variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+	/** Accepted file types (MIME types or extensions, comma-separated) */
+	accept?: string;
+	/** Theme color */
+	color?: ThemeColor;
+	/** Disable interaction */
+	disabled?: boolean;
+	/** Error message (marks field as invalid) */
+	error?: string;
+	/** Full width mode */
+	fullwidth?: boolean;
+	/** Helper text */
+	helper?: string;
+	/** Label text */
+	label?: string;
+	/** Maximum number of files (0 = unlimited) */
+	"max-files"?: number;
+	/** Maximum file size in bytes (0 = unlimited) */
+	"max-size"?: number;
+	/** Allow multiple file selection */
+	multiple?: boolean;
+	/** Form field name */
+	name?: string;
+	/** Mark as required */
+	required?: boolean;
+	/** Border radius */
+	rounded?: Exclude<RoundedSize, "full">;
+	/** Component size */
+	size?: ComponentSize;
+	/** Visual variant */
+	variant?: Exclude<VisualVariant, "glass" | "text" | "frost">;
 };
 
 // ============================================
@@ -438,331 +463,234 @@ export type FileInputProps = {
  * ```
  */
 export const TAG = define(
-  'bit-file-input',
-  ({ host }) => {
-    const emit = defineEmits<{
-      change: { files: File[]; originalEvent?: Event };
-      remove: { file: File; files: File[] };
-    }>();
+	"bit-file-input",
+	({ host }) => {
+		const emit = defineEmits<{
+			change: { files: File[]; originalEvent?: Event };
+			remove: { file: File; files: File[] };
+		}>();
 
-    const props = defineProps<FileInputProps>({
-      accept: { default: '' },
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '', omit: true },
-      fullwidth: { default: false },
-      helper: { default: '' },
-      label: { default: '' },
-      'max-files': { default: 0, type: Number },
-      'max-size': { default: 0, type: Number },
-      multiple: { default: false },
-      name: { default: '' },
-      required: { default: false },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      variant: { default: undefined },
-    });
+		const props = defineProps<FileInputProps>({
+			accept: { default: "" },
+			color: { default: undefined },
+			disabled: { default: false },
+			error: { default: "", omit: true },
+			fullwidth: { default: false },
+			helper: { default: "" },
+			label: { default: "" },
+			"max-files": { default: 0, type: Number },
+			"max-size": { default: 0, type: Number },
+			multiple: { default: false },
+			name: { default: "" },
+			required: { default: false },
+			rounded: { default: undefined },
+			size: { default: undefined },
+			variant: { default: undefined },
+		});
 
-    // ============================================
-    // State
-    // ============================================
+		// ============================================
+		// State
+		// ============================================
 
-    const files = signal<File[]>([]);
-    const isDragging = signal(false);
+		const files = signal<File[]>([]);
+		const isDragging = signal(false);
 
-    // ============================================
-    // Form Integration
-    // ============================================
+		// ============================================
+		// Form Integration
+		// ============================================
 
-    defineField(
-      {
-        disabled: computed(() => Boolean(props.disabled.value)),
-        toFormValue: (fi: File[]) => {
-          if (fi.length === 0) return null;
-          const name = props.name.value || 'file';
-          const fd = new FormData();
-          for (const file of fi) fd.append(name, file);
-          return fd;
-        },
-        value: files,
-      },
-      {
-        onReset: () => {
-          files.value = [];
-        },
-      },
-    );
+		defineField(
+			{
+				disabled: computed(() => Boolean(props.disabled.value)),
+				toFormValue: (fi: File[]) => {
+					if (fi.length === 0) return null;
+					const name = props.name.value || "file";
+					const fd = new FormData();
+					for (const file of fi) fd.append(name, file);
+					return fd;
+				},
+				value: files,
+			},
+			{
+				onReset: () => {
+					files.value = [];
+				},
+			},
+		);
 
-    // Sync boolean host attributes for CSS selectors
-    effect(() => {
-      const errVal = props.error.value;
-      // Set attr to the actual error string to avoid changing the attribute value
-      // when it was already set externally. This prevents the feedback cycle
-      // (setAttribute('', '') would change the attr value → re-trigger prop update → loop).
-      if (errVal) {
-        if (host.getAttribute('error') !== errVal) host.setAttribute('error', errVal);
-      } else {
-        host.removeAttribute('error');
-      }
-    });
+		// Sync host attributes for CSS selectors
+		const isInvalid = computed(() => Boolean(props.error.value));
 
-    effect(() => {
-      isDragging.value ? host.setAttribute('drag-over', '') : host.removeAttribute('drag-over');
-    });
+		effect(() => {
+			isInvalid.value
+				? host.setAttribute("invalid", "")
+				: host.removeAttribute("invalid");
+		});
 
-    // ============================================
-    // IDs
-    // ============================================
+		effect(() => {
+			isDragging.value
+				? host.setAttribute("drag-over", "")
+				: host.removeAttribute("drag-over");
+		});
 
-    const fileInputId = props.name.value ? `file-input-${props.name.value}` : createId('file-input');
-    const labelId = `label-${fileInputId}`;
-    const helperId = `helper-${fileInputId}`;
-    const errorId = `error-${fileInputId}`;
+		// ============================================
+		// IDs
+		// ============================================
 
-    // ============================================
-    // Refs
-    // ============================================
+		const fileInputId = createId("file-input");
+		const labelId = `label-${fileInputId}`;
+		const helperId = `helper-${fileInputId}`;
+		const errorId = `error-${fileInputId}`;
 
-    const dropzoneRef = ref<HTMLDivElement>();
-    const inputRef = ref<HTMLInputElement>();
-    const labelRef = ref<HTMLLabelElement>();
-    const hintRef = ref<HTMLSpanElement>();
-    const fileListRef = ref<HTMLUListElement>();
-    const helperRef = ref<HTMLDivElement>();
-    const errorRef = ref<HTMLDivElement>();
+		// ============================================
+		// Refs
+		// ============================================
 
-    // ============================================
-    // File Management
-    // ============================================
+		const dropzoneRef = ref<HTMLDivElement>();
+		const inputRef = ref<HTMLInputElement>();
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: File validation requires checking multiple constraints (accept, size, count limits)
-    function addFiles(newFiles: File[], originalEvent?: Event): void {
-      if (props.disabled.value) return;
+		const hintText = computed(() => {
+			const parts: string[] = [];
+			if (props.accept.value) {
+				parts.push(
+					props.accept.value
+						.split(",")
+						.map((s) => s.trim())
+						.join(", "),
+				);
+			}
+			if (props["max-size"].value > 0)
+				parts.push(`max ${formatBytes(props["max-size"].value)}`);
+			if (props["max-files"].value > 0)
+				parts.push(
+					`up to ${props["max-files"].value} file${props["max-files"].value !== 1 ? "s" : ""}`,
+				);
+			return parts.join(" · ");
+		});
 
-      const maxFilesLimit = props['max-files'].value;
-      const maxSizeLimit = props['max-size'].value;
-      const acceptVal = props.accept.value;
-      const isMultiple = props.multiple.value;
+		// ============================================
+		// File Management
+		// ============================================
 
-      let incoming = Array.from(newFiles);
+		function addFiles(newFiles: File[], originalEvent?: Event): void {
+			if (props.disabled.value) return;
 
-      // Single-file mode: only take the first
-      if (!isMultiple) incoming = incoming.slice(0, 1);
+			const maxFilesLimit = props["max-files"].value;
+			const maxSizeLimit = props["max-size"].value;
+			const acceptVal = props.accept.value;
+			const isMultiple = props.multiple.value;
 
-      // Filter by accepted types
-      if (acceptVal) incoming = incoming.filter((f) => matchesAccept(f, acceptVal));
+			let incoming = Array.from(newFiles);
+			if (!isMultiple) incoming = incoming.slice(0, 1);
+			incoming = incoming.filter(
+				(f) =>
+					isFileAccepted(f, acceptVal) && isFileSizeAllowed(f, maxSizeLimit),
+			);
 
-      // Filter by max size
-      if (maxSizeLimit > 0) incoming = incoming.filter((f) => f.size <= maxSizeLimit);
+			let updated: File[] = isMultiple ? [...files.value] : [];
+			for (const f of incoming) {
+				if (!updated.includes(f)) updated.push(f);
+			}
 
-      // Build updated list (replace in single mode, append in multiple mode)
-      let updated: File[] = isMultiple ? [...files.value] : [];
-      for (const f of incoming) {
-        if (!updated.some((existing) => existing.name === f.name && existing.size === f.size)) {
-          updated.push(f);
-        }
-      }
+			if (maxFilesLimit > 0 && updated.length > maxFilesLimit) {
+				updated = updated.slice(0, maxFilesLimit);
+			}
 
-      // Enforce max-files cap
-      if (maxFilesLimit > 0 && updated.length > maxFilesLimit) {
-        updated = updated.slice(0, maxFilesLimit);
-      }
+			files.value = updated;
+			emit("change", { files: files.value, originalEvent });
+		}
 
-      files.value = updated;
-      emit('change', { files: files.value, originalEvent });
-    }
+		function removeFile(file: File): void {
+			const updated = files.value.filter((f) => f !== file);
+			files.value = updated;
+			emit("remove", { file, files: files.value });
+			emit("change", { files: files.value });
+		}
 
-    function removeFile(file: File): void {
-      const updated = files.value.filter((f) => f !== file);
-      files.value = updated;
-      emit('remove', { file, files: files.value });
-      emit('change', { files: files.value });
-    }
+		// ============================================
+		// Mount
+		// ============================================
 
-    // ============================================
-    // Mount
-    // ============================================
+		onMount(() => {
+			const inp = inputRef.value!;
+			const dz = dropzoneRef.value!;
 
-    onMount(() => {
-      // ── Props → DOM sync effect ─────────────────
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form component requires synchronizing many props to DOM elements reactively
-      effect(() => {
-        const inp = inputRef.value;
-        if (!inp) return;
+			// Native input → add files
+			handle(inp, "change", (e: Event) => {
+				const input = e.target as HTMLInputElement;
+				if (input.files?.length) addFiles(Array.from(input.files), e);
+				input.value = ""; // reset so same file triggers change again
+			});
 
-        inp.accept = props.accept.value;
-        inp.multiple = props.multiple.value;
-        inp.required = props.required.value;
-        inp.disabled = props.disabled.value;
-        if (props.name.value) inp.name = props.name.value;
+			// Click dropzone → open file picker
+			handle(dz, "click", () => {
+				if (!props.disabled.value) inp.click();
+			});
 
-        // Dropzone tabindex
-        const dz = dropzoneRef.value;
-        if (dz) {
-          dz.tabIndex = props.disabled.value ? -1 : 0;
-        }
+			// Keyboard: Enter / Space → open picker
+			handle(dz, "keydown", (e: KeyboardEvent) => {
+				if ((e.key === "Enter" || e.key === " ") && !props.disabled.value) {
+					e.preventDefault();
+					inp.click();
+				}
+			});
 
-        // Label
-        if (labelRef.value) {
-          labelRef.value.textContent = props.label.value;
-          labelRef.value.hidden = !props.label.value;
-        }
+			const dropZone = createDropZone({
+				disabled: () => props.disabled.value,
+				element: dz,
+				onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
+				onHoverChange: (hovered) => {
+					isDragging.value = hovered;
+				},
+			});
+			onCleanup(() => dropZone.destroy());
+		});
 
-        // Accept / size hint
-        if (hintRef.value) {
-          const parts: string[] = [];
-          if (props.accept.value) {
-            const types = props.accept.value
-              .split(',')
-              .map((s) => s.trim())
-              .join(', ');
-            parts.push(types);
-          }
-          if (props['max-size'].value > 0) parts.push(`max ${formatBytes(props['max-size'].value)}`);
-          if (props['max-files'].value > 0)
-            parts.push(`up to ${props['max-files'].value} file${props['max-files'].value !== 1 ? 's' : ''}`);
-          hintRef.value.textContent = parts.join(' · ');
-          hintRef.value.hidden = parts.length === 0;
-        }
+		// ============================================
+		// Template
+		// ============================================
 
-        // Helper / error text
-        if (helperRef.value) {
-          helperRef.value.textContent = props.helper.value;
-          helperRef.value.hidden = !!props.error.value || !props.helper.value;
-        }
-        if (errorRef.value) {
-          errorRef.value.textContent = props.error.value;
-          errorRef.value.hidden = !props.error.value;
-        }
-      });
-
-      // ── File list render effect ─────────────────
-      effect(() => {
-        const list = fileListRef.value;
-        if (!list) return;
-
-        const currentFiles = files.value;
-        list.hidden = currentFiles.length === 0;
-        list.innerHTML = '';
-
-        for (const file of currentFiles) {
-          const item = document.createElement('li');
-          item.className = 'file-item';
-          item.dataset.fileName = file.name;
-          item.dataset.fileSize = String(file.size);
-
-          const icon = document.createElement('span');
-          icon.className = 'file-icon';
-          icon.setAttribute('aria-hidden', 'true');
-          icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-
-          const meta = document.createElement('span');
-          meta.className = 'file-meta';
-
-          const name = document.createElement('span');
-          name.className = 'file-name';
-          name.textContent = file.name;
-          name.title = file.name;
-
-          const size = document.createElement('span');
-          size.className = 'file-size';
-          size.textContent = formatBytes(file.size);
-
-          meta.append(name, size);
-
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'file-remove';
-          removeBtn.type = 'button';
-          removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
-          removeBtn.setAttribute('data-action', 'remove');
-          removeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-
-          item.append(icon, meta, removeBtn);
-          list.appendChild(item);
-        }
-      });
-
-      // ── Event bindings ──────────────────────────
-      const inp = inputRef.value!;
-      const dz = dropzoneRef.value!;
-      aria(dz, { disabled: () => String(props.disabled.value) });
-      const list = fileListRef.value!;
-
-      // Native input → add files
-      handle(inp, 'change', (e: Event) => {
-        const input = e.target as HTMLInputElement;
-        if (input.files?.length) addFiles(Array.from(input.files), e);
-        input.value = ''; // reset so same file triggers change again
-      });
-
-      // Click dropzone → open file picker
-      handle(dz, 'click', () => {
-        if (!props.disabled.value) inp.click();
-      });
-
-      // Keyboard: Enter / Space → open picker
-      handle(dz, 'keydown', (e: KeyboardEvent) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !props.disabled.value) {
-          e.preventDefault();
-          inp.click();
-        }
-      });
-
-      const dropZone = createDropZone({
-        accept: props.accept.value ? props.accept.value.split(',').map((s) => s.trim()) : [],
-        disabled: () => props.disabled.value,
-        element: dz,
-        onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
-        onHoverChange: (hovered) => {
-          isDragging.value = hovered;
-        },
-      });
-      onCleanup(() => dropZone.destroy());
-
-      // File list: delegated remove click
-      handle(list, 'click', (e: MouseEvent) => {
-        const btn = (e.target as Element).closest<HTMLElement>('[data-action="remove"]');
-        if (!btn) return;
-        const item = btn.closest<HTMLElement>('.file-item');
-        if (!item) return;
-        const { fileName, fileSize } = item.dataset;
-        const file = files.value.find((f) => f.name === fileName && String(f.size) === fileSize);
-        if (file) removeFile(file);
-      });
-    });
-
-    // ============================================
-    // Template
-    // ============================================
-
-    return {
-      styles: [
-        ...formFieldMixins,
-        sizeVariantMixin({
-          lg: { '--_min-height': 'var(--size-40)', fontSize: 'var(--text-base)' },
-          sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
-        }),
-        disabledLoadingMixin(),
-        forcedColorsFocusMixin('.dropzone'),
-        componentStyles,
-      ],
-      template: html`
+		return {
+			styles: [
+				...formFieldMixins,
+				sizeVariantMixin({
+					lg: {
+						"--_min-height": "var(--size-40)",
+						fontSize: "var(--text-base)",
+					},
+					sm: { "--_min-height": "var(--size-28)", fontSize: "var(--text-xs)" },
+				}),
+				disabledLoadingMixin(),
+				forcedColorsFocusMixin(".dropzone"),
+				componentStyles,
+			],
+			template: html`
         <div class="file-input-wrapper" part="wrapper">
-          <label class="label-outside" id="${labelId}" part="label" ref=${labelRef} hidden></label>
+          <label
+            class="label-outside"
+            id="${labelId}"
+            part="label"
+            ?hidden=${() => !props.label.value}>${() => props.label.value}</label>
           <div
             class="dropzone"
             part="dropzone"
             ref=${dropzoneRef}
             role="button"
-            tabindex="0"
-            aria-label="File upload drop zone"
-            aria-labelledby="${labelId}"
+            :tabindex=${() => (props.disabled.value ? "-1" : "0")}
+            :aria-disabled=${() => String(props.disabled.value)}
+            :aria-label=${() => (!props.label.value ? "File upload drop zone" : null)}
+            :aria-labelledby=${() => (props.label.value ? labelId : null)}
             aria-describedby="${helperId}">
             <input
               type="file"
               ref=${inputRef}
               part="input"
               id="${fileInputId}"
+              :accept=${() => props.accept.value}
+              ?multiple=${() => props.multiple.value}
+              ?required=${() => props.required.value}
+              ?disabled=${() => props.disabled.value}
+              :name=${() => props.name.value}
               hidden
               inert
               tabindex="-1" />
@@ -784,33 +712,60 @@ export const TAG = define(
                 </svg>
               </span>
               <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
-              <span class="dropzone-hint" ref=${hintRef} hidden></span>
+              <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
             </div>
           </div>
           <ul
             class="file-list"
-            ref=${fileListRef}
             role="list"
             aria-label="Selected files"
-            hidden></ul>
-          <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
+            ?hidden=${() => files.value.length === 0}>
+            ${html.each(
+							files,
+							(file) => `${file.name}:${file.size}:${file.lastModified}`,
+							(file) => html`
+                <li class="file-item">
+                  <span class="file-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </span>
+                  <span class="file-meta">
+                    <span class="file-name" :title=${() => file.name}>${() => file.name}</span>
+                    <span class="file-size">${() => formatBytes(file.size)}</span>
+                  </span>
+                  <button
+                    class="file-remove"
+                    type="button"
+                    :aria-label=${() => `Remove ${file.name}`}
+                    @click=${() => removeFile(file)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </li>
+              `,
+						)}
+          </ul>
           <div
             class="helper-text"
+            id="${helperId}"
+            part="helper"
+            ?hidden=${() => isInvalid.value || !props.helper.value}>${() => props.helper.value}</div>
+          <div
+            class="helper-text helper-text--error"
             id="${errorId}"
             role="alert"
-            style="color: var(--color-error);"
             part="error"
-            ref=${errorRef}
-            hidden></div>
+            ?hidden=${() => !isInvalid.value}>${() => props.error.value}</div>
         </div>
       `,
-    };
-  },
-  { formAssociated: true, shadow: { delegatesFocus: true } },
+		};
+	},
+	{ formAssociated: true, shadow: { delegatesFocus: true } },
 );
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'bit-file-input': HTMLElement & FileInputProps & FormValidityMethods & AddEventListeners<BitFileInputEvents>;
-  }
+	interface HTMLElementTagNameMap {
+		"bit-file-input": HTMLElement &
+			FileInputProps &
+			FormValidityMethods &
+			AddEventListeners<BitFileInputEvents>;
+	}
 }

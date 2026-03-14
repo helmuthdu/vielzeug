@@ -14,6 +14,66 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./array": {
+      "source": "./src/array/index.ts",
+      "types": "./dist/array/index.d.ts",
+      "import": "./dist/array/index.js",
+      "require": "./dist/array/index.cjs"
+    },
+    "./async": {
+      "source": "./src/async/index.ts",
+      "types": "./dist/async/index.d.ts",
+      "import": "./dist/async/index.js",
+      "require": "./dist/async/index.cjs"
+    },
+    "./date": {
+      "source": "./src/date/index.ts",
+      "types": "./dist/date/index.d.ts",
+      "import": "./dist/date/index.js",
+      "require": "./dist/date/index.cjs"
+    },
+    "./function": {
+      "source": "./src/function/index.ts",
+      "types": "./dist/function/index.d.ts",
+      "import": "./dist/function/index.js",
+      "require": "./dist/function/index.cjs"
+    },
+    "./math": {
+      "source": "./src/math/index.ts",
+      "types": "./dist/math/index.d.ts",
+      "import": "./dist/math/index.js",
+      "require": "./dist/math/index.cjs"
+    },
+    "./money": {
+      "source": "./src/money/index.ts",
+      "types": "./dist/money/index.d.ts",
+      "import": "./dist/money/index.js",
+      "require": "./dist/money/index.cjs"
+    },
+    "./object": {
+      "source": "./src/object/index.ts",
+      "types": "./dist/object/index.d.ts",
+      "import": "./dist/object/index.js",
+      "require": "./dist/object/index.cjs"
+    },
+    "./random": {
+      "source": "./src/random/index.ts",
+      "types": "./dist/random/index.d.ts",
+      "import": "./dist/random/index.js",
+      "require": "./dist/random/index.cjs"
+    },
+    "./string": {
+      "source": "./src/string/index.ts",
+      "types": "./dist/string/index.d.ts",
+      "import": "./dist/string/index.js",
+      "require": "./dist/string/index.cjs"
+    },
+    "./typed": {
+      "source": "./src/typed/index.ts",
+      "types": "./dist/typed/index.d.ts",
+      "import": "./dist/typed/index.js",
+      "require": "./dist/typed/index.cjs"
     }
   },
   "scripts": {

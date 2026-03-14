@@ -11,9 +11,9 @@ describe('fuzzy', () => {
     expect(result).toEqual(data);
   });
 
-  it('should return an empty array for an empty search string', () => {
+  it('should return all items for an empty search string', () => {
     const emptyResult = search(data, '', 0.25);
-    expect(emptyResult).toEqual([]);
+    expect(emptyResult).toEqual(data);
   });
 
   it('should throw an error for an invalid tone', () => {

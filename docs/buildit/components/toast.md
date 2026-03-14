@@ -1,4 +1,4 @@
-# Toast Component
+# Toast
 
 A fixed toast notification container with Time Machine-style stacking animation. Stacks toasts with a 3D effect when collapsed; expands the full list on hover or focus. Built on top of `bit-alert`.
 
@@ -123,8 +123,8 @@ Toasts can carry action buttons. Each button auto-dismisses the toast when click
     message: 'You have unsaved changes. What would you like to do?',
     duration: 0,
     actions: [
-      { label: 'Save',    color: 'warning', onClick: () => console.log('saved') },
-      { label: 'Discard', onClick: () => console.log('discarded') },
+      { label: 'Save',  variant: 'flat',   color: 'warning', onClick: () => console.log('saved') },
+      { label: 'Discard', variant: 'solid', color: 'warning', onClick: () => console.log('discarded') },
     ],
   });
 
@@ -132,7 +132,7 @@ Toasts can carry action buttons. Each button auto-dismisses the toast when click
     color: 'info',
     message: 'A new update is available.',
     horizontal: true,
-    actions: [{ label: 'Refresh', onClick: () => location.reload() }],
+    actions: [{ label: 'Refresh', variant: 'flat', onClick: () => location.reload() }],
   });
 </script>
 ```

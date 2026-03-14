@@ -32,10 +32,11 @@ type ProxyOptions<T> = {
  */
 export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
   const { set, get, deep = false, watch } = options;
+  const watchSet = watch ? new Set<PropertyKey>(watch as PropertyKey[]) : null;
 
   const handler: ProxyHandler<T> = {
     get(target, prop, receiver) {
-      if (watch && !watch.includes(prop as keyof T)) {
+      if (watchSet && !watchSet.has(prop)) {
         return Reflect.get(target, prop, receiver);
       }
 
@@ -47,13 +48,13 @@ export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
       }
 
       if (deep && isObject(value)) {
-        return proxy(value as T[keyof T], options);
+        return proxy(value as unknown as T, options);
       }
 
       return value;
     },
     set(target, prop, val, receiver) {
-      if (watch && !watch.includes(prop as keyof T)) {
+      if (watchSet && !watchSet.has(prop)) {
         return Reflect.set(target, prop, val, receiver);
       }
 
@@ -61,7 +62,7 @@ export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
       const value = set ? set(prop, val, prev, target) : val;
 
       if (deep && isObject(value)) {
-        return Reflect.set(target, prop, proxy(value as T[keyof T], options), receiver);
+        return Reflect.set(target, prop, proxy(value as unknown as T, options), receiver);
       }
 
       return Reflect.set(target, prop, value, receiver);

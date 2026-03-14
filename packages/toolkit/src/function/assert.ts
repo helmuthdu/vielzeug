@@ -5,15 +5,13 @@ type AssertOptions = { type?: ErrorConstructor; args?: Obj; bypass?: boolean };
 /**
  * Asserts that a condition is true. Throws (or warns, with `bypass`) otherwise.
  *
- * For asserting multiple conditions at once, use `assert.all`.
- *
  * @example
  * ```ts
- * assert(Array.isArray([]));                     // ok
- * assert(x > 0, 'x must be positive');           // throws if false
+ * assert(Array.isArray([]));                      // ok
+ * assert(x > 0, 'x must be positive');            // throws if false
  * assert(x > 0, 'x must be positive', { args: { x } });
- * assert(ok, 'not ok', { bypass: true });        // logs warning instead of throwing
- * assert.all([cond1, cond2], 'One failed');       // throws if any is false
+ * assert(ok, 'not ok', { bypass: true });         // logs warning instead of throwing
+ * assertAll([cond1, cond2], 'One failed');         // throws if any is false
  * ```
  *
  * @param condition - The boolean condition to assert.
@@ -43,9 +41,9 @@ export function assert(
  *
  * @example
  * ```ts
- * assert.all([cond1, cond2, cond3], 'One or more conditions failed');
+ * assertAll([cond1, cond2, cond3], 'One or more conditions failed');
  * ```
  */
-assert.all = (conditions: boolean[], message = 'Assertion failed', options: AssertOptions = {}): void => {
+export function assertAll(conditions: boolean[], message = 'Assertion failed', options: AssertOptions = {}): void {
   assert(conditions.every(Boolean), message, options);
-};
+}

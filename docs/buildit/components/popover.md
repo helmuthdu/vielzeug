@@ -1,4 +1,4 @@
-# Popover Component
+# Popover
 
 A floating interactive panel anchored to a trigger element. Unlike a tooltip, a popover can contain any interactive content (forms, menus, rich text) via slots.
 

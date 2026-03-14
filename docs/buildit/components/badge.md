@@ -1,4 +1,4 @@
-# Badge Component
+# Badge
 
 A compact label for counts, statuses, and short metadata. Supports numeric overflow capping, a dot-only indicator, an optional icon slot, and all color themes.
 
@@ -190,21 +190,21 @@ Badges work great when combined with other components to show counts, status, or
 
 ### Overlay / Notification Badge
 
-Use the `anchor` prop with the `anchor` slot to pin a badge to the corner of any element. The host becomes `position: relative` and the badge is positioned absolutely at the specified corner.
+Use the `anchor` prop with the `target` slot to pin a badge to the corner of any element. The host becomes `position: relative` and the badge is positioned absolutely at the specified corner.
 
 <ComponentPreview center>
 
 ```html
 <bit-badge color="error" count="5" anchor="top-end">
-  <bit-button slot="anchor" variant="ghost" aria-label="Inbox">&#128706;</bit-button>
+  <bit-button slot="target" variant="ghost" aria-label="Inbox">&#128706;</bit-button>
 </bit-badge>
 
 <bit-badge color="success" dot anchor="bottom-end">
-  <img slot="anchor" src="/avatar.png" width="40" height="40" alt="User avatar" style="border-radius: 50%;" />
+  <img slot="target" src="/avatar.png" width="40" height="40" alt="User avatar" style="border-radius: 50%;" />
 </bit-badge>
 
 <bit-badge color="warning" count="12" anchor="top-start">
-  <bit-button slot="anchor" variant="outline" size="sm">Messages</bit-button>
+  <bit-button slot="target" variant="outline" size="sm">Messages</bit-button>
 </bit-badge>
 ```
 
@@ -343,16 +343,17 @@ Stack multiple badges to show different types of information.
 
 ### Attributes
 
-| Attribute | Type                                                                      | Default   | Description                                       |
-| --------- | ------------------------------------------------------------------------- | --------- | ------------------------------------------------- |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'frost'`                 | `'solid'` | Visual style variant                              |
-| `color`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -         | Theme color                                       |
-| `size`    | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Badge size                                        |
-| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | `'full'`  | Border radius                                     |
-| `count`   | `number`                                                                  | -         | Numeric count to display                          |
-| `max`     | `number`                                                                  | `99`      | Maximum count before showing `{max}+`             |
-| `dot`     | `boolean`                                                                 | `false`   | Show as a dot indicator (no label)                |
-| `anchor`  | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | —         | Pin badge to a corner of slotted `anchor` content |
+| Attribute    | Type                                                                      | Default   | Description                                                                         |
+| ------------ | ------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'frost'`                 | `'solid'` | Visual style variant                                                                |
+| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -         | Theme color                                                                         |
+| `size`       | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Badge size                                                                          |
+| `rounded`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'full'`  | Border radius                                                                       |
+| `count`      | `number`                                                                  | -         | Numeric count to display                                                            |
+| `max`        | `number`                                                                  | `99`      | Maximum count before showing `{max}+`                                               |
+| `dot`        | `boolean`                                                                 | `false`   | Show as a dot indicator (no label)                                                  |
+| `anchor`     | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | —         | Pin badge to a corner of the `target` slot content                                  |
+| `aria-label` | `string`                                                                  | —         | Accessible label for assistive technology. Recommended for count-only and dot mode. |
 
 ### Slots
 
@@ -360,20 +361,22 @@ Stack multiple badges to show different types of information.
 | --------- | ---------------------------------------------------- |
 | (default) | Badge label text                                     |
 | `icon`    | Icon prepended inside the badge                      |
-| `anchor`  | Content the badge overlays when `anchor` prop is set |
+| `target`  | Element the badge overlays when `anchor` prop is set |
 
 ### CSS Custom Properties
 
-| Property               | Description                | Default               |
-| ---------------------- | -------------------------- | --------------------- |
-| `--badge-bg`           | Background color           | Theme-dependent       |
-| `--badge-color`        | Text / icon color          | Theme-dependent       |
-| `--badge-border-color` | Border color               | Theme-dependent       |
-| `--badge-radius`       | Border radius              | `var(--rounded-full)` |
-| `--badge-font-size`    | Font size                  | `var(--text-xs)`      |
-| `--badge-padding-x`    | Horizontal padding         | `var(--size-2)`       |
-| `--badge-padding-y`    | Vertical padding           | `var(--size-0-5)`     |
-| `--badge-gap`          | Gap between icon and label | `var(--size-1)`       |
+| Property               | Description                | Default                |
+| ---------------------- | -------------------------- | ---------------------- |
+| `--badge-bg`           | Background color           | Theme-dependent        |
+| `--badge-color`        | Text / icon color          | Theme-dependent        |
+| `--badge-border-color` | Border color               | Theme-dependent        |
+| `--badge-radius`       | Border radius              | `var(--rounded-full)`  |
+| `--badge-font-size`    | Font size                  | `var(--text-xs)`       |
+| `--badge-font-weight`  | Font weight                | `var(--font-semibold)` |
+| `--badge-padding-x`    | Horizontal padding         | `var(--size-1-5)`      |
+| `--badge-padding-y`    | Vertical padding           | `var(--size-0-5)`      |
+| `--badge-gap`          | Gap between icon and label | `var(--size-1)`        |
+| `--badge-max-width`    | Maximum text width         | `24ch`                 |
 
 ## Accessibility
 
@@ -385,8 +388,8 @@ The badge component follows WAI-ARIA best practices.
 
 - Badge text content is read by screen readers as inline text.
 - Count badges expose the full value (or `{max}+`) as visible text that is read aloud.
-- Dot indicator badges convey meaning through color and shape only — always pair them with a contextual label in the surrounding UI.
-- When a badge is the only visible status indicator, add `aria-label` to its parent element to describe the meaning.
+- Dot indicator badges and count-only badges convey meaning through color and shape alone — use the `aria-label` attribute directly on `bit-badge` to provide a text description for assistive technology.
+- When multiple badges are present, each should have a distinct `aria-label` to distinguish them.
 
 ## Best Practices
 

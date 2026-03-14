@@ -112,7 +112,7 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strate
       isArray(sourceValue) && isArray(targetValue)
         ? handleArrayMerge(targetValue, sourceValue, strategy)
         : isObject(sourceValue) && isObject(targetValue)
-          ? mergeObjects(targetValue, sourceValue, strategy)
+          ? mergeObjects(targetValue as Obj, sourceValue as Obj, strategy)
           : applyMergeStrategy(targetValue, sourceValue, strategy);
   }
 

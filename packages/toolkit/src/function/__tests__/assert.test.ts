@@ -1,4 +1,4 @@
-import { assert } from '../assert';
+import { assert, assertAll } from '../assert';
 
 describe('assert', () => {
   afterEach(() => {
@@ -37,7 +37,7 @@ describe('assert', () => {
   });
 
   it('should handle multiple conditions', () => {
-    expect(() => assert.all([true, true])).not.toThrow();
-    expect(() => assert.all([true, false], 'One condition failed')).toThrowError('One condition failed');
+    expect(() => assertAll([true, true])).not.toThrow();
+    expect(() => assertAll([true, false], 'One condition failed')).toThrowError('One condition failed');
   });
 });

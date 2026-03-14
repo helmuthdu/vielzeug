@@ -21,7 +21,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { FORM_CTX } from '../form/form';
+import { FORM_CTX, type FormContext } from '../form/form';
 
 export interface TextFieldBaseProps {
   disabled: ReadonlySignal<boolean>;
@@ -92,4 +92,72 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
     triggerValidation,
     valueSignal,
   };
+}
+
+export interface LabelSyncProps {
+  'label-placement': ReadonlySignal<'inset' | 'outside'>;
+  label: ReadonlySignal<string>;
+}
+
+/**
+ * Reactively synchronises label text and visibility for components that manage
+ * their own `labelInsetRef` / `labelOutsideRef` refs (e.g. select, combobox).
+ * Call inside `onMount` once DOM refs are ready.
+ */
+export function mountLabelSyncStandalone(
+  labelInsetRef: { value: HTMLElement | null | undefined },
+  labelOutsideRef: { value: HTMLElement | null | undefined },
+  props: LabelSyncProps,
+): void {
+  effect(() => {
+    const placement = props['label-placement'].value;
+    const labelText = props.label.value || '';
+    if (labelInsetRef.value) {
+      labelInsetRef.value.textContent = labelText;
+      labelInsetRef.value.hidden = !labelText || placement !== 'inset';
+    }
+    if (labelOutsideRef.value) {
+      labelOutsideRef.value.textContent = labelText;
+      labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
+    }
+  });
+}
+
+export interface FormContextSyncProps {
+  disabled: ReadonlySignal<boolean>;
+  size: ReadonlySignal<string | undefined>;
+  variant?: ReadonlySignal<string | undefined>;
+}
+
+/**
+ * Propagates form context `disabled`, `size`, and optionally `variant` to the
+ * host element's attributes. Call this in setup or inside an `onMount` callback.
+ *
+ * - `disabled` is tracked with a flag so that context-driven removal only
+ *   clears the attribute when it was set by the context (not by the component).
+ * - `size` and `variant` are only applied when the component's own prop is unset.
+ */
+export function mountFormContextSync(
+  host: HTMLElement,
+  formCtx: FormContext | undefined,
+  props: FormContextSyncProps,
+): void {
+  if (!formCtx) return;
+  let ctxDisabledActive = false;
+  effect(() => {
+    const ctxDisabled = formCtx.disabled.value;
+    if (ctxDisabled && !ctxDisabledActive) {
+      host.setAttribute('disabled', '');
+      ctxDisabledActive = true;
+    } else if (!ctxDisabled && ctxDisabledActive) {
+      host.removeAttribute('disabled');
+      ctxDisabledActive = false;
+    }
+    const ctxSize = formCtx.size.value;
+    if (ctxSize && !props.size.value) host.setAttribute('size', ctxSize);
+    if (props.variant) {
+      const ctxVariant = formCtx.variant.value;
+      if (ctxVariant && !props.variant.value) host.setAttribute('variant', ctxVariant);
+    }
+  });
 }

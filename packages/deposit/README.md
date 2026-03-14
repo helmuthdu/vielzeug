@@ -43,6 +43,7 @@ const alice  = await db.get('users', 1);
 - ✅ **`getMany`** — batch fetch by a list of keys in a single operation
 - ✅ **Transactions** — atomic multi-table writes with `get`, `put`, `patch`, and `delete` (IndexedDB only)
 - ✅ **Bulk operations** — `put` and `delete` accept a single value or an array
+- ✅ **`storeField()`** — migration helper that encapsulates deposit's internal key-path convention
 - ✅ **Zero dependencies** — tiny bundle, no supply chain risk
 
 ## Usage
@@ -151,12 +152,14 @@ await qb.orderBy('age', 'desc').limit(10).toArray();
 await qb.orderBy('name').page(2, 20).toArray();
 await qb.reverse().toArray();
 
-// Projection
-const names = await qb.map(u => u.name).toArray();
+// Projection — map returns ProjectedQuery<U>, so primitives work too
+const names = await qb.map(u => u.name).toArray();         // string[]
+const dtos  = await qb.map(u => ({ id: u.id })).toArray(); // { id: number }[]
 
 // Terminals
 const first = await qb.orderBy('age').first();
 const last  = await qb.orderBy('age').last();
+// Note: count() applies after limit/offset — call count() before pagination for a total
 const count = await qb.equals('city', 'Paris').count();
 
 // Async iteration
@@ -186,11 +189,14 @@ db.close();
 
 ```typescript
 import type { MigrationFn } from '@vielzeug/deposit';
+import { storeField } from '@vielzeug/deposit';
 
 const migrationFn: MigrationFn = (db, oldVersion, newVersion, tx) => {
   if (oldVersion < 2) {
     const store = tx.objectStore('users');
-    store.createIndex('email', 'v.email', { unique: true });
+    // Use storeField() instead of hard-coding 'v.email' — stays correct if deposit's
+    // internal envelope format ever changes.
+    store.createIndex('email', storeField('email'), { unique: true });
   }
 };
 
@@ -206,6 +212,7 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 | `createLocalStorage(options)` | `Adapter<Schema<S>>` |
 | `createIndexedDB(options)` | `IndexedDBHandle<Schema<S>>` |
 | `defineSchema<S>(schema)` | `Schema<S>` |
+| `storeField(field)` | `string` — IDB key path for a record field (e.g. `'v.id'`) |
 
 ### `Adapter<S>` Methods
 
@@ -227,7 +234,7 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 
 | Method | Description |
 |---|---|
-| `transaction(tables, fn)` | Atomic multi-table write; `fn` receives `get`, `getAll`, `put`, `patch`, `delete` |
+| `transaction(tables, fn)` | Atomic multi-table write; `fn` receives `get`, `getAll`, `put`, `patch`, `delete`. Methods not available in a transaction: `getMany`, `count`, `has`, `getOrPut`, `from`. |
 | `close()` | Close the IDB connection |
 
 ### `QueryBuilder<T>` Methods
@@ -245,13 +252,13 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 | `offset(n)` | Skip first *n* records |
 | `page(pageNumber, pageSize)` | Slice by page number |
 | `reverse()` | Reverse result order |
-| `map(fn)` | Project to a new type (`QueryBuilder<U>`) |
-| `search(query, tone?)` | Fuzzy full-text search across all fields |
+| `map(fn)` | Project each record — returns `ProjectedQuery<U>` (supports primitive types) |
+| `search(query, tone?)` | Fuzzy full-text search; `tone` ∈ [0,1], lower = more permissive (default 0.25) |
 | `contains(query, fields?)` | Case-insensitive substring match; all string fields when `fields` omitted |
 | `toArray()` | Execute and return `T[]` |
 | `first()` | First record or `undefined` |
 | `last()` | Last record or `undefined` |
-| `count()` | Count matching records |
+| `count()` | Count matching records (applied after `limit`/`offset`/`page`) |
 | `[Symbol.asyncIterator]()` | Enable `for await...of` iteration |
 
 ## Documentation

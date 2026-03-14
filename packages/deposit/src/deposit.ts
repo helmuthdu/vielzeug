@@ -11,14 +11,15 @@ type Logger = {
   warn(...args: unknown[]): void;
 };
 
-// Phantom symbol used only in the type system to carry the original record type
-declare const _schemaRecord: unique symbol;
+/** @internal Phantom symbol — carries the original record type through the Schema wrapper. Not present at runtime. */
+declare const _r: unique symbol;
 
 export type Schema<S = Record<string, Record<string, unknown>>> = {
   [K in keyof S]: {
     key: keyof S[K] & string;
     indexes?: (keyof S[K] & string)[];
-    readonly [_schemaRecord]?: S[K];
+    /** @internal */
+    readonly [_r]?: S[K];
   };
 };
 
@@ -31,13 +32,12 @@ export type MigrationFn = (
 
 // NonNullable strips the `| undefined` introduced by the optional phantom property (`?`).
 // Intersecting with Record<string, unknown> satisfies the constraint required by QueryBuilder<T>.
-type RecordType<S extends Schema, K extends keyof S> = NonNullable<S[K][typeof _schemaRecord]> &
-  Record<string, unknown>;
+type RecordType<S extends Schema, K extends keyof S> = NonNullable<S[K][typeof _r]> & Record<string, unknown>;
 
 // Extracts the value-type of the key field using the phantom record type.
 type KeyType<S extends Schema, K extends keyof S> = S[K] extends {
   key: infer KF;
-  [_schemaRecord]?: infer R;
+  [_r]?: infer R;
 }
   ? KF extends keyof NonNullable<R>
     ? NonNullable<R>[KF & keyof NonNullable<R>]
@@ -60,6 +60,13 @@ export type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> 
 
 /* -------------------- Transaction context for IndexedDB -------------------- */
 
+/**
+ * A subset of `Adapter` scoped to a single IDB transaction.
+ * The transaction commits atomically when the async callback resolves, or rolls back if it throws.
+ *
+ * Methods intentionally absent (not supported within IDB transactions):
+ * `getMany`, `count`, `has`, `getOrPut`, `from`.
+ */
 export type TransactionContext<S extends Schema, K extends keyof S> = {
   get<T extends K>(table: T, key: KeyType<S, T>): Promise<RecordType<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordType<S, T>[]>;
@@ -119,9 +126,9 @@ export interface IndexedDBHandle<S extends Schema> extends Adapter<S> {
  * });
  * ```
  */
-export function defineSchema<S extends Record<string, Record<string, unknown>>>(
-  schema: { [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] } },
-): Schema<S> {
+export function defineSchema<S extends Record<string, Record<string, unknown>>>(schema: {
+  [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] };
+}): Schema<S> {
   return schema as unknown as Schema<S>;
 }
 
@@ -145,6 +152,26 @@ export function createIndexedDB<S extends Record<string, Record<string, unknown>
   );
 }
 
+/**
+ * Returns the IDB key path for a given field name, accounting for the internal
+ * envelope format used by deposit (`{ v: record, exp?: number }`).
+ *
+ * Use this in `migrationFn` when creating indexes or accessing object-store key paths,
+ * so your migration code stays decoupled from deposit's storage internals.
+ *
+ * @example
+ * ```ts
+ * const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
+ *   if (oldVersion < 2) {
+ *     tx.objectStore('users').createIndex('email', storeField('email'), { unique: true });
+ *   }
+ * };
+ * ```
+ */
+export function storeField(field: string): string {
+  return `v.${field}`;
+}
+
 /* -------------------- TTL Envelope (storage-layer only) -------------------- */
 
 type Envelope<T> = { v: T; exp?: number };
@@ -159,6 +186,43 @@ function unwrap<T>(env: Envelope<T>): T | undefined {
 
 function isEnvelope(value: unknown): value is Envelope<unknown> {
   return typeof value === 'object' && value !== null && 'v' in value;
+}
+
+/* -------------------- ProjectedQuery -------------------- */
+
+/**
+ * Terminal result of a `QueryBuilder.map()` projection.
+ * Supports the same terminal methods as `QueryBuilder` but is not further chainable,
+ * since the record type may no longer be an object (e.g. `map(u => u.name)` yields `string`).
+ */
+export class ProjectedQuery<U> {
+  private readonly source: () => Promise<U[]>;
+
+  constructor(source: () => Promise<U[]>) {
+    this.source = source;
+  }
+
+  async toArray(): Promise<U[]> {
+    return this.source();
+  }
+
+  async first(): Promise<U | undefined> {
+    return (await this.source())[0];
+  }
+
+  async last(): Promise<U | undefined> {
+    const arr = await this.source();
+    return arr[arr.length - 1];
+  }
+
+  /** Returns the number of projected records. */
+  async count(): Promise<number> {
+    return (await this.source()).length;
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<U> {
+    for (const item of await this.source()) yield item;
+  }
 }
 
 /* -------------------- QueryBuilder -------------------- */
@@ -186,7 +250,11 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return this.clone((data) => data.filter((r) => r[field] === value));
   }
 
-  between<K extends keyof T>(field: K, lower: number | string, upper: number | string): QueryBuilder<T> {
+  between<K extends keyof T>(
+    field: K,
+    lower: T[K] extends number | string ? T[K] : never,
+    upper: T[K] extends number | string ? T[K] : never,
+  ): QueryBuilder<T> {
     return this.clone((data) =>
       data.filter((r) => {
         const val = r[field] as number | string;
@@ -240,13 +308,25 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return this.clone((data) => [...data].reverse());
   }
 
-  map<U extends Record<string, unknown>>(callback: (record: T) => U): QueryBuilder<U> {
-    return new QueryBuilder<U>(this.adapter, this.table, [
-      ...this.operations,
-      (data: unknown[]) => (data as T[]).map(callback),
-    ]);
+  /**
+   * Projects each record to a new value.
+   * Returns a `ProjectedQuery<U>` rather than a `QueryBuilder`, since the result
+   * type may not be a plain object (e.g. `map(u => u.name)` yields `string`).
+   */
+  map<U>(callback: (record: T) => U): ProjectedQuery<U> {
+    const ops = [...this.operations, (data: unknown[]) => (data as T[]).map(callback)];
+    return new ProjectedQuery<U>(async () => {
+      let data: unknown[] = await this.adapter.getAll(this.table);
+      for (const op of ops) data = op(data);
+      return data as U[];
+    });
   }
 
+  /**
+   * Fuzzy full-text search across all string fields.
+   * @param query The search string.
+   * @param tone  Match threshold in [0, 1]. Lower = more permissive. Defaults to 0.25.
+   */
   search(query: string, tone?: number): QueryBuilder<T> {
     return this.clone((data) => search(data, query, tone) as T[]);
   }
@@ -261,6 +341,11 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     );
   }
 
+  /**
+   * Returns the number of records after all pipeline operations are applied.
+   * Note: `limit`, `offset`, and `page` affect this count — use them after calling `count()`
+   * if you need a total match count independent of pagination.
+   */
   async count(): Promise<number> {
     return (await this.toArray()).length;
   }
@@ -306,6 +391,18 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     }
   }
 
+  private checkStorage(): void {
+    try {
+      // accessing localStorage throws a SecurityError in Safari private mode and some sandboxed iframes
+      // biome-ignore lint/suspicious/noSelfCompare: intentional availability probe
+      void localStorage;
+    } catch {
+      throw new Error(
+        'deposit: localStorage is not available in this environment (private browsing or sandboxed iframe?)',
+      );
+    }
+  }
+
   from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
     return new QueryBuilder<RecordType<S, K>>(this, String(table));
   }
@@ -321,10 +418,12 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     key: KeyType<S, K>,
     defaultValue?: RecordType<S, K>,
   ): Promise<RecordType<S, K> | undefined> {
+    this.checkStorage();
     return this.readEntry<RecordType<S, K>>(this.storageKey(table, String(key)), String(key)) ?? defaultValue;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
+    this.checkStorage();
     const prefix = this.tablePrefix(table);
     const records: RecordType<S, K>[] = [];
     for (const k of Object.keys(localStorage)) {
@@ -345,6 +444,7 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   }
 
   async put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void> {
+    this.checkStorage();
     const values = Array.isArray(value) ? value : [value];
     for (const v of values) {
       const key = this.recordKey(v, table);
@@ -353,6 +453,7 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   }
 
   async delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void> {
+    this.checkStorage();
     const keys = Array.isArray(key) ? key : [key];
     for (const k of keys) {
       localStorage.removeItem(this.storageKey(table, String(k)));
@@ -401,13 +502,19 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
+    this.checkStorage();
     const prefix = this.tablePrefix(table);
     for (const k of Object.keys(localStorage)) {
       if (k.startsWith(prefix)) localStorage.removeItem(k);
     }
   }
 
+  /**
+   * Returns the number of live (non-expired) records in the given table.
+   * Note: scans all matching keys to exclude TTL-expired entries — O(n).
+   */
   async count<K extends keyof S>(table: K): Promise<number> {
+    this.checkStorage();
     const prefix = this.tablePrefix(table);
     let n = 0;
     for (const k of Object.keys(localStorage)) {
@@ -502,7 +609,7 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
       request.onupgradeneeded = (event) => {
         const db = request.result;
         const tx = request.transaction!;
-        this.createObjectStores(db);
+        this.createObjectStores(db, tx);
 
         if (this.migrationFn) {
           const handleError = (err: unknown) => {
@@ -511,7 +618,7 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
             } catch {
               /* ignore */
             }
-            reject(new Error('Migration failed', { cause: err }));
+            reject(new Error(`deposit: migration failed for "${this.dbName}"`, { cause: err }));
           };
           try {
             const result = this.migrationFn(
@@ -534,7 +641,7 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
 
       request.onerror = () => {
         this.connectPromise = null;
-        reject(new Error('Failed to open IndexedDB'));
+        reject(new Error(`deposit: failed to open "${this.dbName}" (IndexedDB)`));
       };
     });
     return this.connectPromise;
@@ -646,6 +753,10 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     await this.withStore(table, 'readwrite', (store) => this.idbRequest<undefined>(store.clear()));
   }
 
+  /**
+   * Returns the number of live (non-expired) records in the given table.
+   * Note: fetches all records to exclude TTL-expired entries — O(n).
+   */
   async count<K extends keyof S>(table: K): Promise<number> {
     return this.withStore(table, 'readonly', async (store) => {
       const envs = await this.idbRequest<Envelope<RecordType<S, K>>[]>(store.getAll());
@@ -662,9 +773,11 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     fn: (tx: TransactionContext<S, K>) => Promise<void>,
   ): Promise<void> {
     if (!this.db) await this.connect();
+    const db = this.db;
+    if (!db) throw new Error(`deposit: "${this.dbName}" is closed`);
 
     return new Promise<void>((resolve, reject) => {
-      const idbTx = this.db!.transaction(tables.map(String), 'readwrite');
+      const idbTx = db.transaction(tables.map(String), 'readwrite');
       let callbackError: unknown;
 
       const ctx: TransactionContext<S, K> = {
@@ -704,40 +817,48 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
       });
 
       idbTx.oncomplete = () =>
-        callbackError ? reject(new Error('Transaction failed', { cause: callbackError })) : resolve();
-      idbTx.onerror = () => reject(new Error('Transaction error', { cause: idbTx.error }));
+        callbackError
+          ? reject(new Error(`deposit: transaction on "${this.dbName}" failed`, { cause: callbackError }))
+          : resolve();
+      idbTx.onerror = () => reject(new Error(`deposit: transaction error on "${this.dbName}"`, { cause: idbTx.error }));
       idbTx.onabort = () => {
-        reject(new Error('Transaction aborted', { cause: callbackError ?? idbTx.error }));
+        reject(
+          new Error(`deposit: transaction on "${this.dbName}" was aborted`, {
+            cause: callbackError ?? idbTx.error,
+          }),
+        );
       };
     });
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: schema creation requires validation logic
-  private createObjectStores(db: IDBDatabase): void {
+  private createObjectStores(db: IDBDatabase, tx: IDBTransaction): void {
     for (const [name, def] of Object.entries(this.schema)) {
-      if (db.objectStoreNames.contains(name)) continue;
-
       const keyPath = (def as { key: string }).key;
-      const store = db.createObjectStore(name, { keyPath: `v.${keyPath}` });
+      const indexes = (def as { indexes?: string[] }).indexes ?? [];
 
-      const indexes = (def as { indexes?: string[] }).indexes;
-      if (!indexes) continue;
+      let store: IDBObjectStore;
+      if (db.objectStoreNames.contains(name)) {
+        // access the existing store via the upgrade transaction to add any new indexes
+        store = tx.objectStore(name);
+      } else {
+        store = db.createObjectStore(name, { keyPath: `v.${keyPath}` });
+      }
 
-      const created = new Set<string>();
+      const created = new Set<string>(store.indexNames as unknown as Iterable<string>);
       for (const index of indexes) {
         if (created.has(index)) {
-          this.logger.warn(`Duplicate index "${index}" in table "${name}" — skipping`);
+          // already exists (either pre-existing or duplicate in schema declaration)
           continue;
         }
         if (index === keyPath) {
-          this.logger.warn(`Skipping index on key path "${index}" in table "${name}" — redundant`);
+          this.logger.warn(`deposit: skipping index on key path "${index}" in table "${name}" — redundant`);
           continue;
         }
         try {
           store.createIndex(index, `v.${index}`);
           created.add(index);
         } catch (err) {
-          this.logger.error(`Failed to create index "${index}" in table "${name}"`, err);
+          this.logger.error(`deposit: failed to create index "${index}" in table "${name}"`, err);
         }
       }
     }
@@ -749,10 +870,12 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     fn: (store: IDBObjectStore) => Promise<T>,
   ): Promise<T> {
     if (!this.db) await this.connect();
+    const db = this.db;
+    if (!db) throw new Error(`deposit: "${this.dbName}" is closed`);
 
     return new Promise<T>((resolve, reject) => {
       const name = String(table);
-      const tx = this.db!.transaction(name, mode);
+      const tx = db.transaction(name, mode);
       const store = tx.objectStore(name);
 
       let result: T | undefined;
@@ -773,11 +896,16 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
 
       tx.oncomplete = () =>
         callbackError
-          ? reject(new Error(`Transaction callback failed for ${name}`, { cause: callbackError }))
+          ? reject(new Error(`deposit: transaction on "${this.dbName}/${name}" failed`, { cause: callbackError }))
           : resolve(result as T);
-      tx.onerror = () => reject(new Error(`Transaction error for ${name}`, { cause: tx.error }));
+      tx.onerror = () =>
+        reject(new Error(`deposit: transaction error on "${this.dbName}/${name}"`, { cause: tx.error }));
       tx.onabort = () => {
-        reject(new Error(`Transaction aborted for ${name}`, { cause: callbackError ?? tx.error }));
+        reject(
+          new Error(`deposit: transaction on "${this.dbName}/${name}" was aborted`, {
+            cause: callbackError ?? tx.error,
+          }),
+        );
       };
     });
   }
@@ -785,7 +913,7 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
   private idbRequest<R>(req: IDBRequest<R>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
       req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error ?? new Error('IndexedDB request failed'));
+      req.onerror = () => reject(req.error ?? new Error(`deposit: IndexedDB request on "${this.dbName}" failed`));
     });
   }
 }

@@ -1,4 +1,4 @@
-# Tabs Component
+# Tabs
 
 A flexible tabs component for organizing content into switchable panels. Keyboard accessible, animation-ready, and available in six visual styles.
 

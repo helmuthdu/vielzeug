@@ -3,42 +3,46 @@ import { predict } from './predict';
 import { retry } from './retry';
 
 type AttemptOptions = {
-  retries?: number;
+  times?: number;
   onError?: (err: unknown) => void;
   timeout?: number;
 };
 
+export type AttemptResult<R> = { ok: true; value: R } | { ok: false; error: unknown };
+
 /**
- * Attempts to execute a function with advanced error handling and retry logic.
+ * Attempts to execute a function with retry logic and an optional timeout.
+ * Returns a discriminated union so callers can handle success and failure
+ * explicitly without relying on `undefined`.
  *
  * @example
  * ```ts
- * const unreliableFunction = async () => {
- *   if (Math.random() < 0.7) throw new Error ('Random failure');
- *   return 'Success!';
- * };
+ * const result = await attempt(fetchUser, { times: 3, timeout: 5000 });
  *
- * await attempt(
- *   unreliableFunction,
- *   { retries: 3, timeout: 5000 }); // Success! (or undefined if all attempts failed)
+ * if (result.ok) {
+ *   console.log(result.value);
+ * } else {
+ *   console.error(result.error);
+ * }
  * ```
  *
  * @param fn - The function to be executed.
- * @param [options] - Configuration options for the attempt.
- * @param [options.retries=3] - Number of retry attempts if the function fails.
+ * @param [options] - Configuration options.
+ * @param [options.times=3] - Total number of attempts (including the first).
  * @param [options.onError] - Called with the error when all attempts fail.
- * @param [options.timeout=7000] - Timeout in milliseconds for function execution.
+ * @param [options.timeout=7000] - Per-attempt timeout in milliseconds.
  *
- * @returns The result of the function or undefined if it failed.
+ * @returns `{ ok: true, value }` on success or `{ ok: false, error }` on failure.
  */
 export async function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
   fn: T,
-  { onError, retries = 3, timeout = 7000 }: AttemptOptions = {},
-): Promise<R | undefined> {
+  { onError, times = 3, timeout = 7000 }: AttemptOptions = {},
+): Promise<AttemptResult<R>> {
   try {
-    return await retry(() => predict<R>(() => fn(), { timeout }), { times: retries + 1 });
+    const value = await retry(() => predict<R>(() => fn(), { timeout }), { times });
+    return { ok: true, value };
   } catch (err) {
     onError?.(err);
-    return undefined;
+    return { ok: false, error: err };
   }
 }

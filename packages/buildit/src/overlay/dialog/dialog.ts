@@ -5,6 +5,7 @@ import {
   defineEmits,
   defineProps,
   defineSlots,
+  handle,
   html,
   onMount,
   ref,
@@ -550,14 +551,11 @@ export const TAG = define('bit-dialog', ({ host }) => {
       }
     };
 
-    dialog.addEventListener('close', handleNativeClose);
-    dialog.addEventListener('click', handleBackdropClick);
-    dialog.addEventListener('keydown', handleKeydown);
+    handle(dialog, 'close', handleNativeClose);
+    handle(dialog, 'click', handleBackdropClick);
+    handle(dialog, 'keydown', handleKeydown);
 
     return () => {
-      dialog.removeEventListener('close', handleNativeClose);
-      dialog.removeEventListener('click', handleBackdropClick);
-      dialog.removeEventListener('keydown', handleKeydown);
       // Ensure the native dialog is closed on unmount to release top-layer
       if (dialog.open) dialog.close();
       unlockBackground();

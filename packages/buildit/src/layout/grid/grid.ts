@@ -1,4 +1,4 @@
-import { css, define, defineProps, effect, html, onCleanup, onMount } from '@vielzeug/craftit';
+import { css, define, defineProps, effect, html, observeResize, onMount } from '@vielzeug/craftit';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
@@ -223,21 +223,19 @@ export const TAG = define('bit-grid', ({ host }) => {
   };
 
   // Re-run cols whenever any responsive prop changes
-  onCleanup(
-    effect(() => {
-      void [
-        props.cols.value,
-        props.colsSm.value,
-        props.colsMd.value,
-        props.colsLg.value,
-        props.colsXl.value,
-        props.cols2xl.value,
-        props.responsive.value,
-        props.minColWidth.value,
-      ];
-      updateCols();
-    }),
-  );
+  effect(() => {
+    void [
+      props.cols.value,
+      props.colsSm.value,
+      props.colsMd.value,
+      props.colsLg.value,
+      props.colsXl.value,
+      props.cols2xl.value,
+      props.responsive.value,
+      props.minColWidth.value,
+    ];
+    updateCols();
+  });
 
   const updateAreas = () => {
     const w = host.offsetWidth;
@@ -254,39 +252,34 @@ export const TAG = define('bit-grid', ({ host }) => {
 
   // Also update on element resize (drives breakpoint switching)
   onMount(() => {
-    const update = () => {
+    const size = observeResize(host);
+    effect(() => {
+      void size.value;
       updateCols();
       updateAreas();
-    };
-    const ro = new ResizeObserver(update);
-    ro.observe(host);
-    return () => ro.disconnect();
+    });
   });
 
   // Rows
-  onCleanup(
-    effect(() => {
-      const rows = props.rows.value;
-      rows && rows !== 'auto'
-        ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
-        : host.style.removeProperty('--_rows');
-    }),
-  );
+  effect(() => {
+    const rows = props.rows.value;
+    rows && rows !== 'auto'
+      ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
+      : host.style.removeProperty('--_rows');
+  });
 
   // Grid template areas (responsive)
-  onCleanup(
-    effect(() => {
-      void [
-        props.areas.value,
-        props.areasSm.value,
-        props.areasMd.value,
-        props.areasLg.value,
-        props.areasXl.value,
-        props.areas2xl.value,
-      ];
-      updateAreas();
-    }),
-  );
+  effect(() => {
+    void [
+      props.areas.value,
+      props.areasSm.value,
+      props.areasMd.value,
+      props.areasLg.value,
+      props.areasXl.value,
+      props.areas2xl.value,
+    ];
+    updateAreas();
+  });
 
   return {
     styles: [styles],

@@ -1,4 +1,4 @@
-import { css, define, html } from '@vielzeug/craftit';
+import { css, define, defineProps, html, watch } from '@vielzeug/craftit';
 
 const styles = /* css */ css`
   /* ========================================
@@ -26,6 +26,25 @@ const styles = /* css */ css`
   }
 
   /* ========================================
+     Unlayered display overrides
+     These must live outside any @layer so they can beat the unlayered
+     display: block on :host. Same cascade rule that was fixed for [lines].
+     ======================================== */
+
+  /* Multi-line truncation */
+  :host([lines]) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    -webkit-line-clamp: var(--_lines);
+  }
+
+  /* Inline semantic tags — but not when align/truncate force block layout */
+  :host(:is([as='span'], [as='label'], [as='code']):not([align]):not([truncate])) {
+    display: inline;
+  }
+
+  /* ========================================
      Variant Styles
      ======================================== */
 
@@ -33,6 +52,7 @@ const styles = /* css */ css`
 
   /* Heading */
   :host([variant='heading']) {
+    --_size: var(--text-size, var(--text-2xl));
     --_weight: var(--text-weight, var(--font-semibold));
     --_color: var(--text-color, var(--text-color-heading));
     --_line-height: var(--text-line-height, var(--leading-tight));
@@ -40,6 +60,7 @@ const styles = /* css */ css`
 
   /* Label */
   :host([variant='label']) {
+    --_size: var(--text-size, var(--text-sm));
     --_weight: var(--text-weight, var(--font-medium));
     --_color: var(--text-color, var(--text-color-heading));
   }
@@ -54,6 +75,7 @@ const styles = /* css */ css`
   :host([variant='overline']) {
     --_size: var(--text-size, var(--text-xs));
     --_weight: var(--text-weight, var(--font-semibold));
+    --_line-height: var(--text-line-height, var(--leading-none));
     --_letter-spacing: var(--text-letter-spacing, 0.05em);
     text-transform: uppercase;
   }
@@ -61,7 +83,7 @@ const styles = /* css */ css`
   /* Code */
   :host([variant='code']) {
     --_size: var(--text-size, var(--text-sm));
-    font-family: var(--font-mono, 'Monaco', 'Menlo', 'Ubuntu Mono', monospace);
+    font-family: var(--font-mono, monospace);
   }
 
   /* ========================================
@@ -113,13 +135,13 @@ const styles = /* css */ css`
        ======================================== */
 
     :host([align]) { display: block; }
-    :host([align='left']) { text-align: left; }
+    :host([align='left']) { text-align: start; }
     :host([align='center']) { text-align: center; }
-    :host([align='right']) { text-align: right; }
+    :host([align='right']) { text-align: end; }
     :host([align='justify']) { text-align: justify; }
 
     /* ========================================
-       Truncate
+       Truncate (single-line)
        ======================================== */
 
     :host([truncate]) {
@@ -146,6 +168,9 @@ const styles = /* css */ css`
     :host(:is([as='h1'], [as='h2'], [as='h3'], [as='h4'], [as='h5'], [as='h6'])) {
       display: block;
     }
+
+    /* Note: display: inline for span/label/code is handled outside this @layer
+       (above) so it can override the unlayered :host { display: block }. */
   }
 `;
 
@@ -172,11 +197,13 @@ export interface TextProps {
     | 'contrast';
   /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
-  /** Enable text truncation with ellipsis */
+  /** Enable single-line text truncation with ellipsis */
   truncate?: boolean;
+  /** Clamp text to N lines with an ellipsis (multi-line truncation) */
+  lines?: number;
   /** Italic text style */
   italic?: boolean;
-  /** Semantic HTML element to render as */
+  /** Semantic HTML element to render as — sets the correct ARIA role/level on the host */
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code';
 }
 
@@ -190,7 +217,8 @@ export interface TextProps {
  * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
  * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
  * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
- * @attr {boolean} truncate - Truncate text with ellipsis when it overflows
+ * @attr {boolean} truncate - Truncate text with ellipsis when it overflows (single-line)
+ * @attr {number} lines - Clamp to N lines with ellipsis (multi-line truncation)
  * @attr {boolean} italic - Italic text style
  * @attr {string} as - Semantic HTML element: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'
  *
@@ -205,12 +233,49 @@ export interface TextProps {
  * @example
  * ```html
  * <bit-text variant="heading" size="3xl" weight="bold">Welcome</bit-text>
+ * <bit-text as="h2" variant="heading" size="xl">Section title</bit-text>
  * <bit-text color="primary" weight="semibold">Important notice</bit-text>
  * <bit-text variant="code">npm install</bit-text>
+ * <bit-text lines="2">Long paragraph that clamps at two lines…</bit-text>
  * ```
  */
 
-export const TAG = define('bit-text', () => {
+export const TAG = define('bit-text', ({ host }) => {
+  // Only props read by JS need signals. CSS attribute selectors (variant, size,
+  // color, weight, align, truncate, italic) are handled entirely by the browser
+  // and do not need a MutationObserver per-prop.
+  const props = defineProps<Pick<TextProps, 'as' | 'lines'>>({
+    as: { default: undefined },
+    lines: { default: undefined, type: Number },
+  });
+
+  // Single watcher drives both role + aria-level from `as`.
+  // h1–h6 → role="heading" + aria-level; everything else → remove both.
+  watch(
+    props.as,
+    (tag) => {
+      const match = /^h([1-6])$/.exec(tag ?? '');
+      if (match) {
+        host.setAttribute('role', 'heading');
+        host.setAttribute('aria-level', match[1]);
+      } else {
+        host.removeAttribute('role');
+        host.removeAttribute('aria-level');
+      }
+    },
+    { immediate: true },
+  );
+
+  // Drive --_lines on the host so the CSS line-clamp rule works.
+  watch(
+    props.lines,
+    (n) => {
+      if (n != null) host.style.setProperty('--_lines', String(n));
+      else host.style.removeProperty('--_lines');
+    },
+    { immediate: true },
+  );
+
   return {
     styles: [styles],
     template: html`<slot></slot>`,

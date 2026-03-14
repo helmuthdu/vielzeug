@@ -24,7 +24,7 @@ export function search<T>(array: T[], query: string, tone = 0.25): T[] {
   assert(isString(query), IS_STRING_ERROR_MSG, { args: { query }, type: TypeError });
   assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
 
-  if (!query) return [];
+  if (!query) return [...array];
 
   const searchTerm = query.toLowerCase();
 

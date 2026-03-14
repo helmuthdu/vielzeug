@@ -10,6 +10,7 @@ import {
   html,
   onMount,
   ref,
+  syncDOMProps,
 } from '@vielzeug/craftit';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import type {
@@ -22,7 +23,7 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
-import { useTextField } from '../_common/use-text-field';
+import { mountFormContextSync, useTextField } from '../_common/use-text-field';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -203,6 +204,11 @@ const componentStyles = /* css */ css`
       box-shadow: var(--shadow-2xs);
     }
 
+    :host(:not([variant]):not([disabled])) .field:focus-within,
+    :host([variant='solid']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Flat */
     :host([variant='flat']) .field {
       border-color: var(--_theme-border);
@@ -244,6 +250,10 @@ const componentStyles = /* css */ css`
       box-shadow: none;
     }
 
+    :host([variant='outline']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Ghost */
     :host([variant='ghost']) .field {
       background: transparent;
@@ -253,6 +263,10 @@ const componentStyles = /* css */ css`
 
     :host([variant='ghost']) .field:hover {
       background: var(--color-contrast-100);
+    }
+
+    :host([variant='ghost']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
     }
   }
 
@@ -421,33 +435,21 @@ export const TAG = define(
       // Effect 1: label visibility (via shared composable)
       tf.mountLabelSync();
 
-      // Effect 2: sync textarea element attributes to props
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many optional attributes requires branching
+      // Effect 2: sync textarea element properties
+      syncDOMProps(ta, {
+        disabled: props.disabled,
+        name: () => props.name.value || '',
+        placeholder: props.placeholder,
+        readOnly: props.readonly,
+        required: props.required,
+        value: valueSignal,
+      });
+      // Sync conditional/style props that require branching
       effect(() => {
-        ta.placeholder = props.placeholder.value;
-        ta.disabled = props.disabled.value;
-        ta.name = props.name.value || '';
-        ta.readOnly = props.readonly.value;
-        ta.required = props.required.value;
-        ta.value = valueSignal.value;
-
-        if (props.rows.value) {
-          ta.rows = props.rows.value;
-        }
-        const maxLenVal = maxLen.value;
-        if (maxLenVal) {
-          ta.maxLength = maxLenVal;
-        }
-
-        if (props['auto-resize'].value) {
-          ta.style.resize = 'none';
-        } else if (props['no-resize'].value) {
-          ta.style.resize = 'none';
-        } else if (props.resize.value) {
-          ta.style.resize = props.resize.value;
-        } else {
-          ta.style.resize = 'vertical';
-        }
+        if (props.rows.value) ta.rows = props.rows.value;
+        if (maxLen.value) ta.maxLength = Number(maxLen.value);
+        ta.style.resize =
+          props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
       });
 
       // Effect 3: sync helper / error text (textarea uses single div for both)
@@ -509,23 +511,8 @@ export const TAG = define(
         requestAnimationFrame(autoGrow);
       }
 
-      // Effect 5: propagate form context size/variant/disabled to host when not explicitly set
-      let ctxDisabledActive = false;
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
-      effect(() => {
-        const fCtx = tf.formCtx;
-        if (!fCtx) return;
-        const ctxDisabled = fCtx.disabled.value;
-        if (ctxDisabled && !ctxDisabledActive) {
-          host.setAttribute('disabled', '');
-          ctxDisabledActive = true;
-        } else if (!ctxDisabled && ctxDisabledActive) {
-          host.removeAttribute('disabled');
-          ctxDisabledActive = false;
-        }
-        if (!props.size.value && fCtx.size.value) host.setAttribute('size', fCtx.size.value);
-        if (!props.variant.value && fCtx.variant.value) host.setAttribute('variant', fCtx.variant.value);
-      });
+      // Effect 5: propagate form context size/variant/disabled to host
+      mountFormContextSync(host, tf.formCtx, props);
     });
 
     return {

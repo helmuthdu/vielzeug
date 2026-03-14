@@ -1,4 +1,4 @@
-import { diff } from '../diff';
+import { DELETED, diff } from '../diff';
 
 describe('diff', () => {
   it('should return an empty object if both inputs are undefined', () => {
@@ -18,8 +18,7 @@ describe('diff', () => {
   it('should return the difference between two objects', () => {
     const curr = { a: 1, b: 2, c: 3 };
     const prev = { b: 2, c: 3, d: 4 };
-    // @ts-expect-error
-    expect(diff(curr, prev)).toEqual({ a: 1, d: undefined });
+    expect(diff(curr, prev)).toEqual({ a: 1, d: DELETED });
   });
 
   it('should handle nested objects', () => {
@@ -33,14 +32,12 @@ describe('diff', () => {
     const prev = { a: 1, b: '2' };
     // biome-ignore lint/suspicious/noDoubleEquals: -
     const comparator = (a: unknown, b: unknown) => a == b; // Loose equality
-    // @ts-expect-error
     expect(diff(curr, prev, comparator)).toEqual({});
   });
 
   it('should handle cases where keys are added or removed', () => {
     const curr = { a: 1, b: 2 };
     const prev = { b: 2, c: 3 };
-    // @ts-expect-error
-    expect(diff(curr, prev)).toEqual({ a: 1, c: undefined });
+    expect(diff(curr, prev)).toEqual({ a: 1, c: DELETED });
   });
 });

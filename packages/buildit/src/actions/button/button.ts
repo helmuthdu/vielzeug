@@ -4,9 +4,9 @@ import {
   define,
   defineField,
   defineProps,
+  handle,
   html,
   inject,
-  onMount,
   syncContextProps,
 } from '@vielzeug/craftit';
 import {
@@ -28,7 +28,6 @@ const componentStyles = /* css */ css`
       --_border: var(--button-border, var(--border));
       --_border-color: var(--button-border-color, var(--color-contrast-200));
       --_radius: var(--button-radius, var(--rounded-md));
-      --_shadow: var(--button-shadow, var(--shadow-2xs));
 
       display: inline-flex;
       align-items: center;
@@ -66,7 +65,6 @@ const componentStyles = /* css */ css`
       color: var(--_color);
       border: var(--_border) solid var(--_border-color);
       border-radius: var(--_radius);
-      box-shadow: var(--_shadow);
 
       font-size: var(--_font-size, var(--text-sm));
       font-weight: var(--font-medium);
@@ -101,7 +99,6 @@ const componentStyles = /* css */ css`
       color: var(--_color);
       border: var(--_border) solid var(--_border-color);
       border-radius: var(--_radius);
-      box-shadow: var(--_shadow);
 
       font-size: var(--_font-size, var(--text-sm));
       font-weight: var(--font-medium);
@@ -120,14 +117,9 @@ const componentStyles = /* css */ css`
         transform var(--transition-fast));
     }
 
-    button:focus-visible {
-      outline: var(--border-2) solid currentColor;
-      outline-offset: var(--border-2);
-    }
-
+    button:focus-visible,
     a:focus-visible {
-      outline: var(--border-2) solid currentColor;
-      outline-offset: var(--border-2);
+      outline: none;
     }
 
     button,
@@ -181,13 +173,11 @@ const componentStyles = /* css */ css`
       background: var(--_theme-base);
       color: var(--_theme-contrast);
       border-color: var(--_theme-base);
-      box-shadow: var(--shadow-2xs);
     }
 
     :host(:not([variant])) :is(button, a):hover,
     :host([variant='solid']) :is(button, a):hover {
       background: var(--_theme-focus);
-      box-shadow: var(--shadow-xs);
     }
 
     :host(:not([variant])) :is(button, a):active,
@@ -207,7 +197,7 @@ const componentStyles = /* css */ css`
     :host([variant='flat']) :is(button, a):hover {
       background: var(--_theme-focus);
       color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-xs), var(--shadow-xs);
+      box-shadow: var(--inset-shadow-xs);
     }
 
     :host([variant='flat']) :is(button, a):active {
@@ -221,14 +211,14 @@ const componentStyles = /* css */ css`
       background: var(--_theme-backdrop);
       color: var(--_theme-base);
       border-color: var(--_theme-border);
-      box-shadow: var(--inset-shadow-xs), var(--shadow-xs);
+      box-shadow: var(--inset-shadow-xs);
     }
 
     :host([variant='bordered']) :is(button, a):hover {
       background: var(--_theme-focus);
       color: var(--_theme-contrast);
       border-color: var(--_theme-focus);
-      box-shadow: var(--inset-shadow-xs), var(--shadow-sm);
+      box-shadow: var(--inset-shadow-xs);
     }
 
     :host([variant='bordered']) :is(button, a):active {
@@ -242,13 +232,11 @@ const componentStyles = /* css */ css`
       background: transparent;
       color: var(--_theme-base);
       border-color: var(--_theme-base);
-      box-shadow: var(--shadow-none);
     }
 
     :host([variant='outline']) :is(button, a):hover {
       background: var(--_theme-backdrop);
       border-color: var(--_theme-focus);
-      box-shadow: var(--shadow-xs);
     }
 
     :host([variant='outline']) :is(button, a):active {
@@ -263,12 +251,10 @@ const componentStyles = /* css */ css`
       color: var(--_theme-base);
       border-color: transparent;
       border-width: 0;
-      box-shadow: var(--shadow-none);
     }
 
     :host([variant='ghost']) :is(button, a):hover {
       background: var(--_theme-backdrop);
-      box-shadow: var(--shadow-xs);
     }
 
     :host([variant='ghost']) :is(button, a):active {
@@ -283,7 +269,6 @@ const componentStyles = /* css */ css`
       color: var(--_theme-base);
       border-color: transparent;
       border-width: 0;
-      box-shadow: var(--shadow-none);
     }
 
     :host([variant='text']) :is(button, a):hover {
@@ -331,7 +316,7 @@ const componentStyles = /* css */ css`
     width: 1em;
     height: 1em;
     border: var(--border-2) solid currentColor;
-    border-right-color: transparent;
+    border-inline-end-color: transparent;
     border-radius: 50%;
     animation: var(--_motion-animation, spin 0.6s linear infinite);
   }
@@ -340,6 +325,21 @@ const componentStyles = /* css */ css`
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* Focus ring & hover halo — unlayered so it wins over all @layer variant rules */
+  button:focus-visible,
+  a:focus-visible,
+  button:hover,
+  a:hover {
+    outline: none;
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Text variant: no halo on hover or focus */
+  :host([variant='text']) button:hover,
+  :host([variant='text']) a:hover {
+    box-shadow: none;
   }
 `;
 
@@ -412,7 +412,6 @@ export type ButtonProps = {
  * @cssprop --button-padding - Inner padding
  * @cssprop --button-gap - Gap between icon and text
  * @cssprop --button-font-size - Font size
- * @cssprop --button-shadow - Box shadow
  *
  * @example
  * ```html
@@ -477,16 +476,12 @@ export const TAG = define(
       host.dispatchEvent(new MouseEvent(e.type, e));
     };
 
-    onMount(() => {
-      const handleFormAction = () => {
-        if (isDisabled.value || isLink.value) return;
-        const form = field.internals.form;
-        if (!form) return;
-        if (props.type.value === 'submit') form.requestSubmit();
-        else if (props.type.value === 'reset') form.reset();
-      };
-      host.addEventListener('click', handleFormAction);
-      return () => host.removeEventListener('click', handleFormAction);
+    handle(host, 'click', () => {
+      if (isDisabled.value || isLink.value) return;
+      const form = field.internals.form;
+      if (!form) return;
+      if (props.type.value === 'submit') form.requestSubmit();
+      else if (props.type.value === 'reset') form.reset();
     });
 
     return {
@@ -550,7 +545,7 @@ export const TAG = define(
     `,
     };
   },
-  { formAssociated: true },
+  { formAssociated: true, shadow: { delegatesFocus: true } },
 );
 
 declare global {

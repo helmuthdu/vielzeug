@@ -55,7 +55,9 @@ import { createLocalStorage } from '@vielzeug/deposit';
 
 const db = createLocalStorage({ dbName: 'my-app', schema });
 ```
-
+::: warning Private Browsing / Sandboxed Iframes
+In Safari private mode and some sandboxed iframes, any access to `localStorage` throws a `SecurityError`. Deposit detects this on the first operation and throws a descriptive error. Use `createIndexedDB` as a fallback in environments where `localStorage` may be unavailable.
+:::
 **Options:**
 
 | Property | Type | Description |
@@ -169,7 +171,7 @@ const exists = await db.has('users', 1); // boolean
 
 ### `count(table)`
 
-Counts live records without allocating the full result set.
+Counts live records. Both adapters scan all records to exclude TTL-expired entries — O(n).
 
 ```ts
 const total = await db.count('users'); // number
@@ -231,7 +233,7 @@ await qb.page(2, 20).toArray(); // page 2, 20 per page
 ```ts
 // Fuzzy search — all fields
 await qb.search('alice').toArray();
-await qb.search('alice', 0.5).toArray(); // with tone/sensitivity
+await qb.search('alice', 0.5).toArray(); // tone: 0 = most permissive, 1 = exact. Default: 0.25
 
 // Substring match — named fields
 await qb.contains('ali', ['name']).toArray();
@@ -243,12 +245,15 @@ await qb.contains('paris').toArray();
 
 ### Projection
 
-`map` transforms each record to a new type and returns a `QueryBuilder<U>`.
+`map` transforms each record and returns a `ProjectedQuery<U>`. Unlike the other query methods, `U` is unconstrained, so projecting to a primitive type works correctly:
 
 ```ts
-const ids  = await db.from('users').map(u => u.id).toArray();        // number[]
-const dtos = await db.from('users').map(u => ({ name: u.name })).toArray();
+const ids   = await db.from('users').map(u => u.id).toArray();          // number[]
+const names = await db.from('users').map(u => u.name).toArray();        // string[]
+const dtos  = await db.from('users').map(u => ({ name: u.name })).toArray();
 ```
+
+`ProjectedQuery<U>` supports the same terminal methods as `QueryBuilder` — `toArray`, `first`, `last`, `count`, and `for await...of` — but cannot be chained with further query operators.
 
 ### Terminals
 
@@ -258,6 +263,15 @@ const first = await qb.first();    // T | undefined
 const last  = await qb.last();     // T | undefined
 const count = await qb.count();    // number
 ```
+
+::: tip count() and pagination
+`count()` returns the number of records **after** the full pipeline — including `limit`, `offset`, and `page`. Call `count()` before adding pagination operators if you need the total match count:
+
+```ts
+const total = await db.from('users').equals('city', 'Paris').count();
+const page  = await db.from('users').equals('city', 'Paris').page(1, 20).toArray();
+```
+:::
 
 ### Async Iteration
 
@@ -316,28 +330,34 @@ await db.transaction(['posts', 'comments'], async (tx) => {
 The `transaction()` method is only available on `IndexedDBHandle` (returned by `createIndexedDB()`), not on `Adapter`.
 :::
 
+::: info Methods not available inside a transaction
+`getMany`, `count`, `has`, `getOrPut`, and `from` are not available on the transaction context — they are not supported within an IDB transaction scope. Use `get` or `getAll` to read data inside a transaction.
+:::
+
 ## Schema Migrations
 
 Provide a `migrationFn` to `createIndexedDB` to migrate the database when `version` increases. The function runs inside the browser's `onupgradeneeded` event and receives the raw `IDBDatabase` and `IDBTransaction`.
 
+Deposit stores records inside an envelope `{ v: record, exp?: number }`, which means index key paths must reference `v.fieldName`. Use the exported `storeField()` helper to build these paths so that your migration code stays decoupled from deposit's internals:
+
 ```ts
-import type { MigrationFn } from '@vielzeug/deposit';
+import { type MigrationFn, storeField } from '@vielzeug/deposit';
 
 const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
   if (oldVersion < 2) {
     // Add an index added in v2
     const store = tx.objectStore('users');
-    store.createIndex('email', 'v.email', { unique: true });
+    store.createIndex('email', storeField('email'), { unique: true });
   }
   if (oldVersion < 3) {
     // Create a new table in v3
-    db.createObjectStore('tags', { keyPath: 'v.id' });
+    db.createObjectStore('tags', { keyPath: storeField('id') });
   }
 };
 
 const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
 ```
 
-::: tip Key path prefix
-Deposit stores records inside an envelope `{ v: record, exp?: number }`. Index paths must therefore use `'v.fieldName'` as the key path.
+::: tip New indexes on existing tables
+When you add entries to `indexes` in your schema and bump `version`, deposit automatically creates the missing indexes on the existing object store during the upgrade — no manual `createIndex` call required for indexes declared in the schema.
 :::

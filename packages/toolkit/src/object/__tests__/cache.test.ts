@@ -79,7 +79,7 @@ describe('cache', () => {
     const c = cache<string>();
     c.setMeta(['user', 1], { role: 'admin' });
     const meta = c.getMeta(['user', 1]);
-    expect(meta).toHaveProperty('lastUsedAt');
+    expect(meta).not.toHaveProperty('lastUsedAt');
     expect(meta).toHaveProperty('role', 'admin');
   });
 

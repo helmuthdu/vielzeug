@@ -1,6 +1,7 @@
 import { computed, css, define, defineEmits, defineField, defineProps, html, inject, signal } from '@vielzeug/craftit';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import type { AddEventListeners, DisablableProps, FormValidityMethods, SizableProps, ThemableProps } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 const styles = /* css */ css`
@@ -195,6 +196,8 @@ export const TAG = define(
     const emit = defineEmits<{ change: { value: number } }>();
 
     const formCtx = inject(FORM_CTX);
+    mountFormContextSync(host, formCtx, props);
+
     const fd = defineField(
       {
         disabled: computed(() => Boolean(props.disabled.value)),

@@ -1,4 +1,4 @@
-# Separator Component
+# Separator
 
 A simple visual divider for separating sections of content. Supports horizontal and vertical orientation, an optional centered label, and semantic vs. decorative modes.
 

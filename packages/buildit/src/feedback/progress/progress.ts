@@ -38,6 +38,11 @@ const componentStyles = /* css */ css`
       transition: var(--_motion-transition, width var(--transition-normal));
     }
 
+    /* In RTL the fill grows from the inline-end (physical right) side */
+    :host(:dir(rtl)) .fill {
+      transform-origin: right;
+    }
+
     /* Indeterminate: sliding bar */
     @keyframes bit-progress-slide {
       0%   { transform: translateX(-150%) scaleX(0.6); }
@@ -48,6 +53,11 @@ const componentStyles = /* css */ css`
     :host([indeterminate]) .fill {
       width: 40%;
       animation: var(--_motion-animation, bit-progress-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+    }
+
+    /* In RTL the indeterminate bar sweeps right-to-left */
+    :host(:dir(rtl)[indeterminate]) .fill {
+      animation-direction: reverse;
     }
 
     /* ========================================

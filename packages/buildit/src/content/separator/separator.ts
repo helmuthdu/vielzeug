@@ -36,7 +36,7 @@ const componentStyles = /* css */ css`
     }
 
     :host([orientation='vertical']) .separator {
-      border-left: var(--_size) solid var(--_color);
+      border-inline-start: var(--_size) solid var(--_color);
       height: 100%;
     }
 

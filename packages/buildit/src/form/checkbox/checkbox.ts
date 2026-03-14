@@ -1,6 +1,5 @@
 import {
   aria,
-  computed,
   createId,
   css,
   define,
@@ -27,6 +26,7 @@ import type {
   SizableProps,
   ThemableProps,
 } from '../../types';
+import { mountFormContextSync } from '../_common/use-text-field';
 import { useToggleField } from '../_common/use-toggle-field';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
 
@@ -231,23 +231,7 @@ export const TAG = define(
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
     // Propagate form context size/disabled to host when not explicitly set
-    if (formCtx) {
-      watch(
-        computed(() => formCtx.disabled.value),
-        (ctxDisabled) => {
-          if (ctxDisabled) host.setAttribute('disabled', '');
-          else if (!props.disabled.value) host.removeAttribute('disabled');
-        },
-        { immediate: true },
-      );
-      watch(
-        computed(() => formCtx.size.value),
-        (ctxSize) => {
-          if (ctxSize && !props.size.value) host.setAttribute('size', ctxSize);
-        },
-        { immediate: true },
-      );
-    }
+    mountFormContextSync(host, formCtx, props);
 
     const labelRef = ref<HTMLSpanElement>();
     const helperRef = ref<HTMLDivElement>();

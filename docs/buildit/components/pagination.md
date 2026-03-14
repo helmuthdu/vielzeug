@@ -1,4 +1,4 @@
-# Pagination Component
+# Pagination
 
 A page-navigation control for splitting content across multiple pages. Renders numbered page buttons with optional ellipsis, first/last shortcuts, and previous/next arrows.
 

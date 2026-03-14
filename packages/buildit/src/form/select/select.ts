@@ -14,6 +14,7 @@ import {
   onSlotChange,
   ref,
   signal,
+  watch,
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -29,6 +30,7 @@ import type {
   ThemableProps,
   VisualVariant,
 } from '../../types';
+import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
@@ -185,7 +187,7 @@ const componentStyles = /* css */ css`
       height: 100%;
       justify-content: center;
       position: absolute;
-      right: var(--size-2);
+      inset-inline-end: var(--size-2);
       top: 0;
       transition: transform var(--transition-fast);
       width: var(--size-6);
@@ -199,7 +201,7 @@ const componentStyles = /* css */ css`
       animation: var(--_motion-animation, bit-select-spin 0.6s linear infinite);
       border-radius: 50%;
       border: 2px solid currentColor;
-      border-right-color: transparent;
+      border-inline-end-color: transparent;
       display: none;
       flex-shrink: 0;
       height: 1em;
@@ -402,6 +404,11 @@ const componentStyles = /* css */ css`
       box-shadow: var(--shadow-2xs);
     }
 
+    :host(:not([variant]):not([disabled])) .field:focus-within,
+    :host([variant='solid']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Flat - Minimal with subtle color hint */
     :host([variant='flat']) .field {
       border-color: var(--_theme-border);
@@ -443,6 +450,10 @@ const componentStyles = /* css */ css`
       box-shadow: none;
     }
 
+    :host([variant='outline']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Ghost - Transparent until hover */
     :host([variant='ghost']) .field {
       background: transparent;
@@ -452,6 +463,10 @@ const componentStyles = /* css */ css`
 
     :host([variant='ghost']) .field:hover {
       background: var(--color-contrast-100);
+    }
+
+    :host([variant='ghost']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
     }
   }
 
@@ -612,22 +627,10 @@ export const TAG = define(
     }
 
     // Sync open attribute on host
-    effect(() => {
-      if (isOpen.value) {
-        host.setAttribute('open', '');
-      } else {
-        host.removeAttribute('open');
-      }
-    });
+    watch(isOpen, (v) => host.toggleAttribute('open', v), { immediate: true });
 
     // Sync has-error attribute on host (error is a string prop, needs boolean attribute for CSS)
-    effect(() => {
-      if (props.error.value) {
-        host.setAttribute('has-error', '');
-      } else {
-        host.removeAttribute('has-error');
-      }
-    });
+    watch(props.error, (v) => host.toggleAttribute('has-error', Boolean(v)), { immediate: true });
 
     // Accessibility IDs
     const { fieldId: selectId, labelId } = createFormIds('select', props.name);
@@ -987,21 +990,11 @@ export const TAG = define(
         }
       });
 
+      mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
+
       // Effect to manage dynamic content and visibility
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Form component requires synchronizing many props to DOM elements reactively
       effect(() => {
-        // Label visibility
-        const placement = props['label-placement'].value;
-        const labelText = props.label.value;
-        if (labelInsetRef.value) {
-          labelInsetRef.value.textContent = labelText;
-          labelInsetRef.value.hidden = !labelText || placement !== 'inset';
-        }
-        if (labelOutsideRef.value) {
-          labelOutsideRef.value.textContent = labelText;
-          labelOutsideRef.value.hidden = !labelText || placement !== 'outside';
-        }
-
         // Helper / error
         if (helperRef.value) {
           helperRef.value.textContent = props.error.value || props.helper.value;
@@ -1099,22 +1092,8 @@ export const TAG = define(
 
       document.addEventListener('click', handleOutsideClick, true);
 
-      // Effect: propagate form context disabled/size/variant to host when not explicitly set
-      let ctxDisabledActive = false;
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
-      effect(() => {
-        if (!formCtx) return;
-        const ctxDisabled = formCtx.disabled.value;
-        if (ctxDisabled && !ctxDisabledActive) {
-          host.setAttribute('disabled', '');
-          ctxDisabledActive = true;
-        } else if (!ctxDisabled && ctxDisabledActive) {
-          host.removeAttribute('disabled');
-          ctxDisabledActive = false;
-        }
-        if (!props.size.value && formCtx.size.value) host.setAttribute('size', formCtx.size.value);
-        if (!props.variant.value && formCtx.variant.value) host.setAttribute('variant', formCtx.variant.value);
-      });
+      // Propagate form context size/variant/disabled to host
+      mountFormContextSync(host, formCtx, props);
 
       return () => {
         virtualizer?.destroy();

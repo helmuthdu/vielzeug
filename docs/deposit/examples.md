@@ -206,7 +206,7 @@ db.close();
 Add an index and a table when upgrading from v1 to v3.
 
 ```ts
-import { createIndexedDB, defineSchema, type MigrationFn } from '@vielzeug/deposit';
+import { createIndexedDB, defineSchema, type MigrationFn, storeField } from '@vielzeug/deposit';
 
 interface User { id: number; name: string; email: string; role: string }
 interface Tag  { id: number; label: string }
@@ -219,11 +219,11 @@ const schema = defineSchema<{ users: User; tags: Tag }>({
 const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
   if (oldVersion < 2) {
     // Add role index introduced in v2
-    tx.objectStore('users').createIndex('role', 'v.role');
+    tx.objectStore('users').createIndex('role', storeField('role'));
   }
   if (oldVersion < 3) {
     // New table introduced in v3
-    db.createObjectStore('tags', { keyPath: 'v.id' });
+    db.createObjectStore('tags', { keyPath: storeField('id') });
   }
 };
 

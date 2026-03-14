@@ -10,6 +10,7 @@ import {
   onMount,
   ref,
   signal,
+  syncDOMProps,
 } from '@vielzeug/craftit';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import type {
@@ -22,7 +23,7 @@ import type {
   ThemeColor,
   VisualVariant,
 } from '../../types';
-import { useTextField } from '../_common/use-text-field';
+import { mountFormContextSync, useTextField } from '../_common/use-text-field';
 
 const componentStyles = /* css */ css`
   @layer buildit.base {
@@ -329,6 +330,11 @@ const componentStyles = /* css */ css`
       box-shadow: var(--shadow-2xs);
     }
 
+    :host(:not([variant]):not([disabled])) .field:focus-within,
+    :host([variant='solid']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Flat - Minimal with subtle color hint */
     :host([variant='flat']) .field {
       border-color: var(--_theme-border);
@@ -370,6 +376,10 @@ const componentStyles = /* css */ css`
       box-shadow: none;
     }
 
+    :host([variant='outline']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
+    }
+
     /* Ghost - Transparent until hover */
     :host([variant='ghost']) .field {
       background: transparent;
@@ -379,6 +389,10 @@ const componentStyles = /* css */ css`
 
     :host([variant='ghost']) .field:hover {
       background: var(--color-contrast-100);
+    }
+
+    :host([variant='ghost']:not([disabled])) .field:focus-within {
+      box-shadow: var(--_theme-shadow);
     }
 
     /* Text - Underline style */
@@ -609,17 +623,20 @@ export const TAG = define(
       // Effect 1: label visibility (via shared composable)
       tf.mountLabelSync();
 
-      // Effect 2: sync input element attributes to props
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Syncing many optional attributes requires branching
+      // Effect 2: sync input element properties
+      syncDOMProps(inp, {
+        disabled: props.disabled,
+        name: () => props.name.value || '',
+        placeholder: props.placeholder,
+        readOnly: props.readonly,
+        required: props.required,
+        type: () =>
+          props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value),
+        value: valueSignal,
+      });
+      // Sync optional input attributes that require conditional attribute removal
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Each optional attribute independently requires null-checking and removeAttribute fallback
       effect(() => {
-        inp.disabled = props.disabled.value;
-        inp.name = props.name.value || '';
-        inp.placeholder = props.placeholder.value;
-        inp.readOnly = props.readonly.value;
-        inp.required = props.required.value;
-        inp.type = props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
-        inp.value = valueSignal.value;
-
         const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
         if (maxLen > 0) inp.maxLength = maxLen;
 
@@ -670,23 +687,8 @@ export const TAG = define(
         else host.removeAttribute('has-value');
       });
 
-      // Effect 6: propagate form context size/variant/disabled to host when not explicitly set
-      let ctxDisabledActive = false;
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Propagates form context and handles disabled state transitions
-      effect(() => {
-        const fCtx = tf.formCtx;
-        if (!fCtx) return;
-        const ctxDisabled = fCtx.disabled.value;
-        if (ctxDisabled && !ctxDisabledActive) {
-          host.setAttribute('disabled', '');
-          ctxDisabledActive = true;
-        } else if (!ctxDisabled && ctxDisabledActive) {
-          host.removeAttribute('disabled');
-          ctxDisabledActive = false;
-        }
-        if (!props.size.value && fCtx.size.value) host.setAttribute('size', fCtx.size.value);
-        if (!props.variant.value && fCtx.variant.value) host.setAttribute('variant', fCtx.variant.value);
-      });
+      // Effect 6: propagate form context size/variant/disabled to host
+      mountFormContextSync(host, tf.formCtx, props);
 
       aria(inp, {
         describedby: () => (props.error.value ? errorId : helperId),

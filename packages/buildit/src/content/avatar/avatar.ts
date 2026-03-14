@@ -1,4 +1,4 @@
-import { computed, css, define, defineProps, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { computed, css, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -15,6 +15,8 @@ const componentStyles = /* css */ css`
       --_font-weight: var(--avatar-font-weight, var(--font-semibold));
       --_border: var(--avatar-border, none);
       --_border-color: var(--avatar-border-color, var(--color-canvas));
+      --_size: var(--avatar-size, var(--size-10));
+      --_font-size: var(--avatar-font-size, var(--text-sm));
 
       display: inline-flex;
       flex-shrink: 0;
@@ -74,7 +76,7 @@ const componentStyles = /* css */ css`
       bottom: 0;
       height: 0.75em;
       position: absolute;
-      right: 0;
+      inset-inline-end: 0;
       width: 0.75em;
     }
 
@@ -350,10 +352,7 @@ export const GROUP_TAG = define('bit-avatar-group', ({ host }) => {
       });
     };
 
-    const observer = new MutationObserver(updateVisibility);
-    observer.observe(host, { childList: true });
-    updateVisibility();
-    return () => observer.disconnect();
+    onSlotChange('default', updateVisibility);
   });
 
   return {

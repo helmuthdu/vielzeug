@@ -1,3 +1,5 @@
+import type { BaseList } from './list';
+
 // #region RemoteMeta
 export type RemoteMeta = Readonly<{
   end: number; // inclusive
@@ -15,7 +17,7 @@ export type RemoteMeta = Readonly<{
 // #endregion RemoteMeta
 
 // #region RemoteList
-export type RemoteList<T, F, S> = {
+export type RemoteList<T, F, S> = BaseList<T> & {
   readonly current: readonly T[];
   readonly meta: RemoteMeta;
   subscribe(listener: () => void): () => void;
@@ -57,6 +59,7 @@ type RemoteQuery<F, S> = Readonly<{
 type RemoteResult<T> = Readonly<{ items: readonly T[]; total: number }>;
 
 type RemoteConfig<T, F, S> = Readonly<{
+  cacheTtl?: number; // milliseconds; omit (or 0) to cache indefinitely
   debounceMs?: number;
   fetch: (q: RemoteQuery<F, S>) => Promise<RemoteResult<T>>;
   initialFilter?: F;
@@ -84,7 +87,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
   let loading = false;
   let error: string | null = null;
 
-  const cache = new Map<string, RemoteResult<T>>();
+  const cache = new Map<string, { result: RemoteResult<T>; ts: number }>();
   const inflight = new Map<string, Promise<void>>();
 
   const keyOf = (q: RemoteQuery<F, S>) => JSON.stringify(q);
@@ -111,13 +114,15 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
 
   const fetchQuery = async (q: RemoteQuery<F, S>) => {
     const k = keyOf(q);
-    if (cache.has(k)) {
-      assign(cache.get(k)!);
+    const entry = cache.get(k);
+    const ttl = cfg.cacheTtl;
+    if (entry && (!ttl || Date.now() - entry.ts < ttl)) {
+      assign(entry.result);
       return;
     }
     if (inflight.has(k)) {
       await inflight.get(k);
-      assign(cache.get(k)!);
+      assign(cache.get(k)!.result);
       return;
     }
     loading = true;
@@ -126,7 +131,7 @@ export function remoteList<T, F = Record<string, unknown>, S = { key?: string; d
     const p = cfg
       .fetch(q)
       .then((res) => {
-        cache.set(k, res);
+        cache.set(k, { result: res, ts: Date.now() });
         assign(res);
       })
       .catch((e) => {

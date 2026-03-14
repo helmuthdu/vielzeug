@@ -1,4 +1,4 @@
-# Grid Component
+# Grid
 
 A flexible CSS Grid layout component with element-width responsive columns, named grid areas, and fine-grained item placement. Perfect for dashboards, card grids, photo galleries, and complex page layouts.
 

@@ -1,4 +1,4 @@
-# Chip Component
+# Chip
 
 A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, five variants, and three sizes. Used internally by `bit-select` and `bit-combobox` in multiselect mode.
 

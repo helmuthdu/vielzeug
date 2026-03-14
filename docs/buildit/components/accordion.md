@@ -1,4 +1,4 @@
-# Accordion Component
+# Accordion
 
 A flexible accordion component for organizing collapsible content sections. Built with native `<details>` and `<summary>` elements for accessibility and progressive enhancement.
 

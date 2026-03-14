@@ -4,6 +4,7 @@ import {
   define,
   defineEmits,
   defineProps,
+  handle,
   html,
   onCleanup,
   onMount,
@@ -93,9 +94,9 @@ const styles = /* css */ css`
     }
 
     :host([orientation='vertical']) .indicator {
-      /* Reposition indicator to left side for vertical */
+      /* Reposition indicator to inline-start side for vertical */
       bottom: unset;
-      left: 0;
+      inset-inline-start: 0;
       width: 2px;
       height: unset;
       transition: top var(--tabs-transition), height var(--tabs-transition);
@@ -374,11 +375,10 @@ export const TAG = define('bit-tabs', ({ host }) => {
   };
 
   host.addEventListener('tab-click', handleTabClick);
-  host.addEventListener('keydown', handleKeydown);
+  handle(host, 'keydown', handleKeydown);
 
   onCleanup(() => {
     host.removeEventListener('tab-click', handleTabClick);
-    host.removeEventListener('keydown', handleKeydown);
   });
 
   onMount(() => {

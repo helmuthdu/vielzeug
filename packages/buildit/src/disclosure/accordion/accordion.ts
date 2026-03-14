@@ -5,6 +5,7 @@ import {
   define,
   defineEmits,
   defineProps,
+  handle,
   html,
   onCleanup,
   provide,
@@ -179,7 +180,7 @@ export const TAG = define('bit-accordion', ({ host }) => {
   host.addEventListener('expand', handleExpand);
 
   // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
-  const handleKeydown = (e: KeyboardEvent) => {
+  handle(host, 'keydown', (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
     const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
     const summaries = items
@@ -197,12 +198,10 @@ export const TAG = define('bit-accordion', ({ host }) => {
 
     e.preventDefault();
     summaries[next]?.focus();
-  };
+  });
 
-  host.addEventListener('keydown', handleKeydown);
   onCleanup(() => {
     host.removeEventListener('expand', handleExpand);
-    host.removeEventListener('keydown', handleKeydown);
   });
 
   return {

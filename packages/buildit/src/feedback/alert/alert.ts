@@ -165,6 +165,7 @@ const componentStyles = /* css */ css`
       grid-column: 3;
       grid-row: 1;
       margin-top: 0;
+      margin-inline-start: var(--_gap);
       flex-wrap: nowrap;
     }
 
