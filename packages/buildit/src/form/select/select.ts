@@ -2,7 +2,6 @@ import {
   aria,
   computed,
   createFormIds,
-  css,
   define,
   defineEmits,
   defineField,
@@ -19,508 +18,73 @@ import {
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
 import { createVirtualizer } from '@vielzeug/virtualit';
 
-import type {
-  AddEventListeners,
-  BitSelectEvents,
-  DisablableProps,
-  FormValidityMethods,
-  RoundedSize,
-  SizableProps,
-  ThemableProps,
-  VisualVariant,
-} from '../../types';
+import type { DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
-import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
-import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
+import { CHIP_TAG } from '../../feedback/chip/chip';
+import { checkIconHTML, chevronDownIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync, mountLabelSyncStandalone } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
 // Types
 // ============================================
 
-interface OptionItem {
-  value: string;
-  label: string;
+type OptionItem = {
   disabled: boolean;
   group?: string;
-}
+  label: string;
+  value: string;
+};
 
 // ============================================
 // Styles
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_font-size: var(--select-font-size, var(--text-sm));
-      --_gap: var(--select-gap, var(--size-2));
-      --_field-height: var(--select-height, var(--size-10));
-      --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
-      --_padding: var(--select-padding, var(--size-1-5) var(--size-3));
-      --_radius: var(--select-radius, var(--rounded-md));
-      --_placeholder: var(--select-placeholder-color, var(--color-contrast-500));
-      --_bg: var(--select-bg, var(--color-contrast-100));
-      --_border-color: var(--select-border-color, var(--color-contrast-300));
-
-      align-items: stretch;
-      display: inline-flex;
-      flex-direction: column;
-      min-width: 12rem;
-    }
-
-    :host([fullwidth]) {
-      width: 100%;
-    }
-
-    /* Hide native <option> elements — we render our own UI */
-    ::slotted(option),
-    ::slotted(optgroup) {
-      display: none;
-    }
-
-    .select-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-1-5);
-      width: 100%;
-    }
-
-    /* ========================================
-       Trigger Field
-       ======================================== */
-
-    .field {
-      align-items: stretch;
-      background: var(--_bg);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--_border-color);
-      box-shadow: var(--shadow-2xs);
-      box-sizing: border-box;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      height: var(--_field-height);
-      min-height: max(var(--_field-height), var(--_touch-target, 0px));
-      padding: var(--_padding);
-      padding-inline-end: var(--size-8);
-      position: relative;
-      transition: var(
-        --_motion-transition,
-        background var(--transition-fast),
-        backdrop-filter var(--transition-slow),
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        transform var(--transition-fast)
-      );
-      user-select: none;
-    }
-
-    .field:focus {
-      outline: none;
-    }
-
-    /* Expand height for multi-select chips or inset label */
-    :host([multiple]) .field,
-    .field:has(.label-inset:not([hidden])) {
-      height: auto;
-    }
-
-    .label-inset {
-      color: var(--color-contrast-500);
-      cursor: pointer;
-      font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-tight);
-      margin-bottom: 2px;
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    .label-outside {
-      color: var(--color-contrast-500);
-      cursor: pointer;
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-none);
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    .trigger-row {
-      align-items: center;
-      display: flex;
-      flex: 1;
-      flex-wrap: wrap;
-      gap: var(--_gap);
-      max-width: calc(100% - var(--size-10));
-      min-height: var(--_row-min-height);
-    }
-
-    .chips-row {
-      align-items: center;
-      display: none;
-      flex-wrap: wrap;
-      gap: var(--size-1);
-      flex: 1;
-      min-width: 0;
-    }
-
-    .trigger-value {
-      color: var(--_theme-content);
-      flex: 1;
-      font-size: var(--_font-size);
-      line-height: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: color var(--transition-fast);
-      white-space: nowrap;
-    }
-
-    .trigger-placeholder {
-      color: var(--_placeholder);
-      transition: color var(--transition-fast);
-    }
-
-    .trigger-icon {
-      align-items: center;
-      color: var(--color-contrast-500);
-      display: flex;
-      height: 100%;
-      justify-content: center;
-      position: absolute;
-      inset-inline-end: var(--size-2);
-      top: 0;
-      transition: transform var(--transition-fast);
-      width: var(--size-6);
-    }
-
-    :host([open]) .trigger-icon {
-      transform: rotate(180deg);
-    }
-
-    .loader {
-      animation: var(--_motion-animation, bit-select-spin 0.6s linear infinite);
-      border-radius: 50%;
-      border: 2px solid currentColor;
-      border-inline-end-color: transparent;
-      display: none;
-      flex-shrink: 0;
-      height: 1em;
-      width: 1em;
-    }
-
-    :host([loading]) .loader {
-      display: inline-block;
-    }
-
-    :host([loading]) .trigger-icon svg {
-      display: none;
-    }
-
-    @keyframes bit-select-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* ========================================
-       Dropdown Listbox
-       ======================================== */
-
-    .dropdown {
-      background: var(--color-canvas);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--shadow-lg);
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-0-5);
-      max-height: 260px;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      padding: var(--size-1);
-      position: fixed;
-      z-index: var(--z-dropdown, 8000);
-
-      /* Hidden by default */
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-4px);
-      visibility: hidden;
-      transition: var(
-        --_motion-transition,
-        opacity var(--transition-fast),
-        transform var(--transition-fast),
-        visibility var(--transition-fast)
-      );
-    }
-
-    .dropdown[data-open] {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-      visibility: visible;
-    }
-
-    /* ========================================
-       Option Items
-       ======================================== */
-
-    .option {
-      align-items: center;
-      border-radius: var(--rounded-sm);
-      cursor: pointer;
-      display: flex;
-      font-size: var(--_font-size);
-      gap: var(--size-2);
-      line-height: var(--leading-normal);
-      padding: var(--size-1-5) var(--size-2-5);
-      transition:
-        background var(--transition-fast),
-        color var(--transition-fast);
-    }
-
-    .option:hover:not([data-disabled]) {
-      background: var(--color-contrast-100);
-    }
-
-    .option[data-focused]:not([data-disabled]) {
-      background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
-      color: var(--_theme-base);
-    }
-
-    .option[data-selected] {
-      background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
-      color: var(--_theme-base);
-      font-weight: var(--font-medium);
-    }
-
-    .option[data-selected][data-focused] {
-      background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
-    }
-
-    .option[data-disabled] {
-      color: var(--color-contrast-400);
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    .option-check {
-      color: var(--_theme-base);
-      display: inline-flex;
-      flex-shrink: 0;
-      margin-inline-start: auto;
-      opacity: 0;
-      transition: opacity var(--transition-fast);
-    }
-
-    .option[data-selected] .option-check {
-      opacity: 1;
-    }
-
-    /* ========================================
-       Option Groups
-       ======================================== */
-
-    .optgroup-label {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      font-weight: var(--font-semibold);
-      letter-spacing: var(--tracking-wide, 0.05em);
-      padding: var(--size-1-5) var(--size-2-5) var(--size-1);
-      text-transform: uppercase;
-    }
-
-    /* ========================================
-       Loading / No-Results
-       ======================================== */
-
-    .dropdown-loading,
-    .dropdown-empty {
-      color: var(--color-contrast-500);
-      font-size: var(--_font-size);
-      padding: var(--size-3) var(--size-2-5);
-      text-align: center;
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline: 2px;
-    }
-
-    /* ========================================
-       States
-       ======================================== */
-
-    :host(:not([disabled]):not([variant='bordered']):not([variant='flat'])) .field:hover {
-      border-color: var(--color-contrast-400);
-    }
-
-    :host(:not([disabled]):not([variant='flat'])) .field:focus-within,
-    :host([open]:not([disabled]):not([variant='flat'])) .field {
-      background: var(--color-canvas);
-      border-color: var(--_theme-focus);
-      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-      transform: translateY(-1px);
-    }
-
-    :host(:not([disabled])) .field:focus-within .label-inset,
-    :host(:not([disabled])) .field:focus-within .label-outside,
-    :host([open]:not([disabled])) .label-inset {
-      color: var(--_theme-focus);
-    }
-
-    /* ========================================
-       Error State
-       ======================================== */
-
-    :host([has-error]) .field {
-      border-color: var(--color-error);
-    }
-
-    :host([has-error]) .field:focus-within {
-      border-color: var(--color-error);
-      box-shadow: var(--color-error-focus-shadow);
-    }
-
-    :host([has-error]) .label-inset,
-    :host([has-error]) .label-outside {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.variants {
-    /* ========================================
-       Visual Variants
-       ======================================== */
-
-    /* Solid (Default) - Standard select with background */
-    :host(:not([variant])) .field,
-    :host([variant='solid']) .field {
-      background: var(--color-contrast-50);
-      border-color: var(--color-contrast-300);
-      box-shadow: var(--shadow-2xs);
-    }
-
-    :host(:not([variant]):not([disabled])) .field:focus-within,
-    :host([variant='solid']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Flat - Minimal with subtle color hint */
-    :host([variant='flat']) .field {
-      border-color: var(--_theme-border);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    :host([variant='flat']) .field:hover {
-      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-    }
-
-    :host([variant='flat']) .field:focus-within {
-      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Bordered - Filled with theme color */
-    :host([variant='bordered']) .field {
-      background: var(--_theme-backdrop);
-      border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-    }
-
-    :host([variant='bordered']) .trigger-value {
-      color: var(--_theme-content);
-    }
-
-    :host([variant='bordered']) .trigger-placeholder {
-      color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-    }
-
-    :host([variant='bordered']) .field:hover {
-      border-color: var(--_theme-focus);
-    }
-
-    /* Outline - Transparent background */
-    :host([variant='outline']) .field {
-      background: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='outline']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Ghost - Transparent until hover */
-    :host([variant='ghost']) .field {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='ghost']) .field:hover {
-      background: var(--color-contrast-100);
-    }
-
-    :host([variant='ghost']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([fullwidth]) {
-      display: flex;
-      width: 100%;
-    }
-  }
-`;
+import componentStyles from './select.css?inline';
 
 // ============================================
 // Component Props
 // ============================================
 
 /** Select component properties */
-export interface SelectProps extends ThemableProps, SizableProps, DisablableProps {
-  /** Error message */
-  error?: string;
-  /** Helper text */
-  helper?: string;
-  /** Label text */
-  label?: string;
-  /** Label placement: 'inset' | 'outside' */
-  'label-placement'?: 'inset' | 'outside';
-  /** Show loading state in dropdown */
-  loading?: boolean;
-  /** Allow selecting multiple options */
-  multiple?: boolean;
-  /** Form field name */
-  name?: string;
-  /** JS options array (alternative to slotted <option> elements) */
-  options?: OptionItem[];
-  /** Placeholder text when no option is selected */
-  placeholder?: string;
-  /** Mark the field as required */
-  required?: boolean;
-  /** Border radius size */
-  rounded?: RoundedSize | '';
-  /** Current value (use comma-separated for multiple) */
-  value?: string;
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
-  /** Expand to full width */
-  fullwidth?: boolean;
-}
+
+export type BitSelectEvents = {
+  change: { originalEvent?: Event; value: string; values: string[] };
+};
+
+export type BitSelectProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Error message */
+    error?: string;
+    /** Expand to full width */
+    fullwidth?: boolean;
+    /** Helper text */
+    helper?: string;
+    /** Label text */
+    label?: string;
+    /** Label placement: 'inset' | 'outside' */
+    'label-placement'?: 'inset' | 'outside';
+    /** Show loading state in dropdown */
+    loading?: boolean;
+    /** Allow selecting multiple options */
+    multiple?: boolean;
+    /** Form field name */
+    name?: string;
+    /** JS options array (alternative to slotted <option> elements) */
+    options?: OptionItem[];
+    /** Placeholder text when no option is selected */
+    placeholder?: string;
+    /** Mark the field as required */
+    required?: boolean;
+    /** Border radius size */
+    rounded?: RoundedSize | '';
+    /** Current value (use comma-separated for multiple) */
+    value?: string;
+    /** Visual style variant */
+    variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  };
 
 /**
  * A fully custom form-associated select dropdown with keyboard navigation and ARIA support.
@@ -574,14 +138,12 @@ export interface SelectProps extends ThemableProps, SizableProps, DisablableProp
  * </bit-select>
  * ```
  */
-export const TAG = define(
+export const SELECT_TAG = define(
   'bit-select',
   ({ host }) => {
-    const emit = defineEmits<{
-      change: { originalEvent?: Event; value: string; values: string[] };
-    }>();
+    const emit = defineEmits<BitSelectEvents>();
 
-    const props = defineProps<Omit<SelectProps, 'options'>>({
+    const props = defineProps<Omit<BitSelectProps, 'options'>>({
       // 'options' is a JS-only prop handled via Object.defineProperty
       color: { default: undefined },
       disabled: { default: false },
@@ -961,10 +523,9 @@ export const TAG = define(
 
       const flatList = buildFlatList(options.value);
 
-      virtualizer = createVirtualizer({
+      virtualizer = createVirtualizer(scrollEl, {
         count: flatList.length,
         estimateSize: (i) => (flatList[i]?.type === 'group' ? 28 : 36),
-        getScrollElement: () => scrollEl,
         onChange: (virtualItems, totalSize) => {
           const container = dropdownContentRef.value;
           const spacer = dropdownSpacerRef.value;
@@ -1016,7 +577,7 @@ export const TAG = define(
 
               check.className = 'option-check';
               check.setAttribute('aria-hidden', 'true');
-              check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+              check.innerHTML = checkIconHTML;
               optionEl.appendChild(check);
 
               optionEl.addEventListener('click', (e: MouseEvent) => {
@@ -1125,7 +686,7 @@ export const TAG = define(
         if (dropdownSpacerRef.value) dropdownSpacerRef.value.hidden = isLoading.value;
 
         // Re-render virtualizer on focused/selected changes (options handled by separate effect)
-        virtualizer?.measure();
+        virtualizer?.invalidate();
 
         // Dropdown open state
         if (dropdownEl) {
@@ -1227,18 +788,7 @@ export const TAG = define(
               <span class="trigger-value" ref=${triggerValueRef}></span>
             </div>
             <span class="trigger-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              ${chevronDownIcon}
               <span class="loader" aria-label="Loading"></span>
             </span>
           </div>
@@ -1262,9 +812,3 @@ export const TAG = define(
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-select': HTMLElement & SelectProps & FormValidityMethods & AddEventListeners<BitSelectEvents>;
-  }
-}

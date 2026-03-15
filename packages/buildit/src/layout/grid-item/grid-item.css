@@ -1,0 +1,39 @@
+@layer buildit.base {
+  :host {
+    display: block;
+  }
+}
+
+@layer buildit.utilities {
+  :host([align='start']) {
+    align-self: start;
+  }
+
+  :host([align='center']) {
+    align-self: center;
+  }
+
+  :host([align='end']) {
+    align-self: end;
+  }
+
+  :host([align='stretch']) {
+    align-self: stretch;
+  }
+
+  :host([justify='start']) {
+    justify-self: start;
+  }
+
+  :host([justify='center']) {
+    justify-self: center;
+  }
+
+  :host([justify='end']) {
+    justify-self: end;
+  }
+
+  :host([justify='stretch']) {
+    justify-self: stretch;
+  }
+}

@@ -42,6 +42,11 @@ define('my-counter', () => {
 - ✅ **Watch** — `watch(source, callback)` for derived reactions
 - ✅ **Batched updates** — `batch(fn)` to group multiple signal writes
 - ✅ **Props, slots, emits** — `defineProps`, `defineSlots`, `defineEmits`
+- ✅ **Context / DI** — `provide()`, `inject()`, `createContext()` for cross-component data sharing
+- ✅ **Form-associated** — `defineField()` for custom form controls with native validation
+- ✅ **Accessibility** — `aria()`, `createId()`, `createFormIds()`, `useFocusTrap()`
+- ✅ **Lifecycle** — `onMount`, `onUnmount`, `onRendered`, `onCleanup`, `onError`
+- ✅ **Observers** — `observeResize()`, `observeIntersection()`, `observeMedia()`
 - ✅ **Framework-agnostic** — pure web components, usable anywhere
 
 ## Usage
@@ -97,16 +102,13 @@ define('user-card', () => {
 define('my-input', () => {
   const props = defineProps({
     label: { default: '' },
-    disabled: { default: false },
+    disabled: typed<boolean>(false),
   });
   const emit = defineEmits<{ change: string }>();
 
   return html`
     <label>${props.label}</label>
-    <input
-      ?disabled=${props.disabled}
-      @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
-    />
+    <input ?disabled=${props.disabled} @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)} />
     <slot></slot>
   `;
 });
@@ -117,102 +119,117 @@ define('my-input', () => {
 ```typescript
 import { readonly, writable, isSignal, toValue } from '@vielzeug/craftit';
 
-const count  = signal(0);
-const ro     = readonly(count);      // read-only view
+const count = signal(0);
+const ro = readonly(count); // read-only view
 const custom = writable(
   () => count.value,
   (v) => (count.value = v * 2),
 );
 
-isSignal(count);   // true
-toValue(count);    // 0
-toValue(42);       // 42 (plain values pass through)
+isSignal(count); // true
+toValue(count); // 0
+toValue(42); // 42 (plain values pass through)
 ```
 
 ## API
 
 **Components**
 
-| Export | Description |
-|---|---|
-| `define(name, setup, options?)` | Register a custom element |
-| `prop(name, default, options?)` | Declare a single reactive prop (syncs with HTML attribute) |
-| `defineProps(defs)` | Declare multiple props at once from an object literal |
-| `defineEmits<T>()` | Emit typed custom events |
-| `defineSlots()` | Check whether named slots have content |
-| `provide(key, value)` | Provide a context value to descendant components |
-| `inject(key, fallback?)` | Inject a context value from an ancestor component |
-| `createContext<T>()` | Create a typed injection key |
-| `field(options)` | Form-associated element via ElementInternals |
+| Export                               | Description                                                |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `define(name, setup, options?)`      | Register a custom element                                  |
+| `prop(name, default, options?)`      | Declare a single reactive prop (syncs with HTML attribute) |
+| `defineProps(defs)`                  | Declare multiple props at once from an object literal      |
+| `typed<T>(default, options?)`        | Typed PropDef helper for explicit type parameters          |
+| `defineEmits<T>()`                   | Emit typed custom events                                   |
+| `defineSlots()`                      | Reactive slot-presence signals for named/default slots     |
+| `onSlotChange(name, cb)`             | React to slot content changes inside `onMount`             |
+| `provide(key, value)`                | Provide a context value to descendant components           |
+| `inject(key, fallback?)`             | Inject a context value from an ancestor component          |
+| `createContext<T>()`                 | Create a typed injection key with optional default         |
+| `syncContextProps(ctx, props, keys)` | Reactively inherit props from a context object             |
+| `defineField(options, callbacks?)`   | Form-associated element via ElementInternals               |
 
 **Signals** (re-exported from `@vielzeug/stateit`)
 
-| Export | Description |
-|---|---|
-| `signal(initial)` | Create a reactive signal |
-| `computed(fn)` | Create a memoized derived signal |
-| `effect(fn)` | Run a side-effect when dependencies change |
+| Export                    | Description                                      |
+| ------------------------- | ------------------------------------------------ |
+| `signal(initial)`         | Create a reactive signal                         |
+| `computed(fn)`            | Create a memoized derived signal                 |
+| `effect(fn)`              | Run a side-effect when dependencies change       |
 | `watch(source, callback)` | Watch a signal (or array of signals) for changes |
-| `batch(fn)` | Group mutations into a single update |
-| `untrack(fn)` | Read signals without creating dependencies |
-| `readonly(signal)` | Read-only signal wrapper |
-| `writable(get, set)` | Bi-directional computed signal |
-| `isSignal(v)` | Type guard for signals |
-| `toValue(v)` | Unwrap signal or return plain value |
+| `batch(fn)`               | Group mutations into a single update             |
+| `untrack(fn)`             | Read signals without creating dependencies       |
+| `readonly(signal)`        | Read-only signal wrapper                         |
+| `writable(get, set)`      | Bi-directional computed signal                   |
+| `isSignal(v)`             | Type guard for signals                           |
+| `toValue(v)`              | Unwrap signal or return plain value              |
 
 **Templates**
 
-| Export | Description |
-|---|---|
-| `html` | Tagged template for reactive DOM rendering |
-| `html.when(cond, then, else?)` | Conditional rendering (mounts/unmounts) |
-| `html.show(cond, template)` | Conditional visibility (keeps DOM mounted) |
-| `html.each(source, keyFn, templateFn)` | Keyed list rendering |
-| `html.bind(signal)` | Two-way input binding shorthand |
-| `html.classes(obj)` | Build dynamic class strings |
-| `html.style(obj)` | Build dynamic inline style strings |
-| `raw` | Tagged template — no HTML escaping |
-| `rawHtml(content)` | Mark a string as trusted raw HTML |
-| `escapeHtml(value)` | Escape HTML entities |
-| `suspense(asyncFn, opts)` | Async data with loading/error/retry |
+| Export                                 | Description                                         |
+| -------------------------------------- | --------------------------------------------------- |
+| `html`                                 | Tagged template for reactive DOM rendering          |
+| `html.when(cond, then, else?)`         | Conditional rendering — mounts/unmounts             |
+| `html.show(cond, template)`            | Conditional visibility — keeps DOM mounted          |
+| `html.each(source, keyFn, templateFn)` | Keyed list rendering                                |
+| `html.bind(signal)`                    | Two-way input binding shorthand                     |
+| `html.classes(obj)`                    | Build dynamic class strings                         |
+| `html.style(obj)`                      | Build dynamic inline style strings                  |
+| `match(...branches, fallback?)`        | Multi-branch conditional rendering (else-if chains) |
+| `raw`                                  | Tagged template — no HTML escaping                  |
+| `rawHtml(content)`                     | Mark a string as trusted raw HTML                   |
+| `escapeHtml(value)`                    | Escape HTML entities                                |
+| `suspense(asyncFn, opts)`              | Async data with loading/error/retry                 |
 
 **Styling**
 
-| Export | Description |
-|---|---|
-| `css` | Tagged template for scoped shadow DOM styles |
+| Export                           | Description                                  |
+| -------------------------------- | -------------------------------------------- |
+| `css`                            | Tagged template for scoped shadow DOM styles |
 | `css.theme(light, dark?, opts?)` | CSS custom properties for light/dark theming |
 
 **Lifecycle**
 
-| Export | Description |
-|---|---|
-| `onMount(fn)` | Run after component connects to the DOM |
-| `onUnmount(fn)` | Run before component disconnects |
-| `onUpdated(fn)` | Run after each reactive update |
-| `onCleanup(fn)` | Register a cleanup function (runs on unmount) |
-| `onError(fn)` | Scoped error boundary for render/lifecycle errors |
-| `handle(target, event, fn)` | Add event listener with automatic cleanup |
-| `aria(attrs)` | Reactive ARIA attribute bindings on the host element |
+| Export                      | Description                                                           |
+| --------------------------- | --------------------------------------------------------------------- |
+| `onMount(fn)`               | Run after component connects to the DOM                               |
+| `onUnmount(fn)`             | Run before component disconnects                                      |
+| `onRendered(fn)`            | Run once after initial render and all `onMount` hooks                 |
+| `onCleanup(fn)`             | Register a cleanup function (runs on unmount or effect re-run)        |
+| `onError(fn)`               | Scoped error boundary for render/lifecycle errors                     |
+| `handle(target, event, fn)` | Add event listener with automatic cleanup                             |
+| `syncDOMProps(el, map)`     | Reactively sync signal values onto DOM element properties             |
+| `aria(attrs)`               | Reactive ARIA attributes on the host (setup) or any element (onMount) |
+| `onFormAssociated(fn)`      | Called when element is inserted into a `<form>`                       |
+| `onFormDisabled(fn)`        | Called when the associated form's disabled state changes              |
+| `onFormReset(fn)`           | Called when the associated form is reset                              |
+| `onFormStateRestore(fn)`    | Called when the browser restores form state                           |
 
 **Utilities**
 
-| Export | Description |
-|---|---|
-| `ref<T>()` | Single DOM element reference |
-| `refs<T>()` | Multiple DOM element references (live `ReadonlyArray`) |
-| `guard(condition, handler)` | Conditional event handler wrapper |
-| `createId(prefix?)` | Generate unique stable IDs for accessibility |
+| Export                           | Description                                                        |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `ref<T>()`                       | Single DOM element reference                                       |
+| `refs<T>()`                      | Multiple DOM element references (live `ReadonlyArray`)             |
+| `guard(condition, handler)`      | Conditional event handler wrapper                                  |
+| `createId(prefix?)`              | Generate a unique stable ID for accessibility linkage              |
+| `createFormIds(prefix, name)`    | Generate a set of stable ARIA IDs for a form control               |
+| `useFocusTrap(container)`        | Trap keyboard focus inside a container (`onMount`)                 |
+| `getFocusableElements(root)`     | All keyboard-focusable descendants in DOM order                    |
+| `observeResize(el)`              | `ReadonlySignal<{width, height}>` via `ResizeObserver` (`onMount`) |
+| `observeIntersection(el, opts?)` | `ReadonlySignal<IntersectionObserverEntry>` (`onMount`)            |
+| `observeMedia(query)`            | `ReadonlySignal<boolean>` tracking a CSS media query               |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/craftit](https://vielzeug.dev/craftit)**
 
-| | |
-|---|---|
+|                                                   |                                |
+| ------------------------------------------------- | ------------------------------ |
 | [Usage Guide](https://vielzeug.dev/craftit/usage) | Components, signals, templates |
-| [API Reference](https://vielzeug.dev/craftit/api) | Complete type signatures |
-| [Examples](https://vielzeug.dev/craftit/examples) | Real-world component patterns |
+| [API Reference](https://vielzeug.dev/craftit/api) | Complete type signatures       |
+| [Examples](https://vielzeug.dev/craftit/examples) | Real-world component patterns  |
 
 ## License
 

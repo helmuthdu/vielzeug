@@ -46,8 +46,8 @@ if (is.string(value)) { /* value narrowed to string */ }
 
 - ✅ **Tree-shakeable** — import only what you use
 - ✅ **Type-safe** — full TypeScript inference on every utility
-- ✅ **Array** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `rotate`, `replace`, `search`, `uniq`, `sort`, `contains`, `pick`
-- ✅ **Object** — `merge`, `diff`, `path`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
+- ✅ **Array** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `rotate`, `replace`, `search`, `uniq`, `sort`, `contains`, `pick`, `list`, `remoteList`
+- ✅ **Object** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
 - ✅ **String** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
 - ✅ **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`
 - ✅ **Function** — `debounce`, `throttle`, `memo`, `once`, `pipe`, `compose`, `curry`, `compare`, `fp`
@@ -77,8 +77,11 @@ const byId = keyBy(users, 'id');                 // { '1': user1, '2': user2 }
 // Fold (reduce without initial value)
 fold([1, 2, 3], (a, b) => a + b);               // 6
 
-// Map + filter in one step
-select([1, 2, 3, 4], (n) => n > 2 ? n * 10 : null); // [30, 40]
+// Filter nil elements from source, then map remaining
+select([null, 1, null, 2], (n) => n * 10); // [10, 20]
+
+// Filter by predicate, then map
+select([1, 2, 3, 4], (n) => n * 10, (n) => n > 2); // [30, 40]
 
 // Toggle item in/out of array
 toggle([1, 2, 3], 2);                            // [1, 3]
@@ -91,17 +94,17 @@ uniq([1, 2, 2, 3]);                              // [1, 2, 3]
 ### Object Utilities
 
 ```typescript
-import { merge, diff, path, seek, prune, parseJSON } from '@vielzeug/toolkit';
+import { merge, diff, get, seek, prune, parseJSON } from '@vielzeug/toolkit';
 
 // Deep merge
 const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
 // { api: { host: 'localhost', port: 3000 } }
 
 // Nested path access
-path(cfg, 'api.host');   // 'localhost'
+get(cfg, 'api.host');   // 'localhost'
 
-// Find value anywhere in deeply nested object
-seek(cfg, 'port');       // 3000
+// Recursively search object values by similarity
+seek(cfg, 'localhost', 1);   // true (exact match)
 
 // Remove nulls/empty values
 prune({ a: 1, b: null, c: '' });  // { a: 1 }
@@ -129,7 +132,7 @@ const results = await parallel(5, urls, async (url) => fetch(url).then(r => r.js
 const data = await race(fetchUser(id), 300);
 
 // Attempt with silent error handling
-const user = await attempt(fetchUser, { retries: 2, timeout: 5000 });
+const user = await attempt(fetchUser, { times: 2, timeout: 5000 });
 
 // Poll until condition is true
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
@@ -173,7 +176,7 @@ sum([1, 2, 3, 4]);          // 10
 average([10, 20, 30]);      // 20
 clamp(105, 0, 100);         // 100
 round(Math.PI, 4);          // 3.1416
-range(1, 5);                // [1, 2, 3, 4, 5]
+range(1, 6, 1);              // [1, 2, 3, 4, 5]
 percent(25, 100);           // 25
 linspace(0, 10, 5);         // [0, 2.5, 5, 7.5, 10]
 ```
@@ -230,7 +233,7 @@ is.gt(5, 3);                  // true  (a > b)
 | `replace(arr, predicate, value)` | Replace first matching element |
 | `rotate(arr, n, opts?)` | Rotate elements by N positions |
 | `search(arr, query, opts?)` | Fuzzy search |
-| `select(arr, mapper)` | Map + filter in one pass |
+| `select(arr, mapper, predicate?)` | Map elements matching predicate (default: not nil) |
 | `sort(arr, comparator)` | Sort with custom comparator |
 | `toggle(arr, item, selector?, opts?)` | Add or remove item |
 | `uniq(arr)` | Remove duplicates |
@@ -243,10 +246,10 @@ is.gt(5, 3);                  // true  (a > b)
 | `diff(a, b)` | Find differences between objects |
 | `merge(strategy, ...objs)` | Merge objects (deep/shallow/concat) |
 | `parseJSON(str, fallback?)` | Safe JSON parse |
-| `path(obj, str)` | Access nested property by dot-path |
+| `get(obj, path, default?)` | Access nested property by dot-path |
 | `proxy(obj, opts)` | Object proxy with get/set hooks |
 | `prune(value)` | Remove nulls/empty values recursively |
-| `seek(obj, key)` | Find value by key anywhere in nested object |
+| `seek(obj, query, tone?)` | Search object values by similarity score |
 
 ### String
 

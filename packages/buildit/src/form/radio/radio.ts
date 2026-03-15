@@ -2,7 +2,6 @@ import {
   aria,
   computed,
   createId,
-  css,
   define,
   defineEmits,
   defineField,
@@ -19,148 +18,29 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  BitRadioEvents,
-  CheckableProps,
-  DisablableProps,
-  FormValidityMethods,
-  SizableProps,
-  ThemableProps,
-} from '../../types';
+import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    /* ========================================
-       Base Styles & Defaults
-       ======================================== */
-
-    :host {
-      --_size: var(--radio-size, var(--size-5));
-      --_font-size: var(--radio-font-size, var(--text-sm));
-      --_bg: var(--radio-bg, var(--color-contrast-200));
-      --_border: var(--radio-border-color, var(--color-contrast-300));
-
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--_gap, var(--size-2));
-      cursor: pointer;
-      user-select: none;
-      min-height: var(--_touch-target);
-    }
-
-    .radio-wrapper {
-      position: relative;
-      display: block;
-      width: var(--_size);
-      height: var(--_size);
-      flex-shrink: 0;
-    }
-
-    .circle {
-      width: var(--_size);
-      height: var(--_size);
-      border: var(--border-2) solid var(--_border);
-      border-radius: 50%;
-      background: var(--_bg);
-      transition:
-        background var(--transition-slower),
-        border-color var(--transition-slower),
-        box-shadow var(--transition-normal);
-      position: relative;
-      box-sizing: border-box;
-    }
-
-    /* ========================================
-       Focus State
-       ======================================== */
-
-    :host(:focus-visible) .circle {
-      box-shadow: var(--_focus-shadow);
-    }
-
-    /* ========================================
-       Inner Dot
-       ======================================== */
-
-    .dot {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 50%;
-      height: 50%;
-      border-radius: 50%;
-      background: var(--_dot-color);
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.5);
-      transition:
-        opacity var(--transition-spring),
-        transform var(--transition-spring);
-    }
-
-    /* ========================================
-       Label
-       ======================================== */
-
-    .label {
-      font-size: var(--_font-size);
-      color: var(--color-contrast);
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline-start: calc(var(--_size) + var(--size-2));
-      width: 100%;
-    }
-
-    .helper-text[role='alert'] {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.overrides {
-    /* Map theme variables to radio-specific variables */
-    :host {
-      --_active-bg: var(--radio-checked-bg, var(--_theme-base));
-      --_dot-color: var(--radio-color, var(--_theme-contrast));
-      --_focus-shadow: var(--_theme-shadow);
-    }
-
-    /* ========================================
-       Checked State
-       ======================================== */
-
-    :host([checked]) .circle {
-      background: var(--_active-bg);
-      border-color: var(--_active-bg);
-    }
-
-    :host([checked]) .dot {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
-`;
+import componentStyles from './radio.css?inline';
 
 /** Radio component properties */
-export interface RadioProps extends CheckableProps, ThemableProps, SizableProps, DisablableProps {
-  /** Helper text displayed below the radio */
-  helper?: string;
-  /** Error message (marks field as invalid) */
-  error?: string;
-}
+
+export type BitRadioEvents = {
+  change: { checked: boolean; originalEvent: Event };
+};
+
+export type BitRadioProps = CheckableProps &
+  ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Error message (marks field as invalid) */
+    error?: string;
+    /** Helper text displayed below the radio */
+    helper?: string;
+  };
 
 /**
  * A customizable radio button component for mutually exclusive selections.
@@ -196,12 +76,12 @@ export interface RadioProps extends CheckableProps, ThemableProps, SizableProps,
  * <bit-radio name="size" value="large">Large</bit-radio>
  * ```
  */
-export const TAG = define(
+export const RADIO_TAG = define(
   'bit-radio',
   ({ host }) => {
     const slots = defineSlots();
-    const emit = defineEmits<{ change: { checked: boolean; originalEvent: Event } }>();
-    const props = defineProps<RadioProps>({
+    const emit = defineEmits<BitRadioEvents>();
+    const props = defineProps<BitRadioProps>({
       checked: { default: false },
       color: { default: undefined },
       disabled: { default: false },
@@ -236,10 +116,33 @@ export const TAG = define(
     const helperRef = ref<HTMLDivElement>();
     const helperId = createId('radio-helper');
 
+    // When inside a group, derive checked state from group context value.
+    // When standalone, drive it from the checked prop/attribute.
+    if (groupCtx) {
+      watch(
+        computed(() => groupCtx.value.value === props.value.value),
+        (isChecked) => {
+          checkedSignal.value = isChecked;
+        },
+        { immediate: true },
+      );
+    } else {
+      watch(
+        props.checked,
+        (v) => {
+          checkedSignal.value = v ?? false;
+        },
+        { immediate: true },
+      );
+    }
+
+    // Mirror checkedSignal back to the host attribute so CSS, external queries,
+    // and framework bindings can observe the checked state declaratively.
     watch(
-      props.checked,
-      (v) => {
-        checkedSignal.value = v;
+      computed(() => checkedSignal.value),
+      (isChecked) => {
+        if (isChecked) host.setAttribute('checked', '');
+        else host.removeAttribute('checked');
       },
       { immediate: true },
     );
@@ -428,9 +331,3 @@ export const TAG = define(
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-radio': HTMLElement & RadioProps & FormValidityMethods & AddEventListeners<BitRadioEvents>;
-  }
-}

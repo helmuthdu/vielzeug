@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/toolkit",
+      "comment": "Major release: comprehensive utility library across eight categories — Array (chunk, group, sort, uniq, search, remoteList, keyBy, and more), Object (merge with 5 strategies, diff, path, seek, cache, parseJSON), String (camelCase, kebabCase, pascalCase, snakeCase, truncate, similarity), Math (clamp, range, round, sum, average, allocate, distribute, median), Date (expires, timeDiff, interval), Function (compose, pipe, curry, debounce, throttle, memo, once, retry), Async (defer, parallel, pool, queue, race, sleep, waitFor), Typed (is type guards, isEqual, isMatch, isEmpty), and Random (uuid, draw, shuffle)",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/toolkit"
+}

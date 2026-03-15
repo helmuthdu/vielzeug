@@ -1,0 +1,127 @@
+@layer buildit.base {
+  :host {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip {
+    /* Positioning — JS sets top/left inline */
+    position: fixed;
+
+    /* Popover UA resets */
+    inset: unset;
+    max-width: var(--tooltip-max-width, 18rem);
+    padding: var(--size-0) var(--size-3);
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+    line-height: var(--leading-none);
+    color: var(--color-contrast-50);
+    word-break: auto-phrase;
+    white-space: pre-line;
+    pointer-events: none;
+    background: var(--color-contrast-900);
+    border: 0;
+    border-radius: var(--rounded-sm);
+    box-shadow: var(--shadow-md);
+
+    /* Hidden by default (also serves as exit state) */
+    opacity: 0;
+    transition:
+      opacity var(--transition-fast),
+      display var(--transition-fast) allow-discrete,
+      overlay var(--transition-fast) allow-discrete;
+  }
+
+  /* Entry animation via @starting-style */
+  .tooltip:popover-open {
+    opacity: 1;
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* ========================================
+       Arrow
+       ======================================== */
+
+  .arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+
+  /* Arrow placement depends on tooltip position */
+  .tooltip[data-placement='top'] .arrow {
+    bottom: -4px;
+    left: 50%;
+    border-top: 5px solid var(--color-contrast-900);
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    transform: translateX(-50%);
+  }
+
+  .tooltip[data-placement='bottom'] .arrow {
+    top: -4px;
+    left: 50%;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid var(--color-contrast-900);
+    border-left: 5px solid transparent;
+    transform: translateX(-50%);
+  }
+
+  .tooltip[data-placement='left'] .arrow {
+    top: 50%;
+    right: -4px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 5px solid var(--color-contrast-900);
+    transform: translateY(-50%);
+  }
+
+  .tooltip[data-placement='right'] .arrow {
+    top: 50%;
+    left: -4px;
+    border-top: 5px solid transparent;
+    border-right: 5px solid var(--color-contrast-900);
+    border-bottom: 5px solid transparent;
+    transform: translateY(-50%);
+  }
+}
+
+@layer buildit.variants {
+  /* Light tooltip */
+  :host([variant='light']) .tooltip {
+    color: var(--color-contrast-900);
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-200);
+    box-shadow: var(--shadow-md);
+  }
+
+  :host([variant='light']) .tooltip[data-placement='top'] .arrow {
+    border-top-color: var(--color-canvas);
+  }
+
+  :host([variant='light']) .tooltip[data-placement='bottom'] .arrow {
+    border-bottom-color: var(--color-canvas);
+  }
+
+  :host([variant='light']) .tooltip[data-placement='left'] .arrow {
+    border-left-color: var(--color-canvas);
+  }
+
+  :host([variant='light']) .tooltip[data-placement='right'] .arrow {
+    border-right-color: var(--color-canvas);
+  }
+}
+
+@layer buildit.utilities {
+  :host([size='sm']) .tooltip {
+    font-size: var(--text-xs);
+  }
+
+  :host([size='lg']) .tooltip {
+    font-size: var(--text-base);
+  }
+}

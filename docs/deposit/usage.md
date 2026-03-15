@@ -14,13 +14,27 @@ Use `defineSchema<S>(schema)` to create a fully-typed schema. The type parameter
 ```ts
 import { defineSchema } from '@vielzeug/deposit';
 
-interface User    { id: number; name: string; age: number; city?: string }
-interface Post    { id: number; title: string; authorId: number; publishedAt: number }
-interface Comment { id: number; postId: number; body: string }
+interface User {
+  id: number;
+  name: string;
+  age: number;
+  city?: string;
+}
+interface Post {
+  id: number;
+  title: string;
+  authorId: number;
+  publishedAt: number;
+}
+interface Comment {
+  id: number;
+  postId: number;
+  body: string;
+}
 
 const schema = defineSchema<{ users: User; posts: Post; comments: Comment }>({
-  users:    { key: 'id', indexes: ['name', 'age'] },
-  posts:    { key: 'id', indexes: ['authorId', 'publishedAt'] },
+  users: { key: 'id', indexes: ['name', 'age'] },
+  posts: { key: 'id', indexes: ['authorId', 'publishedAt'] },
   comments: { key: 'id', indexes: ['postId'] },
 });
 ```
@@ -55,16 +69,17 @@ import { createLocalStorage } from '@vielzeug/deposit';
 
 const db = createLocalStorage({ dbName: 'my-app', schema });
 ```
+
 ::: warning Private Browsing / Sandboxed Iframes
 In Safari private mode and some sandboxed iframes, any access to `localStorage` throws a `SecurityError`. Deposit detects this on the first operation and throws a descriptive error. Use `createIndexedDB` as a fallback in environments where `localStorage` may be unavailable.
 :::
 **Options:**
 
-| Property | Type | Description |
-|---|---|---|
-| `dbName` | `string` | Namespace prefix for all localStorage keys |
-| `schema` | `Schema<S>` | Schema created by `defineSchema()` or inline object |
-| `logger?` | `Logger` | Custom logger; defaults to `console` |
+| Property  | Type        | Description                                         |
+| --------- | ----------- | --------------------------------------------------- |
+| `dbName`  | `string`    | Namespace prefix for all localStorage keys          |
+| `schema`  | `Schema<S>` | Schema created by `defineSchema()` or inline object |
+| `logger?` | `Logger`    | Custom logger; defaults to `console`                |
 
 ### `createIndexedDB(options)`
 
@@ -88,13 +103,13 @@ db.close();
 
 **Options:**
 
-| Property | Type | Description |
-|---|---|---|
-| `dbName` | `string` | IDB database name |
-| `version?` | `number` | Database version (default: `1`) |
-| `schema` | `Schema<S>` | Schema created by `defineSchema()` or inline object |
-| `migrationFn?` | `MigrationFn` | Runs inside `onupgradeneeded` for schema migrations |
-| `logger?` | `Logger` | Custom logger; defaults to `console` |
+| Property       | Type          | Description                                                         |
+| -------------- | ------------- | ------------------------------------------------------------------- |
+| `dbName`       | `string`      | IDB database name                                                   |
+| `version`      | `number`      | Database version — **required**; increment to trigger `migrationFn` |
+| `schema`       | `Schema<S>`   | Schema created by `defineSchema()` or inline object                 |
+| `migrationFn?` | `MigrationFn` | Runs inside `onupgradeneeded` for schema migrations                 |
+| `logger?`      | `Logger`      | Custom logger; defaults to `console`                                |
 
 ## CRUD Operations
 
@@ -102,21 +117,36 @@ All methods are `async` on both adapters for a consistent API.
 
 ### `put(table, value, ttl?)`
 
-Upserts one record or an array of records. An optional `ttl` (milliseconds) sets the expiry timestamp.
+Upserts a single record. An optional `ttl` (milliseconds) sets the expiry timestamp.
 
 ```ts
 await db.put('users', { id: 1, name: 'Alice', age: 30 });
-await db.put('users', [user1, user2, user3]);            // bulk upsert
-await db.put('users', { id: 1, name: 'Alice', age: 30 }, 3_600_000); // expires in 1 hour
+await db.put('users', { id: 1, name: 'Alice', age: 30 }, ttl.hours(1)); // expires in 1 hour
 ```
 
-### `get(table, key, defaultValue?)`
+### `putMany(table, values[], ttl?)`
 
-Returns the record by primary key, or `undefined` when absent or expired. When `defaultValue` is supplied the return type narrows to `T` (never `undefined`).
+Upserts multiple records in one call. The same optional `ttl` is applied to each record.
 
 ```ts
-const user = await db.get('users', 1);               // User | undefined
-const user = await db.get('users', 1, { id: 0, name: 'Guest', age: 0 }); // User
+await db.putMany('users', [user1, user2, user3]);
+await db.putMany('sessions', sessions, ttl.hours(1)); // TTL applied to all
+```
+
+### `get(table, key)`
+
+Returns the record by primary key, or `undefined` when absent or expired.
+
+```ts
+const user = await db.get('users', 1); // User | undefined
+```
+
+### `getOr(table, key, defaultValue)`
+
+Returns the record when present, or `defaultValue` when absent or expired. The return type is always `T` — never `undefined`.
+
+```ts
+const user = await db.getOr('users', 1, { id: 0, name: 'Guest', age: 0 }); // User
 ```
 
 ### `getAll(table)`
@@ -146,11 +176,18 @@ const updated = await db.patch('users', 1, { age: 31 });
 
 ### `delete(table, key)`
 
-Removes one record or an array of records. Silently ignores missing keys.
+Removes a single record. Silently ignores missing keys.
 
 ```ts
 await db.delete('users', 1);
-await db.delete('users', [1, 2, 3]);  // bulk delete
+```
+
+### `deleteMany(table, keys[])`
+
+Removes multiple records in one call. Silently ignores missing keys.
+
+```ts
+await db.deleteMany('users', [1, 2, 3]);
 ```
 
 ### `deleteAll(table)`
@@ -182,7 +219,7 @@ const total = await db.count('users'); // number
 Returns the cached record if present; otherwise calls `factory()`, stores the result, and returns it.
 
 ```ts
-const user = await db.getOrPut('users', 1, () => fetchUser(1), 60_000);
+const user = await db.getOrPut('users', 1, () => fetchUser(1), ttl.minutes(5));
 ```
 
 ## Query Builder
@@ -205,11 +242,21 @@ await qb.startsWith('name', 'Al').toArray();
 await qb.startsWith('name', 'al', true).toArray(); // case-insensitive
 
 // Custom predicate
-await qb.filter(u => u.age > 18 && (u.city ?? '').length > 0).toArray();
+await qb.filter((u) => u.age > 18 && (u.city ?? '').length > 0).toArray();
 
 // Logical AND / OR
-await qb.and(u => u.city === 'Paris', u => u.age > 25).toArray();
-await qb.or(u => u.city === 'Paris', u => u.city === 'Berlin').toArray();
+await qb
+  .and(
+    (u) => u.city === 'Paris',
+    (u) => u.age > 25,
+  )
+  .toArray();
+await qb
+  .or(
+    (u) => u.city === 'Paris',
+    (u) => u.city === 'Berlin',
+  )
+  .toArray();
 ```
 
 ### Sorting & Pagination
@@ -248,9 +295,18 @@ await qb.contains('paris').toArray();
 `map` transforms each record and returns a `ProjectedQuery<U>`. Unlike the other query methods, `U` is unconstrained, so projecting to a primitive type works correctly:
 
 ```ts
-const ids   = await db.from('users').map(u => u.id).toArray();          // number[]
-const names = await db.from('users').map(u => u.name).toArray();        // string[]
-const dtos  = await db.from('users').map(u => ({ name: u.name })).toArray();
+const ids = await db
+  .from('users')
+  .map((u) => u.id)
+  .toArray(); // number[]
+const names = await db
+  .from('users')
+  .map((u) => u.name)
+  .toArray(); // string[]
+const dtos = await db
+  .from('users')
+  .map((u) => ({ name: u.name }))
+  .toArray();
 ```
 
 `ProjectedQuery<U>` supports the same terminal methods as `QueryBuilder` — `toArray`, `first`, `last`, `count`, and `for await...of` — but cannot be chained with further query operators.
@@ -258,10 +314,24 @@ const dtos  = await db.from('users').map(u => ({ name: u.name })).toArray();
 ### Terminals
 
 ```ts
-const all   = await qb.toArray();  // T[]
-const first = await qb.first();    // T | undefined
-const last  = await qb.last();     // T | undefined
-const count = await qb.count();    // number
+const all = await qb.toArray(); // T[]
+const first = await qb.first(); // T | undefined
+const last = await qb.last(); // T | undefined
+const count = await qb.count(); // number
+```
+
+### Aggregations
+
+```ts
+// count() and pagination
+const total = await qb.count();
+
+// reduce
+const totalAge = await db.from('users').reduce((sum, u) => sum + u.age, 0);
+const names = await db
+  .from('users')
+  .filter((u) => u.active)
+  .reduce<string[]>((acc, u) => [...acc, u.name], []);
 ```
 
 ::: tip count() and pagination
@@ -269,8 +339,9 @@ const count = await qb.count();    // number
 
 ```ts
 const total = await db.from('users').equals('city', 'Paris').count();
-const page  = await db.from('users').equals('city', 'Paris').page(1, 20).toArray();
+const page = await db.from('users').equals('city', 'Paris').page(1, 20).toArray();
 ```
+
 :::
 
 ### Async Iteration
@@ -285,21 +356,35 @@ for await (const user of db.from('users').orderBy('name').limit(100)) {
 
 ## TTL
 
-Pass a TTL (time-to-live in milliseconds) as the third argument to `put`, or the fourth argument to `getOrPut`. The expiry timestamp is stored in an internal envelope alongside the value.
+Pass a TTL in milliseconds as the third argument to `put` or `putMany`, or the fourth argument to `getOrPut`.
+Use the `ttl` helper to express durations readably:
 
 ```ts
-// Expires in 1 hour
-await db.put('sessions', { id: 's1', token: 'abc' }, 3_600_000);
+import { ttl } from '@vielzeug/deposit';
+
+// named helpers
+await db.put('sessions', session, ttl.hours(1));
+await db.putMany('cache', entries, ttl.minutes(15));
+await db.getOrPut('users', id, fetchUser, ttl.seconds(30));
+
+// raw ms also works
+await db.put('tokens', token, 60_000);
 
 // Returns undefined after expiry — and removes the entry from storage
 const session = await db.get('sessions', 's1');
 
 // patch preserves existing TTL
 const updated = await db.patch('sessions', 's1', { token: 'xyz' });
-
-// Cache pattern with TTL
-const data = await db.getOrPut('cache', 'key', () => fetchData(), 5 * 60_000);
 ```
+
+**`ttl` helpers:**
+
+| Helper           | Returns                           |
+| ---------------- | --------------------------------- |
+| `ttl.ms(n)`      | `n` (identity — raw milliseconds) |
+| `ttl.seconds(n)` | `n * 1_000`                       |
+| `ttl.minutes(n)` | `n * 60_000`                      |
+| `ttl.hours(n)`   | `n * 3_600_000`                   |
 
 ::: tip Lazy eviction
 Expired entries are removed lazily: the LocalStorage adapter evicts on read; the IndexedDB adapter evicts in a background write after `getAll()` returns.
@@ -315,23 +400,27 @@ import { createIndexedDB } from '@vielzeug/deposit';
 const db = createIndexedDB({ dbName: 'my-app', version: 1, schema });
 
 await db.transaction(['posts', 'comments'], async (tx) => {
-  // Full CRUD available on the transaction context
+  // Reads
   const post = await tx.get('posts', 1);
+  const all = await tx.getAll('posts');
+  const many = await tx.getMany('posts', [1, 2, 3]);
+  const safe = await tx.getOr('posts', 1, defaultPost);
+  const exists = await tx.has('posts', 1);
+  const total = await tx.count('posts'); // native IDB count — includes TTL-expired
+  const recent = await tx.from('posts').orderBy('publishedAt', 'desc').limit(5).toArray();
+
+  // Writes
   await tx.put('posts', { id: 1, title: 'Hello', authorId: 1, publishedAt: Date.now() });
+  await tx.putMany('comments', [c1, c2, c3]);
   await tx.patch('posts', 1, { title: 'Hello, World!' });
   await tx.delete('posts', 99);
-  await tx.put('comments', { id: 1, postId: 1, body: 'First!' });
-
-  const all = await tx.getAll('posts');
+  await tx.deleteMany('comments', [10, 11]);
+  await tx.deleteAll('drafts');
 });
 ```
 
 ::: warning
 The `transaction()` method is only available on `IndexedDBHandle` (returned by `createIndexedDB()`), not on `Adapter`.
-:::
-
-::: info Methods not available inside a transaction
-`getMany`, `count`, `has`, `getOrPut`, and `from` are not available on the transaction context — they are not supported within an IDB transaction scope. Use `get` or `getAll` to read data inside a transaction.
 :::
 
 ## Schema Migrations

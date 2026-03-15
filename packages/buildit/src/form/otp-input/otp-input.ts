@@ -1,178 +1,40 @@
-import { computed, css, define, defineEmits, defineProps, html, onMount } from '@vielzeug/craftit';
+import { computed, define, defineEmits, defineProps, html, onMount } from '@vielzeug/craftit';
 
-import type { AddEventListeners, ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import styles from './otp-input.css?inline';
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_cell-size: var(--otp-cell-size, var(--size-12));
-      --_cell-gap: var(--otp-cell-gap, var(--size-2));
-      --_cell-font-size: var(--otp-cell-font-size, var(--text-xl));
-      --_cell-radius: var(--otp-cell-radius, var(--rounded-md));
-      --_cell-border: var(--otp-cell-border, var(--border));
-      --_cell-border-color: var(--otp-cell-border-color, var(--color-contrast-300));
-      --_cell-bg: var(--otp-cell-bg, var(--color-canvas));
-      --_cell-focus-border: var(--otp-cell-focus-border, var(--_theme-base, var(--color-contrast-700)));
-
-      display: inline-flex;
-      flex-direction: column;
-      gap: var(--size-1);
-    }
-
-    .otp-group {
-      display: flex;
-      align-items: center;
-      gap: var(--_cell-gap);
-    }
-
-    .cell {
-      box-sizing: border-box;
-      display: block;
-      width: var(--_cell-size);
-      height: var(--_cell-size);
-      text-align: center;
-      font-size: var(--_cell-font-size);
-      font-weight: var(--font-semibold);
-      line-height: 1;
-      background: var(--_cell-bg);
-      border: var(--_cell-border) solid var(--_cell-border-color);
-      border-radius: var(--_cell-radius);
-      color: var(--color-contrast-900);
-      caret-color: var(--_cell-focus-border);
-      transition:
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast);
-      padding: 0;
-    }
-
-    .cell::selection {
-      background: var(--_theme-backdrop, var(--color-contrast-100));
-    }
-
-    .cell:focus {
-      outline: none;
-      border-color: var(--_cell-focus-border);
-      box-shadow: 0 0 0 var(--border-2) color-mix(in srgb, var(--_cell-focus-border) 20%, transparent);
-    }
-
-    .cell:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .separator {
-      color: var(--color-contrast-400);
-      font-size: var(--_cell-font-size);
-      user-select: none;
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (default) */
-    :host(:not([variant])) .cell,
-    :host([variant='solid']) .cell {
-      background: var(--color-contrast-50);
-      border-color: var(--color-contrast-300);
-      box-shadow: var(--shadow-2xs);
-    }
-
-    /* Flat */
-    :host([variant='flat']) .cell {
-      background: var(--color-contrast-100);
-      border-color: var(--_theme-border, var(--color-contrast-200));
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    :host([variant='flat']) .cell:hover:not(:disabled) {
-      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-    }
-
-    :host([variant='flat']) .cell:focus {
-      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-      border-color: color-mix(in srgb, var(--_cell-focus-border) 60%, transparent);
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Bordered */
-    :host([variant='bordered']) .cell {
-      background: var(--_theme-backdrop, var(--color-contrast-50));
-      border-color: color-mix(in srgb, var(--_cell-focus-border) 70%, transparent);
-    }
-
-    :host([variant='bordered']) .cell:hover:not(:disabled) {
-      border-color: var(--_cell-focus-border);
-    }
-
-    :host([variant='bordered']) .cell {
-      color: var(--_theme-content, var(--color-contrast-900));
-      caret-color: var(--_theme-content, var(--_cell-focus-border));
-    }
-
-    /* Outline */
-    :host([variant='outline']) .cell {
-      background: transparent;
-      box-shadow: none;
-    }
-
-    /* Ghost */
-    :host([variant='ghost']) .cell {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='ghost']) .cell:hover:not(:disabled) {
-      background: var(--color-contrast-100);
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([size='sm']) {
-      --_cell-size: var(--size-9);
-      --_cell-font-size: var(--text-base);
-    }
-
-    :host([size='lg']) {
-      --_cell-size: var(--size-14);
-      --_cell-font-size: var(--text-2xl);
-    }
-  }
-`;
-
-/** OTP Input events */
-export interface BitOtpInputEvents {
-  change: CustomEvent<{ complete: boolean; value: string }>;
-  complete: CustomEvent<{ value: string }>;
-}
+export type BitOtpInputEvents = {
+  change: { complete: boolean; value: string };
+  complete: { value: string };
+};
 
 /** OTP Input props */
-export interface OtpInputProps {
+export type BitOtpInputProps = {
+  /** Theme color */
+  color?: ThemeColor;
+  /** Make inputs disabled */
+  disabled?: boolean;
+  /** Accessible label */
+  label?: string;
   /** Number of input cells */
   length?: number;
+  /** Mask input (show dots instead of characters) */
+  masked?: boolean;
+  /** Form field name */
+  name?: string;
+  /** Show a separator in the middle (e.g. "–") */
+  separator?: string;
+  /** Component size */
+  size?: ComponentSize;
   /** Input type: 'numeric' (digits only) or 'alphanumeric' */
   type?: 'numeric' | 'alphanumeric';
   /** Current value */
   value?: string;
-  /** Make inputs disabled */
-  disabled?: boolean;
-  /** Mask input (show dots instead of characters) */
-  masked?: boolean;
-  /** Component size */
-  size?: ComponentSize;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Form field name */
-  name?: string;
-  /** Accessible label */
-  label?: string;
-  /** Show a separator in the middle (e.g. "–") */
-  separator?: string;
   /** Visual variant */
   variant?: Exclude<VisualVariant, 'text' | 'frost' | 'glass'>;
-}
+};
 
 /**
  * A segmented OTP (One-Time Password) input with N individual cells.
@@ -206,8 +68,8 @@ export interface OtpInputProps {
  * <bit-otp-input length="6" color="primary"></bit-otp-input>
  * ```
  */
-export const TAG = define('bit-otp-input', ({ host }) => {
-  const props = defineProps<OtpInputProps>({
+export const OTP_INPUT_TAG = define('bit-otp-input', ({ host }) => {
+  const props = defineProps<BitOtpInputProps>({
     color: { default: undefined },
     disabled: { default: false },
     label: { default: 'One-time password' },
@@ -221,7 +83,7 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     variant: { default: undefined },
   });
 
-  const emit = defineEmits<{ change: { complete: boolean; value: string }; complete: { value: string } }>();
+  const emit = defineEmits<BitOtpInputEvents>();
 
   const cells = computed(() => Array.from({ length: Number(props.length.value) || 6 }, (_, i) => i));
 
@@ -382,9 +244,3 @@ export const TAG = define('bit-otp-input', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-otp-input': HTMLElement & OtpInputProps & AddEventListeners<BitOtpInputEvents>;
-  }
-}

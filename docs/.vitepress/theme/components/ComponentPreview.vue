@@ -19,6 +19,24 @@ const viewportSize = ref<ViewportSize>('full');
 const scriptCode = ref('');
 const previewContainerRef = ref<HTMLDivElement | null>(null);
 const activeTab = ref('preview');
+const isCopied = ref(false);
+const isRtl = ref(false);
+
+const copyCode = async () => {
+  try {
+    await navigator.clipboard.writeText(extractedCode.value.trim());
+    isCopied.value = true;
+    setTimeout(() => {
+      isCopied.value = false;
+    }, 2000);
+  } catch (e) {
+    console.warn('[ComponentPreview] Copy failed:', e);
+  }
+};
+
+const toggleDirection = () => {
+  isRtl.value = !isRtl.value;
+};
 
 const toggleMaximize = () => {
   isMaximized.value = !isMaximized.value;
@@ -233,7 +251,7 @@ const backgroundStyle = computed(() => {
             <bit-button-group attached size="sm">
               <bit-button
                 icon-only
-                :variant="viewportSize === 'mobile' ? 'solid' : 'flat'"
+                :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
                 @click="setViewportSize('mobile')"
                 title="Mobile view (375px)">
                 <svg
@@ -251,7 +269,7 @@ const backgroundStyle = computed(() => {
               </bit-button>
               <bit-button
                 icon-only
-                :variant="viewportSize === 'tablet' ? 'solid' : 'flat'"
+                :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
                 @click="setViewportSize('tablet')"
                 title="Tablet view (768px)">
                 <svg
@@ -269,7 +287,7 @@ const backgroundStyle = computed(() => {
               </bit-button>
               <bit-button
                 icon-only
-                :variant="viewportSize === 'desktop' ? 'solid' : 'flat'"
+                :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
                 @click="setViewportSize('desktop')"
                 title="Desktop view (1280px) - Opens maximized">
                 <svg
@@ -288,6 +306,43 @@ const backgroundStyle = computed(() => {
               </bit-button>
             </bit-button-group>
           </div>
+          <!-- Copy code button -->
+          <bit-button
+            variant="bordered"
+            size="sm"
+            icon-only
+            @click="copyCode"
+            :title="isCopied ? 'Copied!' : 'Copy code'">
+            <svg
+              v-if="isCopied"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+              </g>
+            </svg>
+          </bit-button>
+
+          <!-- LTR / RTL toggle button -->
+          <bit-button
+            variant="bordered"
+            size="sm"
+            icon-only
+            @click="toggleDirection"
+            :title="isRtl ? 'Switch to LTR' : 'Switch to RTL'">
+            <span style="font-weight: 600; font-size: 0.6275rem; line-height: 1rem">{{ isRtl ? 'LTR' : 'RTL' }}</span>
+          </bit-button>
+
           <!-- Maximize button -->
           <bit-button
             variant="ghost"
@@ -343,7 +398,7 @@ const backgroundStyle = computed(() => {
                 }"
                 :style="backgroundStyle">
                 <ClientOnly>
-                  <div ref="previewContainerRef" class="preview-demo"></div>
+                  <div ref="previewContainerRef" class="preview-demo" :dir="isRtl ? 'rtl' : 'ltr'"></div>
                 </ClientOnly>
               </div>
             </div>

@@ -45,7 +45,7 @@ const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
 // Side-effect: runs immediately and re-runs on change
-const stopEffect = effect(() => {
+const sub = effect(() => {
   console.log('doubled:', doubled.value);
 });
 
@@ -61,9 +61,9 @@ batch(() => {
   count.value = 20; // only one notification
 });
 
-stopEffect(); // dispose effect
-stopWatch();  // unsubscribe watch
-doubled();    // call to dispose computed
+sub.dispose(); // dispose effect
+stopWatch.dispose(); // unsubscribe watch
+doubled.dispose(); // dispose computed
 ```
 
 ### Stores
@@ -81,59 +81,66 @@ const stopWatch = watch(counter, (curr, prev) => {
   console.log(`${prev.count} → ${curr.count}`);
 });
 
-// Watch a selected slice — fires only when count changes
-watch(counter, s => s.count, (count, prev) => {
+// Watch a selected slice — compose with store.select()
+const countSignal = counter.select((s) => s.count);
+watch(countSignal, (count, prev) => {
   console.log('count:', prev, '→', count);
 });
 
 // Partial patch
-counter.set({ count: 1 });
+counter.patch({ count: 1 });
 
 // Updater function
-counter.update(s => ({ ...s, count: s.count + 1 }));
-
-// Derived slice as a computed signal
-const countSignal = counter.select(s => s.count);
+counter.update((s) => ({ ...s, count: s.count + 1 }));
 
 // Batch: one notification for all writes
 batch(() => {
-  counter.set({ count: 10 });
-  counter.update(s => ({ ...s, count: s.count + 1 }));
+  counter.patch({ count: 10 });
+  counter.update((s) => ({ ...s, count: s.count + 1 }));
 });
 
 // Reset to original initial state
 counter.reset();
 
 // Clean up
-stopWatch();
-counter.dispose();
+stopWatch.dispose();
+counter.freeze();
 ```
 
 ## Features
 
 ### Signals
 
-- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`, peek untracked with `.peek()`
-- **`computed(fn, options?)`** — lazy derived signal; recomputes when deps change; call `fn()` to dispose
-- **`effect(fn)`** — side-effect that re-runs when any signal read inside it changes; supports cleanup return
-- **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes
-- **`watch(source, selector, cb, options?)`** — watch a selected slice; fires only when the slice changes
+- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`, `.update(fn)`, peek untracked with `.peek()`
+- **`computed(fn, options?)`** — lazy derived signal; recomputes when deps change; call `.dispose()` to stop tracking
+- **`effect(fn, options?)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
+- **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
+- **`derived(sources, fn)`** — multi-source derived signal combining multiple signals into one
+- **`nextValue(source, predicate?)`** — async helper that resolves with the next matching emission
 - **`untrack(fn)`** — read signals inside an effect without creating subscriptions
 - **`readonly(sig)`** — narrows a signal to a `ReadonlySignal<T>` view (identity, no proxy)
 - **`toValue(v)`** — unwrap a plain value or signal transparently
 - **`writable(get, set, options?)`** — bidirectional computed for form adapters and transformations
 - **`batch(fn)`** — flush all notifications once after bulk updates
+- **`onCleanup(fn)`** — register teardown from inside an effect without using the return value
 - **`isSignal(v)`** / **`isStore(v)`** — type guards
 
 ### Stores
 
 - **`store(init, options?)`** — structured reactive object container extending `Signal<T>`
-- **`.set(patch)`** — shallow-merge a partial object into state
+- **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
 - **`.update(fn)`** — derive next state from current via an updater function
-- **`.select(selector, options?)`** — lazily derived `ComputedSignal<U>` from a state slice
+- **`.select(selector, options?)`** — lazily derived `ComputedSignal<U>` from a state slice; compose with `watch()` to watch slices
 - **`.reset()`** — restore the initial state baseline
-- **Disposed-safety** — writes are silently ignored after `.dispose()`
+- **`.freeze()`** — freeze the store; further writes are silently ignored
 - **Zero dependencies** — no supply chain risk; < 2 kB gzipped
+
+### Ergonomics
+
+- **`Subscription`** — all dispose handles support `.dispose()`, direct call `()`, and `[Symbol.dispose]` (`using` declarations)
+- **`EffectOptions`** — per-effect `maxIterations` and `onError` callbacks
+- **`configureStateit()`** — global defaults (e.g. `maxEffectIterations`)
+- **`shallowEqual`** — exported equality helper (the default for stores)
 
 ## Next Steps
 

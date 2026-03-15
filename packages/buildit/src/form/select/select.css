@@ -1,0 +1,441 @@
+@layer buildit.base {
+  :host {
+    --_font-size: var(--select-font-size, var(--text-sm));
+    --_gap: var(--select-gap, var(--size-2));
+    --_field-height: var(--select-height, var(--size-10));
+    --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
+    --_padding: var(--select-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--select-radius, var(--rounded-md));
+    --_placeholder: var(--select-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--select-bg, var(--color-contrast-100));
+    --_border-color: var(--select-border-color, var(--color-contrast-300));
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 12rem;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+
+  /* Hide native <option> elements — we render our own UI */
+  ::slotted(option),
+  ::slotted(optgroup) {
+    display: none;
+  }
+
+  .select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+  }
+
+  /* ========================================
+       Trigger Field
+       ======================================== */
+
+  .field {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    height: var(--_field-height);
+    min-height: max(var(--_field-height), var(--_touch-target, 0px));
+    padding: var(--_padding);
+    padding-inline-end: var(--size-8);
+    cursor: pointer;
+    user-select: none;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-2xs);
+    transition: var(
+      --_motion-transition,
+      background var(--transition-fast),
+      backdrop-filter var(--transition-slow),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast)
+    );
+  }
+
+  .field:focus {
+    outline: none;
+  }
+
+  /* Expand height for multi-select chips or inset label */
+  :host([multiple]) .field,
+  .field:has(.label-inset:not([hidden])) {
+    height: auto;
+  }
+
+  .label-inset {
+    margin-bottom: 2px;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .label-outside {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-none);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .trigger-row {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: var(--_gap);
+    align-items: center;
+    max-width: calc(100% - var(--size-10));
+    min-height: var(--_row-min-height);
+  }
+
+  .chips-row {
+    display: none;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: var(--size-1);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .trigger-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_font-size);
+    line-height: 1;
+    color: var(--_theme-content);
+    white-space: nowrap;
+    transition: color var(--transition-fast);
+  }
+
+  .trigger-placeholder {
+    color: var(--_placeholder);
+    transition: color var(--transition-fast);
+  }
+
+  .trigger-icon {
+    position: absolute;
+    inset-inline-end: var(--size-2);
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-6);
+    height: 100%;
+    color: var(--color-contrast-500);
+    transition: transform var(--transition-fast);
+  }
+
+  :host([open]) .trigger-icon {
+    transform: rotate(180deg);
+  }
+
+  .loader {
+    display: none;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: var(--_motion-animation, bit-select-spin 0.6s linear infinite);
+  }
+
+  :host([loading]) .loader {
+    display: inline-block;
+  }
+
+  :host([loading]) .trigger-icon svg {
+    display: none;
+  }
+
+  @keyframes bit-select-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ========================================
+       Dropdown Listbox
+       ======================================== */
+
+  .dropdown {
+    position: fixed;
+    z-index: var(--z-dropdown, 8000);
+    box-sizing: border-box;
+    display: flex;
+    visibility: hidden;
+    flex-direction: column;
+    gap: var(--size-0-5);
+    max-height: 260px;
+    padding: var(--size-1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: none;
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-lg);
+
+    /* Hidden by default */
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast)
+    );
+  }
+
+  .dropdown[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ========================================
+       Option Items
+       ======================================== */
+
+  .option {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    padding: var(--size-1-5) var(--size-2-5);
+    font-size: var(--_font-size);
+    line-height: var(--leading-normal);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .option:hover:not([data-disabled]) {
+    background: var(--color-contrast-100);
+  }
+
+  .option[data-focused]:not([data-disabled]) {
+    color: var(--_theme-content);
+    background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
+  }
+
+  .option[data-selected] {
+    font-weight: var(--font-medium);
+    color: var(--_theme-content);
+    background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
+  }
+
+  .option[data-selected][data-focused] {
+    background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
+  }
+
+  .option[data-disabled] {
+    color: var(--color-contrast-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .option-check {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    color: var(--_theme-content);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .option[data-selected] .option-check {
+    opacity: 1;
+  }
+
+  /* ========================================
+       Option Groups
+       ======================================== */
+
+  .optgroup-label {
+    padding: var(--size-1-5) var(--size-2-5) var(--size-1);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-500);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide, 0.05em);
+  }
+
+  /* ========================================
+       Loading / No-Results
+       ======================================== */
+
+  .dropdown-loading,
+  .dropdown-empty {
+    padding: var(--size-3) var(--size-2-5);
+    font-size: var(--_font-size);
+    color: var(--color-contrast-500);
+    text-align: center;
+  }
+
+  /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  /* ========================================
+       States
+       ======================================== */
+
+  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled], [variant='flat'])) .field:focus-within,
+  :host([open]:not([disabled], [variant='flat'])) .field {
+    background: var(--color-canvas);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+    transform: translateY(-1px);
+  }
+
+  :host(:not([disabled])) .field:focus-within .label-inset,
+  :host(:not([disabled])) .field:focus-within .label-outside,
+  :host([open]:not([disabled])) .label-inset {
+    color: var(--_theme-focus);
+  }
+
+  /* ========================================
+       Error State
+       ======================================== */
+
+  :host([has-error]) .field {
+    border-color: var(--color-error);
+  }
+
+  :host([has-error]) .field:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
+
+  :host([has-error]) .label-inset,
+  :host([has-error]) .label-outside {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.variants {
+  /* ========================================
+       Visual Variants
+       ======================================== */
+
+  /* Solid (Default) - Standard select with background */
+  :host(:not([variant])) .field,
+  :host([variant='solid']) .field {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :host(:not([variant], [disabled])) .field:focus-within,
+  :host([variant='solid']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Flat - Minimal with subtle color hint */
+  :host([variant='flat']) .field {
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  }
+
+  :host([variant='flat']) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered - Filled with theme color */
+  :host([variant='bordered']) .field {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+  }
+
+  :host([variant='bordered']) .trigger-value {
+    color: var(--_theme-content);
+  }
+
+  :host([variant='bordered'][color='secondary']) .trigger-value {
+    color: var(--_theme-base);
+  }
+
+  :host([variant='bordered']) .trigger-placeholder {
+    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
+  }
+
+  :host([variant='bordered'][color='secondary']) .trigger-placeholder {
+    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+  }
+
+  :host([variant='bordered']) .field:hover {
+    border-color: var(--_theme-focus);
+  }
+
+  /* Outline - Transparent background */
+  :host([variant='outline']) .field {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='outline']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Ghost - Transparent until hover */
+  :host([variant='ghost']) .field {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']) .field:hover {
+    background: var(--color-contrast-100);
+  }
+
+  :host([variant='ghost']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+}
+
+@layer buildit.utilities {
+  :host([fullwidth]) {
+    display: flex;
+    width: 100%;
+  }
+}

@@ -18,17 +18,17 @@ Dependency injection decouples your code from its dependencies, making testing a
 ```ts
 // Before — manual wiring
 const config = loadConfig();
-const db     = new Database(config.dbUrl);
-const repo   = new UserRepository(db);
-const svc    = new UserService(repo);
+const db = new Database(config.dbUrl);
+const repo = new UserRepository(db);
+const svc = new UserService(repo);
 
 // After — Wireit
 const container = createContainer();
 container
   .value(ConfigToken, loadConfig())
-  .factory(DbToken,  (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
-  .bind(RepoToken,   UserRepository, { deps: [DbToken] })
-  .bind(SvcToken,    UserService,    { deps: [RepoToken] });
+  .factory(DbToken, (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
+  .bind(RepoToken, UserRepository, { deps: [DbToken] })
+  .bind(SvcToken, UserService, { deps: [RepoToken] });
 
 const svc = container.get(SvcToken);
 ```
@@ -50,8 +50,15 @@ import { createContainer, createToken } from '@vielzeug/wireit';
 
 // Types only
 import type {
-  Token, Lifetime, Provider, ValueProvider, ClassProvider,
-  FactoryProvider, ProviderOptions, TokenValues, Snapshot,
+  Token,
+  Lifetime,
+  Provider,
+  ValueProvider,
+  ClassProvider,
+  FactoryProvider,
+  ProviderOptions,
+  TokenValues,
+  Snapshot,
 } from '@vielzeug/wireit';
 ```
 
@@ -62,9 +69,9 @@ Every dependency is identified by a typed token — a branded symbol. The descri
 ```ts
 import { createToken } from '@vielzeug/wireit';
 
-const ConfigToken  = createToken<AppConfig>('AppConfig');
-const DbToken      = createToken<IDatabase>('Database');
-const LoggerToken  = createToken<ILogger>('Logger');
+const ConfigToken = createToken<AppConfig>('AppConfig');
+const DbToken = createToken<IDatabase>('Database');
+const LoggerToken = createToken<ILogger>('Logger');
 const ServiceToken = createToken<UserService>('UserService');
 ```
 
@@ -72,9 +79,9 @@ Centralise token definitions in a dedicated file:
 
 ```ts
 // tokens.ts
-export const ConfigToken  = createToken<AppConfig>('AppConfig');
-export const DbToken      = createToken<IDatabase>('Database');
-export const LoggerToken  = createToken<ILogger>('Logger');
+export const ConfigToken = createToken<AppConfig>('AppConfig');
+export const DbToken = createToken<IDatabase>('Database');
+export const LoggerToken = createToken<ILogger>('Logger');
 export const ServiceToken = createToken<UserService>('UserService');
 ```
 
@@ -104,11 +111,15 @@ container.factory(DbToken, (config) => new Database(config.apiUrl), {
 });
 
 // Async — must be resolved via getAsync()
-container.factory(DbToken, async (config) => {
-  const db = new Database(config.apiUrl);
-  await db.connect();
-  return db;
-}, { deps: [ConfigToken] });
+container.factory(
+  DbToken,
+  async (config) => {
+    const db = new Database(config.apiUrl);
+    await db.connect();
+    return db;
+  },
+  { deps: [ConfigToken] },
+);
 ```
 
 ### bind()
@@ -160,13 +171,17 @@ container.value(ConfigToken, otherConfig, { overwrite: true });
 Class and factory providers accept an optional `dispose` callback invoked by `container.dispose()`:
 
 ```ts
-container.factory(DbToken, async () => {
-  const db = new Database(env.DB_URL);
-  await db.connect();
-  return db;
-}, {
-  dispose: async (db) => db.close(),
-});
+container.factory(
+  DbToken,
+  async () => {
+    const db = new Database(env.DB_URL);
+    await db.connect();
+    return db;
+  },
+  {
+    dispose: async (db) => db.close(),
+  },
+);
 
 await container.dispose(); // calls db.close(), then clears the container
 ```
@@ -188,11 +203,11 @@ await container.dispose(); // calls db.close(), then clears the container
 
 ## Lifetimes
 
-| Lifetime | Behaviour |
-|---|---|
+| Lifetime    | Behaviour                                                                |
+| ----------- | ------------------------------------------------------------------------ |
 | `singleton` | One instance per container — created on first `get()`, cached thereafter |
-| `transient` | New instance on every `get()` call |
-| `scoped` | One instance per child container; behaves like singleton in the root |
+| `transient` | New instance on every `get()` call                                       |
+| `scoped`    | One instance per child container; behaves like singleton in the root     |
 
 ```ts
 // Singleton (default)
@@ -218,8 +233,8 @@ const child = root.createChild();
 child.value(UserToken, currentUser); // local only
 
 child.get(ConfigToken); // globalConfig — inherited from root
-child.get(UserToken);   // currentUser — local
-root.get(UserToken);    // throws ProviderNotFoundError — not in root
+child.get(UserToken); // currentUser — local
+root.get(UserToken); // throws ProviderNotFoundError — not in root
 ```
 
 `scoped` providers resolve once per child — each `createChild()` call gets its own instance:
@@ -342,20 +357,21 @@ container.restore(snap); // LoggerToken is back to its original state
 
 ### createTestContainer
 
-`createTestContainer(base?)` returns a container pre-configured for tests. Pass an existing container as `base` to inherit its registrations. Call `dispose()` in `afterEach` to clear state without running production dispose hooks:
+`createTestContainer(base?)` returns `{ container, dispose }`. `container` is an isolated child container for test overrides — it inherits all registrations from `base`. Call `dispose()` in `afterEach` to tear it down without affecting the base container:
 
 ```ts
 import { createTestContainer } from '@vielzeug/wireit';
 
 describe('UserService', () => {
   let container: Container;
+  let dispose: () => Promise<void>;
 
   beforeEach(() => {
-    container = createTestContainer(appContainer);
+    ({ container, dispose } = createTestContainer(appContainer));
     container.value(DbToken, mockDb, { overwrite: true });
   });
 
-  afterEach(() => container.dispose());
+  afterEach(() => dispose());
 
   it('creates a user', async () => {
     const svc = container.get(ServiceToken);
@@ -385,11 +401,9 @@ it('handles database errors', async () => {
 The second argument accepts either a plain value (wrapped in `{ useValue }`) or a full `Provider<T>`:
 
 ```ts
-await container.mock(
-  DbToken,
-  { useFactory: () => createInMemoryDb() },
-  async () => { /* ... */ },
-);
+await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, async () => {
+  /* ... */
+});
 ```
 
 ### Manual snapshot/restore
@@ -412,7 +426,7 @@ it('tests with custom logger', () => {
 
 ```ts
 const { tokens, aliases } = container.debug();
-console.log(tokens);  // ['AppConfig', 'Database', 'Logger', 'UserService']
+console.log(tokens); // ['AppConfig', 'Database', 'Logger', 'UserService']
 console.log(aliases); // [['ILogger', 'Logger']]
 ```
 

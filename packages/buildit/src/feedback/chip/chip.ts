@@ -1,7 +1,6 @@
-import { css, define, defineEmits, defineProps, html, signal, watch } from '@vielzeug/craftit';
+import { define, defineEmits, defineProps, html, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-import type { AddEventListeners, BitChipEvents, ChipChangeDetail, ChipRemoveDetail } from '../../types/events';
 
 import {
   colorThemeMixin,
@@ -10,251 +9,56 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-
-export type { BitChipEvents } from '../../types/events';
-
 // ============================================
 // Styles
 // ============================================
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_bg: var(--chip-bg, var(--color-contrast-150, var(--color-contrast-100)));
-      --_color: var(--chip-color, var(--color-contrast-800));
-      --_border-color: var(--chip-border-color, transparent);
-      --_radius: var(--chip-radius, var(--rounded-full));
-      --_font-size: var(--chip-font-size, var(--text-sm));
-      --_font-weight: var(--chip-font-weight, var(--font-medium));
-      --_padding-x: var(--chip-padding-x, var(--size-2-5));
-      --_padding-y: var(--chip-padding-y, var(--size-0-5));
-      --_gap: var(--chip-gap, var(--size-1));
-
-      display: inline-flex;
-      align-items: center;
-      max-width: 100%;
-      vertical-align: middle;
-    }
-
-    .chip {
-      align-items: center;
-      background: var(--_bg);
-      border: var(--border) solid var(--_border-color);
-      border-radius: var(--_radius);
-      box-sizing: border-box;
-      color: var(--_color);
-      display: inline-flex;
-      font-size: var(--_font-size);
-      font-weight: var(--_font-weight);
-      gap: var(--_gap);
-      line-height: 1.2;
-      max-width: 100%;
-      padding: var(--_padding-y) var(--_padding-x);
-      position: relative;
-      transition:
-        background var(--transition-fast),
-        border-color var(--transition-fast),
-        color var(--transition-fast);
-      white-space: nowrap;
-    }
-
-    .label {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* ========================================
-       Remove Button
-       ======================================== */
-
-    .remove-btn {
-      align-items: center;
-      background: color-mix(in srgb, currentColor 12%, transparent);
-      border: none;
-      border-radius: var(--_radius);
-      color: inherit;
-      cursor: pointer;
-      display: inline-flex;
-      flex-shrink: 0;
-      height: 1.35em;
-      justify-content: center;
-      margin-inline-end: calc(var(--size-2) * -1);
-      margin-inline-start: var(--size-0-5);
-      opacity: 0.7;
-      padding: 0;
-      transition:
-        background var(--transition-fast),
-        opacity var(--transition-fast);
-      width: 1.35em;
-    }
-
-    .remove-btn:hover {
-      background: color-mix(in srgb, currentColor 28%, transparent);
-      opacity: 1;
-    }
-
-    .remove-btn:focus-visible {
-      opacity: 1;
-      outline: 2px solid currentColor;
-      outline-offset: 1px;
-    }
-
-    /* ========================================
-       Icon slot
-       ======================================== */
-
-    ::slotted([slot='icon']) {
-      align-items: center;
-      display: inline-flex;
-      flex-shrink: 0;
-      height: 1em;
-      justify-content: center;
-      width: 1em;
-    }
-    .chip-btn {
-      background: none;
-      border: none;
-      color: inherit;
-      cursor: pointer;
-      display: inline-flex;
-      font: inherit;
-      margin: 0;
-      padding: 0;
-      text-align: inherit;
-      width: 100%;
-    }
-
-    .chip-btn:disabled {
-      cursor: not-allowed;
-    }
-
-    :host([mode='selectable'][checked]) .chip {
-      outline: var(--border-2) solid var(--_theme-base, currentColor);
-      outline-offset: -2px;
-    }
-
-    :host([mode='selectable']:not([disabled])) .chip {
-      cursor: pointer;
-    }
-
-    .chip-btn:focus-visible .chip {
-      outline: 2px solid var(--_theme-base, currentColor);
-      outline-offset: 2px;
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (Default) — full theme color fill */
-    :host(:not([variant])) .chip,
-    :host([variant='solid']) .chip {
-      background: var(--_theme-base, var(--color-contrast-700));
-      border-color: transparent;
-      color: var(--_theme-contrast, var(--color-contrast-50));
-    }
-
-    /* Flat — subtle tint */
-    :host([variant='flat']) .chip {
-      background: color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent);
-      border-color: transparent;
-      color: var(--_theme-base, var(--color-contrast-800));
-    }
-
-    /* Bordered — backdrop fill with themed border */
-    :host([variant='bordered']) .chip {
-      background: var(--_theme-backdrop, var(--color-contrast-50));
-      border-color: var(--_theme-border, var(--color-contrast-300));
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='bordered']) .remove-btn {
-      background: var(--_theme-focus, var(--color-contrast-700));
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-      color: var(--_theme-backdrop, var(--color-contrast-50));
-    }
-
-    :host([variant='bordered']) .remove-btn:hover {
-      background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-      opacity: 1;
-    }
-
-    /* Outline — transparent with colored border */
-    :host([variant='outline']) .chip {
-      background: transparent;
-      border-color: var(--_theme-base, var(--color-contrast-400));
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='outline']) .remove-btn {
-      background: var(--_theme-focus, var(--color-contrast-700));
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-      color: var(--_theme-backdrop, var(--color-contrast-50));
-    }
-
-    :host([variant='outline']) .remove-btn:hover {
-      background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-      opacity: 1;
-    }
-
-    /* Ghost — transparent, no border */
-    :host([variant='ghost']) .chip {
-      background: transparent;
-      border-color: transparent;
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='ghost']) .remove-btn {
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-400));
-    }
-
-    :host([variant='ghost']) .remove-btn:hover {
-      background: color-mix(in srgb, currentColor 15%, transparent);
-    }
-  }
-`;
+import componentStyles from './chip.css?inline';
 
 // ============================================
 // Types
 // ============================================
 
 /** Chip component properties */
-interface ChipBaseProps {
+type ChipBaseProps = {
   /** Theme color */
   color?: ThemeColor;
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
-  /** Component size */
-  size?: ComponentSize;
-  /** Border radius override */
-  rounded?: RoundedSize | '';
   /** Disable interactions */
   disabled?: boolean;
+  /** Border radius override */
+  rounded?: RoundedSize | '';
+  /** Component size */
+  size?: ComponentSize;
   /** Value associated with this chip — included in emitted event detail */
   value?: string;
-}
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+};
 
 /** Read-only presentation chip */
-interface StaticChipProps {
+type StaticChipProps = {
   mode?: 'static';
-}
+};
 
 /** Removable chip mode */
-interface RemovableChipProps {
+type RemovableChipProps = {
   mode: 'removable';
-}
+};
 
 /** Selectable chip mode */
-interface SelectableChipProps {
-  mode: 'selectable';
+type SelectableChipProps = {
   /** Controlled checked state for `mode="selectable"` */
   checked?: boolean | undefined;
   /** Initial checked state for uncontrolled `mode="selectable"` */
   'default-checked'?: boolean;
-}
+  mode: 'selectable';
+};
 
-export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | SelectableChipProps);
+export type BitChipEvents = {
+  change: { checked: boolean; originalEvent: Event; value: string | undefined };
+  remove: { originalEvent: MouseEvent; value: string | undefined };
+};
+
+export type BitChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | SelectableChipProps);
 
 /**
  * A compact, styled label element. Supports icons, a remove button, colors, sizes, and variants.
@@ -299,8 +103,8 @@ export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | 
  * </bit-chip>
  * ```
  */
-export const TAG = define('bit-chip', ({ host }) => {
-  const props = defineProps<ChipProps>({
+export const CHIP_TAG = define('bit-chip', ({ host }) => {
+  const props = defineProps<BitChipProps>({
     checked: { default: undefined },
     color: { default: undefined },
     'default-checked': { default: false },
@@ -312,10 +116,7 @@ export const TAG = define('bit-chip', ({ host }) => {
     variant: { default: undefined },
   });
 
-  const emit = defineEmits<{
-    change: ChipChangeDetail;
-    remove: ChipRemoveDetail;
-  }>();
+  const emit = defineEmits<BitChipEvents>();
 
   const isSelectableMode = () => props.mode.value === 'selectable';
   const internalChecked = signal(false);
@@ -458,9 +259,3 @@ export const TAG = define('bit-chip', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-chip': HTMLElement & ChipProps & AddEventListeners<BitChipEvents>;
-  }
-}

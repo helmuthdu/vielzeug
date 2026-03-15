@@ -89,12 +89,12 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.5.0",
     "@vielzeug/logit": "workspace:*",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
+    "typescript": "~5.8.2",
+    "vite": "^8.0.0",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "@vielzeug/logit": "workspace:*"

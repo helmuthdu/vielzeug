@@ -14,9 +14,9 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 ## Import
 
 ```ts
-import { createForm } from '@vielzeug/formit';
+import { createForm, fromSchema } from '@vielzeug/formit';
 
-// Standalone utility
+// Standalone utilities
 import { toFormData } from '@vielzeug/formit';
 
 // Error classes
@@ -24,16 +24,22 @@ import { FormValidationError, SubmitError } from '@vielzeug/formit';
 
 // Types only
 import type {
+  BindConfig,
+  BindResult,
+  FieldState,
+  FieldValidator,
+  FlatKeyOf,
   Form,
   FormOptions,
   FormState,
-  FieldState,
-  FieldValidator,
   FormValidator,
-  ValidateOptions,
+  SafeParseSchema,
   SetOptions,
   SubmitOptions,
-  BindConfig,
+  TypeAtPath,
+  Unsubscribe,
+  ValidateOptions,
+  ValidateResult,
 } from '@vielzeug/formit';
 ```
 
@@ -48,7 +54,7 @@ const form = createForm({
     email: '',
     age: 0,
   },
-  rules: {
+  validators: {
     name: (v) => (!v ? 'Name is required' : undefined),
     email: [
       (v) => (!v ? 'Email is required' : undefined),
@@ -116,7 +122,7 @@ const all = form.values();
 
 ### Field-Level Validators
 
-Single or multiple validators per field:
+Single or multiple validators per field. When an array is given, the first failing validator wins:
 
 ```ts
 const form = createForm({
@@ -124,7 +130,7 @@ const form = createForm({
     email: '',
     password: '',
   },
-  rules: {
+  validators: {
     email: [
       (v) => (!v ? 'Email is required' : undefined),
       (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
@@ -169,16 +175,18 @@ const form = createForm({
 
 ### Async Validators
 
+Validators can be async — each receives an `AbortSignal` to detect cancellation:
+
 ```ts
 const form = createForm({
   defaultValues: {
     username: '',
   },
-  rules: {
-    username: async (value) => {
+  validators: {
+    username: async (value, signal) => {
       if (!value) return 'Username required';
 
-      const response = await fetch(`/api/check-username?username=${value}`);
+      const response = await fetch(`/api/check-username?username=${encodeURIComponent(String(value))}`, { signal });
       const { exists } = await response.json();
 
       if (exists) return 'Username already taken';
@@ -187,25 +195,60 @@ const form = createForm({
 });
 ```
 
+### Schema Integration
+
+`fromSchema()` wraps any Zod/Valibot-compatible `safeParse` schema as the form-level validator:
+
+```ts
+import { z } from 'zod';
+import { createForm, fromSchema } from '@vielzeug/formit';
+
+const schema = z.object({
+  email: z.string().email('Invalid email'),
+  age: z.number().min(18, 'Must be 18+'),
+});
+
+const form = createForm({
+  defaultValues: { email: '', age: 0 },
+  ...fromSchema(schema), // spreads in { validator: ... }
+});
+
+const { valid, errors } = await form.validate();
+```
+
+You can still combine `fromSchema` with per-field `validators`:
+
+```ts
+const form = createForm({
+  defaultValues: { email: '', age: 0 },
+  ...fromSchema(schema),
+  validators: {
+    email: (v) => (!v ? 'Email is required' : undefined), // runs on every validateField()
+  },
+});
+```
+
 ### Manual Validation
+
+`validate()` returns a `ValidateResult` — `{ valid: boolean; errors: Record<string, string> }`:
 
 ```ts
 // Single field — sets isValidating, stores result in error map
 const error = await form.validateField('email');
 
 // Full validation — replaces ALL errors, runs the form-level validator
-const errors = await form.validate();
+const { valid, errors } = await form.validate();
 
 // Partial validation — updates only these fields; preserves all other errors;
 // does NOT run the form-level validator
-const errors = await form.validate({ fields: ['email', 'password'] });
+const { errors } = await form.validate({ fields: ['email', 'password'] });
 
 // Only validate fields the user has touched
-const errors = await form.validate({ onlyTouched: true });
+const { valid } = await form.validate({ onlyTouched: true });
 
 // With cancellation
 const controller = new AbortController();
-const errors = await form.validate({ signal: controller.signal });
+await form.validate({ signal: controller.signal });
 controller.abort();
 ```
 
@@ -226,9 +269,6 @@ await form.submit(handler, { skipValidation: true });
 
 // Restrict which fields are validated before submit
 await form.submit(handler, { fields: ['email', 'password'] });
-
-// Validate only touched fields before submit
-await form.submit(handler, { onlyTouched: true });
 ```
 
 `submit()` sets `isSubmitting` while running and guards against double-submits (`SubmitError`). It throws `FormValidationError` if validation fails.
@@ -272,6 +312,9 @@ const unsubscribe = form.watch('email', ({ value, error, touched, dirty }) => {
   emailInput.value = String(value);
   errorSpan.textContent = touched ? (error ?? '') : '';
 });
+
+// Skip the immediate fire on registration
+form.watch('email', handler, { immediate: false });
 ```
 
 ::: tip
@@ -305,6 +348,10 @@ interface BindConfig {
   valueExtractor?: (event: Event) => unknown;
   /** Mark the field as touched on blur. Default: true */
   touchOnBlur?: boolean;
+  /** Run validateField() on blur. Default: false */
+  validateOnBlur?: boolean;
+  /** Run validateField() on every change. Default: false */
+  validateOnChange?: boolean;
 }
 ```
 
@@ -338,6 +385,51 @@ form.reset({ name: 'Guest', email: '' });
 
 // Reset a single field without touching the rest
 form.resetField('name');
+```
+
+## Dirty and Touched State
+
+### Touch
+
+```ts
+// Mark fields as touched
+form.touch('email');
+form.touch('email', 'password'); // multiple at once
+form.touchAll(); // all fields
+
+// Remove touched state (useful in multi-step flows between steps)
+form.untouch('email');
+form.untouchAll();
+```
+
+### Errors
+
+```ts
+// Set / clear individual errors
+form.setError('email', 'Already taken');
+form.setError('email'); // clear
+
+// Replace all errors at once
+form.setErrors({ email: 'Taken', password: 'Too short' });
+
+// Clear all errors
+form.clearErrors();
+```
+
+### Field Shorthand Getters
+
+Read a single piece of field state without allocating a full snapshot object:
+
+```ts
+// equivalent to form.field('email').error — but no object alloc
+form.getError('email'); // string | undefined
+form.isFieldDirty('email'); // boolean
+form.isFieldTouched('email'); // boolean
+
+// Good for conditional rendering:
+if (form.isFieldTouched('email') && form.getError('email')) {
+  showEmailError();
+}
 ```
 
 ## File Uploads
@@ -374,7 +466,7 @@ const form = createForm({
   defaultValues: {
     avatar: null as File | null,
   },
-  rules: {
+  validators: {
     avatar: (value) => {
       if (!value) return 'Avatar is required';
 
@@ -390,24 +482,39 @@ const form = createForm({
 
 ## Arrays and Multi-Select
 
-### Basic Array Handling
+### Array Field Utilities
+
+Use the built-in helpers instead of manual spread patterns:
 
 ```ts
 const form = createForm({
   defaultValues: {
     tags: ['javascript', 'typescript'] as string[],
-    interests: [] as string[],
   },
 });
 
-// Add a tag
-form.set('tags', [...(form.get('tags') as string[]), 'react']);
+// Append
+form.appendField('tags', 'react'); // ['javascript', 'typescript', 'react']
 
-// Remove a tag
-form.set(
-  'tags',
-  (form.get('tags') as string[]).filter((t) => t !== 'react'),
-);
+// Remove by index
+form.removeField('tags', 0); // ['typescript', 'react']
+
+// Reorder (drag-and-drop)
+form.moveField('tags', 0, 2); // move item at index 0 to index 2
+```
+
+Object lists work the same way:
+
+```ts
+const form = createForm({
+  defaultValues: {
+    items: [] as { name: string; qty: number }[],
+  },
+});
+
+form.appendField('items', { name: '', qty: 1 });
+form.removeField('items', 2);
+form.moveField('items', 0, 3); // drag-and-drop reorder
 ```
 
 ### Multi-Select Inputs
@@ -417,7 +524,7 @@ const form = createForm({
   defaultValues: {
     skills: [] as string[],
   },
-  rules: {
+  validators: {
     skills: (v) => ((v as string[]).length < 2 ? 'Select at least 2 skills' : undefined),
   },
 });
@@ -468,9 +575,11 @@ const form = createForm({
 const steps = [['name', 'email'], ['address', 'city'], ['cardNumber']];
 
 async function nextStep(currentStep: number) {
-  const errors = await form.validate({ fields: steps[currentStep] });
-  if (Object.keys(errors).length === 0) {
+  const { valid } = await form.validate({ fields: steps[currentStep] });
+  if (valid) {
     // advance to next step
+    // use untouchAll() to reset touched state between steps
+    form.untouchAll();
   }
 }
 ```
@@ -487,15 +596,15 @@ const form = createForm({
 });
 
 function addItem() {
-  form.set('items', [...(form.get('items') as Item[]), { name: '', quantity: 0 }]);
+  form.appendField('items', { name: '', quantity: 0 });
 }
 
 function removeItem(index: number) {
-  const items = form.get('items') as Item[];
-  form.set(
-    'items',
-    items.filter((_, i) => i !== index),
-  );
+  form.removeField('items', index);
+}
+
+function moveItem(from: number, to: number) {
+  form.moveField('items', from, to);
 }
 
 function updateItem(index: number, field: keyof Item, value: Item[typeof field]) {
@@ -670,7 +779,7 @@ function ContactForm() {
         email: '',
         message: '',
       },
-      rules: {
+      validators: {
         email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
       },
     }),
@@ -729,7 +838,7 @@ function MyForm() {
     defaultValues: {
       email: '',
     },
-    rules: {
+    validators: {
       email: (v) => (v && !String(v).includes('@') ? 'Invalid' : undefined),
     },
   });
@@ -762,7 +871,7 @@ const form = createForm({
     email: '',
     password: '',
   },
-  rules: {
+  validators: {
     email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
   },
 });
@@ -831,7 +940,7 @@ const form = createForm({
     email: '',
     password: '',
   },
-  rules: {
+  validators: {
     email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
   },
 });

@@ -1,7 +1,6 @@
 import {
   aria,
   createId,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -17,158 +16,31 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  BitCheckboxEvents,
-  CheckableProps,
-  DisablableProps,
-  FormValidityMethods,
-  SizableProps,
-  ThemableProps,
-} from '../../types';
+import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
-import { useToggleField } from '../_common/use-toggle-field';
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
+import { useToggleField } from '../../utils/use-toggle-field';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    /* ========================================
-       Base Styles & Defaults
-       ======================================== */
-
-    :host {
-      --_size: var(--checkbox-size, var(--size-5));
-      --_radius: var(--checkbox-radius, var(--rounded-md));
-      --_font-size: var(--checkbox-font-size, var(--text-sm));
-      --_bg: var(--checkbox-bg, var(--color-contrast-200));
-      --_border: var(--checkbox-border-color, var(--color-contrast-300));
-
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--_gap, var(--size-2));
-      cursor: pointer;
-      user-select: none;
-      min-height: var(--_touch-target);
-    }
-
-    .checkbox-wrapper {
-      position: relative;
-      display: block;
-      width: var(--_size);
-      height: var(--_size);
-      flex-shrink: 0;
-    }
-
-    .box {
-      width: var(--_size);
-      height: var(--_size);
-      border: var(--border-2) solid var(--_border);
-      border-radius: var(--_radius);
-      background: var(--_bg);
-      transition:
-        background var(--transition-slower),
-        border-color var(--transition-slower),
-        box-shadow var(--transition-normal);
-      position: relative;
-      box-sizing: border-box;
-    }
-
-    /* ========================================
-       Focus State
-       ======================================== */
-
-    input:focus-visible + .box {
-      box-shadow: var(--_focus-shadow);
-    }
-
-    /* ========================================
-       Icons (Checkmark & Dash)
-       ======================================== */
-
-    .checkmark,
-    .dash {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 80%;
-      height: 80%;
-      transform: translate(-50%, -50%) scale(0.5);
-      color: var(--_icon-color);
-      stroke: currentColor;
-      stroke-width: 3;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      opacity: 0;
-      transition:
-        opacity var(--transition-spring),
-        transform var(--transition-spring);
-    }
-
-    /* ========================================
-       Label
-       ======================================== */
-
-    .label {
-      font-size: var(--_font-size);
-      color: var(--color-contrast);
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline-start: calc(var(--_size) + var(--size-2));
-      width: 100%;
-    }
-
-    .helper-text[role='alert'] {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.overrides {
-    /* Map theme variables to checkbox-specific variables */
-    :host {
-      --_active-bg: var(--checkbox-checked-bg, var(--_theme-base));
-      --_icon-color: var(--checkbox-color, var(--_theme-contrast));
-      --_focus-shadow: var(--_theme-shadow);
-    }
-
-    /* ========================================
-       Checked & Indeterminate States
-       ======================================== */
-
-    :host([checked]) .box,
-    :host([indeterminate]) .box {
-      background: var(--_active-bg);
-      border-color: var(--_active-bg);
-    }
-
-    :host([checked]) .checkmark,
-    :host([indeterminate]:not([checked])) .dash {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-  }
-`;
+import componentStyles from './checkbox.css?inline';
 
 /** Checkbox component properties */
-export interface CheckboxProps extends CheckableProps, ThemableProps, SizableProps, DisablableProps {
-  /** Indeterminate state (partially checked) */
-  indeterminate?: boolean;
-  /** Helper text displayed below the checkbox */
-  helper?: string;
-  /** Error message (marks field as invalid) */
-  error?: string;
-}
+
+export type BitCheckboxEvents = {
+  change: { checked: boolean; value: string };
+};
+
+export type BitCheckboxProps = CheckableProps &
+  ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Error message (marks field as invalid) */
+    error?: string;
+    /** Helper text displayed below the checkbox */
+    helper?: string;
+    /** Indeterminate state (partially checked) */
+    indeterminate?: boolean;
+  };
 
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
@@ -206,12 +78,12 @@ export interface CheckboxProps extends CheckableProps, ThemableProps, SizablePro
  * <bit-checkbox indeterminate>Select all</bit-checkbox>
  * ```
  */
-export const TAG = define(
+export const CHECKBOX_TAG = define(
   'bit-checkbox',
   ({ host }) => {
     const slots = defineSlots();
-    const emit = defineEmits<{ change: { checked: boolean; value: string } }>();
-    const props = defineProps<CheckboxProps>({
+    const emit = defineEmits<BitCheckboxEvents>();
+    const props = defineProps<BitCheckboxProps>({
       checked: { default: false },
       color: { default: undefined },
       disabled: { default: false },
@@ -383,9 +255,3 @@ export const TAG = define(
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-checkbox': HTMLElement & CheckboxProps & FormValidityMethods & AddEventListeners<BitCheckboxEvents>;
-  }
-}

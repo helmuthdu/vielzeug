@@ -19,16 +19,31 @@ const doubled = computed(() => count.value * 2);
 const isEven = computed(() => count.value % 2 === 0);
 
 // effect runs immediately and re-runs on any dependency change
-const stopLog = effect(() => {
+const sub = effect(() => {
   console.log(`count=${count.value}, doubled=${doubled.value}, even=${isEven.value}`);
 });
 
 count.value++; // → count=1, doubled=2, even=false
 count.value++; // → count=2, doubled=4, even=true
 
-stopLog(); // dispose effect
+sub.dispose();
 doubled.dispose();
 isEven.dispose();
+```
+
+---
+
+### `signal.update()` — Derive Next Value in Place
+
+```ts
+import { signal } from '@vielzeug/stateit';
+
+const count = signal(0);
+count.update((n) => n + 1); // 1
+count.update((n) => n * 2); // 2
+
+const tags = signal(['ts', 'js']);
+tags.update((arr) => [...arr, 'tsx']); // ['ts', 'js', 'tsx']
 ```
 
 ---
@@ -107,15 +122,138 @@ import { signal, watch } from '@vielzeug/stateit';
 
 const authToken = signal<string | null>(null);
 
-// React only to the first time a token is set
-const unsub = watch(
+watch(
   authToken,
   (token) => {
     console.log('First login:', token);
-    // unsub() already called automatically
+    // subscription is already disposed automatically
   },
   { once: true },
 );
+```
+
+---
+
+### `nextValue` — Await the Next Matching Emission
+
+```ts
+import { signal, nextValue } from '@vielzeug/stateit';
+
+const status = signal<'idle' | 'loading' | 'done'>('idle');
+
+// Somewhere async:
+async function waitForCompletion() {
+  // Resolves on the next change (any value)
+  const next = await nextValue(status);
+  console.log('status changed to:', next);
+
+  // Or wait for a specific condition
+  const done = await nextValue(status, (v) => v === 'done');
+  console.log('done!', done);
+}
+```
+
+---
+
+### `using` Declarations — Automatic Disposal
+
+With the TC39 explicit resource management proposal (`using`), disposables are cleaned up automatically when their block exits:
+
+```ts
+import { signal, effect, computed } from '@vielzeug/stateit';
+
+const count = signal(0);
+
+{
+  using sub = effect(() => console.log('count:', count.value));
+  using doubled = computed(() => count.value * 2);
+
+  count.value = 5; // both reactive
+  // ← block exits; sub and doubled are automatically disposed
+}
+```
+
+---
+
+### Multi-Source `derived`
+
+```ts
+import { signal, derived } from '@vielzeug/stateit';
+
+const price = signal(100);
+const quantity = signal(3);
+const vat = signal(0.2);
+
+const total = derived([price, quantity, vat], (p, q, v) => +(p * q * (1 + v)).toFixed(2));
+
+console.log(total.value); // 360
+price.value = 200;
+console.log(total.value); // 720
+```
+
+## Stores
+
+### Basic Store
+
+```ts
+import { store, watch, batch } from '@vielzeug/stateit';
+
+const cart = store({ items: [] as string[], total: 0 });
+
+// Partial patch
+cart.patch({ total: 42 });
+
+// Updater function
+cart.update((s) => ({ ...s, items: [...s.items, 'apple'] }));
+
+// Watch a derived slice via select()
+const totalSignal = cart.select((s) => s.total);
+watch(totalSignal, (total) => console.log('total:', total));
+
+// Batch
+batch(() => {
+  cart.patch({ total: 0 });
+  cart.update((s) => ({ ...s, items: [] }));
+});
+
+cart.reset();
+cart.freeze();
+```
+
+---
+
+### Slice Watch via `store.select()`
+
+```ts
+import { store, watch } from '@vielzeug/stateit';
+
+const user = store({ id: 1, name: 'Alice', role: 'admin' });
+
+// Only fires when `name` changes — unrelated updates are ignored
+const nameSignal = user.select((s) => s.name);
+const sub = watch(nameSignal, (name, prev) => {
+  console.log('name:', prev, '→', name);
+});
+
+user.patch({ role: 'editor' }); // ← does NOT fire (name unchanged)
+user.patch({ name: 'Bob' }); // → "name: Alice → Bob"
+
+sub.dispose();
+```
+
+---
+
+### Resetting to Initial State
+
+`reset()` restores the state passed to `store()` and protects it from external mutation:
+
+```ts
+const s = store({ count: 0, label: 'default' });
+s.patch({ count: 10, label: 'modified' });
+console.log(s.value); // { count: 10, label: 'modified' }
+
+s.reset();
+console.log(s.value); // { count: 0, label: 'default' }
 ```
 
 ## React
@@ -127,24 +265,32 @@ The cleanest way to integrate with React is `useSyncExternalStore`:
 ```ts
 // store-hooks.ts
 import { useSyncExternalStore } from 'react';
-import type { Store } from '@vielzeug/stateit';
+import { watch } from '@vielzeug/stateit';
+import type { ReadonlySignal, Store } from '@vielzeug/stateit';
 
 /** Subscribe to the full state of a store. */
 export function useStoreState<T extends object>(store: Store<T>): T {
   return useSyncExternalStore(
-    (notify) => store.subscribe(notify, { immediate: false }),
+    (notify) => {
+      const sub = watch(store, notify);
+      return () => sub.dispose();
+    },
     () => store.value,
     () => store.value,
   );
 }
 
 /** Subscribe to a projected slice of a store. Re-renders only when the
- *  slice changes (shallowEqual by default). */
+ *  slice changes (Object.is by default). */
 export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): U {
+  const sliceSignal = store.select(selector);
   return useSyncExternalStore(
-    (notify) => store.subscribe(selector, notify),
-    () => selector(store.value),
-    () => selector(store.value),
+    (notify) => {
+      const sub = watch(sliceSignal, notify);
+      return () => sub.dispose();
+    },
+    () => sliceSignal.value,
+    () => sliceSignal.value,
   );
 }
 ```
@@ -158,7 +304,7 @@ import { useStoreState, useStoreSelector } from './store-hooks';
 
 function Counter() {
   const count = useStoreSelector(counterStore, (s) => s.count);
-  return <button onClick={() => counterStore.set((s) => ({ count: s.count + 1 }))}>{count}</button>;
+  return <button onClick={() => counterStore.update((s) => ({ count: s.count + 1 }))}>{count}</button>;
 }
 ```
 
@@ -176,18 +322,20 @@ type TodoState = { todos: Todo[]; filter: 'all' | 'active' | 'done' };
 export const todoStore = store<TodoState>({ todos: [], filter: 'all' });
 
 export const addTodo = (text: string) =>
-  todoStore.set((s) => ({
+  todoStore.update((s) => ({
+    ...s,
     todos: [...s.todos, { id: Date.now(), text, done: false }],
   }));
 
 export const toggleTodo = (id: number) =>
-  todoStore.set((s) => ({
+  todoStore.update((s) => ({
+    ...s,
     todos: s.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
   }));
 
-export const setFilter = (filter: TodoState['filter']) => todoStore.set({ filter });
+export const setFilter = (filter: TodoState['filter']) => todoStore.patch({ filter });
 
-export const clearDone = () => todoStore.set((s) => ({ todos: s.todos.filter((t) => !t.done) }));
+export const clearDone = () => todoStore.update((s) => ({ ...s, todos: s.todos.filter((t) => !t.done) }));
 ```
 
 ```tsx
@@ -236,8 +384,6 @@ function TodoApp() {
 
 ### Async Data Fetching
 
-Since `set()` is synchronous, handle async operations externally and call `set()` when the data is ready:
-
 ```ts
 // user.store.ts
 import { store } from '@vielzeug/stateit';
@@ -251,12 +397,12 @@ type UserState =
 export const userStore = store<UserState>({ status: 'idle' });
 
 export async function loadUser(id: string) {
-  userStore.set({ status: 'loading' });
+  userStore.patch({ status: 'loading' });
   try {
     const user = await fetchUser(id);
-    userStore.set({ status: 'success', user });
+    userStore.value = { status: 'success', user };
   } catch (err) {
-    userStore.set({ status: 'error', error: (err as Error).message });
+    userStore.value = { status: 'error', error: (err as Error).message };
   }
 }
 ```
@@ -283,25 +429,27 @@ function UserProfile({ id }: { id: string }) {
 ```ts
 // composables/useStore.ts
 import { ref, onUnmounted, type Ref } from 'vue';
+import { watch } from '@vielzeug/stateit';
 import type { Store } from '@vielzeug/stateit';
 
 /** Reactive ref that stays in sync with the full store state. */
 export function useStoreState<T extends object>(store: Store<T>): Ref<T> {
   const state = ref(store.value) as Ref<T>;
-  const unsub = store.subscribe((next) => {
+  const sub = watch(store, (next) => {
     state.value = next;
   });
-  onUnmounted(unsub);
+  onUnmounted(() => sub.dispose());
   return state;
 }
 
 /** Reactive ref that stays in sync with a projected slice. */
 export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): Ref<U> {
-  const selected = ref(selector(store.value)) as Ref<U>;
-  const unsub = store.subscribe(selector, (next) => {
+  const sliceSignal = store.select(selector);
+  const selected = ref(sliceSignal.value) as Ref<U>;
+  const sub = watch(sliceSignal, (next) => {
     selected.value = next;
   });
-  onUnmounted(unsub);
+  onUnmounted(() => sub.dispose());
   return selected;
 }
 ```
@@ -314,7 +462,7 @@ import { useStoreSelector } from '@/composables/useStore';
 import { counterStore } from '@/stores/counter.store';
 
 const count = useStoreSelector(counterStore, (s) => s.count);
-const increment = () => counterStore.set((s) => ({ count: s.count + 1 }));
+const increment = () => counterStore.update((s) => ({ count: s.count + 1 }));
 </script>
 
 <template>
@@ -330,19 +478,17 @@ For Options API components, set up watchers in `created`/`mounted` and clean up 
 
 ```ts
 import { defineComponent, ref } from 'vue';
+import { watch } from '@vielzeug/stateit';
 import { counterStore } from '@/stores/counter.store';
 
 export default defineComponent({
   setup() {
-    const count = ref(counterStore.value.count);
-    const unsub = counterStore.subscribe(
-      (s) => s.count,
-      (next) => {
-        count.value = next;
-      },
-    );
-
-    return { count, cleanup: unsub };
+    const countSignal = counterStore.select((s) => s.count);
+    const count = ref(countSignal.value);
+    const sub = watch(countSignal, (next) => {
+      count.value = next;
+    });
+    return { count, cleanup: () => sub.dispose() };
   },
   unmounted() {
     this.cleanup();
@@ -354,31 +500,28 @@ export default defineComponent({
 
 ### Svelte Store Adapter
 
-Svelte's store contract requires `subscribe(run, invalidate)` returning an unsubscribe function. Bridge stateit's `watch()` to that interface:
+Svelte's store contract requires `subscribe(run)` returning an unsubscribe function. Bridge stateit's `watch()` to that interface:
 
 ```ts
 // lib/stateit-svelte.ts
-import type { Store } from '@vielzeug/stateit';
+import { watch } from '@vielzeug/stateit';
+import type { Store, ReadonlySignal } from '@vielzeug/stateit';
 import type { Readable } from 'svelte/store';
 
-/** Wraps a stateit Store as a Svelte readable store. */
-export function readable<T extends object>(source: Store<T>): Readable<T> {
+/** Wraps a stateit ReadonlySignal as a Svelte readable store. */
+export function readable<T>(source: ReadonlySignal<T>): Readable<T> {
   return {
     subscribe(run) {
       run(source.value); // immediate: true equivalent
-      return source.subscribe((next) => run(next));
+      const sub = watch(source, (next) => run(next));
+      return () => sub.dispose();
     },
   };
 }
 
-/** Wraps a projected slice as a Svelte readable store. */
+/** Wraps a projected store slice as a Svelte readable store. */
 export function readableSelector<T extends object, U>(source: Store<T>, selector: (state: T) => U): Readable<U> {
-  return {
-    subscribe(run) {
-      run(selector(source.value));
-      return source.subscribe(selector, (next) => run(next));
-    },
-  };
+  return readable(source.select(selector));
 }
 ```
 
@@ -386,13 +529,13 @@ Usage in a Svelte component:
 
 ```svelte
 <script lang="ts">
-  import { readable, readableSelector } from '$lib/stateit-svelte';
+  import { readableSelector } from '$lib/stateit-svelte';
   import { counterStore } from '$lib/counter.store';
 
   const count = readableSelector(counterStore, (s) => s.count);
 </script>
 
-<button on:click={() => counterStore.set((s) => ({ count: s.count + 1 }))}>
+<button on:click={() => counterStore.update(s => ({ count: s.count + 1 }))}>
   {$count}
 </button>
 ```
@@ -403,7 +546,7 @@ Structure stores as plain modules — no class registration or plugin needed:
 
 ```ts
 // stores/auth.store.ts
-import { store, computed } from '@vielzeug/stateit';
+import { store, computed, readonly } from '@vielzeug/stateit';
 
 type AuthState = {
   token: string | null;
@@ -417,17 +560,17 @@ const s = store<AuthState>({ token: null, user: null, loading: false });
 export const isAuthenticated = computed(() => !!s.value.token);
 export const currentUser = computed(() => s.value.user);
 
-// Public read-only view (exposes only .value and .watch)
-export const authStore = s as Pick<typeof s, 'value' | 'watch'>;
+// Public read-only view — callers can observe but not mutate
+export const authStore = readonly(s);
 
 // Mutations (exported as functions, not methods)
 export async function login(credentials: Credentials) {
-  s.set({ loading: true });
+  s.patch({ loading: true });
   try {
     const { token, user } = await authenticate(credentials);
-    s.set({ token, user, loading: false });
+    s.value = { token, user, loading: false };
   } catch {
-    s.set({ loading: false });
+    s.patch({ loading: false });
   }
 }
 
@@ -438,17 +581,41 @@ export function logout() {
 
 ## Pattern: Batch for Complex Mutations
 
-When a domain operation touches multiple fields of the same store at once, wrap in the top-level `batch()` so watchers see only the final state:
+When a domain operation touches multiple fields at once, wrap in `batch()` so watchers see only the final state:
 
 ```ts
 import { batch } from '@vielzeug/stateit';
 
 export function applySettings(settings: UserSettings) {
   batch(() => {
-    userStore.set({ theme: settings.theme });
-    userStore.set({ language: settings.language });
-    userStore.set({ notifications: settings.notifications });
+    userStore.patch({ theme: settings.theme });
+    userStore.patch({ language: settings.language });
+    userStore.patch({ notifications: settings.notifications });
   });
   // → one notification for all three changes together
 }
 ```
+
+## Pattern: `nextValue` in Async Workflows
+
+Use `nextValue` to bridge reactive state into async code without managing subscriptions manually:
+
+```ts
+import { store, nextValue } from '@vielzeug/stateit';
+
+const modalStore = store({ open: false, result: null as string | null });
+
+export async function openModal(): Promise<string | null> {
+  modalStore.patch({ open: true, result: null });
+
+  // Wait until result is set (modal closed with a value)
+  const result = await nextValue(
+    modalStore.select((s) => s.result),
+    (v) => v !== null,
+  );
+
+  modalStore.patch({ open: false });
+  return result;
+}
+```
+

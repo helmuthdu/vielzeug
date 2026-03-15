@@ -1,59 +1,19 @@
-import { computed, css, define, defineProps, effect, html, inject, signal } from '@vielzeug/craftit';
+import { computed, define, defineProps, effect, html, inject, signal } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
+import styles from './tab-panel.css?inline';
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: none;
-      width: 100%;
-    }
-
-    :host([active]) {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 0;
-    }
-
-    .panel {
-      padding: var(--tab-panel-padding, var(--size-4));
-      color: var(--text-color-body);
-      font-size: var(--tab-panel-font-size, var(--text-sm));
-      animation: var(--_motion-animation, tab-panel-in var(--transition-normal) var(--ease-out) both);
-      height: 100%;
-      box-sizing: border-box;
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
-    }
-  }
-
-  @layer buildit.variants {
-    @keyframes tab-panel-in {
-      from {
-        opacity: 0;
-        translate: 0 4px;
-      }
-      to {
-        opacity: 1;
-        translate: 0 0;
-      }
-    }
-  }
-`;
-
-export interface TabPanelProps {
-  /** Must match the `value` of its corresponding bit-tab-item */
-  value: string;
+export type BitTabPanelProps = {
   /** Active state (managed by bit-tabs) */
   active?: boolean;
   /** When true, the panel content is not rendered until first activation (preserves resources) */
   lazy?: boolean;
   /** Panel padding size: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (default: 'md' = var(--size-4)) */
   padding?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-}
+  /** Must match the `value` of its corresponding bit-tab-item */
+  value: string;
+};
 
 /**
  * Content panel for a tab. Shown when its `value` matches the selected tab.
@@ -73,8 +33,8 @@ export interface TabPanelProps {
  * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
  * ```
  */
-export const TAG = define('bit-tab-panel', ({ host }) => {
-  const props = defineProps<TabPanelProps>({
+export const TAB_PANEL_TAG = define('bit-tab-panel', ({ host }) => {
+  const props = defineProps<BitTabPanelProps>({
     active: { default: false },
     lazy: { default: false },
     padding: { default: 'md' },
@@ -130,9 +90,3 @@ export const TAG = define('bit-tab-panel', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-tab-panel': HTMLElement & TabPanelProps;
-  }
-}

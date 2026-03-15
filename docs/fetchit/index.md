@@ -42,18 +42,19 @@ const users = await api.get<User[]>('/users');
 // Type-safe path parameters — TypeScript errors if params are wrong or missing
 const user = await api.get<User>('/users/{id}', { params: { id: 42 } });
 
-// Cached query — second call within staleTime returns immediately from cache
+// Cached query with lifecycle callbacks
 const qc = createQuery({ staleTime: 5_000 });
 const post = await qc.query({
   key: ['users', 42],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 42 }, signal }),
+  onSuccess: (data) => console.log(`Loaded ${data.name}`),
+  onError: (err) => console.error(err.message),
 });
 
 // Standalone mutation with cache invalidation on success
-const createUser = createMutation(
-  (data: NewUser) => api.post<User>('/users', { body: data }),
-  { onSuccess: () => qc.invalidate(['users']) },
-);
+const createUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
+  onSuccess: () => qc.invalidate(['users']),
+});
 await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
 ```
 
@@ -62,10 +63,11 @@ await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
 - **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
 - **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and deduplication
 - **Query cache** — `createQuery()` for stale-while-revalidate caching, prefix invalidation, and reactive subscriptions
-- **Standalone mutations** — `createMutation()` with lifecycle callbacks, retry, and observable state
+- **Query callbacks** — `onSuccess`, `onError`, `onSettled` per-call callbacks on `query()` for fire-and-forget side effects
+- **Standalone mutations** — `createMutation()` with lifecycle callbacks, retry, observable state, and `cancel()`
 - **Request deduplication** — GET/HEAD/OPTIONS always deduplicate concurrent identical calls; others opt-in
 - **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
-- **Retry with backoff** — configurable attempt count and exponential delay strategy
+- **Retry with backoff** — configurable attempt count, exponential delay strategy, and `shouldRetry` predicate
 - **Abort support** — `QueryFnContext` passes an `AbortSignal` to every query function
 - **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped

@@ -123,32 +123,36 @@ export const roundedVariantMixin = css`
  * };
  * ```
  */
+type SizeConfig = {
+  /** Arbitrary CSS custom properties (must start with --) */
+  [key: `--${string}`]: string | undefined;
+  /** Font size — maps to --_font-size */
+  fontSize?: string;
+  /** Gap between elements — maps to --_gap */
+  gap?: string;
+  /** Element height — maps to --_height */
+  height?: string;
+  /** Icon size — maps to --_icon-size */
+  iconSize?: string;
+  /** Line height — maps to --_line-height */
+  lineHeight?: string;
+  /** Internal padding — maps to --_padding */
+  padding?: string;
+  /** Element size (width/height) — maps to --_size */
+  size?: string;
+  /** Thumb size (e.g. toggle/switch thumb) — maps to --_thumb-size */
+  thumbSize?: string;
+  /** Element width — maps to --_width */
+  width?: string;
+};
+
 export const sizeVariantMixin = (config?: {
   /** Large size configuration */
-  lg?: {
-    [key: string]: string | undefined;
-    fontSize?: string;
-    gap?: string;
-    size?: string;
-  };
+  lg?: SizeConfig;
   /** Medium size configuration (default) */
-  md?: {
-    [key: string]: string | undefined;
-    fontSize?: string;
-    gap?: string;
-    size?: string;
-  };
+  md?: SizeConfig;
   /** Small size configuration */
-  sm?: {
-    /** Custom properties (must start with --) */
-    [key: string]: string | undefined;
-    /** Font size - maps to --_font-size */
-    fontSize?: string;
-    /** Gap between elements - maps to gap property */
-    gap?: string;
-    /** Element size (width/height) - maps to --_size */
-    size?: string;
-  };
+  sm?: SizeConfig;
 }) => {
   const defaults = {
     lg: {

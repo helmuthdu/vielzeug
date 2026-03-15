@@ -131,16 +131,18 @@ export class Schema<Output = unknown, Input = unknown> {
   }
 
   async parseAsync(value: Input): Promise<Output> {
-    const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
-    const syncIssues = this._runSync(processed, []);
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+      const syncIssues = this._runSync(processed, []);
 
-    if (syncIssues.length) throw new ValidationError(syncIssues);
+      if (syncIssues.length) throw new ValidationError(syncIssues);
 
-    const asyncIssues = await this._runAsync(processed, []);
+      const asyncIssues = await this._runAsync(processed, []);
 
-    if (asyncIssues.length) throw new ValidationError(asyncIssues);
+      if (asyncIssues.length) throw new ValidationError(asyncIssues);
 
-    return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
+      return this._postprocessors.reduce((v, fn) => fn(v), processed) as Output;
+    });
   }
 
   async safeParseAsync(value: Input): Promise<ParseResult<Output>> {
@@ -198,20 +200,13 @@ export class Schema<Output = unknown, Input = unknown> {
     check: (value: Output) => Promise<boolean>,
     message: MessageFn<{ value: Output }> = 'Invalid value',
   ): this {
-    const cloned = this._clone();
+    return this._addAsyncValidator(async (value, path) => {
+      const ok = await check(value as Output);
 
-    cloned._asyncValidators = [
-      ...this._asyncValidators,
-      async (value, path) => {
-        const ok = await check(value as Output);
-
-        return ok
-          ? null
-          : [{ code: ErrorCode.custom, message: resolveMessage(message, { value: value as Output }), path }];
-      },
-    ];
-
-    return cloned;
+      return ok
+        ? null
+        : [{ code: ErrorCode.custom, message: resolveMessage(message, { value: value as Output }), path }];
+    });
   }
 
   /** Allows undefined. */
@@ -238,6 +233,15 @@ export class Schema<Output = unknown, Input = unknown> {
 
     cloned._isOptional = true;
     cloned._isNullable = true;
+
+    return cloned;
+  }
+
+  /** Removes undefined from the output type (reverses optional). */
+  required(): Schema<Exclude<Output, undefined>, Input> {
+    const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Input>;
+
+    cloned._isOptional = false;
 
     return cloned;
   }
@@ -331,6 +335,14 @@ export class Schema<Output = unknown, Input = unknown> {
     return this._clone([...this._validators, validator]);
   }
 
+  protected _addAsyncValidator(fn: AsyncValidateFn): this {
+    const cloned = this._clone();
+
+    cloned._asyncValidators = [...this._asyncValidators, fn];
+
+    return cloned;
+  }
+
   protected _addPreprocessor(fn: (value: unknown) => unknown): this {
     const cloned = this._clone();
 
@@ -371,7 +383,7 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ min: number; value: string }> = ({ min }) => `Must be at least ${min} characters`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.length >= length
+      (value as string).length >= length
         ? null
         : [
             {
@@ -389,7 +401,7 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ max: number; value: string }> = ({ max }) => `Must be at most ${max} characters`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.length <= length
+      (value as string).length <= length
         ? null
         : [
             {
@@ -407,7 +419,7 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ exact: number; value: string }> = ({ exact }) => `Must be exactly ${exact} characters`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.length === exact
+      (value as string).length === exact
         ? null
         : [
             {
@@ -429,12 +441,13 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ prefix: string; value: string }> = ({ prefix }) => `Must start with "${prefix}"`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.startsWith(prefix)
+      (value as string).startsWith(prefix)
         ? null
         : [
             {
               code: ErrorCode.invalid_string,
               message: resolveMessage(message, { prefix, value: value as string }),
+              params: { prefix },
               path,
             },
           ],
@@ -446,12 +459,13 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ suffix: string; value: string }> = ({ suffix }) => `Must end with "${suffix}"`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.endsWith(suffix)
+      (value as string).endsWith(suffix)
         ? null
         : [
             {
               code: ErrorCode.invalid_string,
               message: resolveMessage(message, { suffix, value: value as string }),
+              params: { suffix },
               path,
             },
           ],
@@ -463,12 +477,13 @@ export class StringSchema extends Schema<string, unknown> {
     message: MessageFn<{ substr: string; value: string }> = ({ substr }) => `Must include "${substr}"`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && value.includes(substr)
+      (value as string).includes(substr)
         ? null
         : [
             {
               code: ErrorCode.invalid_string,
               message: resolveMessage(message, { substr, value: value as string }),
+              params: { includes: substr },
               path,
             },
           ],
@@ -477,70 +492,117 @@ export class StringSchema extends Schema<string, unknown> {
 
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = 'Invalid format'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'string' && pattern.test(value)
+      pattern.test(value as string)
         ? null
-        : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value: value as string }), path }],
+        : [
+            {
+              code: ErrorCode.invalid_string,
+              message: resolveMessage(message, { value: value as string }),
+              params: { pattern: pattern.source },
+              path,
+            },
+          ],
     );
   }
 
   email(message: MessageFn<{ value: string }> = 'Invalid email address'): this {
-    return this._addValidator((value, path) => {
-      if (typeof value !== 'string') return null;
-
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    return this._addValidator((value, path) =>
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)
         ? null
-        : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
-    });
+        : [
+            {
+              code: ErrorCode.invalid_string,
+              message: resolveMessage(message, { value: value as string }),
+              params: { format: 'email' },
+              path,
+            },
+          ],
+    );
   }
 
   url(message: MessageFn<{ value: string }> = 'Invalid URL'): this {
     return this._addValidator((value, path) => {
-      if (typeof value !== 'string') return null;
-
       try {
-        new URL(value);
+        new URL(value as string);
 
         return null;
       } catch {
-        return [{ code: ErrorCode.invalid_url, message: resolveMessage(message, { value }), path }];
+        return [
+          {
+            code: ErrorCode.invalid_url,
+            message: resolveMessage(message, { value: value as string }),
+            params: { format: 'url' },
+            path,
+          },
+        ];
       }
     });
   }
 
   uuid(message: MessageFn<{ value: string }> = 'Invalid UUID'): this {
-    return this._addValidator((value, path) => {
-      if (typeof value !== 'string') return null;
-
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+    return this._addValidator((value, path) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value as string)
         ? null
-        : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
-    });
+        : [
+            {
+              code: ErrorCode.invalid_string,
+              message: resolveMessage(message, { value: value as string }),
+              params: { format: 'uuid' },
+              path,
+            },
+          ],
+    );
   }
 
   date(message: MessageFn<{ value: string }> = 'Invalid date'): this {
     return this._addValidator((value, path) => {
-      if (typeof value !== 'string') return null;
+      const str = value as string;
 
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        return [
+          {
+            code: ErrorCode.invalid_string,
+            message: resolveMessage(message, { value: str }),
+            params: { format: 'date' },
+            path,
+          },
+        ];
       }
 
-      const d = new Date(value);
+      const d = new Date(str);
       // Guard against roll-over dates like 2024-02-30 → 2024-03-01
-      const valid = !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
+      const valid = !Number.isNaN(d.getTime()) && d.toISOString().startsWith(str);
 
-      return valid ? null : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
+      return valid
+        ? null
+        : [
+            {
+              code: ErrorCode.invalid_string,
+              message: resolveMessage(message, { value: str }),
+              params: { format: 'date' },
+              path,
+            },
+          ];
     });
   }
 
   datetime(message: MessageFn<{ value: string }> = 'Invalid datetime'): this {
     return this._addValidator((value, path) => {
-      if (typeof value !== 'string') return null;
+      const str = value as string;
 
       // Require at minimum YYYY-MM-DDTHH:MM structure before trying Date constructor
-      const valid = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/.test(value) && !Number.isNaN(new Date(value).getTime());
+      const valid = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/.test(str) && !Number.isNaN(new Date(str).getTime());
 
-      return valid ? null : [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value }), path }];
+      return valid
+        ? null
+        : [
+            {
+              code: ErrorCode.invalid_string,
+              message: resolveMessage(message, { value: str }),
+              params: { format: 'datetime' },
+              path,
+            },
+          ];
     });
   }
 
@@ -578,7 +640,7 @@ export class NumberSchema extends Schema<number, unknown> {
     message: MessageFn<{ min: number; value: number }> = ({ min }) => `Must be at least ${min}`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value >= minimum
+      (value as number) >= minimum
         ? null
         : [
             {
@@ -596,7 +658,7 @@ export class NumberSchema extends Schema<number, unknown> {
     message: MessageFn<{ max: number; value: number }> = ({ max }) => `Must be at most ${max}`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value <= maximum
+      (value as number) <= maximum
         ? null
         : [
             {
@@ -611,7 +673,7 @@ export class NumberSchema extends Schema<number, unknown> {
 
   int(message: MessageFn<{ value: number }> = 'Must be an integer'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && Number.isInteger(value)
+      Number.isInteger(value as number)
         ? null
         : [{ code: ErrorCode.not_integer, message: resolveMessage(message, { value: value as number }), path }],
     );
@@ -619,7 +681,7 @@ export class NumberSchema extends Schema<number, unknown> {
 
   positive(message: MessageFn<{ value: number }> = 'Must be positive'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value > 0
+      (value as number) > 0
         ? null
         : [
             {
@@ -634,7 +696,7 @@ export class NumberSchema extends Schema<number, unknown> {
 
   negative(message: MessageFn<{ value: number }> = 'Must be negative'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value < 0
+      (value as number) < 0
         ? null
         : [
             {
@@ -649,7 +711,7 @@ export class NumberSchema extends Schema<number, unknown> {
 
   nonNegative(message: MessageFn<{ value: number }> = 'Must be non-negative'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value >= 0
+      (value as number) >= 0
         ? null
         : [
             {
@@ -664,7 +726,7 @@ export class NumberSchema extends Schema<number, unknown> {
 
   nonPositive(message: MessageFn<{ value: number }> = 'Must be non-positive'): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && value <= 0
+      (value as number) <= 0
         ? null
         : [
             {
@@ -682,7 +744,7 @@ export class NumberSchema extends Schema<number, unknown> {
     message: MessageFn<{ step: number; value: number }> = ({ step }) => `Must be a multiple of ${step}`,
   ): this {
     return this._addValidator((value, path) =>
-      typeof value === 'number' && Math.abs(Math.round(value / step) - value / step) < 1e-9
+      Math.abs(Math.round((value as number) / step) - (value as number) / step) < 1e-9
         ? null
         : [
             {
@@ -720,9 +782,9 @@ export class BooleanSchema extends Schema<boolean, unknown> {
     return new BooleanSchema()._addPreprocessor((v) => {
       if (typeof v === 'boolean') return v;
 
-      if (v === 'true' || v === 1) return true;
+      if (v === 'true' || v === '1' || v === 1) return true;
 
-      if (v === 'false' || v === 0) return false;
+      if (v === 'false' || v === '0' || v === 0) return false;
 
       return v;
     });
@@ -746,7 +808,7 @@ export class DateSchema extends Schema<Date, unknown> {
     message: MessageFn<{ min: Date; value: Date }> = ({ min }) => `Must be after ${min.toISOString()}`,
   ): this {
     return this._addValidator((value, path) =>
-      value instanceof Date && value >= date
+      (value as Date) >= date
         ? null
         : [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: date, value: value as Date }), path }],
     );
@@ -757,7 +819,7 @@ export class DateSchema extends Schema<Date, unknown> {
     message: MessageFn<{ max: Date; value: Date }> = ({ max }) => `Must be before ${max.toISOString()}`,
   ): this {
     return this._addValidator((value, path) =>
-      value instanceof Date && value <= date
+      (value as Date) <= date
         ? null
         : [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: date, value: value as Date }), path }],
     );
@@ -839,6 +901,10 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferTuple<T>;
+
+      if (this._isNullable && processed === null) return null as unknown as InferTuple<T>;
+
       if (!Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
       }
@@ -880,45 +946,51 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>, u
   }
 
   override async parseAsync(value: unknown): Promise<InferTuple<T>> {
-    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
-    if (!Array.isArray(processed)) {
-      throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
-    }
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferTuple<T>;
 
-    if (processed.length !== this.items.length) {
-      throw new ValidationError([
-        {
-          code: ErrorCode.invalid_length,
-          message: `Expected tuple of length ${this.items.length}`,
-          params: { exact: this.items.length },
-          path: [],
-        },
-      ]);
-    }
+      if (this._isNullable && processed === null) return null as unknown as InferTuple<T>;
 
-    const itemResults = await Promise.all(
-      this.items.map((schema, i) =>
-        schema.safeParseAsync(processed[i]).then((result) => ({
-          data: result.success ? result.data : processed[i],
-          issues: result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [i, ...issue.path] })),
-        })),
-      ),
-    );
-    const output = itemResults.map((r) => r.data);
-    const syncIssues: Issue[] = [];
+      if (!Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
+      }
 
-    for (const validate of this._validators) {
-      const extra = validate(output, []);
+      if (processed.length !== this.items.length) {
+        throw new ValidationError([
+          {
+            code: ErrorCode.invalid_length,
+            message: `Expected tuple of length ${this.items.length}`,
+            params: { exact: this.items.length },
+            path: [],
+          },
+        ]);
+      }
 
-      if (extra) syncIssues.push(...extra);
-    }
+      const itemResults = await Promise.all(
+        this.items.map((schema, i) =>
+          schema.safeParseAsync(processed[i]).then((result) => ({
+            data: result.success ? result.data : processed[i],
+            issues: result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [i, ...issue.path] })),
+          })),
+        ),
+      );
+      const output = itemResults.map((r) => r.data);
+      const syncIssues: Issue[] = [];
 
-    const issues = [...itemResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+      for (const validate of this._validators) {
+        const extra = validate(output, []);
 
-    if (issues.length) throw new ValidationError(issues);
+        if (extra) syncIssues.push(...extra);
+      }
 
-    return this._postprocessors.reduce((v, fn) => fn(v), output) as InferTuple<T>;
+      const issues = [...itemResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+
+      if (issues.length) throw new ValidationError(issues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), output) as InferTuple<T>;
+    });
   }
 
   protected override _clone(validators = this._validators): this {
@@ -949,6 +1021,10 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>, unkn
 
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
+      if (this._isOptional && processed === undefined) return undefined as unknown as Record<K, V>;
+
+      if (this._isNullable && processed === null) return null as unknown as Record<K, V>;
 
       if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
@@ -993,48 +1069,54 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>, unkn
   }
 
   override async parseAsync(value: unknown): Promise<Record<K, V>> {
-    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
-    if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
-      throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
-    }
+      if (this._isOptional && processed === undefined) return undefined as unknown as Record<K, V>;
 
-    const obj = processed as Record<string, unknown>;
-    const keys = Object.keys(obj);
-    const entryResults = await Promise.all(
-      keys.map((key) =>
-        Promise.all([this.keySchema.safeParseAsync(key), this.valueSchema.safeParseAsync(obj[key])]).then(
-          ([keyResult, valResult]) => ({
-            key,
-            keyIssues: keyResult.success ? [] : keyResult.error.issues.map((i) => ({ ...i, path: [key, ...i.path] })),
-            parsedKey: keyResult.success ? keyResult.data : key,
-            parsedVal: valResult.success ? valResult.data : obj[key],
-            valIssues: valResult.success ? [] : valResult.error.issues.map((i) => ({ ...i, path: [key, ...i.path] })),
-          }),
+      if (this._isNullable && processed === null) return null as unknown as Record<K, V>;
+
+      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
+      }
+
+      const obj = processed as Record<string, unknown>;
+      const keys = Object.keys(obj);
+      const entryResults = await Promise.all(
+        keys.map((key) =>
+          Promise.all([this.keySchema.safeParseAsync(key), this.valueSchema.safeParseAsync(obj[key])]).then(
+            ([keyResult, valResult]) => ({
+              key,
+              keyIssues: keyResult.success ? [] : keyResult.error.issues.map((i) => ({ ...i, path: [key, ...i.path] })),
+              parsedKey: keyResult.success ? keyResult.data : key,
+              parsedVal: valResult.success ? valResult.data : obj[key],
+              valIssues: valResult.success ? [] : valResult.error.issues.map((i) => ({ ...i, path: [key, ...i.path] })),
+            }),
+          ),
         ),
-      ),
-    );
-    const output: Record<string, unknown> = {};
-    const issues: Issue[] = [];
+      );
+      const output: Record<string, unknown> = {};
+      const issues: Issue[] = [];
 
-    for (const r of entryResults) {
-      issues.push(...r.keyIssues, ...r.valIssues);
+      for (const r of entryResults) {
+        issues.push(...r.keyIssues, ...r.valIssues);
 
-      if (r.keyIssues.length === 0 && r.valIssues.length === 0) output[r.parsedKey as string] = r.parsedVal;
-    }
+        if (r.keyIssues.length === 0 && r.valIssues.length === 0) output[r.parsedKey as string] = r.parsedVal;
+      }
 
-    const syncIssues: Issue[] = [];
+      const syncIssues: Issue[] = [];
 
-    for (const validate of this._validators) {
-      const extra = validate(output, []);
+      for (const validate of this._validators) {
+        const extra = validate(output, []);
 
-      if (extra) syncIssues.push(...extra);
-    }
-    issues.push(...syncIssues, ...(await this._runAsync(output, [])));
+        if (extra) syncIssues.push(...extra);
+      }
+      issues.push(...syncIssues, ...(await this._runAsync(output, [])));
 
-    if (issues.length) throw new ValidationError(issues);
+      if (issues.length) throw new ValidationError(issues);
 
-    return this._postprocessors.reduce((v, fn) => fn(v), output) as Record<K, V>;
+      return this._postprocessors.reduce((v, fn) => fn(v), output) as Record<K, V>;
+    });
   }
 
   protected override _clone(validators = this._validators): this {
@@ -1045,19 +1127,6 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>, unkn
 
     return cloned;
   }
-}
-
-/* -------------------- Raw-or-schema helpers -------------------- */
-
-type LiteralValue = string | number | boolean | null | undefined;
-type RawOrSchema = Schema<any, any> | LiteralValue;
-type NormalizeItem<T> = T extends Schema<any, any> ? T : T extends LiteralValue ? LiteralSchema<T> : never;
-type NormalizeItems<T extends readonly RawOrSchema[]> = { readonly [K in keyof T]: NormalizeItem<T[K]> };
-
-function normalizeToSchemas<T extends readonly RawOrSchema[]>(items: T): NormalizeItems<T> {
-  return items.map((item) =>
-    item instanceof Schema ? item : new LiteralSchema(item as LiteralValue),
-  ) as unknown as NormalizeItems<T>;
 }
 
 /* -------------------- Array Schema -------------------- */
@@ -1077,6 +1146,10 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
 
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+
+      if (this._isOptional && processed === undefined) return undefined as unknown as T[];
+
+      if (this._isNullable && processed === null) return null as unknown as T[];
 
       if (!Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
@@ -1108,39 +1181,45 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
   }
 
   override async parseAsync(value: unknown): Promise<T[]> {
-    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
-    if (!Array.isArray(processed)) {
-      throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
-    }
+      if (this._isOptional && processed === undefined) return undefined as unknown as T[];
 
-    const itemResults = await Promise.all(
-      processed.map((item, i) =>
-        this.itemSchema.safeParseAsync(item).then((result) => ({
-          data: result.success ? result.data : (item as T),
-          issues: result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [i, ...issue.path] })),
-        })),
-      ),
-    );
-    const items = itemResults.map((r) => r.data);
-    const arrayIssues: Issue[] = [];
+      if (this._isNullable && processed === null) return null as unknown as T[];
 
-    for (const validate of this._validators) {
-      const extra = validate(items, []);
+      if (!Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected array', path: [] }]);
+      }
 
-      if (extra) arrayIssues.push(...extra);
-    }
+      const itemResults = await Promise.all(
+        processed.map((item, i) =>
+          this.itemSchema.safeParseAsync(item).then((result) => ({
+            data: result.success ? result.data : (item as T),
+            issues: result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [i, ...issue.path] })),
+          })),
+        ),
+      );
+      const items = itemResults.map((r) => r.data);
+      const arrayIssues: Issue[] = [];
 
-    const issues = [...itemResults.flatMap((r) => r.issues), ...arrayIssues, ...(await this._runAsync(items, []))];
+      for (const validate of this._validators) {
+        const extra = validate(items, []);
 
-    if (issues.length) throw new ValidationError(issues);
+        if (extra) arrayIssues.push(...extra);
+      }
 
-    return this._postprocessors.reduce((v, fn) => fn(v), items) as T[];
+      const issues = [...itemResults.flatMap((r) => r.issues), ...arrayIssues, ...(await this._runAsync(items, []))];
+
+      if (issues.length) throw new ValidationError(issues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), items) as T[];
+    });
   }
 
   min(length: number, message: MessageFn<{ min: number }> = ({ min }) => `Must have at least ${min} items`): this {
     return this._addValidator((value, path) =>
-      Array.isArray(value) && value.length >= length
+      (value as unknown[]).length >= length
         ? null
         : [
             {
@@ -1155,7 +1234,7 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
 
   max(length: number, message: MessageFn<{ max: number }> = ({ max }) => `Must have at most ${max} items`): this {
     return this._addValidator((value, path) =>
-      Array.isArray(value) && value.length <= length
+      (value as unknown[]).length <= length
         ? null
         : [
             {
@@ -1173,7 +1252,7 @@ export class ArraySchema<T> extends Schema<T[], unknown> {
     message: MessageFn<{ exact: number }> = ({ exact }) => `Must have exactly ${exact} items`,
   ): this {
     return this._addValidator((value, path) =>
-      Array.isArray(value) && value.length === exact
+      (value as unknown[]).length === exact
         ? null
         : [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact }), params: { exact }, path }],
     );
@@ -1201,11 +1280,13 @@ type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, unknown> {
   readonly shape: T;
   private readonly _mode: ObjectMode;
+  private readonly _knownKeys: Set<string> | null;
 
   constructor(shape: T, mode: ObjectMode = 'strip') {
     super([]);
     this.shape = shape;
     this._mode = mode;
+    this._knownKeys = mode === 'strict' ? new Set(Object.keys(shape)) : null;
   }
 
   override parse(value: unknown): InferObject<T> {
@@ -1216,13 +1297,18 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
     return this._withCatch(() => {
       const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferObject<T>;
+
+      if (this._isNullable && processed === null) return null as unknown as InferObject<T>;
+
       if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
         throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
       }
 
       const obj = processed as Record<string, unknown>;
+      const strictIssues = this._strictKeyIssues(obj);
 
-      this._checkStrictKeys(obj);
+      if (strictIssues.length) throw new ValidationError(strictIssues);
 
       const { issues, output } = this._parseObjectFields(obj);
 
@@ -1238,17 +1324,14 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
     });
   }
 
-  private _checkStrictKeys(obj: Record<string, unknown>): void {
-    if (this._mode !== 'strict') return;
+  private _strictKeyIssues(obj: Record<string, unknown>): Issue[] {
+    if (!this._knownKeys) return [];
 
-    const knownKeys = new Set(Object.keys(this.shape));
-    const unknownKeys = Object.keys(obj).filter((k) => !knownKeys.has(k));
+    const unknownKeys = Object.keys(obj).filter((k) => !this._knownKeys!.has(k));
 
-    if (unknownKeys.length > 0) {
-      throw new ValidationError([
-        { code: ErrorCode.unrecognized_keys, message: `Unrecognized keys: ${unknownKeys.join(', ')}`, path: [] },
-      ]);
-    }
+    if (!unknownKeys.length) return [];
+
+    return [{ code: ErrorCode.unrecognized_keys, message: `Unrecognized keys: ${unknownKeys.join(', ')}`, path: [] }];
   }
 
   private _parseObjectFields(obj: Record<string, unknown>): { issues: Issue[]; output: Record<string, unknown> } {
@@ -1269,54 +1352,54 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
   }
 
   override async parseAsync(value: unknown): Promise<InferObject<T>> {
-    const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
-    if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
-      throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
-    }
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferObject<T>;
 
-    const obj = processed as Record<string, unknown>;
+      if (this._isNullable && processed === null) return null as unknown as InferObject<T>;
 
-    if (this._mode === 'strict') {
-      const knownKeys = new Set(Object.keys(this.shape));
-      const unknownKeys = Object.keys(obj).filter((k) => !knownKeys.has(k));
-
-      if (unknownKeys.length > 0) {
-        throw new ValidationError([
-          { code: ErrorCode.unrecognized_keys, message: `Unrecognized keys: ${unknownKeys.join(', ')}`, path: [] },
-        ]);
+      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
       }
-    }
 
-    const keyResults = await Promise.all(
-      Object.keys(this.shape).map((key) =>
-        this.shape[key].safeParseAsync(obj[key]).then((result) => ({
-          data: result.success ? result.data : obj[key],
-          issues: result.success ? [] : result.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })),
-          key,
-        })),
-      ),
-    );
+      const obj = processed as Record<string, unknown>;
+      const strictIssues = this._strictKeyIssues(obj);
 
-    const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
+      if (strictIssues.length) throw new ValidationError(strictIssues);
 
-    for (const r of keyResults) {
-      if (r.issues.length === 0) output[r.key] = r.data;
-    }
+      const keyResults = await Promise.all(
+        Object.keys(this.shape).map((key) =>
+          this.shape[key].safeParseAsync(obj[key]).then((result) => ({
+            data: result.success ? result.data : obj[key],
+            issues: result.success
+              ? []
+              : result.error.issues.map((issue) => ({ ...issue, path: [key, ...issue.path] })),
+            key,
+          })),
+        ),
+      );
 
-    const syncIssues: Issue[] = [];
+      const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
 
-    for (const validate of this._validators) {
-      const extra = validate(output, []);
+      for (const r of keyResults) {
+        if (r.issues.length === 0) output[r.key] = r.data;
+      }
 
-      if (extra) syncIssues.push(...extra);
-    }
+      const syncIssues: Issue[] = [];
 
-    const issues = [...keyResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+      for (const validate of this._validators) {
+        const extra = validate(output, []);
 
-    if (issues.length) throw new ValidationError(issues);
+        if (extra) syncIssues.push(...extra);
+      }
 
-    return this._postprocessors.reduce((v, fn) => fn(v), output) as InferObject<T>;
+      const issues = [...keyResults.flatMap((r) => r.issues), ...syncIssues, ...(await this._runAsync(output, []))];
+
+      if (issues.length) throw new ValidationError(issues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), output) as InferObject<T>;
+    });
   }
 
   partial(): ObjectSchema<{ [K in keyof T]: Schema<InferOutput<T[K]> | undefined, unknown> }>;
@@ -1336,15 +1419,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
 
   required(): ObjectSchema<{ [K in keyof T]: Schema<Exclude<InferOutput<T[K]>, undefined>, unknown> }> {
     return new ObjectSchema(
-      Object.fromEntries(
-        Object.entries(this.shape).map(([k, s]) => {
-          const cloned = (s as unknown as ObjectSchema<any>)._clone();
-
-          cloned._isOptional = false;
-
-          return [k, cloned];
-        }),
-      ) as any,
+      Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._mode,
     )._copyRefinements(this);
   }
@@ -1386,6 +1461,13 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
   protected _copyRefinements(source: ObjectSchema<any>): this {
     this._validators = [...source._validators];
     this._asyncValidators = [...source._asyncValidators];
+    this._preprocessors = [...source._preprocessors];
+    this._postprocessors = [...source._postprocessors];
+    this._isOptional = source._isOptional;
+    this._isNullable = source._isNullable;
+    this._hasCatch = source._hasCatch;
+    this._catchValue = source._catchValue;
+    this._description = source._description;
 
     return this;
   }
@@ -1395,32 +1477,112 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
 
     (cloned as any).shape = this.shape;
     (cloned as any)._mode = this._mode;
+    (cloned as any)._knownKeys = this._knownKeys;
 
     return cloned;
   }
+}
+
+/* -------------------- Raw-or-schema helpers -------------------- */
+
+type LiteralValue = string | number | boolean | null | undefined;
+type RawOrSchema = Schema<any, any> | LiteralValue;
+type NormalizeItem<T> = T extends Schema<any, any> ? T : T extends LiteralValue ? LiteralSchema<T> : never;
+type NormalizeItems<T extends readonly RawOrSchema[]> = { readonly [K in keyof T]: NormalizeItem<T[K]> };
+
+function normalizeToSchemas<T extends readonly RawOrSchema[]>(items: T): NormalizeItems<T> {
+  return items.map((item) =>
+    item instanceof Schema ? item : new LiteralSchema(item as LiteralValue),
+  ) as unknown as NormalizeItems<T>;
 }
 
 /* -------------------- Union Schema -------------------- */
 
 /** First-match union — tries each schema in order, returns first success. */
 export class UnionSchema<T extends readonly Schema<any, any>[]> extends Schema<InferOutput<T[number]>, unknown> {
+  readonly schemas: T;
+
   constructor(schemas: T) {
-    super([
-      (value, path) => {
-        const branchResults = schemas.map((s) => s.safeParse(value));
+    super([]);
+    this.schemas = schemas;
+  }
 
-        if (branchResults.some((r) => r.success)) return null;
+  override parse(value: unknown): InferOutput<T[number]> {
+    if (this._asyncValidators.length > 0) {
+      throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
+    }
 
-        return [
+    return this._withCatch(() => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferOutput<T[number]>;
+
+      if (this._isNullable && processed === null) return null as unknown as InferOutput<T[number]>;
+
+      const branchResults = this.schemas.map((s) => s.safeParse(processed));
+      const success = branchResults.find((r) => r.success);
+
+      if (!success) {
+        throw new ValidationError([
           {
             code: ErrorCode.invalid_union,
             message: 'Does not match any of the expected types',
             params: { errors: branchResults.map((r) => (!r.success ? r.error.issues : [])) },
-            path,
+            path: [],
           },
-        ];
-      },
-    ]);
+        ]);
+      }
+
+      const data = (success as { data: InferOutput<T[number]> }).data;
+      const issues = this._runSync(data, []);
+
+      if (issues.length) throw new ValidationError(issues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferOutput<T[number]>;
+    });
+  }
+
+  override async parseAsync(value: unknown): Promise<InferOutput<T[number]>> {
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferOutput<T[number]>;
+
+      if (this._isNullable && processed === null) return null as unknown as InferOutput<T[number]>;
+
+      const branchResults = await Promise.all(this.schemas.map((s) => s.safeParseAsync(processed)));
+      const success = branchResults.find((r) => r.success);
+
+      if (!success) {
+        throw new ValidationError([
+          {
+            code: ErrorCode.invalid_union,
+            message: 'Does not match any of the expected types',
+            params: { errors: branchResults.map((r) => (!r.success ? r.error.issues : [])) },
+            path: [],
+          },
+        ]);
+      }
+
+      const data = (success as { data: InferOutput<T[number]> }).data;
+      const syncIssues = this._runSync(data, []);
+
+      if (syncIssues.length) throw new ValidationError(syncIssues);
+
+      const asyncIssues = await this._runAsync(data, []);
+
+      if (asyncIssues.length) throw new ValidationError(asyncIssues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferOutput<T[number]>;
+    });
+  }
+
+  protected override _clone(validators = this._validators): this {
+    const cloned = super._clone(validators);
+
+    (cloned as any).schemas = this.schemas;
+
+    return cloned;
   }
 }
 
@@ -1433,20 +1595,76 @@ export class IntersectSchema<T extends readonly Schema<any, any>[]> extends Sche
   UnionToIntersection<InferOutput<T[number]>>,
   unknown
 > {
+  readonly schemas: T;
+
   constructor(schemas: T) {
-    super([
-      (value, _path) => {
-        const issues: Issue[] = [];
+    super([]);
+    this.schemas = schemas;
+  }
 
-        for (const schema of schemas) {
-          const result = schema.safeParse(value);
+  override parse(value: unknown): UnionToIntersection<InferOutput<T[number]>> {
+    if (this._asyncValidators.length > 0) {
+      throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
+    }
 
-          if (!result.success) issues.push(...result.error.issues);
-        }
+    return this._withCatch(() => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
 
-        return issues.length ? issues : null;
-      },
-    ]);
+      if (this._isOptional && processed === undefined)
+        return undefined as unknown as UnionToIntersection<InferOutput<T[number]>>;
+
+      if (this._isNullable && processed === null) return null as unknown as UnionToIntersection<InferOutput<T[number]>>;
+
+      const branchIssues: Issue[] = [];
+
+      for (const schema of this.schemas) {
+        const result = schema.safeParse(processed);
+
+        if (!result.success) branchIssues.push(...result.error.issues);
+      }
+
+      if (branchIssues.length) throw new ValidationError(branchIssues);
+
+      const userIssues = this._runSync(processed, []);
+
+      if (userIssues.length) throw new ValidationError(userIssues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), processed) as UnionToIntersection<InferOutput<T[number]>>;
+    });
+  }
+
+  override async parseAsync(value: unknown): Promise<UnionToIntersection<InferOutput<T[number]>>> {
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+
+      if (this._isOptional && processed === undefined)
+        return undefined as unknown as UnionToIntersection<InferOutput<T[number]>>;
+
+      if (this._isNullable && processed === null) return null as unknown as UnionToIntersection<InferOutput<T[number]>>;
+
+      const branchResults = await Promise.all(this.schemas.map((s) => s.safeParseAsync(processed)));
+      const branchIssues: Issue[] = branchResults.flatMap((r) => (!r.success ? r.error.issues : []));
+
+      if (branchIssues.length) throw new ValidationError(branchIssues);
+
+      const syncIssues = this._runSync(processed, []);
+
+      if (syncIssues.length) throw new ValidationError(syncIssues);
+
+      const asyncIssues = await this._runAsync(processed, []);
+
+      if (asyncIssues.length) throw new ValidationError(asyncIssues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), processed) as UnionToIntersection<InferOutput<T[number]>>;
+    });
+  }
+
+  protected override _clone(validators = this._validators): this {
+    const cloned = super._clone(validators);
+
+    (cloned as any).schemas = this.schemas;
+
+    return cloned;
   }
 }
 
@@ -1460,6 +1678,9 @@ type InferVariantMap<K extends string, M extends VariantMap> = {
 }[keyof M & string];
 
 export class VariantSchema<K extends string, M extends VariantMap> extends Schema<InferVariantMap<K, M>, unknown> {
+  private readonly _map: Map<string, ObjectSchema<any>>;
+  private readonly _discriminator: K;
+
   constructor(discriminator: K, variantMap: M) {
     const map = new Map<string, ObjectSchema<any>>();
 
@@ -1467,33 +1688,108 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
       map.set(tag, schema.extend({ [discriminator]: new LiteralSchema(tag) }));
     }
 
-    super([
-      (value, path) => {
-        if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-          return [{ code: ErrorCode.invalid_type, message: 'Expected object', path }];
-        }
+    super([]);
+    this._discriminator = discriminator;
+    this._map = map;
+  }
 
-        const obj = value as Record<string, unknown>;
-        const discValue = obj[discriminator] as string;
-        const matched = map.get(discValue);
+  override parse(value: unknown): InferVariantMap<K, M> {
+    if (this._asyncValidators.length > 0) {
+      throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
+    }
 
-        if (!matched) {
-          const expected = [...map.keys()].map((k) => JSON.stringify(k)).join(' | ');
+    return this._withCatch(() => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
 
-          return [
-            {
-              code: ErrorCode.invalid_variant,
-              message: `Invalid discriminator value at "${discriminator}": expected ${expected}`,
-              path,
-            },
-          ];
-        }
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferVariantMap<K, M>;
 
-        const result = matched.safeParse(value);
+      if (this._isNullable && processed === null) return null as unknown as InferVariantMap<K, M>;
 
-        return result.success ? null : result.error.issues;
-      },
-    ]);
+      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
+      }
+
+      const obj = processed as Record<string, unknown>;
+      const discValue = obj[this._discriminator] as string;
+      const matched = this._map.get(discValue);
+
+      if (!matched) {
+        const expected = [...this._map.keys()].map((k) => JSON.stringify(k)).join(' | ');
+
+        throw new ValidationError([
+          {
+            code: ErrorCode.invalid_variant,
+            message: `Invalid discriminator value at "${this._discriminator}": expected ${expected}`,
+            path: [],
+          },
+        ]);
+      }
+
+      const result = matched.safeParse(processed);
+
+      if (!result.success) throw new ValidationError(result.error.issues);
+
+      const data = (result as unknown as { data: InferVariantMap<K, M> }).data;
+      const issues = this._runSync(data, []);
+
+      if (issues.length) throw new ValidationError(issues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferVariantMap<K, M>;
+    });
+  }
+
+  override async parseAsync(value: unknown): Promise<InferVariantMap<K, M>> {
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+
+      if (this._isOptional && processed === undefined) return undefined as unknown as InferVariantMap<K, M>;
+
+      if (this._isNullable && processed === null) return null as unknown as InferVariantMap<K, M>;
+
+      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
+        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
+      }
+
+      const obj = processed as Record<string, unknown>;
+      const discValue = obj[this._discriminator] as string;
+      const matched = this._map.get(discValue);
+
+      if (!matched) {
+        const expected = [...this._map.keys()].map((k) => JSON.stringify(k)).join(' | ');
+
+        throw new ValidationError([
+          {
+            code: ErrorCode.invalid_variant,
+            message: `Invalid discriminator value at "${this._discriminator}": expected ${expected}`,
+            path: [],
+          },
+        ]);
+      }
+
+      const result = await matched.safeParseAsync(processed);
+
+      if (!result.success) throw new ValidationError(result.error.issues);
+
+      const data = (result as unknown as { data: InferVariantMap<K, M> }).data;
+      const syncIssues = this._runSync(data, []);
+
+      if (syncIssues.length) throw new ValidationError(syncIssues);
+
+      const asyncIssues = await this._runAsync(data, []);
+
+      if (asyncIssues.length) throw new ValidationError(asyncIssues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferVariantMap<K, M>;
+    });
+  }
+
+  protected override _clone(validators = this._validators): this {
+    const cloned = super._clone(validators);
+
+    (cloned as any)._discriminator = this._discriminator;
+    (cloned as any)._map = this._map;
+
+    return cloned;
   }
 }
 
@@ -1508,40 +1804,46 @@ export class NeverSchema extends Schema<never, unknown> {
 /* -------------------- Lazy Schema -------------------- */
 
 export class LazySchema<T> extends Schema<T, unknown> {
-  private _resolved: Schema<T, unknown> | null = null;
   private readonly getter: () => Schema<T, unknown>;
 
   constructor(getter: () => Schema<T, unknown>) {
     super([]);
     this.getter = getter;
-  }
+    // Use a single sync validator that delegates to the inner schema's sync path.
+    // This lets base-class logic (optional/nullable/catch/preprocessors/etc.) work
+    // on the LazySchema itself. Async validators in sub-schemas are handled by the
+    // parseAsync override below.
+    this._validators = [
+      (value, path) => {
+        const inner = this.getter();
+        const result = inner.safeParse(value);
 
-  private _get(): Schema<T, unknown> {
-    if (this._resolved === null) {
-      this._resolved = this.getter();
-    }
-
-    return this._resolved;
-  }
-
-  override parse(value: unknown): T {
-    return this._get().parse(value);
-  }
-
-  override safeParse(value: unknown): ParseResult<T> {
-    return this._get().safeParse(value);
+        return result.success ? null : result.error.issues.map((i) => ({ ...i, path: [...path, ...i.path] }));
+      },
+    ];
   }
 
   override async parseAsync(value: unknown): Promise<T> {
-    return this._get().parseAsync(value);
-  }
+    return this._withCatchAsync(async () => {
+      const processed = this._preprocessors.reduce((v, fn) => fn(v), value);
 
-  override async safeParseAsync(value: unknown): Promise<ParseResult<T>> {
-    return this._get().safeParseAsync(value);
-  }
+      if (this._isOptional && processed === undefined) return undefined as unknown as T;
 
-  override is(value: unknown): value is T {
-    return this._get().is(value);
+      if (this._isNullable && processed === null) return null as unknown as T;
+
+      const inner = this.getter();
+      const result = await inner.safeParseAsync(processed);
+
+      if (!result.success) {
+        throw new ValidationError(result.error.issues);
+      }
+
+      const asyncIssues = await this._runAsync(result.data, []);
+
+      if (asyncIssues.length) throw new ValidationError(asyncIssues);
+
+      return this._postprocessors.reduce((v, fn) => fn(v), result.data) as T;
+    });
   }
 }
 
@@ -1622,8 +1924,11 @@ export const v = {
   nativeEnum: <T extends Record<string, string | number>>(enumObj: T) => new NativeEnumSchema(enumObj),
   never: () => new NeverSchema(),
   null: () => new LiteralSchema(null),
+  nullable: <T>(schema: Schema<T, any>) => schema.nullable(),
+  nullish: <T>(schema: Schema<T, any>) => schema.nullish(),
   number: () => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T) => new ObjectSchema(shape),
+  optional: <T>(schema: Schema<T, any>) => schema.optional(),
   record: <K extends string, V>(keySchema: Schema<K, unknown>, valueSchema: Schema<V, unknown>) =>
     new RecordSchema(keySchema, valueSchema),
   string: () => new StringSchema(),

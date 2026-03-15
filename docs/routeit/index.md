@@ -53,7 +53,7 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 - **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
 - **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
 - **Middleware** — global (`createRouter`/`use()`), per-group, and per-route; `ctx.locals` for passing data down the chain
-- **Route groups** — `group(prefix, definer, { middleware? })` for shared prefixes and middleware
+- **Route groups** — `group(prefix, definer, options?)` with typed prefix params propagated to nested handlers via `RouteGroup<Prefix>`
 - **Named routes** — navigate and build URLs by name, never hard-code paths
 - **URL builder** — `url(nameOrPattern, params?, query?)` with base-path awareness
 - **Async navigation** — `navigate()` returns a `Promise`; errors are rejections

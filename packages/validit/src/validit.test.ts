@@ -1539,4 +1539,467 @@ describe('validit', () => {
       expect(() => s.parse(3)).toThrow();
     });
   });
+
+  /* ============================================
+     LazySchema — modifiers respected (P0 fix)
+     ============================================ */
+
+  describe('v.lazy()', () => {
+    it('optional() on lazy schema allows undefined', () => {
+      const schema = v.lazy(() => v.string()).optional();
+
+      expect(schema.parse(undefined)).toBeUndefined();
+      expect(schema.parse('hello')).toBe('hello');
+    });
+
+    it('nullable() on lazy schema allows null', () => {
+      const schema = v.lazy(() => v.string()).nullable();
+
+      expect(schema.parse(null)).toBeNull();
+      expect(schema.parse('hello')).toBe('hello');
+    });
+
+    it('catch() on lazy schema returns fallback on failure', () => {
+      const schema = v.lazy(() => v.string()).catch('fallback');
+
+      expect(schema.parse('hello')).toBe('hello');
+      expect(schema.parse(42 as any)).toBe('fallback');
+    });
+
+    it('supports recursive schemas', () => {
+      const Node: any = v.object({
+        children: v.array(v.lazy(() => Node)).optional(),
+        value: v.number(),
+      });
+
+      expect(Node.parse({ value: 1 })).toEqual({ value: 1 });
+      expect(Node.parse({ children: [{ value: 2 }], value: 1 })).toEqual({
+        children: [{ value: 2 }],
+        value: 1,
+      });
+      expect(() => Node.parse({ value: 'bad' })).toThrow();
+    });
+  });
+
+  /* ============================================
+     parseAsync .catch() fallback (P0 fix)
+     ============================================ */
+
+  describe('parseAsync() with catch()', () => {
+    it('returns fallback for invalid input in async path', async () => {
+      const schema = v.string().catch('fallback');
+
+      expect(await schema.parseAsync('hello')).toBe('hello');
+      expect(await schema.parseAsync(42 as any)).toBe('fallback');
+    });
+
+    it('async object schema catch() returns fallback', async () => {
+      const schema = v.object({ name: v.string() }).catch({ name: 'unknown' });
+
+      expect(await schema.parseAsync('bad' as any)).toEqual({ name: 'unknown' });
+    });
+  });
+
+  /* ============================================
+     Union/Intersect — async sub-schema validators (P0 fix)
+     ============================================ */
+
+  describe('v.union() async', () => {
+    it('runs async refinements inside branches', async () => {
+      const a = v.string().refineAsync(async (s) => s.startsWith('a'), 'Must start with a');
+      const b = v.number();
+      const schema = v.union(a, b);
+
+      expect(await schema.parseAsync('abc')).toBe('abc');
+      expect(await schema.parseAsync(42)).toBe(42);
+
+      // 'xyz' fails branch a's async refine, but number branch won't match it either
+      const result = await schema.safeParseAsync('xyz');
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('v.intersect() async', () => {
+    it('runs async refinements on all branches', async () => {
+      const a = v.string().refineAsync(async (s) => s.length >= 3, 'Too short');
+      const b = v.string().refineAsync(async (s) => s.length <= 10, 'Too long');
+      const schema = v.intersect(a, b);
+
+      expect(await schema.parseAsync('hello')).toBe('hello');
+      await expect(schema.parseAsync('hi')).rejects.toThrow();
+    });
+  });
+
+  /* ============================================
+     String format validators — params.format (P2)
+     ============================================ */
+
+  describe('string format validators — params.format', () => {
+    it('email() includes params.format = "email"', () => {
+      const result = v.string().email().safeParse('bad');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) {
+        expect(result.error.issues[0].params?.format).toBe('email');
+      }
+    });
+
+    it('url() includes params.format = "url"', () => {
+      const result = v.string().url().safeParse('not-a-url');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) {
+        expect(result.error.issues[0].params?.format).toBe('url');
+      }
+    });
+
+    it('uuid() includes params.format = "uuid"', () => {
+      const result = v.string().uuid().safeParse('bad-uuid');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) {
+        expect(result.error.issues[0].params?.format).toBe('uuid');
+      }
+    });
+
+    it('date() includes params.format = "date"', () => {
+      const result = v.string().date().safeParse('not-a-date');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) {
+        expect(result.error.issues[0].params?.format).toBe('date');
+      }
+    });
+
+    it('datetime() includes params.format = "datetime"', () => {
+      const result = v.string().datetime().safeParse('not-a-datetime');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) {
+        expect(result.error.issues[0].params?.format).toBe('datetime');
+      }
+    });
+  });
+
+  /* ============================================
+     v.optional() / v.nullable() shorthands (P3)
+     ============================================ */
+
+  describe('v.optional() / v.nullable() shorthands', () => {
+    it('v.optional(schema) is equivalent to schema.optional()', () => {
+      const a = v.optional(v.string());
+      const b = v.string().optional();
+
+      expect(a.parse(undefined)).toBeUndefined();
+      expect(a.parse('hello')).toBe('hello');
+      expect(b.parse(undefined)).toBeUndefined();
+    });
+
+    it('v.nullable(schema) is equivalent to schema.nullable()', () => {
+      const a = v.nullable(v.string());
+
+      expect(a.parse(null)).toBeNull();
+      expect(a.parse('hello')).toBe('hello');
+      expect(() => a.parse(42 as any)).toThrow();
+    });
+
+    it('v.optional works with object schemas', () => {
+      const schema = v.object({
+        bio: v.optional(v.string()),
+        name: v.string(),
+      });
+
+      expect(schema.parse({ name: 'Alice' })).toEqual({ name: 'Alice' });
+      expect(schema.parse({ bio: 'hi', name: 'Alice' })).toEqual({ bio: 'hi', name: 'Alice' });
+    });
+  });
+
+  /* ============================================
+     ObjectSchema — optional / nullable guards in parse()
+     ============================================ */
+
+  describe('ObjectSchema optional/nullable guards', () => {
+    it('parse(undefined) returns undefined when optional', () => {
+      expect(v.object({ a: v.string() }).optional().parse(undefined)).toBeUndefined();
+    });
+
+    it('parse(null) returns null when nullable', () => {
+      expect(v.object({ a: v.string() }).nullable().parse(null)).toBeNull();
+    });
+
+    it('parseAsync(undefined) returns undefined when optional', async () => {
+      expect(await v.object({ a: v.string() }).optional().parseAsync(undefined)).toBeUndefined();
+    });
+
+    it('parseAsync(null) returns null when nullable', async () => {
+      expect(await v.object({ a: v.string() }).nullable().parseAsync(null)).toBeNull();
+    });
+
+    it('catch() fallback works on object parse failure', () => {
+      const fallback = { a: 'default' };
+
+      expect(
+        v
+          .object({ a: v.string() })
+          .catch(fallback)
+          .parse('not-an-object' as any),
+      ).toEqual(fallback);
+    });
+  });
+
+  /* ============================================
+     Container schemas — parseAsync _withCatchAsync + opt/null
+     ============================================ */
+
+  describe('container schemas parseAsync optional/nullable/catch', () => {
+    it('array.optional().parseAsync(undefined) returns undefined', async () => {
+      expect(await v.array(v.string()).optional().parseAsync(undefined)).toBeUndefined();
+    });
+
+    it('array.nullable().parseAsync(null) returns null', async () => {
+      expect(await v.array(v.string()).nullable().parseAsync(null)).toBeNull();
+    });
+
+    it('array.catch([]).parseAsync(invalid) returns fallback', async () => {
+      expect(
+        await v
+          .array(v.string())
+          .catch([])
+          .parseAsync('not-an-array' as any),
+      ).toEqual([]);
+    });
+
+    it('tuple.optional().parseAsync(undefined) returns undefined', async () => {
+      expect(await v.tuple([v.string()]).optional().parseAsync(undefined)).toBeUndefined();
+    });
+
+    it('tuple.catch().parseAsync(invalid) returns fallback', async () => {
+      expect(
+        await v
+          .tuple([v.string()])
+          .catch(['x'] as any)
+          .parseAsync(42 as any),
+      ).toEqual(['x']);
+    });
+
+    it('record.optional().parseAsync(undefined) returns undefined', async () => {
+      expect(await v.record(v.string(), v.number()).optional().parseAsync(undefined)).toBeUndefined();
+    });
+
+    it('record.catch({}).parseAsync(invalid) returns fallback', async () => {
+      expect(
+        await v
+          .record(v.string(), v.number())
+          .catch({})
+          .parseAsync('bad' as any),
+      ).toEqual({});
+    });
+  });
+
+  /* ============================================
+     Union sync — returns branch output (not raw input)
+     ============================================ */
+
+  describe('v.union() sync returns branch output', () => {
+    it('returns transformed value from matching branch', () => {
+      expect(v.union(v.coerce.number(), v.string()).parse('42')).toBe(42);
+    });
+
+    it('falls through to second branch when first fails', () => {
+      expect(v.union(v.number(), v.string()).parse('hello')).toBe('hello');
+    });
+  });
+
+  /* ============================================
+     Union/Intersect/Variant — sync refine() runs in parseAsync()
+     ============================================ */
+
+  describe('union/intersect/variant — sync refine() honored in parseAsync()', () => {
+    it('union: refine() runs in parseAsync', async () => {
+      const schema = v.union(v.string(), v.number()).refine((v) => v !== 0, 'Must not be zero');
+      const result = await schema.safeParseAsync(0);
+
+      expect(result.success).toBe(false);
+    });
+
+    it('union: catch() works in parseAsync when no branch matches', async () => {
+      const schema = v.union(v.string(), v.number()).catch('fallback' as any);
+      const result = await schema.parseAsync(true as any);
+
+      expect(result).toBe('fallback');
+    });
+
+    it('intersect: refine() runs in parseAsync', async () => {
+      const schema = v.intersect(v.string(), v.string().min(1)).refine((v) => v !== 'forbidden', 'Forbidden value');
+      const result = await schema.safeParseAsync('forbidden');
+
+      expect(result.success).toBe(false);
+    });
+
+    it('variant: optional().parseAsync(undefined) returns undefined', async () => {
+      const schema = v.variant('type', { ok: v.object({ msg: v.string() }) }).optional();
+
+      expect(await schema.parseAsync(undefined)).toBeUndefined();
+    });
+
+    it('variant: refine() runs in parseAsync', async () => {
+      const schema = v
+        .variant('type', { ok: v.object({ msg: v.string() }) })
+        .refine((v) => v.msg !== 'forbidden', 'Forbidden');
+      const result = await schema.safeParseAsync({ msg: 'forbidden', type: 'ok' });
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  /* ============================================
+     ObjectSchema shape-transform methods preserve metadata
+     ============================================ */
+
+  describe('ObjectSchema shape-transform methods preserve metadata', () => {
+    it('pick() preserves refine() validators', () => {
+      const schema = v.object({ a: v.string(), b: v.number() }).refine(() => false, 'always fails');
+
+      expect(schema.pick('a').safeParse({ a: 'hello' }).success).toBe(false);
+    });
+
+    it('partial() preserves description', () => {
+      const schema = v.object({ a: v.string() }).describe('My object');
+
+      expect(schema.partial().description).toBe('My object');
+    });
+
+    it('extend() preserves description', () => {
+      const schema = v.object({ a: v.string() }).describe('My object');
+
+      expect(schema.extend({ b: v.number() }).description).toBe('My object');
+    });
+
+    it('omit() preserves nullable — parse(null) returns null', () => {
+      // cast because .nullable() returns base Schema type
+      const schema = (v.object({ a: v.string(), b: v.number() }) as any).nullable().omit('a');
+
+      expect(schema.parse(null)).toBeNull();
+    });
+  });
+
+  /* ============================================
+     v.nullish() factory shorthand
+     ============================================ */
+
+  describe('v.nullish() shorthand', () => {
+    it('allows undefined', () => {
+      expect(v.nullish(v.string()).parse(undefined)).toBeUndefined();
+    });
+
+    it('allows null', () => {
+      expect(v.nullish(v.string()).parse(null)).toBeNull();
+    });
+
+    it('still validates non-null/undefined values', () => {
+      expect(v.nullish(v.string()).parse('hello')).toBe('hello');
+      expect(() => v.nullish(v.string()).parse(42 as any)).toThrow();
+    });
+  });
+
+  /* ============================================
+     String pattern validators — params
+     ============================================ */
+
+  describe('string pattern validators — params', () => {
+    it('startsWith() includes params.prefix', () => {
+      const result = v.string().startsWith('foo').safeParse('bar');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) expect(result.error.issues[0].params).toEqual({ prefix: 'foo' });
+    });
+
+    it('endsWith() includes params.suffix', () => {
+      const result = v.string().endsWith('baz').safeParse('bar');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) expect(result.error.issues[0].params).toEqual({ suffix: 'baz' });
+    });
+
+    it('includes() includes params.includes', () => {
+      const result = v.string().includes('xyz').safeParse('bar');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) expect(result.error.issues[0].params).toEqual({ includes: 'xyz' });
+    });
+
+    it('regex() includes params.pattern (source string)', () => {
+      const result = v.string().regex(/^\d+$/).safeParse('abc');
+
+      expect(result.success).toBe(false);
+
+      if (!result.success) expect(result.error.issues[0].params).toEqual({ pattern: '^\\d+$' });
+    });
+  });
+
+  /* ============================================
+     Schema.required() / ObjectSchema.required() via base
+     ============================================ */
+
+  describe('Schema.required() / ObjectSchema.required()', () => {
+    it('Schema.required() removes optional from any schema', () => {
+      const schema = v.string().optional().required();
+
+      expect(schema.safeParse(undefined).success).toBe(false);
+      expect(schema.parse('hello')).toBe('hello');
+    });
+
+    it('ObjectSchema.required() uses base required() — no direct field mutation', () => {
+      const schema = v.object({ name: v.string().optional() }).required();
+
+      expect(schema.shape.name.safeParse(undefined).success).toBe(false);
+    });
+  });
+
+  /* ============================================
+     BooleanSchema.coerce — "1" / "0" support (P3)
+     ============================================ */
+
+  describe('coerce.boolean() — "1" / "0" string support', () => {
+    it('coerces "1" to true and "0" to false', () => {
+      expect(v.coerce.boolean().parse('1')).toBe(true);
+      expect(v.coerce.boolean().parse('0')).toBe(false);
+    });
+
+    it('still handles numeric 1 and 0', () => {
+      expect(v.coerce.boolean().parse(1)).toBe(true);
+      expect(v.coerce.boolean().parse(0)).toBe(false);
+    });
+  });
+
+  /* ============================================
+     Union / Intersect — schemas property (P2)
+     ============================================ */
+
+  describe('UnionSchema.schemas / IntersectSchema.schemas introspection', () => {
+    it('UnionSchema exposes .schemas', () => {
+      const s1 = v.string();
+      const s2 = v.number();
+      const schema = v.union(s1, s2);
+
+      expect(schema.schemas).toHaveLength(2);
+    });
+
+    it('IntersectSchema exposes .schemas', () => {
+      const s1 = v.string();
+      const s2 = v.string().min(3);
+      const schema = v.intersect(s1, s2);
+
+      expect(schema.schemas).toHaveLength(2);
+    });
+  });
 });

@@ -4,9 +4,9 @@ export const examples = {
       code: `import { define, signal, html } from '@vielzeug/craftit'
 
 define('user-profile', () => {
-  const user = signal<any>(null)
+  const user = signal(null)
   const loading = signal(false)
-  const error = signal<string | null>(null)
+  const error = signal(null)
   const userId = signal(1)
 
   async function loadUser() {
@@ -94,8 +94,8 @@ define('price-calculator', () => {
     template: html\`
       <div style="padding:1rem;font-family:sans-serif;max-width:300px">
         <h3 style="margin:0 0 1rem">Price Calculator</h3>
-        <label>Price: <input type="number" .value=\${price} @input=\${(e: Event) => (price.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
-        <label>Qty:   <input type="number" .value=\${quantity} @input=\${(e: Event) => (quantity.value = +(e.target as HTMLInputElement).value)} style="width:80px"/></label><br/><br/>
+        <label>Price: <input type="number" .value=\${price} @input=\${(e: Event) => (price.value = +(e.target).value)} style="width:80px"/></label><br/><br/>
+        <label>Qty:   <input type="number" .value=\${quantity} @input=\${(e: Event) => (quantity.value = +(e.target).value)} style="width:80px"/></label><br/><br/>
         <hr/>
         <p>Subtotal: $\${subtotal}</p>
         <p>Tax (10%): $\${tax}</p>
@@ -191,7 +191,7 @@ define('custom-input', () => {
     internals.setFormValue('')
   })
 
-  function validate(v: string) {
+  function validate(v) {
     if (!v) return 'Required'
     if (!v.includes('@')) return 'Invalid email'
     return ''
@@ -207,7 +207,7 @@ define('custom-input', () => {
           placeholder="you@example.com"
           style="padding:.4rem;border:1px solid \${error.derive((e) => (e ? '#f56565' : '#cbd5e0'))};border-radius:4px;width:100%"
           @input=\${(e: Event) => {
-            const v = (e.target as HTMLInputElement).value
+            const v = (e.target).value
             value.value = v
             error.value = validate(v)
             internals.setFormValue(v)
@@ -227,7 +227,7 @@ document.getElementById('output')?.appendChild(document.createElement('custom-in
       code: `import { define, signal, html, css } from '@vielzeug/craftit'
 
 define('todo-list', () => {
-  const todos = signal<string[]>(['Learn Craftit', 'Build components'])
+  const todos = signal(['Learn Craftit', 'Build components'])
   const input = signal('')
 
   function addTodo() {
@@ -238,7 +238,7 @@ define('todo-list', () => {
     }
   }
 
-  function removeTodo(index: number) {
+  function removeTodo(index) {
     todos.update((list) => list.filter((_, i) => i !== index))
   }
 
@@ -257,7 +257,7 @@ define('todo-list', () => {
     template: html\`
       <h2 style="margin-top:0">My Todos</h2>
       <div class="row">
-        <input .value=\${input} @input=\${(e: Event) => (input.value = (e.target as HTMLInputElement).value)}
+        <input .value=\${input} @input=\${(e: Event) => (input.value = (e.target).value)}
                placeholder="New todo…" @keydown=\${(e: KeyboardEvent) => e.key === 'Enter' && addTodo()} />
         <button class="add" @click=\${addTodo}>Add</button>
       </div>
@@ -279,7 +279,7 @@ document.getElementById('output')?.appendChild(document.createElement('todo-list
 
 define('watcher-demo', () => {
   const count = signal(0)
-  const log = signal<string[]>([])
+  const log = signal([])
 
   // watch fires whenever count changes
   watch(count, (next, prev) => {
@@ -310,13 +310,13 @@ document.getElementById('output')?.appendChild(document.createElement('watcher-d
   },
   deposit: {
     'basic-setup': {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+      code: `import { createLocalStorage, defineSchema } from '@vielzeug/deposit'
 
-const schema = defineSchema()({
+const schema = defineSchema({
   users: { key: 'id', indexes: ['email'] },
 })
 
-const db = createDeposit({ type: 'localStorage', dbName: 'demo', schema })
+const db = createLocalStorage({ dbName: 'demo', schema })
 
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com' })
 await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com' })
@@ -327,29 +327,34 @@ console.log('Count:', await db.count('users'))`,
       name: 'Basic Setup - Initialize Deposit',
     },
     'bulk-operations': {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+      code: `import { createLocalStorage, defineSchema } from '@vielzeug/deposit'
 
-const schema = defineSchema()({ items: { key: 'id' } })
-const db = createDeposit({ type: 'localStorage', dbName: 'bulk-demo', schema })
+const schema = defineSchema({
+  items: { key: 'id' },
+})
+const db = createLocalStorage({ dbName: 'bulk-demo', schema })
 
 const items = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
-  value: +(Math.random() * 1000).toFixed(2)
+  value: +(Math.random() * 1000).toFixed(2),
 }))
 
-await db.bulkPut('items', items)
+await db.putMany('items', items)
 console.log('Inserted', items.length, 'items')
 
-await db.bulkDelete('items', [1, 2, 3])
+await db.deleteMany('items', [1, 2, 3])
 console.log('Deleted 3 items')
 console.log('Remaining:', await db.count('items'))`,
       name: 'Bulk Operations',
     },
     'crud-operations': {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+      code: `import { createLocalStorage, defineSchema } from '@vielzeug/deposit'
 
-const schema = defineSchema()({ users: { key: 'id', indexes: ['email'] } })
-const db = createDeposit({ type: 'localStorage', dbName: 'demo', schema })
+const schema = defineSchema({
+  users: { key: 'id', indexes: ['email'] },
+})
+
+const db = createLocalStorage({ dbName: 'demo', schema })
 
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com', age: 25 })
 await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com', age: 30 })
@@ -358,20 +363,76 @@ console.log('Created 2 users')
 console.log('Get user 1:', await db.get('users', 1))
 console.log('All users:', await db.getAll('users'))
 
-await db.put('users', { id: 1, name: 'Alice Smith', email: 'alice@example.com', age: 26 })
-console.log('Updated user 1')
+await db.patch('users', 1, { name: 'Alice Smith', age: 26 })
+console.log('Updated user 1:', await db.get('users', 1))
 
 await db.delete('users', 2)
 console.log('Count after delete:', await db.count('users'))`,
       name: 'CRUD Operations',
     },
+    'get-or-put': {
+      code: `import { createLocalStorage, defineSchema } from '@vielzeug/deposit'
+
+const schema = defineSchema({
+  cache: { key: 'id' },
+})
+const db = createLocalStorage({ dbName: 'cache-demo', schema })
+
+// getOrPut: fetch from cache or compute & store
+const result = await db.getOrPut(
+  'cache',
+  'config',
+  async () => {
+    console.log('Cache miss — computing...')
+    await new Promise((r) => setTimeout(r, 200))
+    return { id: 'config', data: 'computed value', fetched: Date.now() }
+  }
+)
+console.log('First call:', result)
+
+// Second call uses cached value
+const cached = await db.getOrPut('cache', 'config', async () => {
+  console.log('This should NOT print — cache hit!')
+  return { id: 'config', data: 'new value', fetched: Date.now() }
+})
+console.log('Second call (cache hit):', cached)`,
+      name: 'getOrPut - Cache Pattern',
+    },
+    'indexed-db': {
+      code: `import { createIndexedDB, defineSchema } from '@vielzeug/deposit'
+
+const schema = defineSchema({
+  logs: { key: 'id', indexes: ['level'] },
+})
+
+// IndexedDB supports transactions and larger datasets
+const db = createIndexedDB({ dbName: 'app-logs', version: 1, schema })
+
+await db.putMany('logs', [
+  { id: 1, level: 'info', message: 'App started', ts: Date.now() - 3000 },
+  { id: 2, level: 'warn', message: 'Slow query detected', ts: Date.now() - 2000 },
+  { id: 3, level: 'error', message: 'Request failed', ts: Date.now() - 1000 },
+  { id: 4, level: 'info', message: 'Request succeeded', ts: Date.now() },
+])
+
+const errors = await db.from('logs').equals('level', 'error').toArray()
+console.log('Errors:', errors.map((l) => l.message))
+
+const count = await db.count('logs')
+console.log('Total logs:', count)
+
+db.close()`,
+      name: 'IndexedDB Adapter',
+    },
     'query-builder': {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+      code: `import { createLocalStorage, defineSchema } from '@vielzeug/deposit'
 
-const schema = defineSchema()({ products: { key: 'id', indexes: ['category'] } })
-const db = createDeposit({ type: 'localStorage', dbName: 'shop', schema })
+const schema = defineSchema({
+  products: { key: 'id', indexes: ['category'] },
+})
+const db = createLocalStorage({ dbName: 'shop', schema })
 
-await db.bulkPut('products', [
+await db.putMany('products', [
   { id: 1, name: 'Laptop', price: 999, category: 'electronics', inStock: true },
   { id: 2, name: 'Mouse', price: 29, category: 'electronics', inStock: true },
   { id: 3, name: 'Desk', price: 299, category: 'furniture', inStock: false },
@@ -379,64 +440,336 @@ await db.bulkPut('products', [
   { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },
 ])
 
-const affordable = await db.query('products')
+const affordable = await db
+  .from('products')
   .equals('category', 'electronics')
-  .filter(p => p.inStock && p.price < 500)
+  .filter((p) => p.inStock && p.price < 500)
   .orderBy('price', 'asc')
   .toArray()
-console.log('Affordable electronics in stock:', affordable.map(p => p.name))
+console.log('Affordable electronics in stock:', affordable.map((p) => p.name))
 
-const grouped = await db.query('products').toGrouped('category')
+const grouped = await db.from('products').toGrouped('category')
 console.log('By category:')
 for (const { key, values } of grouped) {
   console.log(\`  \${key}: \${values.length} items\`)
 }`,
       name: 'Query Builder - Advanced Queries',
     },
-    transactions: {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+    'ttl-expiration': {
+      code: `import { createLocalStorage, defineSchema, ttl } from '@vielzeug/deposit'
 
-const schema = defineSchema()({ accounts: { key: 'id' } })
-const db = createDeposit({ type: 'localStorage', dbName: 'bank', schema })
+const schema = defineSchema({
+  cache: { key: 'id' },
+})
+const db = createLocalStorage({ dbName: 'cache-demo', schema })
 
-await db.bulkPut('accounts', [
-  { id: 'alice', balance: 1000 },
-  { id: 'bob', balance: 500 },
-])
-console.log('Before:', await db.getAll('accounts'))
+// Store with 1-second TTL
+await db.put('cache', { id: 'temp', data: 'Temporary data' }, ttl.seconds(1))
+console.log('Stored with 1s TTL')
+console.log('Immediate read:', await db.get('cache', 'temp'))
 
-await db.transaction(['accounts'], async (stores) => {
-  const alice = stores.accounts.find(a => a.id === 'alice')
-  const bob = stores.accounts.find(a => a.id === 'bob')
-  alice.balance -= 200
-  bob.balance += 200
+await new Promise((r) => setTimeout(r, 1500))
+console.log('After 1.5s:', await db.get('cache', 'temp')) // undefined — expired
+console.log('ttl helpers:', {
+  '5 minutes': ttl.minutes(5),
+  '2 hours': ttl.hours(2),
+  '7 days': ttl.days(7),
+})`,
+      name: 'TTL & Expiration',
+    },
+  },
+  dragit: {
+    'drop-zone-accept': {
+      code: `import { createDropZone } from '@vielzeug/dragit'
+
+const dropEl = document.createElement('div')
+dropEl.style.cssText = 'width:300px;height:200px;border:2px dashed #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;'
+dropEl.innerHTML = '<span>Drop images or PDFs here</span><small style="color:#888">(.png, .jpg, image/*, .pdf)</small>'
+document.body.appendChild(dropEl)
+
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*', '.pdf'],
+  onDrop: (files) => {
+    console.log('Accepted files:')
+    files.forEach(f => console.log(' ✓', f.name))
+  },
+  onDropRejected: (files) => {
+    console.log('Rejected files (wrong type):')
+    files.forEach(f => console.log(' ✗', f.name, '-', f.type))
+  },
+  onHoverChange: (hovered) => {
+    dropEl.style.borderColor = hovered ? '#10b981' : '#ccc'
+  },
 })
 
-console.log('After transfer of 200:', await db.getAll('accounts'))`,
-      name: 'Transactions - Atomic for IndexedDB',
+// Disable zone conditionally
+let isReadOnly = false
+const toggleReadOnly = () => {
+  isReadOnly = !isReadOnly
+  console.log('Read-only mode:', isReadOnly)
+}
+
+// Pass reactive disabled callback
+const reactiveZone = createDropZone({
+  element: dropEl,
+  disabled: () => isReadOnly,
+  onDrop: (files) => console.log('Dropped:', files.map(f => f.name)),
+})`,
+      name: 'createDropZone - Accept Filter',
     },
-    'ttl-expiration': {
-      code: `import { Deposit, defineSchema } from '@vielzeug/deposit'
+    'drop-zone-basic': {
+      code: `import { createDropZone } from '@vielzeug/dragit'
 
-const schema = defineSchema()({ cache: { key: 'id' } })
-const db = createDeposit({ type: 'localStorage', dbName: 'cache-demo', schema })
+const dropEl = document.createElement('div')
+dropEl.style.cssText = 'width:300px;height:200px;border:2px dashed #ccc;display:flex;align-items:center;justify-content:center;'
+dropEl.textContent = 'Drop files here'
+document.body.appendChild(dropEl)
 
-await db.put('cache', { id: 1, data: 'Temporary data' }, 1000) // 1s TTL
-console.log('Stored with 1s TTL')
-console.log('Immediate read:', await db.get('cache', 1))
+const zone = createDropZone({
+  element: dropEl,
+  onDrop: (files, event) => {
+    console.log('Dropped files:')
+    files.forEach(f => console.log(' -', f.name, '(' + f.type + ')', f.size + ' bytes'))
+  },
+  onHoverChange: (hovered) => {
+    dropEl.style.borderColor = hovered ? '#3b82f6' : '#ccc'
+    dropEl.style.background = hovered ? '#eff6ff' : ''
+    dropEl.textContent = hovered ? 'Release to drop!' : 'Drop files here'
+  },
+})
 
-await new Promise(r => setTimeout(r, 1500))
-console.log('After 1.5s:', await db.get('cache', 1)) // undefined — expired`,
-      name: 'TTL & Expiration',
+console.log('Drop zone created. Zone hovered:', zone.hovered)
+
+// Cleanup when done
+// zone.destroy()`,
+      name: 'createDropZone - Basic',
+    },
+    'sortable-list': {
+      code: `import { createSortable } from '@vielzeug/dragit'
+
+const listEl = document.createElement('ul')
+listEl.style.cssText = 'list-style:none;padding:0;margin:0;width:200px;'
+document.body.appendChild(listEl)
+
+const items = [
+  { id: 'item-1', label: 'Item One' },
+  { id: 'item-2', label: 'Item Two' },
+  { id: 'item-3', label: 'Item Three' },
+  { id: 'item-4', label: 'Item Four' },
+]
+
+function render(order) {
+  listEl.innerHTML = ''
+  order.forEach(id => {
+    const item = items.find(i => i.id === id)
+    const li = document.createElement('li')
+    // data-sort-id is required on each direct child
+    li.dataset.sortId = item.id
+    li.textContent = item.label
+    li.style.cssText = 'padding:10px;margin:4px 0;background:#f0f0f0;border-radius:4px;cursor:grab;'
+    listEl.appendChild(li)
+  })
+}
+
+let currentOrder = items.map(i => i.id)
+render(currentOrder)
+
+const sortable = createSortable({
+  container: listEl,
+  onReorder: (orderedIds) => {
+    console.log('New order:', orderedIds)
+    currentOrder = orderedIds
+  },
+  onDragStart: (id) => console.log('Dragging:', id),
+  onDragEnd: () => console.log('Drag ended'),
+})
+
+console.log('Sortable list ready. Drag items to reorder.')
+
+// Cleanup:
+// sortable.destroy()`,
+      name: 'createSortable - Drag to Reorder',
+    },
+    'sortable-with-handle': {
+      code: `import { createSortable } from '@vielzeug/dragit'
+
+const listEl = document.createElement('ul')
+listEl.style.cssText = 'list-style:none;padding:0;width:250px;'
+document.body.appendChild(listEl)
+
+const tasks = [
+  { id: 'task-a', title: 'Design UI' },
+  { id: 'task-b', title: 'Write tests' },
+  { id: 'task-c', title: 'Deploy to prod' },
+]
+
+tasks.forEach(task => {
+  const li = document.createElement('li')
+  li.dataset.sortId = task.id
+  li.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;background:#fff;border:1px solid #e5e5e5;border-radius:4px;'
+
+  const handle = document.createElement('span')
+  handle.className = 'drag-handle'
+  handle.textContent = '⠿'
+  handle.style.cssText = 'cursor:grab;color:#888;font-size:18px;'
+
+  const label = document.createElement('span')
+  label.textContent = task.title
+
+  li.appendChild(handle)
+  li.appendChild(label)
+  listEl.appendChild(li)
+})
+
+// Using the 'using' keyword for automatic cleanup (ES2025)
+const sortable = createSortable({
+  container: listEl,
+  handle: '.drag-handle',  // only the handle triggers drag
+  onReorder: (ids) => console.log('Reordered:', ids),
+})
+
+sortable.refresh() // Call after dynamically adding/removing items`,
+      name: 'createSortable - Drag Handle',
+    },
+  },
+  eventit: {
+    'abort-signal': {
+      code: `import { createBus, BusDisposedError } from '@vielzeug/eventit'
+
+
+const bus = createBus()
+
+// AbortSignal works with on(), once(), wait(), and events()
+const controller = new AbortController()
+const { signal } = controller
+
+bus.on('message', (msg) => {
+  console.log('Listener with signal:', msg)
+}, signal)
+
+bus.emit('message', 'First message')    // received
+bus.emit('message', 'Second message')   // received
+
+// Abort — listener auto-removed
+controller.abort()
+
+bus.emit('message', 'Third message')    // NOT received (aborted)
+console.log('After abort — third message ignored')
+
+// Disposing the bus rejects pending waits
+const bus2 = createBus()
+
+bus2.wait('message').catch(err => {
+  if (err instanceof BusDisposedError) {
+    console.log('Caught BusDisposedError:', err.message)
+  }
+})
+
+bus2.dispose()`,
+      name: 'AbortSignal & BusDisposedError',
+    },
+    'async-generator': {
+      code: `import { createBus } from '@vielzeug/eventit'
+
+
+const bus = createBus()
+
+// Consume events
+async function consumeTicks() {
+  let received = 0
+  for await (const tick of bus.events('tick')) {
+    console.log('Tick:', tick)
+    received++
+    if (received >= 3) break  // stop after 3 ticks
+  }
+  console.log('Done consuming ticks')
+}
+
+consumeTicks()
+
+// Emit several ticks
+let count = 0
+const interval = setInterval(() => {
+  bus.emit('tick', ++count)
+  if (count >= 5) clearInterval(interval)
+}, 30)`,
+      name: 'events() - Async Generator',
+    },
+    'bus-basics': {
+      code: `import { createBus } from '@vielzeug/eventit'
+
+// Define your event map for full type safety
+
+const bus = createBus()
+
+// Subscribe to typed events
+const unsubLogin = bus.on('user:login', (payload) => {
+  console.log('User logged in:', payload.name, '(' + payload.userId + ')')
+})
+
+bus.on('user:logout', () => {
+  console.log('User logged out')
+})
+
+bus.on('notification', (msg) => {
+  console.log('Notification:', msg)
+})
+
+// Emit events (type-safe)
+bus.emit('user:login', { userId: '123', name: 'Alice' })
+bus.emit('notification', 'Welcome back!')
+bus.emit('count:update', 42)
+
+// Unsubscribe manually
+unsubLogin()
+
+bus.emit('user:login', { userId: '456', name: 'Bob' })
+console.log('Login listener removed — no log above for Bob')
+
+// Total listener count
+console.log('Active listeners:', bus.listenerCount())
+
+bus.dispose()`,
+      name: 'createBus - Basics',
+    },
+    'once-and-wait': {
+      code: `import { createBus } from '@vielzeug/eventit'
+
+
+const bus = createBus()
+
+// Subscribe once — auto-removes after first emit
+bus.once('data:ready', (payload) => {
+  console.log('Data arrived (once):', payload.items)
+})
+
+bus.emit('data:ready', { items: ['alpha', 'beta', 'gamma'] })
+bus.emit('data:ready', { items: ['will not fire once listener'] })
+
+// Await the next emit
+async function waitForTask() {
+  console.log('Waiting for task to complete...')
+  const result = await bus.wait('task:done')
+  console.log('Task done! Result:', result.result)
+}
+
+waitForTask()
+
+// Simulate task completing after a delay
+setTimeout(() => {
+  bus.emit('task:done', { result: 99 })
+}, 50)`,
+      name: 'once() and wait()',
     },
   },
   fetchit: {
     'http-client-basic': {
-      code: `import { createHttp } from '@vielzeug/fetchit'
+      code: `import { createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
+const http = createApi({
   baseUrl: 'https://jsonplaceholder.typicode.com',
-  timeout: 5000
+  timeout: 5000,
 })
 
 console.log('Fetchit HTTP client created!')
@@ -447,29 +780,26 @@ console.log('GET /todos/1:', todo)
 
 // POST request
 const newTodo = await http.post('/todos', {
-  body: { title: 'New Todo', completed: false, userId: 1 }
+  body: { title: 'New Todo', completed: false, userId: 1 },
 })
 console.log('POST /todos:', newTodo)`,
       name: 'HTTP Client - Basic Requests',
     },
     'http-client-headers': {
-      code: `import { createHttp } from '@vielzeug/fetchit'
+      code: `import { createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
+const http = createApi({
   baseUrl: 'https://jsonplaceholder.typicode.com',
   headers: {
-    'Authorization': 'Bearer token123',
-    'X-Custom-Header': 'CustomValue'
-  }
+    Authorization: 'Bearer token123',
+    'X-Custom-Header': 'CustomValue',
+  },
 })
 
 console.log('HTTP client created with custom headers')
 
 // Update headers dynamically
-http.headers({
-  'Authorization': 'Bearer newtoken456'
-})
-
+http.headers({ Authorization: 'Bearer newtoken456' })
 console.log('Headers updated successfully')
 
 // Make request with updated headers
@@ -478,11 +808,9 @@ console.log('Fetched with new headers:', data.title)`,
       name: 'HTTP Client - Custom Headers',
     },
     'http-client-methods': {
-      code: `import { createHttp } from '@vielzeug/fetchit'
+      code: `import { createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
 // GET
 const post = await http.get('/posts/1')
@@ -490,19 +818,19 @@ console.log('GET:', post.title)
 
 // POST
 const created = await http.post('/posts', {
-  body: { title: 'New Post', body: 'Content', userId: 1 }
+  body: { title: 'New Post', body: 'Content', userId: 1 },
 })
-console.log('POST:', created.id)
+console.log('POST id:', created.id)
 
 // PUT
 const updated = await http.put('/posts/1', {
-  body: { id: 1, title: 'Updated', body: 'New content', userId: 1 }
+  body: { id: 1, title: 'Updated', body: 'New content', userId: 1 },
 })
 console.log('PUT:', updated.title)
 
 // PATCH
 const patched = await http.patch('/posts/1', {
-  body: { title: 'Patched Title' }
+  body: { title: 'Patched Title' },
 })
 console.log('PATCH:', patched.title)
 
@@ -512,181 +840,325 @@ console.log('DELETE: Success')`,
       name: 'HTTP Client - All Methods',
     },
     'http-client-params': {
-      code: `import { createHttp } from '@vielzeug/fetchit'
+      code: `import { createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
 // GET with query parameters
 const posts = await http.get('/posts', {
-  query: { userId: 1, _limit: 5 }
+  query: { userId: 1, _limit: 5 },
 })
+console.log('Filtered posts count:', posts.length)
 
-console.log('Filtered posts:', posts)
-console.log('Count:', posts.length)
-
-// GET with path parameters
-const user = await http.get('/users/:id', {
-  params: { id: 1 }
+// GET with path parameters (curly-brace or colon style)
+const user = await http.get('/users/{id}', {
+  params: { id: 1 },
 })
-
 console.log('User:', user.name)
 
 // Combine path and query parameters
-const userPosts = await http.get('/users/:userId/posts', {
+const userPosts = await http.get('/users/{userId}/posts', {
   params: { userId: 1 },
-  query: { _limit: 3 }
+  query: { _limit: 3 },
 })
-
 console.log('User posts:', userPosts.length, 'items')`,
       name: 'HTTP Client - Path & Query Parameters',
     },
+    'http-interceptors': {
+      code: `import { createApi, HttpError } from '@vielzeug/fetchit'
+
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
+
+// Add a request/response interceptor
+const remove = http.use(async (ctx, next) => {
+  console.log('→ Request:', ctx.url)
+  const start = Date.now()
+  try {
+    const response = await next(ctx)
+    console.log(\`← Response: \${ctx.url} (\${Date.now() - start}ms)\`)
+    return response
+  } catch (err) {
+    if (HttpError.is(err)) {
+      console.error(\`← Error \${err.status}: \${ctx.url}\`)
+    }
+    throw err
+  }
+})
+
+const data = await http.get('/posts/1')
+console.log('Post:', data.title)
+
+// Remove the interceptor
+remove()`,
+      name: 'HTTP Client - Interceptors',
+    },
     'query-client-basic': {
-      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
+      code: `import { createQuery, createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
-const queryClient = createQuery({
-  staleTime: 5000,
-  gcTime: 300000
-})
+const queryClient = createQuery({ staleTime: 5000, gcTime: 300000 })
 
-// First fetch - hits the network
-console.log('First fetch...')
-const data1 = await queryClient.fetch({
+// First call — hits the network
+console.log('First query...')
+const data1 = await queryClient.query({
   queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1')
+  queryFn: () => http.get('/posts/1'),
 })
 console.log('Data:', data1.title)
 
-// Second fetch - returns from cache (within staleTime)
-console.log('Second fetch (cached)...')
-const data2 = await queryClient.fetch({
+// Second call — served from cache (within staleTime)
+console.log('Second query (cached)...')
+const data2 = await queryClient.query({
   queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1')
+  queryFn: () => http.get('/posts/1'),
 })
 console.log('Data:', data2.title)
 console.log('✓ Second request used cached data!')`,
       name: 'Query Client - Basic Caching',
     },
     'query-client-invalidate': {
-      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
+      code: `import { createQuery, createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
-
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 const queryClient = createQuery()
 
 // Fetch and cache
-await queryClient.fetch({
+await queryClient.query({
   queryKey: ['users'],
-  queryFn: () => http.get('/users')
+  queryFn: () => http.get('/users'),
 })
-
 console.log('✓ Data cached for key: ["users"]')
 
-// Invalidate specific query
 queryClient.invalidate(['users'])
 console.log('✓ Cache invalidated for ["users"]')
 
-// Invalidate with prefix matching
-await queryClient.fetch({
-  queryKey: ['users', 1],
-  queryFn: () => http.get('/users/1')
-})
-await queryClient.fetch({
-  queryKey: ['users', 2],
-  queryFn: () => http.get('/users/2')
-})
-
+// Cache individual entries
+await queryClient.query({ queryKey: ['users', 1], queryFn: () => http.get('/users/1') })
+await queryClient.query({ queryKey: ['users', 2], queryFn: () => http.get('/users/2') })
 console.log('✓ Cached ["users", 1] and ["users", 2]')
 
-// Invalidate all 'users' queries with prefix matching
+// Invalidate all 'users' queries via prefix
 queryClient.invalidate(['users'])
-console.log('✓ All "users" queries invalidated via prefix match')`,
+console.log('✓ All "users" queries invalidated')`,
       name: 'Query Client - Cache Invalidation',
     },
     'query-client-mutations': {
-      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
+      code: `import { createMutation, createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
-const queryClient = createQuery()
-
-// Mutation with callbacks
-const result = await queryClient.mutate({
-  mutationFn: (variables) => http.post('/posts', { body: variables }),
-  onSuccess: (data, variables) => {
-    console.log('✓ Post created:', data.id)
-    console.log('  Variables:', variables)
-    // Invalidate related queries
-    queryClient.invalidate(['posts'])
-  },
-  onError: (error, variables) => {
-    console.error('✗ Mutation failed:', error.message)
+// Standalone createMutation
+const createPost = createMutation(
+  (variables: { title: string; body: string; userId: number }) =>
+    http.post('/posts', { body: variables }),
+  {
+    onSuccess: (data, variables) => {
+      console.log('✓ Post created:', data.id)
+      console.log('  Title:', variables.title)
+    },
+    onError: (error) => {
+      console.error('✗ Mutation failed:', error.message)
+    },
   }
-}, {
-  title: 'New Post',
-  body: 'Content here',
-  userId: 1
-})
+)
 
-console.log('Mutation result:', result)`,
-      name: 'Query Client - Mutations',
+const result = await createPost.mutate({ title: 'New Post', body: 'Content', userId: 1 })
+console.log('Result:', result)`,
+      name: 'Mutations - createMutation',
     },
     'query-client-subscriptions': {
-      code: `import { createQuery, createHttp } from '@vielzeug/fetchit'
+      code: `import { createQuery, createApi } from '@vielzeug/fetchit'
 
-const http = createHttp({
-  baseUrl: 'https://jsonplaceholder.typicode.com'
-})
-
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 const queryClient = createQuery()
 
 // Subscribe to query state changes
 const unsubscribe = queryClient.subscribe(['posts', 1], (state) => {
   console.log('Query state:', {
     status: state.status,
-    isLoading: state.isLoading,
     isSuccess: state.isSuccess,
-    dataUpdatedAt: state.dataUpdatedAt
+    isLoading: state.isLoading,
   })
 })
 
-// Fetch data (will trigger subscription)
-await queryClient.fetch({
+// Fetch triggers subscribers
+await queryClient.query({
   queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1')
+  queryFn: () => http.get('/posts/1'),
 })
 
-// Clean up
 unsubscribe()
 console.log('Unsubscribed')`,
       name: 'Query Client - Subscriptions',
     },
   },
+  floatit: {
+    'auto-update': {
+      code: `import { positionFloat, offset, flip, shift, autoUpdate } from '@vielzeug/floatit'
+
+const button = document.createElement('button')
+button.textContent = 'Reference'
+button.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 16px;'
+document.body.appendChild(button)
+
+const dropdown = document.createElement('div')
+dropdown.textContent = 'I stay positioned!'
+dropdown.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5e5e5;border-radius:6px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,.1);'
+document.body.appendChild(dropdown)
+
+async function update() {
+  await positionFloat(button, dropdown, {
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift({ padding: 8 })],
+  })
+}
+
+// autoUpdate re-runs 'update' on scroll, resize, and DOM changes
+const cleanup = autoUpdate(button, dropdown, update)
+
+update()
+
+console.log('autoUpdate running — resize the window or scroll to see re-positioning')
+
+// Stop tracking when the dropdown closes:
+// cleanup()`,
+      name: 'autoUpdate - Track on Scroll/Resize',
+    },
+    'position-basic': {
+      code: `import { computePosition } from '@vielzeug/floatit'
+
+const button = document.createElement('button')
+button.textContent = 'Hover me'
+button.style.cssText = 'margin: 80px; padding: 8px 16px;'
+document.body.appendChild(button)
+
+const tooltip = document.createElement('div')
+tooltip.textContent = 'I am a tooltip!'
+tooltip.style.cssText = 'position:fixed;background:#1e293b;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;pointer-events:none;'
+document.body.appendChild(tooltip)
+
+async function updatePosition() {
+  const { x, y, placement } = await computePosition(button, tooltip, {
+    placement: 'top',
+  })
+  tooltip.style.left = x + 'px'
+  tooltip.style.top = y + 'px'
+  console.log('Placed at:', placement, '→', Math.round(x), Math.round(y))
+}
+
+button.addEventListener('mouseenter', updatePosition)
+updatePosition()`,
+      name: 'computePosition - Basic',
+    },
+    'position-float': {
+      code: `import { positionFloat, offset, flip, shift } from '@vielzeug/floatit'
+
+const button = document.createElement('button')
+button.textContent = 'Click for tooltip'
+button.style.cssText = 'margin:100px;padding:8px 16px;'
+document.body.appendChild(button)
+
+const tooltip = document.createElement('div')
+tooltip.textContent = 'Smart tooltip with middleware!'
+tooltip.style.cssText = 'position:fixed;background:#1e293b;color:#fff;padding:8px 12px;border-radius:6px;font-size:13px;pointer-events:none;'
+document.body.appendChild(tooltip)
+
+// positionFloat applies left/top styles automatically
+async function update() {
+  const placement = await positionFloat(button, tooltip, {
+    placement: 'top',
+    middleware: [
+      offset(8),          // 8px gap between button and tooltip
+      flip(),             // flip to bottom if no space above
+      shift({ padding: 8 }), // keep within viewport edges
+    ],
+  })
+  tooltip.dataset.placement = placement
+  console.log('Final placement:', placement)
+}
+
+update()`,
+      name: 'positionFloat - With Middleware',
+    },
+    'size-middleware': {
+      code: `import { positionFloat, offset, flip, size } from '@vielzeug/floatit'
+
+const button = document.createElement('button')
+button.textContent = 'Open dropdown'
+button.style.cssText = 'margin:50px;padding:8px 16px;'
+document.body.appendChild(button)
+
+const dropdown = document.createElement('div')
+dropdown.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5e5e5;border-radius:6px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);'
+// Populate dropdown with many items
+for (let i = 1; i <= 20; i++) {
+  const item = document.createElement('div')
+  item.textContent = 'Option ' + i
+  item.style.cssText = 'padding:8px 16px;cursor:pointer;'
+  dropdown.appendChild(item)
+}
+document.body.appendChild(dropdown)
+
+positionFloat(button, dropdown, {
+  placement: 'bottom-start',
+  middleware: [
+    offset(4),
+    flip(),
+    size({
+      padding: 8,
+      apply: ({ availableHeight, elements }) => {
+        // Constrain dropdown height to available viewport space
+        elements.floating.style.maxHeight = Math.min(availableHeight, 300) + 'px'
+        console.log('Available height:', availableHeight)
+      },
+    }),
+  ],
+})`,
+      name: 'size() - Constrain Height',
+    },
+  },
   formit: {
+    'array-fields': {
+      code: `import { createForm } from '@vielzeug/formit'
+
+const form = createForm({
+  fields: {
+    tags: { value: ['javascript', 'typescript']},
+  },
+})
+
+console.log('Initial tags:', form.get('tags'))
+
+// Append a new tag
+form.appendField('tags', 'react')
+console.log('After append:', form.get('tags'))
+
+// Remove second item (index 1)
+form.removeField('tags', 1)
+console.log('After remove index 1:', form.get('tags'))
+
+// Move first item to last position
+form.moveField('tags', 0, 1)
+console.log('After move:', form.get('tags'))`,
+      name: 'Array Fields - Dynamic Lists',
+    },
     'create-form': {
       code: `import { createForm } from '@vielzeug/formit'
 
 const form = createForm({
   fields: {
-    name: '',
-    email: '',
-    age: 0
-  }
+    name: { value: '' },
+    email: { value: '' },
+    age: { value: 0 },
+  },
 })
 
 console.log('Form created!')
 console.log('Initial values:', form.values())
 console.log('Name:', form.get('name'))
-console.log('Email:', form.get('email'))`,
+console.log('Is valid:', form.isValid)
+console.log('Is dirty:', form.isDirty)`,
       name: 'Create Form - Basic Setup',
     },
     'field-binding': {
@@ -694,36 +1166,27 @@ console.log('Email:', form.get('email'))`,
 
 const form = createForm({
   fields: {
-    firstName: '',
-    lastName: '',
-    email: ''
-  }
+    firstName: { value: '' },
+    lastName: { value: '' },
+    email: { value: '' },
+  },
 })
 
-// Create bindings (for use with input elements)
+// bind() returns live getters compatible with HTML inputs
 const firstNameBind = form.bind('firstName')
-const lastNameBind = form.bind('lastName')
 const emailBind = form.bind('email')
 
-console.log('Field bindings created:', {
-  firstName: firstNameBind.name,
-  lastName: lastNameBind.name,
-  email: emailBind.name
+console.log('Binding for firstName:', {
+  name: firstNameBind.name,
+  value: firstNameBind.value,
 })
 
-// Simulate input changes
-firstNameBind.set('John')
-lastNameBind.set('Doe')
-emailBind.set('john.doe@example.com')
+// Simulate user input — call onChange with an Event-like object
+firstNameBind.onChange({ target: { value: 'John' } })
+emailBind.onChange({ target: { value: 'john@example.com' } })
 
-console.log('Form values:', form.values())
-
-// Check dirty state
-console.log('Dirty fields:', {
-  firstName: form.isDirty('firstName'),
-  lastName: form.isDirty('lastName'),
-  email: form.isDirty('email')
-})`,
+console.log('Form values after input:', form.values())
+console.log('Touched fields:', form.isTouched)`,
       name: 'Field Binding for Inputs',
     },
     'field-operations': {
@@ -731,9 +1194,9 @@ console.log('Dirty fields:', {
 
 const form = createForm({
   fields: {
-    name: 'Alice',
-    age: 25
-  }
+    name: { value: 'Alice' },
+    age: { value: 25 },
+  },
 })
 
 console.log('Initial:', form.values())
@@ -742,58 +1205,53 @@ console.log('Initial:', form.values())
 form.set('name', 'Bob')
 console.log('After set name:', form.get('name'))
 
-// Set multiple fields (merge)
-form.set({ name: 'Charlie', age: 30 })
-console.log('After merge:', form.values())
+// Patch multiple fields at once
+form.patch({ name: 'Charlie', age: 30 })
+console.log('After patch:', form.values())
 
-// Replace all values
-form.set({ name: 'David' }, { replace: true })
-console.log('After replace:', form.values())
+// Dirty tracking
+console.log('Is dirty:', form.isDirty)
+console.log('Name dirty:', form.isFieldDirty('name'))
 
 // Reset to initial
 form.reset()
 console.log('After reset:', form.values())`,
-      name: 'Field Operations - Get/Set',
+      name: 'Field Operations - Get/Set/Patch',
     },
     'form-submission': {
-      code: `import { createForm } from '@vielzeug/formit'
+      code: `import { createForm, FormValidationError } from '@vielzeug/formit'
 
 const form = createForm({
   fields: {
     username: {
       value: '',
-      validators: (value) => value ? undefined : 'Username is required'
+      validators: [(v) => (!v ? 'Username is required' : undefined)],
     },
     email: {
       value: '',
-      validators: (value) => {
-        if (!value) return 'Email is required'
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) {
-          return 'Invalid email'
-        }
-      }
-    }
-  }
+      validators: [
+        (v) => {
+          if (!v) return 'Email is required'
+          if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(v))) return 'Invalid email'
+        },
+      ],
+    },
+  },
 })
 
-// Set values
 form.set('username', 'johndoe')
 form.set('email', 'john@example.com')
 
-// Submit with validation
 try {
-  const result = await form.submit(async (formData) => {
-    const values = Object.fromEntries(formData)
+  const result = await form.submit(async (values) => {
     console.log('Submitting...', values)
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise((r) => setTimeout(r, 500))
     return { success: true, id: 123 }
   })
-
-  console.log('✓ Form submitted successfully!', result)
+  console.log('✓ Form submitted!', result)
 } catch (error) {
-  if (error.type === 'validation') {
-    console.error('✗ Validation errors:', Object.fromEntries(error.errors))
+  if (error instanceof FormValidationError) {
+    console.error('✗ Validation errors:', error.errors)
   } else {
     console.error('✗ Submission error:', error)
   }
@@ -805,38 +1263,33 @@ try {
 
 const form = createForm({
   fields: {
-    name: '',
-    email: '',
-    age: 0
-  }
+    name: { value: '' },
+    email: { value: '' },
+  },
 })
 
-// Subscribe to all form changes
+// Subscribe to entire form state
 const unsubscribe = form.subscribe((state) => {
-  console.log('Form state changed:', {
-    values: form.values(),
-    errors: state.errors.size,
-    dirty: state.dirty.size,
-    isSubmitting: state.isSubmitting
+  console.log('Form state:', {
+    isDirty: state.isDirty,
+    isValid: state.isValid,
+    errors: state.errors,
   })
 })
 
-// Subscribe to specific field
-const unsubEmail = form.subscribeOnly('email', (field) => {
+// Watch a specific field (replaces subscribeOnly)
+const unsubEmail = form.watch('email', (field) => {
   console.log('Email field:', {
     value: field.value,
     error: field.error,
     touched: field.touched,
-    dirty: field.dirty
+    dirty: field.dirty,
   })
 })
 
-// Make changes
 form.set('name', 'Alice')
 form.set('email', 'alice@example.com')
-form.set('age', 25)
 
-// Cleanup
 setTimeout(() => {
   unsubscribe()
   unsubEmail()
@@ -851,109 +1304,82 @@ const form = createForm({
   fields: {
     email: {
       value: '',
-      validators: (value) => {
-        if (!value) return 'Email is required'
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) {
-          return 'Invalid email format'
-        }
-      }
+      validators: [(v) => {
+        if (!v) return 'Email is required'
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(v))) return 'Invalid email format'
+      }],
     },
     password: {
       value: '',
-      validators: (value) => {
-        if (!value) return 'Password is required'
-        if (String(value).length < 8) return 'Min 8 characters'
-      }
+      validators: [(v) => {
+        if (!v) return 'Password is required'
+        if (String(v).length < 8) return 'Min 8 characters'
+      }],
     },
-    confirmPassword: ''
+    confirmPassword: { value: '' },
   },
-  validate: (formData) => {
-    const password = formData.get('password')
-    const confirm = formData.get('confirmPassword')
-    const errors = new Map()
-
-    if (password !== confirm) {
-      errors.set('confirmPassword', 'Passwords must match')
+  validator: (values) => {
+    const errors: Record<string, string> = {}
+    if (values.password !== values.confirmPassword) {
+      errors.confirmPassword = 'Passwords must match'
     }
-
     return errors
-  }
+  },
 })
 
-// Set values
 form.set('email', 'invalid-email')
 form.set('password', 'short')
 form.set('confirmPassword', 'different')
 
-// Validate
-const errors = await form.validate()
-console.log('Validation errors:', Object.fromEntries(errors))
+const { errors, valid } = await form.validate()
+console.log('Valid:', valid)
+console.log('Errors:', errors)
 
-// Fix and revalidate
 form.set('email', 'user@example.com')
 form.set('password', 'password123')
 form.set('confirmPassword', 'password123')
 
-const errors2 = await form.validate()
-console.log('After fixing:', errors2.size === 0 ? '✓ Valid' : 'Still errors')`,
+const result2 = await form.validate()
+console.log('After fixing:', result2.valid ? '✓ Valid' : 'Still errors')`,
       name: 'Field & Form Validation',
     },
-    'nested-fields': {
-      code: `import { createForm } from '@vielzeug/formit'
+    'schema-integration': {
+      code: `import { createForm, fromSchema } from '@vielzeug/formit'
 
-const form = createForm({})
-
-// Set nested values using dot notation
-form.set('user.name', 'Alice')
-form.set('user.email', 'alice@example.com')
-form.set('user.address.city', 'New York')
-
-console.log('Nested values:', form.values())
-console.log('User name:', form.get('user.name'))
-console.log('City:', form.get('user.address.city'))
-
-// Arrays
-form.set('tags', ['javascript', 'typescript', 'react'])
-console.log('Tags:', form.get('tags'))
-
-// Update nested field
-form.set('user.address.city', 'San Francisco')
-console.log('Updated city:', form.get('user.address.city'))`,
-      name: 'Nested Fields - Dot Notation',
-    },
-    'nested-values': {
-      code: `import { createForm } from '@vielzeug/formit'
+// Works with any schema library that exposes safeParseAsync
+// Example using a minimal compatible schema shape:
+const mockSchema = {
+  safeParseAsync: async (data) => {
+    const errors: Record<string, string> = {}
+    const d = data
+    if (!d.username || String(d.username).length < 3) {
+      errors.username = 'Min 3 characters'
+    }
+    if (!d.email || !String(d.email).includes('@')) {
+      errors.email = 'Invalid email'
+    }
+    if (Object.keys(errors).length) {
+      return { success: false, error: { fieldErrors: errors, formErrors: [] } }
+    }
+    return { success: true, data }
+  },
+}
 
 const form = createForm({
   fields: {
-    user: {
-      name: 'Alice',
-      email: 'alice@example.com',
-      profile: {
-        age: 25,
-        city: 'NYC'
-      }
-    },
-    settings: {
-      notifications: true,
-      theme: 'dark'
-    }
-  }
+    username: { value: '' },
+    email: { value: '' },
+  },
+  ...fromSchema(mockSchema),
 })
 
-console.log('Nested object initialized!')
-console.log('User name:', form.get('user.name'))
-console.log('User age:', form.get('user.profile.age'))
-console.log('City:', form.get('user.profile.city'))
-console.log('Theme:', form.get('settings.theme'))
+form.set('username', 'ab')
+form.set('email', 'notanemail')
 
-// Update nested values
-form.set('user.profile.city', 'San Francisco')
-console.log('Updated city:', form.get('user.profile.city'))
-
-// All values (flattened)
-console.log('All values:', form.values())`,
-      name: 'Nested Values - Auto Flattening',
+const { errors, valid } = await form.validate()
+console.log('Valid:', valid)
+console.log('Errors:', errors)`,
+      name: 'Schema Integration - fromSchema',
     },
   },
   i18nit: {
@@ -996,7 +1422,7 @@ console.log(i18n.t('or', { flavors: ['vainilla', 'chocolate'] }))`,
     'async-loading': {
       code: `import { createI18n } from '@vielzeug/i18nit'
 
-// Reusable loader function that receives locale as parameter
+// Reusable loader function that receives locale
 const loadLocale = async (locale) => {
   console.log(\`Loading locale: \${locale}\`)
   // Simulate loading translations from API
@@ -1017,9 +1443,9 @@ const i18n = createI18n({
     en: { greeting: 'Hello', farewell: 'Goodbye' }
   },
   loaders: {
-    es: loadLocale,  // Receives 'es' as parameter
-    fr: loadLocale,  // Receives 'fr' as parameter
-    de: loadLocale   // Receives 'de' as parameter
+    es: loadLocale,  // Receives 'es'
+    fr: loadLocale,  // Receives 'fr'
+    de: loadLocale   // Receives 'de'
   }
 })
 
@@ -1933,320 +2359,197 @@ console.log('User posts URL:', userPostsUrl)`,
     },
   },
   stateit: {
-    'async-updates': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'basic-signal': {
+      code: `import { signal, effect, computed, batch } from '@vielzeug/stateit'
 
-const data = createSnapshot({
-  items: null,
-  loading: false,
-  error: null
+// Create reactive signals
+const count = signal(0)
+const name = signal('World')
+
+// Computed derives from signals automatically
+const greeting = computed(() => \`Hello, \${name.value}! Count: \${count.value}\`)
+
+// Effect re-runs when dependencies change
+effect(() => {
+  console.log('Greeting:', greeting.value)
 })
 
-// Subscribe to loading state
-data.subscribe(
-  (state) => state.loading,
-  (loading) => console.log('Loading:', loading)
-)
+// Updates trigger effects
+count.value = 1
+name.value = 'Alice'
 
-// Async fetch with loading states
-async function fetchItems() {
-  data.set({ loading: true, error: null })
-
-  try {
-    // Use async updater
-    await data.set(async (current) => {
-      // Simulate API call
-      await new Promise(r => setTimeout(r, 1000))
-      const items = [
-        { id: 1, name: 'Item 1' },
-        { id: 2, name: 'Item 2' }
-      ]
-      return { ...current, items, loading: false }
-    })
-
-    console.log('Success! Items:', data.get().items)
-  } catch (error) {
-    data.set({ error: error.message, loading: false })
-    console.error('Error:', error)
-  }
-}
-
-await fetchItems()`,
-      name: 'Async State Updates',
+// Batch multiple writes into one flush
+batch(() => {
+  count.value = 10
+  name.value = 'Bob'
+})
+// Only one re-run after the batch`,
+      name: 'Signal, Computed & Effect',
     },
-    'basic-state': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'batch-untrack': {
+      code: `import { signal, effect, batch, untrack } from '@vielzeug/stateit'
 
-// Create a simple counter state
-const counter = createSnapshot({ count: 0, name: 'Counter' })
+const a = signal(1)
+const b = signal(2)
 
-// Subscribe to changes
-counter.subscribe((current, prev) => {
-  console.log(\`Count: \${prev.count} → \${current.count}\`)
+let effectRuns = 0
+effect(() => {
+  // Reading a and b makes them dependencies
+  const sum = a.value + b.value
+  effectRuns++
+  console.log(\`Effect run #\${effectRuns}: sum = \${sum}\`)
 })
 
-// Update state - partial merge
-console.log('Initial:', counter.get())
-counter.set({ count: 1 })
-counter.set({ count: 2 })
+// Without batch: each write triggers the effect
+a.value = 10  // run #2
+b.value = 20  // run #3
 
-// Update with function
-counter.set((state) => ({ count: state.count + 1 }))
+// Batch: flush only once after the block
+batch(() => {
+  a.value = 100
+  b.value = 200
+})  // run #4 (single run for both updates)
 
-// Reset to initial
-counter.reset()
-console.log('After reset:', counter.get())`,
-      name: 'Basic State - Counter',
+// untrack: read without registering dependency
+effect(() => {
+  const tracked = a.value        // tracked
+  const peeked = untrack(() => b.value)  // NOT tracked
+  console.log('peeked b:', peeked)
+})
+
+b.value = 999  // won't re-run the untrack effect`,
+      name: 'Batch & Untrack',
     },
-    'computed-values': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'derived-signals': {
+      code: `import { signal, derived, computed } from '@vielzeug/stateit'
 
-const cart = createSnapshot({
-  items: [
-    { id: 1, name: 'Apple', price: 1.5, quantity: 2 },
-    { id: 2, name: 'Banana', price: 0.8, quantity: 3 }
-  ],
-  taxRate: 0.1
-})
+const price = signal(100)
+const quantity = signal(2)
+const taxRate = signal(0.1)
 
-// Create computed values
-const subtotal = cart.computed((state) =>
-  state.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-)
+// derived() — combine multiple source signals
+const subtotal = derived([price, quantity], (p, q) => p * q)
+const tax = computed(() => subtotal.value * taxRate.value)
+const total = computed(() => subtotal.value + tax.value)
 
-const tax = cart.computed((state) => subtotal.get() * state.taxRate)
-const total = cart.computed(() => subtotal.get() + tax.get())
+console.log('Subtotal:', subtotal.value)
+console.log('Tax:', tax.value)
+console.log('Total:', total.value)
 
-console.log('Subtotal:', subtotal.get().toFixed(2))
-console.log('Tax:', tax.get().toFixed(2))
-console.log('Total:', total.get().toFixed(2))
-
-// Subscribe to changes
-total.subscribe((current, prev) => {
-  console.log(\`Total: $\${prev.toFixed(2)} → $\${current.toFixed(2)}\`)
-})
-
-// Add item - auto-updates
-cart.set((state) => ({
-  items: [...state.items, { id: 3, name: 'Orange', price: 1.2, quantity: 4 }]
-}))
-
-console.log('\\nNew Total:', total.get().toFixed(2))`,
-      name: 'Computed Values',
+// Update sources — all derived values re-compute
+price.value = 150
+console.log('After price change:')
+console.log('Subtotal:', subtotal.value)
+console.log('Total:', total.value)`,
+      name: 'Derived Signals',
     },
-    'custom-equality': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'next-value': {
+      code: `import { signal, nextValue } from '@vielzeug/stateit'
 
-const state = createSnapshot({
-  items: [1, 2, 3],
-  metadata: { updated: Date.now() }
-})
+const status = signal('idle')
 
-// Subscribe with custom equality - only notify if length changes
-state.subscribe(
-  (state) => state.items,
-  (items) => {
-    console.log('Items array changed:', items)
-  },
-  {
-    equality: (a, b) => a.length === b.length
-  }
-)
+// nextValue: wait for the next emission that satisfies the predicate
+const waitForDone = nextValue(status, (v) => v === 'done')
 
-// Won't trigger (same length)
-state.set({ items: [4, 5, 6] })
-console.log('After replacing items (same length) - no log above')
+// Simulate async state transitions
+setTimeout(() => { status.value = 'loading'; console.log('→ loading') }, 100)
+setTimeout(() => { status.value = 'done'; console.log('→ done') }, 300)
 
-// Will trigger (different length)
-state.set({ items: [1, 2, 3, 4] })
-console.log('After adding item - logged above')
+const finalStatus = await waitForDone
+console.log('Resolved to:', finalStatus)
 
-// Won't trigger (metadata change doesn't affect items)
-state.set({ metadata: { updated: Date.now() } })`,
-      name: 'Custom Equality Functions',
+// Without predicate — resolves on next emission
+const counter = signal(0)
+const next = nextValue(counter)
+counter.value = 42
+console.log('Next value:', await next)`,
+      name: 'nextValue - Await Signal Change',
     },
-    'get-with-selector': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'store-basics': {
+      code: `import { store } from '@vielzeug/stateit'
 
-const user = createSnapshot({
-  firstName: 'Alice',
-  lastName: 'Johnson',
-  age: 30,
-  address: {
-    city: 'New York',
-    country: 'USA'
-  }
-})
+// Create an object-state store
+const user = store({ name: 'Alice', age: 30, email: 'alice@example.com' })
 
-// Get full state
-console.log('Full state:', user.get())
+console.log('Initial:', user.value)
 
-// Get with selector - computed value
-const fullName = user.get((s) => \`\${s.firstName} \${s.lastName}\`)
-console.log('Full name:', fullName)
+// Shallow-merge partial updates
+user.patch({ age: 31 })
+console.log('After patch:', user.value)
 
-// Get nested property
-const city = user.get((s) => s.address.city)
-console.log('City:', city)
+// Derive next state via updater
+user.update((s) => ({ ...s, name: 'Alice Smith' }))
+console.log('After update:', user.value)
 
-// Get multiple derived values
-const summary = user.get((s) => ({
-  name: \`\${s.firstName} \${s.lastName}\`,
-  location: \`\${s.address.city}, \${s.address.country}\`,
-  isAdult: s.age >= 18
-}))
-console.log('Summary:', summary)`,
-      name: 'Get with Selector',
+// Select a slice
+const greeting = user.select((s) => \`\${s.name} (age \${s.age})\`)
+console.log('Greeting:', greeting.value)
+
+// Reset to initial state
+user.reset()
+console.log('After reset:', user.value)`,
+      name: 'Store - Object State',
     },
-    'scoped-states': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'store-todo-list': {
+      code: `import { store, computed } from '@vielzeug/stateit'
 
-const app = createSnapshot({
-  theme: 'light',
-  language: 'en',
-  user: 'Alice'
-})
 
-// Create child state with overrides
-const draft = app.createChild({
-  theme: 'dark'
-})
-
-console.log('Parent theme:', app.get().theme) // 'light'
-console.log('Child theme:', draft.get().theme) // 'dark'
-
-// Child changes don't affect parent
-draft.set({ language: 'es', user: 'Bob' })
-console.log('\\nAfter child update:')
-console.log('Parent:', app.get())
-console.log('Child:', draft.get())
-
-// Run in isolated scope
-const result = await app.runInScope(
-  async (scoped) => {
-    scoped.set({ theme: 'dark', user: 'Temporary' })
-    console.log('\\nScoped state:', scoped.get())
-    return 'completed'
-  }
-)
-
-console.log('\\nAfter scope:')
-console.log('Parent unchanged:', app.get())
-console.log('Result:', result)`,
-      name: 'Scoped States',
-    },
-    'selective-subscription': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-const user = createSnapshot({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com'
-})
-
-// Subscribe to specific field only
-user.subscribe(
-  (state) => state.name,
-  (name, prevName) => {
-    console.log(\`Name changed: \${prevName} → \${name}\`)
-  }
-)
-
-// Subscribe to computed value
-user.subscribe(
-  (state) => state.age >= 18,
-  (isAdult) => {
-    console.log('Is adult:', isAdult)
-  }
-)
-
-// Only name changes trigger name subscription
-user.set({ name: 'Bob' }) // Triggers name subscriber
-user.set({ age: 31 }) // Doesn't trigger name subscriber
-user.set({ email: 'bob@example.com' }) // No name change
-user.set({ name: 'Charlie', age: 25 }) // Triggers both`,
-      name: 'Selective Subscriptions',
-    },
-    'todo-list': {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
-
-const todos = createSnapshot({
+const todos = store({
   items: [],
-  filter: 'all' // 'all' | 'active' | 'completed'
+  filter: 'all',
 })
 
-// Subscribe to filtered todos
-todos.subscribe(
-  (state) => {
-    const { items, filter } = state
-    switch (filter) {
-      case 'active':
-        return items.filter(t => !t.completed)
-      case 'completed':
-        return items.filter(t => t.completed)
-      default:
-        return items
-    }
-  },
-  (filtered) => {
-    console.log(\`\${todos.get().filter} todos (\${filtered.length}):\`, filtered)
-  }
+const visible = todos.select((s) =>
+  s.filter === 'active' ? s.items.filter((t) => !t.done)
+  : s.filter === 'done' ? s.items.filter((t) => t.done)
+  : s.items
 )
 
 // Add todos
-const items = [
-  { id: 1, text: 'Learn Stateit', completed: false },
-  { id: 2, text: 'Build app', completed: false },
-  { id: 3, text: 'Deploy', completed: true }
-]
-todos.set({ items })
-
-// Filter to active only
-todos.set({ filter: 'active' })
-
-// Complete a todo
-todos.set((state) => ({
-  items: state.items.map(t =>
-    t.id === 2 ? { ...t, completed: true } : t
-  )
+todos.update((s) => ({
+  ...s,
+  items: [
+    { id: 1, text: 'Learn stateit', done: false },
+    { id: 2, text: 'Build app', done: false },
+    { id: 3, text: 'Deploy', done: true },
+  ],
 }))
 
-// Show completed
-todos.set({ filter: 'completed' })`,
-      name: 'Todo List Example',
+console.log('All:', visible.value.map((t) => t.text))
+
+todos.patch({ filter: 'active' })
+console.log('Active:', visible.value.map((t) => t.text))
+
+todos.patch({ filter: 'done' })
+console.log('Done:', visible.value.map((t) => t.text))`,
+      name: 'Store - Todo List',
     },
-    transactions: {
-      code: `import { createSnapshot } from '@vielzeug/stateit'
+    'watch-and-subscribe': {
+      code: `import { signal, store, watch } from '@vielzeug/stateit'
 
-const user = createSnapshot({
-  name: 'Alice',
-  age: 30,
-  email: 'alice@example.com'
+const counter = signal(0)
+
+// watch: fires whenever the signal changes
+const sub = watch(counter, (next, prev) => {
+  console.log(\`Count: \${prev} → \${next}\`)
 })
 
-let count = 0
-user.subscribe(() => {
-  count++
-  console.log(\`Update #\${count}\`)
-})
+counter.value = 1
+counter.value = 2
+counter.value = 3
 
-console.log('=== Without transaction ===')
-count = 0
-user.set({ name: 'Bob' })
-user.set({ age: 31 })
-user.set({ email: 'bob@example.com' })
-console.log(\`Updates: \${count}\`)
+sub.dispose()
+counter.value = 4 // No log — disposed
 
-console.log(\`\\n=== With transaction ===\`)
-count = 0
-user.transaction(() => {
-  user.set({ name: 'Charlie' })
-  user.set({ age: 25 })
-  user.set({ email: 'charlie@example.com' })
-})
-console.log(\`Updates: \${count}\`)
-console.log('Final:', user.get())`,
-      name: 'Transactions',
+// Store subscriptions
+const cart = store({ items: 0, total: 0 })
+const itemsSignal = cart.select((s) => s.items)
+
+watch(itemsSignal, (n) => console.log('Items changed:', n))
+
+cart.patch({ items: 2, total: 29.98 })
+cart.patch({ items: 3 })`,
+      name: 'Watch & Subscribe',
     },
   },
   toolkit: {
@@ -2908,212 +3211,586 @@ Object.entries(tests).forEach(([key, value]) => {
       name: 'String Validation',
     },
   },
+  virtualit: {
+    'basic-list': {
+      code: `import { Virtualizer } from '@vielzeug/virtualit'
+
+const ITEM_COUNT = 10_000
+const ROW_HEIGHT = 40
+
+// Build a scrollable container
+const container = document.createElement('div')
+container.style.cssText = 'height:400px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;position:relative;'
+document.body.appendChild(container)
+
+// Spacer div sets the total scroll height
+const spacer = document.createElement('div')
+const content = document.createElement('div')
+content.style.cssText = 'position:absolute;top:0;left:0;right:0;'
+container.appendChild(spacer)
+container.appendChild(content)
+
+const virtualizer = new Virtualizer({
+  count: ITEM_COUNT,
+  estimateSize: ROW_HEIGHT,
+  onChange: (items, totalSize) => {
+    spacer.style.height = totalSize + 'px'
+    content.innerHTML = ''
+    items.forEach(({ index, top, height }) => {
+      const row = document.createElement('div')
+      row.style.cssText = \`position:absolute;top:\${top}px;left:0;right:0;height:\${height}px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #f0f0f0;\`
+      row.textContent = \`Row #\${index + 1} of \${ITEM_COUNT}\`
+      content.appendChild(row)
+    })
+  },
+})
+
+virtualizer.attach(container)
+
+console.log('Virtualizer: rendering', ITEM_COUNT, 'rows efficiently')
+console.log('Total height:', virtualizer.getTotalSize() + 'px')
+console.log('Visible items:', virtualizer.getVirtualItems().length)`,
+      name: 'Virtualizer - Basic List',
+    },
+    'dynamic-count': {
+      code: `import { Virtualizer } from '@vielzeug/virtualit'
+
+let items = ['Alpha', 'Beta', 'Gamma']
+
+const container = document.createElement('div')
+container.style.cssText = 'height:200px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;position:relative;'
+document.body.appendChild(container)
+
+const spacer = document.createElement('div')
+const content = document.createElement('div')
+content.style.cssText = 'position:absolute;top:0;left:0;right:0;'
+container.appendChild(spacer)
+container.appendChild(content)
+
+const virtualizer = new Virtualizer({
+  count: items.length,
+  estimateSize: 44,
+  onChange: (virtualItems, totalSize) => {
+    spacer.style.height = totalSize + 'px'
+    content.innerHTML = ''
+    virtualItems.forEach(({ index, top, height }) => {
+      const row = document.createElement('div')
+      row.style.cssText = \`position:absolute;top:\${top}px;height:\${height}px;left:0;right:0;line-height:\${height}px;padding:0 16px;border-bottom:1px solid #f5f5f5;\`
+      row.textContent = items[index]
+      content.appendChild(row)
+    })
+  },
+})
+
+virtualizer.attach(container)
+console.log('Initial count:', virtualizer.count)
+
+// Dynamically add more items
+setTimeout(() => {
+  items = [...items, 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta']
+  virtualizer.count = items.length   // triggers re-render
+  console.log('Updated count:', virtualizer.count)
+}, 300)`,
+      name: 'Virtualizer - Dynamic Count',
+    },
+    'scroll-to-index': {
+      code: `import { Virtualizer } from '@vielzeug/virtualit'
+
+const ITEM_COUNT = 1_000
+
+const container = document.createElement('div')
+container.style.cssText = 'height:300px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;position:relative;'
+document.body.appendChild(container)
+
+const spacer = document.createElement('div')
+const content = document.createElement('div')
+content.style.cssText = 'position:absolute;top:0;left:0;right:0;'
+container.appendChild(spacer)
+container.appendChild(content)
+
+const virtualizer = new Virtualizer({
+  count: ITEM_COUNT,
+  estimateSize: 48,
+  onChange: (items, totalSize) => {
+    spacer.style.height = totalSize + 'px'
+    content.innerHTML = ''
+    items.forEach(({ index, top, height }) => {
+      const row = document.createElement('div')
+      row.style.cssText = \`position:absolute;top:\${top}px;left:0;right:0;height:\${height}px;line-height:\${height}px;padding:0 16px;border-bottom:1px solid #f5f5f5;\`
+      row.textContent = \`Item \${index}\`
+      content.appendChild(row)
+    })
+  },
+})
+
+virtualizer.attach(container)
+
+// Scroll to specific indexes
+setTimeout(() => {
+  console.log('Scrolling to index 500 (start align)')
+  virtualizer.scrollToIndex(500, { align: 'start', behavior: 'smooth' })
+}, 200)
+
+setTimeout(() => {
+  console.log('Scrolling to index 999 (end align)')
+  virtualizer.scrollToIndex(999, { align: 'end', behavior: 'smooth' })
+}, 800)
+
+setTimeout(() => {
+  console.log('Scrolling to index 250 (center align)')
+  virtualizer.scrollToIndex(250, { align: 'center', behavior: 'smooth' })
+}, 1400)`,
+      name: 'Virtualizer - scrollToIndex',
+    },
+    'variable-height': {
+      code: `import { Virtualizer } from '@vielzeug/virtualit'
+
+const items = Array.from({ length: 500 }, (_, i) => ({
+  id: i,
+  text: 'Item ' + i + ': ' + 'lorem ipsum '.repeat(Math.floor(Math.random() * 3) + 1).trim(),
+}))
+
+const container = document.createElement('div')
+container.style.cssText = 'height:400px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;position:relative;'
+document.body.appendChild(container)
+
+const spacer = document.createElement('div')
+const content = document.createElement('div')
+content.style.cssText = 'position:absolute;top:0;left:0;right:0;'
+container.appendChild(spacer)
+container.appendChild(content)
+
+const virtualizer = new Virtualizer({
+  count: items.length,
+  estimateSize: 60,   // estimate — actual height measured after render
+  onChange: (virtualItems, totalSize) => {
+    spacer.style.height = totalSize + 'px'
+    content.innerHTML = ''
+    virtualItems.forEach(({ index, top }) => {
+      const row = document.createElement('div')
+      row.style.cssText = \`position:absolute;top:\${top}px;left:0;right:0;padding:12px 16px;border-bottom:1px solid #f0f0f0;word-wrap:break-word;\`
+      row.textContent = items[index].text
+      content.appendChild(row)
+      // Report actual measured height back to the virtualizer
+      requestAnimationFrame(() => {
+        virtualizer.measureElement(index, row.offsetHeight)
+      })
+    })
+  },
+})
+
+virtualizer.attach(container)
+console.log('Variable height list with', items.length, 'items')`,
+      name: 'Virtualizer - Variable Height',
+    },
+  },
   wireit: {
     'basic-container': {
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
-// Create tokens
-const Config = createToken('Config')
-const Logger = createToken('Logger')
+// 1. Define typed tokens
+const ConfigToken  = createToken('AppConfig')
+const LoggerToken  = createToken('Logger')
 
-// Create container
+// 2. Create a root container
 const container = createContainer()
 
-// Register providers
+// 3. Register providers
 container
-  .registerValue(Config, { apiUrl: 'https://api.example.com' })
-  .registerValue(Logger, { log: (msg) => console.log('[LOG]', msg) })
+  .value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 })
+  .factory(LoggerToken, (config) => ({
+    log: (msg) => console.log(\`[LOG] [\${config.apiUrl}] \${msg}\`)
+  }), { deps: [ConfigToken] })
 
-// Resolve dependencies
-const config = container.get(Config)
-const logger = container.get(Logger)
+// 4. Resolve
+const config = container.get(ConfigToken)
+const logger  = container.get(LoggerToken)
 
-logger.log(\`Config loaded: \${config.apiUrl}\`)
-console.log('Container initialized!')`,
-      name: 'Basic Container - Value Provider',
+logger.log('Container initialized!')
+console.log('Timeout:', config.timeout, 'ms')
+
+// 5. Batch resolution
+const [cfg, log] = container.getAll([ConfigToken, LoggerToken])
+log.log(\`getAll works — apiUrl = \${cfg.apiUrl}\`)`,
+      name: 'Basic Container – value() & factory()',
     },
     'child-containers': {
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
-const GlobalConfig = createToken('GlobalConfig')
-const RequestId = createToken('RequestId')
+const ConfigToken   = createToken('Config')
+const RequestToken  = createToken('Request')
+const HandlerToken  = createToken('Handler')
 
-// Parent container
-const parent = createContainer()
-parent.registerValue(GlobalConfig, {
-  appName: 'MyApp',
-  version: '1.0.0'
-})
+// Root container — shared across all requests
+const root = createContainer()
+root
+  .value(ConfigToken, { appName: 'MyApp', version: '2.0' })
+  .factory(HandlerToken, (cfg, req) => ({
+    handle: () => \`[\${cfg.appName}] handling \${req.id} for \${req.user}\`
+  }), { deps: [ConfigToken, RequestToken] })
 
-// Child container inherits from parent
-const child1 = parent.createChild([
-  [RequestId, { useValue: 'req-001' }]
-])
+// Per-request child containers
+function processRequest(id, user) {
+  const child = root.createChild()
+  child.value(RequestToken, { id, user })
 
-const child2 = parent.createChild([
-  [RequestId, { useValue: 'req-002' }]
-])
+  // Child inherits root providers; RequestToken is local
+  const handler = child.get(HandlerToken)
+  return handler.handle()
+}
 
-// Both children have access to parent's providers
-const config1 = child1.get(GlobalConfig)
-const id1 = child1.get(RequestId)
-console.log(\`Child 1: \${config1.appName} - Request \${id1}\`)
+console.log(processRequest('req-001', 'alice'))
+console.log(processRequest('req-002', 'bob'))
 
-const config2 = child2.get(GlobalConfig)
-const id2 = child2.get(RequestId)
-console.log(\`Child 2: \${config2.appName} - Request \${id2}\`)`,
-      name: 'Child Containers - Hierarchical DI',
+// Parent does NOT see the child's RequestToken
+console.log('Root has RequestToken?', root.has(RequestToken))
+
+// Debug shows full hierarchy
+const { tokens } = root.createChild().debug()
+console.log('Tokens visible from a new child:', tokens)`,
+      name: 'Child Containers – inheritance & isolation',
     },
     'class-provider': {
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
-// Define tokens
-const Database = createToken('Database')
-const UserService = createToken('UserService')
+// Tokens
+const DbToken   = createToken('Database')
+const RepoToken = createToken('UserRepo')
+const SvcToken  = createToken('UserService')
 
-// Define classes
+// Classes
 class DatabaseImpl {
-  constructor() {
-    this.users = [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' }
-    ]
-  }
-  getUsers() { return this.users }
+  private users = [
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+  ]
+  getAll() { return this.users }
+  findById(id) { return this.users.find(u => u.id === id) }
+}
+
+class UserRepoImpl {
+  constructor(private db: DatabaseImpl) {}
+  findAll()           { return this.db.getAll() }
+  findById(id){ return this.db.findById(id) }
 }
 
 class UserServiceImpl {
-  constructor(db) {
-    this.db = db
-  }
-  getAllUsers() {
-    return this.db.getUsers()
-  }
+  constructor(private repo: UserRepoImpl) {}
+  listUsers()         { return this.repo.findAll() }
+  getUser(id) { return this.repo.findById(id) }
 }
 
-// Setup container
+// Wire everything with bind()
 const container = createContainer()
 container
-  .register(Database, { useClass: DatabaseImpl })
-  .register(UserService, {
-    useClass: UserServiceImpl,
-    deps: [Database]
-  })
+  .bind(DbToken,   DatabaseImpl)
+  .bind(RepoToken, UserRepoImpl,     { deps: [DbToken] })
+  .bind(SvcToken,  UserServiceImpl,  { deps: [RepoToken] })
 
-// Use the service
-const service = container.get(UserService)
-console.log('Users:', service.getAllUsers())`,
-      name: 'Class Provider - Dependency Injection',
-    },
-    'factory-provider': {
-      code: `import { createContainer, createToken } from '@vielzeug/wireit'
-
-const Config = createToken('Config')
-const Logger = createToken('Logger')
-
-const container = createContainer()
-
-// Register config
-container.registerValue(Config, {
-  environment: 'production',
-  logLevel: 'info'
-})
-
-// Register factory that uses config
-container.registerFactory(
-  Logger,
-  (config) => ({
-    info: (msg) => {
-      if (config.logLevel === 'info') {
-        console.log(\`[\${config.environment.toUpperCase()}] \${msg}\`)
-      }
-    }
-  }),
-  { deps: [Config], lifetime: 'singleton' }
-)
-
-const logger = container.get(Logger)
-logger.info('Application started!')
-logger.info('Factory provider working!')`,
-      name: 'Factory Provider - Custom Creation',
+// Resolve & use
+const svc = container.get(SvcToken)
+console.log('All users:', svc.listUsers())
+console.log('User #1:',   svc.getUser(1))`,
+      name: 'Class Provider – bind() with deps',
     },
     lifetimes: {
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
-const SingletonService = createToken('SingletonService')
-const TransientService = createToken('TransientService')
-
 let singletonCount = 0
 let transientCount = 0
+let scopedCount    = 0
+
+const SingletonT = createToken('Singleton')
+const TransientT = createToken('Transient')
+const ScopedT    = createToken('Scoped')
 
 const container = createContainer()
 
-// Singleton - created once
-container.registerFactory(
-  SingletonService,
-  () => ({ id: ++singletonCount }),
-  { lifetime: 'singleton' }
-)
+container
+  .factory(SingletonT, () => ({ id: ++singletonCount }))                       // singleton (default)
+  .factory(TransientT, () => ({ id: ++transientCount }), { lifetime: 'transient' })
+  .factory(ScopedT,    () => ({ id: ++scopedCount }),    { lifetime: 'scoped' })
 
-// Transient - created every time
-container.registerFactory(
-  TransientService,
-  () => ({ id: ++transientCount }),
-  { lifetime: 'transient' }
-)
+// Singleton — always the same instance
+const s1 = container.get(SingletonT)
+const s2 = container.get(SingletonT)
+console.log('Singleton ids:', s1.id, s2.id, '— same?', s1 === s2)
 
-// Get singleton multiple times
-const s1 = container.get(SingletonService)
-const s2 = container.get(SingletonService)
-console.log('Singleton instances:', s1.id, s2.id) // Same ID
+// Transient — new instance every call
+const t1 = container.get(TransientT)
+const t2 = container.get(TransientT)
+console.log('Transient ids:', t1.id, t2.id, '— same?', t1 === t2)
 
-// Get transient multiple times
-const t1 = container.get(TransientService)
-const t2 = container.get(TransientService)
-console.log('Transient instances:', t1.id, t2.id) // Different IDs`,
-      name: 'Lifetimes - Singleton vs Transient',
+// Scoped — one instance per child container
+const child1 = container.createChild()
+const child2 = container.createChild()
+const sc1a = child1.get(ScopedT)
+const sc1b = child1.get(ScopedT)  // same(within child1)
+const sc2  = child2.get(ScopedT)  // different from sc1a (different child)
+console.log('Scoped in child1:', sc1a.id, sc1b.id, '— same?', sc1a === sc1b)
+console.log('Scoped child1 vs child2:', sc1a.id, sc2.id, '— same?', sc1a === sc2)`,
+      name: 'Lifetimes – singleton, transient, scoped',
     },
     'scoped-execution': {
       code: `import { createContainer, createToken } from '@vielzeug/wireit'
 
-const RequestId = createToken('RequestId')
-const RequestHandler = createToken('RequestHandler')
-
-class Handler {
-  constructor(requestId) {
-    this.requestId = requestId
-  }
-  handle() {
-    return \`Handled request: \${this.requestId}\`
-  }
-}
+const RequestIdToken = createToken('RequestId')
+const UserToken      = createToken('User')
+const HandlerToken   = createToken('Handler')
 
 const container = createContainer()
-container.register(RequestHandler, {
-  useClass: Handler,
-  deps: [RequestId]
-})
 
-// Simulate multiple requests
-async function handleRequest(id) {
-  return container.runInScope(
-    (scope) => {
-      const handler = scope.get(RequestHandler)
-      return handler.handle()
-    },
-    [[RequestId, { useValue: id }]]
-  )
+container.factory(HandlerToken, async (id, user: { name: string }) => ({
+  process: async () => {
+    await new Promise(r => setTimeout(r, 10))  // simulate async work
+    return \`Request \${id} processed for \${user.name}\`
+  }
+}), { deps: [RequestIdToken, UserToken] })
+
+// runInScope() creates a child, runs fn, then disposes the child automatically
+async function handleRequest(id, user: { name: string }) {
+  return container.runInScope(async (scope) => {
+    scope.value(RequestIdToken, id)
+    scope.value(UserToken, user)
+
+    const handler = await scope.getAsync(HandlerToken)
+    return handler.process()
+  })
 }
 
-// Process multiple requests
+// Simulate concurrent requests — each gets its own isolated scope
 const results = await Promise.all([
-  handleRequest('request-1'),
-  handleRequest('request-2'),
-  handleRequest('request-3')
+  handleRequest('req-1', { name: 'Alice' }),
+  handleRequest('req-2', { name: 'Bob' }),
+  handleRequest('req-3', { name: 'Carol' }),
 ])
 
-console.log('Results:', results)`,
-      name: 'Scoped Execution - Request Scoping',
+results.forEach(r => console.log(r))`,
+      name: 'Scoped Execution – runInScope()',
+    },
+    testing: {
+      code: `import { createContainer, createToken, createTestContainer } from '@vielzeug/wireit'
+
+const DbToken  = createToken('Database')
+const SvcToken = createToken('UserService')
+
+// Production container
+const appContainer = createContainer()
+appContainer.factory(DbToken, () => ({
+  users: { findAll: () => [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }] }
+}))
+appContainer.factory(SvcToken, (db) => ({
+  listUsers: () => db.users.findAll()
+}), { deps: [DbToken] })
+
+// ── createTestContainer ───────────────────────────────────────────────────────
+const { container, dispose } = createTestContainer(appContainer)
+
+// Override only the parts you need
+const fakeDb = { users: { findAll: () => [{ id: 99, name: 'TestUser' }] } }
+container.value(DbToken, fakeDb, { overwrite: true })
+
+const svc = container.get(SvcToken)
+console.log('Test container result:', svc.listUsers())
+
+await dispose()  // cleans up without touching appContainer
+
+// ── container.mock() ─────────────────────────────────────────────────────────
+const brokenDb = { users: { findAll: () => { throw new Error('DB down') } } }
+
+try {
+  await appContainer.mock(DbToken, brokenDb, async () => {
+    appContainer.get(SvcToken).listUsers()
+  })
+} catch (e) {
+  console.log('Caught inside mock():', e.message)
+}
+
+// DbToken is fully restored after mock()
+console.log('After mock(), production users:', appContainer.get(SvcToken).listUsers())
+
+// ── snapshot / restore ────────────────────────────────────────────────────────
+const snap = appContainer.snapshot()
+appContainer.value(DbToken, fakeDb, { overwrite: true })
+console.log('After override:', appContainer.get(SvcToken).listUsers())
+
+appContainer.restore(snap)
+console.log('After restore:', appContainer.get(SvcToken).listUsers())`,
+      name: 'Testing – mock(), createTestContainer(), snapshot()',
+    },
+  },
+  workit: {
+    'worker-abort': {
+      code: `import { createWorker } from '@vielzeug/workit'
+
+// Worker with a slow task
+const worker = createWorker((input) => {
+  // Busy-wait to simulate long processing
+  const end = Date.now() + input.durationMs
+  while (Date.now() < end) { /* busy wait */ }
+  return 'completed after ' + input.durationMs + 'ms'
+}, { size: 2 })
+
+async function run() {
+  // Run a short task normally
+  const r1 = await worker.run({ durationMs: 10 })
+  console.log('Short task:', r1)
+
+  // Abort a queued (not yet started) task
+  const controller = new AbortController()
+
+  // Queue multiple tasks to fill the pool
+  const p1 = worker.run({ durationMs: 300 })
+  const p2 = worker.run({ durationMs: 300 })
+  // This one will be queued and can be aborted before it starts
+  const p3 = worker.run({ durationMs: 100 }, { signal: controller.signal })
+    .then(r => console.log('p3 completed:', r))
+    .catch(e => console.log('p3 aborted:', e.message))
+
+  // Abort p3 before it gets a slot
+  setTimeout(() => controller.abort(), 50)
+
+  await Promise.allSettled([p1, p2, p3])
+
+  // ES2025 'using' keyword for automatic cleanup
+  {
+    const w2 = createWorker((n) => n * n)
+    const sq = await w2.run(7)
+    console.log('7² =', sq)
+  } // w2.dispose() called automatically here
+
+  worker.dispose()
+}
+
+run()`,
+      name: 'createWorker - AbortSignal & using',
+    },
+    'worker-basic': {
+      code: `import { createWorker } from '@vielzeug/workit'
+
+// IMPORTANT: The task function CANNOT reference outer-scope variables.
+// It is serialized via .toString() and runs in an isolated Worker scope.
+const worker = createWorker((input) => {
+  // This runs in a Web Worker — no access to outer variables
+  const { numbers } = input
+  return numbers.reduce((sum, n) => sum + n, 0)
+})
+
+async function run() {
+  console.log('Worker native:', worker.isNative)
+  console.log('Worker size:', worker.size)
+  console.log('Worker status:', worker.status)
+
+  const result = await worker.run({ numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })
+  console.log('Sum of 1-10:', result)
+
+  const result2 = await worker.run({ numbers: Array.from({ length: 100 }, (_, i) => i + 1) })
+  console.log('Sum of 1-100:', result2)
+
+  worker.dispose()
+  console.log('Worker status after dispose:', worker.status)
+}
+
+run()`,
+      name: 'createWorker - Basic',
+    },
+    'worker-errors': {
+      code: `import { createWorker, TaskError, TaskTimeoutError, TerminatedError } from '@vielzeug/workit'
+
+const worker = createWorker((input) => {
+  // Self-contained — no outer scope access
+  if (input.shouldThrow) {
+    throw new Error('Task failed: ' + input.reason)
+  }
+  return 'success: ' + input.value
+}, {
+  timeout: 200,  // fail tasks that take over 200ms
+})
+
+const workerSlow = createWorker((input) => {
+  // Simulate a slow task (busy loop, since setTimeout won't block the Worker)
+  const end = Date.now() + 1000
+  while (Date.now() < end) { /* busy wait */ }
+  return 'done'
+}, {
+  timeout: 100,
+})
+
+async function run() {
+  // Normal success
+  const ok = await worker.run({ shouldThrow: false, value: 42 })
+  console.log('Success:', ok)
+
+  // Task throws → TaskError
+  try {
+    await worker.run({ shouldThrow: true, reason: 'bad input' })
+  } catch (err) {
+    if (err instanceof TaskError) {
+      console.log('Caught TaskError:', err.message)
+    }
+  }
+
+  // Timeout → TaskTimeoutError
+  try {
+    await workerSlow.run({})
+  } catch (err) {
+    if (err instanceof TaskTimeoutError) {
+      console.log('Caught TaskTimeoutError:', err.message)
+    }
+  }
+
+  // Dispose then run → TerminatedError
+  worker.dispose()
+  try {
+    await worker.run({ shouldThrow: false, value: 0 })
+  } catch (err) {
+    if (err instanceof TerminatedError) {
+      console.log('Caught TerminatedError:', err.message)
+    }
+  }
+
+  workerSlow.dispose()
+}
+
+run()`,
+      name: 'createWorker - Error Handling',
+    },
+    'worker-pool': {
+      code: `import { createWorker } from '@vielzeug/workit'
+
+// Create a pool of 3 worker threads for parallel processing
+const pool = createWorker((input) => {
+  // Self-contained task — no outer-scope references allowed
+  const { data, chunkId } = input
+  // Simulate CPU-intensive work
+  let result = 0
+  for (let i = 0; i < data.length; i++) {
+    result += Math.sqrt(data[i]) * Math.PI
+  }
+  return { chunkId, result: +result.toFixed(4) }
+}, {
+  size: 3,        // 3 concurrent worker threads
+  timeout: 5000,  // abort tasks after 5 seconds
+})
+
+async function processChunks() {
+  console.log('Pool size:', pool.size, '| Native:', pool.isNative)
+
+  // These run in parallel across the worker pool
+  const chunks = [
+    { chunkId: 'A', data: Array.from({ length: 1000 }, (_, i) => i) },
+    { chunkId: 'B', data: Array.from({ length: 1000 }, (_, i) => i * 2) },
+    { chunkId: 'C', data: Array.from({ length: 1000 }, (_, i) => i * 3) },
+  ]
+
+  const results = await Promise.all(chunks.map(c => pool.run(c)))
+  results.forEach(r => console.log('Chunk', r.chunkId + ':', r.result))
+
+  pool.dispose()
+}
+
+processChunks()`,
+      name: 'createWorker - Pool',
     },
   },
 };

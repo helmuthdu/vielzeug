@@ -1,7 +1,6 @@
 import {
   aria,
   createId,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -15,156 +14,28 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  BitSwitchEvents,
-  CheckableProps,
-  DisablableProps,
-  FormValidityMethods,
-  SizableProps,
-  ThemableProps,
-} from '../../types';
+import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
-import { useToggleField } from '../_common/use-toggle-field';
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_width: var(--switch-width, var(--size-10));
-      --_height: var(--switch-height, var(--size-5));
-      --_padding: var(--size-0-5);
-      --_thumb-size: calc(var(--_height) - var(--_padding) * 2);
-      --_track-bg: var(--switch-track, var(--color-contrast-300));
-      --_thumb-bg: var(--switch-thumb, white);
-      --_font-size: var(--switch-font-size, var(--text-sm));
-
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--_gap, var(--size-2-5));
-      min-height: var(--size-11);
-      cursor: pointer;
-      user-select: none;
-      touch-action: manipulation;
-    }
-
-    /* ========================================
-       Track & Thumb
-       ======================================== */
-
-    .switch-wrapper {
-      display: flex;
-      flex-shrink: 0;
-    }
-
-    .switch-track {
-      position: relative;
-      width: var(--_width);
-      height: var(--_height);
-      background: var(--_track-bg);
-      border-radius: var(--rounded-full);
-      transition:
-        background var(--transition-slower),
-        box-shadow var(--transition-normal);
-      will-change: background;
-    }
-
-    .switch-thumb {
-      position: absolute;
-      top: var(--_padding);
-      inset-inline-start: var(--_padding);
-      width: var(--_thumb-size);
-      height: var(--_thumb-size);
-      background: var(--_thumb-bg);
-      border-radius: var(--rounded-full);
-      box-shadow: var(--shadow-sm);
-      transition:
-        transform var(--transition-spring),
-        box-shadow var(--transition-normal);
-      will-change: transform;
-    }
-
-    /* ========================================
-       Focus State
-       ======================================== */
-
-    input:focus-visible ~ .switch-track {
-      box-shadow: var(--_focus-shadow);
-    }
-
-    /* ========================================
-       Label
-       ======================================== */
-
-    .label {
-      font-size: var(--_font-size);
-      color: var(--color-contrast);
-    }
-  }
-
-  @layer buildit.overrides {
-    /* Map theme variables to switch-specific variables */
-    :host {
-      --_active-bg: var(--switch-bg, var(--_theme-base));
-      --_focus-shadow: var(--_theme-shadow);
-    }
-
-    /* ========================================
-       Checked State
-       ======================================== */
-
-    :host([checked]) .switch-track {
-      background: var(--_active-bg);
-    }
-
-    :host([checked]) .switch-thumb {
-      transform: translateX(calc(var(--_width) - var(--_height)));
-    }
-
-    /* In RTL the thumb starts at the inline-end edge; slide left to reach inline-start */
-    :host(:dir(rtl)[checked]) .switch-thumb {
-      transform: translateX(calc(-1 * (var(--_width) - var(--_height))));
-    }
-
-    /* ========================================
-       Hover & Active States
-       ======================================== */
-
-    :host(:hover:not([disabled]):not([checked])) .switch-track {
-      background: var(--color-contrast-400);
-    }
-
-    :host(:hover:not([disabled])[checked]) .switch-track {
-      filter: brightness(1.1);
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline-start: calc(var(--_width) + var(--size-2-5));
-      width: 100%;
-    }
-
-    .helper-text[role='alert'] {
-      color: var(--color-error);
-    }
-  }
-`;
+import { mountFormContextSync } from '../../utils/use-text-field';
+import { useToggleField } from '../../utils/use-toggle-field';
+import componentStyles from './switch.css?inline';
 
 /** Switch component properties */
-export interface SwitchProps extends CheckableProps, ThemableProps, SizableProps, DisablableProps {
-  /** Helper text displayed below the switch */
-  helper?: string;
-  /** Error message (marks field as invalid) */
-  error?: string;
-}
+
+export type BitSwitchEvents = {
+  change: { checked: boolean };
+};
+
+export type BitSwitchProps = CheckableProps &
+  ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Error message (marks field as invalid) */
+    error?: string;
+    /** Helper text displayed below the switch */
+    helper?: string;
+  };
 
 /**
  * A toggle switch component for binary on/off states.
@@ -201,12 +72,12 @@ export interface SwitchProps extends CheckableProps, ThemableProps, SizableProps
  * <bit-switch size="lg">Large toggle</bit-switch>
  * ```
  */
-export const TAG = define(
+export const SWITCH_TAG = define(
   'bit-switch',
   ({ host }) => {
     const slots = defineSlots();
-    const emit = defineEmits<{ change: { checked: boolean } }>();
-    const props = defineProps<SwitchProps>({
+    const emit = defineEmits<BitSwitchEvents>();
+    const props = defineProps<BitSwitchProps>({
       checked: { default: false },
       color: { default: undefined },
       disabled: { default: false },
@@ -327,9 +198,3 @@ export const TAG = define(
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-switch': HTMLElement & SwitchProps & FormValidityMethods & AddEventListeners<BitSwitchEvents>;
-  }
-}

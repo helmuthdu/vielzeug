@@ -3,7 +3,6 @@ import type { Placement } from '@vielzeug/floatit';
 import {
   computed,
   createId,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -14,8 +13,6 @@ import {
   watch,
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-
-import type { AddEventListeners } from '../../types';
 
 import { reducedMotionMixin } from '../../styles';
 
@@ -34,73 +31,30 @@ function normalizeTriggers(value: unknown): PopoverTrigger[] {
   return parsed.length > 0 ? parsed : ['click'];
 }
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: inline-block;
-      position: relative;
-    }
+import styles from './popover.css?inline';
 
-    .panel {
-      /* Popover UA resets */
-      inset: unset;
-      margin: 0;
-      padding: 0;
-      border: var(--border) solid var(--color-contrast-200);
-      position: fixed;
-      background: var(--color-canvas);
-      border-radius: var(--rounded-lg);
-      box-shadow: var(--shadow-lg);
-      min-width: var(--popover-min-width, 12rem);
-      max-width: var(--popover-max-width, 24rem);
-      max-height: var(--popover-max-height, min(70vh, 32rem));
-      overflow: auto;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      box-sizing: border-box;
-      /* Hidden by default */
-      opacity: 0;
-      transition: var(
-        --_motion-transition,
-        opacity var(--transition-fast),
-        display var(--transition-fast) allow-discrete,
-        overlay var(--transition-fast) allow-discrete
-      );
-    }
-
-    .panel:popover-open {
-      opacity: 1;
-
-      @starting-style {
-        opacity: 0;
-      }
-    }
-  }
-`;
-
-/** Popover component events */
-export interface BitPopoverEvents {
-  /** Emitted when the popover opens */
-  open: CustomEvent<void>;
+export type BitPopoverEvents = {
   /** Emitted when the popover closes */
-  close: CustomEvent<void>;
-}
+  close: undefined;
+  /** Emitted when the popover opens */
+  open: undefined;
+};
 
 /** Popover component properties */
-export interface PopoverProps {
-  /** Preferred placement relative to the trigger */
-  placement?: Placement;
-  /** Which trigger(s) open/close the popover — comma-separated */
-  trigger?: string;
-  /** Controlled open state */
-  open?: boolean;
-  /** Gap between trigger and panel in px */
-  offset?: number;
+export type BitPopoverProps = {
   /** Disable the popover */
   disabled?: boolean;
   /** Accessible label for the panel */
   label?: string;
-}
+  /** Gap between trigger and panel in px */
+  offset?: number;
+  /** Controlled open state */
+  open?: boolean;
+  /** Preferred placement relative to the trigger */
+  placement?: Placement;
+  /** Which trigger(s) open/close the popover — comma-separated */
+  trigger?: string;
+};
 
 /**
  * A floating informational or interactive panel anchored to a trigger element.
@@ -133,8 +87,8 @@ export interface PopoverProps {
  * </bit-popover>
  * ```
  */
-export const TAG = define('bit-popover', ({ host }) => {
-  const props = defineProps<PopoverProps>({
+export const POPOVER_TAG = define('bit-popover', ({ host }) => {
+  const props = defineProps<BitPopoverProps>({
     disabled: { default: false },
     label: { default: undefined },
     offset: { default: PANEL_OFFSET },
@@ -143,10 +97,7 @@ export const TAG = define('bit-popover', ({ host }) => {
     trigger: { default: 'click' },
   });
 
-  const emit = defineEmits<{
-    close: undefined;
-    open: undefined;
-  }>();
+  const emit = defineEmits<BitPopoverEvents>();
 
   const visible = signal(false);
   const panelId = createId('popover');
@@ -361,9 +312,3 @@ export const TAG = define('bit-popover', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-popover': HTMLElement & PopoverProps & AddEventListeners<BitPopoverEvents>;
-  }
-}

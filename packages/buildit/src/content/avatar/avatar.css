@@ -1,0 +1,105 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--avatar-bg, var(--_theme-backdrop, var(--color-contrast-200)));
+    --_color: var(--avatar-color, var(--_theme-base, var(--color-contrast-700)));
+    --_radius: var(--avatar-radius, var(--rounded-full));
+    --_font-weight: var(--avatar-font-weight, var(--font-semibold));
+    --_border: var(--avatar-border, none);
+    --_border-color: var(--avatar-border-color, var(--color-canvas));
+    --_size: var(--avatar-size, var(--size-10));
+    --_font-size: var(--avatar-font-size, var(--text-sm));
+
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_size);
+    height: var(--_size);
+    overflow: hidden;
+    font-size: var(--_font-size);
+    font-weight: var(--_font-weight);
+    line-height: 1;
+    color: var(--_color);
+    text-transform: uppercase;
+    user-select: none;
+    background: var(--_bg);
+    border: var(--_border);
+    border-color: var(--_border-color);
+    border-radius: var(--_radius);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  img[hidden] {
+    display: none;
+  }
+
+  .initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .icon-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--_color);
+    opacity: 0.6;
+  }
+
+  .status {
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: 0;
+    width: 0.75em;
+    height: 0.75em;
+    border: 2px solid var(--_border-color, var(--color-canvas));
+    border-radius: var(--rounded-full);
+  }
+
+  .status[data-status='online'] {
+    background: var(--color-success);
+  }
+
+  .status[data-status='offline'] {
+    background: var(--color-contrast-400);
+  }
+
+  .status[data-status='busy'] {
+    background: var(--color-error);
+  }
+
+  .status[data-status='away'] {
+    background: var(--color-warning);
+  }
+}
+
+/* forcedColorsMixin targets :host; avatar needs the border on .avatar (different geometry),
+     so forced-color rules are kept inline and unlayered to match mixin convention. */
+@media (forced-colors: active) {
+  .avatar {
+    forced-color-adjust: none;
+    border: 1px solid ButtonText;
+  }
+
+  .status {
+    background: Highlight;
+    border: 2px solid ButtonText;
+  }
+}

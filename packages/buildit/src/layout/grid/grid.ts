@@ -1,4 +1,4 @@
-import { css, define, defineProps, effect, html, observeResize, onMount } from '@vielzeug/craftit';
+import { define, defineProps, effect, html, observeResize, onMount } from '@vielzeug/craftit';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
@@ -31,139 +31,53 @@ const BP_FALLBACKS: Record<string, number> = {
   '--size-screen-xl': 1280,
 };
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_cols: var(--grid-cols, repeat(auto-fit, minmax(250px, 1fr)));
-      --_rows: var(--grid-rows, auto);
-      --_gap: var(--grid-gap, var(--size-4));
-      --_row-gap: var(--grid-row-gap, var(--_gap));
-      --_col-gap: var(--grid-col-gap, var(--_gap));
-
-      display: grid;
-      grid-template-columns: var(--_cols);
-      grid-template-rows: var(--_rows);
-      row-gap: var(--_row-gap);
-      column-gap: var(--_col-gap);
-      grid-auto-flow: row;
-    }
-
-    :host([gap='none']) {
-      --_row-gap: 0;
-      --_col-gap: 0;
-    }
-    :host([gap='xs']) {
-      --_row-gap: var(--size-1);
-      --_col-gap: var(--size-1);
-    }
-    :host([gap='sm']) {
-      --_row-gap: var(--size-2);
-      --_col-gap: var(--size-2);
-    }
-    :host([gap='md']) {
-      --_row-gap: var(--size-4);
-      --_col-gap: var(--size-4);
-    }
-    :host([gap='lg']) {
-      --_row-gap: var(--size-6);
-      --_col-gap: var(--size-6);
-    }
-    :host([gap='xl']) {
-      --_row-gap: var(--size-8);
-      --_col-gap: var(--size-8);
-    }
-    :host([gap='2xl']) {
-      --_row-gap: var(--size-12);
-      --_col-gap: var(--size-12);
-    }
-
-    :host([align='start']) {
-      align-items: start;
-    }
-    :host([align='center']) {
-      align-items: center;
-    }
-    :host([align='end']) {
-      align-items: end;
-    }
-    :host([align='stretch']) {
-      align-items: stretch;
-    }
-    :host([align='baseline']) {
-      align-items: baseline;
-    }
-
-    :host([justify='start']) {
-      justify-items: start;
-    }
-    :host([justify='center']) {
-      justify-items: center;
-    }
-    :host([justify='end']) {
-      justify-items: end;
-    }
-    :host([justify='stretch']) {
-      justify-items: stretch;
-    }
-
-    :host([flow='row']) {
-      grid-auto-flow: row;
-    }
-    :host([flow='column']) {
-      grid-auto-flow: column;
-    }
-    :host([flow='row-dense']) {
-      grid-auto-flow: row dense;
-    }
-    :host([flow='column-dense']) {
-      grid-auto-flow: column dense;
-    }
-  }
-`;
+import styles from './grid.css?inline';
 
 type ColCount = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
 
 /** Grid component properties */
-export interface GridProps {
-  /** Number of columns: '1'-'12' | 'auto' */
-  cols?: ColCount;
-  /** Columns at sm breakpoint (≥640px) */
-  colsSm?: ColCount;
-  /** Columns at md breakpoint (≥768px) */
-  colsMd?: ColCount;
-  /** Columns at lg breakpoint (≥1024px) */
-  colsLg?: ColCount;
-  /** Columns at xl breakpoint (≥1280px) */
-  colsXl?: ColCount;
-  /** Columns at 2xl breakpoint (≥1536px) */
-  cols2xl?: ColCount;
-  /** Number of rows: '1'-'12' | 'auto' */
-  rows?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
-  /** Gap between items */
-  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+export type BitGridProps = {
   /** Align items vertically */
   align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
-  /** Justify items horizontally */
-  justify?: 'start' | 'center' | 'end' | 'stretch';
-  /** Grid auto flow direction */
-  flow?: 'row' | 'column' | 'row-dense' | 'column-dense';
-  /** Use auto-fit responsive columns */
-  responsive?: boolean;
-  /** Minimum column width for responsive mode (default: 250px) */
-  minColWidth?: string;
   /** CSS grid-template-areas value */
   areas?: string;
-  /** grid-template-areas at sm breakpoint (≥640px) */
-  areasSm?: string;
-  /** grid-template-areas at md breakpoint (≥768px) */
-  areasMd?: string;
-  /** grid-template-areas at lg breakpoint (≥1024px) */
-  areasLg?: string;
-  /** grid-template-areas at xl breakpoint (≥1280px) */
-  areasXl?: string;
   /** grid-template-areas at 2xl breakpoint (≥1536px) */
   areas2xl?: string;
-}
+  /** grid-template-areas at lg breakpoint (≥1024px) */
+  areasLg?: string;
+  /** grid-template-areas at md breakpoint (≥768px) */
+  areasMd?: string;
+  /** grid-template-areas at sm breakpoint (≥640px) */
+  areasSm?: string;
+  /** grid-template-areas at xl breakpoint (≥1280px) */
+  areasXl?: string;
+  /** Number of columns: '1'-'12' | 'auto' */
+  cols?: ColCount;
+  /** Columns at 2xl breakpoint (≥1536px) */
+  cols2xl?: ColCount;
+  /** Columns at lg breakpoint (≥1024px) */
+  colsLg?: ColCount;
+  /** Columns at md breakpoint (≥768px) */
+  colsMd?: ColCount;
+  /** Columns at sm breakpoint (≥640px) */
+  colsSm?: ColCount;
+  /** Columns at xl breakpoint (≥1280px) */
+  colsXl?: ColCount;
+  /** Grid auto flow direction */
+  flow?: 'row' | 'column' | 'row-dense' | 'column-dense';
+  /** Stretch the grid to fill its container's full width */
+  fullwidth?: boolean;
+  /** Gap between items */
+  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** Justify items horizontally */
+  justify?: 'start' | 'center' | 'end' | 'stretch';
+  /** Minimum column width for responsive mode (default: 250px) */
+  minColWidth?: string;
+  /** Use auto-fit responsive columns */
+  responsive?: boolean;
+  /** Number of rows: '1'-'12' | 'auto' */
+  rows?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+};
 
 /**
  * bit-grid — Flexible grid layout with responsive column control.
@@ -188,6 +102,7 @@ export interface GridProps {
  * @attr {string} flow - grid-auto-flow: 'row' | 'column' | 'row-dense' | 'column-dense'
  * @attr {boolean} responsive - Enables auto-fit columns without a fixed count
  * @attr {string} min-col-width - Min column width for responsive mode (default: 250px)
+ * @attr {boolean} fullwidth - Stretch the grid to fill its container's full width
  * @attr {string} areas - CSS grid-template-areas value (e.g. "'header header' 'nav main'")
  * @attr {string} areas-sm - grid-template-areas when width ≥ 640px
  * @attr {string} areas-md - grid-template-areas when width ≥ 768px
@@ -222,8 +137,8 @@ export interface GridProps {
  *   <main style="grid-area: main">Main</main>
  * </bit-grid>
  */
-export const TAG = define('bit-grid', ({ host }) => {
-  const props = defineProps<GridProps>({
+export const GRID_TAG = define('bit-grid', ({ host }) => {
+  const props = defineProps<BitGridProps>({
     align: { default: undefined },
     areas: { default: '' },
     areas2xl: { default: '' },
@@ -238,6 +153,7 @@ export const TAG = define('bit-grid', ({ host }) => {
     colsSm: { default: undefined },
     colsXl: { default: undefined },
     flow: { default: undefined },
+    fullwidth: { default: false },
     gap: { default: undefined },
     justify: { default: undefined },
     minColWidth: { default: '' },
@@ -343,9 +259,3 @@ export const TAG = define('bit-grid', ({ host }) => {
     template: html`<slot></slot>`,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-grid': HTMLElement & GridProps;
-  }
-}

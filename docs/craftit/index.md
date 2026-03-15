@@ -34,7 +34,7 @@ yarn add @vielzeug/craftit
 ```ts
 import { define, signal, html, css } from '@vielzeug/craftit';
 
-define('my-counter', () => {
+define('my-counter', ({ host }) => {
   const count = signal(0);
   const styles = css`
     button {
@@ -44,7 +44,7 @@ define('my-counter', () => {
   `;
 
   return {
-    template: html` <button @click=${() => count.value++}>Count: ${count}</button> `,
+    template: html`<button @click=${() => count.value++}>Count: ${count}</button>`,
     styles: [styles],
   };
 });
@@ -58,14 +58,18 @@ define('my-counter', () => {
 ## Features
 
 - **Fine-grained reactivity** — Re-exports all signals from [@vielzeug/stateit](/stateit/): `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
-- **Template literals** — `html\`...\`` tagged template for declarative, reactive DOM updates
-- **CSS-in-JS** — `css\`...\`` with automatic shadow DOM scoping and style encapsulation
-- **Lifecycle hooks** — `onMount()`, `onUnmount()`, `onUpdated()`, `onCleanup()` for component lifecycle management
-- **Props** — `prop()` and `defineProps()` for reactive attribute bindings with type safety
-- **Slots & Emits** — `defineSlots()` and `defineEmits()` for composable component APIs
+- **Template literals** — `html\`...\``tagged template for declarative, reactive DOM updates with`:attr`, `?bool`, `@event`, `ref=`, and `.prop` bindings
+- **CSS-in-JS** — `css\`...\``with shadow DOM scoping;`css.theme()` for design-token-based light/dark theming
+- **Lifecycle hooks** — `onMount()`, `onUnmount()`, `onRendered()`, `onCleanup()`, `onError()` for full component lifecycle control
+- **Props** — `prop()` and `defineProps()` for reactive attribute bindings with auto type-coercion, reflection, and validation
+- **Slots & Emits** — `defineSlots()` (reactive slot presence), `onSlotChange()`, and `defineEmits()` for composable component APIs
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
-- **Form-associated** — `field()` for custom form elements with native validation support
-- **Context/DI** — `provide()` and `inject()` for dependency injection across component trees
+- **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
+- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
+- **Accessibility** — `aria()` for reactive ARIA attributes, `createId()`, `createFormIds()`, `useFocusTrap()`
+- **Observers** — `observeResize()`, `observeIntersection()`, `observeMedia()` return reactive signals
+- **Async rendering** — `suspense()` manages loading/error/retry for async data fetching
+- **Multi-branch conditionals** — `match()` replaces nested `html.when()` chains
 - **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
 - **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
 

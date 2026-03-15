@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/fetchit",
+      "comment": "Major release: HTTP client (createApi) with configurable base URL, timeout, deduplication, and composable interceptors; query client (createQuery) with staleTime/gcTime caching, prefetch, invalidation, per-key subscriptions, and AbortSignal cancellation; standalone mutation helper (createMutation) with retries, retry delay, and onSuccess/onError/onSettled callbacks; typed HttpError with status, data, isTimeout, and isAborted properties; [Symbol.dispose]() support on all clients",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/fetchit"
+}

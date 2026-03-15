@@ -1,0 +1,334 @@
+@layer buildit.base {
+  :host {
+    --_height: var(--progress-height, var(--size-2, 0.5rem));
+    --_radius: var(--progress-radius, var(--rounded-full, 9999px));
+    --_circle-size: var(--progress-circle-size, 6rem);
+    --_circular-label-size: var(--progress-circular-label-size, var(--text-xl, 1.25rem));
+    --_circular-title-size: var(--progress-circular-title-size, var(--text-xs, 0.75rem));
+
+    display: block;
+
+    /* Stretch to fill the parent container (matches native <progress> behaviour).
+         The host's width is set against its parent, so % widths inside shadow DOM
+         (.track, .fill) resolve correctly in any flex/grid/block context. */
+    width: 100%;
+  }
+
+  /* ========================================
+       Linear Bar
+       ======================================== */
+
+  .track {
+    width: 100%;
+    height: var(--_height);
+    overflow: hidden;
+
+    /* contrast-300 (88% lightness) gives a visible groove in light mode */
+    background: var(--progress-track-bg, var(--color-contrast-300, #ddd));
+    border-radius: var(--_radius);
+  }
+
+  .fill {
+    width: var(--_percent, 0%);
+    height: 100%;
+    background: var(--progress-fill, var(--_theme-base, #3b82f6));
+    border-radius: inherit;
+    transform-origin: left;
+    transition: var(--_motion-transition, width var(--transition-normal));
+  }
+
+  /* In RTL the fill grows from the inline-end (physical right) side */
+  :host(:dir(rtl)) .fill {
+    transform-origin: right;
+  }
+
+  /* Indeterminate: sliding bar */
+  @keyframes bit-progress-slide {
+    0% {
+      transform: translateX(-150%) scaleX(0.6);
+    }
+
+    50% {
+      transform: translateX(50%) scaleX(1);
+    }
+
+    100% {
+      transform: translateX(300%) scaleX(0.6);
+    }
+  }
+
+  :host([indeterminate]) .fill {
+    width: 40%;
+    animation: var(--_motion-animation, bit-progress-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+  }
+
+  /* In RTL the indeterminate bar sweeps right-to-left */
+  :host(:dir(rtl)[indeterminate]) .fill {
+    animation-direction: reverse;
+  }
+
+  /* ========================================
+       Wrapper / Label / Title / Floating label
+       ======================================== */
+
+  /* Flex-column shell for the linear variant */
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--progress-label-gap, var(--space-1, 0.25rem));
+    width: 100%;
+  }
+
+  /* Header row ─ visible only when [title] is present */
+  .header {
+    display: none;
+    gap: var(--space-2, 0.5rem);
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  :host([title]) .header {
+    display: flex;
+  }
+
+  .progress-title {
+    font-size: var(--text-sm, 0.875rem);
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1.25;
+    color: var(--progress-title-color, currentColor);
+  }
+
+  /* Label inside the header ─ only when both [title] and [label] are set */
+  .header-label {
+    display: none;
+  }
+
+  :host([title][label]) .header-label {
+    display: inline;
+  }
+
+  /* Bar row ─ transparent wrapper by default; becomes a flex row when
+       [label] is present without [title] so the label sits beside the bar */
+  .bar-row {
+    display: contents;
+  }
+
+  :host([label]:not([title])) .bar-row {
+    display: flex;
+    gap: var(--progress-label-gap, var(--space-2, 0.5rem));
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Outer track container ─ always position:relative for floating-label */
+  .track-outer {
+    position: relative;
+    width: 100%;
+  }
+
+  :host([label]:not([title])) .track-outer {
+    flex: 1 1 0%;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Shared label typography */
+  .end-label {
+    flex-shrink: 0;
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1.25;
+    color: var(--progress-label-color, currentColor);
+    white-space: nowrap;
+  }
+
+  /* Trailing end label ─ shown only when [label] is present without [title] */
+  .row-label {
+    display: none;
+  }
+
+  :host([label]:not([title])) .row-label {
+    display: inline;
+  }
+
+  /* Floating label chip ─────────────────────────────────────────────────
+       Positioned above the fill endpoint.
+       Formula: left = X% (fill width) − Y (half chip width)
+       Implemented as: left: var(--_percent); transform: translateX(-50%)     */
+  .floating-label {
+    position: absolute;
+    bottom: calc(100% + var(--space-1, 0.25rem));
+    left: var(--_percent, 0%);
+    display: none;
+    padding: var(--space-0-5, 0.125rem) var(--space-2, 0.5rem);
+    font-size: var(--text-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    line-height: 1;
+    color: var(--color-white, #fff);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    background: var(--progress-fill, var(--_theme-base, #3b82f6));
+    border-radius: var(--rounded-md, 0.375rem);
+    transform: translateX(-50%);
+  }
+
+  :host([floating-label]:not([indeterminate])) .floating-label {
+    display: block;
+  }
+
+  /* Reserve vertical space above the track so the chip does not clip */
+  :host([floating-label]:not([indeterminate])) .wrapper {
+    padding-top: calc(var(--text-xs, 0.75rem) + var(--space-1, 0.25rem) * 3);
+  }
+
+  /* ========================================
+       Circular variant
+       ======================================== */
+
+  .circular-track {
+    position: relative; /* anchor the inner text overlay */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_circle-size);
+    height: var(--_circle-size);
+  }
+
+  .circular-track svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    transform: rotate(-90deg);
+  }
+
+  /* Inner overlay — label + title stacked and centered inside the ring */
+  .circular-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5, 0.125rem);
+    align-items: center;
+    justify-content: center;
+
+    /* Inset from the stroke edge so text stays clear of the ring */
+    padding: calc(8% + var(--_height));
+    overflow: hidden;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .circular-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_circular-label-size);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: 1;
+    color: var(--progress-label-color, currentColor);
+    white-space: nowrap;
+  }
+
+  .circular-title {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_circular-title-size);
+    line-height: 1.25;
+    color: var(--progress-title-color, var(--color-contrast-500, #6b7280));
+    white-space: nowrap;
+  }
+
+  /* Hide empty inner text nodes so flexbox gap doesn't create phantom space */
+  .circular-label:empty,
+  .circular-title:empty {
+    display: none;
+  }
+
+  .circle-bg {
+    fill: none;
+    stroke: var(--progress-track-bg, var(--color-contrast-300, #ddd));
+    stroke-width: var(--progress-stroke-width, calc(var(--_height) * 1.2));
+  }
+
+  .circle-fill {
+    fill: none;
+    stroke: var(--progress-fill, var(--_theme-base, #3b82f6));
+    stroke-width: var(--progress-stroke-width, calc(var(--_height) * 1.2));
+    stroke-linecap: round;
+    transition: var(--_motion-transition, stroke-dashoffset var(--transition-normal));
+  }
+
+  @keyframes bit-progress-spin {
+    from {
+      transform: rotate(-90deg);
+    }
+
+    to {
+      transform: rotate(270deg);
+    }
+  }
+
+  @keyframes bit-progress-dash {
+    0% {
+      stroke-dasharray: 1px var(--_circ);
+      stroke-dashoffset: var(--_circ);
+    }
+
+    40% {
+      stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ);
+      stroke-dashoffset: calc(var(--_circ) * -0.1);
+    }
+
+    60% {
+      stroke-dasharray: calc(var(--_circ) * 0.75) var(--_circ);
+      stroke-dashoffset: calc(var(--_circ) * -0.1);
+    }
+
+    100% {
+      stroke-dasharray: 1px var(--_circ);
+      stroke-dashoffset: calc(var(--_circ) * -0.9);
+    }
+  }
+
+  :host([indeterminate]) .circular-track svg {
+    animation: var(--_motion-animation, bit-progress-spin 1.4s linear infinite);
+  }
+
+  :host([indeterminate]) .circle-fill {
+    animation: var(--_motion-animation, bit-progress-dash 1.4s ease-in-out infinite);
+  }
+}
+
+@layer buildit.utilities {
+  :host([size='sm']) {
+    --_height: var(--size-1, 0.25rem);
+    --_circle-size: 4rem;
+    --_circular-label-size: var(--text-sm, 0.875rem);
+    --_circular-title-size: var(--text-2xs, 0.625rem);
+  }
+
+  :host([size='md']) {
+    --_height: var(--size-2, 0.5rem);
+    --_circle-size: 6rem;
+  }
+
+  :host([size='lg']) {
+    --_height: var(--size-3-5, 0.875rem);
+    --_circle-size: 9rem;
+    --_circular-label-size: var(--text-3xl, 1.875rem);
+    --_circular-title-size: var(--text-sm, 0.875rem);
+  }
+}
+
+/* Extra indeterminate state overrides — cannot be expressed via CSS variables alone */
+@media (prefers-reduced-motion: reduce) {
+  :host([indeterminate]) .fill {
+    width: 100%;
+    opacity: 0.6;
+  }
+
+  :host([indeterminate]) .circle-fill {
+    stroke-dasharray: none;
+  }
+}

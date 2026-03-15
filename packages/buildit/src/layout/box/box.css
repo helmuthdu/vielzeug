@@ -1,0 +1,75 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--box-bg, var(--color-canvas));
+    --_color: var(--box-color, var(--color-contrast-900));
+    --_border-width: var(--box-border, var(--border));
+    --_border-color: var(--box-border-color, var(--color-contrast-300));
+    --_radius: var(--box-radius, var(--rounded-md));
+    --_padding: var(--box-padding, var(--size-4));
+    --_shadow: var(--box-shadow, var(--shadow-sm));
+
+    position: relative;
+    display: block;
+  }
+
+  .box {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: var(--_padding);
+    color: var(--_color);
+    background: var(--_bg);
+    border: var(--_border-width) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--_shadow);
+    transition:
+      backdrop-filter var(--transition-slow),
+      box-shadow var(--transition-normal),
+      background var(--transition-normal),
+      border-color var(--transition-normal);
+    will-change: box-shadow;
+  }
+}
+
+@layer buildit.variants {
+  /* Color theme integration — custom props still take priority */
+  :host([color]) {
+    --_bg: var(--box-bg, var(--_theme-backdrop));
+    --_border-color: var(--box-border-color, var(--_theme-border));
+  }
+
+  /* Flat - border only, no shadow */
+  :host([variant='flat']) {
+    --_shadow: none;
+  }
+
+  /* Glass */
+  :host([variant='glass']:not([color])) {
+    --_bg: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+    --_border-color: color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+  }
+
+  :host([variant='glass'][color]) {
+    --_bg: color-mix(in srgb, var(--_theme-base) 20%, transparent);
+    --_border-color: color-mix(in srgb, var(--_theme-contrast) 15%, transparent);
+    --_color: var(--_theme-content);
+  }
+
+  :host([variant='glass']) .box {
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+  }
+
+  /* Subtle hover for solid/default + color (glass & frost manage their own hover) */
+  :host([color]:not([variant='glass'], [variant='frost']):hover) {
+    --_bg: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
+    --_border-color: var(--_theme-focus);
+  }
+}
+
+@layer buildit.utilities {
+  :host([fullwidth]) {
+    width: 100%;
+  }
+}

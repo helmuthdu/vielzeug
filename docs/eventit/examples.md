@@ -20,14 +20,14 @@ Define a shared bus as a module singleton. Any module can import it to publish o
 import { createBus } from '@vielzeug/eventit';
 
 type AppEvents = {
-  'user:login':    { userId: string; email: string };
-  'user:logout':   void;
-  'cart:updated':  { items: CartItem[]; total: number };
-  'theme:change':  'light' | 'dark';
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
+  'cart:updated': { items: CartItem[]; total: number };
+  'theme:change': 'light' | 'dark';
 };
 
 export const appBus = createBus<AppEvents>({
-  onError: (err, event) => console.error(`[bus] error in "${event}"`, err),
+  onError: (err, event, payload) => console.error(`[bus] error in "${event}"`, err, payload),
 });
 
 // src/cart/cart-module.ts
@@ -49,9 +49,13 @@ function UserGreeting() {
   useEffect(() => {
     const controller = new AbortController();
 
-    appBus.on('user:login', ({ userId }) => {
-      fetchUser(userId).then(setUser);
-    }, controller.signal);
+    appBus.on(
+      'user:login',
+      ({ userId }) => {
+        fetchUser(userId).then(setUser);
+      },
+      controller.signal,
+    );
 
     return () => controller.abort(); // unsubscribes on unmount
   }, []);
@@ -78,10 +82,7 @@ import { appBus } from '../events/app-bus';
 import type { EventKey, Listener } from '@vielzeug/eventit';
 import type { AppEvents } from '../events/app-bus';
 
-export function useAppBus<K extends EventKey<AppEvents>>(
-  event: K,
-  listener: Listener<AppEvents[K]>,
-) {
+export function useAppBus<K extends EventKey<AppEvents>>(event: K, listener: Listener<AppEvents[K]>) {
   const unsub = appBus.on(event, listener);
   onUnmounted(unsub);
 }
@@ -171,7 +172,7 @@ import { describe, it, expect } from 'vitest';
 import { createTestBus } from '@vielzeug/eventit/test';
 
 type CartEvents = {
-  'item:added':   { id: string; qty: number };
+  'item:added': { id: string; qty: number };
   'cart:cleared': void;
 };
 
@@ -205,13 +206,16 @@ describe('cart module', () => {
 
 ## Custom error boundary
 
-Collect errors across an event bus session:
+Collect errors across an event bus session with typed context:
 
 ```ts
+import { BusDisposedError } from '@vielzeug/eventit';
+
 const errors: Array<{ event: string; err: unknown }> = [];
 
 const bus = createBus<AppEvents>({
-  onError: (err, event) => errors.push({ event, err }),
+  // event and payload are fully typed to the specific event
+  onError: (err, event, payload) => errors.push({ event, err }),
 });
 
 // All other listeners for the same emit still run even if one throws
@@ -220,4 +224,44 @@ bus.on('user:login', workingHandler); // still called
 bus.emit('user:login', { userId: '1', email: 'a@example.com' });
 
 console.log(errors); // [{ event: 'user:login', err: Error(...) }]
+```
+
+## Handling disposal in async code
+
+Use `BusDisposedError` for `instanceof` checks instead of string matching:
+
+```ts
+import { BusDisposedError } from '@vielzeug/eventit';
+
+async function waitForLogin(bus: Bus<AppEvents>) {
+  try {
+    const { userId } = await bus.wait('user:login', AbortSignal.timeout(10_000));
+    return userId;
+  } catch (err) {
+    if (err instanceof BusDisposedError) return null; // bus torn down — graceful exit
+    throw err; // timeout or unexpected error — propagate
+  }
+}
+```
+
+## Inspecting listener counts
+
+Useful for debugging, conditional logic, or test assertions:
+
+```ts
+const bus = createBus<AppEvents>();
+
+const unsub1 = bus.on('user:login', handler1);
+const unsub2 = bus.on('user:login', handler2);
+bus.on('user:logout', handler3);
+
+bus.listenerCount('user:login'); // 2
+bus.listenerCount('user:logout'); // 1
+bus.listenerCount(); // 3 — total across all events
+
+unsub1();
+bus.listenerCount('user:login'); // 1
+
+bus.dispose();
+bus.listenerCount(); // 0
 ```

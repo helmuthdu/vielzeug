@@ -10,8 +10,9 @@ export type TestBus<T extends EventMap> = Bus<T> & {
   reset(): void;
 };
 
-export function createTestBus<T extends EventMap>(options?: Omit<BusOptions<T>, 'onEmit'>): TestBus<T> {
+export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
+  const userOnEmit = options?.onEmit;
 
   const bus = createBus<T>({
     ...options,
@@ -24,6 +25,7 @@ export function createTestBus<T extends EventMap>(options?: Omit<BusOptions<T>, 
       }
 
       list.push(payload);
+      userOnEmit?.(event, payload);
     },
   });
 
@@ -32,8 +34,8 @@ export function createTestBus<T extends EventMap>(options?: Omit<BusOptions<T>, 
   }
 
   function dispose(): void {
-    records.clear();
     bus.dispose();
+    records.clear();
   }
 
   return {

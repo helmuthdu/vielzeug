@@ -63,12 +63,20 @@ import type { RouteState } from '@vielzeug/routeit';
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const router = createRouter();
-router.on('/', () => {}).on('/about', () => {}).on('/users/:id', () => {}).start();
+router
+  .on('/', () => {})
+  .on('/about', () => {})
+  .on('/users/:id', () => {})
+  .start();
 
 const state = ref<RouteState>(router.state);
 let unsubscribe: () => void;
 
-onMounted(() => { unsubscribe = router.subscribe((s) => { state.value = s; }); });
+onMounted(() => {
+  unsubscribe = router.subscribe((s) => {
+    state.value = s;
+  });
+});
 onUnmounted(() => unsubscribe?.());
 </script>
 
@@ -155,9 +163,11 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <a
       href={to}
-      onClick={(e) => { e.preventDefault(); navigate(to); }}
-      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}
-    >
+      onClick={(e) => {
+        e.preventDefault();
+        navigate(to);
+      }}
+      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}>
       {children}
     </a>
   );
@@ -177,7 +187,11 @@ export function useRouter() {
   const state = ref<RouteState>(router.state);
   let unsubscribe: () => void;
 
-  onMounted(() => { unsubscribe = router.subscribe((s) => { state.value = s; }); });
+  onMounted(() => {
+    unsubscribe = router.subscribe((s) => {
+      state.value = s;
+    });
+  });
   onUnmounted(() => unsubscribe?.());
 
   return {
@@ -197,7 +211,11 @@ Protected routes with a middleware guard that loads the current user into `ctx.l
 import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
-interface User { id: string; name: string; roles: string[] }
+interface User {
+  id: string;
+  name: string;
+  roles: string[];
+}
 
 const authService = {
   async getCurrentUser(): Promise<User | null> {
@@ -218,14 +236,16 @@ const requireAuth: Middleware = async (ctx, next) => {
   await next();
 };
 
-const requireRole = (role: string): Middleware => async (ctx, next) => {
-  const user = ctx.locals.user as User | undefined;
-  if (!user?.roles.includes(role)) {
-    await ctx.navigate('/forbidden', { replace: true });
-    return;
-  }
-  await next();
-};
+const requireRole =
+  (role: string): Middleware =>
+  async (ctx, next) => {
+    const user = ctx.locals.user as User | undefined;
+    if (!user?.roles.includes(role)) {
+      await ctx.navigate('/forbidden', { replace: true });
+      return;
+    }
+    await next();
+  };
 
 const router = createRouter();
 
@@ -234,15 +254,23 @@ router
   .on('/login', () => renderLogin())
   .on('/forbidden', () => renderForbidden())
 
-  .group('/dashboard', (r) => {
-    r.on('/', (ctx) => renderDashboard(ctx.locals.user as User));
-    r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
-  }, { middleware: requireAuth })
+  .group(
+    '/dashboard',
+    (r) => {
+      r.on('/', (ctx) => renderDashboard(ctx.locals.user as User));
+      r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
+    },
+    { middleware: requireAuth },
+  )
 
-  .group('/admin', (r) => {
-    r.on('/reports', () => renderReports());
-    r.on('/users',   () => renderAdminUsers());
-  }, { middleware: [requireAuth, requireRole('admin')] })
+  .group(
+    '/admin',
+    (r) => {
+      r.on('/reports', () => renderReports());
+      r.on('/users', () => renderAdminUsers());
+    },
+    { middleware: [requireAuth, requireRole('admin')] },
+  )
 
   .start();
 ```
@@ -259,7 +287,7 @@ import type { BaseUser } from '@vielzeug/permit';
 
 const permit = createPermit();
 permit
-  .register('admin',  'posts', { read: true, create: true, update: true, delete: true })
+  .register('admin', 'posts', { read: true, create: true, update: true, delete: true })
   .register('editor', 'posts', {
     read: true,
     create: true,
@@ -269,12 +297,16 @@ permit
 
 const requireAuth: Middleware = async (ctx, next) => {
   const user = await getCurrentUser();
-  if (!user) { await ctx.navigate('/login'); return; }
+  if (!user) {
+    await ctx.navigate('/login');
+    return;
+  }
   ctx.locals.user = user;
   await next();
 };
 
-const requirePermission = (resource: string, action: string): Middleware =>
+const requirePermission =
+  (resource: string, action: string): Middleware =>
   async (ctx, next) => {
     const user = ctx.locals.user as BaseUser;
     if (!permit.check(user, resource, action)) {
@@ -287,8 +319,8 @@ const requirePermission = (resource: string, action: string): Middleware =>
 const router = createRouter();
 
 router
-  .on('/posts',         () => renderPosts(),     { middleware: [requireAuth, requirePermission('posts', 'read')] })
-  .on('/posts/new',     () => renderNewPost(),   { middleware: [requireAuth, requirePermission('posts', 'create')] })
+  .on('/posts', () => renderPosts(), { middleware: [requireAuth, requirePermission('posts', 'read')] })
+  .on('/posts/new', () => renderNewPost(), { middleware: [requireAuth, requirePermission('posts', 'create')] })
   .on('/posts/:id/edit', ({ params }) => renderEditPost(params.id), {
     middleware: [requireAuth, requirePermission('posts', 'update')],
   })
@@ -305,7 +337,8 @@ import type { Middleware, RouteContext } from '@vielzeug/routeit';
 
 type RouteModule = { default: (ctx: RouteContext) => void };
 
-const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
+const lazyLoad =
+  (importFn: () => Promise<RouteModule>): Middleware =>
   async (ctx, next) => {
     const module = await importFn();
     ctx.locals.component = module.default;
@@ -315,10 +348,10 @@ const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
 const router = createRouter();
 
 router
-  .on('/dashboard',  (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
+  .on('/dashboard', (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
     middleware: lazyLoad(() => import('./routes/dashboard')),
   })
-  .on('/analytics',  (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
+  .on('/analytics', (ctx) => (ctx.locals.component as RouteModule['default'])(ctx), {
     middleware: lazyLoad(() => import('./routes/analytics')),
   })
   .start();
@@ -334,10 +367,10 @@ import { createRouter } from '@vielzeug/routeit';
 const router = createRouter({ base: '/app' });
 
 router
-  .on('/',                                   () => renderHome(),                  { name: 'home' })
-  .on('/users',                              () => renderUsers(),                 { name: 'userList' })
-  .on('/users/:id',                          ({ params }) => renderUser(params.id), { name: 'userDetail' })
-  .on('/users/:id/posts/:postId',            ({ params }) => renderPost(params),  { name: 'userPost' })
+  .on('/', () => renderHome(), { name: 'home' })
+  .on('/users', () => renderUsers(), { name: 'userList' })
+  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'userDetail' })
+  .on('/users/:id/posts/:postId', ({ params }) => renderPost(params), { name: 'userPost' })
   .start();
 
 // Navigate by name — paths never hard-coded
@@ -345,9 +378,9 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 await router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
 
 // Build URLs for links
-router.url('userDetail', { id: '42' });              // '/app/users/42'
-router.url('userPost',   { id: '1', postId: '99' }); // '/app/users/1/posts/99'
-router.url('userList',   undefined, { page: '2' });  // '/app/users?page=2'
+router.url('userDetail', { id: '42' }); // '/app/users/42'
+router.url('userPost', { id: '1', postId: '99' }); // '/app/users/1/posts/99'
+router.url('userList', undefined, { page: '2' }); // '/app/users?page=2'
 ```
 
 ## Navigation Tracking & Analytics
@@ -374,8 +407,8 @@ const router = createRouter({
 });
 
 router
-  .on('/',         () => renderHome(),              { meta: { page: 'home' } })
-  .on('/pricing',  () => renderPricing(),           { meta: { page: 'pricing' } })
+  .on('/', () => renderHome(), { meta: { page: 'home' } })
+  .on('/pricing', () => renderPricing(), { meta: { page: 'pricing' } })
   .on('/users/:id', ({ params }) => renderUser(params.id), { meta: { page: 'user_detail' } })
   .start();
 ```
@@ -390,9 +423,9 @@ type RouteMeta = { title?: string };
 const router = createRouter();
 
 router
-  .on('/',       () => renderHome(),   { name: 'home',  meta: { title: 'Home' } })
-  .on('/about',  () => renderAbout(),  { name: 'about', meta: { title: 'About' } })
-  .on('/users',  () => renderUsers(),  { name: 'users', meta: { title: 'Users' } })
+  .on('/', () => renderHome(), { name: 'home', meta: { title: 'Home' } })
+  .on('/about', () => renderAbout(), { name: 'about', meta: { title: 'About' } })
+  .on('/users', () => renderUsers(), { name: 'users', meta: { title: 'Users' } })
   .start();
 
 router.subscribe(({ meta }) => {
@@ -437,14 +470,20 @@ Navigate to in-page anchors via named routes:
 ```ts
 const router = createRouter();
 
-router.on('/docs/:page', ({ params, hash }) => {
-  renderPage(params.page);
-  if (hash) {
-    requestAnimationFrame(() => {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-    });
-  }
-}, { name: 'docsPage' }).start();
+router
+  .on(
+    '/docs/:page',
+    ({ params, hash }) => {
+      renderPage(params.page);
+      if (hash) {
+        requestAnimationFrame(() => {
+          document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
+    },
+    { name: 'docsPage' },
+  )
+  .start();
 
 // Navigate to a specific section
 await router.navigate({ name: 'docsPage', params: { page: 'api' }, hash: 'navigate' });
@@ -486,7 +525,10 @@ const router = createRouter({
   },
 });
 
-router.on('/', () => renderHome()).on('/about', () => renderAbout()).start();
+router
+  .on('/', () => renderHome())
+  .on('/about', () => renderAbout())
+  .start();
 ```
 
 ## Middleware-only Routes
@@ -497,16 +539,20 @@ Register route-wide hooks without a terminal handler — useful for analytics, a
 const router = createRouter();
 
 // Log every navigation under /dashboard without a separate handler
-router.on('/dashboard/*', { middleware: async (ctx, next) => {
-  console.log('[analytics]', ctx.pathname);
-  await next();
-}});
+router.on('/dashboard/*', {
+  middleware: async (ctx, next) => {
+    console.log('[analytics]', ctx.pathname);
+    await next();
+  },
+});
 
 // Then register the actual handlers — middleware runs first
-router.group('/dashboard', (r) => {
-  r.on('/',      () => renderDashboard());
-  r.on('/users', () => renderUsers());
-}).start();
+router
+  .group('/dashboard', (r) => {
+    r.on('/', () => renderDashboard());
+    r.on('/users', () => renderUsers());
+  })
+  .start();
 ```
 
 ## View Transitions
@@ -531,12 +577,88 @@ await router.navigate('/about', { viewTransition: true });
 CSS to animate the transition:
 
 ```css
-::view-transition-old(root) { animation: fade-out 150ms ease; }
-::view-transition-new(root) { animation: fade-in  150ms ease; }
+::view-transition-old(root) {
+  animation: fade-out 150ms ease;
+}
+::view-transition-new(root) {
+  animation: fade-in 150ms ease;
+}
 
-@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }
-@keyframes fade-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 ```
+
+## Typed Group Prefix Params
+
+When a group prefix contains path params, they are typed inside every `on()` handler in the group — no runtime casting required:
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import type { Middleware } from '@vielzeug/routeit';
+
+interface Project {
+  id: string;
+  name: string;
+}
+interface Task {
+  id: string;
+  title: string;
+}
+
+const requireAuth: Middleware = async (ctx, next) => {
+  if (!isLoggedIn()) {
+    await ctx.navigate('/login');
+    return;
+  }
+  await next();
+};
+
+const router = createRouter();
+
+router.group(
+  '/orgs/:orgId',
+  (r) => {
+    r.on('/overview', ({ params }) => {
+      params.orgId; // ✓ typed string
+      renderOrgOverview(params.orgId);
+    });
+
+    r.group('/projects/:projectId', (inner) => {
+      inner.on('/', ({ params }) => {
+        params.orgId; // ✓ typed string — from outer prefix
+        params.projectId; // ✓ typed string — from inner prefix
+        renderProject(params.orgId, params.projectId);
+      });
+
+      inner.on('/tasks/:taskId', ({ params }) => {
+        params.orgId; // ✓ typed string
+        params.projectId; // ✓ typed string
+        params.taskId; // ✓ typed string
+        renderTask(params.orgId, params.projectId, params.taskId);
+      });
+    });
+  },
+  { middleware: requireAuth },
+);
+
+router.start();
+```
+
+This eliminates parameter casting entirely in deeply-nested route groups.
 
 ## `using` — Explicit Resource Management
 
@@ -621,7 +743,9 @@ const state = ref(router.state);
 let unsubscribe: () => void;
 
 onMounted(() => {
-  unsubscribe = router.subscribe((s) => { state.value = s; });
+  unsubscribe = router.subscribe((s) => {
+    state.value = s;
+  });
 });
 onUnmounted(() => unsubscribe?.());
 </script>
@@ -702,7 +826,10 @@ export function useRouter() {
 
 // App setup
 const router = createRouter();
-router.on('/', () => {}).on('/about', () => {}).start();
+router
+  .on('/', () => {})
+  .on('/about', () => {})
+  .start();
 
 function RouterProvider({ children }: { children: React.ReactNode }) {
   return <RouterContext.Provider value={router}>{children}</RouterContext.Provider>;
@@ -713,9 +840,11 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <a
       href={to}
-      onClick={(e) => { e.preventDefault(); navigate(to); }}
-      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}
-    >
+      onClick={(e) => {
+        e.preventDefault();
+        navigate(to);
+      }}
+      style={{ fontWeight: state.pathname === to ? 'bold' : 'normal' }}>
       {children}
     </a>
   );
@@ -736,7 +865,9 @@ export function useRouter() {
   let unsubscribe: () => void;
 
   onMounted(() => {
-    unsubscribe = router.subscribe((s) => { state.value = s; });
+    unsubscribe = router.subscribe((s) => {
+      state.value = s;
+    });
   });
   onUnmounted(() => unsubscribe?.());
 
@@ -757,7 +888,11 @@ Complete authentication flow with protected routes.
 import { createRouter } from '@vielzeug/routeit';
 import type { Middleware } from '@vielzeug/routeit';
 
-interface User { id: string; name: string; roles: string[] }
+interface User {
+  id: string;
+  name: string;
+  roles: string[];
+}
 
 const authService = {
   async getCurrentUser(): Promise<User | null> {
@@ -776,7 +911,9 @@ const authService = {
     localStorage.setItem('authToken', data.token);
     return data.user;
   },
-  logout() { localStorage.removeItem('authToken'); },
+  logout() {
+    localStorage.removeItem('authToken');
+  },
 };
 
 const router = createRouter();
@@ -792,14 +929,16 @@ const requireAuth: Middleware = async (ctx, next) => {
   await next();
 };
 
-const requireRole = (role: string): Middleware => async (ctx, next) => {
-  const user = ctx.locals.user as User | undefined;
-  if (!user?.roles.includes(role)) {
-    await ctx.navigate('/forbidden', { replace: true });
-    return;
-  }
-  await next();
-};
+const requireRole =
+  (role: string): Middleware =>
+  async (ctx, next) => {
+    const user = ctx.locals.user as User | undefined;
+    if (!user?.roles.includes(role)) {
+      await ctx.navigate('/forbidden', { replace: true });
+      return;
+    }
+    await next();
+  };
 
 router
   .on('/', () => renderHome())
@@ -807,19 +946,27 @@ router
   .on('/forbidden', () => renderForbidden())
 
   // Protected routes
-  .group('/dashboard', (r) => {
-    r.on('/', (ctx) => {
-      const user = ctx.locals.user as User;
-      renderDashboard(user);
-    });
-    r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
-  }, { middleware: requireAuth })
+  .group(
+    '/dashboard',
+    (r) => {
+      r.on('/', (ctx) => {
+        const user = ctx.locals.user as User;
+        renderDashboard(user);
+      });
+      r.on('/profile', (ctx) => renderProfile(ctx.locals.user as User));
+    },
+    { middleware: requireAuth },
+  )
 
   // Admin-only routes
-  .group('/admin', (r) => {
-    r.on('/reports', renderReports);
-    r.on('/users', renderAdminUsers);
-  }, { middleware: [requireAuth, requireRole('admin')] })
+  .group(
+    '/admin',
+    (r) => {
+      r.on('/reports', renderReports);
+      r.on('/users', renderAdminUsers);
+    },
+    { middleware: [requireAuth, requireRole('admin')] },
+  )
 
   .start();
 ```
@@ -848,12 +995,16 @@ const router = createRouter();
 
 const requireAuth: Middleware = async (ctx, next) => {
   const user = await getCurrentUser();
-  if (!user) { await ctx.navigate('/login'); return; }
+  if (!user) {
+    await ctx.navigate('/login');
+    return;
+  }
   ctx.locals.user = user;
   await next();
 };
 
-const requirePermission = (resource: string, action: PermissionAction): Middleware =>
+const requirePermission =
+  (resource: string, action: PermissionAction): Middleware =>
   async (ctx, next) => {
     const user = ctx.locals.user as BaseUser;
     if (!permit.check(user, resource, action)) {
@@ -884,7 +1035,8 @@ const router = createRouter();
 
 type RouteModule = { default: (ctx: RouteContext) => void | Promise<void> };
 
-const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
+const lazyLoad =
+  (importFn: () => Promise<RouteModule>): Middleware =>
   async (ctx, next) => {
     const module = await importFn();
     ctx.locals.component = module.default;
@@ -892,13 +1044,21 @@ const lazyLoad = (importFn: () => Promise<RouteModule>): Middleware =>
   };
 
 router
-  .on('/dashboard', (ctx) => {
-    (ctx.locals.component as RouteModule['default'])(ctx);
-  }, { middleware: lazyLoad(() => import('./routes/dashboard')) })
+  .on(
+    '/dashboard',
+    (ctx) => {
+      (ctx.locals.component as RouteModule['default'])(ctx);
+    },
+    { middleware: lazyLoad(() => import('./routes/dashboard')) },
+  )
 
-  .on('/analytics', (ctx) => {
-    (ctx.locals.component as RouteModule['default'])(ctx);
-  }, { middleware: lazyLoad(() => import('./routes/analytics')) })
+  .on(
+    '/analytics',
+    (ctx) => {
+      (ctx.locals.component as RouteModule['default'])(ctx);
+    },
+    { middleware: lazyLoad(() => import('./routes/analytics')) },
+  )
 
   .start();
 ```
@@ -985,9 +1145,9 @@ router.navigate({ name: 'userDetail', params: { id: '42' } });
 router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
 
 // Build URLs for links
-router.url('userDetail', { id: '42' });             // '/app/users/42'
-router.url('userPost', { id: '1', postId: '99' });  // '/app/users/1/posts/99'
-router.url('userList', undefined, { page: '2' });   // '/app/users?page=2'
+router.url('userDetail', { id: '42' }); // '/app/users/42'
+router.url('userPost', { id: '1', postId: '99' }); // '/app/users/1/posts/99'
+router.url('userList', undefined, { page: '2' }); // '/app/users?page=2'
 ```
 
 ## Hash Fragment Navigation
@@ -997,14 +1157,18 @@ Navigate to in-page anchors via named routes:
 ```ts
 const router = createRouter();
 
-router.on('/docs/:page', ({ params, hash }) => {
-  renderPage(params.page);
-  if (hash) {
-    requestAnimationFrame(() => {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-    });
-  }
-}, { name: 'docs' });
+router.on(
+  '/docs/:page',
+  ({ params, hash }) => {
+    renderPage(params.page);
+    if (hash) {
+      requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  },
+  { name: 'docs' },
+);
 
 router.start();
 
@@ -1021,9 +1185,13 @@ Capture the rest of a path as a named param:
 const router = createRouter();
 
 // Named wildcard — ctx.params.rest = 'guide/getting-started'
-router.on('/docs/:rest*', ({ params }) => {
-  renderDoc(params.rest);
-}, { name: 'doc' });
+router.on(
+  '/docs/:rest*',
+  ({ params }) => {
+    renderDoc(params.rest);
+  },
+  { name: 'doc' },
+);
 
 // Catch-all 404
 router.on('*', () => render404());
@@ -1031,7 +1199,7 @@ router.on('*', () => render404());
 router.start();
 
 // URL builder works with named wildcard params
-router.url('doc', { rest: 'api/createrouter' });  // → '/docs/api/createrouter'
+router.url('doc', { rest: 'api/createrouter' }); // → '/docs/api/createrouter'
 ```
 
 ## SPA with Layout Selection
@@ -1052,11 +1220,11 @@ const router = createRouter({
 });
 
 router.routes([
-  { path: '/',                  meta: { layout: 'default' },    handler: renderHome },
-  { path: '/about',             meta: { layout: 'default' },    handler: renderAbout },
-  { path: '/dashboard',         meta: { layout: 'dashboard' },  handler: renderDashboard },
-  { path: '/dashboard/settings',meta: { layout: 'dashboard' },  handler: renderSettings },
-  { path: '/preview/:id',       meta: { layout: 'fullscreen' }, handler: ({ params }) => renderPreview(params.id) },
+  { path: '/', meta: { layout: 'default' }, handler: renderHome },
+  { path: '/about', meta: { layout: 'default' }, handler: renderAbout },
+  { path: '/dashboard', meta: { layout: 'dashboard' }, handler: renderDashboard },
+  { path: '/dashboard/settings', meta: { layout: 'dashboard' }, handler: renderSettings },
+  { path: '/preview/:id', meta: { layout: 'fullscreen' }, handler: ({ params }) => renderPreview(params.id) },
 ]);
 router.start();
 ```
@@ -1107,16 +1275,16 @@ Deploy at a subdirectory without changing route definitions:
 const router = createRouter({ mode: 'history', base: '/my-app' });
 
 router.routes([
-  { path: '/',          handler: renderHome },
-  { path: '/about',     handler: renderAbout },
+  { path: '/', handler: renderHome },
+  { path: '/about', handler: renderAbout },
   { path: '/users/:id', name: 'user', handler: ({ params }) => renderUser(params.id) },
 ]);
 router.start();
 
 // Navigation and URL building automatically prepend /my-app
-router.navigate('/about');         // pushes /my-app/about
-router.url('user', { id: '7' });  // → '/my-app/users/7'
-router.isActive('/about');         // true when at /my-app/about
+router.navigate('/about'); // pushes /my-app/about
+router.url('user', { id: '7' }); // → '/my-app/users/7'
+router.isActive('/about'); // true when at /my-app/about
 ```
 
 ## autoStart
@@ -1129,9 +1297,7 @@ import { createRouter } from '@vielzeug/routeit';
 const router = createRouter({ autoStart: true });
 
 // Routes registered before the first tick are matched automatically on load
-router
-  .on('/', renderHome)
-  .on('/about', renderAbout);
+router.on('/', renderHome).on('/about', renderAbout);
 ```
 
 ## View Transitions API
@@ -1141,10 +1307,7 @@ Enable browser-native page transitions:
 ```ts
 const router = createRouter({ viewTransition: true });
 
-router
-  .on('/', renderHome)
-  .on('/gallery', renderGallery)
-  .start();
+router.on('/', renderHome).on('/gallery', renderGallery).start();
 
 // Override per-navigation
 router.navigate('/gallery', { viewTransition: false });

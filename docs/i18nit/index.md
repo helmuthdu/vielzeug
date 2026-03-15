@@ -62,22 +62,25 @@ i18n.t('nav.home');                     // "Home" (fallback to 'en')
 
 ## Features
 
-- **Type-safe keys** — `TranslationKey<T>` resolves all valid dot-notation paths from your message object
+- **Type-safe keys** — `TranslationKeyParam<T>` resolves all valid dot-notation paths from your message object
 - **Variable interpolation** — `{var}`, `{obj.prop}`, `{arr[0]}`, `{arr|and}`, `{arr| - }` and more
 - **Pluralisation** — `Intl.PluralRules`-based with `zero/one/two/few/many/other` plural forms
 - **Nested messages** — deeply nested message trees accessed via dot-notation keys
-- **Fallback chain** — automatic `locale → lang-root → fallback(s)` resolution for missing keys
-- **Message management** — `add()` deep-merges, `replace()` swaps the entire catalog
+- **Full BCP47 cascade** — `sr-Latn-RS → sr-Latn → sr → fallback(s)` for missing keys
+- **Message management** — `add()` deep-merges, `replace()` swaps the catalog, `reload()` force-refreshes
+- **Batch updates** — `batch()` collapses multiple catalog changes into a single subscriber notification
 - **Async loading** — `registerLoader()` + `setLocale()` for on-demand locale bundles
-- **Scope & withLocale** — `scope(ns)` for key-prefix binding, `withLocale(locale)` for locale-pinned translations
+- **Scope & withLocale** — `scope(ns)` for key-prefix binding (namespace keys enforced at compile time), `withLocale(locale)` for locale-pinned translations
 - **Formatting helpers** — `number()`, `date()`, `list()`, `relative()`, `currency()` all backed by `Intl`
 - **Reactive subscriptions** — `subscribe(fn, immediate?)` + `dispose()` for locale-change notifications
+- **Diagnostics** — `onDiagnostic` receives typed `DiagnosticEvent` for subscriber errors and loader failures
+- **Disposable** — `using` and `await using` for deterministic resource release
 - **Lightweight** — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
 
 ## Next Steps
 
-|                           |                                                   |
-| ------------------------- | ------------------------------------------------- |
-| [Usage Guide](./usage.md) | Messages, interpolation, pluralisation, and patterns |
-| [API Reference](./api.md) | Complete type signatures and API documentation    |
-| [Examples](./examples.md) | Real-world i18n recipes                           |
+|                           |                                                                |
+| ------------------------- | -------------------------------------------------------------- |
+| [Usage Guide](./usage.md) | Messages, interpolation, pluralisation, batching, and patterns |
+| [API Reference](./api.md) | Complete type signatures and API documentation                 |
+| [Examples](./examples.md) | Real-world i18n recipes                                        |

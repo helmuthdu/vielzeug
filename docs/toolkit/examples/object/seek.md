@@ -23,7 +23,7 @@ The `seek` utility performs a deep fuzzy search within an object or array. It re
 ## API
 
 ```ts
-function seek(obj: any, searchValue: string, tolerance?: number): boolean;
+function seek<T>(item: T, query: string, tone?: number): boolean;
 ```
 
 ### Parameters
@@ -81,6 +81,6 @@ seek(item, 'viel', 1.0); // false
 
 ## See Also
 
-- [path](./path.md): Safely retrieve a value at a specific known path.
+- [get](./path.md): Safely retrieve a value at a specific known path.
 - [similarity](../string/similarity.md): The underlying string comparison helper.
 - [isEqual](../typed/isEqual.md): Check for exact deep equality.

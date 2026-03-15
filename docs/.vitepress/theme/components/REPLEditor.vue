@@ -7,7 +7,7 @@
           <h3>Editor</h3>
         </div>
         <div class="header-actions">
-          <select v-model="localSelectedExample" @change="loadExample" id="example-selector">
+          <select v-model="localSelectedExample" id="example-selector">
             <option value="">Choose an example...</option>
             <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
               <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
@@ -280,6 +280,10 @@ watch(
     localSelectedExample.value = newVal;
   },
 );
+
+watch(localSelectedExample, (newVal) => {
+  if (newVal) loadExample();
+});
 
 watch(
   () => props.selectedLibrary,

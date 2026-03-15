@@ -28,78 +28,24 @@ export interface MenuItemSelectDetail {
   originalEvent?: Event;
 }
 
-export interface BitMenuEvents {
-  'bit-select': CustomEvent<MenuItemSelectDetail>;
-  'bit-open': CustomEvent<never>;
-  'bit-close': CustomEvent<never>;
-}
+export type BitMenuEvents = {
+  'bit-close': never;
+  'bit-open': never;
+  'bit-select': { checked?: boolean; originalEvent?: Event; value: string | undefined };
+};
 
-export interface MenuProps {
-  placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
+export type BitMenuProps = {
   color?: ThemeColor;
-  size?: ComponentSize;
   disabled?: boolean;
-}
+  placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
+  size?: ComponentSize;
+};
 
 // ============================================
 // Styles
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: inline-block;
-      position: relative;
-    }
-
-    /* ========================================
-       Menu Panel
-       ======================================== */
-
-    .menu-panel {
-      background: var(--color-canvas);
-      border-radius: var(--rounded-md);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--shadow-lg);
-      box-sizing: border-box;
-      inset-inline-start: 0;
-      margin: 0;
-      min-width: 10rem;
-      opacity: 0;
-      padding: var(--size-1);
-      pointer-events: none;
-      position: fixed;
-      top: 0;
-      transform: translateY(-4px) scale(0.97);
-      transform-origin: top;
-      transition:
-        opacity var(--transition-fast),
-        transform var(--transition-fast),
-        visibility var(--transition-fast);
-      visibility: hidden;
-      z-index: calc(var(--z-popover, 1000) + 1);
-    }
-
-    .menu-panel[data-open] {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0) scale(1);
-      visibility: visible;
-    }
-
-    /* ========================================
-       Menu Items (slotted bit-menu-item)
-       ======================================== */
-
-    ::slotted(bit-menu-item) {
-      display: block;
-    }
-
-    ::slotted(bit-menu-separator) {
-      display: block;
-    }
-  }
-`;
+import componentStyles from './menu.css?inline';
 
 const themeStyles = /* css */ css`
   ${colorThemeMixin}
@@ -111,17 +57,17 @@ const themeStyles = /* css */ css`
 // Menu Item Component
 // ============================================
 
-export interface MenuItemProps {
-  value?: string;
+export type BitMenuItemProps = {
+  /** Whether the checkable item is currently checked */
+  checked?: boolean;
   disabled?: boolean;
   /** 'checkbox' | 'radio' — makes this a checkable item */
   type?: 'checkbox' | 'radio';
-  /** Whether the checkable item is currently checked */
-  checked?: boolean;
-}
+  value?: string;
+};
 
-export const ITEM_TAG = define('bit-menu-item', ({ host }) => {
-  const props = defineProps<MenuItemProps>({
+export const MENU_ITEM_TAG = define('bit-menu-item', ({ host }) => {
+  const props = defineProps<BitMenuItemProps>({
     checked: { default: false },
     disabled: { default: false },
     type: { default: undefined },
@@ -285,19 +231,15 @@ export const SEPARATOR_TAG = define('bit-menu-separator', () => {
  * </bit-menu>
  * ```
  */
-export const TAG = define('bit-menu', ({ host }) => {
-  const props = defineProps<MenuProps>({
+export const MENU_TAG = define('bit-menu', ({ host }) => {
+  const props = defineProps<BitMenuProps>({
     color: { default: undefined },
     disabled: { default: false },
     placement: { default: 'bottom-start' },
     size: { default: undefined },
   });
 
-  const emit = defineEmits<{
-    'bit-close': never;
-    'bit-open': never;
-    'bit-select': MenuItemSelectDetail;
-  }>();
+  const emit = defineEmits<BitMenuEvents>();
 
   const menuId = createId('menu');
   const isOpen = signal(false);

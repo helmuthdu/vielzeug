@@ -14,11 +14,13 @@ import {
   batch,
   type CleanupFn,
   computed,
+  type EffectCallback,
   type EffectOptions,
   isSignal,
   type ReadonlySignal,
   type Signal,
   signal,
+  type Subscription,
   untrack,
   type WatchOptions,
 } from '@vielzeug/stateit';
@@ -39,25 +41,25 @@ const runAll = (fns: Iterable<() => void>): void => {
 export function watch<T>(
   source: ReadonlySignal<T>,
   cb: (value: T, prev: T) => void,
-  options?: Omit<WatchOptions<T>, 'select'>,
-): CleanupFn;
+  options?: WatchOptions<T>,
+): Subscription;
 export function watch<T, U>(
   source: ReadonlySignal<T>,
   selector: (state: T) => U,
   cb: (value: U, prev: U) => void,
-  options?: Omit<WatchOptions<T, U>, 'select'>,
-): CleanupFn;
+  options?: WatchOptions<U>,
+): Subscription;
 export function watch(
   sources: ReadonlyArray<ReadonlySignal<unknown>>,
   cb: () => void,
-  options?: Omit<WatchOptions<unknown>, 'select'>,
-): CleanupFn;
+  options?: WatchOptions<unknown>,
+): Subscription;
 export function watch(
   source: ReadonlySignal<unknown> | ReadonlyArray<ReadonlySignal<unknown>>,
   cbOrSelector: ((value: unknown, prev: unknown) => void) | (() => void),
-  cbOrOptions?: ((value: unknown, prev: unknown) => void) | WatchOptions<unknown, unknown>,
-  options?: WatchOptions<unknown, unknown>,
-): CleanupFn {
+  cbOrOptions?: ((value: unknown, prev: unknown) => void) | WatchOptions<unknown>,
+  options?: WatchOptions<unknown>,
+): Subscription {
   if (Array.isArray(source)) {
     const cb = cbOrSelector as () => void;
     const opts = cbOrOptions as WatchOptions<unknown> | undefined;
@@ -80,17 +82,29 @@ export function watch(
     return dispose;
   }
 
-  const stop =
-    typeof cbOrOptions === 'function'
-      ? _signalWatch(source as ReadonlySignal<unknown>, cbOrOptions as (value: unknown, prev: unknown) => void, {
-          ...options,
-          select: cbOrSelector as (s: unknown) => unknown,
-        })
-      : _signalWatch(
-          source as ReadonlySignal<unknown>,
-          cbOrSelector as (value: unknown, prev: unknown) => void,
-          cbOrOptions,
-        );
+  if (typeof cbOrOptions === 'function') {
+    // Selector overload: (source, selector, cb, options)
+    // Use computed() so only the selected slice is subscribed — no select option needed.
+    const selector = cbOrSelector as (s: unknown) => unknown;
+    const cb = cbOrOptions as (value: unknown, prev: unknown) => void;
+    const selected = computed(() => selector((source as ReadonlySignal<unknown>).value));
+    const stop = _signalWatch(selected, cb, options);
+    const dispose = (): void => {
+      stop();
+      selected.dispose();
+    };
+    const sub = Object.assign(dispose, { dispose, [Symbol.dispose]: dispose }) as Subscription;
+
+    autoCleanup(sub);
+
+    return sub;
+  }
+
+  const stop = _signalWatch(
+    source as ReadonlySignal<unknown>,
+    cbOrSelector as (value: unknown, prev: unknown) => void,
+    cbOrOptions,
+  );
 
   autoCleanup(stop);
 
@@ -1362,7 +1376,7 @@ export const onCleanup = (fn: CleanupFn): void => {
 };
 
 /** Registers a cleanup only when currently inside a component setup context. Avoids the repeated inline check pattern. */
-const autoCleanup = (dispose: CleanupFn): void => {
+const autoCleanup = (dispose: Subscription | CleanupFn): void => {
   if (runtimeStack.length > 0) onCleanup(dispose);
 };
 
@@ -1379,7 +1393,7 @@ const autoCleanup = (dispose: CleanupFn): void => {
  * // Inside onMount — also auto-cleaned:
  * onMount(() => { effect(() => syncExternal(data.value)); });
  */
-export const effect = (fn: () => void, options?: EffectOptions): CleanupFn => {
+export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const dispose = _rawEffect(fn, options);
 
   autoCleanup(dispose);

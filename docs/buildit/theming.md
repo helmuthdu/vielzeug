@@ -24,6 +24,10 @@ Buildit provides a comprehensive set of design tokens organized into categories:
 - **Shadows & Effects**: Elevation and visual depth
 - **Border Radii**: Consistent corner rounding
 
+## Color Palette
+
+<ColorPalette />
+
 ### Theme Reference
 
 ::: details View theme.css
@@ -262,7 +266,8 @@ When customizing colors, ensure proper contrast ratios:
 ## Next Steps
 
 ::: tip Continue Learning
+
 - [API Reference](./api.md) — Complete list of CSS custom properties per component
 - [Components](./components/button.md) — Component-specific theming options
 - [Examples](./examples.md) — Real-world theming examples and recipes
-:::
+  :::

@@ -104,7 +104,7 @@ export const i18n = createI18n({
 });
 
 const locale = ref(i18n.locale);
-i18n.subscribe((l) => { locale.value = l; });
+i18n.subscribe(({ locale: l }) => { locale.value = l; });
 
 export function useI18n() {
   return {
@@ -151,7 +151,7 @@ export const i18n = createI18n({
 });
 
 const locale = writable(i18n.locale);
-i18n.subscribe((l) => locale.set(l));
+i18n.subscribe(({ locale: l }) => locale.set(l));
 
 // A derived store that re-computes whenever locale changes
 export const t = derived(locale, () => i18n.t.bind(i18n));
@@ -373,5 +373,91 @@ const i18n = createI18n({
     // In CI / production: throw so missing keys are caught early
     throw new Error(`Missing translation key "${key}" for locale "${locale}"`);
   },
+});
+```
+
+## Batch-Loading Code-Split Chunks
+
+Use `batch()` when hydrating multiple message chunks at startup to avoid a re-render flicker per `add()` call:
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: { app: { title: 'My App' } } },
+});
+
+// Load several code-split message chunks — subscribers notified exactly once
+async function loadAuthBundle() {
+  const [authMsgs, formMsgs, errorMsgs] = await Promise.all([
+    import('./locales/en/auth.json'),
+    import('./locales/en/forms.json'),
+    import('./locales/en/errors.json'),
+  ]);
+
+  i18n.batch(() => {
+    i18n.add('en', authMsgs.default);
+    i18n.add('en', formMsgs.default);
+    i18n.add('en', errorMsgs.default);
+  });
+}
+```
+
+## Force-Reload After a Deployment
+
+Use `reload()` to refresh a locale bundle without a full page reload — useful in SPAs that detect a new deployment and want to hot-swap message files:
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    en: () => fetch(`/api/messages/en?v=${Date.now()}`).then(r => r.json()),
+  },
+  messages: { en: cachedMessages },
+});
+
+// Called when a new app version is detected
+async function onNewDeployment() {
+  // Force-fetches a fresh bundle even though 'en' is already loaded
+  await i18n.reload(i18n.locale);
+  console.log('Messages refreshed');
+}
+```
+
+## Typed Diagnostics with `onDiagnostic`
+
+Use the discriminated `DiagnosticEvent` union to route subscriber errors and loader failures to different handlers:
+
+```ts
+import { createI18n, type DiagnosticEvent } from '@vielzeug/i18nit';
+
+const retryQueue = new Set<string>();
+
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    de: () => fetch('/api/messages/de').then(r => r.json()),
+    fr: () => fetch('/api/messages/fr').then(r => r.json()),
+  },
+  onDiagnostic: (event: DiagnosticEvent) => {
+    if (event.kind === 'loader-error') {
+      // event.locale is available — add to retry queue
+      console.warn(`[i18n] Failed to load "${event.locale}", scheduling retry`);
+      retryQueue.add(event.locale);
+    } else {
+      // event.kind === 'subscriber-error' — programming error, report to error tracker
+      Sentry.captureException(event.error, { tags: { source: 'i18n-subscriber' } });
+    }
+  },
+});
+
+// Retry after reconnect
+onNetworkReconnect(() => {
+  const locales = [...retryQueue];
+  retryQueue.clear();
+  locales.forEach(l => i18n.load(l));
 });
 ```

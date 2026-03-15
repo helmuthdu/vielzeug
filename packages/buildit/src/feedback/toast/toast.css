@@ -1,0 +1,240 @@
+@layer buildit.base {
+  :host {
+    --_position: var(--toast-position, fixed);
+    --_inset-top: var(--toast-inset-top, auto);
+    --_inset-bottom: var(--toast-inset-bottom, 1rem);
+    --_inset-right: var(--toast-inset-right, 1rem);
+    --_inset-left: var(--toast-inset-left, auto);
+    --_z-index: var(--toast-z-index, 9999);
+    --_max-width: var(--toast-max-width, 400px);
+    --_gap: var(--toast-gap, 0.5rem);
+
+    position: var(--_position);
+    inset: var(--_inset-top) var(--_inset-right) var(--_inset-bottom) var(--_inset-left);
+    z-index: var(--_z-index);
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+    max-width: var(--_max-width);
+    pointer-events: none;
+  }
+
+  /* Position variants */
+  :host([position='top-left']) {
+    --_inset-top: 1rem;
+    --_inset-bottom: auto;
+    --_inset-left: 1rem;
+    --_inset-right: auto;
+  }
+
+  :host([position='top-center']) {
+    --_inset-top: 1rem;
+    --_inset-bottom: auto;
+    --_inset-left: 50%;
+    --_inset-right: auto;
+
+    transform: translateX(-50%);
+  }
+
+  :host([position='top-right']) {
+    --_inset-top: 1rem;
+    --_inset-bottom: auto;
+    --_inset-right: 1rem;
+    --_inset-left: auto;
+  }
+
+  :host([position='bottom-left']) {
+    --_inset-bottom: 1rem;
+    --_inset-left: 1rem;
+    --_inset-right: auto;
+    --_inset-top: auto;
+  }
+
+  :host([position='bottom-center']) {
+    --_inset-bottom: 1rem;
+    --_inset-left: 50%;
+    --_inset-right: auto;
+    --_inset-top: auto;
+
+    transform: translateX(-50%);
+  }
+
+  :host([position='bottom-right']) {
+    --_inset-bottom: 1rem;
+    --_inset-right: 1rem;
+    --_inset-left: auto;
+    --_inset-top: auto;
+  }
+
+  .toast-container {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    row-gap: 0;
+    perspective: 1200px;
+    perspective-origin: center center;
+    transition: var(--_motion-transition, row-gap var(--transition-normal, 0.35s) ease);
+  }
+
+  /* Keep ARIA live regions without affecting stacking layout geometry. */
+  .toast-live-region {
+    display: contents;
+  }
+
+  :host(.hovered) .toast-container {
+    row-gap: var(--_gap);
+  }
+
+  :host(:not(.hovered)) .toast-wrapper {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: end;
+  }
+
+  :host([position^='top']:not(.hovered)) .toast-wrapper {
+    align-self: start;
+  }
+
+  .toast-wrapper {
+    position: relative;
+    pointer-events: auto;
+    transform-origin: center bottom;
+    transition: var(
+      --_motion-transition,
+      transform 0.5s cubic-bezier(0.34, 1.1, 0.64, 1),
+      opacity 0.5s cubic-bezier(0.34, 1.1, 0.64, 1),
+      filter 0.5s cubic-bezier(0.34, 1.1, 0.64, 1)
+    );
+    will-change: transform, opacity, filter;
+  }
+
+  /* Enter animation via @starting-style — no JS class needed */
+  @starting-style {
+    .toast-wrapper {
+      opacity: 0;
+      transform: translateY(1.5rem) scale(0.92);
+    }
+
+    :host([position^='top']) .toast-wrapper {
+      transform: translateY(-1.5rem) scale(0.92);
+    }
+  }
+
+  /* Exit animation */
+  .toast-wrapper.exiting {
+    z-index: -1 !important;
+    pointer-events: none;
+    transition: none !important;
+    animation: var(--_motion-animation, toast-exit 0.3s ease-out forwards);
+  }
+
+  @keyframes toast-exit {
+    to {
+      opacity: 0;
+      transform: scale(0.7);
+    }
+  }
+
+  /* Stacking (collapsed) */
+  :host(:not(.hovered)) .toast-wrapper:nth-last-child(1) {
+    z-index: 3;
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateY(0) scale(1);
+  }
+
+  :host(:not(.hovered)) .toast-wrapper:nth-last-child(2) {
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.85;
+    filter: brightness(0.95);
+    transform: translateY(-8px) scale(0.95) rotateX(3deg);
+  }
+
+  :host(:not(.hovered)) .toast-wrapper:nth-last-child(3) {
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.7;
+    filter: brightness(0.9);
+    transform: translateY(-14px) scale(0.9) rotateX(5deg);
+  }
+
+  :host(:not(.hovered)) .toast-wrapper:nth-last-child(n + 4) {
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  /* Expanded (hovered) */
+  :host(.hovered) .toast-wrapper {
+    z-index: auto !important;
+    grid-row: auto;
+    grid-column: 1;
+    align-self: stretch;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    filter: brightness(1) !important;
+    transform: none !important;
+  }
+
+  /* Staggered expand delays */
+  :host(.hovered) .toast-wrapper:nth-last-child(2) {
+    transition-delay: 0.05s;
+  }
+
+  :host(.hovered) .toast-wrapper:nth-last-child(3) {
+    transition-delay: 0.1s;
+  }
+
+  :host(.hovered) .toast-wrapper:nth-last-child(n + 4) {
+    transition-delay: 0.15s;
+  }
+
+  /* Top positions: reverse stacking direction */
+  :host([position^='top']) .toast-wrapper {
+    transform-origin: center top;
+  }
+
+  :host([position^='top']:not(.hovered)) .toast-wrapper:nth-last-child(2) {
+    transform: translateY(8px) scale(0.95) rotateX(-3deg);
+  }
+
+  :host([position^='top']:not(.hovered)) .toast-wrapper:nth-last-child(3) {
+    transform: translateY(14px) scale(0.9) rotateX(-5deg);
+  }
+
+  ::slotted(bit-alert) {
+    width: 100%;
+    margin: 0;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .toast-wrapper.exiting ::slotted(bit-alert) {
+    transition: none !important;
+  }
+
+  .toast-actions {
+    display: flex;
+    gap: var(--size-4);
+    justify-content: flex-end;
+  }
+
+  /* ========================================
+       Responsive: small screens
+       ======================================== */
+
+  @media (width <= 480px) {
+    :host {
+      --_max-width: calc(100vw - var(--size-4));
+      --_inset-right: var(--size-2);
+      --_inset-left: var(--size-2);
+    }
+
+    :host([position='top-center']),
+    :host([position='bottom-center']) {
+      --_inset-left: var(--size-2);
+
+      inset-inline-start: var(--size-2);
+      transform: none;
+    }
+  }
+}

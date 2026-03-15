@@ -1,6 +1,5 @@
 import {
   createContext,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -14,7 +13,7 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import type { AddEventListeners, BitTabsEvents, ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { colorThemeMixin } from '../../styles';
 
@@ -29,227 +28,32 @@ export type TabsContext = {
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>();
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      --tabs-transition: var(--transition-normal);
-      --tabs-radius: var(--rounded-lg);
-    }
+import styles from './tabs.css?inline';
 
-    .tablist-wrapper {
-      position: relative;
-      flex-shrink: 0;
-    }
+export type BitTabsEvents = {
+  change: { value: string };
+};
 
-    [role='tablist'] {
-      display: flex;
-      align-items: stretch;
-      position: relative;
-      gap: var(--tabs-tab-gap, var(--size-1));
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    [role='tablist']::-webkit-scrollbar {
-      display: none;
-    }
-
-    .indicator {
-      position: absolute;
-      bottom: 0;
-      height: 2px;
-      border-radius: var(--rounded-full);
-      background: var(--tabs-indicator-color, var(--_theme-base));
-      transition:
-        left var(--tabs-transition),
-        width var(--tabs-transition);
-      pointer-events: none;
-    }
-
-    .panels {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-  }
-
-  @layer buildit.orientation {
-    /* ─── vertical orientation ─── */
-    :host([orientation='vertical']) {
-      flex-direction: row;
-      align-items: flex-start;
-    }
-
-    :host([orientation='vertical']) .tablist-wrapper {
-      display: flex;
-      flex-shrink: 0;
-    }
-
-    :host([orientation='vertical']) [role='tablist'] {
-      flex-direction: column;
-      overflow-x: unset;
-      overflow-y: auto;
-      width: max-content;
-    }
-
-    :host([orientation='vertical']) .indicator {
-      /* Reposition indicator to inline-start side for vertical */
-      bottom: unset;
-      inset-inline-start: 0;
-      width: 2px;
-      height: unset;
-      transition:
-        top var(--tabs-transition),
-        height var(--tabs-transition);
-    }
-  }
-
-  @layer buildit.variants {
-    /* ─── solid (default) ─── */
-    :host,
-    :host([variant='solid']) {
-      --tabs-tab-gap: var(--size-1);
-    }
-
-    :host [role='tablist'],
-    :host([variant='solid']) [role='tablist'] {
-      padding: var(--size-1);
-      background: var(--color-contrast-100);
-      border-radius: var(--tabs-radius);
-      border: var(--border) solid var(--color-contrast-200);
-    }
-
-    :host .indicator,
-    :host([variant='solid']) .indicator {
-      display: none;
-    }
-
-    /* ─── flat ─── */
-    :host([variant='flat']) {
-      background: var(--color-contrast-100);
-      border: var(--border) solid var(--color-contrast-200);
-      border-radius: var(--tabs-radius);
-      box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
-      overflow: hidden;
-    }
-
-    :host([variant='flat']) [role='tablist'] {
-      background: transparent;
-      border: none;
-      border-bottom: var(--border) solid var(--color-contrast-200);
-      border-radius: 0;
-      padding: var(--size-1);
-      gap: var(--size-1);
-    }
-
-    :host([variant='flat']) .indicator {
-      display: none;
-    }
-
-    /* ─── bordered ─── */
-    :host([variant='bordered']) [role='tablist'] {
-      padding: var(--size-1);
-      background: transparent;
-      border: var(--border) solid var(--color-contrast-200);
-      border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
-      border-bottom: none;
-      gap: var(--size-1);
-    }
-
-    :host([variant='bordered']) .indicator {
-      display: none;
-    }
-
-    :host([variant='bordered']) .panels {
-      border: var(--border) solid var(--color-contrast-200);
-      border-radius: 0 0 var(--tabs-radius) var(--tabs-radius);
-    }
-
-    /* ─── ghost ─── */
-    :host([variant='ghost']) [role='tablist'] {
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 0;
-      gap: var(--size-1);
-    }
-
-    :host([variant='ghost']) .indicator {
-      display: none;
-    }
-
-    /* ─── glass ─── */
-    :host([variant='glass']) [role='tablist'] {
-      padding: var(--size-1);
-      background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
-      backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-      border: var(--border) solid color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
-      border-radius: var(--tabs-radius);
-      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-    }
-
-    :host([variant='glass']) .indicator {
-      display: none;
-    }
-
-    /* ─── frost ─── */
-    :host([variant='frost']) [role='tablist'] {
-      padding: var(--size-1);
-      background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-      backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-      border: var(--border) solid color-mix(in srgb, var(--color-contrast-300) 50%, transparent);
-      border-radius: var(--tabs-radius);
-      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-    }
-
-    :host([variant='frost']) .indicator {
-      display: none;
-    }
-
-    /* ─── size variants ─── */
-    :host([size='sm']) {
-      --tabs-tab-size: var(--text-xs);
-      --tabs-tab-padding: var(--size-1) var(--size-3);
-    }
-
-    :host(:not([size])),
-    :host([size='md']) {
-      --tabs-tab-size: var(--text-sm);
-      --tabs-tab-padding: var(--size-1-5) var(--size-4);
-    }
-
-    :host([size='lg']) {
-      --tabs-tab-size: var(--text-base);
-      --tabs-tab-padding: var(--size-2) var(--size-5);
-    }
-  }
-`;
-
-export interface TabsProps {
-  /** Currently selected tab value */
-  value?: string;
-  /** Visual style variant */
-  variant?: VisualVariant;
-  /** Component size */
-  size?: ComponentSize;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Tab list orientation */
-  orientation?: 'horizontal' | 'vertical';
+export type BitTabsProps = {
   /**
    * Keyboard activation mode.
    * - `'auto'` (default): Selecting a tab on arrow-key focus immediately activates it (ARIA recommendation for most cases).
    * - `'manual'`: Arrow keys only move focus; the user must press Enter or Space to activate the focused tab.
    */
   activation?: 'auto' | 'manual';
+  /** Theme color */
+  color?: ThemeColor;
   /** Accessible label for the tablist (passed as aria-label). Use when there is no visible heading labelling the tabs. */
   label?: string;
-}
+  /** Tab list orientation */
+  orientation?: 'horizontal' | 'vertical';
+  /** Component size */
+  size?: ComponentSize;
+  /** Currently selected tab value */
+  value?: string;
+  /** Visual style variant */
+  variant?: VisualVariant;
+};
 
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
@@ -276,8 +80,8 @@ export interface TabsProps {
  * </bit-tabs>
  * ```
  */
-export const TAG = define('bit-tabs', ({ host }) => {
-  const props = defineProps<TabsProps>({
+export const TABS_TAG = define('bit-tabs', ({ host }) => {
+  const props = defineProps<BitTabsProps>({
     activation: { default: 'auto' },
     color: { default: undefined },
     label: { default: undefined },
@@ -289,7 +93,7 @@ export const TAG = define('bit-tabs', ({ host }) => {
 
   const tablistRef = ref<HTMLElement>();
   const indicatorRef = ref<HTMLElement>();
-  const emit = defineEmits<{ change: { value: string } }>();
+  const emit = defineEmits<BitTabsEvents>();
 
   const getTabs = () => [...host.querySelectorAll<HTMLElement>('bit-tab-item')];
 
@@ -428,9 +232,3 @@ export const TAG = define('bit-tabs', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-tabs': HTMLElement & TabsProps & AddEventListeners<BitTabsEvents>;
-  }
-}

@@ -1,0 +1,53 @@
+@layer buildit.base {
+  :host {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* ========================================
+       Menu Panel
+       ======================================== */
+
+  .menu-panel {
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    z-index: calc(var(--z-popover, 1000) + 1);
+    box-sizing: border-box;
+    visibility: hidden;
+    min-width: 10rem;
+    padding: var(--size-1);
+    margin: 0;
+    pointer-events: none;
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--rounded-md);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+    transform-origin: top;
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast);
+  }
+
+  .menu-panel[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* ========================================
+       Menu Items (slotted bit-menu-item)
+       ======================================== */
+
+  ::slotted(bit-menu-item) {
+    display: block;
+  }
+
+  ::slotted(bit-menu-separator) {
+    display: block;
+  }
+}

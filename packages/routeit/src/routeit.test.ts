@@ -30,8 +30,11 @@ Object.defineProperty(window, 'history', { value: mockHistory, writable: true })
 
 /** -------------------- Helpers -------------------- **/
 
+let _router: Router | undefined;
+
 /** Starts the router and waits for the initial route handling to complete. */
 async function boot(router: Router): Promise<Router> {
+  _router = router;
   router.start();
   await new Promise<void>((r) => setTimeout(r, 10));
 
@@ -46,6 +49,11 @@ describe('Router', () => {
     mockLocation.pathname = '/';
     mockLocation.search = '';
     mockLocation.hash = '';
+  });
+
+  afterEach(() => {
+    _router?.dispose();
+    _router = undefined;
   });
 
   /** -------------------- Route registration -------------------- **/

@@ -2,7 +2,6 @@ import {
   aria,
   computed,
   createId,
-  css,
   define,
   defineEmits,
   defineField,
@@ -18,212 +17,45 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  BitSliderEvents,
-  DisablableProps,
-  FormValidityMethods,
-  SizableProps,
-  ThemableProps,
-} from '../../types';
+import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    /* ========================================
-       Base Styles & Defaults
-       ======================================== */
-
-    :host {
-      --_size: var(--slider-size, var(--size-5));
-      --_height: var(--slider-height, var(--size-3));
-      --_track: var(--slider-track, var(--color-contrast-300));
-      --_fill: var(--slider-fill, var(--color-neutral));
-      --_thumb: var(--slider-thumb, var(--color-contrast-100));
-      --_thumb-size: calc(var(--_size) - var(--size-1));
-      --_font-size: var(--text-sm);
-      --_shadow: var(--color-neutral-focus-shadow);
-
-      align-items: center;
-      cursor: pointer;
-      display: inline-flex;
-      gap: var(--_gap, var(--size-3));
-      position: relative;
-      touch-action: none;
-      user-select: none;
-      width: 100%;
-    }
-  }
-
-  /* ========================================
-     Track, Fill & Thumb
-     ======================================== */
-
-  .slider-container {
-    align-items: center;
-    display: flex;
-    flex: 1;
-    height: var(--_size);
-    position: relative;
-    width: 100%;
-    min-height: var(--_touch-target);
-  }
-
-  .slider-track {
-    background: var(--_track);
-    border-radius: var(--rounded-full);
-    height: var(--_height);
-    position: relative;
-    width: 100%;
-  }
-
-  /* Fill: always driven by --_fill-start / --_fill-width */
-  .slider-fill {
-    background: var(--_fill);
-    border-radius: var(--rounded-full);
-    height: 100%;
-    left: var(--_fill-start, 0%);
-    position: absolute;
-    top: 0;
-    transition:
-      left var(--transition-normal),
-      width var(--transition-normal);
-    width: var(--_fill-width, 0%);
-  }
-
-  :host([data-dragging]) .slider-fill {
-    transition: none;
-  }
-
-  .slider-thumb {
-    background: var(--_thumb);
-    border: 2px solid var(--_fill);
-    border-radius: var(--rounded-full);
-    box-shadow: var(--shadow-sm);
-    cursor: grab;
-    height: var(--_thumb-size);
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    transition:
-      box-shadow var(--transition-normal),
-      transform var(--transition-fast),
-      left var(--transition-normal);
-    width: var(--_thumb-size);
-    z-index: 1;
-  }
-
-  :host([data-dragging]) .slider-thumb {
-    transition:
-      box-shadow var(--transition-normal),
-      transform var(--transition-fast);
-  }
-
-  /* ── Single-value thumb ─────────────────────────────────── */
-
-  .slider-thumb-sole {
-    left: var(--_thumb-pos, 0%);
-  }
-
-  :host(:focus-visible) .slider-thumb-sole,
-  :host(:active) .slider-thumb-sole {
-    box-shadow: var(--_shadow);
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-
-  /* ── Range thumbs ───────────────────────────────────────── */
-
-  .slider-thumb-start {
-    left: var(--_thumb-start, 0%);
-  }
-
-  .slider-thumb-end {
-    left: var(--_thumb-end, 100%);
-  }
-
-  .slider-thumb-start:focus-visible,
-  .slider-thumb-end:focus-visible {
-    box-shadow: var(--_shadow);
-    cursor: grabbing;
-    outline: var(--border-2) solid var(--_fill);
-    outline-offset: 2px;
-    transform: translate(-50%, -50%) scale(1.1);
-    z-index: 2;
-  }
-
-  /* ── Visibility gating ──────────────────────────────────── */
-
-  :host(:not([range])) .slider-thumb-start,
-  :host(:not([range])) .slider-thumb-end {
-    display: none;
-  }
-
-  :host([range]) .slider-thumb-sole {
-    display: none;
-  }
-
-  @media (forced-colors: active) {
-    /* Replace box-shadow focus ring with outline for sole-thumb focus visibility */
-    :host(:focus-visible) .slider-thumb-sole {
-      box-shadow: none;
-      outline: 2px solid Highlight;
-      outline-offset: 2px;
-    }
-  }
-
-  @layer buildit.overrides {
-    :host {
-      --_fill: var(--slider-fill, var(--_theme-base));
-      --_shadow: var(--_theme-shadow);
-    }
-  }
-
-  /* ========================================
-     Label
-     ======================================== */
-
-  .label {
-    color: var(--color-contrast);
-    font-size: var(--_font-size);
-    white-space: nowrap;
-  }
-
-  @media (pointer: coarse) {
-    :host {
-      --_thumb-size: calc(var(--_size) + var(--size-2));
-      --_size: var(--size-7);
-    }
-  }
-`;
+import componentStyles from './slider.css?inline';
 
 /** Slider component properties */
-export interface SliderProps extends ThemableProps, SizableProps, DisablableProps {
-  /** Minimum value */
-  min?: number | string;
-  /** Maximum value */
-  max?: number | string;
-  /** Step increment */
-  step?: number | string;
-  /** Single-value mode: current value */
-  value?: number | string;
-  /** Range mode: lower bound */
-  from?: number | string;
-  /** Range mode: upper bound */
-  to?: number | string;
-  /** Activate two-thumb range selection */
-  range?: boolean;
-  /** Single-value mode: form field name */
-  name?: string;
-  /** Single-value mode a11y label override (e.g. "75%"). Overrides raw aria-valuenow. */
-  'value-text'?: string;
-  /** Range mode a11y label for the start thumb (e.g. "$20") */
-  'from-value-text'?: string;
-  /** Range mode a11y label for the end thumb (e.g. "$80") */
-  'to-value-text'?: string;
-}
+
+export type BitSliderEvents = {
+  change: { from?: number; originalEvent?: Event; to?: number; value?: number };
+};
+
+export type BitSliderProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Range mode: lower bound */
+    from?: number | string;
+    /** Range mode a11y label for the start thumb (e.g. "$20") */
+    'from-value-text'?: string;
+    /** Maximum value */
+    max?: number | string;
+    /** Minimum value */
+    min?: number | string;
+    /** Single-value mode: form field name */
+    name?: string;
+    /** Activate two-thumb range selection */
+    range?: boolean;
+    /** Step increment */
+    step?: number | string;
+    /** Range mode: upper bound */
+    to?: number | string;
+    /** Range mode a11y label for the end thumb (e.g. "$80") */
+    'to-value-text'?: string;
+    /** Single-value mode: current value */
+    value?: number | string;
+    /** Single-value mode a11y label override (e.g. "75%"). Overrides raw aria-valuenow. */
+    'value-text'?: string;
+  };
 
 /**
  * A slider for selecting a single numeric value or a numeric range.
@@ -268,12 +100,12 @@ export interface SliderProps extends ThemableProps, SizableProps, DisablableProp
  * <bit-slider range from="20" to="80" color="primary">Price range</bit-slider>
  * ```
  */
-export const TAG = define(
+export const SLIDER_TAG = define(
   'bit-slider',
   ({ host }) => {
     const slots = defineSlots();
-    const emit = defineEmits<{ change: { from?: number; originalEvent?: Event; to?: number; value?: number } }>();
-    const props = defineProps<SliderProps>({
+    const emit = defineEmits<BitSliderEvents>();
+    const props = defineProps<BitSliderProps>({
       color: { default: undefined },
       disabled: { default: false },
       from: { default: '0' },
@@ -741,9 +573,3 @@ export const TAG = define(
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-slider': HTMLElement & SliderProps & FormValidityMethods & AddEventListeners<BitSliderEvents>;
-  }
-}

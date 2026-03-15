@@ -5,6 +5,7 @@ import {
   defineSchema,
   type IndexedDBHandle,
   QueryBuilder,
+  ttl,
 } from './deposit';
 
 /* -------------------- Shared types & fixtures -------------------- */
@@ -166,6 +167,26 @@ describe('QueryBuilder', () => {
       expect(r).toEqual([rows[2]]);
     });
   });
+
+  describe('Aggregations', () => {
+    test('reduce – sum', async () => {
+      const total = await qb.reduce((acc, u) => acc + (u.age ?? 0), 0);
+
+      expect(total).toBe(90);
+    });
+
+    test('reduce – collect names', async () => {
+      const names = await qb.reduce<string[]>((acc, u) => [...acc, u.name ?? ''], []);
+
+      expect(names).toEqual(['Alice', 'Bob', 'Charlie']);
+    });
+
+    test('reduce – after filter', async () => {
+      const total = await qb.equals('city', 'Paris').reduce((acc, u) => acc + (u.age ?? 0), 0);
+
+      expect(total).toBe(60); // Alice (25) + Charlie (35)
+    });
+  });
 });
 
 /* ==================== LocalStorage adapter ==================== */
@@ -185,7 +206,7 @@ describe('LocalStorage adapter', () => {
     });
 
     test('put array / getAll', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -216,20 +237,20 @@ describe('LocalStorage adapter', () => {
     });
 
     test('delete array removes only specified keys', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
-      await db.delete('users', [1, 3]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+      await db.deleteMany('users', [1, 3]);
       expect(await db.getAll('users')).toEqual([{ id: 2 }]);
     });
 
     test('deleteAll empties the table', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }]);
       await db.deleteAll('users');
       expect(await db.getAll('users')).toEqual([]);
     });
 
     test('count tracks live records', async () => {
       expect(await db.count('users')).toBe(0);
-      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }]);
       expect(await db.count('users')).toBe(2);
     });
 
@@ -256,7 +277,7 @@ describe('LocalStorage adapter', () => {
     });
 
     test('getMany – returns only found records', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -264,6 +285,22 @@ describe('LocalStorage adapter', () => {
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
+    });
+
+    test('getMany – empty keys returns empty array', async () => {
+      await db.putMany('users', [{ id: 1, name: 'Alice' }]);
+      expect(await db.getMany('users', [])).toEqual([]);
+    });
+
+    test('getOrPut – async factory is awaited', async () => {
+      const result = await db.getOrPut('users', 7, async () => {
+        await Promise.resolve();
+
+        return { id: 7, name: 'Async' };
+      });
+
+      expect(result).toEqual({ id: 7, name: 'Async' });
+      expect(await db.get('users', 7)).toEqual({ id: 7, name: 'Async' });
     });
   });
 
@@ -275,13 +312,13 @@ describe('LocalStorage adapter', () => {
     });
 
     test('getAll excludes all expired records', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }], 1);
       await delay(5);
       expect(await db.getAll('users')).toEqual([]);
     });
 
     test('count excludes expired records', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }], 1);
       await db.put('users', { id: 3 });
       await delay(5);
       expect(await db.count('users')).toBe(1);
@@ -305,10 +342,10 @@ describe('LocalStorage adapter', () => {
   });
 
   describe('Edge Cases', () => {
-    test('get returns defaultValue when key absent', async () => {
+    test('getOr returns defaultValue when key absent', async () => {
       const fallback = { id: 0, name: 'Fallback' };
 
-      expect(await db.get('users', 0, fallback)).toBe(fallback);
+      expect(await db.getOr('users', 0, fallback)).toBe(fallback);
     });
 
     test('delete non-existent key is silent', async () => {
@@ -334,7 +371,7 @@ describe('LocalStorage adapter', () => {
     });
 
     test('from filters stored records', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { age: 25, id: 1, name: 'Alice' },
         { age: 30, id: 2, name: 'Bob' },
       ]);
@@ -352,6 +389,40 @@ describe('LocalStorage adapter', () => {
 
       await inlineDb.put('items', { id: 1, label: 'hello' });
       expect(await inlineDb.get('items', 1)).toEqual({ id: 1, label: 'hello' });
+    });
+
+    test('checkStorage guards getMany when storage unavailable', async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')!;
+
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get() {
+          throw new DOMException('SecurityError');
+        },
+      });
+
+      try {
+        await expect(db.getMany('users', [1])).rejects.toThrow();
+      } finally {
+        Object.defineProperty(globalThis, 'localStorage', descriptor);
+      }
+    });
+
+    test('checkStorage guards patch when storage unavailable', async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')!;
+
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get() {
+          throw new DOMException('SecurityError');
+        },
+      });
+
+      try {
+        await expect(db.patch('users', 1, { name: 'X' })).rejects.toThrow();
+      } finally {
+        Object.defineProperty(globalThis, 'localStorage', descriptor);
+      }
     });
   });
 });
@@ -377,7 +448,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('put array / getAll', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -408,20 +479,20 @@ describe('IndexedDB adapter', () => {
     });
 
     test('delete array removes only specified keys', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
-      await db.delete('users', [1, 3]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+      await db.deleteMany('users', [1, 3]);
       expect(await db.getAll('users')).toEqual([{ id: 2 }]);
     });
 
     test('deleteAll empties the table', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }]);
       await db.deleteAll('users');
       expect(await db.getAll('users')).toEqual([]);
     });
 
     test('count tracks live records', async () => {
       expect(await db.count('users')).toBe(0);
-      await db.put('users', [{ id: 1 }, { id: 2 }]);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }]);
       expect(await db.count('users')).toBe(2);
     });
 
@@ -448,7 +519,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('getMany – returns only found records', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -456,6 +527,22 @@ describe('IndexedDB adapter', () => {
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
+    });
+
+    test('getMany – empty keys returns empty array', async () => {
+      await db.putMany('users', [{ id: 1, name: 'Alice' }]);
+      expect(await db.getMany('users', [])).toEqual([]);
+    });
+
+    test('getOrPut – async factory is awaited', async () => {
+      const result = await db.getOrPut('users', 7, async () => {
+        await Promise.resolve();
+
+        return { id: 7, name: 'Async' };
+      });
+
+      expect(result).toEqual({ id: 7, name: 'Async' });
+      expect(await db.get('users', 7)).toEqual({ id: 7, name: 'Async' });
     });
   });
 
@@ -467,7 +554,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('getAll returns live records and evicts expired from store', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }], 1);
       await db.put('users', { id: 3, name: 'Charlie' });
       await delay(5);
       expect(await db.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
@@ -480,7 +567,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('count excludes expired records', async () => {
-      await db.put('users', [{ id: 1 }, { id: 2 }], 1);
+      await db.putMany('users', [{ id: 1 }, { id: 2 }], 1);
       await db.put('users', { id: 3 });
       await delay(5);
       expect(await db.count('users')).toBe(1);
@@ -498,10 +585,10 @@ describe('IndexedDB adapter', () => {
   });
 
   describe('Edge Cases', () => {
-    test('get returns defaultValue when key absent', async () => {
+    test('getOr returns defaultValue when key absent', async () => {
       const fallback = { id: 0, name: 'Fallback' };
 
-      expect(await db.get('users', 0, fallback)).toBe(fallback);
+      expect(await db.getOr('users', 0, fallback)).toBe(fallback);
     });
 
     test('delete non-existent key is silent', async () => {
@@ -509,7 +596,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('from filters stored records', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { age: 25, id: 1, name: 'Alice' },
         { age: 30, id: 2, name: 'Bob' },
       ]);
@@ -522,7 +609,7 @@ describe('IndexedDB adapter', () => {
 
   describe('Transaction', () => {
     test('put and delete commit atomically', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -563,7 +650,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('getAll inside transaction sees all committed records', async () => {
-      await db.put('users', [
+      await db.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
@@ -583,11 +670,11 @@ describe('IndexedDB adapter', () => {
 
       await multi.deleteAll('users');
       await multi.deleteAll('posts');
-      await multi.put('users', [
+      await multi.putMany('users', [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ]);
-      await multi.put('posts', [
+      await multi.putMany('posts', [
         { id: 1, title: 'P1', userId: 1 },
         { id: 2, title: 'P2', userId: 2 },
       ]);
@@ -601,7 +688,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('rolls back all changes on callback error', async () => {
-      await db.put('users', [{ id: 1, name: 'Alice' }]);
+      await db.putMany('users', [{ id: 1, name: 'Alice' }]);
       await expect(
         db.transaction(['users'], async (tx) => {
           await tx.put('users', { id: 2, name: 'Bob' });
@@ -609,6 +696,131 @@ describe('IndexedDB adapter', () => {
         }),
       ).rejects.toThrow();
       expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+    });
+
+    test('getMany inside transaction returns matching records', async () => {
+      await db.putMany('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+      ]);
+
+      let found: User[] = [];
+
+      await db.transaction(['users'], async (tx) => {
+        found = await tx.getMany('users', [1, 3, 99]);
+      });
+      expect(found).toEqual([
+        { id: 1, name: 'Alice' },
+        { id: 3, name: 'Charlie' },
+      ]);
+    });
+
+    test('deleteAll inside transaction clears the table', async () => {
+      await db.putMany('users', [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
+
+      await db.transaction(['users'], async (tx) => {
+        await tx.deleteAll('users');
+      });
+      expect(await db.getAll('users')).toEqual([]);
+    });
+
+    test('putMany inside transaction inserts multiple records', async () => {
+      await db.transaction(['users'], async (tx) => {
+        await tx.putMany('users', [
+          { id: 1, name: 'Alice' },
+          { id: 2, name: 'Bob' },
+        ]);
+      });
+      expect(await db.getAll('users')).toHaveLength(2);
+    });
+
+    test('deleteMany inside transaction removes specified keys', async () => {
+      await db.putMany('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+
+      await db.transaction(['users'], async (tx) => {
+        await tx.deleteMany('users', [1, 3]);
+      });
+      expect(await db.getAll('users')).toEqual([{ id: 2 }]);
+    });
+
+    test('getOr inside transaction returns default when missing', async () => {
+      const fallback = { id: 99, name: 'Ghost' };
+
+      let result: User | undefined;
+
+      await db.transaction(['users'], async (tx) => {
+        result = await tx.getOr('users', 99, fallback);
+      });
+      expect(result).toBe(fallback);
+    });
+
+    test('has inside transaction reflects in-flight writes', async () => {
+      let exists = false;
+
+      await db.transaction(['users'], async (tx) => {
+        await tx.put('users', { id: 5, name: 'Eve' });
+        exists = await tx.has('users', 5);
+      });
+      expect(exists).toBe(true);
+    });
+
+    test('count inside transaction returns native record count', async () => {
+      await db.putMany('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
+
+      let n = 0;
+
+      await db.transaction(['users'], async (tx) => {
+        n = await tx.count('users');
+      });
+      expect(n).toBe(3);
+    });
+
+    test('from inside transaction enables query-builder filtering', async () => {
+      await db.putMany('users', [
+        { age: 25, city: 'Paris', id: 1, name: 'Alice' },
+        { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
+        { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
+      ]);
+
+      let parisians: User[] = [];
+
+      await db.transaction(['users'], async (tx) => {
+        parisians = await tx.from('users').equals('city', 'Paris').orderBy('age', 'desc').toArray();
+      });
+      expect(parisians.map((u) => u.id)).toEqual([3, 1]);
+    });
+  });
+
+  describe('Lifecycle', () => {
+    test('close and reuse reopens the connection', async () => {
+      await db.put('users', { id: 1, name: 'Alice' });
+      db.close();
+      // After close, the next operation should transparently reconnect
+      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    });
+
+    test('migration function is called on first open', async () => {
+      const migrationSpy = vi.fn();
+      const migDb = createIndexedDB({
+        dbName: 'MigrationTest',
+        migrationFn: migrationSpy,
+        schema: userSchema,
+        version: 1,
+      });
+
+      await migDb.put('users', { id: 1, name: 'Alice' });
+      expect(migrationSpy).toHaveBeenCalledOnce();
+      expect(migrationSpy).toHaveBeenCalledWith(
+        expect.any(IDBDatabase),
+        expect.any(Number),
+        1,
+        expect.any(IDBTransaction),
+      );
+      migDb.close();
     });
   });
 });
@@ -651,5 +863,35 @@ describe('Logger', () => {
     await db.get('items', 1);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Removing corrupted entry'), expect.any(Error));
     warnSpy.mockRestore();
+  });
+});
+
+/* ==================== ttl helpers ==================== */
+
+describe('ttl helpers', () => {
+  test('ms passes value through', () => {
+    expect(ttl.ms(500)).toBe(500);
+  });
+
+  test('seconds converts to milliseconds', () => {
+    expect(ttl.seconds(2)).toBe(2000);
+  });
+
+  test('minutes converts to milliseconds', () => {
+    expect(ttl.minutes(1)).toBe(60_000);
+  });
+
+  test('hours converts to milliseconds', () => {
+    expect(ttl.hours(1)).toBe(3_600_000);
+  });
+
+  test('ttl helpers can be used with put', async () => {
+    localStorage.clear();
+
+    const db = createLocalStorage({ dbName: 'TtlHelper', schema: userSchema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
+    await delay(5);
+    expect(await db.get('users', 1)).toBeUndefined();
   });
 });

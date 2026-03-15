@@ -1,17 +1,6 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import {
-  computed,
-  createId,
-  css,
-  define,
-  defineProps,
-  html,
-  onMount,
-  onSlotChange,
-  signal,
-  watch,
-} from '@vielzeug/craftit';
+import { computed, createId, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
@@ -23,155 +12,29 @@ type TooltipTrigger = 'hover' | 'focus' | 'click';
 
 const ARROW_OFFSET = 8; // offset from trigger to tooltip edge
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: inline-block;
-      position: relative;
-    }
-
-    .tooltip {
-      /* Popover UA resets */
-      inset: unset;
-      margin: 0;
-      border: 0;
-      /* Positioning — JS sets top/left inline */
-      position: fixed;
-      background: var(--color-contrast-900);
-      color: var(--color-contrast-50);
-      border-radius: var(--rounded-sm);
-      font-size: var(--text-sm);
-      font-weight: var(--font-normal);
-      line-height: var(--leading-none);
-      max-width: var(--tooltip-max-width, 18rem);
-      padding: var(--size-0) var(--size-3);
-      pointer-events: none;
-      white-space: pre-line;
-      word-break: break-word;
-      box-shadow: var(--shadow-md);
-      /* Hidden by default (also serves as exit state) */
-      opacity: 0;
-      transition:
-        opacity var(--transition-fast),
-        display var(--transition-fast) allow-discrete,
-        overlay var(--transition-fast) allow-discrete;
-    }
-
-    /* Entry animation via @starting-style */
-    .tooltip:popover-open {
-      opacity: 1;
-
-      @starting-style {
-        opacity: 0;
-      }
-    }
-
-    /* ========================================
-       Arrow
-       ======================================== */
-
-    .arrow {
-      position: absolute;
-      width: 0;
-      height: 0;
-    }
-
-    /* Arrow placement depends on tooltip position */
-    .tooltip[data-placement='top'] .arrow {
-      bottom: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 5px solid var(--color-contrast-900);
-    }
-
-    .tooltip[data-placement='bottom'] .arrow {
-      top: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-bottom: 5px solid var(--color-contrast-900);
-    }
-
-    .tooltip[data-placement='left'] .arrow {
-      right: -4px;
-      top: 50%;
-      transform: translateY(-50%);
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      border-left: 5px solid var(--color-contrast-900);
-    }
-
-    .tooltip[data-placement='right'] .arrow {
-      left: -4px;
-      top: 50%;
-      transform: translateY(-50%);
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      border-right: 5px solid var(--color-contrast-900);
-    }
-  }
-
-  @layer buildit.variants {
-    /* Light tooltip */
-    :host([variant='light']) .tooltip {
-      background: var(--color-canvas);
-      color: var(--color-contrast-900);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--shadow-md);
-    }
-
-    :host([variant='light']) .tooltip[data-placement='top'] .arrow {
-      border-top-color: var(--color-canvas);
-    }
-
-    :host([variant='light']) .tooltip[data-placement='bottom'] .arrow {
-      border-bottom-color: var(--color-canvas);
-    }
-
-    :host([variant='light']) .tooltip[data-placement='left'] .arrow {
-      border-left-color: var(--color-canvas);
-    }
-
-    :host([variant='light']) .tooltip[data-placement='right'] .arrow {
-      border-right-color: var(--color-canvas);
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([size='sm']) .tooltip {
-      font-size: var(--text-xs);
-    }
-
-    :host([size='lg']) .tooltip {
-      font-size: var(--text-base);
-    }
-  }
-`;
+import styles from './tooltip.css?inline';
 
 /** Tooltip component properties */
-export interface TooltipProps {
-  /** Tooltip text content */
-  content?: string;
-  /** Preferred placement relative to trigger */
-  placement?: TooltipPlacement;
-  /** Which trigger(s) show/hide the tooltip — comma-separated if multiple, e.g. "hover,focus" */
-  trigger?: string;
-  /** Show delay in ms */
-  delay?: number;
+export type BitTooltipProps = {
   /** Hide delay in ms (useful to keep tooltip open when moving focus between trigger and tooltip) */
   'close-delay'?: number;
-  /** Tooltip size */
-  size?: ComponentSize;
-  /** Visual variant: 'dark' (default) or 'light' */
-  variant?: 'dark' | 'light';
+  /** Tooltip text content */
+  content?: string;
+  /** Show delay in ms */
+  delay?: number;
   /** Disable the tooltip */
   disabled?: boolean;
   /** Controlled open state. When provided, the tooltip acts as a controlled component and ignores trigger events for open/close. */
   open?: boolean;
-}
+  /** Preferred placement relative to trigger */
+  placement?: TooltipPlacement;
+  /** Tooltip size */
+  size?: ComponentSize;
+  /** Which trigger(s) show/hide the tooltip — comma-separated if multiple, e.g. "hover,focus" */
+  trigger?: string;
+  /** Visual variant: 'dark' (default) or 'light' */
+  variant?: 'dark' | 'light';
+};
 
 /**
  * A lightweight tooltip shown on hover/focus/click relative to the slotted trigger.
@@ -202,8 +65,8 @@ export interface TooltipProps {
  * </bit-tooltip>
  * ```
  */
-export const TAG = define('bit-tooltip', ({ host }) => {
-  const props = defineProps<TooltipProps>({
+export const TOOLTIP_TAG = define('bit-tooltip', ({ host }) => {
+  const props = defineProps<BitTooltipProps>({
     'close-delay': { default: 0 },
     content: { default: '' },
     delay: { default: 0 },
@@ -260,7 +123,13 @@ export const TAG = define('bit-tooltip', ({ host }) => {
   function show() {
     if (props.open.value !== undefined) return; // controlled mode
 
-    if (props.disabled.value || !props.content.value) return;
+    const hasSlottedContent = () => {
+      const contentSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="content"]');
+
+      return (contentSlot?.assignedNodes({ flatten: true }).length ?? 0) > 0;
+    };
+
+    if (props.disabled.value || (!props.content.value && !hasSlottedContent())) return;
 
     if (hideTimer) {
       clearTimeout(hideTimer);
@@ -441,9 +310,3 @@ export const TAG = define('bit-tooltip', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-tooltip': HTMLElement & TooltipProps;
-  }
-}

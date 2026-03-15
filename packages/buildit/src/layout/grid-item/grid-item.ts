@@ -1,56 +1,22 @@
-import { css, define, defineProps, effect, html } from '@vielzeug/craftit';
+import { define, defineProps, effect, html } from '@vielzeug/craftit';
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: block;
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([align='start']) {
-      align-self: start;
-    }
-    :host([align='center']) {
-      align-self: center;
-    }
-    :host([align='end']) {
-      align-self: end;
-    }
-    :host([align='stretch']) {
-      align-self: stretch;
-    }
-
-    :host([justify='start']) {
-      justify-self: start;
-    }
-    :host([justify='center']) {
-      justify-self: center;
-    }
-    :host([justify='end']) {
-      justify-self: end;
-    }
-    :host([justify='stretch']) {
-      justify-self: stretch;
-    }
-  }
-`;
+import styles from './grid-item.css?inline';
 
 /** Grid item component properties */
-export interface GridItemProps {
-  /** Span N columns. Use 'full' to span all columns (1 / -1). */
-  colSpan?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full';
-  /** Span N rows. Use 'full' to span all rows (1 / -1). */
-  rowSpan?: '1' | '2' | '3' | '4' | '5' | '6' | 'full';
-  /** Explicit grid-column value — overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
-  col?: string;
-  /** Explicit grid-row value — overrides row-span (e.g. '1 / 3', 'span 2'). */
-  row?: string;
+export type BitGridItemProps = {
   /** Align self vertically within the grid cell */
   align?: 'start' | 'center' | 'end' | 'stretch';
+  /** Explicit grid-column value — overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
+  col?: string;
+  /** Span N columns. Use 'full' to span all columns (1 / -1). */
+  colSpan?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full';
   /** Justify self horizontally within the grid cell */
   justify?: 'start' | 'center' | 'end' | 'stretch';
-}
+  /** Explicit grid-row value — overrides row-span (e.g. '1 / 3', 'span 2'). */
+  row?: string;
+  /** Span N rows. Use 'full' to span all rows (1 / -1). */
+  rowSpan?: '1' | '2' | '3' | '4' | '5' | '6' | 'full';
+};
 
 /**
  * bit-grid-item — A grid cell with declarative placement and span control.
@@ -82,8 +48,8 @@ export interface GridItemProps {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const TAG = define('bit-grid-item', ({ host }) => {
-  const props = defineProps<GridItemProps>({
+export const GRID_ITEM_TAG = define('bit-grid-item', ({ host }) => {
+  const props = defineProps<BitGridItemProps>({
     align: { default: undefined },
     col: { default: '' },
     colSpan: { default: undefined },
@@ -127,9 +93,3 @@ export const TAG = define('bit-grid-item', ({ host }) => {
     template: html`<slot></slot>`,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-grid-item': HTMLElement & GridItemProps;
-  }
-}

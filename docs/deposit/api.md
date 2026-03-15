@@ -16,9 +16,9 @@ Creates a fully-typed schema definition. The type parameter `S` maps table names
 **Signature:**
 
 ```ts
-function defineSchema<S extends Record<string, Record<string, unknown>>>(
-  schema: { [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] } },
-): Schema<S>
+function defineSchema<S extends Record<string, Record<string, unknown>>>(schema: {
+  [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] };
+}): Schema<S>;
 ```
 
 **Example:**
@@ -41,16 +41,16 @@ Creates a LocalStorage-backed adapter.
 ```ts
 function createLocalStorage<S extends Record<string, Record<string, unknown>>>(
   options: LocalStorageOptions<S>,
-): Adapter<Schema<S>>
+): Adapter<Schema<S>>;
 ```
 
 **Options — `LocalStorageOptions<S>`:**
 
-| Property | Type | Description |
-|---|---|---|
-| `dbName` | `string` | Namespace prefix for all localStorage keys |
-| `schema` | `Schema<S>` | Table definitions |
-| `logger?` | `Logger` | Custom logger; defaults to `console` |
+| Property  | Type        | Description                                |
+| --------- | ----------- | ------------------------------------------ |
+| `dbName`  | `string`    | Namespace prefix for all localStorage keys |
+| `schema`  | `Schema<S>` | Table definitions                          |
+| `logger?` | `Logger`    | Custom logger; defaults to `console`       |
 
 ---
 
@@ -62,7 +62,7 @@ Use this inside `migrationFn` when creating indexes or object stores to stay dec
 **Signature:**
 
 ```ts
-function storeField(field: string): string
+function storeField(field: string): string;
 // storeField('email') === 'v.email'
 ```
 
@@ -89,35 +89,48 @@ Creates an IndexedDB-backed adapter. The database connection is opened lazily on
 ```ts
 function createIndexedDB<S extends Record<string, Record<string, unknown>>>(
   options: IndexedDBOptions<S>,
-): IndexedDBHandle<Schema<S>>
+): IndexedDBHandle<Schema<S>>;
 ```
 
 **Options — `IndexedDBOptions<S>`:**
 
-| Property | Type | Description |
-|---|---|---|
-| `dbName` | `string` | IDB database name |
-| `version?` | `number` | Database version (default: `1`) |
-| `schema` | `Schema<S>` | Table definitions |
-| `migrationFn?` | `MigrationFn` | Called inside `onupgradeneeded` on version upgrade |
-| `logger?` | `Logger` | Custom logger; defaults to `console` |
+| Property       | Type          | Description                                                         |
+| -------------- | ------------- | ------------------------------------------------------------------- |
+| `dbName`       | `string`      | IDB database name                                                   |
+| `version`      | `number`      | Database version — **required**; increment to trigger `migrationFn` |
+| `schema`       | `Schema<S>`   | Table definitions                                                   |
+| `migrationFn?` | `MigrationFn` | Called inside `onupgradeneeded` on version upgrade                  |
+| `logger?`      | `Logger`      | Custom logger; defaults to `console`                                |
 
 ## Adapter Interface
 
 `Adapter<S>` is the common interface implemented by both adapters.
 
-### `get(table, key, defaultValue?)`
+### `get(table, key)`
 
-Returns the record for the given primary key, or `defaultValue` / `undefined` when absent or expired.
-
-**Overloads:**
+Returns the record for the given primary key, or `undefined` when absent or expired.
 
 ```ts
-get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
-get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue?: RecordType<S, K>): Promise<RecordType<S, K> | undefined>;
+get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined>
 ```
 
-When `defaultValue` is supplied the return type narrows to `RecordType<S, K>` (never `undefined`).
+---
+
+### `getOr(table, key, defaultValue)`
+
+Returns the record when present, or `defaultValue` when absent or expired. The return type is always `RecordType<S, K>` — never `undefined`.
+
+```ts
+getOr<K extends keyof S>(
+  table: K,
+  key: KeyType<S, K>,
+  defaultValue: RecordType<S, K>,
+): Promise<RecordType<S, K>>
+```
+
+```ts
+const user = await db.getOr('users', 1, defaultUser); // User — never undefined
+```
 
 ---
 
@@ -143,10 +156,22 @@ getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<
 
 ### `put(table, value, ttl?)`
 
-Upserts one record or an array of records. `ttl` is the time-to-live in milliseconds.
+Upserts a single record. `ttl` is the time-to-live in milliseconds. For multiple records use `putMany`.
 
 ```ts
-put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void>
+put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>
+```
+
+> **LocalStorage:** throws a descriptive `QuotaExceededError` when the storage quota is exceeded.
+
+---
+
+### `putMany(table, values[], ttl?)`
+
+Upserts multiple records. The same optional `ttl` is applied to every record.
+
+```ts
+putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>
 ```
 
 ---
@@ -167,10 +192,20 @@ patch<K extends keyof S>(
 
 ### `delete(table, key)`
 
-Removes one or many records. Silently ignores missing keys.
+Removes a single record by key. Silently ignores missing keys. For multiple keys use `deleteMany`.
 
 ```ts
-delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void>
+delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>
+```
+
+---
+
+### `deleteMany(table, keys[])`
+
+Removes multiple records by key list. Silently ignores missing keys.
+
+```ts
+delete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>
 ```
 
 ---
@@ -247,15 +282,25 @@ transaction<K extends keyof S>(
 
 **`TransactionContext<S, K>` methods:**
 
-| Method | Description |
-|---|---|
-| `get(table, key)` | Read a record inside the transaction |
-| `getAll(table)` | Read all live records inside the transaction |
-| `put(table, value, ttl?)` | Write or upsert a record |
-| `patch(table, key, partial)` | Partial update — returns merged record or `undefined` |
-| `delete(table, key)` | Delete a record |
+| Method                           | Description                                            |
+| -------------------------------- | ------------------------------------------------------ |
+| `get(table, key)`                | Read a record by key                                   |
+| `getOr(table, key, default)`     | Read a record; return `default` when absent            |
+| `getAll(table)`                  | Read all live records                                  |
+| `getMany(table, keys[])`         | Batch read by key list, omitting misses                |
+| `put(table, value, ttl?)`        | Write or upsert a record                               |
+| `putMany(table, values[], ttl?)` | Upsert multiple records                                |
+| `patch(table, key, partial)`     | Partial update — returns merged record or `undefined`  |
+| `delete(table, key)`             | Delete a single record                                 |
+| `deleteMany(table, keys[])`      | Delete multiple records                                |
+| `deleteAll(table)`               | Delete all records in a table                          |
+| `has(table, key)`                | Check existence                                        |
+| `count(table)`                   | Native IDB record count (includes TTL-expired records) |
+| `from(table)`                    | Create a lazy `QueryBuilder`                           |
 
-> **Note:** `getMany`, `count`, `has`, `getOrPut`, and `from` are intentionally absent — they are not supported within an IDB transaction scope.
+> **Note:** `getOrPut` is absent from `TransactionContext`. The read-then-conditionally-write pattern is not safely atomic within a shared transaction scope.
+
+> **count() in transactions:** Returns the native IDB count which includes TTL-expired records. Use `(await tx.getAll(table)).length` for a TTL-accurate count.
 
 ---
 
@@ -400,8 +445,14 @@ map<U>(callback: (record: T) => U): ProjectedQuery<U>
 Transforms each record to a new value. Returns a `ProjectedQuery<U>` rather than `QueryBuilder<U>` — `U` is unconstrained, so primitive projections like `map(u => u.name)` work correctly. `ProjectedQuery<U>` exposes the same terminal methods (`toArray`, `first`, `last`, `count`, `[Symbol.asyncIterator]`) but is not further chainable.
 
 ```ts
-const names = await db.from('users').map(u => u.name).toArray();          // string[]
-const dtos  = await db.from('users').map(u => ({ id: u.id })).toArray();  // { id: number }[]
+const names = await db
+  .from('users')
+  .map((u) => u.name)
+  .toArray(); // string[]
+const dtos = await db
+  .from('users')
+  .map((u) => ({ id: u.id }))
+  .toArray(); // { id: number }[]
 ```
 
 ---
@@ -424,6 +475,24 @@ contains(query: string, fields?: (keyof T & string)[]): QueryBuilder<T>
 ```
 
 Case-insensitive substring match. When `fields` is omitted, all string-valued fields are checked.
+
+---
+
+#### `reduce(callback, initial)`
+
+```ts
+reduce<A>(callback: (accumulator: A, record: T) => A, initial: A): Promise<A>
+```
+
+Reduces all matching records to a single value. Applied after all filters, sorting, and pagination operators.
+
+```ts
+const totalAge = await db.from('users').reduce((sum, u) => sum + u.age, 0);
+const ids = await db
+  .from('users')
+  .filter((u) => u.active)
+  .reduce<number[]>((acc, u) => [...acc, u.id], []);
+```
 
 ---
 
@@ -487,17 +556,40 @@ for await (const record of db.from('users').orderBy('name')) {
 
 ## Types
 
+### `ttl`
+
+A convenience constant of named duration helpers. Returns raw millisecond values for use with `put`, `putMany`, `getOrPut`, and `getOrPut`.
+
+```ts
+const ttl: {
+  ms(n: number): number; // identity: ttl.ms(500) === 500
+  seconds(n: number): number; // ttl.seconds(30) === 30_000
+  minutes(n: number): number; // ttl.minutes(15) === 900_000
+  hours(n: number): number; // ttl.hours(1) === 3_600_000
+};
+```
+
+```ts
+import { ttl } from '@vielzeug/deposit';
+
+await db.put('sessions', session, ttl.hours(1));
+await db.put('cache', entry, ttl.minutes(15));
+await db.getOrPut('users', id, fetchUser, ttl.seconds(30));
+```
+
+---
+
 ### `ProjectedQuery<U>`
 
 The return type of `QueryBuilder.map()`. Exposes terminal methods only — it is not chainable with further query operators.
 
 ```ts
 class ProjectedQuery<U> {
-  toArray(): Promise<U[]>
-  first(): Promise<U | undefined>
-  last(): Promise<U | undefined>
-  count(): Promise<number>
-  [Symbol.asyncIterator](): AsyncGenerator<U>
+  toArray(): Promise<U[]>;
+  first(): Promise<U | undefined>;
+  last(): Promise<U | undefined>;
+  count(): Promise<number>;
+  [Symbol.asyncIterator](): AsyncGenerator<U>;
 }
 ```
 
@@ -508,12 +600,44 @@ class ProjectedQuery<U> {
 Use `defineSchema<S>(schema)` rather than constructing this type directly.
 
 ```ts
-type Schema<S = Record<string, Record<string, unknown>>> = {
+type Schema<S> = {
   [K in keyof S]: {
     key: keyof S[K] & string;
     indexes?: (keyof S[K] & string)[];
   };
-}
+};
+```
+
+---
+
+### `RecordOf<S, K>`
+
+Extracts the record type for table `K` from a schema `S`.
+
+```ts
+export type RecordOf<S extends Schema<any>, K extends keyof S> = /* ... */
+```
+
+```ts
+import type { RecordOf } from '@vielzeug/deposit';
+
+type User = RecordOf<typeof schema, 'users'>; // { id: number; name: string; age: number }
+```
+
+---
+
+### `KeyOf<S, K>`
+
+Extracts the primary key type for table `K` from a schema `S`.
+
+```ts
+export type KeyOf<S extends Schema<any>, K extends keyof S> = /* ... */
+```
+
+```ts
+import type { KeyOf } from '@vielzeug/deposit';
+
+type UserId = KeyOf<typeof schema, 'users'>; // number
 ```
 
 ---
@@ -526,7 +650,7 @@ type MigrationFn = (
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-) => void | Promise<void>
+) => void;
 ```
 
 Provide to `createIndexedDB` to handle schema migrations across database versions.
@@ -540,7 +664,7 @@ type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
   dbName: string;
   schema: Schema<S>;
   logger?: Logger;
-}
+};
 ```
 
 ---
@@ -550,11 +674,12 @@ type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
 ```ts
 type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = {
   dbName: string;
-  version?: number;
+  /** Increment to trigger `migrationFn` on next open. Required. */
+  version: number;
   schema: Schema<S>;
   migrationFn?: MigrationFn;
   logger?: Logger;
-}
+};
 ```
 
 ---
@@ -562,13 +687,25 @@ type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = {
 ### `TransactionContext<S, K>`
 
 ```ts
-type TransactionContext<S extends Schema, K extends keyof S> = {
+type TransactionContext<S extends Schema<any>, K extends keyof S> = {
+  count<T extends K>(table: T): Promise<number>;
+  delete<T extends K>(table: T, key: KeyType<S, T>): Promise<void>;
+  deleteAll<T extends K>(table: T): Promise<void>;
+  deleteMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<void>;
+  from<T extends K>(table: T): QueryBuilder<RecordType<S, T>>;
   get<T extends K>(table: T, key: KeyType<S, T>): Promise<RecordType<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordType<S, T>[]>;
+  getMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<RecordType<S, T>[]>;
+  getOr<T extends K>(table: T, key: KeyType<S, T>, defaultValue: RecordType<S, T>): Promise<RecordType<S, T>>;
+  has<T extends K>(table: T, key: KeyType<S, T>): Promise<boolean>;
+  patch<T extends K>(
+    table: T,
+    key: KeyType<S, T>,
+    partial: Partial<RecordType<S, T>>,
+  ): Promise<RecordType<S, T> | undefined>;
   put<T extends K>(table: T, value: RecordType<S, T>, ttl?: number): Promise<void>;
-  delete<T extends K>(table: T, key: KeyType<S, T>): Promise<void>;
-  patch<T extends K>(table: T, key: KeyType<S, T>, partial: Partial<RecordType<S, T>>): Promise<RecordType<S, T> | undefined>;
-}
+  putMany<T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void>;
+};
 ```
 
 ---
@@ -579,7 +716,7 @@ type TransactionContext<S extends Schema, K extends keyof S> = {
 type Logger = {
   error(...args: unknown[]): void;
   warn(...args: unknown[]): void;
-}
+};
 ```
 
 Pass a custom logger to `createLocalStorage` or `createIndexedDB` to redirect internal warnings. Defaults to `console`.

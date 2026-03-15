@@ -231,7 +231,3 @@ console.log(results); // [832040, 2178309, 5702887, 14930352, 39088169, 10233415
 
 fibPool.dispose();
 ```
-
-::: tip
-Script URLs must be accessible from the Worker origin. For local development, host scripts via your dev server or use a CORS-enabled CDN.
-:::

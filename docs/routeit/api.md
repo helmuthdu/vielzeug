@@ -18,15 +18,15 @@ const router = createRouter();
 const router = createRouter({ mode: 'hash', base: '/app' });
 ```
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `options.mode` | `RouterMode` | `'history'` | Routing mode — `'history'` uses the HTML5 History API, `'hash'` uses URL hash |
-| `options.base` | `string` | `'/'` | Base path prefix for all routes in history mode |
-| `options.onNotFound` | `RouteHandler` | — | Called when no route matches the current URL |
-| `options.onError` | `(error, ctx) => void` | — | Called when a handler or middleware throws |
-| `options.middleware` | `Middleware \| Middleware[]` | `[]` | Global middleware applied before every route |
-| `options.viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
-| `options.autoStart` | `boolean` | `false` | Start listening and handle the current URL immediately after construction |
+| Parameter                | Type                         | Default     | Description                                                                   |
+| ------------------------ | ---------------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `options.mode`           | `RouterMode`                 | `'history'` | Routing mode — `'history'` uses the HTML5 History API, `'hash'` uses URL hash |
+| `options.base`           | `string`                     | `'/'`       | Base path prefix for all routes in history mode                               |
+| `options.onNotFound`     | `RouteHandler`               | —           | Called when no route matches the current URL                                  |
+| `options.onError`        | `(error, ctx) => void`       | —           | Called when a handler or middleware throws                                    |
+| `options.middleware`     | `Middleware \| Middleware[]` | `[]`        | Global middleware applied before every route                                  |
+| `options.viewTransition` | `boolean`                    | `false`     | Wrap navigations in the View Transition API when available                    |
+| `options.autoStart`      | `boolean`                    | `false`     | Start listening and handle the current URL immediately after construction     |
 
 **Returns:** `Router`
 
@@ -56,25 +56,29 @@ router.on('/checkout/*', { middleware: requireAuth });
 router.on('/api/*', { middleware: [rateLimit, logger] });
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `path` | `Path extends string` | Path pattern — supports `:param`, `:param*`, and `*` wildcards |
-| `handler` | `RouteHandler<PathParams<Path>, Meta>` | Function called when the route matches |
-| `options.name` | `string` | Route name for `navigate({ name })`, `url()`, and `isActive()` |
-| `options.meta` | `Meta` | Static metadata passed to `ctx.meta` |
-| `options.middleware` | `Middleware \| Middleware[]` | Route-specific middleware |
+| Parameter            | Type                                   | Description                                                    |
+| -------------------- | -------------------------------------- | -------------------------------------------------------------- |
+| `path`               | `Path extends string`                  | Path pattern — supports `:param`, `:param*`, and `*` wildcards |
+| `handler`            | `RouteHandler<PathParams<Path>, Meta>` | Function called when the route matches                         |
+| `options.name`       | `string`                               | Route name for `navigate({ name })`, `url()`, and `isActive()` |
+| `options.meta`       | `Meta`                                 | Static metadata passed to `ctx.meta`                           |
+| `options.middleware` | `Middleware \| Middleware[]`           | Route-specific middleware                                      |
 
 **Returns:** `this` (chainable)
 
 #### `router.group(prefix, definer, options?)`
 
-Register a group of routes sharing a path prefix and optional middleware.
+Register a group of routes sharing a path prefix and optional middleware. The definer callback receives a `RouteGroup<Prefix>` whose `on()` overloads type-check path params against the combined `prefix + path` pattern.
 
 ```ts
-router.group('/admin', (r) => {
-  r.on('/dashboard', () => renderDashboard());
-  r.on('/users/:id', ({ params }) => renderUser(params.id));
-}, { middleware: requireAuth });
+router.group(
+  '/admin',
+  (r) => {
+    r.on('/dashboard', () => renderDashboard());
+    r.on('/users/:id', ({ params }) => renderUser(params.id));
+  },
+  { middleware: requireAuth },
+);
 ```
 
 Groups are nestable:
@@ -87,11 +91,22 @@ router.group('/admin', (r) => {
 });
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `prefix` | `string` | Shared path prefix |
-| `definer` | `(r: RouteGroup) => void` | Callback that receives a scoped `RouteGroup` |
-| `options.middleware` | `Middleware \| Middleware[]` | Middleware applied to every route in the group |
+Path params from the group prefix are typed inside the callback:
+
+```ts
+router.group('/projects/:projectId', (r) => {
+  r.on('/tasks/:taskId', ({ params }) => {
+    params.projectId; // ✓ typed — from the group prefix
+    params.taskId; // ✓ typed — from this on() path
+  });
+});
+```
+
+| Parameter | Type                              | Description                                        |
+| --------- | --------------------------------- | -------------------------------------------------- |
+| `prefix`  | `Prefix extends string`           | Shared path prefix                                 |
+| `definer` | `(r: RouteGroup<Prefix>) => void` | Callback that receives a prefix-aware `RouteGroup` |
+| `options` | `GroupOptions`                    | Optional group-level middleware                    |
 
 **Returns:** `this` (chainable)
 
@@ -139,13 +154,13 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 await router.navigate({ name: 'user', query: { tab: 'posts' }, hash: 'activity' });
 ```
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `target` | `NavigationTarget` | — | Path string or named-route descriptor |
-| `options.replace` | `boolean` | `false` | Use `replaceState` instead of `pushState` |
-| `options.state` | `unknown` | — | State stored with the history entry |
-| `options.viewTransition` | `boolean` | — | Override the router-level `viewTransition` setting for this navigation |
-| `options.force` | `boolean` | `false` | Navigate even if the destination URL matches the current URL |
+| Parameter                | Type               | Default | Description                                                            |
+| ------------------------ | ------------------ | ------- | ---------------------------------------------------------------------- |
+| `target`                 | `NavigationTarget` | —       | Path string or named-route descriptor                                  |
+| `options.replace`        | `boolean`          | `false` | Use `replaceState` instead of `pushState`                              |
+| `options.state`          | `unknown`          | —       | State stored with the history entry                                    |
+| `options.viewTransition` | `boolean`          | —       | Override the router-level `viewTransition` setting for this navigation |
+| `options.force`          | `boolean`          | `false` | Navigate even if the destination URL matches the current URL           |
 
 **Returns:** `Promise<void>`
 
@@ -158,18 +173,18 @@ await router.navigate({ name: 'user', query: { tab: 'posts' }, hash: 'activity' 
 Generate a URL from a path pattern or named route. Prepends the base path in history mode.
 
 ```ts
-router.url('/users/:id', { id: '42' });              // '/users/42'
-router.url('userDetail', { id: '42' });              // '/app/users/42' (with base)
-router.url('/search', undefined, { q: 'ts' });       // '/search?q=ts'
+router.url('/users/:id', { id: '42' }); // '/users/42'
+router.url('userDetail', { id: '42' }); // '/app/users/42' (with base)
+router.url('/search', undefined, { q: 'ts' }); // '/search?q=ts'
 router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/docs/guide/intro'
-router.url('/p', undefined, { tags: ['a', 'b'] });   // '/p?tags=a&tags=b'
+router.url('/p', undefined, { tags: ['a', 'b'] }); // '/p?tags=a&tags=b'
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `nameOrPattern` | `string` | Path pattern (e.g. `'/users/:id'`) or route name |
-| `params` | `RouteParams` | Params to substitute into the pattern |
-| `query` | `QueryParams` | Query params to append |
+| Parameter       | Type          | Description                                      |
+| --------------- | ------------- | ------------------------------------------------ |
+| `nameOrPattern` | `string`      | Path pattern (e.g. `'/users/:id'`) or route name |
+| `params`        | `RouteParams` | Params to substitute into the pattern            |
+| `query`         | `QueryParams` | Query params to append                           |
 
 **Returns:** `string`
 
@@ -180,16 +195,16 @@ router.url('/p', undefined, { tags: ['a', 'b'] });   // '/p?tags=a&tags=b'
 Check whether the current URL matches a path pattern or named route.
 
 ```ts
-router.isActive('/users/:id');          // exact match (default)
-router.isActive('userDetail');          // by route name, exact
-router.isActive('/admin', false);       // prefix match
-router.isActive('adminGroup', false);   // named route prefix match
+router.isActive('/users/:id'); // exact match (default)
+router.isActive('userDetail'); // by route name, exact
+router.isActive('/admin', false); // prefix match
+router.isActive('adminGroup', false); // named route prefix match
 ```
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `nameOrPattern` | `string` | — | Path pattern or route name |
-| `exact` | `boolean` | `true` | `true` = full match; `false` = prefix match |
+| Parameter       | Type      | Default | Description                                 |
+| --------------- | --------- | ------- | ------------------------------------------- |
+| `nameOrPattern` | `string`  | —       | Path pattern or route name                  |
+| `exact`         | `boolean` | `true`  | `true` = full match; `false` = prefix match |
 
 **Returns:** `boolean`
 
@@ -264,14 +279,16 @@ type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
 
 Handlers may return a `Promise` — TypeScript's `void` return allows async functions and functions that return any value.
 
-### `Middleware<Params, Meta>`
+### `Middleware<Meta>`
 
 ```ts
-type Middleware<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
+type Middleware<Meta = unknown> = (
+  context: RouteContext<RouteParams, Meta>,
   next: () => Promise<void>,
 ) => void | Promise<void>;
 ```
+
+Middleware only receives `RouteParams` for `ctx.params`. Path-param typing is applied to `RouteHandler` and `on()` callbacks inside typed `RouteGroup<Prefix>` groups.
 
 ### `RouteOptions<Meta>`
 
@@ -281,27 +298,35 @@ Passed as the last argument to `on()`.
 type RouteOptions<Meta = unknown> = {
   name?: string;
   meta?: Meta;
-  middleware?: Middleware<RouteParams, Meta> | Middleware<RouteParams, Meta>[];
+  middleware?: Middleware<Meta> | Middleware<Meta>[];
 };
 ```
 
-### `RouteGroup`
+### `RouteGroup<Prefix>`
 
-The scoped registration API provided to `group()` callbacks.
+The prefix-aware registration API provided to `group()` callbacks. `Prefix` propagates group path params into each nested `on()` handler's `ctx.params`.
 
 ```ts
-type RouteGroup = {
+type RouteGroup<Prefix extends string = ''> = {
   on<Path extends string, Meta = unknown>(
     path: Path,
-    handler: RouteHandler<PathParams<Path>, Meta>,
+    handler: RouteHandler<PathParams<`${Prefix}/${Path}`>, Meta>,
     options?: RouteOptions<Meta>,
-  ): RouteGroup;
-  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup;
-  group(
-    prefix: string,
-    definer: (r: RouteGroup) => void,
-    options?: { middleware?: Middleware | Middleware[] },
-  ): RouteGroup;
+  ): RouteGroup<Prefix>;
+  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup<Prefix>;
+  group<P extends string>(
+    prefix: P,
+    definer: (r: RouteGroup<`${Prefix}/${P}`>) => void,
+    options?: GroupOptions,
+  ): RouteGroup<Prefix>;
+};
+```
+
+### `GroupOptions`
+
+```ts
+type GroupOptions = {
+  middleware?: Middleware | Middleware[];
 };
 ```
 
@@ -322,9 +347,7 @@ type RouterOptions = {
 ### `NavigationTarget`
 
 ```ts
-type NavigationTarget =
-  | string
-  | { name: string; params?: RouteParams; query?: QueryParams; hash?: string };
+type NavigationTarget = string | { name: string; params?: RouteParams; query?: QueryParams; hash?: string };
 ```
 
 ### `NavigateOptions`
@@ -401,14 +424,14 @@ type StaticParams = PathParams<'/about'>;
 
 ### Path Patterns
 
-| Pattern | Example match | Notes |
-|---|---|---|
-| `/about` | `/about` | Exact static path |
-| `/users/:id` | `/users/123` | Single named param |
-| `/users/:userId/posts/:postId` | `/users/1/posts/42` | Multiple named params |
-| `/docs/*` | `/docs/guide/intro` | Unnamed wildcard — no captured param |
-| `/files/:rest*` | `/files/a/b/c` | Named wildcard — `params.rest = 'a/b/c'` |
-| `*` | anything | Global catch-all |
+| Pattern                        | Example match       | Notes                                    |
+| ------------------------------ | ------------------- | ---------------------------------------- |
+| `/about`                       | `/about`            | Exact static path                        |
+| `/users/:id`                   | `/users/123`        | Single named param                       |
+| `/users/:userId/posts/:postId` | `/users/1/posts/42` | Multiple named params                    |
+| `/docs/*`                      | `/docs/guide/intro` | Unnamed wildcard — no captured param     |
+| `/files/:rest*`                | `/files/a/b/c`      | Named wildcard — `params.rest = 'a/b/c'` |
+| `*`                            | anything            | Global catch-all                         |
 
 ### Middleware Execution Order
 

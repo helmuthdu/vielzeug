@@ -22,7 +22,7 @@ Creates a typed injection token.
 ```ts
 import { createToken } from '@vielzeug/wireit';
 
-const DbToken     = createToken<IDatabase>('Database');
+const DbToken = createToken<IDatabase>('Database');
 const ConfigToken = createToken<AppConfig>('AppConfig');
 ```
 
@@ -42,23 +42,23 @@ const container = createContainer();
 
 ## `createTestContainer(base?)`
 
-Creates a container suitable for unit tests. When `base` is provided, the test container inherits all of its registrations. `dispose()` on the returned container clears registrations without running production dispose hooks.
+Creates an isolated child container for unit tests. Returns `{ container, dispose }` where `container` is the child container for registering test overrides, and `dispose()` tears it down without affecting the base container.
 
 **Parameters:**
 
-- `base?: Container` — Optional base container to inherit from
+- `base?: Container` — Optional base container to inherit from. When omitted, a new root container is used.
 
-**Returns:** `Container`
+**Returns:** `{ container: Container; dispose: () => Promise<void> }`
 
 **Example:**
 
 ```ts
 import { createTestContainer } from '@vielzeug/wireit';
 
-const container = createTestContainer(appContainer);
+const { container, dispose } = createTestContainer(appContainer);
 container.value(DbToken, mockDb, { overwrite: true });
 
-afterEach(() => container.dispose());
+afterEach(() => dispose());
 ```
 
 ## Container Registration
@@ -207,6 +207,7 @@ Resolve a token synchronously.
 **Returns:** `T`
 
 **Throws:**
+
 - `ProviderNotFoundError` — No provider registered
 - `CircularDependencyError` — Circular dependency detected
 - `AsyncProviderError` — Provider is async; use `getAsync()` instead
@@ -225,6 +226,7 @@ Resolve a token asynchronously. Handles both sync and async providers.
 **Returns:** `Promise<T>`
 
 **Throws:**
+
 - `ProviderNotFoundError`
 - `CircularDependencyError`
 - `ContainerDisposedError`

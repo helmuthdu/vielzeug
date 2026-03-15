@@ -2,7 +2,6 @@ import {
   computed,
   createContext,
   createId,
-  css,
   define,
   defineProps,
   effect,
@@ -18,8 +17,8 @@ import {
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -36,84 +35,30 @@ export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>();
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: block;
-    }
-
-    fieldset {
-      border: none;
-      margin: 0;
-      padding: 0;
-      min-width: 0;
-    }
-
-    legend {
-      color: var(--color-contrast-600);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      margin-bottom: var(--size-2);
-      padding: 0;
-    }
-
-    legend[hidden] {
-      display: none;
-    }
-
-    .checkbox-group-items {
-      display: flex;
-      flex-direction: var(--checkbox-group-direction, column);
-      gap: var(--checkbox-group-gap, var(--size-2));
-    }
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-top: var(--size-1-5);
-      padding-inline: 2px;
-    }
-
-    .error-text {
-      color: var(--color-error);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-top: var(--size-1-5);
-      padding-inline: 2px;
-    }
-  }
-
-  @layer buildit.variants {
-    :host([orientation='horizontal']) .checkbox-group-items {
-      --checkbox-group-direction: row;
-      flex-wrap: wrap;
-    }
-  }
-`;
+import componentStyles from './checkbox-group.css?inline';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-export interface CheckboxGroupProps {
-  /** Legend / label for the fieldset. Required for accessibility. */
-  label?: string;
-  /** Comma-separated list of currently checked values */
-  value?: string;
+export type BitCheckboxGroupProps = {
+  /** Theme color — propagated to all child bit-checkbox elements */
+  color?: ThemeColor;
   /** Disable all checkboxes in the group */
   disabled?: boolean;
   /** Error message shown below the group */
   error?: string;
   /** Helper text shown below the group */
   helper?: string;
-  /** Theme color — propagated to all child bit-checkbox elements */
-  color?: ThemeColor;
-  /** Size — propagated to all child bit-checkbox elements */
-  size?: ComponentSize;
+  /** Legend / label for the fieldset. Required for accessibility. */
+  label?: string;
   /** Layout direction of the checkbox options */
   orientation?: 'vertical' | 'horizontal';
   /** Mark the group as required */
   required?: boolean;
-}
+  /** Size — propagated to all child bit-checkbox elements */
+  size?: ComponentSize;
+  /** Comma-separated list of currently checked values */
+  values?: string;
+};
 
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
@@ -122,7 +67,7 @@ export interface CheckboxGroupProps {
  * @element bit-checkbox-group
  *
  * @attr {string} label - Legend text (required for a11y)
- * @attr {string} value - Comma-separated list of checked values
+ * @attr {string} values - Comma-separated list of checked values
  * @attr {boolean} disabled - Disable all checkboxes in the group
  * @attr {string} error - Error message
  * @attr {string} helper - Helper text
@@ -144,8 +89,8 @@ export interface CheckboxGroupProps {
  * </bit-checkbox-group>
  * ```
  */
-export const TAG = define('bit-checkbox-group', ({ host }) => {
-  const props = defineProps<CheckboxGroupProps>({
+export const CHECKBOX_GROUP_TAG = define('bit-checkbox-group', ({ host }) => {
+  const props = defineProps<BitCheckboxGroupProps>({
     color: { default: undefined },
     disabled: { default: false },
     error: { default: '' },
@@ -154,7 +99,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     orientation: { default: 'vertical' },
     required: { default: false },
     size: { default: undefined },
-    value: { default: '' },
+    values: { default: '' },
   });
 
   // Parse comma-separated value string into an array of checked values
@@ -166,11 +111,11 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
           .filter(Boolean)
       : [];
 
-  const checkedValues = signal<string[]>(parseValues(props.value.value));
+  const checkedValues = signal<string[]>(parseValues(props.values.value));
 
   // Keep checkedValues in sync when prop changes externally
   effect(() => {
-    checkedValues.value = parseValues(props.value.value);
+    checkedValues.value = parseValues(props.values.value);
   });
 
   const toggleCheckbox = (val: string) => {
@@ -178,7 +123,7 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     const next = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
 
     checkedValues.value = next;
-    host.setAttribute('value', next.join(','));
+    host.setAttribute('values', next.join(','));
     host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { values: next } }));
   };
 
@@ -225,9 +170,10 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     }
   };
 
+  effect(syncChildren);
+
   onMount(() => {
     onSlotChange('default', syncChildren);
-    effect(syncChildren);
 
     // Listen for change events bubbled from child bit-checkbox elements
     handle(host, 'change', (e: Event) => {
@@ -272,9 +218,3 @@ export const TAG = define('bit-checkbox-group', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-checkbox-group': HTMLElement & CheckboxGroupProps;
-  }
-}

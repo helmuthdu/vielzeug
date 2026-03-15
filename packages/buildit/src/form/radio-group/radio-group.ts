@@ -2,7 +2,6 @@ import {
   computed,
   createContext,
   createId,
-  css,
   define,
   defineProps,
   effect,
@@ -19,8 +18,8 @@ import {
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -38,86 +37,32 @@ export const RADIO_GROUP_CTX = createContext<RadioGroupContext>();
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: block;
-    }
-
-    fieldset {
-      border: none;
-      margin: 0;
-      padding: 0;
-      min-width: 0;
-    }
-
-    legend {
-      color: var(--color-contrast-600);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      margin-bottom: var(--size-2);
-      padding: 0;
-    }
-
-    legend[hidden] {
-      display: none;
-    }
-
-    .radio-group-items {
-      display: flex;
-      flex-direction: var(--radio-group-direction, column);
-      gap: var(--radio-group-gap, var(--size-2));
-    }
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-top: var(--size-1-5);
-      padding-inline: 2px;
-    }
-
-    .error-text {
-      color: var(--color-error);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-top: var(--size-1-5);
-      padding-inline: 2px;
-    }
-  }
-
-  @layer buildit.variants {
-    :host([orientation='horizontal']) .radio-group-items {
-      --radio-group-direction: row;
-      flex-wrap: wrap;
-    }
-  }
-`;
+import componentStyles from './radio-group.css?inline';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-export interface RadioGroupProps {
-  /** Legend / label for the fieldset. Required for accessibility. */
-  label?: string;
-  /** Currently selected value */
-  value?: string;
-  /** Form field name — propagated to all child bit-radio elements */
-  name?: string;
+export type BitRadioGroupProps = {
+  /** Theme color — propagated to all child bit-radio elements */
+  color?: ThemeColor;
   /** Disable all radios in the group */
   disabled?: boolean;
   /** Error message shown below the group */
   error?: string;
   /** Helper text shown below the group */
   helper?: string;
-  /** Theme color — propagated to all child bit-radio elements */
-  color?: ThemeColor;
-  /** Size — propagated to all child bit-radio elements */
-  size?: ComponentSize;
+  /** Legend / label for the fieldset. Required for accessibility. */
+  label?: string;
+  /** Form field name — propagated to all child bit-radio elements */
+  name?: string;
   /** Layout direction of the radio options */
   orientation?: 'vertical' | 'horizontal';
   /** Mark the group as required */
   required?: boolean;
-}
+  /** Size — propagated to all child bit-radio elements */
+  size?: ComponentSize;
+  /** Currently selected value */
+  value?: string;
+};
 
 /**
  * A fieldset wrapper that groups `bit-radio` elements, provides shared
@@ -150,8 +95,8 @@ export interface RadioGroupProps {
  * </bit-radio-group>
  * ```
  */
-export const TAG = define('bit-radio-group', ({ host }) => {
-  const props = defineProps<RadioGroupProps>({
+export const RADIO_GROUP_TAG = define('bit-radio-group', ({ host }) => {
+  const props = defineProps<BitRadioGroupProps>({
     color: { default: undefined },
     disabled: { default: false },
     error: { default: '' },
@@ -193,7 +138,8 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     value: selectedValue,
   });
 
-  // Sync checked state + name/color/size/disabled onto slotted bit-radio children
+  // Sync name/color/size/disabled onto slotted bit-radio children.
+  // Checked state is handled reactively inside bit-radio via group context.
   const syncChildren = () => {
     const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
 
@@ -206,11 +152,8 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     for (const radio of radios) {
       const val = radio.getAttribute('value') ?? '';
 
-      if (val === selectedValue.value) {
-        radio.setAttribute('checked', '');
-      } else {
-        radio.removeAttribute('checked');
-      }
+      if (val === selectedValue.value) radio.setAttribute('checked', '');
+      else radio.removeAttribute('checked');
 
       if (props.name.value) radio.setAttribute('name', props.name.value);
 
@@ -337,9 +280,3 @@ export const TAG = define('bit-radio-group', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-radio-group': HTMLElement & RadioGroupProps;
-  }
-}

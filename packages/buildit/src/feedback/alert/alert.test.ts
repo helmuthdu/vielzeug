@@ -15,7 +15,7 @@ describe('bit-alert', () => {
     it('renders alert container', async () => {
       fixture = await mount('bit-alert');
 
-      expect(fixture.query('[role="alert"]')).toBeTruthy();
+      expect(fixture.query('[role="status"], [role="alert"]')).toBeTruthy();
     });
 
     it('renders default slot content', async () => {
@@ -59,13 +59,15 @@ describe('bit-alert', () => {
     it('has aria-live polite by default', async () => {
       fixture = await mount('bit-alert');
 
-      expect(fixture.query('[role="alert"]')?.getAttribute('aria-live')).toBe('polite');
+      // role="status" carries implicit aria-live="polite" — no explicit attribute needed
+      expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('has aria-live assertive for error color', async () => {
       fixture = await mount('bit-alert', { attrs: { color: 'error' } });
 
-      expect(fixture.query('[role="alert"]')?.getAttribute('aria-live')).toBe('assertive');
+      // role="alert" carries implicit aria-live="assertive"
+      expect(fixture.query('[role="alert"]')).toBeTruthy();
     });
   });
 
@@ -88,10 +90,10 @@ describe('bit-alert', () => {
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
-    it('applies inline', async () => {
-      fixture = await mount('bit-alert', { attrs: { inline: '' } });
+    it('applies horizontal', async () => {
+      fixture = await mount('bit-alert', { attrs: { horizontal: '' } });
 
-      expect(fixture.element.hasAttribute('inline')).toBe(true);
+      expect(fixture.element.hasAttribute('horizontal')).toBe(true);
     });
 
     it('applies accented', async () => {
@@ -156,10 +158,16 @@ describe('bit-alert accessibility', () => {
   });
 
   describe('WAI-ARIA Role', () => {
-    it('has role alert on container', async () => {
-      fixture = await mount('bit-alert');
+    it('has role alert on container for error color', async () => {
+      fixture = await mount('bit-alert', { attrs: { color: 'error' } });
 
       expect(fixture.query('[role="alert"]')).toBeTruthy();
+    });
+
+    it('has role status on container by default', async () => {
+      fixture = await mount('bit-alert');
+
+      expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('icon has aria-hidden', async () => {
@@ -177,19 +185,21 @@ describe('bit-alert accessibility', () => {
     it('uses aria-live polite by default', async () => {
       fixture = await mount('bit-alert');
 
-      expect(fixture.query('[role="alert"]')?.getAttribute('aria-live')).toBe('polite');
+      // role="status" carries implicit aria-live="polite" — no explicit attribute needed
+      expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
     it('uses aria-live assertive for error color', async () => {
       fixture = await mount('bit-alert', { attrs: { color: 'error' } });
 
-      expect(fixture.query('[role="alert"]')?.getAttribute('aria-live')).toBe('assertive');
+      // role="alert" carries implicit aria-live="assertive"
+      expect(fixture.query('[role="alert"]')).toBeTruthy();
     });
 
     it('uses aria-live polite for non-error colors', async () => {
       for (const color of ['primary', 'success', 'warning', 'info']) {
         fixture = await mount('bit-alert', { attrs: { color } });
-        expect(fixture.query('[role="alert"]')?.getAttribute('aria-live')).toBe('polite');
+        expect(fixture.query('[role="status"]')).toBeTruthy();
         fixture.destroy();
       }
     });

@@ -1,18 +1,22 @@
 import {
   _resetContextForTesting,
+  _SIGNAL_BRAND,
   batch,
   computed,
   configureStateit,
   derived,
   effect,
+  type EffectCallback,
   isSignal,
   isStore,
+  nextValue,
   onCleanup,
-  type ReadonlySignal,
   readonly,
+  type ReadonlySignal,
   shallowEqual,
   signal,
   store,
+  type Subscription,
   toValue,
   untrack,
   watch,
@@ -64,6 +68,109 @@ describe('signal', () => {
     pos.value = { x: 1, y: 0 }; // different — fires
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it('update() applies the updater function to the current value', () => {
+    const n = signal(5);
+
+    n.update((v) => v * 2);
+    expect(n.value).toBe(10);
+  });
+
+  it('update() skips notification when the result is equal (Object.is)', () => {
+    const n = signal(5);
+    const listener = vi.fn();
+
+    watch(n, listener);
+    n.update((v) => v); // returns the same value — should not fire
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+// ─── type guards and utilities ────────────────────────────────────────────────────────────────────────────────
+
+describe('type guards and utilities', () => {
+  it('isSignal() is true for signal, computed, writable, and store', () => {
+    expect(isSignal(signal(0))).toBe(true);
+    expect(isSignal(computed(() => 1))).toBe(true);
+    expect(
+      isSignal(
+        writable(
+          () => 0,
+          () => {},
+        ),
+      ),
+    ).toBe(true);
+    expect(isSignal(store({ x: 1 }))).toBe(true);
+  });
+
+  it('isSignal() is false for primitives, null, and plain objects', () => {
+    expect(isSignal(null)).toBe(false);
+    expect(isSignal(42)).toBe(false);
+    expect(isSignal({ value: 0 })).toBe(false);
+  });
+
+  it('isStore() is true only for Store instances', () => {
+    expect(isStore(store({ x: 0 }))).toBe(true);
+    expect(isStore(signal(0))).toBe(false);
+    expect(isStore(null)).toBe(false);
+    expect(isStore({ x: 0 })).toBe(false);
+  });
+
+  it('isStore() narrows the type so Store methods are accessible', () => {
+    const value: unknown = store({ name: 'Alice' });
+
+    if (isStore<{ name: string }>(value)) {
+      value.patch({ name: 'Bob' });
+      expect(value.value.name).toBe('Bob');
+    }
+  });
+
+  it('toValue() unwraps a signal and passes plain values through unchanged', () => {
+    const n = signal(10);
+
+    expect(toValue(n)).toBe(10);
+    expect(toValue(42)).toBe(42);
+  });
+
+  it('readonly() returns a ReadonlySignal view that tracks reactively', () => {
+    const n = signal(1);
+    const ro = readonly(n);
+
+    expect(ro.value).toBe(1);
+
+    const seen: number[] = [];
+    const stop = effect(() => {
+      seen.push(ro.value);
+    });
+
+    n.value = 2;
+    expect(seen).toEqual([1, 2]);
+    stop();
+  });
+
+  it('readonly() returns the same cached wrapper for repeated calls', () => {
+    const n = signal(1);
+
+    expect(readonly(n)).toBe(readonly(n));
+  });
+
+  it('_SIGNAL_BRAND is exported so consumers can create conforming mock signals', () => {
+    const mockSig: ReadonlySignal<number> = {
+      [_SIGNAL_BRAND]: true,
+      peek: () => 42,
+      value: 42,
+    };
+
+    expect(isSignal(mockSig)).toBe(true);
+    expect(mockSig.value).toBe(42);
+  });
+
+  it('EffectCallback is exported and matches the effect fn signature', () => {
+    const fn: EffectCallback = () => {};
+    const stop = effect(fn);
+
+    stop();
+  });
 });
 
 // ─── type guards and utilities ────────────────────────────────────────────────
@@ -100,7 +207,7 @@ describe('type guards and utilities', () => {
     const value: unknown = store({ name: 'Alice' });
 
     if (isStore<{ name: string }>(value)) {
-      value.set({ name: 'Bob' });
+      value.patch({ name: 'Bob' });
       expect(value.value.name).toBe('Bob');
     }
   });
@@ -267,6 +374,36 @@ describe('effect', () => {
     n.value = 1; // effect is disposed — must not re-run
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
+
+  it('returns a Subscription with .dispose() and [Symbol.dispose] aliases', () => {
+    const n = signal(0);
+    const seen: number[] = [];
+    const sub: Subscription = effect(() => {
+      seen.push(n.value);
+    });
+
+    expect(typeof sub).toBe('function');
+    expect(typeof sub.dispose).toBe('function');
+    expect(typeof sub[Symbol.dispose]).toBe('function');
+    sub.dispose();
+    n.value = 1;
+    expect(seen).toEqual([0]); // disposed — no re-run
+  });
+
+  it('per-effect maxIterations overrides the global setting', () => {
+    const n = signal(0);
+
+    expect(() =>
+      effect(
+        () => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          n.value;
+          n.value = n.peek() + 1;
+        },
+        { maxIterations: 5 },
+      ),
+    ).toThrow(/infinite reactive loop/);
+  });
 });
 
 // ─── untrack ──────────────────────────────────────────────────────────────────
@@ -308,7 +445,7 @@ describe('computed', () => {
     const listener = vi.fn();
 
     watch(name$, listener);
-    s.set({ count: 99 }); // name unchanged
+    s.patch({ count: 99 }); // name unchanged
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -343,12 +480,34 @@ describe('computed', () => {
     const n = signal(0);
     const doubled = computed(() => n.value * 2);
     const listener = vi.fn();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     watch(doubled, listener);
     doubled.dispose();
     n.value = 5;
     expect(doubled.value).toBe(0); // stale
     expect(listener).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('warns in dev when reading a disposed ComputedSignal', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const c = computed(() => 42);
+
+    c.dispose();
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    c.value;
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('disposed'));
+    warnSpy.mockRestore();
+  });
+
+  it('exposes .dispose() and [Symbol.dispose] for uniform cleanup', () => {
+    const c = computed(() => 42);
+
+    expect(typeof c.dispose).toBe('function');
+    expect(typeof c[Symbol.dispose]).toBe('function');
+    c[Symbol.dispose]();
+    expect(c.stale).toBe(true);
   });
 
   it('custom equals suppresses downstream notifications when result is semantically unchanged', () => {
@@ -401,10 +560,12 @@ describe('writable', () => {
       () => n.value + 1,
       () => {},
     );
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     w.dispose();
     n.value = 99;
     expect(w.value).toBe(1); // stale
+    warnSpy.mockRestore();
   });
 });
 
@@ -425,12 +586,14 @@ describe('watch', () => {
   it('selector fires only when the selected slice changes', () => {
     const s = signal({ count: 0, name: 'Alice' });
     const listener = vi.fn();
+    const count$ = computed(() => s.value.count);
 
-    watch(s, listener, { select: (v) => v.count });
+    watch(count$, listener);
     s.value = { count: 5, name: 'Alice' };
     expect(listener).toHaveBeenCalledWith(5, 0);
     s.value = { count: 5, name: 'Bob' }; // count unchanged — suppressed
     expect(listener).toHaveBeenCalledTimes(1);
+    count$.dispose();
   });
 
   it('{ immediate: true } fires with the current value on subscribe', () => {
@@ -488,6 +651,18 @@ describe('watch', () => {
     expect(l1).not.toHaveBeenCalled();
     expect(l2).toHaveBeenCalledTimes(1);
   });
+
+  it('returns a Subscription with .dispose() and [Symbol.dispose] aliases', () => {
+    const n = signal(0);
+    const listener = vi.fn();
+    const sub = watch(n, listener);
+
+    expect(typeof sub.dispose).toBe('function');
+    expect(typeof sub[Symbol.dispose]).toBe('function');
+    sub.dispose();
+    n.value = 1;
+    expect(listener).not.toHaveBeenCalled();
+  });
 });
 
 // ─── batch ────────────────────────────────────────────────────────────────────
@@ -499,9 +674,9 @@ describe('batch', () => {
 
     watch(s, listener);
     batch(() => {
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(listener).not.toHaveBeenCalled(); // mid-batch: silent
-      s.set({ name: 'Bob' });
+      s.patch({ name: 'Bob' });
     });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({ count: 1, name: 'Bob' }, { count: 0, name: 'Alice' });
@@ -510,12 +685,13 @@ describe('batch', () => {
   it('nested batches merge into the outermost; a single flush follows', () => {
     const s = store({ count: 0 });
     const listener = vi.fn();
+    const count$ = s.select((st) => st.count);
 
-    watch(s, listener, { select: (st) => st.count });
+    watch(count$, listener);
     batch(() => {
-      s.set({ count: 1 });
-      batch(() => s.set({ count: 2 }));
-      s.set({ count: 3 });
+      s.patch({ count: 1 });
+      batch(() => s.patch({ count: 2 }));
+      s.patch({ count: 3 });
     });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(s.value.count).toBe(3);
@@ -525,9 +701,9 @@ describe('batch', () => {
     const s = store({ count: 0 });
 
     batch(() => {
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(s.value.count).toBe(1);
-      s.set({ count: 2 });
+      s.patch({ count: 2 });
       expect(s.value.count).toBe(2);
     });
   });
@@ -539,50 +715,52 @@ describe('batch', () => {
   it('flushes pending notifications even when the callback throws', () => {
     const s = store({ count: 0 });
     const listener = vi.fn();
+    const count$ = s.select((st) => st.count);
 
-    watch(s, listener, { select: (st) => st.count });
+    watch(count$, listener);
     expect(() =>
       batch(() => {
-        s.set({ count: 1 });
+        s.patch({ count: 1 });
         throw new Error('boom');
       }),
     ).toThrow('boom');
     expect(listener).toHaveBeenCalledTimes(1);
     expect(s.value.count).toBe(1);
+    count$.dispose();
   });
 
   it('a selector-based watcher receives one notification with the final value', () => {
     const s = store({ count: 0, name: 'Alice' });
     const listener = vi.fn();
+    const count$ = s.select((st) => st.count);
 
-    watch(s, listener, { select: (st) => st.count });
+    watch(count$, listener);
     batch(() => {
-      s.set({ count: 1 });
-      s.set({ count: 2 });
-      s.set({ name: 'Bob' }); // unrelated key — no extra notification
+      s.patch({ count: 1 });
+      s.patch({ count: 2 });
+      s.patch({ name: 'Bob' }); // unrelated key — no extra notification
     });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(2, 0);
+    count$.dispose();
   });
 
   it('all flush subscribers are notified even when one throws', () => {
     const s = store({ count: 0 });
     const second = vi.fn();
+    const count$ = s.select((st) => st.count);
 
-    watch(
-      s,
-      () => {
-        throw new Error('flush-boom');
-      },
-      { select: (st: { count: number }) => st.count },
-    );
-    watch(s, second, { select: (st) => st.count });
+    watch(count$, () => {
+      throw new Error('flush-boom');
+    });
+    watch(count$, second);
     expect(() =>
       batch(() => {
-        s.set({ count: 1 });
+        s.patch({ count: 1 });
       }),
     ).toThrow('flush-boom');
     expect(second).toHaveBeenCalledTimes(1);
+    count$.dispose();
   });
 });
 
@@ -596,18 +774,18 @@ describe('store', () => {
     expect(s.peek()).toEqual({ count: 0, name: 'Alice' });
   });
 
-  describe('set(partial)', () => {
+  describe('patch(partial)', () => {
     it('shallow-merges and preserves untouched keys', () => {
       const s = store({ count: 0, name: 'Alice' });
 
-      s.set({ count: 5 });
+      s.patch({ count: 5 });
       expect(s.value).toEqual({ count: 5, name: 'Alice' });
     });
 
     it('does not mutate the original state object', () => {
       const initial = { count: 0 };
 
-      store(initial).set({ count: 5 });
+      store(initial).patch({ count: 5 });
       expect(initial.count).toBe(0);
     });
 
@@ -616,17 +794,19 @@ describe('store', () => {
       const listener = vi.fn();
 
       watch(s, listener);
-      s.set({ count: 0 });
+      s.patch({ count: 0 });
       expect(listener).not.toHaveBeenCalled();
     });
 
     it('custom StoreOptions.equals suppresses writes before any watcher fires', () => {
       const s = store({ items: [1, 2, 3] }, { equals: (a, b) => JSON.stringify(a) === JSON.stringify(b) });
       const listener = vi.fn();
+      const items$ = s.select((st) => st.items);
 
-      watch(s, listener, { select: (st) => st.items });
-      s.set({ items: [1, 2, 3] }); // same value, different reference — suppressed
+      watch(items$, listener);
+      s.patch({ items: [1, 2, 3] }); // same value, different reference — suppressed
       expect(listener).not.toHaveBeenCalled();
+      items$.dispose();
     });
   });
 
@@ -666,9 +846,18 @@ describe('store', () => {
     it('restores the original initial state', () => {
       const s = store({ count: 0 });
 
-      s.set({ count: 99 });
+      s.patch({ count: 99 });
       s.reset();
       expect(s.value.count).toBe(0);
+    });
+
+    it('reset() is not affected by external mutation of the initial object', () => {
+      const init = { count: 0 };
+      const s = store(init);
+
+      init.count = 999; // external mutation after construction
+      s.reset();
+      expect(s.value.count).toBe(0); // defensive copy preserved the true initial
     });
   });
 
@@ -678,85 +867,99 @@ describe('store', () => {
       const listener = vi.fn();
 
       watch(s, listener);
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(listener).toHaveBeenCalledWith({ count: 1, name: 'Alice' }, { count: 0, name: 'Alice' });
     });
 
     it('selector fires on slice change but not on unrelated key change', () => {
       const s = store({ count: 0, name: 'Alice' });
       const listener = vi.fn();
+      const count$ = s.select((st) => st.count);
 
-      watch(s, listener, { select: (st) => st.count });
-      s.set({ name: 'Bob' }); // unrelated — suppressed
+      watch(count$, listener);
+      s.patch({ name: 'Bob' }); // unrelated — suppressed
       expect(listener).not.toHaveBeenCalled();
-      s.set({ count: 5 });
+      s.patch({ count: 5 });
       expect(listener).toHaveBeenCalledWith(5, 0);
+      count$.dispose();
     });
 
-    it('fires once per synchronous set() call', () => {
+    it('fires once per synchronous patch() call', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+      const count$ = s.select((st) => st.count);
 
-      watch(s, listener, { select: (st) => st.count });
-      s.set({ count: 1 });
-      s.set({ count: 2 });
-      s.set({ count: 3 });
+      watch(count$, listener);
+      s.patch({ count: 1 });
+      s.patch({ count: 2 });
+      s.patch({ count: 3 });
       expect(listener).toHaveBeenCalledTimes(3);
       expect(listener).toHaveBeenLastCalledWith(3, 2);
+      count$.dispose();
     });
 
     it('{ immediate: true } fires with the current value on subscribe', () => {
       const s = store({ count: 3 });
       const listener = vi.fn();
+      const count$ = s.select((st) => st.count);
 
-      watch(s, listener, { immediate: true, select: (st) => st.count });
+      watch(count$, listener, { immediate: true });
       expect(listener).toHaveBeenCalledWith(3, 3);
+      count$.dispose();
     });
 
     it('{ once: true } fires exactly once then auto-unsubscribes', () => {
       const s = store({ count: 0 });
       const listener = vi.fn();
+      const count$ = s.select((st) => st.count);
 
-      watch(s, listener, { once: true, select: (st) => st.count });
-      s.set({ count: 1 });
-      s.set({ count: 2 });
+      watch(count$, listener, { once: true });
+      s.patch({ count: 1 });
+      s.patch({ count: 2 });
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith(1, 0);
+      count$.dispose();
     });
 
     it('selector custom equals suppresses semantically equivalent slices', () => {
       const s = store({ items: [1, 2, 3] });
       const listener = vi.fn();
+      const items$ = s.select((st) => st.items, { equals: (a, b) => a.length === b.length });
 
-      watch(s, listener, { equals: (a: number[], b: number[]) => a.length === b.length, select: (st) => st.items });
-      s.set({ items: [4, 5, 6] }); // same length — suppressed
+      watch(items$, listener);
+      s.patch({ items: [4, 5, 6] }); // same length — suppressed
       expect(listener).not.toHaveBeenCalled();
-      s.set({ items: [1, 2, 3, 4] }); // different length — fires
+      s.patch({ items: [1, 2, 3, 4] }); // different length — fires
       expect(listener).toHaveBeenCalledTimes(1);
+      items$.dispose();
     });
 
     it('multiple watchers are all notified; unsubscribing one is isolated and idempotent', () => {
       const s = store({ count: 0 });
       const l1 = vi.fn();
       const l2 = vi.fn();
-      const unsub = watch(s, l1, { select: (st) => st.count });
+      const count$ = s.select((st) => st.count);
+      const unsub = watch(count$, l1);
 
-      watch(s, l2, { select: (st) => st.count });
+      watch(count$, l2);
       unsub();
       unsub(); // idempotent
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(l1).not.toHaveBeenCalled();
       expect(l2).toHaveBeenCalledTimes(1);
+      count$.dispose();
     });
 
     it('store widens to ReadonlySignal and is accepted by top-level watch()', () => {
       const s = store({ count: 1 });
       const ro: ReadonlySignal<{ count: number }> = s;
       const listener = vi.fn();
+      const count$ = computed(() => (ro as { value: { count: number } }).value.count);
 
-      watch(ro, listener, { select: (st) => st.count });
-      s.set({ count: 2 });
+      watch(count$, listener);
+      s.patch({ count: 2 });
       expect(listener).toHaveBeenCalledWith(2, 1);
+      count$.dispose();
     });
   });
 
@@ -773,7 +976,15 @@ describe('store', () => {
       const s = store({ count: 0 });
 
       s.freeze();
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
+      expect(s.value.count).toBe(0);
+    });
+
+    it('direct .value assignment is blocked after freeze()', () => {
+      const s = store({ count: 0 });
+
+      s.freeze();
+      s.value = { count: 99 };
       expect(s.value.count).toBe(0);
     });
 
@@ -784,7 +995,7 @@ describe('store', () => {
 
       s.freeze();
       // writes are no-ops after freeze so listener won't fire regardless
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(listener).not.toHaveBeenCalled();
       unsub();
     });
@@ -805,7 +1016,7 @@ describe('store', () => {
       const name$ = s.select((st) => st.name);
 
       expect(name$.value).toBe('Alice');
-      s.set({ name: 'Bob' });
+      s.patch({ name: 'Bob' });
       expect(name$.value).toBe('Bob');
     });
 
@@ -815,7 +1026,7 @@ describe('store', () => {
       const listener = vi.fn();
 
       watch(name$, listener);
-      s.set({ count: 99 }); // name unchanged — suppressed
+      s.patch({ count: 99 }); // name unchanged — suppressed
       expect(listener).not.toHaveBeenCalled();
     });
 
@@ -825,9 +1036,9 @@ describe('store', () => {
       const listener = vi.fn();
 
       watch(len$, listener);
-      s.set({ items: [4, 5, 6] }); // same length — suppressed
+      s.patch({ items: [4, 5, 6] }); // same length — suppressed
       expect(listener).not.toHaveBeenCalled();
-      s.set({ items: [1, 2, 3, 4] }); // different length — fires
+      s.patch({ items: [1, 2, 3, 4] }); // different length — fires
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
@@ -838,7 +1049,7 @@ describe('store', () => {
 
       watch(count$, listener);
       count$.dispose();
-      s.set({ count: 1 });
+      s.patch({ count: 1 });
       expect(listener).not.toHaveBeenCalled();
     });
   });
@@ -852,7 +1063,7 @@ describe('isStore type narrowing', () => {
 
     // Store is exported as interface only — no `instanceof Store` needed
     if (isStore<{ name: string }>(value)) {
-      value.set({ name: 'Bob' });
+      value.patch({ name: 'Bob' });
       expect(value.value.name).toBe('Bob');
     }
   });
@@ -885,6 +1096,10 @@ describe('onCleanup', () => {
 // ─── shallowEqual ─────────────────────────────────────────────────────────────
 
 describe('shallowEqual', () => {
+  it('returns true when a value is NaN in both objects (Object.is semantics)', () => {
+    expect(shallowEqual({ a: NaN }, { a: NaN })).toBe(true);
+  });
+
   it('returns true for same reference', () => {
     const obj = { a: 1 };
 
@@ -936,6 +1151,23 @@ describe('configureStateit', () => {
         n.value++;
       });
     }).toThrow(/infinite reactive loop/);
+  });
+
+  it('per-effect maxIterations is independent of the global setting', () => {
+    // Global is reset to 100 by afterEach; set a low global, override per-effect upward
+    configureStateit({ maxEffectIterations: 3 });
+
+    const n = signal(0);
+
+    // loop needs 6 iterations (0→1→2→3→4→5, then 5<5=false) — over global=3 but under override=10
+    expect(() => {
+      effect(
+        () => {
+          if (n.value < 5) n.value++;
+        },
+        { maxIterations: 10 },
+      );
+    }).not.toThrow();
   });
 });
 
@@ -1108,5 +1340,77 @@ describe('derived', () => {
     d.dispose();
     n.value = 5;
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+// ─── signal.update ────────────────────────────────────────────────────────────
+
+describe('signal.update()', () => {
+  it('applies the updater and writes the result', () => {
+    const n = signal(5);
+
+    n.update((v) => v * 2);
+    expect(n.value).toBe(10);
+  });
+
+  it('skips notification when the result is the same (Object.is)', () => {
+    const n = signal(5);
+    const listener = vi.fn();
+
+    watch(n, listener);
+    n.update((v) => v); // same value — no-op
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('update() chaining accumulates correctly', () => {
+    const n = signal(1);
+
+    n.update((v) => v + 1);
+    n.update((v) => v * 3);
+    expect(n.value).toBe(6);
+  });
+});
+
+// ─── nextValue ────────────────────────────────────────────────────────────────
+
+describe('nextValue()', () => {
+  it('resolves with the next changed value', async () => {
+    const n = signal(0);
+    const p = nextValue(n);
+
+    n.value = 42;
+    await expect(p).resolves.toBe(42);
+  });
+
+  it('auto-disposes — does not fire again after first emission', async () => {
+    const n = signal(0);
+    const listener = vi.fn();
+    const p = nextValue(n).then(listener);
+
+    n.value = 1;
+    n.value = 2;
+    await p;
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(1);
+  });
+
+  it('predicate filters values until one passes', async () => {
+    const n = signal(0);
+    const p = nextValue(n, (v) => v > 5);
+
+    n.value = 3; // fails predicate
+    n.value = 7; // passes
+    await expect(p).resolves.toBe(7);
+  });
+
+  it('works with store.select() slices', async () => {
+    const s = store({ count: 0, name: 'Alice' });
+    const count$ = s.select((st) => st.count);
+    const p = nextValue(count$);
+
+    s.patch({ name: 'Bob' }); // count unchanged — no emission
+    s.patch({ count: 99 });
+    await expect(p).resolves.toBe(99);
+    count$.dispose();
   });
 });

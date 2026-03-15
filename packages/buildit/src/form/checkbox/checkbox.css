@@ -1,0 +1,125 @@
+@layer buildit.base {
+  /* ========================================
+       Base Styles & Defaults
+       ======================================== */
+
+  :host {
+    --_size: var(--checkbox-size, var(--size-5));
+    --_radius: var(--checkbox-radius, var(--rounded-md));
+    --_font-size: var(--checkbox-font-size, var(--text-sm));
+    --_bg: var(--checkbox-bg, var(--color-contrast-200));
+    --_border: var(--checkbox-border-color, var(--color-contrast-300));
+
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--_gap, var(--size-2));
+    align-items: center;
+    min-height: var(--_touch-target);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .checkbox-wrapper {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: var(--_size);
+    height: var(--_size);
+  }
+
+  .box {
+    position: relative;
+    box-sizing: border-box;
+    width: var(--_size);
+    height: var(--_size);
+    background: var(--_bg);
+    border: var(--border-2) solid var(--_border);
+    border-radius: var(--_radius);
+    transition:
+      background var(--transition-slower),
+      border-color var(--transition-slower),
+      box-shadow var(--transition-normal);
+  }
+
+  /* ========================================
+       Focus State
+       ======================================== */
+
+  input:focus-visible + .box {
+    box-shadow: var(--_focus-shadow);
+  }
+
+  /* ========================================
+       Icons (Checkmark & Dash)
+       ======================================== */
+
+  .checkmark,
+  .dash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 80%;
+    color: var(--_icon-color);
+    opacity: 0;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: translate(-50%, -50%) scale(0.5);
+    transition:
+      opacity var(--transition-spring),
+      transform var(--transition-spring);
+  }
+
+  /* ========================================
+       Label
+       ======================================== */
+
+  .label {
+    font-size: var(--_font-size);
+    color: var(--color-contrast);
+  }
+
+  /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+  .helper-text {
+    width: 100%;
+    padding-inline-start: calc(var(--_size) + var(--size-2));
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  .helper-text[role='alert'] {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.overrides {
+  /* Map theme variables to checkbox-specific variables */
+  :host {
+    --_active-bg: var(--checkbox-checked-bg, var(--_theme-base));
+    --_icon-color: var(--checkbox-color, var(--_theme-contrast));
+    --_focus-shadow: var(--_theme-shadow);
+  }
+
+  /* ========================================
+       Checked & Indeterminate States
+       ======================================== */
+
+  :host([checked]) .box,
+  :host([indeterminate]) .box {
+    background: var(--_active-bg);
+    border-color: var(--_active-bg);
+  }
+
+  :host([checked]) .checkmark,
+  :host([indeterminate]:not([checked])) .dash {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

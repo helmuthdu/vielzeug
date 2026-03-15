@@ -93,20 +93,51 @@ Interpolation variables passed to `t(key, vars)`.
 type TranslationKey<T extends Messages, P extends string = '', D extends unknown[] = []> = D['length'] extends 8
   ? string
   : {
-      [K in keyof T & string]: T[K] extends Messages
-        ? TranslationKey<T[K], `${P}${K}.`, [...D, 0]> | `${P}${K}`
-        : `${P}${K}`;
+      [K in keyof T & string]: T[K] extends MessageValue
+        ? P extends '' ? K : `${P}.${K}`
+        : T[K] extends Messages
+          ? TranslationKey<T[K], P extends '' ? K : `${P}.${K}`, [...D, 0]>
+          : never;
     }[keyof T & string];
 ```
 
-Recursively extracts all valid dot-notation key paths from a `Messages` type up to 8 levels deep.
+Recursively extracts all valid dot-notation leaf key paths from a `Messages` type up to 8 levels deep. Deeper paths resolve to `string`.
 
 ```ts
 type M = { nav: { home: string }; title: string };
 type K = TranslationKey<M>; // "nav.home" | "title"
 ```
 
-Only leaf keys are included — intermediate namespace keys like `"nav"` are excluded.
+---
+
+### `TranslationKeyParam<T>`
+
+```ts
+type TranslationKeyParam<T extends Messages> =
+  [TranslationKey<T>] extends [never] ? string : TranslationKey<T> | (string & {});
+```
+
+The `key` parameter type for `t()`. When `T` is a concrete message type, autocomplete offers all valid paths. When `T = Messages` (untyped), accepts any string. Use this type in framework adapters and custom hooks that wrap `t()`.
+
+```ts
+import type { TranslationKeyParam } from '@vielzeug/i18nit';
+
+function translate<T extends Messages>(i18n: BoundI18n<T>, key: TranslationKeyParam<T>) {
+  return i18n.t(key);
+}
+```
+
+---
+
+### `NamespaceKeys<T>`
+
+```ts
+type NamespaceKeys<T extends Messages> = string extends keyof T
+  ? string
+  : { [K in keyof T & string]: T[K] extends Messages ? K : never }[keyof T & string];
+```
+
+The union of keys in `T` whose values are nested `Messages` objects. Used as the constraint on `scope()` to prevent scoping into leaf keys at compile time. Widens to `string` when `T = Messages` (untyped usage).
 
 ---
 
@@ -156,6 +187,50 @@ Payload passed to every `subscribe()` listener.
 
 ---
 
+### `LocaleChangeListener`
+
+```ts
+type LocaleChangeListener = (event: LocaleChangeEvent) => void;
+```
+
+Type alias for a `subscribe()` listener function. Useful when extracting listeners to typed variables or component props.
+
+```ts
+const onLocaleChange: LocaleChangeListener = ({ locale, reason }) => {
+  console.log(`Switched to "${locale}" (${reason})`);
+};
+i18n.subscribe(onLocaleChange);
+```
+
+---
+
+### `DiagnosticEvent`
+
+```ts
+type DiagnosticEvent =
+  | { kind: 'subscriber-error'; error: unknown }
+  | { kind: 'loader-error'; locale: Locale; error: unknown };
+```
+
+Passed to `onDiagnostic`. Discriminate on `kind` to handle each case:
+
+- `'subscriber-error'` — a subscriber callback threw; treat as a programming error.
+- `'loader-error'` — a locale loader rejected; treat as a recoverable I/O failure. Includes the failing `locale`.
+
+```ts
+const i18n = createI18n({
+  onDiagnostic: (event) => {
+    if (event.kind === 'loader-error') {
+      retryQueue.add(event.locale); // locale is available here
+    } else {
+      Sentry.captureException(event.error);
+    }
+  },
+});
+```
+
+---
+
 ### `Loader`
 
 ```ts
@@ -172,23 +247,23 @@ An async function that returns messages for a given locale. Used with `registerL
 type I18nOptions<T extends Messages = Messages> = {
   locale?: Locale;
   fallback?: Locale | Locale[];
-  messages?: Record<string, T>;
+  messages?: Record<string, T | DeepPartialMessages<T>>;
   loaders?: Record<Locale, Loader>;
   onMissing?: (key: string, locale: Locale) => string | undefined;
-  onError?: (err: unknown, context: 'subscriber' | 'loader') => void;
+  onDiagnostic?: (event: DiagnosticEvent) => void;
 };
 ```
 
 Configuration object for `createI18n()`.
 
-| Option      | Type                                   | Default | Description                                                                                                           |
-| ----------- | -------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
-| `locale`    | `Locale`                               | `'en'`  | Initial active locale                                                                                                 |
-| `fallback`  | `Locale \| Locale[]`                   | —       | Fallback locale(s) for missing keys                                                                                   |
-| `messages`  | `Record<string, T>`                    | —       | Static message bundles loaded at startup. Each bundle is deep-cloned on construction                                  |
-| `loaders`   | `Record<Locale, Loader>`               | —       | Async loaders for on-demand locale bundles                                                                            |
-| `onMissing` | `(key, locale) => string \| undefined` | —       | Custom handler for missing translation keys; return a string to use as the fallback, or `undefined` to return the key |
-| `onError`   | `(err, context) => void`               | —       | Custom handler for subscriber errors and loader failures. Defaults to `console.error` / `console.warn`                |
+| Option | Type | Default | Description |
+| ------------- | ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `locale` | `Locale` | `'en'` | Initial active locale |
+| `fallback` | `Locale \| Locale[]` | — | Fallback locale(s) for missing keys |
+| `messages` | `Record<string, T \| DeepPartialMessages<T>>` | — | Static message bundles. Each bundle is deep-cloned on construction. Secondary locales may be `DeepPartialMessages<T>` without casting. |
+| `loaders` | `Record<Locale, Loader>` | — | Async loaders for on-demand locale bundles |
+| `onMissing` | `(key, locale) => string \| undefined` | — | Custom handler for missing translation keys; return a string to use as the fallback, or `undefined` to return the key |
+| `onDiagnostic` | `(event: DiagnosticEvent) => void` | — | Receives typed diagnostic events for subscriber errors (`'subscriber-error'`) and loader failures (`'loader-error'`). Defaults to `console.error` / `console.warn`. |
 
 ---
 
@@ -305,7 +380,7 @@ i18n.add('en', { nav: { settings: 'Settings' } });
 replace(locale: Locale, messages: Messages): void
 ```
 
-Replaces the entire catalog for `locale` with a deep clone of `messages`. All previous entries for that locale are discarded.
+Replaces the entire catalog for `locale` with a shallow copy of `messages`. All previous entries for that locale are discarded. Use when you receive a complete replacement bundle (e.g. from a hot-reload or API response).
 
 ```ts
 i18n.replace('en', await fetchMessages('en'));
@@ -313,34 +388,66 @@ i18n.replace('en', await fetchMessages('en'));
 
 ---
 
-### `has(key, locale?)`
+### `reload(locale)`
 
 ```ts
-has(key: string, locale?: Locale): boolean
+async reload(locale: Locale): Promise<void>
 ```
 
-Returns `true` if the key resolves to a translation in the given locale (or the active locale if omitted), walking the fallback chain.
+Clears the catalog for `locale` and re-invokes its registered loader. Unlike `load()`, which is a no-op when the catalog is already populated, `reload()` always fetches fresh content. Resolves with no-op if no loader is registered for `locale`.
 
 ```ts
-i18n.has('nav.home'); // check in active locale
-i18n.has('nav.home', 'de'); // check in 'de' locale
+// Force-refresh the active locale bundle after a deployment
+await i18n.reload(i18n.locale);
 ```
 
 ---
 
-### `hasOwn(key, locale?)`
+### `batch(fn)`
 
 ```ts
-hasOwn(key: string, locale?: Locale): boolean
+batch(fn: () => void): void
 ```
 
-Returns `true` if the key resolves to a translation in the exact given locale (or the active locale if omitted), **without** walking the fallback chain.
-
-Use `has()` when you want fallback-aware lookup; use `hasOwn()` when you specifically need to know whether a locale has its own translation.
+Executes `fn` while deferring all subscriber notifications. A single notification fires after `fn` completes, collapsing any number of `add()` / `replace()` calls made within. Nested `batch()` calls are supported; the notification fires when the outermost batch exits. If both a locale change and a catalog update are triggered within one batch, `'locale-change'` takes priority.
 
 ```ts
-i18n.hasOwn('nav.home'); // check in active locale only
-i18n.hasOwn('nav.home', 'de'); // check in 'de' only, no fallback
+i18n.batch(() => {
+  i18n.add('en', chunkA);
+  i18n.add('en', chunkB);
+  i18n.add('en', chunkC);
+});
+// Subscribers receive exactly one notification
+```
+
+---
+
+### `has(key)`
+
+```ts
+has(key: string): boolean
+```
+
+Returns `true` if the key resolves to a translation in the active locale, walking the fallback chain. Use `withLocale(locale).has(key)` to check a specific locale.
+
+```ts
+i18n.has('nav.home');                   // active locale + fallback chain
+i18n.withLocale('de').has('nav.home');  // check 'de' + its fallback chain
+```
+
+---
+
+### `hasOwn(key)`
+
+```ts
+hasOwn(key: string): boolean
+```
+
+Returns `true` if the key resolves to a translation in the **active locale only**, without walking the fallback chain. Use `withLocale(locale).hasOwn(key)` to check a specific locale.
+
+```ts
+i18n.hasOwn('nav.home');                   // active locale only
+i18n.withLocale('de').hasOwn('nav.home');  // 'de' only, no fallback
 ```
 
 ---
@@ -406,16 +513,20 @@ console.log(i18n.loadableLocales); // ['ja']
 ### `t(key, vars?)`
 
 ```ts
-t(key: TranslationKey<T> | (string & {}), vars?: Vars): string
+t(key: TranslationKeyParam<T>, vars?: Vars): string
 ```
 
 Translates `key` in the active locale. If `vars` are provided, interpolates `{placeholder}` patterns in the resolved message. For plural messages, selects the correct form using `Intl.PluralRules` and the `count` variable.
 
-Returns the key itself if no translation is found and `onMissing` is not set (or if `onMissing` returns `undefined`).
+Returns the key itself if no translation is found and `onMissing` is not set (or returns `undefined`).
+
+::: warning
+In development (`import.meta.env.DEV`), a warning is logged if the key resolves to a `PluralMessages` object but `vars.count` is missing.
+:::
 
 ```ts
 i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
-i18n.t('files', { count: 2 }); // "2 files"
+i18n.t('files', { count: 2 });         // "2 files"
 ```
 
 ---
@@ -497,14 +608,19 @@ i18n.currency(9.99, 'EUR'); // "€9.99"
 ### `scope(ns)`
 
 ```ts
-scope<K extends keyof T & string>(ns: K): T[K] extends Messages ? BoundI18n<T[K]> : never
+scope<K extends NamespaceKeys<T>>(ns: K): BoundI18n<T[K] & Messages>
 ```
 
-Returns a `BoundI18n` narrowed to the subtree type `T[K]`, where all `t()` calls are prefixed by `ns + '.'`. It always uses the current active locale. Calling `scope()` on a leaf key (a key that resolves to a string or plural object, not a namespace) produces a `never` — a compile-time error.
+Returns a `BoundI18n` narrowed to the subtree type `T[K]`, where all `t()` calls are prefixed by `ns + '.'`. Reacts to locale changes on the parent instance.
+
+`scope()` accepts only keys whose values are nested message objects (`NamespaceKeys<T>`). Calling `scope()` with a leaf key (string or plural object) is a TypeScript compile-time error.
 
 ```ts
 const auth = i18n.scope('auth');
-auth.t('login'); // i18n.t('auth.login')
+auth.t('login');          // i18n.t('auth.login')
+auth.scope('form').t('submit'); // i18n.t('auth.form.submit')
+
+// i18n.scope('greeting') — compile-time error if 'greeting' is a leaf key
 ```
 
 ---
@@ -527,10 +643,12 @@ fr.t('greeting'); // always in French
 ### `subscribe(listener, immediate?)`
 
 ```ts
-subscribe(listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe
+subscribe(listener: LocaleChangeListener, immediate?: boolean): Unsubscribe
 ```
 
 Registers a listener that is called whenever the active locale changes or the active locale's catalog is updated. If `immediate` is `true`, the listener is also called immediately with the current locale and reason `'locale-change'`.
+
+Notifications are deferred while inside a `batch()` call.
 
 Returns an `Unsubscribe` function.
 
@@ -572,4 +690,21 @@ Calls `dispose()`. Enables deterministic resource release via the `using` statem
   using i18n = createI18n({ locale: 'en', messages: { en } });
   // ... use i18n
 } // dispose() is called automatically here
+```
+
+---
+
+### `[Symbol.asyncDispose]()`
+
+```ts
+async [Symbol.asyncDispose](): Promise<void>
+```
+
+Awaits any in-flight `load()` calls (using `Promise.allSettled`) and then calls `dispose()`. Enables the `await using` statement for contexts where locale loaders may still be in-flight at teardown time.
+
+```ts
+{
+  await using i18n = createI18n({ locale: 'en', loaders: { fr: loadFr } });
+  i18n.load('fr'); // in-flight
+} // waits for the fr loader to settle, then disposes
 ```

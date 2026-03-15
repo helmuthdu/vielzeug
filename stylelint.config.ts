@@ -6,5 +6,6 @@ export default {
   plugins: ['stylelint-use-logical-spec'],
   rules: {
     'at-rule-no-unknown': null,
+    'custom-property-pattern': null,
   },
 };

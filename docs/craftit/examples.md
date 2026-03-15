@@ -127,7 +127,7 @@ define('todo-list', () => {
 Basic custom input with form integration using ElementInternals.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'custom-input',
@@ -136,7 +136,7 @@ define(
     const placeholder = prop('placeholder', '');
 
     // Register as form field
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const styles = css`
       input {
@@ -183,7 +183,7 @@ Usage in a form:
 Email input with built-in validation using ElementInternals.
 
 ```ts
-import { define, signal, computed, watch, html, css, field } from '@vielzeug/craftit';
+import { define, signal, computed, watch, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'email-input',
@@ -193,7 +193,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
@@ -262,7 +262,7 @@ define(
 Star rating component with form integration.
 
 ```ts
-import { define, signal, watch, html, css, field, prop } from '@vielzeug/craftit';
+import { define, signal, watch, html, css, defineField, prop } from '@vielzeug/craftit';
 
 define(
   'star-rating',
@@ -275,7 +275,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({
+    const formField = defineField({
       value: rating,
       toFormValue: (v) => String(v),
     });
@@ -360,7 +360,7 @@ Usage:
 Custom multi-select with form integration.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 type Option = { value: string; label: string };
 
@@ -376,7 +376,7 @@ define(
 
     const selected = signal<string[]>([]);
 
-    const formField = field({
+    const formField = defineField({
       value: selected,
       toFormValue: (values) => {
         // Send as comma-separated string or FormData
@@ -455,7 +455,7 @@ define(
 Custom file uploader with preview and form integration.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'file-upload',
@@ -465,7 +465,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({
+    const formField = defineField({
       value: files,
       toFormValue: (fileList) => {
         if (!fileList || fileList.length === 0) return null;

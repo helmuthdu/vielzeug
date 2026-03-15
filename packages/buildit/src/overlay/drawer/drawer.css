@@ -1,0 +1,264 @@
+@layer buildit.base {
+  :host {
+    --_backdrop: var(--drawer-backdrop, rgb(0 0 0 / 50%));
+    --_panel-bg: var(--drawer-bg, var(--color-canvas));
+    --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
+    --_transition: var(--transition-normal);
+
+    display: contents;
+  }
+
+  dialog {
+    all: unset;
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    pointer-events: none;
+  }
+
+  dialog:not([open]) {
+    display: none;
+  }
+
+  dialog[open] {
+    pointer-events: auto;
+  }
+
+  dialog::backdrop {
+    background: var(--_backdrop);
+    opacity: 1;
+    transition: var(
+      --_motion-transition,
+      opacity var(--_transition) ease,
+      overlay var(--_transition) ease allow-discrete,
+      display var(--_transition) ease allow-discrete
+    );
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  dialog.closing::backdrop {
+    opacity: 0;
+  }
+
+  .panel {
+    position: absolute;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--_panel-bg);
+    box-shadow: var(--_panel-shadow);
+
+    /* Default: right drawer */
+    transition: var(
+      --_motion-transition,
+      transform var(--_transition) ease,
+      overlay var(--_transition) ease allow-discrete,
+      display var(--_transition) ease allow-discrete
+    );
+  }
+
+  dialog.closing .panel {
+    transform: var(--_panel-exit-transform);
+  }
+
+  /* ========================
+       Placement variants
+       ======================== */
+
+  /* left */
+  :host([placement='left']) .panel {
+    --_panel-exit-transform: translateX(-100%);
+
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--drawer-size, 20rem);
+    max-width: calc(100vw - var(--size-4));
+
+    @starting-style {
+      transform: translateX(-100%);
+    }
+  }
+
+  /* right (default) */
+  :host(:not([placement])) .panel,
+  :host([placement='right']) .panel {
+    --_panel-exit-transform: translateX(100%);
+
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: var(--drawer-size, 20rem);
+    max-width: calc(100vw - var(--size-4));
+
+    @starting-style {
+      transform: translateX(100%);
+    }
+  }
+
+  /* top */
+  :host([placement='top']) .panel {
+    --_panel-exit-transform: translateY(-100%);
+
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: var(--drawer-size, 16rem);
+    max-height: calc(100dvh - var(--size-4));
+
+    @starting-style {
+      transform: translateY(-100%);
+    }
+  }
+
+  /* bottom */
+  :host([placement='bottom']) .panel {
+    --_panel-exit-transform: translateY(100%);
+
+    inset-block-end: 0;
+    inset-inline: 0;
+    height: var(--drawer-size, 16rem);
+    max-height: calc(100dvh - var(--size-4));
+
+    @starting-style {
+      transform: translateY(100%);
+    }
+  }
+
+  /*
+     * RTL overrides for horizontal placements:
+     * 'left' uses inset-inline-start (= physical right in RTL), so the out-of-view
+     * position shifts to the opposite physical side.
+     * 'right' uses inset-inline-end (= physical left in RTL), same logic applies.
+     */
+  :host(:dir(rtl)[placement='left']) .panel {
+    --_panel-exit-transform: translateX(100%);
+
+    @starting-style {
+      transform: translateX(100%);
+    }
+  }
+
+  :host(:dir(rtl)[placement='right']) .panel,
+  :host(:dir(rtl):not([placement])) .panel {
+    --_panel-exit-transform: translateX(-100%);
+
+    @starting-style {
+      transform: translateX(-100%);
+    }
+  }
+
+  /* ========================
+       Size utilities
+       ======================== */
+
+  :host([size='sm']) {
+    --drawer-size: 14rem;
+  }
+
+  :host([size='lg']) {
+    --drawer-size: 32rem;
+  }
+
+  :host([size='full']) {
+    --drawer-size: 100%;
+  }
+
+  :host([size='full']) .panel {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* ========================
+       Header / Body / Footer slots
+       ======================== */
+
+  .header {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-4);
+    align-items: center;
+    padding-block: var(--size-4);
+    padding-inline: var(--size-4) var(--size-10);
+    border-bottom: var(--border) solid var(--color-contrast-200);
+  }
+
+  .header-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    white-space: nowrap;
+  }
+
+  .body {
+    flex: 1;
+    padding: var(--size-4);
+    overflow-y: auto;
+  }
+
+  .footer {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-2);
+    justify-content: flex-end;
+    padding: var(--size-4);
+    border-top: var(--border) solid var(--color-contrast-200);
+  }
+
+  /* Close button — absolute-positioned, independent of header slot presence */
+  .close-btn {
+    all: unset;
+    position: absolute;
+    inset-block-start: var(--size-3);
+    inset-inline-end: var(--size-3);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--_touch-target);
+    min-height: var(--_touch-target);
+    padding: var(--size-1);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+  }
+
+  .close-btn:hover {
+    color: var(--color-contrast-800);
+    background: var(--color-contrast-100);
+  }
+
+  .close-btn:focus-visible {
+    outline: var(--focus-ring);
+  }
+
+  @media (width <= 640px) {
+    :host([placement='left']) .panel,
+    :host(:not([placement])) .panel,
+    :host([placement='right']) .panel {
+      width: min(var(--drawer-size, 20rem), calc(100vw - var(--size-2)));
+      max-width: calc(100vw - var(--size-2));
+    }
+
+    :host([placement='top']) .panel,
+    :host([placement='bottom']) .panel {
+      height: min(var(--drawer-size, 16rem), calc(100dvh - var(--size-2)));
+      max-height: calc(100dvh - var(--size-2));
+    }
+
+    .header,
+    .body,
+    .footer {
+      padding: var(--size-3);
+    }
+  }
+}

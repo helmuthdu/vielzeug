@@ -34,7 +34,11 @@ yarn add @vielzeug/deposit
 ```ts
 import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
 
-interface User { id: number; name: string; age: number }
+interface User {
+  id: number;
+  name: string;
+  age: number;
+}
 
 const schema = defineSchema<{ users: User }>({ users: { key: 'id' } });
 const db = createLocalStorage({ dbName: 'my-app', schema });
@@ -42,8 +46,8 @@ const db = createLocalStorage({ dbName: 'my-app', schema });
 await db.put('users', { id: 1, name: 'Alice', age: 30 });
 await db.put('users', { id: 2, name: 'Bob', age: 25 });
 
-const adults  = await db.from('users').between('age', 18, 99).orderBy('name').toArray();
-const alice   = await db.get('users', 1);
+const adults = await db.from('users').between('age', 18, 99).orderBy('name').toArray();
+const alice = await db.get('users', 1);
 const patched = await db.patch('users', 1, { age: 31 }); // returns merged User
 
 for await (const user of db.from('users').orderBy('name')) {
@@ -55,20 +59,22 @@ for await (const user of db.from('users').orderBy('name')) {
 
 - **Two adapters** — `createLocalStorage()` and `createIndexedDB()` share an identical `Adapter` interface
 - **Schema-driven** — `defineSchema()` types every table, key, and query result; or pass inline with a type parameter
-- **Fluent query builder** — `equals`, `between`, `startsWith`, `filter`, `and`, `or`, `search`, `contains`, `orderBy`, `limit`, `offset`, `page`, `map`, and more
+- **Fluent query builder** — `equals`, `between`, `startsWith`, `filter`, `and`, `or`, `search`, `contains`, `orderBy`, `limit`, `offset`, `page`, `map`, `reduce`, and more
 - **`for await...of`** — `QueryBuilder` implements `AsyncIterator` for streamed processing
-- **TTL** — per-record expiry via optional `ttl` (milliseconds) on `put` and `getOrPut`; expired entries evicted on read
+- **TTL** — per-record expiry via optional `ttl` on `put`, `putMany`, and `getOrPut`; use the `ttl` helper (`.hours()`, `.minutes()`, `.seconds()`, `.ms()`) for readable durations
 - **`patch` returns merged record** — no follow-up `get` needed after a partial update
+- **`getOr`** — typed non-nullable get with a fallback default value
 - **`getMany`** — batch fetch by a list of keys in a single operation
-- **Transactions** — atomic multi-table writes with `get`, `getAll`, `put`, `patch`, and `delete` (IndexedDB only)
-- **Bulk operations** — `put` and `delete` accept a single value or an array
+- **Transactions** — atomic multi-table writes with the full read/write method set (IndexedDB only)
+- **Bulk operations** — `putMany` and `deleteMany` for operating on multiple records at once
 - **`storeField()`** — migration helper that encapsulates deposit's internal key-path convention
+- **Utility types** — `RecordOf<S, K>` and `KeyOf<S, K>` for typed schema access
 - **Lightweight** — <PackageInfo package="deposit" type="size" /> gzipped, zero external dependencies
 
 ## Next Steps
 
-| | |
-| --- | --- |
+|                           |                                                          |
+| ------------------------- | -------------------------------------------------------- |
 | [Usage Guide](./usage.md) | Schema, CRUD, queries, TTL, transactions, and migrations |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world storage patterns |
+| [API Reference](./api.md) | Complete type signatures and method documentation        |
+| [Examples](./examples.md) | Real-world storage patterns                              |

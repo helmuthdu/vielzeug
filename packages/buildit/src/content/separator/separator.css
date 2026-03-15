@@ -1,0 +1,59 @@
+@layer buildit.base {
+  :host {
+    --_color: var(--separator-color, var(--color-contrast-300));
+    --_size: var(--separator-size, var(--border));
+    --_spacing: var(--separator-spacing, 0);
+
+    display: block;
+  }
+
+  .separator {
+    all: unset;
+    box-sizing: border-box;
+    display: block;
+    margin: var(--_spacing) 0;
+  }
+
+  :host([orientation='horizontal']),
+  :host(:not([orientation='vertical'])) {
+    width: 100%;
+  }
+
+  :host([orientation='horizontal']) .separator,
+  :host(:not([orientation='vertical'])) .separator {
+    width: 100%;
+    border-top: var(--_size) solid var(--_color);
+  }
+
+  :host([orientation='vertical']) {
+    display: inline-block;
+    align-self: stretch;
+  }
+
+  :host([orientation='vertical']) .separator {
+    height: 100%;
+    border-inline-start: var(--_size) solid var(--_color);
+  }
+
+  :host([color]) {
+    --_color: var(--_theme-base);
+  }
+
+  /* Labelled separator */
+  .separator-wrapper {
+    display: flex;
+    gap: var(--size-3);
+    align-items: center;
+  }
+
+  .separator-wrapper .separator {
+    flex: 1;
+  }
+
+  .separator-label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--_color);
+    white-space: nowrap;
+  }
+}

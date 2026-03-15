@@ -26,6 +26,9 @@ features:
   - title: '@vielzeug/deposit'
     details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
+  - title: '@vielzeug/dragit'
+    details: "<img src='/logo-dragit.svg' class='logo-highlight-smaller' alt='Dragit Logo' width='72'/>Framework-agnostic drag-and-drop primitives: file drop zones with MIME filtering and sortable lists."
+    link: /dragit/
   - title: '@vielzeug/eventit'
     details: "<img src='/logo-eventit.svg' class='logo-highlight-smaller' alt='Eventit Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
     link: /eventit/
@@ -59,6 +62,9 @@ features:
   - title: '@vielzeug/validit'
     details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
+  - title: '@vielzeug/virtualit'
+    details: 'Lightweight, framework-agnostic virtual list engine. Renders only visible items with binary-search windowing, variable heights, and smooth programmatic scrolling.'
+    link: /virtualit/
   - title: '@vielzeug/wireit'
     details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
     link: /wireit/

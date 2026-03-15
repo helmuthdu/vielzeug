@@ -40,22 +40,26 @@ v.string(); // string
 
 **Methods:**
 
-- `.min(length: number, message?: string | MessageFn<{ min: number; value: string }>)` – Minimum length
-- `.max(length: number, message?: string | MessageFn<{ max: number; value: string }>)` – Maximum length
-- `.length(exact: number, message?: string | MessageFn)` – Exact length
-- `.nonempty(message?: string | MessageFn<{ min: number; value: string }>)` – Shorthand for `.min(1)`
-- `.startsWith(prefix: string, message?: string | MessageFn)` – Must start with prefix
-- `.endsWith(suffix: string, message?: string | MessageFn)` – Must end with suffix
-- `.includes(substr: string, message?: string | MessageFn)` – Must contain substring
-- `.regex(pattern: RegExp, message?: string | MessageFn)` – Regex pattern match
-- `.email(message?: string | MessageFn)` – Email address format
-- `.url(message?: string | MessageFn)` – URL format (error code: `invalid_url`)
-- `.uuid(message?: string | MessageFn)` – UUID v4 format
-- `.date(message?: string | MessageFn)` – `YYYY-MM-DD` date string
-- `.datetime(message?: string | MessageFn)` – ISO 8601 datetime string
+- `.min(length, message?)` – Minimum length; `params: { minimum: length }`
+- `.max(length, message?)` – Maximum length; `params: { maximum: length }`
+- `.length(exact, message?)` – Exact length; `params: { exact }`
+- `.nonempty(message?)` – Shorthand for `.min(1)`
+- `.startsWith(prefix, message?)` – Must start with prefix; `params: { prefix }`
+- `.endsWith(suffix, message?)` – Must end with suffix; `params: { suffix }`
+- `.includes(substr, message?)` – Must contain substring; `params: { includes: substr }`
+- `.regex(pattern, message?)` – Regex pattern match; `params: { pattern: pattern.source }`
+- `.email(message?)` – Email address format; `params: { format: 'email' }`
+- `.url(message?)` – URL format (error code: `invalid_url`); `params: { format: 'url' }`
+- `.uuid(message?)` – UUID v4 format; `params: { format: 'uuid' }`
+- `.date(message?)` – `YYYY-MM-DD` date string; `params: { format: 'date' }`
+- `.datetime(message?)` – ISO 8601 datetime string; `params: { format: 'datetime' }`
 - `.trim()` – Trims whitespace from the string **before** validation (preprocessor, no error)
-- `.lowercase(message?: string | MessageFn)` – Must be all lowercase
-- `.uppercase(message?: string | MessageFn)` – Must be all uppercase
+- `.lowercase()` – Lowercases the string **before** validation (preprocessor, no error)
+- `.uppercase()` – Uppercases the string **before** validation (preprocessor, no error)
+
+::: tip Error params
+Every string constraint populates `Issue.params` so you can identify the failing rule without parsing the message string. Example use cases: rendering built-in browser constraint messages, i18n overrides keyed by `params.format`.
+:::
 
 #### `v.number()`
 
@@ -103,7 +107,7 @@ v.date(); // Date
 
 #### `v.union(...schemas)`
 
-First-match union — tries each schema in order and returns the first success. Fails only if every branch fails.
+First-match union — tries each schema in order and returns the **output of the first succeeding branch** (including coercions and transforms). Fails only if every branch fails.
 
 Each argument can be a `Schema` instance **or** a raw literal value (`string | number | boolean | null | undefined`) — raw values are automatically wrapped in `v.literal()`.
 
@@ -112,6 +116,9 @@ v.union(v.string(), v.number()); // string | number
 v.union('light', 'dark'); // 'light' | 'dark'
 v.union('ok', 'error', v.null()); // mix of raw and schema
 
+// Branch output is returned — coercions work correctly
+v.union(v.coerce.number(), v.string()).parse('42'); // → 42 (number, not string)
+
 // With object schemas
 v.union(
   v.object({ type: v.literal('ok'), data: v.string() }),
@@ -119,15 +126,27 @@ v.union(
 );
 ```
 
+**Properties:**
+
+- `.schemas` — The normalized array of branch schemas (read-only)
+
+**Error params:**
+
+- `params.errors` — Array of issue arrays from each failing branch (one per branch)
+
 #### `v.intersect(...schemas)`
 
-All schemas must pass. Useful for intersection / mixin patterns.
+All schemas must pass. Issues from all failing branches are collected and returned together. Useful for intersection / mixin patterns.
 
 ```ts
 v.intersect(v.string(), v.string().min(5)); // all constraints apply
 
 const AdminSchema = v.intersect(v.object({ id: v.number() }), v.object({ permissions: v.array(v.string()) }));
 ```
+
+**Properties:**
+
+- `.schemas` — The normalized array of branch schemas (read-only)
 
 #### `v.variant(discriminator, map)`
 
@@ -282,14 +301,17 @@ v.object({
 
 - `.partial()` – Make **all** fields optional
 - `.partial(...keys)` – Make only the listed **keys** optional (selective partial)
-- `.required()` – Strip optional from all fields (inverse of `partial()`); preserves `.refine()` chains
+- `.required()` – Strip `optional` from all fields (delegates to base `Schema.required()` per-field); preserves all schema metadata
 - `.pick(...keys)` – Select specific fields
 - `.omit(...keys)` – Exclude specific fields
 - `.extend(shape)` – Add or override fields
 - `.strip()` – Remove unknown keys (default behaviour)
 - `.passthrough()` – Allow unknown keys through
 - `.strict()` – Reject objects with unknown keys
-- `.shape` – Public property exposing the raw shape definition
+
+**Properties:**
+
+- `.shape` – The raw shape definition (read-only)
 
 ---
 
@@ -357,7 +379,7 @@ Converts values to boolean.
 
 ```ts
 v.coerce.boolean();
-// Accepts: boolean, 'true', 'false', 1, 0
+// Accepts: boolean, 'true', 'false', '1', '0', 1, 0
 // Returns: boolean
 ```
 
@@ -374,6 +396,20 @@ v.coerce.date().min(new Date('2000-01-01'));
 ## Schema Methods
 
 All schemas inherit these methods:
+
+---
+
+### Factory Shorthands: `v.optional()` / `v.nullable()` / `v.nullish()`
+
+Convenience wrappers for the common modifier patterns:
+
+```ts
+v.optional(v.string()); // equivalent to v.string().optional()
+v.nullable(v.string()); // equivalent to v.string().nullable()
+v.nullish(v.string());  // equivalent to v.string().nullish()
+```
+
+---
 
 ### Validation
 
@@ -460,6 +496,16 @@ Combines `.optional().nullable()` — accepts `null` or `undefined`.
 v.string().nullish(); // string | null | undefined
 v.number().nullish(); // number | null | undefined
 ```
+
+#### `required(): Schema<Exclude<Output, undefined>, Input>`
+
+Removes `undefined` from the output type. Reverses the effect of `.optional()`.
+
+```ts
+v.string().optional().required(); // string (no longer | undefined)
+```
+
+Also used internally by `ObjectSchema.required()` to strip optional from each field without direct prototype mutation.
 
 #### `default(value: Output): this`
 
@@ -765,25 +811,6 @@ v.string().min(5, ({ min, value }) => `'${value}' has only ${value.length} chars
 v.number().max(100, ({ max }) => `Value exceeds the maximum of ${max}`);
 v.string().refine((v) => v.startsWith('sk_'), ({ value }) => `'${value}' is not a valid key`);
 ```
-
-## Error Codes
-
-Built-in error codes for internationalization:
-
-| Code              | Description                   |
-| ----------------- | ----------------------------- |
-| `invalid_type`    | Wrong type                    |
-| `invalid_date`    | Invalid Date object           |
-| `invalid_literal` | Value does not match literal  |
-| `invalid_enum`    | Value not in enum             |
-| `invalid_union`   | Does not match any union type |
-| `invalid_url`     | Invalid URL format            |
-| `invalid_string`  | Pattern/email/uuid mismatch   |
-| `invalid_length`  | Wrong length                  |
-| `not_integer`     | Not an integer                |
-| `too_small`       | Below minimum                 |
-| `too_big`         | Above maximum                 |
-| `custom`          | Custom refinement failed      |
 
 ## Performance Tips
 
